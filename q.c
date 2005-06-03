@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.1 2005/06/03 19:54:55 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.2 2005/06/03 20:30:10 solar Exp $
  *
  * 2005 Ned Ludd <solar@gentoo.org>
  *
@@ -79,7 +79,7 @@ int qfile_main(int, char **);
 # define DBG(a)			/* nothing */
 #endif				/* EBUG */
 
-/* static const char *rcsid = "$Id: q.c,v 1.1 2005/06/03 19:54:55 solar Exp $"; */
+/* static const char *rcsid = "$Id: q.c,v 1.2 2005/06/03 20:30:10 solar Exp $"; */
 
 static char color = 1;
 static char exact = 0;
@@ -676,11 +676,13 @@ int q_main(int argc, char **argv)
    if (((strcmp(argv[1], "--install")) == 0) && (argc >= 2)) {
       char buf[_POSIX_PATH_MAX];
       printf("Installing symlinks..\n");
+      memset(buf, 0, sizeof(buf));
       if ((readlink("/proc/self/exe", buf, sizeof(buf))) == (-1)) {
 	 perror("readlink");
 	 return 1;
       }
       if (chdir((char *) dirname(buf)) != 0) {
+	 fputs("chdir: ", stderr);
 	 perror(buf);
 	 return 1;
       }

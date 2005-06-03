@@ -1,5 +1,5 @@
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.1 2005/06/03 19:54:55 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.2 2005/06/03 20:30:10 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -61,6 +61,7 @@ clean:
 
 distclean: clean
 	-rm -f *~ core
+	-rm -f `find . -type l`
 
 install: all
 	-$(STRIP) $(TARGETS)
@@ -70,5 +71,8 @@ install: all
 		[ -e $$mpage ] \
 			&& cp $$mpage $(PREFIX)/share/man/man1/ || : ;\
 	done
+
+symlinks: all
+	./q --install
 
 -include .depend
