@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.4 2005/06/05 09:44:12 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.5 2005/06/05 09:56:21 vapier Exp $
  *
  * 2005 Ned Ludd <solar@gentoo.org>
  *
@@ -40,9 +40,9 @@
 #include <libgen.h>
 #include <limits.h>
 
-typedef int (*Function) ();
+typedef int (*APPLET)();
 
-Function lookup_applet(char *);
+APPLET lookup_applet(char *);
 
 int rematch(char *, char *, int);
 char *rmspace(char *);
@@ -76,7 +76,7 @@ static char *argv0;
 # define DBG(fmt, args...)
 #endif
 
-/* static const char *rcsid = "$Id: q.c,v 1.4 2005/06/05 09:44:12 vapier Exp $"; */
+/* static const char *rcsid = "$Id: q.c,v 1.5 2005/06/05 09:56:21 vapier Exp $"; */
 
 static char color = 1;
 static char exact = 0;
@@ -85,22 +85,21 @@ static char reinitialize = 0;
 
 static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
 
-/* *INDENT-OFF* */
 struct applet_t {
 	const char *name;
 	/* int *func; */
-	Function func;
+	APPLET func;
 	const char *opts;
 } applets[] = {
-	{"q", (Function) q_main, "<function> <args>"}, /* q must always be the first applet */
-	{"qfile", (Function)qfile_main, "<filename>"},
-	{"qlist", (Function)qlist_main, "<pkgname>"},
-	{"qsearch", (Function)qsearch_main, "<regex>"},
-	{"quse", (Function)quse_main, "<useflag>"}
+	/* q must always be the first applet */
+	{"q",       (APPLET)q_main,       "<function> <args>"},
+	{"qfile",   (APPLET)qfile_main,   "<filename>"},
+	{"qlist",   (APPLET)qlist_main,   "<pkgname>"},
+	{"qsearch", (APPLET)qsearch_main, "<regex>"},
+	{"quse",    (APPLET)quse_main,    "<useflag>"}
 };
-/* *INDENT-ON* */
 
-Function lookup_applet(char *applet)
+APPLET lookup_applet(char *applet)
 {
 	unsigned int i;
 	for (i = 0; i < sizeof(applets) / sizeof(applets[0]); i++) {
@@ -131,9 +130,9 @@ int rematch(char *regex, char *match, int cflags)
 	if (ret) {
 		char err[256];
 		if (regerror(ret, &preg, err, sizeof(err)))
-			fprintf(stderr, "regcomp failed: %s\n", err);
+			warnf("regcomp failed: %s", err);
 		else
-			fprintf(stderr, "regcomp failed\n");
+			warnf("regcomp failed");
 		return EXIT_FAILURE;
 	}
 	ret = regexec(&preg, match, 0, NULL, 0);
@@ -337,8 +336,8 @@ int qsearch_main(int argc, char **argv)
 				}
 				fclose(newfp);
 			} else {
-				fprintf(stderr, "Error: opening %s : %s\n", ebuild,
-				        strerror(errno));
+				warnf("Error: opening %s : %s", ebuild,
+				      strerror(errno));
 				reinitialize = 1;
 			}
 		}
@@ -389,8 +388,8 @@ int quse_main(int argc, char **argv)
 			}
 			fclose(newfp);
 		} else {
-			fprintf(stderr, "Error: opening %s : %s\n", ebuild,
-			strerror(errno));
+			warnf("Error: opening %s : %s", ebuild,
+			      strerror(errno));
 			reinitialize = 1;
 		}
 	}
@@ -537,9 +536,8 @@ void initialize_ebuild_flat(void)
 	time_t start;
 
 	if ((chdir(portdir)) != 0) {
-		fprintf(stderr,
-		        "Error: unable chdir to what I think is your PORTDIR '%s' : %s\n",
-		        portdir, strerror(errno));
+		warn("Error: unable chdir to what I think is your PORTDIR '%s' : %s",
+		     portdir, strerror(errno));
 		return;
 	}
 
@@ -547,18 +545,18 @@ void initialize_ebuild_flat(void)
 	if (access(".ebuild.x", W_OK) == 0)
 		return;
 
-	fprintf(stderr, "Updating ebuild cache.. ");
+	warn("Updating ebuild cache ... ");
 
 	unlink(".ebuild.x");
 	if (errno != ENOENT) {
-		fprintf(stderr, "Error: unlinking %s/%s : %s\n", portdir,
-		        ".ebuild.x", strerror(errno));
+		warnf("Error: unlinking %s/%s : %s", portdir,
+		      ".ebuild.x", strerror(errno));
 		return;
 	}
 
 	if ((fp = fopen(".ebuild.x", "w")) == NULL) {
-		fprintf(stderr, "Error opening %s/.ebuild.x %s\n", portdir,
-		        strerror(errno));
+		warnf("Error opening %s/.ebuild.x %s", portdir,
+		      strerror(errno));
 		return;
 	}
 
@@ -613,15 +611,14 @@ void initialize_ebuild_flat(void)
 	}
 	closedir(dir[0]);
 	fclose(fp);
-	fprintf(stderr, "Finished in %lu seconds\n", time(0) - start);
+	warn("Finished in %lu seconds", time(0) - start);
 }
 
 void reinitialize_ebuild_flat(void)
 {
 	if ((chdir(portdir)) != 0) {
-		fprintf(stderr,
-		        "Error: unable chdir to what I think is your PORTDIR '%s' : %s\n",
-		        portdir, strerror(errno));
+		warn("Error: unable chdir to what I think is your PORTDIR '%s' : %s",
+		     portdir, strerror(errno));
 		return;
 	}
 	unlink(".ebuild.x");
@@ -632,7 +629,7 @@ int q_main(int argc, char **argv)
 {
 	unsigned int i;
 	char *p;
-	Function func;
+	APPLET func;
 
 	if (argc == 0)
 		return 1;
@@ -640,7 +637,7 @@ int q_main(int argc, char **argv)
 	p = argv0 = basename(argv[0]);
 
 	if ((func = lookup_applet(p)) == 0) {
-		fprintf(stderr, "q: Unknown applet '%s'\n", p);
+		warn("q: Unknown applet '%s'", p);
 		return 1;
 	}
 	if (strcmp("q", p) != 0)
@@ -674,7 +671,7 @@ int q_main(int argc, char **argv)
 		return 0;
 	}
 	if ((func = lookup_applet(argv[1])) == 0) {
-		fprintf(stderr, "q: Unknown applet '%s'\n", argv[1]);
+		warn("q: Unknown applet '%s'", argv[1]);
 		return 1;
 	}
 	return (func) (argc - 1, ++argv);
