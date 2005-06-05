@@ -1,5 +1,6 @@
+# Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.2 2005/06/03 20:30:10 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.3 2005/06/05 09:12:33 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -18,9 +19,14 @@
 ####################################################################
 
 ####################################################
-CFLAGS    := -Wall -Werror -Wformat=2 -Wmissing-declarations -Wwrite-strings -Wshadow -Wnested-externs -Wbad-function-cast
+WFLAGS    := -Wall -Wextra -Wunused -Wimplicit -Wshadow -Wformat=2 \
+             -Wmissing-declarations -Wmissing-prototypes -Wwrite-strings \
+             -Wbad-function-cast -Wnested-externs -Wcomment -Wsequence-point \
+             -Wdeclaration-after-statement -Wchar-subscripts -Wcast-align \
+             -Winline
+CFLAGS    := -O2
 #CFLAGS   += -DEBUG -g
-#LDFLAGS  :=-pie
+#LDFLAGS  := -pie
 DESTDIR    =
 PREFIX    := $(DESTDIR)/usr
 STRIP     := strip
@@ -45,7 +51,8 @@ debug: all
 	@-/sbin/paxctl -permsx $(TARGETS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $<
+	@echo $(CC) $(CFLAGS) -c $<
+	@$(CC) $(CFLAGS) $(WFLAGS) -c $<
 
 %: %.o
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
