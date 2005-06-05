@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.5 2005/06/05 09:56:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.6 2005/06/05 11:26:46 vapier Exp $
  *
  * 2005 Ned Ludd <solar@gentoo.org>
  *
@@ -76,7 +76,7 @@ static char *argv0;
 # define DBG(fmt, args...)
 #endif
 
-/* static const char *rcsid = "$Id: q.c,v 1.5 2005/06/05 09:56:21 vapier Exp $"; */
+static const char *rcsid = "$Id: q.c,v 1.6 2005/06/05 11:26:46 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -92,17 +92,18 @@ struct applet_t {
 	const char *opts;
 } applets[] = {
 	/* q must always be the first applet */
-	{"q",       (APPLET)q_main,       "<function> <args>"},
+	{"q",       (APPLET)q_main,       "<applet> <args>"},
 	{"qfile",   (APPLET)qfile_main,   "<filename>"},
 	{"qlist",   (APPLET)qlist_main,   "<pkgname>"},
 	{"qsearch", (APPLET)qsearch_main, "<regex>"},
-	{"quse",    (APPLET)quse_main,    "<useflag>"}
+	{"quse",    (APPLET)quse_main,    "<useflag>"},
+	{NULL,      (APPLET)NULL,         NULL}
 };
 
 APPLET lookup_applet(char *applet)
 {
 	unsigned int i;
-	for (i = 0; i < sizeof(applets) / sizeof(applets[0]); i++) {
+	for (i = 0; applets[i].name; ++i) {
 		if ((strcmp(applets[i].name, applet)) == 0) {
 			DBG("found applet %s at %p", applets[i].name, applets[i].func);
 			return applets[i].func;
@@ -111,13 +112,14 @@ APPLET lookup_applet(char *applet)
 	/* No applet found? Search by shortname then... */
 	if ((strlen(applet)) - 1 > 0) {
 		DBG("Looking up applet by short name");
-		for (i = 1; i < sizeof(applets) / sizeof(applets[0]); i++) {
+		for (i = 1; applets[i].name; ++i) {
 			if ((strcmp(applets[i].name + 1, applet)) == 0) {
 				return applets[i].func;
 			}
 		}
 	}
 	/* still nothing? .. add short opts -q/-l etc.. */
+	warn("Unknown applet '%s'", applet);
 	return 0;
 }
 
@@ -625,9 +627,45 @@ void reinitialize_ebuild_flat(void)
 	initialize_ebuild_flat();
 }
 
+/* usage / invocation handling functions */
+#define PARSE_FLAGS "ihV"
+#define a_argument required_argument
+static struct option const long_opts[] = {
+	{"install",   no_argument, NULL, 'i'},
+	{"help",      no_argument, NULL, 'h'},
+	{"version",   no_argument, NULL, 'V'},
+	{NULL,        no_argument, NULL, 0x0}
+};
+static const char *opts_help[] = {
+	"Install symlinks for applets",
+	"Print this help and exit",
+	"Print version and exit",
+	NULL
+};
+/* display usage and exit */
+static void usage(int status, struct option const opts[], const char *help[])
+{
+	unsigned long i;
+	printf("Usage: q <applet> [arguments]...\n"
+	       "   or: <applet> [arguments]...\n\n");
+	printf("Currently defined applets:\n");
+	for (i = 0; applets[i].name; ++i)
+		printf(" - %s %s\n", applets[i].name, applets[i].opts);
+
+	printf("\nOptions: -[%s]\n", PARSE_FLAGS);
+	for (i = 0; opts[i].name; ++i)
+		if (opts[i].has_arg == no_argument)
+			printf("  -%c, --%-13s* %s\n", opts[i].val, 
+			       opts[i].name, help[i]);
+		else
+			printf("  -%c, --%-6s <arg> * %s\n", opts[i].val,
+			       opts[i].name, help[i]);
+	exit(status);
+}
+
 int q_main(int argc, char **argv)
 {
-	unsigned int i;
+	int i;
 	char *p;
 	APPLET func;
 
@@ -636,45 +674,53 @@ int q_main(int argc, char **argv)
 
 	p = argv0 = basename(argv[0]);
 
-	if ((func = lookup_applet(p)) == 0) {
-		warn("q: Unknown applet '%s'", p);
+	if ((func = lookup_applet(p)) == 0)
 		return 1;
-	}
 	if (strcmp("q", p) != 0)
-		return (func) (argc, argv);
+		return (func)(argc, argv);
 
-	if ((argc < 2) || ((argc > 0) && (strcmp(argv[1], "--help") == 0))) {
-		if (argc > 1) {
-			printf("trying to get help on an applet %s eh?\n", argv[2]);
+	if (argc == 1)
+		usage(EXIT_FAILURE, long_opts, opts_help);
+
+	while ((i=getopt_long(argc, argv, PARSE_FLAGS, long_opts, NULL)) != -1) {
+		switch (i) {
+
+		case 'V':
+			printf("%s compiled %s\n%s\n"
+			       "%s written for Gentoo by <solar and vapier @ gentoo.org>\n",
+			       __FILE__, __DATE__, rcsid, argv0);
+			exit(EXIT_SUCCESS);
+			break;
+		case 'h': usage(EXIT_SUCCESS, long_opts, opts_help); break;
+
+		case 'i': {
+			char buf[_POSIX_PATH_MAX];
+			printf("Installing symlinks:\n");
+			memset(buf, 0x00, sizeof(buf));
+			if ((readlink("/proc/self/exe", buf, sizeof(buf))) == (-1)) {
+				warnf("could not readlink '/proc/self/exe': %s", strerror(errno));
+				return 1;
+			}
+			if (chdir(dirname(buf)) != 0) {
+				warnf("could not chdir to '%s': %s", buf, strerror(errno));
+				return 1;
+			}
+			for (i = 1; applets[i].name; ++i) {
+				printf(" %s ...", applets[i].name);
+				symlink("q", applets[i].name);
+				printf("\tOK\n");
+			}
+			return 0;
 		}
-		printf("Usage: q <function> [arguments]...\n   or: <function> [arguments]...\n\n");
-		printf("Currently defined functions:\n");
-		for (i = 0; i < sizeof(applets) / sizeof(applets[0]); i++)
-			printf(" - %s %s\n", applets[i].name, applets[i].opts);
-		return 0;
+
+		default: break;
+		}
 	}
-	if (((strcmp(argv[1], "--install")) == 0) && (argc >= 2)) {
-		char buf[_POSIX_PATH_MAX];
-		printf("Installing symlinks..\n");
-		memset(buf, 0, sizeof(buf));
-		if ((readlink("/proc/self/exe", buf, sizeof(buf))) == (-1)) {
-			perror("readlink");
-			return 1;
-		}
-		if (chdir((char *) dirname(buf)) != 0) {
-			fputs("chdir: ", stderr);
-			perror(buf);
-			return 1;
-		}
-		for (i = 0; i < sizeof(applets) / sizeof(applets[0]); i++)
-			symlink("q", applets[i].name);
-		return 0;
-	}
-	if ((func = lookup_applet(argv[1])) == 0) {
-		warn("q: Unknown applet '%s'", argv[1]);
+
+	if ((func = lookup_applet(argv[1])) == 0)
 		return 1;
-	}
-	return (func) (argc - 1, ++argv);
+
+	return (func)(argc - 1, ++argv);
 }
 
 void reinitialize_as_needed(void)
