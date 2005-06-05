@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.3 2005/06/05 09:32:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.4 2005/06/05 09:44:12 vapier Exp $
  *
  * 2005 Ned Ludd <solar@gentoo.org>
  *
@@ -38,7 +38,7 @@
 #include <regex.h>
 #include <errno.h>
 #include <libgen.h>
-
+#include <limits.h>
 
 typedef int (*Function) ();
 
@@ -60,13 +60,23 @@ int quse_main(int, char **);
 int qlist_main(int, char **);
 int qfile_main(int, char **);
 
+/* helper functions for showing errors */
+static char *argv0;
+#define warn(fmt, args...) \
+	fprintf(stderr, "%s: " fmt "\n", argv0, ## args)
+#define warnf(fmt, args...) warn("%s(): " fmt, __FUNCTION__, ## args)
+#define err(fmt, args...) \
+	do { \
+	warn(fmt, ## args); \
+	exit(EXIT_FAILURE); \
+	} while (0)
 #ifdef EBUG
-# define DBG(a)  a
-#else				/* !EBUG */
-# define DBG(a)			/* nothing */
-#endif				/* EBUG */
+# define DBG(fmt, args...) warnf(fmt, ## args)
+#else
+# define DBG(fmt, args...)
+#endif
 
-/* static const char *rcsid = "$Id: q.c,v 1.3 2005/06/05 09:32:36 vapier Exp $"; */
+/* static const char *rcsid = "$Id: q.c,v 1.4 2005/06/05 09:44:12 vapier Exp $"; */
 
 static char color = 1;
 static char exact = 0;
@@ -95,19 +105,16 @@ Function lookup_applet(char *applet)
 	unsigned int i;
 	for (i = 0; i < sizeof(applets) / sizeof(applets[0]); i++) {
 		if ((strcmp(applets[i].name, applet)) == 0) {
-			DBG((fprintf
-			       (stderr, "found applet %s at %p\n", applets[i].name,
-			       applets[i].func)));
+			DBG("found applet %s at %p", applets[i].name, applets[i].func);
 			return applets[i].func;
 		}
 	}
 	/* No applet found? Search by shortname then... */
 	if ((strlen(applet)) - 1 > 0) {
-		DBG((fprintf(stderr, "Looking up applet by short name\n")));
+		DBG("Looking up applet by short name");
 		for (i = 1; i < sizeof(applets) / sizeof(applets[0]); i++) {
 			if ((strcmp(applets[i].name + 1, applet)) == 0) {
 				return applets[i].func;
-	 
 			}
 		}
 	}
@@ -288,10 +295,8 @@ int qsearch_main(int argc, char **argv)
 	char last[126];
 	char *p, *str, *q;
 
-	DBG((fprintf
-		(stderr, "Enter %s argc=%d argv[0]=%s argv[1]=%s\n",
-		 __PRETTY_FUNCTION__, argc, argv[0],
-		 argc > 1 ? argv[1] : "NULL?")));
+	DBG("argc=%d argv[0]=%s argv[1]=%s",
+	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
 	last[0] = 0;
 	initialize_ebuild_flat();
@@ -350,10 +355,8 @@ int quse_main(int argc, char **argv)
 	char buf[_POSIX_PATH_MAX];
 	char ebuild[_POSIX_PATH_MAX];
 
-	DBG((fprintf
-		(stderr, "Enter %s argc=%d argv[0]=%s argv[1]=%s\n",
-		 __PRETTY_FUNCTION__, argc, argv[0],
-		 argc > 1 ? argv[1] : "NULL?")));
+	DBG("argc=%d argv[0]=%s argv[1]=%s",
+	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
 	initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
 	fp = fopen(".ebuild.x", "r");
@@ -403,10 +406,8 @@ int qfile_main(int argc, char **argv)
 	char *p;
 	const char *path = "/var/db/pkg";
 
-	DBG((fprintf
-		(stderr, "Enter %s argc=%d argv[0]=%s argv[1]=%s\n",
-		 __PRETTY_FUNCTION__, argc, argv[0],
-		 argc > 1 ? argv[1] : "NULL?")));
+	DBG("argc=%d argv[0]=%s argv[1]=%s",
+	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
 	if (argc <= 1) {
 		printf("Usage: qfile <filename>\n");
@@ -449,11 +450,8 @@ int qlist_main(int argc, char **argv)
 	char buf[_POSIX_PATH_MAX];
 	char buf2[_POSIX_PATH_MAX];
 
-
-	DBG((fprintf
-		(stderr, "Enter %s argc=%d argv[0]=%s argv[1]=%s\n",
-		 __PRETTY_FUNCTION__, argc, argv[0],
-		 argc > 1 ? argv[1] : "NULL?")));
+	DBG("argc=%d argv[0]=%s argv[1]=%s",
+	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
 	if (chdir(path) != 0 || (dir = opendir(path)) == NULL)
 		return 1;
@@ -639,7 +637,7 @@ int q_main(int argc, char **argv)
 	if (argc == 0)
 		return 1;
 
-	p = basename(argv[0]);
+	p = argv0 = basename(argv[0]);
 
 	if ((func = lookup_applet(p)) == 0) {
 		fprintf(stderr, "q: Unknown applet '%s'\n", p);
@@ -690,6 +688,7 @@ void reinitialize_as_needed(void)
 
 int main(int argc, char **argv)
 {
+	argv0 = argv[0];
 	initialize_portdir();
 	atexit(reinitialize_as_needed);
 	return q_main(argc, argv);
