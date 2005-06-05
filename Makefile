@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.3 2005/06/05 09:12:33 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.4 2005/06/05 11:38:29 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -73,7 +73,7 @@ distclean: clean
 install: all
 	-$(STRIP) $(TARGETS)
 	-$(MKDIR) $(PREFIX)/bin/ $(PREFIX)/share/man/man1/
-	-$(CP) $(TARGETS) $(PREFIX)/bin/
+	$(CP) $(TARGETS) $(PREFIX)/bin/
 	for mpage in $(MPAGES) ; do \
 		[ -e $$mpage ] \
 			&& cp $$mpage $(PREFIX)/share/man/man1/ || : ;\
