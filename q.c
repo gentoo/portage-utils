@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.6 2005/06/05 11:26:46 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.7 2005/06/05 11:39:03 vapier Exp $
  *
  * 2005 Ned Ludd <solar@gentoo.org>
  *
@@ -40,7 +40,7 @@
 #include <libgen.h>
 #include <limits.h>
 
-typedef int (*APPLET)();
+typedef int (*APPLET)(int, char **);
 
 APPLET lookup_applet(char *);
 
@@ -76,7 +76,7 @@ static char *argv0;
 # define DBG(fmt, args...)
 #endif
 
-static const char *rcsid = "$Id: q.c,v 1.6 2005/06/05 11:26:46 vapier Exp $";
+static const char *rcsid = "$Id: q.c,v 1.7 2005/06/05 11:39:03 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
