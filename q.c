@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.7 2005/06/05 11:39:03 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.8 2005/06/06 04:53:43 solar Exp $
  *
  * 2005 Ned Ludd <solar@gentoo.org>
  *
@@ -76,7 +76,7 @@ static char *argv0;
 # define DBG(fmt, args...)
 #endif
 
-static const char *rcsid = "$Id: q.c,v 1.7 2005/06/05 11:39:03 vapier Exp $";
+static const char *rcsid = "$Id: q.c,v 1.8 2005/06/06 04:53:43 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -111,9 +111,10 @@ APPLET lookup_applet(char *applet)
 	}
 	/* No applet found? Search by shortname then... */
 	if ((strlen(applet)) - 1 > 0) {
-		DBG("Looking up applet by short name");
+		DBG("Looking up applet (%s) by short name", applet);
 		for (i = 1; applets[i].name; ++i) {
 			if ((strcmp(applets[i].name + 1, applet)) == 0) {
+				DBG("found applet by short name %s", applets[i].name);
 				return applets[i].func;
 			}
 		}
@@ -288,6 +289,24 @@ void qfile(char *path, char *fname)
 	return;
 }
 
+/* 
+ * Taken from emerge manpage.
+ * --searchdesc (-S)
+ *	Matches  the  search  string  against the description field as well as the package name.
+ *	Take caution as the descriptions are also matched as regular expressions.
+ */
+
+/*
+ * --search (-s)
+ * Searches for matches of the supplied string in the portage tree.  The
+ * --search string is a regular expression.  For example,
+ * emerge --search "^kde" searches for any package that starts with
+ * "kde"; emerge --search "gcc$" searches for any package that ends with
+ * "gcc"; emerge --search "office" searches for any package that
+ * contains the word "office".  If you want to search the package
+ * descriptions as well, use the --searchdesc option.
+ */
+ 
 int qsearch_main(int argc, char **argv)
 {
 	FILE *fp;
@@ -295,6 +314,7 @@ int qsearch_main(int argc, char **argv)
 	char ebuild[_POSIX_PATH_MAX];
 	char last[126];
 	char *p, *str, *q;
+	char search_desc = 1;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -304,6 +324,19 @@ int qsearch_main(int argc, char **argv)
 	fp = fopen(".ebuild.x", "r");
 	if (!fp)
 		return 1;
+	if (argc > 1) {
+		if ((strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "--help") == 0)) {
+			puts("Usage:\n\t-s, --search     <regex>\n\t-S, --searchdesc <regex>\n\t-h, --help");
+			return 1;
+		}
+		if ((strcmp(argv[1], "-s") == 0) || (strcmp(argv[1], "--search") == 0))
+			search_desc = 0;
+		if ((strcmp(argv[1], "-S") == 0) || (strcmp(argv[1], "--searchdesc") == 0)) {
+			search_desc = 1;
+			argv++;
+			argc--;
+		}
+	}
 	while ((fgets(ebuild, sizeof(ebuild), fp)) != NULL) {
 
 		if ((p = strchr(ebuild, '\n')) != NULL)
@@ -316,6 +349,11 @@ int qsearch_main(int argc, char **argv)
 		if ((strcmp(p, last)) != 0) {
 			FILE *newfp;
 			strncpy(last, p, sizeof(last));
+			if (!search_desc) {
+				if ((rematch(argv[2], basename(last), REG_EXTENDED | REG_ICASE)) == 0)
+					printf("%s\n", last);
+				continue;
+			}
 			if ((newfp = fopen(ebuild, "r")) != NULL) {
 				while ((fgets(buf, sizeof(buf), newfp)) != NULL) {
 					if ((strlen(buf) <= 13))
@@ -338,8 +376,8 @@ int qsearch_main(int argc, char **argv)
 				}
 				fclose(newfp);
 			} else {
-				warnf("Error: opening %s : %s", ebuild,
-				      strerror(errno));
+				if (!reinitialize)
+					warnf("(cache update pending) %s : %s", ebuild, strerror(errno));
 				reinitialize = 1;
 			}
 		}
@@ -390,8 +428,8 @@ int quse_main(int argc, char **argv)
 			}
 			fclose(newfp);
 		} else {
-			warnf("Error: opening %s : %s", ebuild,
-			      strerror(errno));
+			if (!reinitialize)
+				warnf("(cache update pending) %s : %s", ebuild, strerror(errno));
 			reinitialize = 1;
 		}
 	}
@@ -682,7 +720,7 @@ int q_main(int argc, char **argv)
 	if (argc == 1)
 		usage(EXIT_FAILURE, long_opts, opts_help);
 
-	while ((i=getopt_long(argc, argv, PARSE_FLAGS, long_opts, NULL)) != -1) {
+	if ((argc > 1) && (argv[1][0] == '-')) while ((i=getopt_long(argc, argv, PARSE_FLAGS, long_opts, NULL)) != -1) {
 		switch (i) {
 
 		case 'V':
@@ -707,8 +745,9 @@ int q_main(int argc, char **argv)
 			}
 			for (i = 1; applets[i].name; ++i) {
 				printf(" %s ...", applets[i].name);
+				errno = 0;
 				symlink("q", applets[i].name);
-				printf("\tOK\n");
+				printf("\t[%s]\n", strerror(errno));
 			}
 			return 0;
 		}
