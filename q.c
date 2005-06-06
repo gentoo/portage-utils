@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.8 2005/06/06 04:53:43 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.9 2005/06/06 23:39:22 vapier Exp $
  *
  * 2005 Ned Ludd <solar@gentoo.org>
  *
@@ -76,7 +76,7 @@ static char *argv0;
 # define DBG(fmt, args...)
 #endif
 
-static const char *rcsid = "$Id: q.c,v 1.8 2005/06/06 04:53:43 solar Exp $";
+static const char *rcsid = "$Id: q.c,v 1.9 2005/06/06 23:39:22 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -85,6 +85,7 @@ static char reinitialize = 0;
 
 static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
 
+/* applets we support */
 struct applet_t {
 	const char *name;
 	/* int *func; */
@@ -99,6 +100,56 @@ struct applet_t {
 	{"quse",    (APPLET)quse_main,    "<useflag>"},
 	{NULL,      (APPLET)NULL,         NULL}
 };
+#define Q_IDX 0
+#define QFILE_IDX 1
+#define QLIST_IDX 2
+#define QSEARCH_IDX 3
+#define QUSE_IDX 4
+
+/* Common options for all applets */
+#define COMMON_FLAGS "hV"
+#define a_argument required_argument
+#define COMMON_LONG_OPTS \
+	{"help",      no_argument, NULL, 'h'}, \
+	{"version",   no_argument, NULL, 'V'}, \
+	{NULL,        no_argument, NULL, 0x0}
+#define COMMON_OPTS_HELP \
+	"Print this help and exit", \
+	"Print version and exit", \
+	NULL
+
+/* display usage and exit */
+static void usage(int status, const char *flags, struct option const opts[], 
+                  const char *help[], int applets_blabber)
+{
+	unsigned long i;
+	if (applets_blabber == 0) {
+		printf("Usage: q <applet> [arguments]...\n"
+		       "   or: <applet> [arguments]...\n\n");
+		printf("Currently defined applets:\n");
+		for (i = 0; applets[i].name; ++i)
+			printf(" - %s %s\n", applets[i].name, applets[i].opts);
+	} else {
+		printf("Usage: %s %s\n", applets[applets_blabber].name, applets[applets_blabber].opts);
+	}
+
+	printf("\nOptions: [%s]\n", flags);
+	for (i = 0; opts[i].name; ++i)
+		if (opts[i].has_arg == no_argument)
+			printf("  -%c, --%-13s* %s\n", opts[i].val, 
+			       opts[i].name, help[i]);
+		else
+			printf("  -%c, --%-6s <arg> * %s\n", opts[i].val,
+			       opts[i].name, help[i]);
+	exit(status);
+}
+static void version_barf(void)
+{
+	printf("%s compiled %s\n%s\n"
+	       "%s written for Gentoo by <solar and vapier @ gentoo.org>\n",
+	       __FILE__, __DATE__, rcsid, argv0);
+	exit(EXIT_SUCCESS);
+}
 
 APPLET lookup_applet(char *applet)
 {
@@ -306,7 +357,20 @@ void qfile(char *path, char *fname)
  * contains the word "office".  If you want to search the package
  * descriptions as well, use the --searchdesc option.
  */
- 
+
+#define QSEARCH_FLAGS "s" COMMON_FLAGS
+static struct option const qsearch_long_opts[] = {
+	{"search",     no_argument, NULL, 's'},
+	{"searchdesc",  a_argument, NULL, 'S'},
+	COMMON_LONG_OPTS
+};
+static const char *qsearch_opts_help[] = {
+	"Regex search package names",
+	"Regex search package descriptions",
+	COMMON_OPTS_HELP
+};
+#define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, QSEARCH_IDX)
+
 int qsearch_main(int argc, char **argv)
 {
 	FILE *fp;
@@ -314,7 +378,9 @@ int qsearch_main(int argc, char **argv)
 	char ebuild[_POSIX_PATH_MAX];
 	char last[126];
 	char *p, *str, *q;
+	char *search_me;
 	char search_desc = 1;
+	int i;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -324,19 +390,24 @@ int qsearch_main(int argc, char **argv)
 	fp = fopen(".ebuild.x", "r");
 	if (!fp)
 		return 1;
-	if (argc > 1) {
-		if ((strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "--help") == 0)) {
-			puts("Usage:\n\t-s, --search     <regex>\n\t-S, --searchdesc <regex>\n\t-h, --help");
-			return 1;
-		}
-		if ((strcmp(argv[1], "-s") == 0) || (strcmp(argv[1], "--search") == 0))
+
+	while ((i=getopt_long(argc, argv, QSEARCH_FLAGS, qsearch_long_opts, NULL)) != -1) {
+		switch (i) {
+
+		case 'V': version_barf(); break;
+		case 'h': qsearch_usage(EXIT_SUCCESS); break;
+
+		case 's':
 			search_desc = 0;
-		if ((strcmp(argv[1], "-S") == 0) || (strcmp(argv[1], "--searchdesc") == 0)) {
+			break;
+		case 'S':
 			search_desc = 1;
-			argv++;
-			argc--;
 		}
 	}
+	if (argc == optind)
+		qsearch_usage(EXIT_FAILURE);
+	search_me = argv[optind];
+
 	while ((fgets(ebuild, sizeof(ebuild), fp)) != NULL) {
 
 		if ((p = strchr(ebuild, '\n')) != NULL)
@@ -350,7 +421,7 @@ int qsearch_main(int argc, char **argv)
 			FILE *newfp;
 			strncpy(last, p, sizeof(last));
 			if (!search_desc) {
-				if ((rematch(argv[2], basename(last), REG_EXTENDED | REG_ICASE)) == 0)
+				if ((rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE)) == 0)
 					printf("%s\n", last);
 				continue;
 			}
@@ -365,7 +436,7 @@ int qsearch_main(int argc, char **argv)
 							break;
 						q = buf + 13;
 						if (argc > 1) {
-							if ((rematch(argv[1], q, REG_EXTENDED | REG_ICASE)) == 0) {
+							if ((rematch(search_me, q, REG_EXTENDED | REG_ICASE)) == 0) {
 								fprintf(stdout, "%s %s\n", p, q);
 							}
 						} else {
@@ -437,6 +508,19 @@ int quse_main(int argc, char **argv)
 	return 0;
 }
 
+#define QFILE_FLAGS "C" COMMON_FLAGS
+static struct option const qfile_long_opts[] = {
+	{"exact",       no_argument, NULL, 'e'},
+	{"nocolor",     no_argument, NULL, 'C'},
+	COMMON_LONG_OPTS
+};
+static const char *qfile_opts_help[] = {
+	"Exact match",
+	"Don't ouput color",
+	COMMON_OPTS_HELP
+};
+#define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, QFILE_IDX)
+
 int qfile_main(int argc, char **argv)
 {
 	DIR *dir;
@@ -448,10 +532,15 @@ int qfile_main(int argc, char **argv)
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	if (argc <= 1) {
-		printf("Usage: qfile <filename>\n");
-		return 0;
+	while ((i=getopt_long(argc, argv, QFILE_FLAGS, qfile_long_opts, NULL)) != -1) {
+		switch (i) {
+		case 'V': version_barf(); break;
+		case 'h': qfile_usage(EXIT_SUCCESS); break;
+		}
 	}
+	if (argc == optind)
+		qfile_usage(EXIT_FAILURE);
+
 	if ((chdir(path) == 0) && ((dir = opendir(path)))) {
 		while ((dentry = readdir(dir))) {
 			if (*dentry->d_name == '.')
@@ -567,7 +656,6 @@ int qlist_main(int argc, char **argv)
 	return 0;
 }
 
-
 void initialize_ebuild_flat(void)
 {
 	DIR *dir[3];
@@ -665,41 +753,16 @@ void reinitialize_ebuild_flat(void)
 	initialize_ebuild_flat();
 }
 
-/* usage / invocation handling functions */
-#define PARSE_FLAGS "ihV"
-#define a_argument required_argument
-static struct option const long_opts[] = {
+#define Q_FLAGS "i" COMMON_FLAGS
+static struct option const q_long_opts[] = {
 	{"install",   no_argument, NULL, 'i'},
-	{"help",      no_argument, NULL, 'h'},
-	{"version",   no_argument, NULL, 'V'},
-	{NULL,        no_argument, NULL, 0x0}
+	COMMON_LONG_OPTS
 };
-static const char *opts_help[] = {
+static const char *q_opts_help[] = {
 	"Install symlinks for applets",
-	"Print this help and exit",
-	"Print version and exit",
-	NULL
+	COMMON_OPTS_HELP
 };
-/* display usage and exit */
-static void usage(int status, struct option const opts[], const char *help[])
-{
-	unsigned long i;
-	printf("Usage: q <applet> [arguments]...\n"
-	       "   or: <applet> [arguments]...\n\n");
-	printf("Currently defined applets:\n");
-	for (i = 0; applets[i].name; ++i)
-		printf(" - %s %s\n", applets[i].name, applets[i].opts);
-
-	printf("\nOptions: -[%s]\n", PARSE_FLAGS);
-	for (i = 0; opts[i].name; ++i)
-		if (opts[i].has_arg == no_argument)
-			printf("  -%c, --%-13s* %s\n", opts[i].val, 
-			       opts[i].name, help[i]);
-		else
-			printf("  -%c, --%-6s <arg> * %s\n", opts[i].val,
-			       opts[i].name, help[i]);
-	exit(status);
-}
+#define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, Q_IDX)
 
 int q_main(int argc, char **argv)
 {
@@ -718,18 +781,13 @@ int q_main(int argc, char **argv)
 		return (func)(argc, argv);
 
 	if (argc == 1)
-		usage(EXIT_FAILURE, long_opts, opts_help);
+		q_usage(EXIT_FAILURE);
 
-	if ((argc > 1) && (argv[1][0] == '-')) while ((i=getopt_long(argc, argv, PARSE_FLAGS, long_opts, NULL)) != -1) {
+	while ((i=getopt_long(argc, argv, "+" Q_FLAGS, q_long_opts, NULL)) != -1) {
 		switch (i) {
 
-		case 'V':
-			printf("%s compiled %s\n%s\n"
-			       "%s written for Gentoo by <solar and vapier @ gentoo.org>\n",
-			       __FILE__, __DATE__, rcsid, argv0);
-			exit(EXIT_SUCCESS);
-			break;
-		case 'h': usage(EXIT_SUCCESS, long_opts, opts_help); break;
+		case 'V': version_barf(); break;
+		case 'h': q_usage(EXIT_SUCCESS); break;
 
 		case 'i': {
 			char buf[_POSIX_PATH_MAX];
