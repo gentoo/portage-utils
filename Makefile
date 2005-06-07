@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.4 2005/06/05 11:38:29 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.5 2005/06/07 04:37:32 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -38,42 +38,34 @@ ifneq ($(S),)
 CFLAGS    += -Werror
 endif
 #####################################################
-TARGETS    = q
-OBJS       = ${TARGETS:%=%.o}
-MPAGES     = ${TARGETS:%=man/%.1}
-SOURCES    = ${OBJS:%.o=%.c}
+APPLETS    = q qfile qlist qsearch quse
+SRC        = $(APPLETS:%=%.c) main.c
+MPAGES     = man/q.1
 
-all: $(OBJS) $(TARGETS)
+all: main
 	@:
 
 debug: all
 	@-/sbin/chpax  -permsx $(TARGETS)
 	@-/sbin/paxctl -permsx $(TARGETS)
 
-%.o: %.c
-	@echo $(CC) $(CFLAGS) -c $<
-	@$(CC) $(CFLAGS) $(WFLAGS) -c $<
-
-%: %.o
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
-
-%.so: %.c
-	$(CC) -shared -fPIC -o $@ $<
+main: $(SRC)
+	@echo $(CC) $(CFLAGS) $(LDFLAGS) main.c -o q
+	@$(CC) $(CFLAGS) $(LDFLAGS) $(WFLAGS) main.c -o q
 
 depend:
 	$(CC) $(CFLAGS) -MM $(SOURCES) > .depend
 
 clean:
-	-rm -f $(OBJS) $(TARGETS)
+	-rm -f q
 
 distclean: clean
 	-rm -f *~ core
 	-rm -f `find . -type l`
 
 install: all
-	-$(STRIP) $(TARGETS)
 	-$(MKDIR) $(PREFIX)/bin/ $(PREFIX)/share/man/man1/
-	$(CP) $(TARGETS) $(PREFIX)/bin/
+	$(CP) q $(PREFIX)/bin/
 	for mpage in $(MPAGES) ; do \
 		[ -e $$mpage ] \
 			&& cp $$mpage $(PREFIX)/share/man/man1/ || : ;\
