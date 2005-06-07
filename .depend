@@ -1,0 +1,1 @@
+q.o: q.c qfile.c qlist.c qsearch.c quse.c
