@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.1 2005/06/07 02:17:24 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.2 2005/06/07 04:36:32 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -27,6 +27,7 @@
 
 /* functional description of search options based on emerge(1) */
 
+#if 0
 /* --searchdesc (-S) */
 char qsearch_searchdesc_help[] =
 	"Matches the search string against the description field as well as the package name.\n"
@@ -40,6 +41,9 @@ char qsearch_search_help[] =
 	"qsearch --search 'gcc$' searches for any package that ends with 'gcc'\n"
 	"qsearch --search 'office' searches for any package that contains the word 'office'.\n"
 	"If you want to search the package descriptions as well, use the --searchdesc option.\n";
+#endif
+
+
 
 #define QSEARCH_FLAGS "asS" COMMON_FLAGS
 static struct option const qsearch_long_opts[] = {
@@ -54,8 +58,9 @@ static const char *qsearch_opts_help[] = {
 	"Regex search package descriptions",
 	COMMON_OPTS_HELP
 };
+#define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, APPLET_QSEARCH)
 
-#define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, QSEARCH_IDX)
+
 
 int qsearch_main(int argc, char **argv)
 {

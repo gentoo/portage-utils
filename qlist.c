@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.1 2005/06/07 02:17:24 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.2 2005/06/07 04:36:32 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -23,6 +23,7 @@
  * MA 02111-1307, USA.
  *
  */
+
 
 
 int qlist_main(int argc, char **argv)

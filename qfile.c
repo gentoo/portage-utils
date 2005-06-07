@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.1 2005/06/07 02:17:24 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.2 2005/06/07 04:36:32 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -23,6 +23,22 @@
  * MA 02111-1307, USA.
  *
  */
+
+
+
+#define QFILE_FLAGS "C" COMMON_FLAGS
+static struct option const qfile_long_opts[] = {
+	{"exact",       no_argument, NULL, 'e'},
+	{"nocolor",     no_argument, NULL, 'C'},
+	COMMON_LONG_OPTS
+};
+static const char *qfile_opts_help[] = {
+	"Exact match",
+	"Don't ouput color",
+	COMMON_OPTS_HELP
+};
+#define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, APPLET_QFILE)
+
 
 
 void qfile(char *path, char *fname)
@@ -121,19 +137,6 @@ void qfile(char *path, char *fname)
 	closedir(dir);
 	return;
 }
-
-#define QFILE_FLAGS "C" COMMON_FLAGS
-static struct option const qfile_long_opts[] = {
-	{"exact",       no_argument, NULL, 'e'},
-	{"nocolor",     no_argument, NULL, 'C'},
-	COMMON_LONG_OPTS
-};
-static const char *qfile_opts_help[] = {
-	"Exact match",
-	"Don't ouput color",
-	COMMON_OPTS_HELP
-};
-#define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, QFILE_IDX)
 
 int qfile_main(int argc, char **argv)
 {
