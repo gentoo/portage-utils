@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.11 2005/06/07 04:37:32 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.12 2005/06/08 23:31:25 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -58,11 +58,9 @@ int q_main(int argc, char **argv)
 	if (argc == 1)
 		q_usage(EXIT_FAILURE);
 
-	while ((i=getopt_long(argc, argv, "+" Q_FLAGS, q_long_opts, NULL)) != -1) {
+	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
-
-		case 'V': version_barf(); break;
-		case 'h': q_usage(EXIT_SUCCESS); break;
+		COMMON_GETOPTS_CASES(q)
 
 		case 'i': {
 			char buf[_POSIX_PATH_MAX];
@@ -84,13 +82,15 @@ int q_main(int argc, char **argv)
 			}
 			return 0;
 		}
-
-		default: break;
 		}
 	}
+	if (argc == optind)
+		q_usage(EXIT_FAILURE);
 
-	if ((func = lookup_applet(argv[1])) == 0)
+	if ((func = lookup_applet(argv[optind])) == 0)
 		return 1;
+
+	optind = 0; /* reset so the applets can call getopt */
 
 	return (func)(argc - 1, ++argv);
 }
