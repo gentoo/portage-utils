@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.2 2005/06/07 04:36:32 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.3 2005/06/08 23:33:40 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,9 +26,21 @@
 
 
 
+#define QLIST_FLAGS "" COMMON_FLAGS
+static struct option const qlist_long_opts[] = {
+	COMMON_LONG_OPTS
+};
+static const char *qlist_opts_help[] = {
+	COMMON_OPTS_HELP
+};
+#define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, APPLET_QLIST)
+
+
+
 int qlist_main(int argc, char **argv)
 {
 	DIR *dir, *dirp;
+	int i;
 	struct dirent *dentry, *de;
 	char *cat, *p, *q;
 	const char *path = "/var/db/pkg";
@@ -40,14 +52,20 @@ int qlist_main(int argc, char **argv)
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
+	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
+		switch (i) {
+		COMMON_GETOPTS_CASES(qlist)
+		}
+	}
+
 	if (chdir(path) != 0 || (dir = opendir(path)) == NULL)
 		return 1;
 
 	p = q = cat = NULL;
 
 	if (argc > 1) {
-		cat = strchr(argv[1], '/');
-		len = strlen(argv[1]);
+		cat = strchr(argv[optind], '/');
+		len = strlen(argv[optind]);
 	}
 	while ((dentry = readdir(dir))) {
 		if (*dentry->d_name == '.')
@@ -67,12 +85,12 @@ int qlist_main(int argc, char **argv)
 				if (cat != NULL) {
 					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name,
 					         de->d_name);
-					/*if ((rematch(argv[1], buf, REG_EXTENDED)) != 0)*/
-					if ((strncmp(argv[1], buf, len)) != 0)
+					/*if ((rematch(argv[optind], buf, REG_EXTENDED)) != 0)*/
+					if ((strncmp(argv[optind], buf, len)) != 0)
 						continue;
 				} else {
-					/* if ((rematch(argv[1], de->d_name, REG_EXTENDED)) != 0)*/
-					if ((strncmp(argv[1], de->d_name, len)) != 0)
+					/* if ((rematch(argv[optind], de->d_name, REG_EXTENDED)) != 0)*/
+					if ((strncmp(argv[optind], de->d_name, len)) != 0)
 						continue;
 				}
 			}
