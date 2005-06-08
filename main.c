@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.2 2005/06/08 23:30:29 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.3 2005/06/08 23:43:36 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -80,7 +80,7 @@ static char *argv0;
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.2 2005/06/08 23:30:29 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.3 2005/06/08 23:43:36 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -108,12 +108,14 @@ int qsize_main(int, char **);
 
 /* applets we support */
 typedef enum {
+	FIRST_APPLET = 0,
 	APPLET_Q = 0,
 	APPLET_QFILE = 1,
 	APPLET_QLIST = 2,
 	APPLET_QSEARCH = 3,
 	APPLET_QUSE = 4,
-	APPLET_QSIZE = 5
+	APPLET_QSIZE = 5,
+	LAST_APPLET = 5
 } applets_enum;
 struct applet_t {
 	const char *name;
@@ -128,6 +130,21 @@ struct applet_t {
 	{"qsearch", (APPLET)qsearch_main, "<regex>"},
 	{"quse",    (APPLET)quse_main,    "<useflag>"},
 	{"qsize",   (APPLET)qsize_main,   "<pkgname>"},
+
+	/* aliases for equery capatability */
+	{"belongs", (APPLET)qfile_main,   "<filename>"},
+	/*"changes"*/
+	/*"check"*/
+	/*"depends"*/
+	/*"depgraph"*/
+	{"files",   (APPLET)qlist_main,   "<pkgname>"},
+	/*"glsa"*/
+	{"hasuse",  (APPLET)quse_main,    "<useflag>"},
+	/*"list"*/
+	{"size",    (APPLET)qsize_main,   "<pkgname>"},
+	/*"stats"*/
+	/*"uses"*/
+	/*"which"*/
 	{NULL,      (APPLET)NULL,         NULL}
 };
 
@@ -161,7 +178,7 @@ static void usage(int status, const char *flags, struct option const opts[],
 	if (blabber == APPLET_Q) {
 		printf("Usage: q <applet> [arguments]...\n\n");
 		printf("Currently defined applets:\n");
-		for (i = 0; applets[i].name; ++i)
+		for (i = FIRST_APPLET; i <= LAST_APPLET; ++i)
 			printf(" - %s %s\n", applets[i].name, applets[i].opts);
 	} else {
 		printf("Usage: %s %s\n", applets[blabber].name, applets[blabber].opts);
