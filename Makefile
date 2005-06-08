@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.5 2005/06/07 04:37:32 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.6 2005/06/08 22:26:20 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -23,8 +23,8 @@ WFLAGS    := -Wall -Wextra -Wunused -Wimplicit -Wshadow -Wformat=2 \
              -Wmissing-declarations -Wmissing-prototypes -Wwrite-strings \
              -Wbad-function-cast -Wnested-externs -Wcomment -Wsequence-point \
              -Wdeclaration-after-statement -Wchar-subscripts -Wcast-align \
-             -Winline
-CFLAGS    := -O2
+             -Winline -Wno-format-nonliteral
+CFLAGS    := -O2 -pipe
 #CFLAGS   += -DEBUG -g
 #LDFLAGS  := -pie
 DESTDIR    =
@@ -38,18 +38,18 @@ ifneq ($(S),)
 CFLAGS    += -Werror
 endif
 #####################################################
-APPLETS    = q qfile qlist qsearch quse
+APPLETS    = q qfile qlist qsearch quse qsize
 SRC        = $(APPLETS:%=%.c) main.c
 MPAGES     = man/q.1
 
-all: main
+all: q
 	@:
 
 debug: all
 	@-/sbin/chpax  -permsx $(TARGETS)
 	@-/sbin/paxctl -permsx $(TARGETS)
 
-main: $(SRC)
+q: $(SRC)
 	@echo $(CC) $(CFLAGS) $(LDFLAGS) main.c -o q
 	@$(CC) $(CFLAGS) $(LDFLAGS) $(WFLAGS) main.c -o q
 
