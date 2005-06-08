@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.2 2005/06/07 04:36:32 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.3 2005/06/08 23:33:02 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -48,12 +48,14 @@ char qsearch_search_help[] =
 #define QSEARCH_FLAGS "asS" COMMON_FLAGS
 static struct option const qsearch_long_opts[] = {
 	{"all",        no_argument, NULL, 'a'},
+	{"cache",      no_argument, NULL, 'c'},
 	{"search",     no_argument, NULL, 's'},
 	{"searchdesc",  a_argument, NULL, 'S'},
 	COMMON_LONG_OPTS
 };
 static const char *qsearch_opts_help[] = {
 	"List the descriptions of every package in the cache",
+	"Use the portage cache",
 	"Regex search package names",
 	"Regex search package descriptions",
 	COMMON_OPTS_HELP
@@ -76,25 +78,16 @@ int qsearch_main(int argc, char **argv)
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	last[0] = 0;
-	initialize_ebuild_flat();
-	fp = fopen(".ebuild.x", "r");
-	if (!fp)
-		return 1;
-
-	while ((i=getopt_long(argc, argv, QSEARCH_FLAGS, qsearch_long_opts, NULL)) != -1) {
+	while ((i = GETOPT_LONG(QSEARCH, qsearch, "")) != -1) {
 		switch (i) {
-
-		case 'V': version_barf(); break;
-		case 'h': qsearch_usage(EXIT_SUCCESS); break;
+		COMMON_GETOPTS_CASES(qsearch)
 		case 'a': search_all = 1; break;
 		case 's': search_desc = 0; break;
-		case 'S': search_desc = 1;
+		case 'S': search_desc = 1; break;
 		}
 	}
 
-	if (!search_all) {
-		argc = 0;
+	if (search_all) {
 		search_desc = 1;
 	} else {
 		if (argc == optind)
@@ -102,8 +95,13 @@ int qsearch_main(int argc, char **argv)
 		search_me = argv[optind];
 	}
 
-	while ((fgets(ebuild, sizeof(ebuild), fp)) != NULL) {
+	last[0] = 0;
+	initialize_ebuild_flat();
+	fp = fopen(EBUILD_CACHE, "r");
+	if (!fp)
+		return 1;
 
+	while (fgets(ebuild, sizeof(ebuild), fp) != NULL) {
 		if ((p = strchr(ebuild, '\n')) != NULL)
 			*p = 0;
 		if (!ebuild[0])
@@ -129,13 +127,12 @@ int qsearch_main(int argc, char **argv)
 						if (strlen(buf) <= 12)
 							break;
 						q = buf + 13;
-						if (argc > 1) {
-							if ((rematch(search_me, q, REG_EXTENDED | REG_ICASE)) == 0) {
-								fprintf(stdout, "%s %s\n", p, q);
-							}
-						} else {
-							fprintf(stdout, "%s %s\n", p, q);
-						}
+						if (!search_all && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
+							break;
+						if (color)
+							printf(BLUE "%s" NORM " %s\n", p, q);
+						else
+							printf("%s %s\n", p, q);
 						break;
 					}
 				}
