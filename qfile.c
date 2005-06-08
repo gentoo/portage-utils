@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.2 2005/06/07 04:36:32 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.3 2005/06/08 23:32:16 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,15 +26,13 @@
 
 
 
-#define QFILE_FLAGS "C" COMMON_FLAGS
+#define QFILE_FLAGS "e" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"exact",       no_argument, NULL, 'e'},
-	{"nocolor",     no_argument, NULL, 'C'},
 	COMMON_LONG_OPTS
 };
 static const char *qfile_opts_help[] = {
 	"Exact match",
-	"Don't ouput color",
 	COMMON_OPTS_HELP
 };
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, APPLET_QFILE)
@@ -121,7 +119,7 @@ void qfile(char *path, char *fname)
 			}
 
 			if (color)
-				printf("\e[0;01m%s/\e[36;01m%s\e[0m (%s)\n", basename(path),
+				printf(BOLD "%s/" BLUE "%s" NORM " (%s)\n", basename(path),
 				       dentry->d_name, ptr);
 			else
 				printf("%s/%s (%s)\n", basename(path), dentry->d_name, ptr);
@@ -149,37 +147,28 @@ int qfile_main(int argc, char **argv)
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	while ((i=getopt_long(argc, argv, QFILE_FLAGS, qfile_long_opts, NULL)) != -1) {
+	while ((i = GETOPT_LONG(QFILE, qfile, "")) != -1) {
 		switch (i) {
-		case 'V': version_barf(); break;
-		case 'h': qfile_usage(EXIT_SUCCESS); break;
+		COMMON_GETOPTS_CASES(qfile)
+		case 'e': exact = 1;
 		}
 	}
 	if (argc == optind)
 		qfile_usage(EXIT_FAILURE);
 
 	if ((chdir(path) == 0) && ((dir = opendir(path)))) {
-		while ((dentry = readdir(dir))) {
+		while ((dentry = readdir(dir)) != NULL) {
 			if (*dentry->d_name == '.')
 				continue;
-			for (i = 1; i < argc; i++) {
-				if (argv[i][0] != '-') {
-					if ((asprintf(&p, "%s/%s", path, dentry->d_name)) != (-1)) {
-						qfile(p, argv[i]);
-						free(p);
-					}
-				} else {
-					if (((strcmp(argv[i], "-nc")) == 0)
-					    || ((strcmp(argv[i], "-C")) == 0))
-						color = 0;
-
-					if (((strcmp(argv[i], "-e")) == 0)
-					    || ((strcmp(argv[i], "-exact")) == 0))
-						exact = 1;
+			for (i = optind; i < argc; i++) {
+				if (asprintf(&p, "%s/%s", path, dentry->d_name) != -1) {
+					qfile(p, argv[i]);
+					free(p);
 				}
 			}
 		}
 		closedir(dir);
 	}
+
 	return (found ? EXIT_SUCCESS : EXIT_FAILURE);
 }
