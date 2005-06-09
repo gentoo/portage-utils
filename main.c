@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.4 2005/06/09 00:05:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.5 2005/06/09 00:21:19 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -80,7 +80,7 @@ static char *argv0;
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.4 2005/06/09 00:05:13 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.5 2005/06/09 00:21:19 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -94,6 +94,8 @@ static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
 /* color constants */
 #define BOLD "\e[0;01m"
 #define BLUE "\e[36;01m"
+#define GREE "\e[32;01m"
+#define RED  "\e[31;01m"
 #define NORM "\e[0m"
 
 
@@ -105,6 +107,7 @@ int quse_main(int, char **);
 int qlist_main(int, char **);
 int qfile_main(int, char **);
 int qsize_main(int, char **);
+int qcheck_main(int, char **);
 
 /* applets we support */
 typedef enum {
@@ -115,7 +118,8 @@ typedef enum {
 	APPLET_QSEARCH = 3,
 	APPLET_QUSE = 4,
 	APPLET_QSIZE = 5,
-	LAST_APPLET = 5
+	APPLET_QCHECK = 6,
+	LAST_APPLET = 6
 } applets_enum;
 struct applet_t {
 	const char *name;
@@ -124,29 +128,31 @@ struct applet_t {
 	const char *opts;
 } applets[] = {
 	/* q must always be the first applet */
-	{"q",       (APPLET)q_main,       "<applet> <args>",},
-	{"qfile",   (APPLET)qfile_main,   "<filename>"},
-	{"qlist",   (APPLET)qlist_main,   "<pkgname>"},
-	{"qsearch", (APPLET)qsearch_main, "<regex>"},
-	{"quse",    (APPLET)quse_main,    "<useflag>"},
-	{"qsize",   (APPLET)qsize_main,   "<pkgname>"},
+	{"q",         q_main,         "<applet> <args>",},
+	{"qfile",     qfile_main,     "<filename>"},
+	{"qlist",     qlist_main,     "<pkgname>"},
+	{"qsearch",   qsearch_main,   "<regex>"},
+	{"quse",      quse_main,      "<useflag>"},
+	{"qsize",     qsize_main,     "<pkgname>"},
+	{"qcheck",    qcheck_main,    "<pkgname>"},
+
 #ifdef EQUERY_COMPAT
 	/* aliases for equery capatability */
-	{"belongs", (APPLET)qfile_main,   "<filename>"},
+	{"belongs",   qfile_main,     "<filename>"},
 	/*"changes"*/
 	/*"check"*/
 	/*"depends"*/
 	/*"depgraph"*/
-	{"files",   (APPLET)qlist_main,   "<pkgname>"},
+	{"files",     qlist_main,     "<pkgname>"},
 	/*"glsa"*/
-	{"hasuse",  (APPLET)quse_main,    "<useflag>"},
+	{"hasuse",    quse_main,      "<useflag>"},
 	/*"list"*/
-	{"size",    (APPLET)qsize_main,   "<pkgname>"},
+	{"size",      qsize_main,     "<pkgname>"},
 	/*"stats"*/
 	/*"uses"*/
 	/*"which"*/
 #endif
-	{NULL,      (APPLET)NULL,         NULL}
+	{NULL,      NULL,         NULL}
 };
 
 
@@ -464,6 +470,7 @@ void reinitialize_as_needed(void)
 #include "qsearch.c"
 #include "quse.c"
 #include "qsize.c"
+#include "qcheck.c"
 #include "q.c"
 
 int main(int argc, char **argv)

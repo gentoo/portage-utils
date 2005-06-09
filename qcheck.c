@@ -1,0 +1,149 @@
+/*
+ * Copyright 2005 Gentoo Foundation
+ * Distributed under the terms of the GNU General Public License v2
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.1 2005/06/09 00:21:19 vapier Exp $
+ *
+ * 2005 Ned Ludd        - <solar@gentoo.org>
+ * 2005 Mike Frysinger  - <vapier@gentoo.org>
+ *
+ ********************************************************************
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+ * MA 02111-1307, USA.
+ *
+ */
+
+
+
+#define QCHECK_FLAGS "" COMMON_FLAGS
+static struct option const qcheck_long_opts[] = {
+	COMMON_LONG_OPTS
+};
+static const char *qcheck_opts_help[] = {
+	COMMON_OPTS_HELP
+};
+#define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, APPLET_QCHECK)
+
+
+
+int qcheck_main(int argc, char **argv)
+{
+	DIR *dir, *dirp;
+	int i;
+	struct dirent *dentry, *de;
+	char *cat, *p, *q;
+	const char *path = "/var/db/pkg";
+	struct stat st;
+	size_t num_files, num_files_ok;
+	size_t len = 0;
+	char buf[_POSIX_PATH_MAX];
+	char buf2[_POSIX_PATH_MAX];
+
+	DBG("argc=%d argv[0]=%s argv[1]=%s",
+	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
+
+	while ((i = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
+		switch (i) {
+		COMMON_GETOPTS_CASES(qcheck)
+		}
+	}
+	if (argc == optind)
+		qcheck_usage(EXIT_FAILURE);
+
+	if (chdir(path) != 0 || (dir = opendir(path)) == NULL)
+		return 1;
+
+	p = q = cat = NULL;
+
+	cat = strchr(argv[optind], '/');
+	len = strlen(argv[optind]);
+	while ((dentry = readdir(dir))) {
+		if (*dentry->d_name == '.')
+			continue;
+		if ((strchr((char *) dentry->d_name, '-')) == 0)
+			continue;
+		stat(dentry->d_name, &st);
+		if (!(S_ISDIR(st.st_mode)))
+			continue;
+		chdir(dentry->d_name);
+		if ((dirp = opendir(".")) == NULL)
+			continue;
+		while ((de = readdir(dirp))) {
+			FILE *fp;
+			if (*de->d_name == '.')
+				continue;
+			if (cat != NULL) {
+				snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name,
+				         de->d_name);
+				/*if ((rematch(argv[optind], buf, REG_EXTENDED)) != 0)*/
+				if ((strncmp(argv[optind], buf, len)) != 0)
+					continue;
+			} else {
+				/* if ((rematch(argv[optind], de->d_name, REG_EXTENDED)) != 0)*/
+				if ((strncmp(argv[optind], de->d_name, len)) != 0)
+					continue;
+			}
+
+			num_files = num_files_ok = 0;
+			snprintf(buf, sizeof(buf), "/var/db/pkg/%s/%s/CONTENTS",
+			         dentry->d_name, de->d_name);
+			if ((fp = fopen(buf, "r")) == NULL)
+				continue;
+			if (color)
+				printf("Checking " GREE "%s/%s" NORM " ...\n", dentry->d_name, de->d_name);
+			else
+				printf("Checking %s/%s ...\n", dentry->d_name, de->d_name);
+			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+				if ((p = strchr(buf, ' ')) == NULL)
+					continue;
+				++p;
+				switch (*buf) {
+				case '\n':   /* newline */
+					break;
+				case 'd':    /* dir */
+				case 'o':    /* obj */
+				case 's':    /* sym */
+					strcpy(buf2, p);
+					if ((p = strchr(buf2, ' ')) != NULL)
+						*p = 0;
+					if ((p = strchr(buf2, '\n')) != NULL)
+						*p = 0;
+					++num_files;
+					if (lstat(buf2, &st)) {
+						if (color)
+							printf(" " RED "AFK" NORM ": %s\n", buf2);
+						else
+							printf(" AFK: %s\n", buf2);
+					} else {
+						/* XXX: check md5 here */
+						++num_files_ok;
+					}
+					break;
+				default:
+					warnf("Unhandled: '%s'", buf);
+					break;
+				}
+			}
+			fclose(fp);
+			if (color)
+				printf("  " BOLD "* " BLUE "%lu" NORM " out of " BLUE "%lu" NORM " files are good\n", num_files_ok, num_files);
+			else
+				printf("  * %lu out of %lu files are good\n", num_files_ok, num_files);
+		}
+		closedir(dirp);
+		chdir("..");
+	}
+	closedir(dir);
+	return 0;
+}

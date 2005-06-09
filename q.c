@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.12 2005/06/08 23:31:25 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.13 2005/06/09 00:21:19 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -74,7 +74,7 @@ int q_main(int argc, char **argv)
 				warnf("could not chdir to '%s': %s", buf, strerror(errno));
 				return 1;
 			}
-			for (i = 1; applets[i].name; ++i) {
+			for (i = 1; i <= LAST_APPLET; ++i) {
 				printf(" %s ...", applets[i].name);
 				errno = 0;
 				symlink("q", applets[i].name);
