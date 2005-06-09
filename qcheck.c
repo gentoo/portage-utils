@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.4 2005/06/09 04:16:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.5 2005/06/09 04:17:05 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -165,9 +165,13 @@ int qcheck_main(int argc, char **argv)
 			}
 			fclose(fp);
 			if (color)
-				printf("  " BOLD "* " BLUE "%lu" NORM " out of " BLUE "%lu" NORM " files are good\n", num_files_ok, num_files);
+				printf("  " BOLD "* " BLUE "%lu" NORM " out of " BLUE "%lu" NORM " files are good\n",
+				       (unsigned long)num_files_ok,
+				       (unsigned long)num_files);
 			else
-				printf("  * %lu out of %lu files are good\n", num_files_ok, num_files);
+				printf("  * %lu out of %lu files are good\n",
+				       (unsigned long)num_files_ok,
+				       (unsigned long)num_files);
 		}
 		closedir(dirp);
 		chdir("..");
