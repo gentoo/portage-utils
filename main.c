@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.3 2005/06/08 23:43:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.4 2005/06/09 00:05:13 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -80,7 +80,7 @@ static char *argv0;
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.3 2005/06/08 23:43:36 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.4 2005/06/09 00:05:13 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -130,7 +130,7 @@ struct applet_t {
 	{"qsearch", (APPLET)qsearch_main, "<regex>"},
 	{"quse",    (APPLET)quse_main,    "<useflag>"},
 	{"qsize",   (APPLET)qsize_main,   "<pkgname>"},
-
+#ifdef EQUERY_COMPAT
 	/* aliases for equery capatability */
 	{"belongs", (APPLET)qfile_main,   "<filename>"},
 	/*"changes"*/
@@ -145,6 +145,7 @@ struct applet_t {
 	/*"stats"*/
 	/*"uses"*/
 	/*"which"*/
+#endif
 	{NULL,      (APPLET)NULL,         NULL}
 };
 
