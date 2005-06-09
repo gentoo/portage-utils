@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.1 2005/06/08 23:34:34 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.2 2005/06/09 00:55:52 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,14 +26,16 @@
 
 
 
-#define QSIZE_FLAGS "mkb" COMMON_FLAGS
+#define QSIZE_FLAGS "amkb" COMMON_FLAGS
 static struct option const qsize_long_opts[] = {
+	{"all", no_argument, NULL, 'a'},
 	{"megabytes", no_argument, NULL, 'm'},
 	{"kilobytes", no_argument, NULL, 'k'},
 	{"bytes",     no_argument, NULL, 'b'},
 	COMMON_LONG_OPTS
 };
 static const char *qsize_opts_help[] = {
+	"List all packages",
 	"Display size in megabytes",
 	"Display size in kilobytes",
 	"Display size in bytes",
@@ -49,6 +51,7 @@ int qsize_main(int argc, char **argv)
 	int i;
 	struct dirent *dentry, *de;
 	char *cat, *p, *q;
+	char search_all = 0;
 	const char *path = "/var/db/pkg";
 	struct stat st;
 	size_t num_bytes, num_files, num_nonfiles;
@@ -63,21 +66,24 @@ int qsize_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsize)
+
+		case 'a': search_all = 1; break;
 		case 'm': disp_units = MEGABYTE; str_disp_units = "MB"; break;
 		case 'k': disp_units = KILOBYTE; str_disp_units = "KB"; break;
 		case 'b': disp_units = 1; str_disp_units = "bytes"; break;
 		}
 	}
-	if (argc == optind)
+	if ((argc == optind) && (search_all == 0))
 		qsize_usage(EXIT_FAILURE);
 
 	if (chdir(path) != 0 || (dir = opendir(path)) == NULL)
 		return 1;
 
 	p = q = cat = NULL;
-
-	cat = strchr(argv[optind], '/');
-	len = strlen(argv[optind]);
+	if (search_all == 0) {
+		cat = strchr(argv[optind], '/');
+		len = strlen(argv[optind]);
+	}
 	while ((dentry = readdir(dir))) {
 		if (*dentry->d_name == '.')
 			continue;
@@ -86,7 +92,8 @@ int qsize_main(int argc, char **argv)
 		stat(dentry->d_name, &st);
 		if (!(S_ISDIR(st.st_mode)))
 			continue;
-		chdir(dentry->d_name);
+		if (chdir(dentry->d_name) == (-1))
+			continue;
 		if ((dirp = opendir(".")) == NULL)
 			continue;
 		while ((de = readdir(dirp))) {
@@ -101,8 +108,9 @@ int qsize_main(int argc, char **argv)
 					continue;
 			} else {
 				/* if ((rematch(argv[optind], de->d_name, REG_EXTENDED)) != 0)*/
-				if ((strncmp(argv[optind], de->d_name, len)) != 0)
-					continue;
+				if (search_all == 0)
+					if ((strncmp(argv[optind], de->d_name, len)) != 0)
+						continue;
 			}
 
 			num_files = num_nonfiles = num_bytes = 0;
