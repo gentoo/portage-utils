@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.5 2005/06/09 04:17:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.6 2005/06/09 17:38:18 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -23,7 +23,6 @@
  * MA 02111-1307, USA.
  *
  */
-
 
 
 #define QCHECK_FLAGS "a" COMMON_FLAGS
@@ -48,7 +47,7 @@ int qcheck_main(int argc, char **argv)
 	char *cat, *p, *q;
 	const char *path = "/var/db/pkg";
 	struct stat st;
-	size_t num_files, num_files_ok;
+	size_t num_files, num_files_ok, num_files_unknown;
 	size_t len = 0;
 	char buf[_POSIX_PATH_MAX];
 	char buf2[_POSIX_PATH_MAX];
@@ -102,7 +101,7 @@ int qcheck_main(int argc, char **argv)
 						continue;
 			}
 
-			num_files = num_files_ok = 0;
+			num_files = num_files_ok = num_files_unknown = 0;
 			snprintf(buf, sizeof(buf), "/var/db/pkg/%s/%s/CONTENTS",
 			         dentry->d_name, de->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
@@ -147,13 +146,21 @@ int qcheck_main(int argc, char **argv)
 						if (S_ISREG(st.st_mode)) {
 							char *hashed_file;
 							hashed_file = hash_file(file, HASH_MD5);
-							if (strcmp(digest, hashed_file)) {
+							if ((hashed_file != NULL) && (digest != NULL)) {
+								if (strcmp(digest, hashed_file)) {
+									if (color)
+										printf(" " RED "MD5" NORM ": %s\n", file);
+									else
+										printf(" MD5: %s\n", file);
+								} else
+									++num_files_ok;
+							} else {
 								if (color)
-									printf(" " RED "MD5" NORM ": %s\n", file);
+									printf(" " RED "%o" NORM ": %s\n", st.st_mode & 07777, file);
 								else
-									printf(" MD5: %s\n", file);
-							} else
-								++num_files_ok;
+									printf(" %o: %s\n", st.st_mode & 07777, file);
+								++num_files_unknown;
+							}
 						} else
 							++num_files_ok;
 					}

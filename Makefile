@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.7 2005/06/09 00:21:19 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.8 2005/06/09 17:38:18 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -35,7 +35,9 @@ CP        := cp
 
 # Build with -Werror while emerging
 ifneq ($(S),)
-CFLAGS    += -Werror
+CFLAGS	+= -Werror
+else
+CFLAGS	+= $(shell [[ `hostname` == simple ]] && echo '-g3 -ggdb -nopie')
 endif
 #####################################################
 APPLETS    = q qfile qlist qsearch quse qsize qcheck
@@ -45,9 +47,9 @@ MPAGES     = man/q.1
 all: q
 	@:
 
-debug: all
-	@-/sbin/chpax  -permsx $(TARGETS)
-	@-/sbin/paxctl -permsx $(TARGETS)
+debug: all symlinks
+	@-/sbin/chpax  -permsx $(APPLETS)
+	@-/sbin/paxctl -permsx $(APPLETS)
 
 q: $(SRC)
 	@echo $(CC) $(CFLAGS) $(LDFLAGS) main.c -o q
