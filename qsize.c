@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.3 2005/06/09 01:07:07 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.4 2005/06/09 01:14:01 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -145,7 +145,7 @@ int qsize_main(int argc, char **argv)
 						*p = 0;
 					++num_files;
 					if (!lstat(buf2, &st))
-						num_bytes += (fs_size ? st.st_blocks*512 : st.st_size);
+						num_bytes += (fs_size ? st.st_blocks * S_BLKSIZE : st.st_size);
 					break;
 				default:
 					++num_nonfiles;
