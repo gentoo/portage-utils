@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.5 2005/06/09 01:20:40 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.6 2005/06/09 04:02:20 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -56,6 +56,7 @@ int qsize_main(int argc, char **argv)
 	DIR *dir, *dirp;
 	int i;
 	struct dirent *dentry, *de;
+	char search_all = 0;
 	const char *cat;
 	char *p, *q;
 	const char *path = "/var/db/pkg";
@@ -76,7 +77,7 @@ int qsize_main(int argc, char **argv)
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsize)
 		case 'f': fs_size = 1; break;
-		case 'a': cat = "*"; break;
+		case 'a': search_all = 1; break;
 		case 's': summary = 1; break;
 		case 'S': summary = summary_only = 1; break;
 		case 'm': disp_units = MEGABYTE; str_disp_units = "MB"; break;
@@ -84,7 +85,7 @@ int qsize_main(int argc, char **argv)
 		case 'b': disp_units = 1; str_disp_units = "bytes"; break;
 		}
 	}
-	if (argc == optind)
+	if ((argc == optind) && (search_all == 0))
 		qsize_usage(EXIT_FAILURE);
 
 	if (chdir(path) != 0 || (dir = opendir(path)) == NULL)
@@ -93,7 +94,7 @@ int qsize_main(int argc, char **argv)
 	p = q = NULL;
 	num_all_bytes = num_all_files = num_all_nonfiles = 0;
 
-	if (cat == NULL) {
+	if (search_all == 0) {
 		cat = strchr(argv[optind], '/');
 		len = strlen(argv[optind]);
 	}
@@ -122,8 +123,9 @@ int qsize_main(int argc, char **argv)
 					continue;
 			} else {
 				/* if ((rematch(argv[optind], de->d_name, REG_EXTENDED)) != 0)*/
-				if ((strncmp(argv[optind], de->d_name, len)) != 0)
-					continue;
+				if (search_all == 0)
+					if ((strncmp(argv[optind], de->d_name, len)) != 0)
+						continue;
 			}
 
 			num_files = num_nonfiles = num_bytes = 0;
