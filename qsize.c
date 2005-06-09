@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.2 2005/06/09 00:55:52 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.3 2005/06/09 01:07:07 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,16 +26,22 @@
 
 
 
-#define QSIZE_FLAGS "amkb" COMMON_FLAGS
+#define QSIZE_FLAGS "fasSmkb" COMMON_FLAGS
 static struct option const qsize_long_opts[] = {
-	{"all", no_argument, NULL, 'a'},
-	{"megabytes", no_argument, NULL, 'm'},
-	{"kilobytes", no_argument, NULL, 'k'},
-	{"bytes",     no_argument, NULL, 'b'},
+	{"filesystem", no_argument, NULL, 'f'},
+	{"all",        no_argument, NULL, 'a'},
+	{"sum",        no_argument, NULL, 's'},
+	{"sum-only",   no_argument, NULL, 'S'},
+	{"megabytes",  no_argument, NULL, 'm'},
+	{"kilobytes",  no_argument, NULL, 'k'},
+	{"bytes",      no_argument, NULL, 'b'},
 	COMMON_LONG_OPTS
 };
 static const char *qsize_opts_help[] = {
-	"List all packages",
+	"Show size used on disk",
+	"Size all installed packages",
+	"Include a summary",
+	"Show just the summary",
 	"Display size in megabytes",
 	"Display size in kilobytes",
 	"Display size in bytes",
@@ -50,10 +56,12 @@ int qsize_main(int argc, char **argv)
 	DIR *dir, *dirp;
 	int i;
 	struct dirent *dentry, *de;
-	char *cat, *p, *q;
-	char search_all = 0;
+	const char *cat;
+	char *p, *q;
 	const char *path = "/var/db/pkg";
 	struct stat st;
+	char fs_size = 0, summary = 0, summary_only = 0;
+	size_t num_all_bytes, num_all_files, num_all_nonfiles;
 	size_t num_bytes, num_files, num_nonfiles;
 	size_t len = 0, disp_units = 0;
 	const char *str_disp_units = NULL;
@@ -63,27 +71,33 @@ int qsize_main(int argc, char **argv)
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
+	cat = NULL;
 	while ((i = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsize)
-
-		case 'a': search_all = 1; break;
+		case 'f': fs_size = 1; break;
+		case 'a': cat = "*"; break;
+		case 's': summary = 1; break;
+		case 'S': summary = summary_only = 1; break;
 		case 'm': disp_units = MEGABYTE; str_disp_units = "MB"; break;
 		case 'k': disp_units = KILOBYTE; str_disp_units = "KB"; break;
 		case 'b': disp_units = 1; str_disp_units = "bytes"; break;
 		}
 	}
-	if ((argc == optind) && (search_all == 0))
+	if (argc == optind)
 		qsize_usage(EXIT_FAILURE);
 
 	if (chdir(path) != 0 || (dir = opendir(path)) == NULL)
 		return 1;
 
-	p = q = cat = NULL;
-	if (search_all == 0) {
+	p = q = NULL;
+	num_all_bytes = num_all_files = num_all_nonfiles = 0;
+
+	if (cat == NULL) {
 		cat = strchr(argv[optind], '/');
 		len = strlen(argv[optind]);
 	}
+
 	while ((dentry = readdir(dir))) {
 		if (*dentry->d_name == '.')
 			continue;
@@ -108,9 +122,8 @@ int qsize_main(int argc, char **argv)
 					continue;
 			} else {
 				/* if ((rematch(argv[optind], de->d_name, REG_EXTENDED)) != 0)*/
-				if (search_all == 0)
-					if ((strncmp(argv[optind], de->d_name, len)) != 0)
-						continue;
+				if ((strncmp(argv[optind], de->d_name, len)) != 0)
+					continue;
 			}
 
 			num_files = num_nonfiles = num_bytes = 0;
@@ -132,7 +145,7 @@ int qsize_main(int argc, char **argv)
 						*p = 0;
 					++num_files;
 					if (!lstat(buf2, &st))
-						num_bytes += st.st_size;
+						num_bytes += (fs_size ? st.st_blocks*512 : st.st_size);
 					break;
 				default:
 					++num_nonfiles;
@@ -140,23 +153,43 @@ int qsize_main(int argc, char **argv)
 				}
 			}
 			fclose(fp);
-			if (color)
-				printf(BOLD "%s/" BLUE "%s" NORM, basename(dentry->d_name), de->d_name);
-			else
-				printf("%s/%s", basename(dentry->d_name), de->d_name);
-			printf(": %lu files, %lu non-files, ", num_files, num_nonfiles);
-			if (disp_units)
-				printf("%s %s\n",
-				       make_human_readable_str(num_bytes, 1, disp_units),
-				       str_disp_units);
-			else
-				printf("%lu.%lu KB\n",
-				       num_bytes / KILOBYTE,
-				       ((num_bytes%KILOBYTE)*1000)/KILOBYTE);
+			num_all_bytes += num_bytes;
+			num_all_files += num_files;
+			num_all_nonfiles += num_nonfiles;
+			if (!summary_only) {
+				if (color)
+					printf(BOLD "%s/" BLUE "%s" NORM, basename(dentry->d_name), de->d_name);
+				else
+					printf("%s/%s", basename(dentry->d_name), de->d_name);
+				printf(": %lu files, %lu non-files, ", num_files, num_nonfiles);
+				if (disp_units)
+					printf("%s %s\n",
+					       make_human_readable_str(num_bytes, 1, disp_units),
+					       str_disp_units);
+				else
+					printf("%lu.%lu KB\n",
+					       num_bytes / KILOBYTE,
+					       ((num_bytes%KILOBYTE)*1000)/KILOBYTE);
+			}
 		}
 		closedir(dirp);
 		chdir("..");
 	}
 	closedir(dir);
+	if (summary) {
+		if (color)
+			printf(BOLD " Totals:" NORM);
+		else
+			printf(" Totals:");
+		printf(" %lu files, %lu non-files, ", num_all_files, num_all_nonfiles);
+		if (disp_units)
+			printf("%s %s\n",
+			       make_human_readable_str(num_all_bytes, 1, disp_units),
+			       str_disp_units);
+		else
+			printf("%lu.%lu MB\n",
+			       num_all_bytes / MEGABYTE,
+			       ((num_all_bytes%MEGABYTE)*1000)/MEGABYTE);
+	}
 	return 0;
 }
