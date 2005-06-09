@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.2 2005/06/09 01:00:56 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.3 2005/06/09 03:34:35 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -112,6 +112,8 @@ int qcheck_main(int argc, char **argv)
 			else
 				printf("Checking %s/%s ...\n", dentry->d_name, de->d_name);
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+				char *file, *digest, *mtime;
+				file = digest = mtime = NULL;
 				if ((p = strchr(buf, ' ')) == NULL)
 					continue;
 				++p;
@@ -122,18 +124,28 @@ int qcheck_main(int argc, char **argv)
 				case 'o':    /* obj */
 				case 's':    /* sym */
 					strcpy(buf2, p);
-					if ((p = strchr(buf2, ' ')) != NULL)
-						*p = 0;
-					if ((p = strchr(buf2, '\n')) != NULL)
-						*p = 0;
+					file = buf2;
+					if ((p = strchr(file, ' ')) != NULL)
+						*p = '\0';
+					if (*buf == 'o') {
+						digest = p+1;
+						if ((mtime = strchr(digest, ' ')) != NULL) {
+							*mtime = '\0';
+							++mtime;
+						}
+					}
+					if ((p = strchr(file, '\n')) != NULL)
+						*p = '\0';
+
 					++num_files;
-					if (lstat(buf2, &st)) {
+					if (lstat(file, &st)) {
 						if (color)
-							printf(" " RED "AFK" NORM ": %s\n", buf2);
+							printf(" " RED "AFK" NORM ": %s\n", file);
 						else
-							printf(" AFK: %s\n", buf2);
+							printf(" AFK: %s\n", file);
 					} else {
-						/* XXX: check md5 here */
+						if (S_ISREG(st.st_mode))
+							printf(" TODO: MD5 check %s's %s\n", file, digest);
 						++num_files_ok;
 					}
 					break;
