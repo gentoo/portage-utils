@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.5 2005/06/09 00:21:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.6 2005/06/09 01:06:39 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -40,6 +40,7 @@
 #include <errno.h>
 #include <libgen.h>
 #include <limits.h>
+#include <assert.h>
 
 
 
@@ -80,7 +81,7 @@ static char *argv0;
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.5 2005/06/09 00:21:19 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.6 2005/06/09 01:06:39 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -192,13 +193,15 @@ static void usage(int status, const char *flags, struct option const opts[],
 	}
 
 	printf("\nOptions: -[%s]\n", flags);
-	for (i = 0; opts[i].name; ++i)
+	for (i = 0; opts[i].name; ++i) {
+		assert(help[i] != NULL);
 		if (opts[i].has_arg == no_argument)
 			printf("  -%c, --%-13s* %s\n", opts[i].val, 
 			       opts[i].name, help[i]);
 		else
 			printf("  -%c, --%-6s <arg> * %s\n", opts[i].val,
 			       opts[i].name, help[i]);
+	}
 	exit(status);
 }
 static void version_barf(void)
