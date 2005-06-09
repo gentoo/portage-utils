@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.4 2005/06/09 01:14:01 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.5 2005/06/09 01:20:40 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -161,15 +161,17 @@ int qsize_main(int argc, char **argv)
 					printf(BOLD "%s/" BLUE "%s" NORM, basename(dentry->d_name), de->d_name);
 				else
 					printf("%s/%s", basename(dentry->d_name), de->d_name);
-				printf(": %lu files, %lu non-files, ", num_files, num_nonfiles);
+				printf(": %lu files, %lu non-files, ",
+				       (unsigned long)num_files, 
+				       (unsigned long)num_nonfiles);
 				if (disp_units)
 					printf("%s %s\n",
 					       make_human_readable_str(num_bytes, 1, disp_units),
 					       str_disp_units);
 				else
 					printf("%lu.%lu KB\n",
-					       num_bytes / KILOBYTE,
-					       ((num_bytes%KILOBYTE)*1000)/KILOBYTE);
+					       (unsigned long)(num_bytes / KILOBYTE),
+					       (unsigned long)(((num_bytes%KILOBYTE)*1000)/KILOBYTE));
 			}
 		}
 		closedir(dirp);
@@ -181,15 +183,17 @@ int qsize_main(int argc, char **argv)
 			printf(BOLD " Totals:" NORM);
 		else
 			printf(" Totals:");
-		printf(" %lu files, %lu non-files, ", num_all_files, num_all_nonfiles);
+		printf(" %lu files, %lu non-files, ",
+		       (unsigned long)num_all_files,
+		       (unsigned long)num_all_nonfiles);
 		if (disp_units)
 			printf("%s %s\n",
 			       make_human_readable_str(num_all_bytes, 1, disp_units),
 			       str_disp_units);
 		else
 			printf("%lu.%lu MB\n",
-			       num_all_bytes / MEGABYTE,
-			       ((num_all_bytes%MEGABYTE)*1000)/MEGABYTE);
+			       (unsigned long)(num_all_bytes / MEGABYTE),
+			       (unsigned long)(((num_all_bytes%MEGABYTE)*1000)/MEGABYTE));
 	}
 	return 0;
 }
