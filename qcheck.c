@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.3 2005/06/09 03:34:35 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.4 2005/06/09 04:16:04 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -144,9 +144,18 @@ int qcheck_main(int argc, char **argv)
 						else
 							printf(" AFK: %s\n", file);
 					} else {
-						if (S_ISREG(st.st_mode))
-							printf(" TODO: MD5 check %s's %s\n", file, digest);
-						++num_files_ok;
+						if (S_ISREG(st.st_mode)) {
+							char *hashed_file;
+							hashed_file = hash_file(file, HASH_MD5);
+							if (strcmp(digest, hashed_file)) {
+								if (color)
+									printf(" " RED "MD5" NORM ": %s\n", file);
+								else
+									printf(" MD5: %s\n", file);
+							} else
+								++num_files_ok;
+						} else
+							++num_files_ok;
 					}
 					break;
 				default:

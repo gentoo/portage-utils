@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.6 2005/06/09 01:06:39 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.7 2005/06/09 04:16:04 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -81,7 +81,7 @@ static char *argv0;
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.6 2005/06/09 01:06:39 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.7 2005/06/09 04:16:04 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -468,6 +468,7 @@ void reinitialize_as_needed(void)
 		reinitialize_ebuild_flat();
 }
 
+#include "libq/libq.c"
 #include "qfile.c"
 #include "qlist.c"
 #include "qsearch.c"
