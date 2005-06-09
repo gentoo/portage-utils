@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.1 2005/06/09 00:21:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.2 2005/06/09 01:00:56 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,11 +26,13 @@
 
 
 
-#define QCHECK_FLAGS "" COMMON_FLAGS
+#define QCHECK_FLAGS "a" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
+	{"all", no_argument, NULL, 'a'},
 	COMMON_LONG_OPTS
 };
 static const char *qcheck_opts_help[] = {
+	"List all packages",
 	COMMON_OPTS_HELP
 };
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, APPLET_QCHECK)
@@ -42,6 +44,7 @@ int qcheck_main(int argc, char **argv)
 	DIR *dir, *dirp;
 	int i;
 	struct dirent *dentry, *de;
+	char search_all = 0;
 	char *cat, *p, *q;
 	const char *path = "/var/db/pkg";
 	struct stat st;
@@ -56,18 +59,20 @@ int qcheck_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qcheck)
+		case 'a': search_all = 1; break;
 		}
 	}
-	if (argc == optind)
+	if ((argc == optind) && (search_all == 0))
 		qcheck_usage(EXIT_FAILURE);
 
 	if (chdir(path) != 0 || (dir = opendir(path)) == NULL)
 		return 1;
 
 	p = q = cat = NULL;
-
-	cat = strchr(argv[optind], '/');
-	len = strlen(argv[optind]);
+	if (search_all == 0) {
+		cat = strchr(argv[optind], '/');
+		len = strlen(argv[optind]);
+	}
 	while ((dentry = readdir(dir))) {
 		if (*dentry->d_name == '.')
 			continue;
@@ -76,7 +81,8 @@ int qcheck_main(int argc, char **argv)
 		stat(dentry->d_name, &st);
 		if (!(S_ISDIR(st.st_mode)))
 			continue;
-		chdir(dentry->d_name);
+		if (chdir(dentry->d_name) == (-1))
+			continue;
 		if ((dirp = opendir(".")) == NULL)
 			continue;
 		while ((de = readdir(dirp))) {
@@ -91,8 +97,9 @@ int qcheck_main(int argc, char **argv)
 					continue;
 			} else {
 				/* if ((rematch(argv[optind], de->d_name, REG_EXTENDED)) != 0)*/
-				if ((strncmp(argv[optind], de->d_name, len)) != 0)
-					continue;
+				if (search_all == 0)
+					if ((strncmp(argv[optind], de->d_name, len)) != 0)
+						continue;
 			}
 
 			num_files = num_files_ok = 0;
