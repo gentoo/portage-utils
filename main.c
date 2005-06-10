@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.7 2005/06/09 04:16:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.8 2005/06/10 00:08:43 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -49,7 +49,7 @@ typedef int (*APPLET)(int, char **);
 
 APPLET lookup_applet(char *);
 
-int rematch(char *, char *, int);
+int rematch(char *, const char *, int);
 char *rmspace(char *);
 void qfile(char *, char *);
 
@@ -81,7 +81,7 @@ static char *argv0;
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.7 2005/06/09 04:16:04 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.8 2005/06/10 00:08:43 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -89,15 +89,17 @@ static int found = 0;
 static char reinitialize = 0;
 
 static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
+static char portvdb[] = "/var/db/pkg";
 
 
 
 /* color constants */
-#define BOLD "\e[0;01m"
-#define BLUE "\e[36;01m"
-#define GREE "\e[32;01m"
-#define RED  "\e[31;01m"
-#define NORM "\e[0m"
+#define COLOR(c,b) (color ? "\e[" c ";" b "m" : "")
+#define BOLD      COLOR("00", "01")
+#define BLUE      COLOR("36", "01")
+#define GREE      COLOR("32", "01")
+#define RED       COLOR("31", "01")
+#define NORM      COLOR("00", "00")
 
 
 
@@ -141,7 +143,7 @@ struct applet_t {
 	/* aliases for equery capatability */
 	{"belongs",   qfile_main,     "<filename>"},
 	/*"changes"*/
-	/*"check"*/
+	{"check",     qcheck_main,    "<pkgname>"},
 	/*"depends"*/
 	/*"depgraph"*/
 	{"files",     qlist_main,     "<pkgname>"},
@@ -236,71 +238,7 @@ APPLET lookup_applet(char *applet)
 	return 0;
 }
 
-const char *make_human_readable_str(unsigned long long,unsigned long,unsigned long);
-enum {
-	KILOBYTE = 1024,
-	MEGABYTE = (KILOBYTE*1024),
-	GIGABYTE = (MEGABYTE*1024)
-};
-const char *make_human_readable_str(unsigned long long size,
-	unsigned long block_size, unsigned long display_unit)
-{
-	/* The code will adjust for additional (appended) units. */
-	static const char zero_and_units[] = { '0', 0, 'k', 'M', 'G', 'T' };
-	static const char fmt[] = "%Lu";
-	static const char fmt_tenths[] = "%Lu.%d%c";
-
-	static char str[21];		/* Sufficient for 64 bit unsigned integers. */
-
-	unsigned long long val;
-	int frac;
-	const char *u;
-	const char *f;
-
-	u = zero_and_units;
-	f = fmt;
-	frac = 0;
-
-	val = size * block_size;
-	if (val == 0) {
-		return u;
-	}
-
-	if (display_unit) {
-		val += display_unit/2;	/* Deal with rounding. */
-		val /= display_unit;	/* Don't combine with the line above!!! */
-	} else {
-		++u;
-		while ((val >= KILOBYTE)
-			   && (u < zero_and_units + sizeof(zero_and_units) - 1)) {
-			f = fmt_tenths;
-			++u;
-			frac = ((((int)(val % KILOBYTE)) * 10) + (KILOBYTE/2)) / KILOBYTE;
-			val /= KILOBYTE;
-		}
-		if (frac >= 10) {		/* We need to round up here. */
-			++val;
-			frac = 0;
-		}
-#if 0
-		/* Sample code to omit decimal point and tenths digit. */
-		if ( /* no_tenths */ 1 ) {
-			if ( frac >= 5 ) {
-				++val;
-			}
-			f = "%Lu%*c" /* fmt_no_tenths */ ;
-			frac = 1;
-		}
-#endif
-	}
-
-	/* If f==fmt then 'frac' and 'u' are ignored. */
-	snprintf(str, sizeof(str), f, val, frac, *u);
-
-	return str;
-}
-
-int rematch(char *regex, char *match, int cflags)
+int rematch(char *regex, const char *match, int cflags)
 {
 	regex_t preg;
 	int ret;
