@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.2 2005/06/08 23:34:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.3 2005/06/10 00:11:20 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -79,12 +79,8 @@ int quse_main(int argc, char **argv)
 							}
 						}
 					}
-					if (ok) {
-						if (color)
-							printf(BLUE "%s" NORM " %s\n", ebuild, &buf[6]);
-						else
-							printf("%s %s\n", ebuild, &buf[6]);
-					}
+					if (ok)
+						printf("%s%s%s %s\n", BLUE, ebuild, NORM, &buf[6]);
 					break;
 				}
 			}
