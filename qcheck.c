@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.6 2005/06/09 17:38:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.7 2005/06/10 00:16:54 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -44,13 +44,10 @@ int qcheck_main(int argc, char **argv)
 	int i;
 	struct dirent *dentry, *de;
 	char search_all = 0;
-	char *cat, *p, *q;
-	const char *path = "/var/db/pkg";
 	struct stat st;
 	size_t num_files, num_files_ok, num_files_unknown;
-	size_t len = 0;
+	char *p;
 	char buf[_POSIX_PATH_MAX];
-	char buf2[_POSIX_PATH_MAX];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -61,58 +58,57 @@ int qcheck_main(int argc, char **argv)
 		case 'a': search_all = 1; break;
 		}
 	}
-	if ((argc == optind) && (search_all == 0))
+	if ((argc == optind) && !search_all)
 		qcheck_usage(EXIT_FAILURE);
 
-	if (chdir(path) != 0 || (dir = opendir(path)) == NULL)
-		return 1;
+	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
+		return EXIT_FAILURE;
 
-	p = q = cat = NULL;
-	if (search_all == 0) {
-		cat = strchr(argv[optind], '/');
-		len = strlen(argv[optind]);
-	}
+	/* open /var/db/pkg */
 	while ((dentry = readdir(dir))) {
-		if (*dentry->d_name == '.')
+		/* search for a category directory */
+		if (dentry->d_name[0] == '.')
 			continue;
-		if ((strchr((char *) dentry->d_name, '-')) == 0)
+		if (strchr(dentry->d_name, '-') == NULL)
 			continue;
 		stat(dentry->d_name, &st);
-		if (!(S_ISDIR(st.st_mode)))
+		if (!S_ISDIR(st.st_mode))
 			continue;
-		if (chdir(dentry->d_name) == (-1))
+		if (chdir(dentry->d_name) != 0)
 			continue;
 		if ((dirp = opendir(".")) == NULL)
 			continue;
-		while ((de = readdir(dirp))) {
+
+		/* open the cateogry */
+		while ((de = readdir(dirp)) != NULL) {
 			FILE *fp;
 			if (*de->d_name == '.')
 				continue;
-			if (cat != NULL) {
-				snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name,
-				         de->d_name);
-				/*if ((rematch(argv[optind], buf, REG_EXTENDED)) != 0)*/
-				if ((strncmp(argv[optind], buf, len)) != 0)
+
+			/* see if this cat/pkg is requested */
+			if (!search_all) {
+				for (i = optind; i < argc; ++i) {
+					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, 
+					         de->d_name);
+					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
+						break;
+					if (rematch(argv[i], de->d_name, REG_EXTENDED) == 0)
+						break;
+				}
+				if (i == argc)
 					continue;
-			} else {
-				/* if ((rematch(argv[optind], de->d_name, REG_EXTENDED)) != 0)*/
-				if (search_all == 0)
-					if ((strncmp(argv[optind], de->d_name, len)) != 0)
-						continue;
 			}
 
-			num_files = num_files_ok = num_files_unknown = 0;
 			snprintf(buf, sizeof(buf), "/var/db/pkg/%s/%s/CONTENTS",
 			         dentry->d_name, de->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;
-			if (color)
-				printf("Checking " GREE "%s/%s" NORM " ...\n", dentry->d_name, de->d_name);
-			else
-				printf("Checking %s/%s ...\n", dentry->d_name, de->d_name);
+
+			num_files = num_files_ok = num_files_unknown = 0;
+			printf("Checking %s%s/%s%s ...\n", GREE, dentry->d_name, de->d_name, NORM);
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-				char *file, *digest, *mtime;
-				file = digest = mtime = NULL;
+				if ((p = strchr(buf, '\n')) != NULL)
+					*p = '\0';
 				if ((p = strchr(buf, ' ')) == NULL)
 					continue;
 				++p;
@@ -121,64 +117,90 @@ int qcheck_main(int argc, char **argv)
 					break;
 				case 'd':    /* dir */
 				case 'o':    /* obj */
-				case 's':    /* sym */
-					strcpy(buf2, p);
-					file = buf2;
+				case 's': {  /* sym */
+					char *file, *digest, *mtime_ascii;
+					long mtime;
+
+					/* parse the CONTENTS file */
+					file = p;
+					digest = mtime_ascii = NULL;
+					mtime = 0;
 					if ((p = strchr(file, ' ')) != NULL)
 						*p = '\0';
-					if (*buf == 'o') {
+					if (*buf == 'o' && p) {
 						digest = p+1;
-						if ((mtime = strchr(digest, ' ')) != NULL) {
-							*mtime = '\0';
-							++mtime;
+						if ((mtime_ascii = strchr(digest, ' ')) != NULL) {
+							*mtime_ascii = '\0';
+							++mtime_ascii;
+							mtime = strtol(mtime_ascii, NULL, 10);
+							if (mtime == LONG_MAX) {
+								warn("Invalid mtime '%s'", mtime_ascii);
+								mtime = 0;
+								mtime_ascii = NULL;
+							}
 						}
 					}
-					if ((p = strchr(file, '\n')) != NULL)
-						*p = '\0';
 
+					/* run our little checks */
 					++num_files;
 					if (lstat(file, &st)) {
-						if (color)
-							printf(" " RED "AFK" NORM ": %s\n", file);
-						else
-							printf(" AFK: %s\n", file);
-					} else {
-						if (S_ISREG(st.st_mode)) {
-							char *hashed_file;
-							hashed_file = hash_file(file, HASH_MD5);
-							if ((hashed_file != NULL) && (digest != NULL)) {
-								if (strcmp(digest, hashed_file)) {
-									if (color)
-										printf(" " RED "MD5" NORM ": %s\n", file);
-									else
-										printf(" MD5: %s\n", file);
-								} else
-									++num_files_ok;
-							} else {
-								if (color)
-									printf(" " RED "%o" NORM ": %s\n", st.st_mode & 07777, file);
-								else
-									printf(" %o: %s\n", st.st_mode & 07777, file);
-								++num_files_unknown;
-							}
-						} else
-							++num_files_ok;
+						/* make sure file exists */
+						printf(" %sAFK%s: %s\n", RED, NORM, file);
+						break;
 					}
+					if (digest && S_ISREG(st.st_mode)) {
+						/* validate digest (handles MD5 / SHA1) */
+						uint8_t hash_algo;
+						char *hashed_file;
+						switch (strlen(digest)) {
+							case 32: hash_algo = HASH_MD5; break;
+							case 40: hash_algo = HASH_SHA1; break;
+							default: hash_algo = 0; break;
+						}
+						if (!hash_algo) {
+							printf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n", RED, NORM, digest, file);
+							++num_files_unknown;
+							break;
+						}
+						hashed_file = hash_file(file, hash_algo);
+						if (!hashed_file) {
+							printf(" %sPERM %4o%s: %s\n", RED, (st.st_mode & 07777), NORM, file);
+							++num_files_unknown;
+							break;
+						} else if (strcmp(digest, hashed_file)) {
+							const char *digest_disp;
+							switch (hash_algo) {
+								case HASH_MD5:  digest_disp = "MD5"; break;
+								case HASH_SHA1: digest_disp = "SHA1"; break;
+								default:        digest_disp = "UNK"; break;
+							}
+							printf(" %s%s-DIGEST%s: %s\n", RED, digest_disp, NORM, file);
+							break;
+						}
+					}
+					if (mtime && mtime != st.st_mtime) {
+						/* validate last modification time */
+						printf(" %sMTIME%s: %s\n", RED, NORM, file);
+						break;
+					}
+					++num_files_ok;
 					break;
+				}
 				default:
 					warnf("Unhandled: '%s'", buf);
 					break;
 				}
 			}
 			fclose(fp);
-			if (color)
-				printf("  " BOLD "* " BLUE "%lu" NORM " out of " BLUE "%lu" NORM " files are good\n",
-				       (unsigned long)num_files_ok,
-				       (unsigned long)num_files);
-			else
-				printf("  * %lu out of %lu files are good\n",
-				       (unsigned long)num_files_ok,
-				       (unsigned long)num_files);
+			printf("  %2$s*%1$s %3$s%4$lu%1$s out of %3$s%5$lu%1$s file%6$s are good\n",
+			       NORM, BOLD, BLUE,
+			       (unsigned long)num_files_ok,
+			       (unsigned long)num_files,
+			       (num_files > 1 ? "s" : ""));
+			if (num_files_unknown)
+				printf("  %2$s*%1$s Unable to digest %3$s%4$lu%1$s file%5$s\n",
+				       NORM, BOLD, BLUE, (unsigned long)num_files_unknown,
+				       (num_files_unknown > 1 ? "s" : ""));
 		}
 		closedir(dirp);
 		chdir("..");
