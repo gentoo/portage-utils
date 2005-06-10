@@ -3,7 +3,7 @@
 #define _BUSYBOX_H
 
 #define CONFIG_MD5SUM
-#undef CONFIG_SHA1SUM
+#define CONFIG_SHA1SUM
 
 #define HASH_SHA1	1
 #define HASH_MD5	2
