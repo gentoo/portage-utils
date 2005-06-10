@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.3 2005/06/08 23:32:16 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.4 2005/06/10 00:10:44 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -118,11 +118,8 @@ void qfile(char *path, char *fname)
 				}
 			}
 
-			if (color)
-				printf(BOLD "%s/" BLUE "%s" NORM " (%s)\n", basename(path),
-				       dentry->d_name, ptr);
-			else
-				printf("%s/%s (%s)\n", basename(path), dentry->d_name, ptr);
+			printf("%s%s/%s%s%s (%s)\n", BOLD, basename(path), BLUE, 
+			       dentry->d_name, NORM, ptr);
 
 			free(ptr);
 			fclose(fp);
@@ -142,7 +139,6 @@ int qfile_main(int argc, char **argv)
 	struct dirent *dentry;
 	int i;
 	char *p;
-	const char *path = "/var/db/pkg";
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -156,19 +152,21 @@ int qfile_main(int argc, char **argv)
 	if (argc == optind)
 		qfile_usage(EXIT_FAILURE);
 
-	if ((chdir(path) == 0) && ((dir = opendir(path)))) {
-		while ((dentry = readdir(dir)) != NULL) {
-			if (*dentry->d_name == '.')
-				continue;
-			for (i = optind; i < argc; i++) {
-				if (asprintf(&p, "%s/%s", path, dentry->d_name) != -1) {
-					qfile(p, argv[i]);
-					free(p);
-				}
+	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
+		return EXIT_FAILURE;
+
+	/* open /var/db/pkg */
+	while ((dentry = readdir(dir)) != NULL) {
+		if (dentry->d_name[0] == '.')
+			continue;
+		for (i = optind; i < argc; i++) {
+			if (asprintf(&p, "%s/%s", portvdb, dentry->d_name) != -1) {
+				qfile(p, argv[i]);
+				free(p);
 			}
 		}
-		closedir(dir);
 	}
+	closedir(dir);
 
 	return (found ? EXIT_SUCCESS : EXIT_FAILURE);
 }
