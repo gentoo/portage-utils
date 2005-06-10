@@ -20,8 +20,6 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include <byteswap.h>
-#include <endian.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
