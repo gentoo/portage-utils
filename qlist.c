@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.3 2005/06/08 23:33:40 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.4 2005/06/10 00:14:48 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -42,12 +42,9 @@ int qlist_main(int argc, char **argv)
 	DIR *dir, *dirp;
 	int i;
 	struct dirent *dentry, *de;
-	char *cat, *p, *q;
-	const char *path = "/var/db/pkg";
+	char *p, *q;
 	struct stat st;
-	size_t len = 0;
 	char buf[_POSIX_PATH_MAX];
-	char buf2[_POSIX_PATH_MAX];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -58,73 +55,70 @@ int qlist_main(int argc, char **argv)
 		}
 	}
 
-	if (chdir(path) != 0 || (dir = opendir(path)) == NULL)
-		return 1;
+	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
+		return EXIT_FAILURE;
 
-	p = q = cat = NULL;
-
-	if (argc > 1) {
-		cat = strchr(argv[optind], '/');
-		len = strlen(argv[optind]);
-	}
+	/* open /var/db/pkg */
 	while ((dentry = readdir(dir))) {
-		if (*dentry->d_name == '.')
+		/* search for a category directory */
+		if (dentry->d_name[0] == '.')
 			continue;
-		if ((strchr((char *) dentry->d_name, '-')) == 0)
+		if (strchr(dentry->d_name, '-') == NULL)
 			continue;
 		stat(dentry->d_name, &st);
-		if (!(S_ISDIR(st.st_mode)))
+		if (!S_ISDIR(st.st_mode))
 			continue;
-		chdir(dentry->d_name);
+		if (chdir(dentry->d_name) != 0)
+			continue;
 		if ((dirp = opendir(".")) == NULL)
 			continue;
-		while ((de = readdir(dirp))) {
+
+		/* open the cateogry */
+		while ((de = readdir(dirp)) != NULL) {
+			FILE *fp;
 			if (*de->d_name == '.')
 				continue;
-			if (argc > 1) {
-				if (cat != NULL) {
-					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name,
-					         de->d_name);
-					/*if ((rematch(argv[optind], buf, REG_EXTENDED)) != 0)*/
-					if ((strncmp(argv[optind], buf, len)) != 0)
-						continue;
-				} else {
-					/* if ((rematch(argv[optind], de->d_name, REG_EXTENDED)) != 0)*/
-					if ((strncmp(argv[optind], de->d_name, len)) != 0)
-						continue;
-				}
+
+			/* see if this cat/pkg is requested */
+			for (i = optind; i < argc; ++i) {
+				snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, 
+				         de->d_name);
+				if (rematch(argv[i], buf, REG_EXTENDED) == 0)
+					break;
+				if (rematch(argv[i], de->d_name, REG_EXTENDED) == 0)
+					break;
 			}
-			if (argc < 2)
-				printf("%s/%s\n", dentry->d_name, de->d_name);
-			else {
-				FILE *fp;
-				snprintf(buf, sizeof(buf), "/var/db/pkg/%s/%s/CONTENTS",
-				         dentry->d_name, de->d_name);
-				if ((fp = fopen(buf, "r")) == NULL)
+			if (i == argc)
+				continue;
+
+			snprintf(buf, sizeof(buf), "/var/db/pkg/%s/%s/CONTENTS",
+			         dentry->d_name, de->d_name);
+			if ((fp = fopen(buf, "r")) == NULL)
+				continue;
+
+			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+				if ((p = strchr(buf, '\n')) != NULL)
+					*p = '\0';
+				if ((p = strchr(buf, ' ')) == NULL)
 					continue;
-				while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-					if ((p = strchr(buf, ' ')) == NULL)
-						continue;
-					++p;
-					switch (*buf) {
-					case '\n':   /* newline */
-						break;
-					case 'd':    /* dir */
-						/*printf("%s", p);*/
-						break;
-					case 'o':    /* obj */
-					case 's':    /* sym */
-						strcpy(buf2, p);
-						if ((p = strchr(buf2, ' ')) != NULL)
-							*p = 0;
-						printf("%s\n", buf2);
-						break;
-					default:
-						break;
-					}
+				++p;
+				switch (*buf) {
+				case '\n':   /* newline */
+					break;
+				case 'd':    /* dir */
+					/*printf("%s", p);*/
+					break;
+				case 'o':    /* obj */
+				case 's':    /* sym */
+					if ((q = strchr(p, ' ')) != NULL)
+						*q = '\0';
+					printf("%s\n", p);
+					break;
+				default:
+					break;
 				}
-				fclose(fp);
 			}
+			fclose(fp);
 		}
 		closedir(dirp);
 		chdir("..");

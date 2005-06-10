@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.6 2005/06/09 04:02:20 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.7 2005/06/10 00:12:22 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -57,22 +57,18 @@ int qsize_main(int argc, char **argv)
 	int i;
 	struct dirent *dentry, *de;
 	char search_all = 0;
-	const char *cat;
 	char *p, *q;
-	const char *path = "/var/db/pkg";
 	struct stat st;
 	char fs_size = 0, summary = 0, summary_only = 0;
 	size_t num_all_bytes, num_all_files, num_all_nonfiles;
 	size_t num_bytes, num_files, num_nonfiles;
-	size_t len = 0, disp_units = 0;
+	size_t disp_units = 0;
 	const char *str_disp_units = NULL;
 	char buf[_POSIX_PATH_MAX];
-	char buf2[_POSIX_PATH_MAX];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	cat = NULL;
 	while ((i = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsize)
@@ -85,55 +81,58 @@ int qsize_main(int argc, char **argv)
 		case 'b': disp_units = 1; str_disp_units = "bytes"; break;
 		}
 	}
-	if ((argc == optind) && (search_all == 0))
+	if ((argc == optind) && !search_all)
 		qsize_usage(EXIT_FAILURE);
 
-	if (chdir(path) != 0 || (dir = opendir(path)) == NULL)
-		return 1;
+	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
+		return EXIT_FAILURE;
 
-	p = q = NULL;
 	num_all_bytes = num_all_files = num_all_nonfiles = 0;
 
-	if (search_all == 0) {
-		cat = strchr(argv[optind], '/');
-		len = strlen(argv[optind]);
-	}
-
+	/* open /var/db/pkg */
 	while ((dentry = readdir(dir))) {
-		if (*dentry->d_name == '.')
+		/* search for a category directory */
+		if (dentry->d_name[0] == '.')
 			continue;
-		if ((strchr((char *) dentry->d_name, '-')) == 0)
+		if (strchr(dentry->d_name, '-') == NULL)
 			continue;
 		stat(dentry->d_name, &st);
-		if (!(S_ISDIR(st.st_mode)))
+		if (!S_ISDIR(st.st_mode))
 			continue;
-		if (chdir(dentry->d_name) == (-1))
+		if (chdir(dentry->d_name) != 0)
 			continue;
 		if ((dirp = opendir(".")) == NULL)
 			continue;
-		while ((de = readdir(dirp))) {
+
+		/* open the cateogry */
+		while ((de = readdir(dirp)) != NULL) {
 			FILE *fp;
 			if (*de->d_name == '.')
 				continue;
-			if (cat != NULL) {
-				snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name,
-				         de->d_name);
-				/*if ((rematch(argv[optind], buf, REG_EXTENDED)) != 0)*/
-				if ((strncmp(argv[optind], buf, len)) != 0)
+
+			/* see if this cat/pkg is requested */
+			if (!search_all) {
+				for (i = optind; i < argc; ++i) {
+					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, 
+					         de->d_name);
+					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
+						break;
+					if (rematch(argv[i], de->d_name, REG_EXTENDED) == 0)
+						break;
+				}
+				if (i == argc)
 					continue;
-			} else {
-				/* if ((rematch(argv[optind], de->d_name, REG_EXTENDED)) != 0)*/
-				if (search_all == 0)
-					if ((strncmp(argv[optind], de->d_name, len)) != 0)
-						continue;
 			}
 
-			num_files = num_nonfiles = num_bytes = 0;
 			snprintf(buf, sizeof(buf), "/var/db/pkg/%s/%s/CONTENTS",
 			         dentry->d_name, de->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;
+
+			num_files = num_nonfiles = num_bytes = 0;
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+				if ((p = strchr(buf, '\n')) != NULL)
+					*p = '\0';
 				if ((p = strchr(buf, ' ')) == NULL)
 					continue;
 				++p;
@@ -142,11 +141,10 @@ int qsize_main(int argc, char **argv)
 					break;
 				case 'o':    /* obj */
 				case 's':    /* sym */
-					strcpy(buf2, p);
-					if ((p = strchr(buf2, ' ')) != NULL)
-						*p = 0;
+					if ((q = strchr(p, ' ')) != NULL)
+						*q = '\0';
 					++num_files;
-					if (!lstat(buf2, &st))
+					if (!lstat(p, &st))
 						num_bytes += (fs_size ? st.st_blocks * S_BLKSIZE : st.st_size);
 					break;
 				default:
@@ -159,11 +157,8 @@ int qsize_main(int argc, char **argv)
 			num_all_files += num_files;
 			num_all_nonfiles += num_nonfiles;
 			if (!summary_only) {
-				if (color)
-					printf(BOLD "%s/" BLUE "%s" NORM, basename(dentry->d_name), de->d_name);
-				else
-					printf("%s/%s", basename(dentry->d_name), de->d_name);
-				printf(": %lu files, %lu non-files, ",
+				printf("%s%s/%s%s%s: %lu files, %lu non-files, ", BOLD, 
+				       basename(dentry->d_name), BLUE, de->d_name, NORM,
 				       (unsigned long)num_files, 
 				       (unsigned long)num_nonfiles);
 				if (disp_units)
@@ -181,11 +176,7 @@ int qsize_main(int argc, char **argv)
 	}
 	closedir(dir);
 	if (summary) {
-		if (color)
-			printf(BOLD " Totals:" NORM);
-		else
-			printf(" Totals:");
-		printf(" %lu files, %lu non-files, ",
+		printf(" %sTotals%s: %lu files, %lu non-files, ", BOLD, NORM,
 		       (unsigned long)num_all_files,
 		       (unsigned long)num_all_nonfiles);
 		if (disp_units)
