@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.9 2005/06/11 00:17:40 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.10 2005/06/11 01:13:49 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -73,15 +73,27 @@ static char *argv0;
 	exit(EXIT_FAILURE); \
 	} while (0)
 #ifdef EBUG
+#include <sys/resource.h>
+
 # define DBG(fmt, args...) warnf(fmt, ## args)
+# define IF_DEBUG(x) x
+void init_coredumps(void);
+void init_coredumps(void) {
+	struct rlimit rl;
+	int val = 0;
+	val = RLIM_INFINITY;
+	rl.rlim_cur = val;
+	rl.rlim_max = val;
+	setrlimit(RLIMIT_CORE, &rl);
+}
 #else
 # define DBG(fmt, args...)
+# define IF_DEBUG(x)
 #endif
 
 
-
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.9 2005/06/11 00:17:40 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.10 2005/06/11 01:13:49 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -413,6 +425,7 @@ void reinitialize_as_needed(void)
 
 int main(int argc, char **argv)
 {
+	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
 	initialize_portdir();
 	atexit(reinitialize_as_needed);

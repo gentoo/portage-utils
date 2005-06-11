@@ -1,1 +1,10 @@
-q.o: q.c qfile.c qlist.c qsearch.c quse.c
+q.o: q.c
+qfile.o: qfile.c
+qlist.o: qlist.c
+qsearch.o: qsearch.c
+quse.o: quse.c
+qsize.o: qsize.c
+qcheck.o: qcheck.c
+main.o: main.c libq/libq.c libq/busybox.h libq/xmalloc.c libq/hash_fd.c \
+  libq/md5_sha1_sum.c libq/human_readable.c qfile.c qlist.c qsearch.c \
+  quse.c qsize.c qcheck.c q.c

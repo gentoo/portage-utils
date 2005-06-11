@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.8 2005/06/09 17:38:18 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.9 2005/06/11 01:13:49 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -18,12 +18,18 @@
 # MA 02111-1307, USA.
 ####################################################################
 
+check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
+        then echo "$(1)"; else echo "$(2)"; fi)
+
 ####################################################
-WFLAGS    := -Wall -Wextra -Wunused -Wimplicit -Wshadow -Wformat=2 \
+WFLAGS    := -Wall -Wunused -Wimplicit -Wshadow -Wformat=2 \
              -Wmissing-declarations -Wmissing-prototypes -Wwrite-strings \
              -Wbad-function-cast -Wnested-externs -Wcomment -Wsequence-point \
-             -Wdeclaration-after-statement -Wchar-subscripts -Wcast-align \
-             -Winline -Wno-format-nonliteral
+             -Wchar-subscripts -Wcast-align -Winline -Wno-format-nonliteral
+
+# =gcc-3.3 does not support these options.
+WFLAGS     += $(call check_gcc, -Wdeclaration-after-statement -Wextra)
+
 CFLAGS    := -O2 -pipe
 #CFLAGS   += -DEBUG -g
 #LDFLAGS  := -pie
@@ -47,7 +53,7 @@ MPAGES     = man/q.1
 all: q
 	@:
 
-debug: all symlinks
+debug: symlinks
 	@-/sbin/chpax  -permsx $(APPLETS)
 	@-/sbin/paxctl -permsx $(APPLETS)
 
@@ -56,12 +62,12 @@ q: $(SRC)
 	@$(CC) $(CFLAGS) $(LDFLAGS) $(WFLAGS) main.c -o q
 
 depend:
-	$(CC) $(CFLAGS) -MM $(SOURCES) > .depend
+	$(CC) $(CFLAGS) -MM $(SRC) > .depend
 
 clean:
 	-rm -f q
 
-distclean: clean
+distclean: clean depend
 	-rm -f *~ core
 	-rm -f `find . -type l`
 
