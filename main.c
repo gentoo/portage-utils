@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.8 2005/06/10 00:08:43 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.9 2005/06/11 00:17:40 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -81,7 +81,7 @@ static char *argv0;
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.8 2005/06/10 00:08:43 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.9 2005/06/11 00:17:40 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -336,27 +336,23 @@ void initialize_ebuild_flat(void)
 		return;
 	}
 
-	start = time(0);
+	start = time(NULL);
 	if ((dir[0] = opendir(".")) == NULL)
 		return;
 
-	while ((dentry[0] = readdir(dir[0]))) {
+	while ((dentry[0] = readdir(dir[0])) != NULL) {
 		struct stat st;
-		stat(dentry[0]->d_name, &st);
-
 		if (*dentry[0]->d_name == '.')
 			continue;
-
-		if (!(S_ISDIR(st.st_mode)))
+		stat(dentry[0]->d_name, &st);
+		if (!S_ISDIR(st.st_mode))
 			continue;
-
-		if ((strchr(dentry[0]->d_name, '-')) == NULL)
+		if (strchr(dentry[0]->d_name, '-') == NULL)
 			continue;
-
 		if ((dir[1] = opendir(dentry[0]->d_name)) == NULL)
 			continue;
 
-		while ((dentry[1] = readdir(dir[1]))) {
+		while ((dentry[1] = readdir(dir[1])) != NULL) {
 			char de[_POSIX_PATH_MAX];
 			if (*dentry[1]->d_name == '.')
 				continue;
@@ -365,13 +361,13 @@ void initialize_ebuild_flat(void)
 			         dentry[1]->d_name);
 
 			stat(de, &st);
-			if (!(S_ISDIR(st.st_mode)))
+			if (!S_ISDIR(st.st_mode))
 				continue;
 
 			if ((dir[2] = opendir(de)) == NULL)
 				continue;
 
-			while ((dentry[2] = readdir(dir[2]))) {
+			while ((dentry[2] = readdir(dir[2])) != NULL) {
 				char *p;
 				if (*dentry[2]->d_name == '.')
 					continue;
@@ -387,7 +383,7 @@ void initialize_ebuild_flat(void)
 	}
 	closedir(dir[0]);
 	fclose(fp);
-	warn("Finished in %lu seconds", time(0) - start);
+	warn("Finished in %lu seconds", (time_t)time(NULL) - start);
 }
 
 void reinitialize_ebuild_flat(void)
