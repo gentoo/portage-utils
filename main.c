@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.11 2005/06/12 21:18:43 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.12 2005/06/12 21:25:33 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -93,7 +93,7 @@ void init_coredumps(void) {
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.11 2005/06/12 21:18:43 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.12 2005/06/12 21:25:33 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -110,7 +110,7 @@ static char portvdb[] = "/var/db/pkg";
 #define BOLD      COLOR("00", "01")
 #define BLUE      COLOR("36", "01")
 #define CYAN      COLOR("36", "02")
-#define MAGENTA   COLOR("35", "01")
+#define MAGENTA   COLOR("35", "02")
 #define GREE      COLOR("32", "01")
 #define RED       COLOR("31", "01")
 #define NORM      COLOR("00", "00")

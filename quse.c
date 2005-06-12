@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.4 2005/06/12 21:18:43 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.5 2005/06/12 21:25:33 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -61,9 +61,9 @@ static void print_highlighted_use_flags(char *str, int argc, char **argv) {
 					highlight = 1;
 			}
 			if (highlight)
-				printf("%s%s%s%s ", MAGENTA, str, BOLD, NORM);
-			else
 				printf("%s%s%s ", BOLD, str, NORM);
+			else
+				printf("%s%s%s%s ", NORM, MAGENTA, str, NORM);
 			str = p + 1;
 		} else {
 			highlight = 0;
@@ -73,9 +73,9 @@ static void print_highlighted_use_flags(char *str, int argc, char **argv) {
 					highlight = 1;
 			}
 			if (highlight)
-				printf("%s%s%s%s ", MAGENTA, str, BOLD, NORM);
-			else
 				printf("%s%s%s ", BOLD, str, NORM);
+			else
+				printf("%s%s%s%s ", NORM, MAGENTA, str, NORM);
 		}
 	}
 }
