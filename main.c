@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.10 2005/06/11 01:13:49 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.11 2005/06/12 21:18:43 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -93,7 +93,7 @@ void init_coredumps(void) {
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.10 2005/06/11 01:13:49 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.11 2005/06/12 21:18:43 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -109,10 +109,11 @@ static char portvdb[] = "/var/db/pkg";
 #define COLOR(c,b) (color ? "\e[" c ";" b "m" : "")
 #define BOLD      COLOR("00", "01")
 #define BLUE      COLOR("36", "01")
+#define CYAN      COLOR("36", "02")
+#define MAGENTA   COLOR("35", "01")
 #define GREE      COLOR("32", "01")
 #define RED       COLOR("31", "01")
 #define NORM      COLOR("00", "00")
-
 
 
 /* applet prototypes */
@@ -269,7 +270,7 @@ int rematch(char *regex, const char *match, int cflags)
 
 	return ret;
 }
-
+/* removed leading/trailing extraneous white space */
 char *rmspace(char *s)
 {
 	register char *p;
@@ -283,12 +284,39 @@ char *rmspace(char *s)
 	return (char *) s;
 }
 
+/* removes adjacent extraneous white space */
+static char *rmextraneousspace(char *str);
+static char *rmextraneousspace(char *str) {
+	char *p, c = ' ';
+	size_t len, pos = 0;
+	char *buf;
+
+	if (str == NULL) return NULL;
+	len = strlen(str);
+	buf = (char *) malloc(len+1);
+	memset(buf, 0, len+1);
+	for (p = str; *p != 0; ++p) {
+		if (!isspace(*p)) c = *p; else {
+			if (c == ' ') continue;
+			c = ' ';
+		}
+		buf[pos] = c;
+		pos++;
+	}
+	strcpy(str, buf);
+	free(buf);
+	return (char *) str;
+}
+
 char *initialize_portdir(void)
 {
 	FILE *fp;
 	char buf[_POSIX_PATH_MAX + 8];
 	char *p = getenv("PORTDIR");
 	size_t i;
+
+	if (getenv("NOCOLOR"))
+		color = 0;
 
 	if (p) {
 		if (strlen(p) + 1 < sizeof(portdir)) {
@@ -298,6 +326,8 @@ char *initialize_portdir(void)
 	}
 	if ((fp = fopen("/etc/make.conf", "r")) != NULL) {
 		while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+			if (strncmp(buf, "NOCOLOR=", 8) == 0)
+				color = 0;
 			if (*buf != 'P')
 				continue;
 			if (strncmp(buf, "PORTDIR=", 8) != 0)
@@ -317,7 +347,8 @@ char *initialize_portdir(void)
 	}
 	return portdir;
 }
-
+/* The logic for ebuild.x should be moved into /var/cache */
+/* and allow for user defined --cache files */
 #define EBUILD_CACHE ".ebuild.x"
 void initialize_ebuild_flat(void)
 {
@@ -332,7 +363,7 @@ void initialize_ebuild_flat(void)
 	}
 
 	/* assuming --sync is used with --delete this will get recreated after every merged */
-	if (access(EBUILD_CACHE, W_OK) == 0)
+	if (access(EBUILD_CACHE, R_OK) == 0)
 		return;
 
 	warn("Updating ebuild cache ... ");

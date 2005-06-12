@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.3 2005/06/10 00:11:20 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.4 2005/06/12 21:18:43 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,16 +26,59 @@
 
 
 
-#define QUSE_FLAGS "" COMMON_FLAGS
+#define QUSE_FLAGS "a" COMMON_FLAGS
 static struct option const quse_long_opts[] = {
+	{"all",        no_argument, NULL, 'a'},
 	COMMON_LONG_OPTS
 };
 static const char *quse_opts_help[] = {
+	"List every package in the cache",
 	COMMON_OPTS_HELP
 };
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, APPLET_QUSE)
 
+static void print_highlighted_use_flags(char *str, int argc, char **argv) {
+	char *p;
+	size_t pos;
 
+	short highlight = 0;
+	int i;
+
+	rmextraneousspace(str);
+	rmspace(str);
+
+	if (!color) {
+		printf("%s", str);
+		return;
+	}
+	for (pos = 0; pos <= strlen(str); pos++) {
+		if ( (p = strchr(str, ' ')) != NULL) {
+			highlight = 0;
+			*p = 0;
+			pos += strlen(str)+1;
+			for (i = 1; i < argc; i++) {
+				if (strcmp(str, argv[i]) == 0)
+					highlight = 1;
+			}
+			if (highlight)
+				printf("%s%s%s%s ", MAGENTA, str, BOLD, NORM);
+			else
+				printf("%s%s%s ", BOLD, str, NORM);
+			str = p + 1;
+		} else {
+			highlight = 0;
+			pos += strlen(str);
+			for (i = 1; i < argc; i++) {
+				if (strcmp(str, argv[i]) == 0)
+					highlight = 1;
+			}
+			if (highlight)
+				printf("%s%s%s%s ", MAGENTA, str, BOLD, NORM);
+			else
+				printf("%s%s%s ", BOLD, str, NORM);
+		}
+	}
+}
 
 int quse_main(int argc, char **argv)
 {
@@ -43,17 +86,18 @@ int quse_main(int argc, char **argv)
 	char *p;
 	char buf[_POSIX_PATH_MAX];
 	char ebuild[_POSIX_PATH_MAX];
-	int i;
+	int i, all = 0;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
 	while ((i = GETOPT_LONG(QUSE, quse, "")) != -1) {
 		switch (i) {
+		case 'a': all = 1; break;
 		COMMON_GETOPTS_CASES(quse)
 		}
 	}
-
+	if (all) optind = argc;
 	initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
 	fp = fopen(EBUILD_CACHE, "r");
 	if (!fp)
@@ -65,8 +109,10 @@ int quse_main(int argc, char **argv)
 		if ((newfp = fopen(ebuild, "r")) != NULL) {
 			while ((fgets(buf, sizeof(buf), newfp)) != NULL) {
 				if ((strncmp(buf, "IUSE=", 5)) == 0) {
-					int ok;
-					if ((p = strrchr(&buf[6], '"')) != NULL)
+					int ok = 0;
+					while ((p = strrchr(&buf[6], '"')) != NULL)
+						*p = 0;
+					while ((p = strrchr(&buf[6], '\'')) != NULL)
 						*p = 0;
 					if (argc == optind) {
 						ok = 1;
@@ -79,8 +125,11 @@ int quse_main(int argc, char **argv)
 							}
 						}
 					}
-					if (ok)
-						printf("%s%s%s %s\n", BLUE, ebuild, NORM, &buf[6]);
+					if (ok) {
+						printf("%s%s%s ", CYAN, ebuild, BOLD);
+						print_highlighted_use_flags(&buf[6], argc, argv);
+						puts(NORM);
+					}
 					break;
 				}
 			}
