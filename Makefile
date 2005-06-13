@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.9 2005/06/11 01:13:49 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.10 2005/06/13 03:12:42 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -39,6 +39,10 @@ STRIP     := strip
 MKDIR     := mkdir -p
 CP        := cp
 
+ifdef PV
+HFLAGS    += -DVERSION=\"$(PV)\"
+endif
+
 # Build with -Werror while emerging
 ifneq ($(S),)
 CFLAGS	+= -Werror
@@ -59,7 +63,7 @@ debug: symlinks
 
 q: $(SRC)
 	@echo $(CC) $(CFLAGS) $(LDFLAGS) main.c -o q
-	@$(CC) $(CFLAGS) $(LDFLAGS) $(WFLAGS) main.c -o q
+	@$(CC) $(CFLAGS) $(LDFLAGS) $(WFLAGS) $(HFLAGS) main.c -o q
 
 depend:
 	$(CC) $(CFLAGS) -MM $(SRC) > .depend
