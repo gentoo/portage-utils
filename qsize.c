@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.7 2005/06/10 00:12:22 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.8 2005/06/13 23:52:56 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -124,7 +124,7 @@ int qsize_main(int argc, char **argv)
 					continue;
 			}
 
-			snprintf(buf, sizeof(buf), "/var/db/pkg/%s/%s/CONTENTS",
+			snprintf(buf, sizeof(buf), "%s/%s/%s/CONTENTS", portvdb,
 			         dentry->d_name, de->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;
