@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.7 2005/06/13 05:25:32 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.8 2005/06/13 23:55:05 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -111,7 +111,7 @@ int quse_main(int argc, char **argv)
 		if ((p = strchr(ebuild, '\n')) != NULL)
 			*p = 0;
 		if ((newfp = fopen(ebuild, "r")) != NULL) {
-			size_t lineno = 0;
+			unsigned int lineno = 0;
 			while ((fgets(buf, sizeof(buf), newfp)) != NULL) {
 				int ok = 0;
 				lineno++;
