@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.13 2005/06/13 03:12:42 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.14 2005/06/13 05:25:32 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -59,11 +59,21 @@ void reinitialize_ebuild_flat(void);
 void reinitialize_as_needed(void);
 
 
+/* color constants */
+#define COLOR(c,b) (color ? "\e[" c ";" b "m" : "")
+#define BOLD      COLOR("00", "01")
+#define BLUE      COLOR("36", "01")
+#define CYAN      COLOR("36", "02")
+#define MAGENTA   COLOR("35", "02")
+#define GREE      COLOR("32", "01")
+#define RED       COLOR("31", "01")
+#define NORM      COLOR("00", "00")
+
 
 /* helper functions for showing errors */
 static char *argv0;
 #define warn(fmt, args...) \
-	fprintf(stderr, "%s: " fmt "\n", argv0, ## args)
+	fprintf(stderr, "%s%s%s: " fmt "\n", RED, argv0, NORM, ## args)
 #define warnf(fmt, args...) warn("%s(): " fmt, __FUNCTION__, ## args)
 #define warnp(fmt, args...) warn(fmt ": %s", ## args, strerror(errno))
 #define warnfp(fmt, args...) warnf(fmt ": %s", ## args, strerror(errno))
@@ -93,27 +103,17 @@ void init_coredumps(void) {
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.13 2005/06/13 03:12:42 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.14 2005/06/13 05:25:32 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
 static int found = 0;
+static int verbose = 0;
 static char reinitialize = 0;
 
 static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
 static char portvdb[] = "/var/db/pkg";
 
-
-
-/* color constants */
-#define COLOR(c,b) (color ? "\e[" c ";" b "m" : "")
-#define BOLD      COLOR("00", "01")
-#define BLUE      COLOR("36", "01")
-#define CYAN      COLOR("36", "02")
-#define MAGENTA   COLOR("35", "02")
-#define GREE      COLOR("32", "01")
-#define RED       COLOR("31", "01")
-#define NORM      COLOR("00", "00")
 
 
 /* applet prototypes */
@@ -288,8 +288,8 @@ char *rmspace(char *s)
 }
 
 /* removes adjacent extraneous white space */
-static char *rmextraneousspace(char *str);
-static char *rmextraneousspace(char *str) {
+static char *remove_extra_space(char *str);
+static char *remove_extra_space(char *str) {
 	char *p, c = ' ';
 	size_t len, pos = 0;
 	char *buf;
@@ -317,9 +317,6 @@ char *initialize_portdir(void)
 	char buf[_POSIX_PATH_MAX + 8];
 	char *p = getenv("PORTDIR");
 	size_t i;
-
-	if (getenv("NOCOLOR"))
-		color = 0;
 
 	if (p) {
 		if (strlen(p) + 1 < sizeof(portdir)) {
@@ -461,6 +458,8 @@ int main(int argc, char **argv)
 {
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
+	if (getenv("NOCOLOR"))
+		color = 0;
 	initialize_portdir();
 	atexit(reinitialize_as_needed);
 	return q_main(argc, argv);
