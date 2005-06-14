@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.1 2005/06/14 05:08:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.2 2005/06/14 23:16:05 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -25,7 +25,6 @@
  */
 
 typedef struct {
-	char *_data;
 	char *CATEGORY;
 	char *PN;
 	int PR_int;
@@ -39,17 +38,18 @@ depend_atom *atom_explode(const char *atom)
 	char *ptr, *ptr_tmp;
 	size_t len, slen;
 
-	/* this shit looks scary huh BUT YOU LIKE IT */
-
+	/* we allocate mem for atom struct and two strings (strlen(atom)).
+	 * the first string is for CAT/PN/PV while the second is for PVR */
 	slen = strlen(atom);
 	len = sizeof(*ret) + slen * sizeof(*atom) * 2 + 2;
-	ret = xmalloc(len);
+	ret = (depend_atom*)xmalloc(len);
 	memset(ret, 0x00, len);
 	ptr = (char*)ret;
-	ret->_data = ptr + sizeof(*ret);
-	ret->CATEGORY = ret->_data + slen + 1;
+	ret->PVR = ptr + sizeof(*ret);
+	ret->CATEGORY = ret->PVR + slen + 1;
 	memcpy(ret->CATEGORY, atom, slen);
 
+	/* this shit looks scary huh BUT YOU LIKE IT */
 	if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL) {
 		int i;
 		const char *suffixes[] = { "_alpha", "_beta", "_pre", "_rc", "_p", NULL };
@@ -58,6 +58,10 @@ depend_atom *atom_explode(const char *atom)
 		ret->PN = ptr+1;
 		*ptr = '\0';
 
+		/* eat extra crap in case it exists */
+		if ((ptr_tmp = strrchr(ret->CATEGORY, '/')) != NULL)
+			ret->CATEGORY = ptr_tmp+1;
+
 		/* search for the special suffixes */
 		for (i = 0; i >= 0 && suffixes[i]; ++i) {
 			ptr_tmp = ret->PN;
@@ -65,6 +69,7 @@ depend_atom *atom_explode(const char *atom)
 retry_suffix:
 			if ((ptr = strstr(ptr_tmp, suffixes[i])) != NULL) {
 				/* check this is a real suffix and not _p hitting mod_perl */
+				/* note: '_suff-' in $PN is accepted, but no one uses that ... */
 				len = strlen(ptr);
 				slen = strlen(suffixes[i]);
 				if (slen > len) continue;
@@ -110,7 +115,6 @@ found_pv:
 		i = -1;
 		if (ret->PV) {
 			/* if we got the PV, split the -r# off */
-			ret->PVR = ret->_data;
 			if ((ptr = strstr(ret->PV, "-r")) != NULL) {
 				ret->PR_int = atoi(ptr+2);
 				strcpy(ret->PVR, ret->PV);
