@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.10 2005/06/14 22:20:19 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.11 2005/06/14 23:27:06 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,7 +39,7 @@ static const char *quse_opts_help[] = {
 };
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, APPLET_QUSE)
 
-static void print_highlighted_use_flags(char *str, int argc, char **argv) {
+static void print_highlighted_use_flags(char *str, int ind, int argc, char **argv) {
 	char *p;
 	size_t pos, len;
 
@@ -61,16 +61,15 @@ static void print_highlighted_use_flags(char *str, int argc, char **argv) {
 		if ((p = strchr(str, ' ')) != NULL)
 			*p = 0;
 		pos += strlen(str);
-		for (i = 1; i < argc; i++) {
+		for (i = ind; i < argc; ++i)
 			if (strcmp(str, argv[i]) == 0)
 				highlight = 1;
-			if (highlight)
-				printf("%s%s%s ", BOLD, str, NORM);
-			else
-				printf("%s%s%s%s ", NORM, MAGENTA, str, NORM);
-			if (p != NULL)
-				str = p + 1;
-		}
+		if (highlight)
+			printf("%s%s%s ", BOLD, str, NORM);
+		else
+			printf("%s%s%s%s ", NORM, MAGENTA, str, NORM);
+		if (p != NULL)
+			str = p + 1;
 	}
 }
 
@@ -118,9 +117,7 @@ int quse_main(int argc, char **argv)
 					|| (strstr(buf, "  ") != NULL))
 					warn("# Line %d of %s has an annoying %s", lineno, ebuild, buf);
 				}
-#if 0
 				if ((p = strrchr(&buf[6], '\\')) != NULL) {
-					size_t size = 0;
 					char buf2[_POSIX_PATH_MAX];
 					char buf3[_POSIX_PATH_MAX];
 
@@ -131,22 +128,19 @@ int quse_main(int argc, char **argv)
 					fgets(buf2, sizeof(buf2), newfp);
 					lineno++;
 
-					if ((p = strrchr(buf2, '\n')) != NULL)
+					if ((p = strchr(buf2, '\n')) != NULL)
 						*p = 0;
 					snprintf(buf3, sizeof(buf3), "%s %s", buf, buf2);
-					fprintf(stderr, "BUF='%s'\nBUF2='%s'\n", buf, buf2);
 					remove_extra_space(buf3);
-					fprintf(stderr, "BUF3='%s'\n", buf3);
 					strcpy(buf, buf3);
-					fprintf(stderr, "BUF0='%s'\nZBUF0[6]='%s'\n", buf, &buf[6]);
 					if ((p = strrchr(buf2, '\\')) != NULL)
 						goto multiline;
 				}
-#endif
-				while ((p = strrchr(&buf[6], '"')) != NULL)
-					*p = 0;
-				while ((p = strrchr(&buf[6], '\'')) != NULL)
-					*p = 0;
+
+				while ((p = strrchr(&buf[6], '"')) != NULL)  *p = 0;
+				while ((p = strrchr(&buf[6], '\'')) != NULL) *p = 0;
+				while ((p = strrchr(&buf[6], '\\')) != NULL) *p = ' ';
+
 				if (argc == optind) {
 					ok = 1;
 				} else {
@@ -160,7 +154,7 @@ int quse_main(int argc, char **argv)
 				}
 				if (ok) {
 					printf("%s%s%s ", CYAN, ebuild, NORM);
-					print_highlighted_use_flags(&buf[6], argc, argv);
+					print_highlighted_use_flags(&buf[6], optind, argc, argv);
 					puts(NORM);
 				}
 				break;
