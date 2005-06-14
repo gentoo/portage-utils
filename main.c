@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.14 2005/06/13 05:25:32 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.15 2005/06/14 00:04:09 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -59,29 +59,34 @@ void reinitialize_ebuild_flat(void);
 void reinitialize_as_needed(void);
 
 
+
 /* color constants */
 #define COLOR(c,b) (color ? "\e[" c ";" b "m" : "")
 #define BOLD      COLOR("00", "01")
+#define NORM      COLOR("00", "00")
 #define BLUE      COLOR("36", "01")
 #define CYAN      COLOR("36", "02")
+#define GREEN     COLOR("32", "01")
 #define MAGENTA   COLOR("35", "02")
-#define GREE      COLOR("32", "01")
 #define RED       COLOR("31", "01")
-#define NORM      COLOR("00", "00")
+#define YELLOW    COLOR("33", "01")
+
 
 
 /* helper functions for showing errors */
 static char *argv0;
 #define warn(fmt, args...) \
 	fprintf(stderr, "%s%s%s: " fmt "\n", RED, argv0, NORM, ## args)
-#define warnf(fmt, args...) warn("%s(): " fmt, __FUNCTION__, ## args)
+#define warnf(fmt, args...) warn("%s%s()%s: " fmt, YELLOW, __FUNCTION__, NORM, ## args)
 #define warnp(fmt, args...) warn(fmt ": %s", ## args, strerror(errno))
 #define warnfp(fmt, args...) warnf(fmt ": %s", ## args, strerror(errno))
-#define err(fmt, args...) \
+#define _err(wfunc, fmt, args...) \
 	do { \
-	warn(fmt, ## args); \
+	wfunc(fmt, ## args); \
 	exit(EXIT_FAILURE); \
 	} while (0)
+#define err(fmt, args...) _err(warn, fmt, ## args)
+#define errf(fmt, args...) _err(warnf, fmt, ## args)
 #ifdef EBUG
 #include <sys/resource.h>
 
@@ -103,7 +108,7 @@ void init_coredumps(void) {
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.14 2005/06/13 05:25:32 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.15 2005/06/14 00:04:09 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
