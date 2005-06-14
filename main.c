@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.21 2005/06/14 05:08:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.22 2005/06/14 20:31:29 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -109,7 +109,7 @@ void init_coredumps(void) {
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.21 2005/06/14 05:08:05 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.22 2005/06/14 20:31:29 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -370,16 +370,28 @@ enum {
 	CACHE_EBUILD = 1,
 	CACHE_METADATA = 2
 };
+
+int filter_hidden(const struct dirent *dentry);
+int filter_hidden(const struct dirent *dentry) {
+	if (dentry->d_name[0] == '.')
+		return 0;
+	return 1;
+}
+
 #define CACHE_EBUILD_FILE ".ebuild.x"
 #define CACHE_METADATA_FILE ".metadata.x"
 const char *initialize_flat(int cache_type);
 const char *initialize_flat(int cache_type)
 {
 	static const char *cache_file;
-	DIR *dir[3];
-	struct dirent *dentry[3];
-	FILE *fp;
+	struct dirent **category, **pn, **eb;
+	struct stat st;
 	time_t start;
+	FILE *fp;
+	int a, b, c, d, e, i;
+	char *p;
+
+	a = b = c = d = e = i = 0;
 
 	cache_file = (cache_type == CACHE_EBUILD ? CACHE_EBUILD_FILE : CACHE_METADATA_FILE);
 
@@ -392,6 +404,10 @@ const char *initialize_flat(int cache_type)
 		warnp("chdir to portage cache '%s/%s' failed", portdir, portcachedir);
 		goto ret;
 	}
+
+	if ((stat(cache_file, &st)) != (-1))
+		if (st.st_size == 0)
+			unlink(cache_file);
 
 	/* assuming --sync is used with --delete this will get recreated after every merged */
 	if (access(cache_file, R_OK) == 0)
@@ -411,30 +427,26 @@ const char *initialize_flat(int cache_type)
 	}
 
 	start = time(NULL);
-	if ((dir[0] = opendir(".")) == NULL)
+
+	if ((a = scandir(".", &category, filter_hidden, alphasort)) < 0)
 		goto ret;
 
-	while ((dentry[0] = readdir(dir[0])) != NULL) {
-		struct stat st;
-		if (*dentry[0]->d_name == '.')
-			continue;
-		stat(dentry[0]->d_name, &st);
+	for (i = 0 ; i < a; i++) {
+		stat(category[i]->d_name, &st);
 		if (!S_ISDIR(st.st_mode))
 			continue;
-		if (strchr(dentry[0]->d_name, '-') == NULL)
-			continue;
-		if ((dir[1] = opendir(dentry[0]->d_name)) == NULL)
+		if (strchr(category[i]->d_name, '-') == NULL)
 			continue;
 
-		while ((dentry[1] = readdir(dir[1])) != NULL) {
+		if ((b = scandir((const char *)category[i]->d_name, &pn, filter_hidden, alphasort)) < 0)
+			continue;
+		for (c = 0; c < b; c++) {
 			char de[_POSIX_PATH_MAX];
-			if (*dentry[1]->d_name == '.')
+
+			snprintf(de, sizeof(de), "%s/%s", category[i]->d_name, pn[c]->d_name);
+
+			if (stat(de, &st) < 0)
 				continue;
-
-			snprintf(de, sizeof(de), "%s/%s", dentry[0]->d_name,
-			         dentry[1]->d_name);
-
-			stat(de, &st);
 
 			switch (cache_type) {
 			case CACHE_EBUILD:
@@ -447,25 +459,21 @@ const char *initialize_flat(int cache_type)
 				continue;
 				break;
 			}
-
-			if ((dir[2] = opendir(de)) == NULL)
+			if ((e = scandir(de, &eb, filter_hidden, alphasort)) < 0)
 				continue;
-
-			while ((dentry[2] = readdir(dir[2])) != NULL) {
-				char *p;
-				if (*dentry[2]->d_name == '.')
-					continue;
-				if ((p = rindex(dentry[2]->d_name, '.')) != NULL)
-					if (strcmp(p, ".ebuild") == 0) {
-						fprintf(fp, "%s/%s/%s\n", dentry[0]->d_name,
-						        dentry[1]->d_name, dentry[2]->d_name);
-					}
+			for (d = 0 ; d < e; d++) {
+				if ((p = rindex(eb[d]->d_name, '.')) != NULL)
+					if (strcmp(p, ".ebuild") == 0)
+						fprintf(fp, "%s/%s/%s\n", category[i]->d_name, pn[c]->d_name, eb[d]->d_name);
 			}
-			closedir(dir[2]);
+			while(d--) free(eb[d]);
+			free(eb);
 		}
-		closedir(dir[1]);
+		while(b--) free(pn[b]);
+		free(pn);
 	}
-	closedir(dir[0]);
+	while(a--) free(category[a]);
+	free(category);
 	fclose(fp);
 	warn("Finished in %lu seconds", (time_t)time(NULL) - start);
 ret:
