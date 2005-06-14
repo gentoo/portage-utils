@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.23 2005/06/14 20:49:34 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.24 2005/06/14 23:18:04 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -93,7 +93,8 @@ static char *argv0;
 # define DBG(fmt, args...) warnf(fmt, ## args)
 # define IF_DEBUG(x) x
 void init_coredumps(void);
-void init_coredumps(void) {
+void init_coredumps(void)
+{
 	struct rlimit rl;
 	int val = 0;
 	val = RLIM_INFINITY;
@@ -109,7 +110,7 @@ void init_coredumps(void) {
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.23 2005/06/14 20:49:34 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.24 2005/06/14 23:18:04 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -372,7 +373,8 @@ enum {
 };
 
 int filter_hidden(const struct dirent *dentry);
-int filter_hidden(const struct dirent *dentry) {
+int filter_hidden(const struct dirent *dentry)
+{
 	if (dentry->d_name[0] == '.')
 		return 0;
 	return 1;
