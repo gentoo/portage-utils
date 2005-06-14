@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.17 2005/06/14 00:16:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.18 2005/06/14 02:18:41 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -109,7 +109,7 @@ void init_coredumps(void) {
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.17 2005/06/14 00:16:05 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.18 2005/06/14 02:18:41 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -485,6 +485,214 @@ void reinitialize_as_needed(void)
 {
 	if (reinitialize)
 		reinitialize_ebuild_flat();
+}
+
+typedef struct {
+	char *_data;
+	char *CATEGORY;
+	char *PN;
+	char *PV, *PVR;
+} depend_atom;
+depend_atom *atom_explode(const char *atom);
+depend_atom *atom_explode(const char *atom)
+{
+	depend_atom *ret;
+	char *ptr;
+	size_t len, slen;
+
+	/* this shit looks scary huh BUT YOU LIKE IT */
+
+	slen = strlen(atom);
+	len = sizeof(*ret) + slen * sizeof(*atom) * 2 + 2;
+	ret = xmalloc(len);
+	memset(ret, 0x00, len);
+	ptr = (char*)ret;
+	ret->_data = ptr + sizeof(*ret);
+	ret->CATEGORY = ret->_data + slen + 1;
+	memcpy(ret->CATEGORY, atom, slen);
+
+	if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL) {
+		int i;
+		const char *suffixes[] = { "_alpha", "_beta", "_pre", "_rc", "_p", NULL };
+
+		/* break off the PVR from the CATEGORY */
+		ret->PN = ptr+1;
+		*ptr = '\0';
+
+		/* search for the special suffixes */
+		for (i = 0; i >= 0 && suffixes[i]; ++i)
+			if ((ptr = strstr(ret->PN, suffixes[i])) != NULL) {
+				char *last_dash;
+eat_version:
+				/* eat the trailing version number [-.0-9]+ */
+				last_dash = ptr;
+				while (--ptr > ret->PN)
+					if (*ptr == '-') {
+						last_dash = ptr;
+						continue;
+					} else if (*ptr != '-' && *ptr != '.' && (*ptr < '0' || *ptr > '9')) {
+						ret->PV = ptr+2;
+						ptr[1] = '\0';
+						goto found_pv;
+					}
+				ret->PV = last_dash+1;
+				*last_dash = '\0';
+				break;
+			}
+		if (i <= -3)
+			errf("Hrm, seem to have hit an infinite loop with %s", atom);
+
+found_pv:
+		i = -1;
+		if (ret->PV) {
+			/* if we got the PV, split the -r# off */
+			ret->PVR = ret->_data;
+			if ((ptr = strstr(ret->PV, "-r")) != NULL) {
+				strcpy(ret->PVR, ret->PV);
+				*ptr = '\0';
+			} else {
+				sprintf(ret->PVR, "%s-r0", ret->PV);
+			}
+		} else {
+			/* this means that we couldn't match any of the special suffixes,
+			 * so we eat the -r# suffix (if it exists) before we throw the
+			 * ptr back into the version eater code above
+			 */
+			ptr = ret->PN + strlen(ret->PN);
+			while (--ptr > ret->PN)
+				if (*ptr < '0' || *ptr > '9')
+					break;
+			if (*ptr == 'r') --ptr;
+			--i;
+			goto eat_version;
+		}
+	} else {
+		errf("Could not locate a /");
+	}
+
+	/*printf("%s -> %s / %s - %s [%s]\n", atom, ret->CATEGORY, ret->PN, ret->PVR, ret->PV);*/
+
+	return ret;
+}
+void atom_free(depend_atom *atom);
+void atom_free(depend_atom *atom)
+{
+	if (!atom)
+		errf("Atom is empty !");
+	free(atom);
+}
+
+typedef struct {
+	char *_data;
+	char *DEPEND;
+	char *RDEPEND;
+	char *SLOT;
+	char *SRC_URI;
+	char *RESTRICT;
+	char *HOMEPAGE;
+	char *LICENSE;
+	char *DESCRIPTION;
+	char *KEYWORDS;
+	char *INHERITED;
+	char *IUSE;
+	char *CDEPEND;
+	char *PDEPEND;
+	char *PROVIDE;
+	depend_atom *atom;
+} portage_cache;
+
+void cache_free(portage_cache *cache);
+portage_cache *cache_read_file(const char *file);
+portage_cache *cache_read_file(const char *file)
+{
+	struct stat s;
+	char *ptr;
+	FILE *f;
+	portage_cache *ret = NULL;
+	size_t len;
+
+	if ((f = fopen(file, "r")) == NULL)
+		goto err;
+
+	if (fstat(fileno(f), &s) != 0)
+		goto err;
+	len = sizeof(*ret) + s.st_size + 1;
+	ret = xmalloc(len);
+	memset(ret, 0x00, len);
+	ptr = (char*)ret;
+	ret->_data = ptr + sizeof(*ret);
+	if ((off_t)fread(ret->_data, 1, s.st_size, f) != s.st_size)
+		goto err;
+
+	ret->atom = atom_explode(file);
+
+	ret->DEPEND = ret->_data;
+#define next_line(curr, next) \
+	if ((ptr = strchr(ret->curr, '\n')) == NULL) { \
+		warn("Invalid cache file '%s'", file); \
+		goto err; \
+	} \
+	ret->next = ptr+1; \
+	*ptr = '\0';
+	next_line(DEPEND, RDEPEND)
+	next_line(RDEPEND, SLOT)
+	next_line(SLOT, SRC_URI)
+	next_line(SRC_URI, RESTRICT)
+	next_line(RESTRICT, HOMEPAGE)
+	next_line(HOMEPAGE, LICENSE)
+	next_line(LICENSE, DESCRIPTION)
+	next_line(DESCRIPTION, KEYWORDS)
+	next_line(KEYWORDS, INHERITED)
+	next_line(INHERITED, IUSE)
+	next_line(IUSE, CDEPEND)
+	next_line(CDEPEND, PDEPEND)
+	next_line(PDEPEND, PROVIDE)
+#undef next_line
+	ptr = strchr(ptr+1, '\n');
+	*ptr = '\0';
+
+	fclose(f);
+
+	return ret;
+
+err:
+	if (ret) cache_free(ret);
+	return NULL;
+}
+
+void cache_dump(portage_cache *cache);
+void cache_dump(portage_cache *cache)
+{
+	if (!cache)
+		errf("Cache is empty !");
+
+	printf("DEPEND     : %s\n", cache->DEPEND);
+	printf("RDEPEND    : %s\n", cache->RDEPEND);
+	printf("SLOT       : %s\n", cache->SLOT);
+	printf("SRC_URI    : %s\n", cache->SRC_URI);
+	printf("RESTRICT   : %s\n", cache->RESTRICT);
+	printf("HOMEPAGE   : %s\n", cache->HOMEPAGE);
+	printf("LICENSE    : %s\n", cache->LICENSE);
+	printf("DESCRIPTION: %s\n", cache->DESCRIPTION);
+	printf("KEYWORDS   : %s\n", cache->KEYWORDS);
+	printf("INHERITED  : %s\n", cache->INHERITED);
+	printf("IUSE       : %s\n", cache->IUSE);
+	printf("CDEPEND    : %s\n", cache->CDEPEND);
+	printf("PDEPEND    : %s\n", cache->PDEPEND);
+	printf("PROVIDE    : %s\n", cache->PROVIDE);
+	if (!cache->atom) return;
+	printf("CATEGORY   : %s\n", cache->atom->CATEGORY);
+	printf("PN         : %s\n", cache->atom->PN);
+	printf("PV         : %s\n", cache->atom->PV);
+	printf("PVR        : %s\n", cache->atom->PVR);
+}
+
+void cache_free(portage_cache *cache)
+{
+	if (!cache)
+		errf("Cache is empty !");
+	atom_free(cache->atom);
+	free(cache);
 }
 
 #include "qfile.c"
