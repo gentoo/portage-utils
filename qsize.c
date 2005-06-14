@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.8 2005/06/13 23:52:56 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.9 2005/06/14 23:30:54 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -188,5 +188,5 @@ int qsize_main(int argc, char **argv)
 			       (unsigned long)(num_all_bytes / MEGABYTE),
 			       (unsigned long)(((num_all_bytes%MEGABYTE)*1000)/MEGABYTE));
 	}
-	return 0;
+	return EXIT_SUCCESS;
 }
