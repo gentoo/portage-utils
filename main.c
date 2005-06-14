@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.15 2005/06/14 00:04:09 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.16 2005/06/14 00:08:15 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -107,8 +107,9 @@ void init_coredumps(void) {
 #endif
 
 
+
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.15 2005/06/14 00:04:09 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.16 2005/06/14 00:08:15 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -118,6 +119,11 @@ static char reinitialize = 0;
 
 static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
 static char portvdb[] = "/var/db/pkg";
+
+
+
+/* include common library code */
+#include "libq/libq.c"
 
 
 
@@ -294,14 +300,15 @@ char *rmspace(char *s)
 
 /* removes adjacent extraneous white space */
 static char *remove_extra_space(char *str);
-static char *remove_extra_space(char *str) {
+static char *remove_extra_space(char *str)
+{
 	char *p, c = ' ';
 	size_t len, pos = 0;
 	char *buf;
 
 	if (str == NULL) return NULL;
 	len = strlen(str);
-	buf = (char *) malloc(len+1);
+	buf = (char*)xmalloc(len+1);
 	memset(buf, 0, len+1);
 	for (p = str; *p != 0; ++p) {
 		if (!isspace(*p)) c = *p; else {
