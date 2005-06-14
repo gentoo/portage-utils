@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.5 2005/06/12 21:18:43 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.6 2005/06/14 00:16:05 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -45,7 +45,7 @@ char qsearch_search_help[] =
 
 
 
-#define QSEARCH_FLAGS "asS" COMMON_FLAGS
+#define QSEARCH_FLAGS "acsS" COMMON_FLAGS
 static struct option const qsearch_long_opts[] = {
 	{"all",        no_argument, NULL, 'a'},
 	{"cache",      no_argument, NULL, 'c'},
@@ -72,7 +72,7 @@ int qsearch_main(int argc, char **argv)
 	char last[126];
 	char *p, *q, *str;
 	char *search_me = NULL;
-	char search_desc = 1, search_all = 0;
+	char search_desc = 1, search_all = 0, search_cache = CACHE_EBUILD;
 	int i;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -82,6 +82,7 @@ int qsearch_main(int argc, char **argv)
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsearch)
 		case 'a': search_all = 1; break;
+		case 'c': search_cache = CACHE_METADATA; break;
 		case 's': search_desc = 0; break;
 		case 'S': search_desc = 1; break;
 		}
@@ -96,8 +97,7 @@ int qsearch_main(int argc, char **argv)
 	}
 
 	last[0] = 0;
-	initialize_ebuild_flat();
-	fp = fopen(EBUILD_CACHE, "r");
+	fp = fopen(initialize_flat(search_cache), "r");
 	if (!fp)
 		return 1;
 
@@ -106,42 +106,50 @@ int qsearch_main(int argc, char **argv)
 			*p = 0;
 		if (!ebuild[0])
 			continue;
-		str = strdup(ebuild);
-		p = (char *) dirname(str);
 
-		if ((strcmp(p, last)) != 0) {
-			FILE *newfp;
-			strncpy(last, p, sizeof(last));
-			if (!search_desc) {
-				if ((rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE)) == 0)
-					printf("%s\n", last);
-				continue;
-			}
-			if ((newfp = fopen(ebuild, "r")) != NULL) {
-				while ((fgets(buf, sizeof(buf), newfp)) != NULL) {
-					if ((strlen(buf) <= 13))
-						continue;
-					if ((strncmp(buf, "DESCRIPTION=", 12)) == 0) {
-						if ((q = strrchr(buf, '"')) != NULL)
-							*q = 0;
-						if (strlen(buf) <= 12)
-							break;
-						q = buf + 13;
-						if (!search_all && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
-							break;
-						printf("%s%s/%s%s%s %s\n", 
-							BOLD, dirname(p), BLUE, basename(p), NORM, q);
-						break;
-					}
+		switch (search_cache) {
+
+		case CACHE_EBUILD: {
+			FILE *ebuildfp;
+			str = xstrdup(ebuild);
+			p = (char *)dirname(str);
+
+			if ((strcmp(p, last)) != 0) {
+				strncpy(last, p, sizeof(last));
+				if (!search_desc) {
+					if ((rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE)) == 0)
+						printf("%s\n", last);
+					continue;
 				}
-				fclose(newfp);
-			} else {
-				if (!reinitialize)
-					warnf("(cache update pending) %s : %s", ebuild, strerror(errno));
-				reinitialize = 1;
+				if ((ebuildfp = fopen(ebuild, "r")) != NULL) {
+					while ((fgets(buf, sizeof(buf), ebuildfp)) != NULL) {
+						if ((strlen(buf) <= 13))
+							continue;
+						if ((strncmp(buf, "DESCRIPTION=", 12)) == 0) {
+							if ((q = strrchr(buf, '"')) != NULL)
+								*q = 0;
+							if (strlen(buf) <= 12)
+								break;
+							q = buf + 13;
+							if (!search_all && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
+								break;
+							printf("%s%s/%s%s%s %s\n", 
+								BOLD, dirname(p), BLUE, basename(p), NORM, q);
+							break;
+						}
+					}
+					fclose(ebuildfp);
+				} else {
+					if (!reinitialize)
+						warnf("(cache update pending) %s : %s", ebuild, strerror(errno));
+					reinitialize = 1;
+				}
 			}
-		}
-		free(str);
+			free(str);
+
+			break;
+		} /* case CACHE_EBUILD */
+		} /* switch (search_cache) */
 	}
 	fclose(fp);
 	return EXIT_SUCCESS;

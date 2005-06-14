@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.8 2005/06/13 23:55:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.9 2005/06/14 00:16:05 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -103,7 +103,7 @@ int quse_main(int argc, char **argv)
 	}
 	if (all) optind = argc;
 	initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
-	fp = fopen(EBUILD_CACHE, "r");
+	fp = fopen(CACHE_EBUILD_FILE, "r");
 	if (!fp)
 		return 1;
 	while ((fgets(ebuild, sizeof(ebuild), fp)) != NULL) {

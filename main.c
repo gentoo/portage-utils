@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.16 2005/06/14 00:08:15 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.17 2005/06/14 00:16:05 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -109,7 +109,7 @@ void init_coredumps(void) {
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.16 2005/06/14 00:08:15 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.17 2005/06/14 00:16:05 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -119,6 +119,7 @@ static char reinitialize = 0;
 
 static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
 static char portvdb[] = "/var/db/pkg";
+static char portcachedir[] = "metadata/cache";
 
 
 
@@ -359,41 +360,56 @@ char *initialize_portdir(void)
 	}
 	return portdir;
 }
+
 /* The logic for ebuild.x should be moved into /var/cache */
 /* and allow for user defined --cache files */
-#define EBUILD_CACHE ".ebuild.x"
-void initialize_ebuild_flat(void)
+enum {
+	CACHE_EBUILD = 1,
+	CACHE_METADATA = 2
+};
+#define CACHE_EBUILD_FILE ".ebuild.x"
+#define CACHE_METADATA_FILE ".metadata.x"
+const char *initialize_flat(int cache_type);
+const char *initialize_flat(int cache_type)
 {
+	static const char *cache_file;
 	DIR *dir[3];
 	struct dirent *dentry[3];
 	FILE *fp;
 	time_t start;
 
+	cache_file = (cache_type == CACHE_EBUILD ? CACHE_EBUILD_FILE : CACHE_METADATA_FILE);
+
 	if (chdir(portdir) != 0) {
 		warnp("chdir to PORTDIR '%s' failed", portdir);
-		return;
+		goto ret;
+	}
+
+	if (cache_type == CACHE_METADATA && chdir(portcachedir) != 0) {
+		warnp("chdir to portage cache '%s/%s' failed", portdir, portcachedir);
+		goto ret;
 	}
 
 	/* assuming --sync is used with --delete this will get recreated after every merged */
-	if (access(EBUILD_CACHE, R_OK) == 0)
-		return;
+	if (access(cache_file, R_OK) == 0)
+		goto ret;
 
 	warn("Updating ebuild cache ... ");
 
-	unlink(EBUILD_CACHE);
+	unlink(cache_file);
 	if (errno != ENOENT) {
-		warnfp("unlinking '%s/%s' failed", portdir, EBUILD_CACHE);
-		return;
+		warnfp("unlinking '%s/%s' failed", portdir, cache_file);
+		goto ret;
 	}
 
-	if ((fp = fopen(EBUILD_CACHE, "w")) == NULL) {
-		warnfp("opening '%s/%s' failed", portdir, EBUILD_CACHE);
-		return;
+	if ((fp = fopen(cache_file, "w")) == NULL) {
+		warnfp("opening '%s/%s' failed", portdir, cache_file);
+		goto ret;
 	}
 
 	start = time(NULL);
 	if ((dir[0] = opendir(".")) == NULL)
-		return;
+		goto ret;
 
 	while ((dentry[0] = readdir(dir[0])) != NULL) {
 		struct stat st;
@@ -416,8 +432,18 @@ void initialize_ebuild_flat(void)
 			         dentry[1]->d_name);
 
 			stat(de, &st);
-			if (!S_ISDIR(st.st_mode))
+
+			switch (cache_type) {
+			case CACHE_EBUILD:
+				if (!S_ISDIR(st.st_mode))
+					continue;
+				break;
+			case CACHE_METADATA:
+				if (S_ISREG(st.st_mode))
+					fprintf(fp, "%s\n", de);
 				continue;
+				break;
+			}
 
 			if ((dir[2] = opendir(de)) == NULL)
 				continue;
@@ -439,7 +465,11 @@ void initialize_ebuild_flat(void)
 	closedir(dir[0]);
 	fclose(fp);
 	warn("Finished in %lu seconds", (time_t)time(NULL) - start);
+ret:
+	return cache_file;
 }
+#define initialize_ebuild_flat() initialize_flat(CACHE_EBUILD)
+#define initialize_metadata_flat() initialize_flat(CACHE_METADATA)
 
 void reinitialize_ebuild_flat(void)
 {
@@ -447,7 +477,7 @@ void reinitialize_ebuild_flat(void)
 		warnp("chdir to PORTDIR '%s' failed", portdir);
 		return;
 	}
-	unlink(EBUILD_CACHE);
+	unlink(CACHE_EBUILD_FILE);
 	initialize_ebuild_flat();
 }
 
@@ -457,7 +487,6 @@ void reinitialize_as_needed(void)
 		reinitialize_ebuild_flat();
 }
 
-#include "libq/libq.c"
 #include "qfile.c"
 #include "qlist.c"
 #include "qsearch.c"
