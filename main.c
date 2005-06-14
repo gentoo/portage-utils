@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.22 2005/06/14 20:31:29 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.23 2005/06/14 20:49:34 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -109,7 +109,7 @@ void init_coredumps(void) {
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.22 2005/06/14 20:31:29 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.23 2005/06/14 20:49:34 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -438,7 +438,7 @@ const char *initialize_flat(int cache_type)
 		if (strchr(category[i]->d_name, '-') == NULL)
 			continue;
 
-		if ((b = scandir((const char *)category[i]->d_name, &pn, filter_hidden, alphasort)) < 0)
+		if ((b = scandir(category[i]->d_name, &pn, filter_hidden, alphasort)) < 0)
 			continue;
 		for (c = 0; c < b; c++) {
 			char de[_POSIX_PATH_MAX];

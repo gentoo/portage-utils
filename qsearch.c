@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.7 2005/06/14 02:18:41 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.8 2005/06/14 20:49:34 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -112,9 +112,12 @@ int qsearch_main(int argc, char **argv)
 		case CACHE_METADATA: {
 			portage_cache *pcache;
 			if ((pcache = cache_read_file(ebuild)) != NULL) {
-				if ((rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE)) == 0)
-					printf("%s%s/%s%s%s %s\n", BOLD, pcache->atom->CATEGORY, BLUE,
-					       pcache->atom->PN, NORM, pcache->DESCRIPTION);
+				if ((strcmp(pcache->atom->PN, last)) != 0) {
+					strncpy(last, pcache->atom->PN, sizeof(last));
+					if ((rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE)) == 0)
+						printf("%s%s/%s%s%s %s\n", BOLD, pcache->atom->CATEGORY, BLUE,
+						       pcache->atom->PN, NORM, pcache->DESCRIPTION);
+				}
 				cache_free(pcache);
 			} else {
 				if (!reinitialize)
