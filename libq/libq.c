@@ -5,9 +5,13 @@
 # include <sys/endian.h>
 #endif
 
+/* busybox imports */
 #include "busybox.h"
 #include "xmalloc.c"
 #include "xstrdup.c"
 #include "hash_fd.c"
 #include "md5_sha1_sum.c"
 #include "human_readable.c"
+
+/* custom libs */
+#include "atom_explode.c"
