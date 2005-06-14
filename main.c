@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.19 2005/06/14 04:01:29 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.20 2005/06/14 04:54:31 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -109,7 +109,7 @@ void init_coredumps(void) {
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.19 2005/06/14 04:01:29 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.20 2005/06/14 04:54:31 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -494,13 +494,14 @@ typedef struct {
 	char *_data;
 	char *CATEGORY;
 	char *PN;
+	int PR_int;
 	char *PV, *PVR;
 } depend_atom;
 depend_atom *atom_explode(const char *atom);
 depend_atom *atom_explode(const char *atom)
 {
 	depend_atom *ret;
-	char *ptr;
+	char *ptr, *ptr_tmp;
 	size_t len, slen;
 
 	/* this shit looks scary huh BUT YOU LIKE IT */
@@ -523,25 +524,50 @@ depend_atom *atom_explode(const char *atom)
 		*ptr = '\0';
 
 		/* search for the special suffixes */
-		for (i = 0; i >= 0 && suffixes[i]; ++i)
-			if ((ptr = strstr(ret->PN, suffixes[i])) != NULL) {
-				char *last_dash;
+		for (i = 0; i >= 0 && suffixes[i]; ++i) {
+			ptr_tmp = ret->PN;
+
+retry_suffix:
+			if ((ptr = strstr(ptr_tmp, suffixes[i])) != NULL) {
+				/* check this is a real suffix and not _p hitting mod_perl */
+				len = strlen(ptr);
+				slen = strlen(suffixes[i]);
+				if (slen > len) continue;
+				if (ptr[slen] && !isdigit(ptr[slen]) && ptr[slen]!='-') {
+					/* ok, it was a fake out ... lets skip this 
+					 * fake and try to match the suffix again */
+					ptr_tmp = ptr + 1;
+					goto retry_suffix;
+				}
+
 eat_version:
+				/* allow for 1 optional suffix letter */
+				if (ptr[-1] >= 'a' && ptr[-1] <= 'z') {
+					ptr_tmp = ptr--;
+					while (--ptr > ret->PN)
+						if (*ptr != '.' && !isdigit(*ptr))
+							break;
+					if (*ptr != '-') {
+						ptr = ptr_tmp;
+					}
+				}
+
 				/* eat the trailing version number [-.0-9]+ */
-				last_dash = ptr;
+				ptr_tmp = ptr;
 				while (--ptr > ret->PN)
 					if (*ptr == '-') {
-						last_dash = ptr;
+						ptr_tmp = ptr;
 						continue;
-					} else if (*ptr != '-' && *ptr != '.' && (*ptr < '0' || *ptr > '9')) {
-						ret->PV = ptr+2;
-						ptr[1] = '\0';
+					} else if (*ptr != '-' && *ptr != '.' && !isdigit(*ptr)) {
+						ret->PV = ptr_tmp+1;
+						ret->PV[-1] = '\0';
 						goto found_pv;
 					}
-				ret->PV = last_dash+1;
-				*last_dash = '\0';
+				ret->PV = ptr_tmp+1;
+				*ptr_tmp = '\0';
 				break;
 			}
+		}
 		if (i <= -3)
 			errf("Hrm, seem to have hit an infinite loop with %s", atom);
 
@@ -551,9 +577,11 @@ found_pv:
 			/* if we got the PV, split the -r# off */
 			ret->PVR = ret->_data;
 			if ((ptr = strstr(ret->PV, "-r")) != NULL) {
+				ret->PR_int = atoi(ptr+2);
 				strcpy(ret->PVR, ret->PV);
 				*ptr = '\0';
 			} else {
+				ret->PR_int = 0;
 				sprintf(ret->PVR, "%s-r0", ret->PV);
 			}
 		} else {
@@ -561,19 +589,28 @@ found_pv:
 			 * so we eat the -r# suffix (if it exists) before we throw the
 			 * ptr back into the version eater code above
 			 */
-			ptr = ret->PN + strlen(ret->PN);
-			while (--ptr > ret->PN)
-				if (*ptr < '0' || *ptr > '9')
+			ptr_tmp = ptr = ret->PN + strlen(ret->PN) - 1;
+			do {
+				if (!isdigit(*ptr))
 					break;
-			if (*ptr == 'r') --ptr;
+			} while (--ptr > ret->PN);
+			/* if we did find a -r#, eat the 'r', otherwise
+			 * reset ourselves to the end of the version # */
+			if (*ptr == 'r')
+				--ptr;
+			else
+				ptr = ptr_tmp;
 			--i;
 			goto eat_version;
 		}
-	} else {
-		errf("Could not locate a /");
-	}
+	} else
+		errf("Could not locate a / in '%s'", atom);
 
-	/*printf("%s -> %s / %s - %s [%s]\n", atom, ret->CATEGORY, ret->PN, ret->PVR, ret->PV);*/
+	/*
+	printf("%s -> %s / %s - %s [%s] [r%i]\n",
+	       atom, ret->CATEGORY, ret->PN,
+	       ret->PVR, ret->PV, ret->PR_int);
+	*/
 
 	return ret;
 }
