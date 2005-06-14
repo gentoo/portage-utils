@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.18 2005/06/14 02:18:41 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.19 2005/06/14 04:01:29 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -109,7 +109,7 @@ void init_coredumps(void) {
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.18 2005/06/14 02:18:41 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.19 2005/06/14 04:01:29 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -270,6 +270,9 @@ int rematch(char *regex, const char *match, int cflags)
 {
 	regex_t preg;
 	int ret;
+
+	if ((match == NULL) || (regex == NULL))
+		return EXIT_FAILURE;
 
 	ret = regcomp(&preg, regex, cflags);
 	if (ret) {
