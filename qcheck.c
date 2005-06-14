@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.8 2005/06/13 23:49:28 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.9 2005/06/14 00:04:30 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -105,7 +105,7 @@ int qcheck_main(int argc, char **argv)
 				continue;
 
 			num_files = num_files_ok = num_files_unknown = 0;
-			printf("Checking %s%s/%s%s ...\n", GREE, dentry->d_name, de->d_name, NORM);
+			printf("Checking %s%s/%s%s ...\n", GREEN, dentry->d_name, de->d_name, NORM);
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 				if ((p = strchr(buf, '\n')) != NULL)
 					*p = '\0';
