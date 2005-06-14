@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.9 2005/06/14 00:16:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.10 2005/06/14 22:20:19 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char *quse_opts_help[] = {
 
 static void print_highlighted_use_flags(char *str, int argc, char **argv) {
 	char *p;
-	size_t pos;
+	size_t pos, len;
 
 	short highlight = 0;
 	int i;
@@ -54,31 +54,22 @@ static void print_highlighted_use_flags(char *str, int argc, char **argv) {
 	remove_extra_space(str);
 	rmspace(str);
 
-	for (pos = 0; pos <= strlen(str); pos++) {
-		if ( (p = strchr(str, ' ')) != NULL) {
-			highlight = 0;
+	len = strlen(str);
+
+	for (pos = 0; pos < len; pos++) {
+		highlight = 0;
+		if ((p = strchr(str, ' ')) != NULL)
 			*p = 0;
-			pos += strlen(str)+1;
-			for (i = 1; i < argc; i++) {
-				if (strcmp(str, argv[i]) == 0)
-					highlight = 1;
-			}
+		pos += strlen(str);
+		for (i = 1; i < argc; i++) {
+			if (strcmp(str, argv[i]) == 0)
+				highlight = 1;
 			if (highlight)
 				printf("%s%s%s ", BOLD, str, NORM);
 			else
 				printf("%s%s%s%s ", NORM, MAGENTA, str, NORM);
-			str = p + 1;
-		} else {
-			highlight = 0;
-			pos += strlen(str);
-			for (i = 1; i < argc; i++) {
-				if (strcmp(str, argv[i]) == 0)
-					highlight = 1;
-			}
-			if (highlight)
-				printf("%s%s%s", BOLD, str, NORM);
-			else
-				printf("%s%s%s%s", NORM, MAGENTA, str, NORM);
+			if (p != NULL)
+				str = p + 1;
 		}
 	}
 }
