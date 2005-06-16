@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.1 2005/06/16 04:32:13 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.2 2005/06/16 14:20:50 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -284,30 +284,30 @@ char *dep_flatten_tree(dep_node *root)
 	struct stat s; \
 	memset(buf, 0x00, sizeof(buf)); \
 	if ((f = fopen(file, "r")) == NULL) break; \
-	assert(fstat(fileno(f), &s) == 0); \
-	assert((size_t)sizeof(buf) > (size_t)s.st_size); \
-	assert(fread(buf, 1, s.st_size, f) == (size_t)s.st_size); \
-	fclose(f); \
+		assert(fstat(fileno(f), &s) == 0); \
+		assert((size_t)sizeof(buf) > (size_t)s.st_size); \
+		assert(fread(buf, 1, s.st_size, f) == (size_t)s.st_size); \
+		fclose(f); \
 	} while (0)
 
 int qdepends_main(int argc, char **argv)
 {
 	DIR *dir, *dirp;
-	int i;
 	struct dirent *dentry, *de;
 	struct stat st;
 	signed long len;
-	char buf[_POSIX_PATH_MAX];
-	dep_node *dep_tree;
-	char depend[8192], use[8192];
+	int i;
 	char *ptr;
+	char buf[_POSIX_PATH_MAX];
+	char depend[8192], use[8192];
+	dep_node *dep_tree;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
+	while ((i = GETOPT_LONG(QDEPENDS, qdepends, "")) != -1) {
 		switch (i) {
-		COMMON_GETOPTS_CASES(qlist)
+		COMMON_GETOPTS_CASES(qdepends)
 		}
 	}
 	if (argc == optind)
@@ -354,7 +354,7 @@ int qdepends_main(int argc, char **argv)
 			         dentry->d_name, de->d_name);
 			eat_file(buf, depend);
 			if (!*depend) continue;
-			puts(depend);
+			IF_DEBUG(puts(depend));
 
 			dep_tree = dep_grow_tree(depend);
 			if (dep_tree == NULL) continue;
