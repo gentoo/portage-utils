@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.27 2005/06/16 23:34:00 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.28 2005/06/16 23:35:30 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -110,7 +110,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.27 2005/06/16 23:34:00 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.28 2005/06/16 23:35:30 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -157,34 +157,34 @@ struct applet_t {
 	/* int *func; */
 	APPLET func;
 	const char *opts;
+	const char *desc;
 } applets[] = {
 	/* q must always be the first applet */
-	{"q",         q_main,         "<applet> <args>",},
-	{"qfile",     qfile_main,     "<filename>"},
-	{"qlist",     qlist_main,     "<pkgname>"},
-	{"qsearch",   qsearch_main,   "<regex>"},
-	{"quse",      quse_main,      "<useflag>"},
-	{"qsize",     qsize_main,     "<pkgname>"},
-	{"qcheck",    qcheck_main,    "<pkgname>"},
-	{"qdepends",  qdepends_main,  "<pkgname>"},
+	{"q",         q_main,         "<applet> <args>", "virtual applet"},
+	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},
+	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
+	{"qsearch",   qsearch_main,   "<regex>",         "search pkgname/desc"},
+	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflag"},
+	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
+	{"qcheck",    qcheck_main,    "<pkgname>",       "verify mtimes/digests"},
+	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
 
-#ifdef EQUERY_COMPAT
 	/* aliases for equery capatability */
-	{"belongs",   qfile_main,     "<filename>"},
+	{"belongs",   qfile_main,     "<filename>", NULL},
 	/*"changes"*/
-	{"check",     qcheck_main,    "<pkgname>"},
-	{"depends",   qdepends_main,  "<pkgname>"},
+	{"check",     qcheck_main,    "<pkgname>",  NULL},
+	{"depends",   qdepends_main,  "<pkgname>",  NULL},
 	/*"depgraph"*/
-	{"files",     qlist_main,     "<pkgname>"},
+	{"files",     qlist_main,     "<pkgname>",  NULL},
 	/*"glsa"*/
-	{"hasuse",    quse_main,      "<useflag>"},
+	{"hasuse",    quse_main,      "<useflag>",  NULL},
 	/*"list"*/
-	{"size",      qsize_main,     "<pkgname>"},
+	{"size",      qsize_main,     "<pkgname>",  NULL},
 	/*"stats"*/
 	/*"uses"*/
 	/*"which"*/
-#endif
-	{NULL,      NULL,         NULL}
+
+	{NULL, NULL, NULL, NULL}
 };
 
 
@@ -218,9 +218,11 @@ static void usage(int status, const char *flags, struct option const opts[],
 		printf("Usage: q <applet> [arguments]...\n\n");
 		printf("Currently defined applets:\n");
 		for (i = FIRST_APPLET; i <= LAST_APPLET; ++i)
-			printf(" - %s %s\n", applets[i].name, applets[i].opts);
+			printf(" - %s %s\t: %s\n", applets[i].name, applets[i].opts,
+			       applets[i].desc);
 	} else {
-		printf("Usage: %s %s\n", applets[blabber].name, applets[blabber].opts);
+		printf("* %s: %s\n\nUsage: %s %s\n", applets[blabber].name,
+		       applets[blabber].desc, applets[blabber].name, applets[blabber].opts);
 	}
 
 	printf("\nOptions: -[%s]\n", flags);
