@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.25 2005/06/16 04:32:13 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.26 2005/06/16 23:32:38 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -50,7 +50,7 @@ typedef int (*APPLET)(int, char **);
 APPLET lookup_applet(char *);
 
 int rematch(const char *, const char *, int);
-char *rmspace(char *);
+static char *rmspace(char *);
 void qfile(char *, char *);
 
 char *initialize_portdir(void);
@@ -110,7 +110,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.25 2005/06/16 04:32:13 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.26 2005/06/16 23:32:38 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -293,17 +293,19 @@ int rematch(const char *regex, const char *match, int cflags)
 	return ret;
 }
 /* removed leading/trailing extraneous white space */
-char *rmspace(char *s)
+static char *rmspace(char *s)
 {
 	register char *p;
-	/* wipe end of string */
-	for (p = s + strlen(s) - 1; ((isspace(*p)) && (p >= s)); p--);
+	/* find the start of trailing space and set it to \0 */
+	for (p = s + strlen(s) - 1; (isspace(*p) && p >= s); --p);
 	if (p != s + strlen(s) - 1)
 		*(p + 1) = 0;
-	for (p = s; ((isspace(*p)) && (*p)); p++);
+	/* find the end of leading space and set p to it */
+	for (p = s; (isspace(*p) && *p); ++p);
+	/* move the memory backward to overwrite leading space */
 	if (p != s)
-		strcpy(s, p);
-	return (char *) s;
+		memmove(s, p, strlen(p));
+	return s;
 }
 
 /* removes adjacent extraneous white space */
