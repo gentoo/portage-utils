@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.24 2005/06/14 23:18:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.25 2005/06/16 04:32:13 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -49,7 +49,7 @@ typedef int (*APPLET)(int, char **);
 
 APPLET lookup_applet(char *);
 
-int rematch(char *, const char *, int);
+int rematch(const char *, const char *, int);
 char *rmspace(char *);
 void qfile(char *, char *);
 
@@ -110,7 +110,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.24 2005/06/14 23:18:04 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.25 2005/06/16 04:32:13 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -137,6 +137,7 @@ int qlist_main(int, char **);
 int qfile_main(int, char **);
 int qsize_main(int, char **);
 int qcheck_main(int, char **);
+int qdepends_main(int, char **);
 
 /* applets we support */
 typedef enum {
@@ -148,7 +149,8 @@ typedef enum {
 	APPLET_QUSE = 4,
 	APPLET_QSIZE = 5,
 	APPLET_QCHECK = 6,
-	LAST_APPLET = 6
+	APPLET_QDEPENDS = 7,
+	LAST_APPLET = 7
 } applets_enum;
 struct applet_t {
 	const char *name;
@@ -164,13 +166,14 @@ struct applet_t {
 	{"quse",      quse_main,      "<useflag>"},
 	{"qsize",     qsize_main,     "<pkgname>"},
 	{"qcheck",    qcheck_main,    "<pkgname>"},
+	{"qdepends",  qdepends_main,  "<pkgname>"},
 
 #ifdef EQUERY_COMPAT
 	/* aliases for equery capatability */
 	{"belongs",   qfile_main,     "<filename>"},
 	/*"changes"*/
 	{"check",     qcheck_main,    "<pkgname>"},
-	/*"depends"*/
+	{"depends",   qdepends_main,  "<pkgname>"},
 	/*"depgraph"*/
 	{"files",     qlist_main,     "<pkgname>"},
 	/*"glsa"*/
@@ -267,7 +270,7 @@ APPLET lookup_applet(char *applet)
 	return 0;
 }
 
-int rematch(char *regex, const char *match, int cflags)
+int rematch(const char *regex, const char *match, int cflags)
 {
 	regex_t preg;
 	int ret;
@@ -502,20 +505,20 @@ void reinitialize_as_needed(void)
 
 typedef struct {
 	char *_data;
-	char *DEPEND;
+	char *DEPEND;        /* line 1 */
 	char *RDEPEND;
 	char *SLOT;
 	char *SRC_URI;
-	char *RESTRICT;
+	char *RESTRICT;      /* line 5 */
 	char *HOMEPAGE;
 	char *LICENSE;
 	char *DESCRIPTION;
 	char *KEYWORDS;
-	char *INHERITED;
+	char *INHERITED;     /* line 10 */
 	char *IUSE;
 	char *CDEPEND;
 	char *PDEPEND;
-	char *PROVIDE;
+	char *PROVIDE;       /* line 14 */
 	depend_atom *atom;
 } portage_cache;
 
@@ -619,6 +622,7 @@ void cache_free(portage_cache *cache)
 #include "quse.c"
 #include "qsize.c"
 #include "qcheck.c"
+#include "qdepends.c"
 #include "q.c"
 
 int main(int argc, char **argv)

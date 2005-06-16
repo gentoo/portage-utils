@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.10 2005/06/13 03:12:42 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.11 2005/06/16 04:32:13 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -50,7 +50,7 @@ else
 CFLAGS	+= $(shell [[ `hostname` == simple ]] && echo '-g3 -ggdb -nopie')
 endif
 #####################################################
-APPLETS    = q qfile qlist qsearch quse qsize qcheck
+APPLETS    = q qfile qlist qsearch quse qsize qcheck qdepends
 SRC        = $(APPLETS:%=%.c) main.c
 MPAGES     = man/q.1
 
