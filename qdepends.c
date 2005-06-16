@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.2 2005/06/16 14:20:50 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.3 2005/06/16 23:36:44 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,11 +26,21 @@
 
 
 
-#define QDEPENDS_FLAGS "i" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpac" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
+	{"depend",    no_argument, NULL, 'd'},
+	{"rdepend",   no_argument, NULL, 'r'},
+	{"pdepend",   no_argument, NULL, 'p'},
+	{"cdepend",   no_argument, NULL, 'c'},
+	{"all",       no_argument, NULL, 'a'},
 	COMMON_LONG_OPTS
 };
 static const char *qdepends_opts_help[] = {
+	"Show DEPEND info (default)",
+	"Show RDEPEND info",
+	"Show PDEPEND info",
+	"Show CDEPEND info",
+	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, APPLET_QDEPENDS)
@@ -63,6 +73,10 @@ typedef struct _dep_node dep_node;
 /* prototypes */
 #define dep_dump_tree(r) _dep_dump_tree(r,0)
 void _dep_dump_tree(dep_node *root, int space);
+dep_node *dep_grow_tree(char *depend);
+void dep_burn_tree(dep_node *root);
+void dep_prune_use(dep_node *root, char *use);
+char *dep_flatten_tree(dep_node *root);
 
 
 
@@ -131,7 +145,6 @@ void _dep_attach(dep_node *root, dep_node *attach_me, int type)
 	}
 }
 
-dep_node *dep_grow_tree(char *depend);
 dep_node *dep_grow_tree(char *depend)
 {
 	signed long paren_balanced;
@@ -225,7 +238,6 @@ this_node_sucks:
 }
 #endif
 
-void dep_burn_tree(dep_node *root);
 void dep_burn_tree(dep_node *root)
 {
 	assert(root);
@@ -235,7 +247,6 @@ void dep_burn_tree(dep_node *root)
 	free(root);
 }
 
-void dep_prune_use(dep_node *root, char *use);
 void dep_prune_use(dep_node *root, char *use)
 {
 	if (root->neighbor) dep_prune_use(root->neighbor, use);
@@ -266,7 +277,6 @@ void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos)
 this_node_sucks:
 	if (root->neighbor) _dep_flatten_tree(root->neighbor, buf, pos);
 }
-char *dep_flatten_tree(dep_node *root);
 char *dep_flatten_tree(dep_node *root)
 {
 	static char flat[8192];
@@ -284,10 +294,10 @@ char *dep_flatten_tree(dep_node *root)
 	struct stat s; \
 	memset(buf, 0x00, sizeof(buf)); \
 	if ((f = fopen(file, "r")) == NULL) break; \
-		assert(fstat(fileno(f), &s) == 0); \
-		assert((size_t)sizeof(buf) > (size_t)s.st_size); \
-		assert(fread(buf, 1, s.st_size, f) == (size_t)s.st_size); \
-		fclose(f); \
+	assert(fstat(fileno(f), &s) == 0); \
+	assert((size_t)sizeof(buf) > (size_t)s.st_size); \
+	assert(fread(buf, 1, s.st_size, f) == (size_t)s.st_size); \
+	fclose(f); \
 	} while (0)
 
 int qdepends_main(int argc, char **argv)
@@ -297,10 +307,13 @@ int qdepends_main(int argc, char **argv)
 	struct stat st;
 	signed long len;
 	int i;
+	const char *depend_file;
 	char *ptr;
 	char buf[_POSIX_PATH_MAX];
 	char depend[8192], use[8192];
 	dep_node *dep_tree;
+	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", "CDEPEND", NULL };
+	depend_file = depend_files[0];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -308,6 +321,12 @@ int qdepends_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QDEPENDS, qdepends, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qdepends)
+
+		case 'd': depend_file = depend_files[0]; break;
+		case 'r': depend_file = depend_files[1]; break;
+		case 'p': depend_file = depend_files[2]; break;
+		case 'c': depend_file = depend_files[3]; break;
+		case 'a': depend_file = NULL; break;
 		}
 	}
 	if (argc == optind)
@@ -348,18 +367,18 @@ int qdepends_main(int argc, char **argv)
 			if (i == argc)
 				continue;
 
-			printf("%s%s/%s%s%s:\n", BOLD, dentry->d_name, BLUE, de->d_name, NORM);
-
-			snprintf(buf, sizeof(buf), "%s/%s/%s/DEPEND", portvdb,
-			         dentry->d_name, de->d_name);
+			snprintf(buf, sizeof(buf), "%s/%s/%s/%s", portvdb,
+			         dentry->d_name, de->d_name, depend_file);
 			eat_file(buf, depend);
 			if (!*depend) continue;
 			IF_DEBUG(puts(depend));
 
 			dep_tree = dep_grow_tree(depend);
 			if (dep_tree == NULL) continue;
-			//dep_dump_tree(dep_tree);
-			//printf("\n");
+			/*dep_dump_tree(dep_tree);*/
+			/*printf("\n");*/
+
+			printf("%s%s/%s%s%s: ", BOLD, dentry->d_name, BLUE, de->d_name, NORM);
 
 			snprintf(buf, sizeof(buf), "%s/%s/%s/USE", portvdb,
 			         dentry->d_name, de->d_name);
@@ -375,9 +394,8 @@ int qdepends_main(int argc, char **argv)
 			use[0] = ' ';
 
 			dep_prune_use(dep_tree, use);
-			//dep_dump_tree(dep_tree);
-			printf("%s", dep_flatten_tree(dep_tree));
-			printf("\n\n");
+			/*dep_dump_tree(dep_tree);*/
+			printf("%s\n", dep_flatten_tree(dep_tree));
 
 			dep_burn_tree(dep_tree);
 		}
