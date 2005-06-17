@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.4 2005/06/10 00:10:44 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.5 2005/06/17 00:25:59 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -58,9 +58,9 @@ void qfile(char *path, char *fname)
 		base = 0;
 
 	while ((dentry = readdir(dir))) {
-		if (*dentry->d_name == '.')
+		if (dentry->d_name[0] == '.')
 			continue;
-		if ((asprintf(&p, "%s/%s/CONTENTS", path, dentry->d_name)) == (-1))
+		if (asprintf(&p, "%s/%s/CONTENTS", path, dentry->d_name) == -1)
 			continue;
 		if ((fp = fopen(p, "r")) == NULL) {
 			free(p);
@@ -75,6 +75,8 @@ void qfile(char *path, char *fname)
 			ptr = strdup(p);
 			if (!ptr)
 				continue;
+			if ((p = strchr(ptr, '\n')) != NULL)
+				*p = '\0';
 			if ((p = strchr(ptr, ' ')) != NULL)
 				*p++ = 0;
 			if (strncmp(base ? basename(ptr) : ptr, fname, flen) != 0
@@ -159,7 +161,7 @@ int qfile_main(int argc, char **argv)
 	while ((dentry = readdir(dir)) != NULL) {
 		if (dentry->d_name[0] == '.')
 			continue;
-		for (i = optind; i < argc; i++) {
+		for (i = optind; i < argc; ++i) {
 			if (asprintf(&p, "%s/%s", portvdb, dentry->d_name) != -1) {
 				qfile(p, argv[i]);
 				free(p);
