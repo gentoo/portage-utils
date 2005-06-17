@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.5 2005/06/17 00:25:59 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.6 2005/06/17 00:35:11 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -124,10 +124,7 @@ void qfile(char *path, char *fname)
 			       dentry->d_name, NORM, ptr);
 
 			free(ptr);
-			fclose(fp);
-			closedir(dir);
 			found++;
-			return;
 		}
 		fclose(fp);
 	}
