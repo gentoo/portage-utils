@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.6 2005/06/17 00:35:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.7 2005/06/17 12:35:19 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -72,8 +72,7 @@ void qfile(char *path, char *fname)
 			if ((p = strchr(buf, ' ')) == NULL)
 				continue;
 			*p++;
-			ptr = strdup(p);
-			if (!ptr)
+			if ((ptr = strdup(p)) == NULL)
 				continue;
 			if ((p = strchr(ptr, '\n')) != NULL)
 				*p = '\0';

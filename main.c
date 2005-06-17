@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.28 2005/06/16 23:35:30 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.29 2005/06/17 12:35:19 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -110,7 +110,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.28 2005/06/16 23:35:30 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.29 2005/06/17 12:35:19 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -294,6 +294,7 @@ int rematch(const char *regex, const char *match, int cflags)
 
 	return ret;
 }
+
 /* removed leading/trailing extraneous white space */
 static char *rmspace(char *s)
 {
@@ -306,7 +307,7 @@ static char *rmspace(char *s)
 	for (p = s; (isspace(*p) && *p); ++p);
 	/* move the memory backward to overwrite leading space */
 	if (p != s)
-		memmove(s, p, strlen(p));
+		memmove(s, p, strlen(p)+1);
 	return s;
 }
 
@@ -358,8 +359,10 @@ char *initialize_portdir(void)
 			if (strncmp(buf, "PORTDIR=", 8) != 0)
 				continue;
 			/* Sorry don't understand bash variables. */
-			if (strchr(buf, '$') != NULL)
+			if (strchr(buf, '$') != NULL) {
+				warn("Sorry bash variables for your PORTDIR make us cry");
 				continue;
+			}
 
 			for (i = 8; i < strlen(buf); i++)
 				if ((buf[i] == '"') || (buf[i] == '\''))
