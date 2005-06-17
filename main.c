@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.29 2005/06/17 12:35:19 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.30 2005/06/17 13:46:03 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -110,7 +110,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.29 2005/06/17 12:35:19 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.30 2005/06/17 13:46:03 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -345,7 +345,7 @@ char *initialize_portdir(void)
 	size_t i;
 
 	if (p) {
-		if (strlen(p) + 1 < sizeof(portdir)) {
+		if ((size_t)strlen(p) <= sizeof(portdir)) {
 			strcpy(portdir, p);
 			return portdir;
 		}
@@ -364,7 +364,7 @@ char *initialize_portdir(void)
 				continue;
 			}
 
-			for (i = 8; i < strlen(buf); i++)
+			for (i = 8; i < (size_t)strlen(buf); i++)
 				if ((buf[i] == '"') || (buf[i] == '\''))
 					buf[i] = ' ';
 

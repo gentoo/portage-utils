@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.12 2005/06/16 23:52:51 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.13 2005/06/17 13:46:03 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -25,7 +25,7 @@ check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; 
 WFLAGS    := -Wall -Wunused -Wimplicit -Wshadow -Wformat=2 \
              -Wmissing-declarations -Wmissing-prototypes -Wwrite-strings \
              -Wbad-function-cast -Wnested-externs -Wcomment -Wsequence-point \
-             -Wchar-subscripts -Wcast-align -Winline -Wno-format-nonliteral
+             -Wchar-subscripts -Winline -Wno-format-nonliteral
 
 # =gcc-3.3 does not support these options.
 WFLAGS     += $(call check_gcc, -Wdeclaration-after-statement -Wextra)
@@ -46,8 +46,6 @@ endif
 # Build with -Werror while emerging
 ifneq ($(S),)
 CFLAGS	+= -Werror
-else
-CFLAGS	+= $(shell [[ `hostname` == simple ]] && echo '-g3 -ggdb -nopie')
 endif
 #####################################################
 APPLETS    = q qfile qlist qsearch quse qsize qcheck qdepends
@@ -57,7 +55,8 @@ MPAGES     = man/q.1
 all: q
 	@:
 
-debug: symlinks
+debug:
+	$(MAKE) CFLAGS="$(CFLAGS) -DEBUG -g -ggdb -fno-pie" clean symlinks
 	@-/sbin/chpax  -permsx $(APPLETS)
 	@-/sbin/paxctl -permsx $(APPLETS)
 
