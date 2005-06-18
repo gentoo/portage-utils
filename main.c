@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.30 2005/06/17 13:46:03 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.31 2005/06/18 01:46:26 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -110,7 +110,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.30 2005/06/17 13:46:03 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.31 2005/06/18 01:46:26 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -170,16 +170,16 @@ struct applet_t {
 	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
 
 	/* aliases for equery capatability */
-	{"belongs",   qfile_main,     "<filename>", NULL},
+	{"belongs",   qfile_main,     NULL, NULL},
 	/*"changes"*/
-	{"check",     qcheck_main,    "<pkgname>",  NULL},
-	{"depends",   qdepends_main,  "<pkgname>",  NULL},
+	{"check",     qcheck_main,    NULL, NULL},
+	{"depends",   qdepends_main,  NULL, NULL},
 	/*"depgraph"*/
-	{"files",     qlist_main,     "<pkgname>",  NULL},
+	{"files",     qlist_main,     NULL, NULL},
 	/*"glsa"*/
-	{"hasuse",    quse_main,      "<useflag>",  NULL},
+	{"hasuse",    quse_main,      NULL, NULL},
 	/*"list"*/
-	{"size",      qsize_main,     "<pkgname>",  NULL},
+	{"size",      qsize_main,     NULL, NULL},
 	/*"stats"*/
 	/*"uses"*/
 	/*"which"*/
