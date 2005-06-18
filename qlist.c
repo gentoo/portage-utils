@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.7 2005/06/14 23:38:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.8 2005/06/18 03:48:47 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,11 +26,13 @@
 
 
 
-#define QLIST_FLAGS "" COMMON_FLAGS
+#define QLIST_FLAGS "I" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
+	{"installed", no_argument, NULL, 'I'},
 	COMMON_LONG_OPTS
 };
 static const char *qlist_opts_help[] = {
+	"Just show installed packages",
 	COMMON_OPTS_HELP
 };
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, APPLET_QLIST)
@@ -41,6 +43,7 @@ int qlist_main(int argc, char **argv)
 {
 	DIR *dir, *dirp;
 	int i;
+	char just_pkgname = 0;
 	struct dirent *dentry, *de;
 	char *p, *q;
 	struct stat st;
@@ -52,6 +55,7 @@ int qlist_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)
+		case 'I': just_pkgname = 1; break;
 		}
 	}
 	if (argc == optind)
@@ -92,6 +96,12 @@ int qlist_main(int argc, char **argv)
 			}
 			if (i == argc)
 				continue;
+
+			if (just_pkgname) {
+				printf("%s%s/%s%s%s\n", BOLD, dentry->d_name, BLUE, 
+				       de->d_name, NORM);
+				continue;
+			}
 
 			snprintf(buf, sizeof(buf), "%s/%s/%s/CONTENTS", portvdb,
 			         dentry->d_name, de->d_name);
