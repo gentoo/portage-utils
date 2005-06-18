@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.8 2005/06/14 20:49:34 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.9 2005/06/18 00:35:32 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -50,7 +50,7 @@ static struct option const qsearch_long_opts[] = {
 	{"all",        no_argument, NULL, 'a'},
 	{"cache",      no_argument, NULL, 'c'},
 	{"search",     no_argument, NULL, 's'},
-	{"searchdesc",  a_argument, NULL, 'S'},
+	{"desc",        a_argument, NULL, 'S'},
 	COMMON_LONG_OPTS
 };
 static const char *qsearch_opts_help[] = {
