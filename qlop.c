@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.5 2005/06/19 08:51:34 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.6 2005/06/19 08:52:54 vapier Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -190,8 +190,15 @@ int qlop_main(int argc, char **argv)
 
 			case 't': do_time = 1; break;
 			case 'l': do_list = 1; break;
-			case 'L': do_list = 1; opt_listpkg = xstrdup(optarg); break;
-			case 'f': opt_logfile = xstrdup(optarg); break;
+			case 'L':
+				if (opt_listpkg) err("Only use -L once");
+				do_list = 1;
+				opt_listpkg = xstrdup(optarg);
+				break;
+			case 'f':
+				if (opt_logfile) err("Only use -f once");
+				opt_logfile = xstrdup(optarg);
+				break;
 		}
 	}
 	if (!do_list && !do_time)
