@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.7 2005/06/19 09:03:28 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.8 2005/06/19 09:17:14 vapier Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -28,11 +28,13 @@
 
 
 
-#define QLOP_FLAGS "tlL:sf:" COMMON_FLAGS
+#define QLOP_FLAGS "tlL:uU:sf:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
 	{"time",      no_argument, NULL, 't'},
 	{"list",      no_argument, NULL, 'l'},
 	{"listonly",   a_argument, NULL, 'L'},
+	{"unlist",    no_argument, NULL, 'u'},
+	{"unlistonly", a_argument, NULL, 'U'},
 	{"sync",      no_argument, NULL, 's'},
 	{"file",       a_argument, NULL, 'f'},
 	COMMON_LONG_OPTS
@@ -42,6 +44,8 @@ static const char *qlop_opts_help[] = {
 	"Calculate merge time for a specific package",
 	"Show full merge history",
 	"Show full merge history for a specific package",
+	"Show full unmerge history",
+	"Show full unmerge history for a specific package",
 	"Show sync history",
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOG,
 	COMMON_OPTS_HELP
@@ -70,7 +74,7 @@ unsigned long calculate_average_merge_time(char *pkg, const char *logfile)
 		return 0;
 
 	while ((fgets(buf[0], sizeof(buf[0]), fp)) != NULL) {
-		if ((strstr(buf[0], pkg)) == NULL)
+		if (strstr(buf[0], pkg) == NULL)
 			continue;
 
 		if ((p = strchr(buf[0], '\n')) != NULL)
@@ -120,8 +124,8 @@ unsigned long calculate_average_merge_time(char *pkg, const char *logfile)
 	return (merge_time / count);
 }
 
-void show_emerge_history(const char *pkg, const char *logfile);
-void show_emerge_history(const char *pkg, const char *logfile)
+void show_emerge_history(char merged, const char *pkg, const char *logfile);
+void show_emerge_history(char merged, const char *pkg, const char *logfile)
 {
 	FILE *fp;
 	char buf[BUFSIZ];
@@ -148,21 +152,26 @@ void show_emerge_history(const char *pkg, const char *logfile)
 		t = (time_t)atol(buf);
 		rmspace(q);
 
-		if ((strncmp(q, "::: completed emerge (", 22)) == 0) {
-			if ((p = strchr(q, ')')) == NULL)
-				continue;
-			*p = 0;
-			q = p+1;
+		if ((merged && !strncmp(q, "::: completed emerge (", 22))
+		    || (!merged && !strncmp(q, ">>> unmerge success: ", 21))) {
 
-			rmspace(q);
-			if ((p = strchr(q, ' ')) == NULL)
-				continue;
-			*p = 0;
+			if (merged) {
+				if ((p = strchr(q, ')')) == NULL)
+					continue;
+				q = p+2;
+				if ((p = strchr(q, ' ')) == NULL)
+					continue;
+				*p = 0;
+			} else {
+				if ((p = strchr(q, ':')) == NULL)
+					continue;
+				q = p+2;
+			}
 
 			sprintf(ctime_out, "%s", ctime(&t));
 			if ((p = strchr(ctime_out, '\n')) != NULL)
 				*p = '\0';
-			printf("\t%s >>> %s%s%s\n", ctime_out, GREEN, q, NORM);
+			printf("\t%s %s %s%s%s\n", ctime_out, (merged ? ">>>" : "<<<"), GREEN, q, NORM);
 		}
 	}
 	fclose(fp);
@@ -210,7 +219,7 @@ void show_sync_history(const char *logfile)
 int qlop_main(int argc, char **argv)
 {
 	int i;
-	char do_time, do_list, do_sync;
+	char do_time, do_list, do_unlist, do_sync;
 	char *opt_logfile, *opt_listpkg;
 	const char *logfile = QLOP_DEFAULT_LOG;
 
@@ -218,7 +227,7 @@ int qlop_main(int argc, char **argv)
 		argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
 	opt_logfile = opt_listpkg = NULL;
-	do_time = do_list = do_sync = 0;
+	do_time = do_list = do_unlist = do_sync = 0;
 
 	while ((i = GETOPT_LONG(QLOP, qlop, "")) != -1) {
 		switch (i) {
@@ -226,10 +235,15 @@ int qlop_main(int argc, char **argv)
 
 			case 't': do_time = 1; break;
 			case 'l': do_list = 1; break;
+			case 'u': do_unlist = 1; break;
 			case 's': do_sync = 1; break;
+			case 'U':
 			case 'L':
-				if (opt_listpkg) err("Only use -L once");
-				do_list = 1;
+				if (opt_listpkg) err("Only use -L/-U once");
+				if (i == 'U')
+					do_unlist = 1;
+				else
+					do_list = 1;
 				opt_listpkg = xstrdup(optarg);
 				break;
 			case 'f':
@@ -238,13 +252,13 @@ int qlop_main(int argc, char **argv)
 				break;
 		}
 	}
-	if (!do_list && !do_time && !do_sync)
+	if (!do_list && !do_unlist && !do_time && !do_sync)
 		qlop_usage(EXIT_FAILURE);
 	if (opt_logfile != NULL)
 		logfile = opt_logfile;
 
-	if (do_list)
-		show_emerge_history(opt_listpkg, logfile);
+	if (do_list || do_unlist)
+		show_emerge_history(do_list, opt_listpkg, logfile);
 
 	if (do_sync)
 		show_sync_history(logfile);
