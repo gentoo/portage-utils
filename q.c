@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.13 2005/06/09 00:21:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.14 2005/06/19 22:25:59 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,17 +26,18 @@
 
 
 
-#define Q_FLAGS "i" COMMON_FLAGS
+#define Q_FLAGS "ir" COMMON_FLAGS
 static struct option const q_long_opts[] = {
-	{"install",   no_argument, NULL, 'i'},
+	{"install",      no_argument, NULL, 'i'},
+	{"reinitialize", no_argument, NULL, 'r'},
 	COMMON_LONG_OPTS
 };
 static const char *q_opts_help[] = {
 	"Install symlinks for applets",
+	"Reinitialize ebuild cache",
 	COMMON_OPTS_HELP
 };
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, APPLET_Q)
-
 
 
 int q_main(int argc, char **argv)
@@ -61,7 +62,7 @@ int q_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
-
+		case 'r': reinitialize = 1; return 0;
 		case 'i': {
 			char buf[_POSIX_PATH_MAX];
 			printf("Installing symlinks:\n");
@@ -86,7 +87,6 @@ int q_main(int argc, char **argv)
 	}
 	if (argc == optind)
 		q_usage(EXIT_FAILURE);
-
 	if ((func = lookup_applet(argv[optind])) == 0)
 		return 1;
 

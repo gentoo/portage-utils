@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.9 2005/06/19 20:34:20 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.10 2005/06/19 22:25:59 solar Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -171,7 +171,7 @@ void show_emerge_history(char merged, int argc, char **argv, const char *logfile
 			sprintf(ctime_out, "%s", ctime(&t));
 			if ((p = strchr(ctime_out, '\n')) != NULL)
 				*p = '\0';
-			printf("\t%s %s %s%s%s\n", ctime_out, (merged ? ">>>" : "<<<"), GREEN, q, NORM);
+			printf("%s %s %s%s%s\n", ctime_out, (merged ? ">>>" : "<<<"), GREEN, q, NORM);
 		}
 	}
 	fclose(fp);
@@ -213,7 +213,7 @@ void show_sync_history(const char *logfile)
 		sprintf(ctime_out, "%s", ctime(&t));
 		if ((p = strchr(ctime_out, '\n')) != NULL)
 			*p = '\0';
-		printf("\t%s >>> %s%s%s\n", ctime_out, GREEN, q, NORM);
+		printf("%s >>> %s%s%s\n", ctime_out, GREEN, q, NORM);
 	}
 	fclose(fp);
 }
@@ -249,6 +249,9 @@ int qlop_main(int argc, char **argv)
 		qlop_usage(EXIT_FAILURE);
 	if (opt_logfile != NULL)
 		logfile = opt_logfile;
+	if (do_list && do_unlist) {
+		/* pick one or the other */
+	}
 
 	argc -= optind;
 	argv += optind;

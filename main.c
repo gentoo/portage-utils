@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.34 2005/06/19 05:43:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.35 2005/06/19 22:25:59 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <sys/time.h>
 #include <ctype.h>
 #include <dirent.h>
 #include <getopt.h>
@@ -110,7 +111,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.34 2005/06/19 05:43:47 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.35 2005/06/19 22:25:59 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -399,15 +400,17 @@ int filter_hidden(const struct dirent *dentry)
 const char *initialize_flat(int cache_type);
 const char *initialize_flat(int cache_type)
 {
-	static const char *cache_file;
 	struct dirent **category, **pn, **eb;
 	struct stat st;
-	time_t start;
-	FILE *fp;
-	int a, b, c, d, e, i;
+	struct timeval start, finish;
+	static const char *cache_file;
 	char *p;
+	int a, b, c, d, e, i;
+	int frac, secs, count;
+	FILE *fp;
 
 	a = b = c = d = e = i = 0;
+	count = frac = secs = 0;
 
 	cache_file = (cache_type == CACHE_EBUILD ? CACHE_EBUILD_FILE : CACHE_METADATA_FILE);
 
@@ -442,7 +445,7 @@ const char *initialize_flat(int cache_type)
 		goto ret;
 	}
 
-	start = time(NULL);
+	gettimeofday(&start, NULL);
 
 	if ((a = scandir(".", &category, filter_hidden, alphasort)) < 0)
 		goto ret;
@@ -479,8 +482,10 @@ const char *initialize_flat(int cache_type)
 				continue;
 			for (d = 0 ; d < e; d++) {
 				if ((p = rindex(eb[d]->d_name, '.')) != NULL)
-					if (strcmp(p, ".ebuild") == 0)
+					if (strcmp(p, ".ebuild") == 0) {
+						count++;
 						fprintf(fp, "%s/%s/%s\n", category[i]->d_name, pn[c]->d_name, eb[d]->d_name);
+					}
 			}
 			while(d--) free(eb[d]);
 			free(eb);
@@ -488,10 +493,21 @@ const char *initialize_flat(int cache_type)
 		while(b--) free(pn[b]);
 		free(pn);
 	}
+	fclose(fp);
 	while(a--) free(category[a]);
 	free(category);
-	fclose(fp);
-	warn("Finished in %lu seconds", (time_t)time(NULL) - start);
+        
+	gettimeofday(&finish, NULL);
+	if (start.tv_usec > finish.tv_usec) {
+		finish.tv_usec += 1000000;
+		finish.tv_sec--;
+        
+	}
+	frac = (finish.tv_usec - start.tv_usec);
+	secs = (finish.tv_sec - start.tv_sec);
+	if (secs < 0) secs = 0;
+	if (frac < 0) frac = 0;
+	warn("Finished %u entries in %d.%06d seconds", count, secs, frac);
 ret:
 	return cache_file;
 }
