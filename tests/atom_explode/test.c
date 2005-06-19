@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.2 2005/06/14 23:06:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.3 2005/06/19 05:32:12 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,9 +26,10 @@
 #include <limits.h>
 #include <assert.h>
 
+#define warnf(fmt, args...) fprintf(stderr, fmt "\n", ## args)
 #define errf(fmt, args...) \
 	do { \
-	fprintf(stderr, fmt "\n", ## args); \
+	warnf(fmt, ## args); \
 	exit(EXIT_FAILURE); \
 	} while (0)
 
@@ -44,7 +45,7 @@ int main(int argc, char *argv[])
 		printf("%s -> %s / %s - %s [%s] [r%i]\n",
 		       argv[i], a->CATEGORY, a->PN,
 		       a->PVR, a->PV, a->PR_int);
-		atom_free(a);
+		atom_implode(a);
 	}
 
 	return EXIT_SUCCESS;

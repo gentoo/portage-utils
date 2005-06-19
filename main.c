@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.32 2005/06/19 01:06:03 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.33 2005/06/19 05:32:12 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -110,7 +110,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.32 2005/06/19 01:06:03 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.33 2005/06/19 05:32:12 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -624,7 +624,7 @@ void cache_free(portage_cache *cache)
 {
 	if (!cache)
 		errf("Cache is empty !");
-	atom_free(cache->atom);
+	atom_implode(cache->atom);
 	free(cache);
 }
 

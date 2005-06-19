@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.2 2005/06/19 04:54:15 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.3 2005/06/19 05:32:12 vapier Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -100,7 +100,7 @@ unsigned long calculate_average_merge_time(char *pkg, const char *logfile) {
 					}
 				}
 			}
-			atom_free(atom);
+			atom_implode(atom);
 		}
 	}
 	fclose(fp);
