@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.2 2005/06/14 23:16:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.3 2005/06/19 05:32:12 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -148,7 +148,7 @@ found_pv:
 	return ret;
 }
 
-void atom_free(depend_atom *atom);
+void atom_implode(depend_atom *atom);
 void atom_free(depend_atom *atom)
 {
 	if (!atom)
