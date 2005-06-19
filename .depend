@@ -6,6 +6,7 @@ quse.o: quse.c
 qsize.o: qsize.c
 qcheck.o: qcheck.c
 qdepends.o: qdepends.c
+qlop.o: qlop.c
 main.o: main.c libq/libq.c libq/busybox.h libq/xmalloc.c libq/xstrdup.c \
   libq/hash_fd.c libq/md5_sha1_sum.c libq/human_readable.c \
   libq/atom_explode.c qfile.c qlist.c qsearch.c quse.c qsize.c qcheck.c \

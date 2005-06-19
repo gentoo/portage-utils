@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.8 2005/06/18 03:48:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.9 2005/06/19 04:54:15 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,10 +29,12 @@
 #define QLIST_FLAGS "I" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
+	/* {"file",       a_argument, NULL, 'f'}, */
 	COMMON_LONG_OPTS
 };
 static const char *qlist_opts_help[] = {
 	"Just show installed packages",
+	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, APPLET_QLIST)
@@ -56,9 +58,10 @@ int qlist_main(int argc, char **argv)
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)
 		case 'I': just_pkgname = 1; break;
+		case 'f': break;
 		}
 	}
-	if (argc == optind)
+	if ((argc == optind) && (!just_pkgname))
 		qlist_usage(EXIT_FAILURE);
 
 	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
@@ -94,7 +97,7 @@ int qlist_main(int argc, char **argv)
 				if (rematch(argv[i], de->d_name, REG_EXTENDED) == 0)
 					break;
 			}
-			if (i == argc)
+			if ((i == argc) && (argc != optind))
 				continue;
 
 			if (just_pkgname) {

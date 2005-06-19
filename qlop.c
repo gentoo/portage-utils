@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.1 2005/06/19 01:06:03 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.2 2005/06/19 04:54:15 solar Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,8 +32,8 @@ static struct option const qlop_long_opts[] = {
 };
 
 static const char *qlop_opts_help[] = {
-	"calculate merge time for a specific package",
-	"read emerge logfile instead of /var/log/emerge.log",
+	"Calculate merge time for a specific package",
+	"Read emerge logfile instead of /var/log/emerge.log",
 	COMMON_OPTS_HELP
 };
 
@@ -53,7 +53,7 @@ unsigned long calculate_average_merge_time(char *pkg, const char *logfile) {
 	count = merge_time = 0;
 
 
-	printf("Searching for %s in %s\n", pkg, logfile);
+	DBG("Searching for %s in %s\n", pkg, logfile);
 
 	if ((fp = fopen(logfile, "r")) == NULL)
 		return 0;
@@ -122,14 +122,17 @@ int qlop_main(int argc, char **argv)
 		switch (i) {
 			COMMON_GETOPTS_CASES(qlop)
 			case 't': do_time = 1; break;
-			case 'f': break;
+			/* add to me: */
+			// case 'f': break;
+		 
 		}
 	}
 
 	if (argc == optind)
 		qlop_usage(EXIT_FAILURE);
 	if (do_time)
-		printf("%lu\n", calculate_average_merge_time(argv[argc-1], "/var/log/emerge.log"));
+		printf("Average merge time in seconds: %lu\n", 
+			calculate_average_merge_time(argv[argc-1], "/var/log/emerge.log"));
 
 	return EXIT_SUCCESS;
 }
