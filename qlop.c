@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.8 2005/06/19 09:17:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.9 2005/06/19 20:34:20 vapier Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -28,13 +28,11 @@
 
 
 
-#define QLOP_FLAGS "tlL:uU:sf:" COMMON_FLAGS
+#define QLOP_FLAGS "tlusf:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
 	{"time",      no_argument, NULL, 't'},
 	{"list",      no_argument, NULL, 'l'},
-	{"listonly",   a_argument, NULL, 'L'},
 	{"unlist",    no_argument, NULL, 'u'},
-	{"unlistonly", a_argument, NULL, 'U'},
 	{"sync",      no_argument, NULL, 's'},
 	{"file",       a_argument, NULL, 'f'},
 	COMMON_LONG_OPTS
@@ -42,10 +40,8 @@ static struct option const qlop_long_opts[] = {
 
 static const char *qlop_opts_help[] = {
 	"Calculate merge time for a specific package",
-	"Show full merge history",
-	"Show full merge history for a specific package",
-	"Show full unmerge history",
-	"Show full unmerge history for a specific package",
+	"Show merge history",
+	"Show unmerge history",
 	"Show sync history",
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOG,
 	COMMON_OPTS_HELP
@@ -124,22 +120,27 @@ unsigned long calculate_average_merge_time(char *pkg, const char *logfile)
 	return (merge_time / count);
 }
 
-void show_emerge_history(char merged, const char *pkg, const char *logfile);
-void show_emerge_history(char merged, const char *pkg, const char *logfile)
+void show_emerge_history(char merged, int argc, char **argv, const char *logfile);
+void show_emerge_history(char merged, int argc, char **argv, const char *logfile)
 {
 	FILE *fp;
 	char buf[BUFSIZ];
 	char ctime_out[50];
 	char *p, *q;
+	int i;
 	time_t t;
-
-	DBG("Searching for %s in %s\n", pkg, logfile);
 
 	if ((fp = fopen(logfile, "r")) == NULL)
 		return;
 
 	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-		if (pkg && strstr(buf, pkg) == NULL)
+		if (strlen(buf) < 30)
+			continue;
+
+		for (i = 0; i < argc; ++i)
+			if (strstr(buf, argv[i]) != NULL)
+				break;
+		if (argc && i == argc)
 			continue;
 
 		if ((p = strchr(buf, '\n')) != NULL)
@@ -147,10 +148,9 @@ void show_emerge_history(char merged, const char *pkg, const char *logfile)
 		if ((p = strchr(buf, ':')) == NULL)
 			continue;
 		*p = 0;
-		q = p+1;
+		q = p + 3;
 
 		t = (time_t)atol(buf);
-		rmspace(q);
 
 		if ((merged && !strncmp(q, "::: completed emerge (", 22))
 		    || (!merged && !strncmp(q, ">>> unmerge success: ", 21))) {
@@ -192,6 +192,8 @@ void show_sync_history(const char *logfile)
 		return;
 
 	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+		if (strlen(buf) < 35)
+			continue;
 		if (strncmp(buf+12, "=== Sync completed with", 23) != 0)
 			continue;
 
@@ -220,13 +222,13 @@ int qlop_main(int argc, char **argv)
 {
 	int i;
 	char do_time, do_list, do_unlist, do_sync;
-	char *opt_logfile, *opt_listpkg;
+	char *opt_logfile;
 	const char *logfile = QLOP_DEFAULT_LOG;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 		argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	opt_logfile = opt_listpkg = NULL;
+	opt_logfile = NULL;
 	do_time = do_list = do_unlist = do_sync = 0;
 
 	while ((i = GETOPT_LONG(QLOP, qlop, "")) != -1) {
@@ -237,15 +239,6 @@ int qlop_main(int argc, char **argv)
 			case 'l': do_list = 1; break;
 			case 'u': do_unlist = 1; break;
 			case 's': do_sync = 1; break;
-			case 'U':
-			case 'L':
-				if (opt_listpkg) err("Only use -L/-U once");
-				if (i == 'U')
-					do_unlist = 1;
-				else
-					do_list = 1;
-				opt_listpkg = xstrdup(optarg);
-				break;
 			case 'f':
 				if (opt_logfile) err("Only use -f once");
 				opt_logfile = xstrdup(optarg);
@@ -257,21 +250,23 @@ int qlop_main(int argc, char **argv)
 	if (opt_logfile != NULL)
 		logfile = opt_logfile;
 
+	argc -= optind;
+	argv += optind;
+
 	if (do_list || do_unlist)
-		show_emerge_history(do_list, opt_listpkg, logfile);
+		show_emerge_history(do_list, argc, argv, logfile);
 
 	if (do_sync)
 		show_sync_history(logfile);
 
 	if (do_time) {
 		printf("Average merge time (in seconds)\n");
-		for (i = optind; i < argc; ++i)
+		for (i = 0; i < argc; ++i)
 			printf("%s%s%s: %lu\n", BLUE, argv[i], NORM, 
 			       calculate_average_merge_time(argv[i], logfile));
 	}
 
 	if (opt_logfile) free(opt_logfile);
-	if (opt_listpkg) free(opt_listpkg);
 
 	return EXIT_SUCCESS;
 }
