@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.33 2005/06/19 05:32:12 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.34 2005/06/19 05:43:47 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -110,7 +110,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.33 2005/06/19 05:32:12 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.34 2005/06/19 05:43:47 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -170,9 +170,8 @@ struct applet_t {
 	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
 	{"qcheck",    qcheck_main,    "<pkgname>",       "verify mtimes/digests"},
 	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
-	{"qlop",      qlop_main,      "<pkgname>",       "calculate merge times"},
+	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
 
-#ifdef EQUERY_COMPAT
 	/* aliases for equery capatability */
 	{"belongs",   qfile_main,     NULL, NULL},
 	/*"changes"*/
@@ -187,7 +186,7 @@ struct applet_t {
 	/*"stats"*/
 	/*"uses"*/
 	/*"which"*/
-#endif
+
 	{NULL, NULL, NULL, NULL}
 };
 
