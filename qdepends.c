@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.3 2005/06/16 23:36:44 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.4 2005/06/19 05:32:18 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -62,6 +62,7 @@ struct _dep_node {
 	dep_type type;
 	char *info;
 	char info_on_heap;
+	depend_atom *atom;
 	struct _dep_node *parent;
 	struct _dep_node *neighbor;
 	struct _dep_node *children;
@@ -112,6 +113,8 @@ dep_node *_dep_grow_node(dep_type type, char *info, size_t info_len)
 	if (info) {
 		ret->info = ((char*)ret) + sizeof(*ret);
 		memcpy(ret->info, info, info_len);
+		if (type == DEP_NORM)
+			ret->atom = atom_explode(info);
 	}
 
 	return ret;
@@ -120,6 +123,8 @@ void _dep_burn_node(dep_node *node);
 void _dep_burn_node(dep_node *node)
 {
 	assert(node);
+	if (node->info_on_heap) free(node->info);
+	if (node->atom) atom_implode(node->atom);
 	free(node);
 }
 
@@ -243,8 +248,7 @@ void dep_burn_tree(dep_node *root)
 	assert(root);
 	if (root->children) dep_burn_tree(root->children);
 	if (root->neighbor) dep_burn_tree(root->neighbor);
-	if (root->info_on_heap) free(root->info);
-	free(root);
+	_dep_burn_node(root);
 }
 
 void dep_prune_use(dep_node *root, char *use)
