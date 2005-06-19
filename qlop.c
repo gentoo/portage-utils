@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.3 2005/06/19 05:32:12 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.4 2005/06/19 08:20:47 vapier Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,11 @@
  *
  */
 
-#define QLOP_FLAGS "tf" COMMON_FLAGS
+#define QLOP_DEFAULT_LOG "/var/log/emerge.log"
+
+
+
+#define QLOP_FLAGS "tf:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
 	{"time", no_argument, NULL, 't'},
 	{"file",  a_argument, NULL, 'f'},
@@ -33,15 +37,17 @@ static struct option const qlop_long_opts[] = {
 
 static const char *qlop_opts_help[] = {
 	"Calculate merge time for a specific package",
-	"Read emerge logfile instead of /var/log/emerge.log",
+	"Read emerge logfile instead of " QLOP_DEFAULT_LOG,
 	COMMON_OPTS_HELP
 };
 
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, APPLET_QLOP)
 
 
+
 unsigned long calculate_average_merge_time(char *pkg, const char *logfile);
-unsigned long calculate_average_merge_time(char *pkg, const char *logfile) {
+unsigned long calculate_average_merge_time(char *pkg, const char *logfile)
+{
 	FILE *fp;
 	char buf[2][BUFSIZ];
 	char *p;
@@ -51,7 +57,6 @@ unsigned long calculate_average_merge_time(char *pkg, const char *logfile) {
 	
 	t[0] = t[1] = 0UL;
 	count = merge_time = 0;
-
 
 	DBG("Searching for %s in %s\n", pkg, logfile);
 
@@ -113,7 +118,8 @@ int qlop_main(int argc, char **argv)
 {
 	int i;
 	short do_time = 0;
-	// char *logfile = NULL;
+	char *opt_logfile = NULL;
+	const char *logfile = QLOP_DEFAULT_LOG;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 		argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -121,18 +127,26 @@ int qlop_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QLOP, qlop, "")) != -1) {
 		switch (i) {
 			COMMON_GETOPTS_CASES(qlop)
+
 			case 't': do_time = 1; break;
-			/* add to me: */
-			// case 'f': break;
-		 
+			case 'f': opt_logfile = xstrdup(optarg); break;
 		}
 	}
-
 	if (argc == optind)
 		qlop_usage(EXIT_FAILURE);
-	if (do_time)
-		printf("Average merge time in seconds: %lu\n", 
-			calculate_average_merge_time(argv[argc-1], "/var/log/emerge.log"));
+
+	if (opt_logfile != NULL)
+		logfile = opt_logfile;
+
+	if (do_time) {
+		printf("Average merge time (in seconds)\n");
+		for (i = optind; i < argc; ++i)
+			printf("%s%s%s: %lu\n", BLUE, argv[i], NORM, 
+			       calculate_average_merge_time(argv[i], logfile));
+	}
+
+	if (opt_logfile != NULL)
+		free(opt_logfile);
 
 	return EXIT_SUCCESS;
 }
