@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.4 2005/06/19 08:20:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.5 2005/06/19 08:51:34 vapier Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -28,15 +28,19 @@
 
 
 
-#define QLOP_FLAGS "tf:" COMMON_FLAGS
+#define QLOP_FLAGS "tlL:f:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
-	{"time", no_argument, NULL, 't'},
-	{"file",  a_argument, NULL, 'f'},
+	{"time",      no_argument, NULL, 't'},
+	{"list",      no_argument, NULL, 'l'},
+	{"listonly",   a_argument, NULL, 'L'},
+	{"file",       a_argument, NULL, 'f'},
 	COMMON_LONG_OPTS
 };
 
 static const char *qlop_opts_help[] = {
 	"Calculate merge time for a specific package",
+	"Show full merge history",
+	"Show full merge history for a specific package",
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOG,
 	COMMON_OPTS_HELP
 };
@@ -114,29 +118,89 @@ unsigned long calculate_average_merge_time(char *pkg, const char *logfile)
 	return (merge_time / count);
 }
 
+void show_emerge_history(const char *pkg, const char *logfile);
+void show_emerge_history(const char *pkg, const char *logfile)
+{
+	FILE *fp;
+	char buf[BUFSIZ];
+	char ctime_out[50];
+	char *p, *q;
+	time_t t;
+	depend_atom *atom;
+
+	DBG("Searching for %s in %s\n", pkg, logfile);
+
+	if ((fp = fopen(logfile, "r")) == NULL)
+		return;
+
+	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+		if (pkg && strstr(buf, pkg) == NULL)
+			continue;
+
+		if ((p = strchr(buf, '\n')) != NULL)
+			*p = 0;
+		if ((p = strchr(buf, ':')) == NULL)
+			continue;
+		*p = 0;
+		q = p+1;
+
+		t = (time_t)atol(buf);
+		rmspace(q);
+
+		if ((strncmp(q, "::: completed emerge (", 22)) == 0) {
+			if ((p = strchr(q, ')')) == NULL)
+				continue;
+			*p = 0;
+			q = p+1;
+
+			rmspace(q);
+			if ((p = strchr(q, ' ')) == NULL)
+				continue;
+			*p = 0;
+			if ((atom = atom_explode(q)) == NULL)
+				continue;
+
+			sprintf(ctime_out, "%s", ctime(&t));
+			if ((p = strchr(ctime_out, '\n')) != NULL)
+				*p = '\0';
+			printf("\t%s >>> %s%s%s\n", ctime_out, GREEN, q, NORM);
+
+			atom_implode(atom);
+		}
+	}
+	fclose(fp);
+}
+
 int qlop_main(int argc, char **argv)
 {
 	int i;
-	short do_time = 0;
-	char *opt_logfile = NULL;
+	char do_time, do_list;
+	char *opt_logfile, *opt_listpkg;
 	const char *logfile = QLOP_DEFAULT_LOG;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 		argc, argv[0], argc > 1 ? argv[1] : "NULL?");
+
+	opt_logfile = opt_listpkg = NULL;
+	do_time = do_list = 0;
 
 	while ((i = GETOPT_LONG(QLOP, qlop, "")) != -1) {
 		switch (i) {
 			COMMON_GETOPTS_CASES(qlop)
 
 			case 't': do_time = 1; break;
+			case 'l': do_list = 1; break;
+			case 'L': do_list = 1; opt_listpkg = xstrdup(optarg); break;
 			case 'f': opt_logfile = xstrdup(optarg); break;
 		}
 	}
-	if (argc == optind)
+	if (!do_list && !do_time)
 		qlop_usage(EXIT_FAILURE);
-
 	if (opt_logfile != NULL)
 		logfile = opt_logfile;
+
+	if (do_list)
+		show_emerge_history(opt_listpkg, logfile);
 
 	if (do_time) {
 		printf("Average merge time (in seconds)\n");
@@ -145,8 +209,8 @@ int qlop_main(int argc, char **argv)
 			       calculate_average_merge_time(argv[i], logfile));
 	}
 
-	if (opt_logfile != NULL)
-		free(opt_logfile);
+	if (opt_logfile) free(opt_logfile);
+	if (opt_listpkg) free(opt_listpkg);
 
 	return EXIT_SUCCESS;
 }
