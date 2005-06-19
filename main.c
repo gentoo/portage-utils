@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.31 2005/06/18 01:46:26 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.32 2005/06/19 01:06:03 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -110,7 +110,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.31 2005/06/18 01:46:26 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.32 2005/06/19 01:06:03 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -138,6 +138,7 @@ int qfile_main(int, char **);
 int qsize_main(int, char **);
 int qcheck_main(int, char **);
 int qdepends_main(int, char **);
+int qlop_main(int, char **);
 
 /* applets we support */
 typedef enum {
@@ -150,7 +151,8 @@ typedef enum {
 	APPLET_QSIZE = 5,
 	APPLET_QCHECK = 6,
 	APPLET_QDEPENDS = 7,
-	LAST_APPLET = 7
+	APPLET_QLOP = 8,
+	LAST_APPLET = 8
 } applets_enum;
 struct applet_t {
 	const char *name;
@@ -168,7 +170,9 @@ struct applet_t {
 	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
 	{"qcheck",    qcheck_main,    "<pkgname>",       "verify mtimes/digests"},
 	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
+	{"qlop",      qlop_main,      "<pkgname>",       "calculate merge times"},
 
+#ifdef EQUERY_COMPAT
 	/* aliases for equery capatability */
 	{"belongs",   qfile_main,     NULL, NULL},
 	/*"changes"*/
@@ -183,7 +187,7 @@ struct applet_t {
 	/*"stats"*/
 	/*"uses"*/
 	/*"which"*/
-
+#endif
 	{NULL, NULL, NULL, NULL}
 };
 
@@ -631,6 +635,7 @@ void cache_free(portage_cache *cache)
 #include "qsize.c"
 #include "qcheck.c"
 #include "qdepends.c"
+#include "qlop.c"
 #include "q.c"
 
 int main(int argc, char **argv)

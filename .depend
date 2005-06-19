@@ -9,4 +9,4 @@ qdepends.o: qdepends.c
 main.o: main.c libq/libq.c libq/busybox.h libq/xmalloc.c libq/xstrdup.c \
   libq/hash_fd.c libq/md5_sha1_sum.c libq/human_readable.c \
   libq/atom_explode.c qfile.c qlist.c qsearch.c quse.c qsize.c qcheck.c \
-  qdepends.c q.c
+  qdepends.c qlop.c q.c
