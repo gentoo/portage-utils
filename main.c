@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.38 2005/06/20 06:17:48 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.39 2005/06/20 06:25:29 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,6 +34,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <sys/time.h>
+#include <linux/time.h>
 #include <ctype.h>
 #include <dirent.h>
 #include <getopt.h>
@@ -48,6 +49,7 @@
 /* prototypes and such */
 typedef int (*APPLET)(int, char **);
 
+static char eat_file(const char *file, char *buf, const size_t bufsize);
 int rematch(const char *, const char *, int);
 static char *rmspace(char *);
 void qfile(char *, char *);
@@ -113,7 +115,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.38 2005/06/20 06:17:48 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.39 2005/06/20 06:25:29 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -255,6 +257,34 @@ static void version_barf(void)
 	       "%s written for Gentoo by <solar and vapier @ gentoo.org>\n",
 	       VERSION, __FILE__, __DATE__, rcsid, argv0);
 	exit(EXIT_SUCCESS);
+}
+
+static char eat_file(const char *file, char *buf, const size_t bufsize)
+{
+	FILE *f;
+	struct stat s;
+	char ret = 0;
+
+	if ((f = fopen(file, "r")) == NULL)
+		return ret;
+
+	memset(buf, 0x00, bufsize);
+	if (fstat(fileno(f), &s) != 0)
+		goto close_and_ret;
+	if (s.st_size) {
+		if (bufsize < (size_t)s.st_size)
+			goto close_and_ret;
+		if (fread(buf, 1, s.st_size, f) != (size_t)s.st_size)
+			goto close_and_ret;
+	} else {
+		if (fread(buf, 1, bufsize, f) == 0)
+			goto close_and_ret;
+	}
+
+	ret = 1;
+close_and_ret:
+	fclose(f);
+	return ret;
 }
 
 int rematch(const char *regex, const char *match, int cflags)

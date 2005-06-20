@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.4 2005/06/19 05:32:18 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.5 2005/06/20 06:25:29 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -292,18 +292,6 @@ char *dep_flatten_tree(dep_node *root)
 
 
 
-#define eat_file(file, buf) \
-	do { \
-	FILE *f; \
-	struct stat s; \
-	memset(buf, 0x00, sizeof(buf)); \
-	if ((f = fopen(file, "r")) == NULL) break; \
-	assert(fstat(fileno(f), &s) == 0); \
-	assert((size_t)sizeof(buf) > (size_t)s.st_size); \
-	assert(fread(buf, 1, s.st_size, f) == (size_t)s.st_size); \
-	fclose(f); \
-	} while (0)
-
 int qdepends_main(int argc, char **argv)
 {
 	DIR *dir, *dirp;
@@ -373,8 +361,8 @@ int qdepends_main(int argc, char **argv)
 
 			snprintf(buf, sizeof(buf), "%s/%s/%s/%s", portvdb,
 			         dentry->d_name, de->d_name, depend_file);
-			eat_file(buf, depend);
-			if (!*depend) continue;
+			if (!eat_file(buf, depend, sizeof(buf)))
+				continue;
 			IF_DEBUG(puts(depend));
 
 			dep_tree = dep_grow_tree(depend);
@@ -386,7 +374,7 @@ int qdepends_main(int argc, char **argv)
 
 			snprintf(buf, sizeof(buf), "%s/%s/%s/USE", portvdb,
 			         dentry->d_name, de->d_name);
-			eat_file(buf, use);
+			assert(eat_file(buf, use, sizeof(use)) == 0);
 			for (ptr = use; *ptr; ++ptr)
 				if (*ptr == '\n' || *ptr == '\t')
 					*ptr = ' ';
