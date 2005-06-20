@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.10 2005/06/14 23:30:54 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.11 2005/06/20 20:17:22 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -25,17 +25,18 @@
  */
 
 
-#define QCHECK_FLAGS "a" COMMON_FLAGS
+#define QCHECK_FLAGS "ar:" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
-	{"all", no_argument, NULL, 'a'},
+	{"all",  no_argument, NULL, 'a'},
+	{"root", no_argument, NULL, 'r'},
 	COMMON_LONG_OPTS
 };
 static const char *qcheck_opts_help[] = {
 	"List all packages",
+	"Chroot before package verification",
 	COMMON_OPTS_HELP
 };
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, APPLET_QCHECK)
-
 
 
 int qcheck_main(int argc, char **argv)
@@ -47,7 +48,7 @@ int qcheck_main(int argc, char **argv)
 	struct stat st;
 	size_t num_files, num_files_ok, num_files_unknown;
 	char *p;
-	char buf[_POSIX_PATH_MAX];
+	char buf[_POSIX_PATH_MAX], root[_POSIX_PATH_MAX] = "";
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -56,11 +57,19 @@ int qcheck_main(int argc, char **argv)
 		switch (i) {
 		COMMON_GETOPTS_CASES(qcheck)
 		case 'a': search_all = 1; break;
+		case 'r': strncpy(root, optarg, sizeof(root)); break;
 		}
 	}
 	if ((argc == optind) && !search_all)
 		qcheck_usage(EXIT_FAILURE);
 
+	/* cheap trick for now */
+	if (*root) {
+		if (chroot(root) != 0) {
+			warn("failed to chroot to '%s' : %s", root, strerror(errno));
+			return EXIT_FAILURE;
+		}
+	}
 	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
 		return EXIT_FAILURE;
 
