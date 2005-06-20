@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.37 2005/06/20 04:39:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.38 2005/06/20 06:17:48 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -113,7 +113,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.37 2005/06/20 04:39:19 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.38 2005/06/20 06:17:48 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -134,27 +134,27 @@ static char portcachedir[] = "metadata/cache";
 
 /* applet prototypes */
 int q_main(int, char **);
-int qsearch_main(int, char **);
-int quse_main(int, char **);
-int qlist_main(int, char **);
-int qfile_main(int, char **);
-int qsize_main(int, char **);
 int qcheck_main(int, char **);
 int qdepends_main(int, char **);
+int qfile_main(int, char **);
+int qlist_main(int, char **);
 int qlop_main(int, char **);
+int qsearch_main(int, char **);
+int qsize_main(int, char **);
+int quse_main(int, char **);
 
 /* applets we support */
 typedef enum {
 	FIRST_APPLET = 0,
 	APPLET_Q = 0,
-	APPLET_QFILE = 1,
-	APPLET_QLIST = 2,
-	APPLET_QSEARCH = 3,
-	APPLET_QUSE = 4,
-	APPLET_QSIZE = 5,
-	APPLET_QCHECK = 6,
-	APPLET_QDEPENDS = 7,
-	APPLET_QLOP = 8,
+	APPLET_QCHECK = 1,
+	APPLET_QDEPENDS = 2,
+	APPLET_QFILE = 3,
+	APPLET_QLIST = 4,
+	APPLET_QLOP = 5,
+	APPLET_QSEARCH = 6,
+	APPLET_QSIZE = 7,
+	APPLET_QUSE = 8,
 	LAST_APPLET = 8
 } applets_enum;
 struct applet_t {
@@ -166,14 +166,14 @@ struct applet_t {
 } applets[] = {
 	/* q must always be the first applet */
 	{"q",         q_main,         "<applet> <args>", "virtual applet"},
-	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},
-	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
-	{"qsearch",   qsearch_main,   "<regex>",         "search pkgname/desc"},
-	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflag"},
-	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
 	{"qcheck",    qcheck_main,    "<pkgname>",       "verify mtimes/digests"},
 	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
+	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},
+	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
+	{"qsearch",   qsearch_main,   "<regex>",         "search pkgname/desc"},
+	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
+	{"quse",      quse_main,      "<useflag>",    "find pkgs using useflags"},
 
 	/* aliases for equery capatability */
 	{"belongs",   qfile_main,     NULL, NULL},
@@ -221,25 +221,28 @@ static void usage(int status, const char *flags, struct option const opts[],
 {
 	unsigned long i;
 	if (blabber == APPLET_Q) {
-		printf("Usage: q <applet> [arguments]...\n\n");
-		printf("Currently defined applets:\n");
+		printf("%sUsage:%s %sq%s <applet> [arguments]...\n\n", GREEN, NORM, YELLOW, NORM);
+		printf("%sCurrently defined applets%s:\n", GREEN, NORM);
 		for (i = FIRST_APPLET; i <= LAST_APPLET; ++i)
-			printf(" - %s %s\t: %s\n", applets[i].name, applets[i].opts,
-			       applets[i].desc);
+			printf(" * %s%s%s %s\t%s:%s %s\n", 
+				YELLOW, applets[i].name, NORM, 
+				applets[i].opts,
+				RED, NORM, applets[i].desc);
 	} else {
-		printf("* %s: %s\n\nUsage: %s %s\n", applets[blabber].name,
-		       applets[blabber].desc, applets[blabber].name, applets[blabber].opts);
+		printf("%s*%s %s: %s\n\n%sUsage:%s %s%s%s %s\n", GREEN, NORM,
+			applets[blabber].name, applets[blabber].desc, 
+			GREEN, NORM, YELLOW, applets[blabber].name, NORM, applets[blabber].opts);
 	}
 
-	printf("\nOptions: -[%s]\n", flags);
+	printf("\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
 	for (i = 0; opts[i].name; ++i) {
 		assert(help[i] != NULL);
 		if (opts[i].has_arg == no_argument)
-			printf("  -%c, --%-13s* %s\n", opts[i].val, 
-			       opts[i].name, help[i]);
+			printf("  -%c, --%-13s%s*%s %s\n", opts[i].val,
+			       opts[i].name, RED, NORM, help[i]);
 		else
-			printf("  -%c, --%-6s <arg> * %s\n", opts[i].val,
-			       opts[i].name, help[i]);
+			printf("  -%c, --%-6s <arg> %s*%s %s\n", opts[i].val,
+			       opts[i].name, RED, NORM, help[i]);
 	}
 	exit(status);
 }
@@ -621,15 +624,15 @@ void cache_free(portage_cache *cache)
 	free(cache);
 }
 
-#include "qfile.c"
-#include "qlist.c"
-#include "qsearch.c"
-#include "quse.c"
-#include "qsize.c"
+#include "q.c"
 #include "qcheck.c"
 #include "qdepends.c"
+#include "qfile.c"
+#include "qlist.c"
 #include "qlop.c"
-#include "q.c"
+#include "qsearch.c"
+#include "qsize.c"
+#include "quse.c"
 
 int main(int argc, char **argv)
 {

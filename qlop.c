@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.10 2005/06/19 22:25:59 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.11 2005/06/20 06:17:48 solar Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -185,8 +185,6 @@ void show_sync_history(const char *logfile)
 	char ctime_out[50];
 	char *p, *q;
 	time_t t;
-
-	DBG("Searching for %s in %s\n", pkg, logfile);
 
 	if ((fp = fopen(logfile, "r")) == NULL)
 		return;
