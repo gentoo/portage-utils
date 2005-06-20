@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.39 2005/06/20 06:25:29 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.40 2005/06/20 17:47:19 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,6 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <sys/time.h>
-#include <linux/time.h>
 #include <ctype.h>
 #include <dirent.h>
 #include <getopt.h>
@@ -44,7 +43,10 @@
 #include <limits.h>
 #include <assert.h>
 
-
+/* why do you/we need linux/time.h ? */
+#if (defined(__linux__) && 0)
+#include <linux/time.h>
+#endif
 
 /* prototypes and such */
 typedef int (*APPLET)(int, char **);
@@ -115,7 +117,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.39 2005/06/20 06:25:29 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.40 2005/06/20 17:47:19 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -224,21 +226,22 @@ static void usage(int status, const char *flags, struct option const opts[],
 	unsigned long i;
 	if (blabber == APPLET_Q) {
 		printf("%sUsage:%s %sq%s <applet> [arguments]...\n\n", GREEN, NORM, YELLOW, NORM);
-		printf("%sCurrently defined applets%s:\n", GREEN, NORM);
+		printf("%sCurrently defined applets:%s\n", GREEN, NORM);
 		for (i = FIRST_APPLET; i <= LAST_APPLET; ++i)
 			printf(" * %s%s%s %s\t%s:%s %s\n", 
 				YELLOW, applets[i].name, NORM, 
 				applets[i].opts,
 				RED, NORM, applets[i].desc);
 	} else {
-		printf("%s*%s %s: %s\n\n%sUsage:%s %s%s%s %s\n", GREEN, NORM,
-			applets[blabber].name, applets[blabber].desc, 
+		printf("%s*%s %s%s%s: %s\n\n%sUsage:%s %s%s%s %s\n", GREEN, NORM, 
+			YELLOW, applets[blabber].name, NORM,
+			applets[blabber].desc, 
 			GREEN, NORM, YELLOW, applets[blabber].name, NORM, applets[blabber].opts);
 	}
 
 	printf("\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
 	for (i = 0; opts[i].name; ++i) {
-		assert(help[i] != NULL);
+		assert(help[i] != NULL); /* this assert is a life saver when adding new applets. */
 		if (opts[i].has_arg == no_argument)
 			printf("  -%c, --%-13s%s*%s %s\n", opts[i].val,
 			       opts[i].name, RED, NORM, help[i]);
@@ -253,9 +256,9 @@ static void version_barf(void)
 #ifndef VERSION
 # define VERSION "cvs"
 #endif
-	printf("portage-utils-%s: %s compiled %s\n%s\n"
+	printf("portage-utils-%s: compiled %s\n%s\n"
 	       "%s written for Gentoo by <solar and vapier @ gentoo.org>\n",
-	       VERSION, __FILE__, __DATE__, rcsid, argv0);
+	       VERSION, __DATE__, rcsid, argv0);
 	exit(EXIT_SUCCESS);
 }
 

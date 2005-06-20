@@ -12,7 +12,9 @@
 #     --help              print this help, then exit
 #     --version           print version number, then exit
 
-APPLETS=$(../q | grep ^" - q"| awk '{print $2}')
+export NOCOLOR=1
+
+APPLETS=$(../q | grep ^' \* '| awk '{print $2}')
 
 for applet in $APPLETS; do
 	help2man -N -S "Gentoo Foundation" -m ${applet} -s 1 -o ${applet}.1 "../q $applet"
