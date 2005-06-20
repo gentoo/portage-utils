@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.5 2005/06/20 22:26:51 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.6 2005/06/20 23:23:57 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -67,6 +67,19 @@ depend_atom *atom_explode(const char *atom)
 	if ((ptr = strstr(ret->PN, ".ebuild")) != NULL)
 		*ptr = '\0';
 
+	/* find -r# */
+	ptr = ret->PN + strlen(ret->PN) - 1;
+	while (*ptr && ptr > ret->PN) {
+		if (!isdigit(*ptr)) {
+			if (ptr[0] == 'r' && ptr[-1] == '-') {
+				ret->PR_int = atoi(ptr+1);
+				ptr[-1] = '\0';
+			}
+			break;
+		}
+		--ptr;
+	}
+
 	/* search for the special suffixes */
 	for (i = 0; i >= 0 && suffixes[i]; ++i) {
 		ptr_tmp = ret->PN;
@@ -119,31 +132,9 @@ eat_version:
 found_pv:
 	i = -1;
 	if (ret->PV) {
-		/* if we got the PV, split the -r# off */
-		if ((ptr = strstr(ret->PV, "-r")) != NULL) {
-			ret->PR_int = atoi(ptr+2);
-			strcpy(ret->PVR, ret->PV);
-			*ptr = '\0';
-		} else {
-			ret->PR_int = 0;
-			sprintf(ret->PVR, "%s-r0", ret->PV);
-		}
+		sprintf(ret->PVR, "%s-r%i", ret->PV, ret->PR_int);
 	} else {
-		/* this means that we couldn't match any of the special suffixes,
-		 * so we eat the -r# suffix (if it exists) before we throw the
-		 * ptr back into the version eater code above
-		 */
-		ptr_tmp = ptr = ret->PN + strlen(ret->PN) - 1;
-		do {
-			if (!isdigit(*ptr))
-				break;
-		} while (--ptr > ret->PN);
-		/* if we did find a -r#, eat the 'r', otherwise
-		 * reset ourselves to the end of the version # */
-		if (*ptr == 'r')
-			--ptr;
-		else
-			ptr = ptr_tmp;
+		ptr = ret->PN + strlen(ret->PN);
 		--i;
 		goto eat_version;
 	}
