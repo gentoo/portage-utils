@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.14 2005/06/19 22:25:59 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.15 2005/06/20 04:37:29 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -49,7 +49,7 @@ int q_main(int argc, char **argv)
 	if (argc == 0)
 		return 1;
 
-	p = argv0 = basename(argv[0]);
+	argv0 = p = basename(argv[0]);
 
 	if ((func = lookup_applet(p)) == 0)
 		return 1;

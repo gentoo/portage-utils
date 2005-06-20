@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.35 2005/06/19 22:25:59 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.36 2005/06/20 04:37:29 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -75,7 +75,7 @@ void reinitialize_as_needed(void);
 
 
 /* helper functions for showing errors */
-static char *argv0;
+static const char *argv0;
 #define warn(fmt, args...) \
 	fprintf(stderr, "%s%s%s: " fmt "\n", RED, argv0, NORM, ## args)
 #define warnf(fmt, args...) warn("%s%s()%s: " fmt, YELLOW, __FUNCTION__, NORM, ## args)
@@ -108,10 +108,14 @@ void init_coredumps(void)
 # define IF_DEBUG(x)
 #endif
 
+#ifndef BUFSIZE
+# define BUFSIZE 8192
+#endif
+
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.35 2005/06/19 22:25:59 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.36 2005/06/20 04:37:29 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -258,6 +262,7 @@ APPLET lookup_applet(char *applet)
 	for (i = 0; applets[i].name; ++i) {
 		if (strcmp(applets[i].name, applet) == 0) {
 			DBG("found applet %s at %p", applets[i].name, applets[i].func);
+			argv0 = applets[i].name;
 			return applets[i].func;
 		}
 	}
@@ -267,6 +272,7 @@ APPLET lookup_applet(char *applet)
 		for (i = 1; applets[i].name; ++i) {
 			if (strcmp(applets[i].name + 1, applet) == 0) {
 				DBG("found applet by short name %s", applets[i].name);
+				argv0 = applets[i].name;
 				return applets[i].func;
 			}
 		}
