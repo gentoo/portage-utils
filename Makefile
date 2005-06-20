@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.14 2005/06/19 04:54:15 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.15 2005/06/20 22:05:12 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -60,7 +60,7 @@ debug:
 	@-/sbin/chpax  -permsx $(APPLETS)
 	@-/sbin/paxctl -permsx $(APPLETS)
 
-q: $(SRC)
+q: $(SRC) libq/*.c
 	@echo $(CC) $(CFLAGS) $(LDFLAGS) main.c -o q
 	@$(CC) $(CFLAGS) $(LDFLAGS) $(WFLAGS) $(HFLAGS) main.c -o q
 
