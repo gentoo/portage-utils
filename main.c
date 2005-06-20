@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.40 2005/06/20 17:47:19 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.41 2005/06/20 22:11:04 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -43,10 +43,7 @@
 #include <limits.h>
 #include <assert.h>
 
-/* why do you/we need linux/time.h ? */
-#if (defined(__linux__) && 0)
-#include <linux/time.h>
-#endif
+
 
 /* prototypes and such */
 typedef int (*APPLET)(int, char **);
@@ -68,6 +65,7 @@ void reinitialize_as_needed(void);
 #define BOLD      COLOR("00", "01")
 #define NORM      COLOR("00", "00")
 #define BLUE      COLOR("36", "01")
+#define DKBLUE    COLOR("34", "01")
 #define CYAN      COLOR("36", "02")
 #define GREEN     COLOR("32", "01")
 #define MAGENTA   COLOR("35", "02")
@@ -117,7 +115,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.40 2005/06/20 17:47:19 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.41 2005/06/20 22:11:04 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -225,18 +223,19 @@ static void usage(int status, const char *flags, struct option const opts[],
 {
 	unsigned long i;
 	if (blabber == APPLET_Q) {
-		printf("%sUsage:%s %sq%s <applet> [arguments]...\n\n", GREEN, NORM, YELLOW, NORM);
+		printf("%sUsage:%s %sq%s %s<applet> [arguments]...%s\n\n", GREEN, 
+			NORM, YELLOW, NORM, DKBLUE, NORM);
 		printf("%sCurrently defined applets:%s\n", GREEN, NORM);
 		for (i = FIRST_APPLET; i <= LAST_APPLET; ++i)
-			printf(" * %s%s%s %s\t%s:%s %s\n", 
+			printf(" %s*%s %s%s%s %s%s%s\t%s:%s %s\n", GREEN, NORM,
 				YELLOW, applets[i].name, NORM, 
-				applets[i].opts,
+				DKBLUE, applets[i].opts, NORM,
 				RED, NORM, applets[i].desc);
 	} else {
-		printf("%s*%s %s%s%s: %s\n\n%sUsage:%s %s%s%s %s\n", GREEN, NORM, 
+		printf("%sUsage:%s %s%s%s %s%s%s %s:%s %s\n", GREEN, NORM,
 			YELLOW, applets[blabber].name, NORM,
-			applets[blabber].desc, 
-			GREEN, NORM, YELLOW, applets[blabber].name, NORM, applets[blabber].opts);
+			DKBLUE, applets[blabber].opts, NORM,
+			RED, NORM, applets[blabber].desc);
 	}
 
 	printf("\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
@@ -246,8 +245,8 @@ static void usage(int status, const char *flags, struct option const opts[],
 			printf("  -%c, --%-13s%s*%s %s\n", opts[i].val,
 			       opts[i].name, RED, NORM, help[i]);
 		else
-			printf("  -%c, --%-6s <arg> %s*%s %s\n", opts[i].val,
-			       opts[i].name, RED, NORM, help[i]);
+			printf("  -%c, --%-6s %s<arg>%s %s*%s %s\n", opts[i].val,
+			       opts[i].name, DKBLUE, NORM, RED, NORM, help[i]);
 	}
 	exit(status);
 }
