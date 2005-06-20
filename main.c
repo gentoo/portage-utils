@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.36 2005/06/20 04:37:29 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.37 2005/06/20 04:39:19 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -47,8 +47,6 @@
 
 /* prototypes and such */
 typedef int (*APPLET)(int, char **);
-
-APPLET lookup_applet(char *);
 
 int rematch(const char *, const char *, int);
 static char *rmspace(char *);
@@ -115,7 +113,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.36 2005/06/20 04:37:29 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.37 2005/06/20 04:39:19 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -254,32 +252,6 @@ static void version_barf(void)
 	       "%s written for Gentoo by <solar and vapier @ gentoo.org>\n",
 	       VERSION, __FILE__, __DATE__, rcsid, argv0);
 	exit(EXIT_SUCCESS);
-}
-
-APPLET lookup_applet(char *applet)
-{
-	unsigned int i;
-	for (i = 0; applets[i].name; ++i) {
-		if (strcmp(applets[i].name, applet) == 0) {
-			DBG("found applet %s at %p", applets[i].name, applets[i].func);
-			argv0 = applets[i].name;
-			return applets[i].func;
-		}
-	}
-	/* No applet found? Search by shortname then... */
-	if (strlen(applet) > 1) {
-		DBG("Looking up applet (%s) by short name", applet);
-		for (i = 1; applets[i].name; ++i) {
-			if (strcmp(applets[i].name + 1, applet) == 0) {
-				DBG("found applet by short name %s", applets[i].name);
-				argv0 = applets[i].name;
-				return applets[i].func;
-			}
-		}
-	}
-	/* still nothing ?  those bastards ... */
-	warn("Unknown applet '%s'", applet);
-	return 0;
 }
 
 int rematch(const char *regex, const char *match, int cflags)
