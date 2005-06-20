@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.9 2005/06/18 00:35:32 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.10 2005/06/20 22:22:31 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -45,12 +45,13 @@ char qsearch_search_help[] =
 
 
 
-#define QSEARCH_FLAGS "acsS" COMMON_FLAGS
+#define QSEARCH_FLAGS "acsSH" COMMON_FLAGS
 static struct option const qsearch_long_opts[] = {
-	{"all",        no_argument, NULL, 'a'},
-	{"cache",      no_argument, NULL, 'c'},
-	{"search",     no_argument, NULL, 's'},
-	{"desc",        a_argument, NULL, 'S'},
+	{"all",       no_argument, NULL, 'a'},
+	{"cache",     no_argument, NULL, 'c'},
+	{"search",    no_argument, NULL, 's'},
+	{"desc",       a_argument, NULL, 'S'},
+	{"homepage",  no_argument, NULL, 'H'},
 	COMMON_LONG_OPTS
 };
 static const char *qsearch_opts_help[] = {
@@ -58,6 +59,7 @@ static const char *qsearch_opts_help[] = {
 	"Use the portage cache",
 	"Regex search package names",
 	"Regex search package descriptions",
+	"Show homepage info",
 	COMMON_OPTS_HELP
 };
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, APPLET_QSEARCH)
@@ -72,6 +74,7 @@ int qsearch_main(int argc, char **argv)
 	char last[126];
 	char *p, *q, *str;
 	char *search_me = NULL;
+	char show_homepage = 1;
 	char search_desc = 1, search_all = 0, search_cache = CACHE_EBUILD;
 	int i;
 
@@ -85,6 +88,7 @@ int qsearch_main(int argc, char **argv)
 		case 'c': search_cache = CACHE_METADATA; break;
 		case 's': search_desc = 0; break;
 		case 'S': search_desc = 1; break;
+		case 'H': show_homepage = 1; break;
 		}
 	}
 
@@ -116,7 +120,7 @@ int qsearch_main(int argc, char **argv)
 					strncpy(last, pcache->atom->PN, sizeof(last));
 					if ((rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE)) == 0)
 						printf("%s%s/%s%s%s %s\n", BOLD, pcache->atom->CATEGORY, BLUE,
-						       pcache->atom->PN, NORM, pcache->DESCRIPTION);
+						       pcache->atom->PN, NORM, (show_homepage ? pcache->HOMEPAGE : pcache->DESCRIPTION));
 				}
 				cache_free(pcache);
 			} else {
@@ -140,15 +144,18 @@ int qsearch_main(int argc, char **argv)
 					continue;
 				}
 				if ((ebuildfp = fopen(ebuild, "r")) != NULL) {
+					const char *search_vars[] = { "HOMEPAGE=", "DESCRIPTION=" };
+					size_t search_len = (show_homepage ? 9 : 12);
+					const char *search_var = (show_homepage ? search_vars[0] : search_vars[1]);
 					while ((fgets(buf, sizeof(buf), ebuildfp)) != NULL) {
-						if ((strlen(buf) <= 13))
+						if (strlen(buf) <= search_len)
 							continue;
-						if ((strncmp(buf, "DESCRIPTION=", 12)) == 0) {
+						if (strncmp(buf, search_var, search_len) == 0) {
 							if ((q = strrchr(buf, '"')) != NULL)
 								*q = 0;
-							if (strlen(buf) <= 12)
+							if (strlen(buf) <= search_len)
 								break;
-							q = buf + 13;
+							q = buf + search_len + 1;
 							if (!search_all && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
 								break;
 							printf("%s%s/%s%s%s %s\n", 
