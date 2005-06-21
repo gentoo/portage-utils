@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.45 2005/06/21 22:28:07 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.46 2005/06/21 22:29:06 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -114,7 +114,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.45 2005/06/21 22:28:07 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.46 2005/06/21 22:29:06 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -166,7 +166,7 @@ static void usage(int status, const char *flags, struct option const opts[],
 			NORM, YELLOW, NORM, DKBLUE, NORM);
 		printf("%sCurrently defined applets:%s\n", GREEN, NORM);
 		for (i = FIRST_APPLET; i <= LAST_APPLET; ++i)
-			printf(" %s*%s %s%s%s %s%s%s\t%s:%s %s\n", GREEN, NORM,
+			printf(" %s%8s%s %s%-16s%s%s:%s %s\n",
 				YELLOW, applets[i].name, NORM, 
 				DKBLUE, applets[i].opts, NORM,
 				RED, NORM, applets[i].desc);
