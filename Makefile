@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.16 2005/06/21 02:12:44 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.17 2005/06/21 04:06:16 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -25,10 +25,8 @@ check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; 
 WFLAGS    := -Wall -Wunused -Wimplicit -Wshadow -Wformat=2 \
              -Wmissing-declarations -Wmissing-prototypes -Wwrite-strings \
              -Wbad-function-cast -Wnested-externs -Wcomment -Wsequence-point \
-             -Wchar-subscripts -Winline -Wno-format-nonliteral
-
-# =gcc-3.3 does not support these options.
-WFLAGS     += $(call check_gcc, -Wdeclaration-after-statement -Wextra)
+             -Wchar-subscripts -Winline -Wno-format-nonliteral \
+             $(call check_gcc, -Wdeclaration-after-statement -Wextra)
 
 CFLAGS    ?= -O2 -pipe
 #CFLAGS   += -DEBUG -g
@@ -65,7 +63,8 @@ q: $(SRC) libq/*.c
 	@$(CC) $(CFLAGS) $(LDFLAGS) $(WFLAGS) $(HFLAGS) main.c -o q
 
 depend:
-	$(CC) $(CFLAGS) -MM $(SRC) > .depend
+	#$(CC) $(CFLAGS) -MM $(SRC) > .depend
+	$(CC) $(CFLAGS) -MM main.c > .depend
 
 clean:
 	-rm -f q

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.42 2005/06/21 02:12:44 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.43 2005/06/21 04:06:16 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,8 +46,6 @@
 
 
 /* prototypes and such */
-typedef int (*APPLET)(int, char **);
-
 static char eat_file(const char *file, char *buf, const size_t bufsize);
 int rematch(const char *, const char *, int);
 static char *rmspace(char *);
@@ -116,7 +114,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.42 2005/06/21 02:12:44 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.43 2005/06/21 04:06:16 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -127,7 +125,6 @@ static char reinitialize = 0;
 static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
 static char portvdb[] = "/var/db/pkg";
 static char portcachedir[] = "metadata/cache";
-
 
 
 /* include common library code */
@@ -147,59 +144,7 @@ int qsize_main(int, char **);
 int qtbz2_main(int, char **);
 int quse_main(int, char **);
 
-/* applets we support */
-typedef enum {
-	FIRST_APPLET = 0,
-	APPLET_Q = 0,
-	APPLET_QCHECK = 1,
-	APPLET_QDEPENDS = 2,
-	APPLET_QFILE = 3,
-	APPLET_QLIST = 4,
-	APPLET_QLOP = 5,
-	APPLET_QSEARCH = 6,
-	APPLET_QSIZE = 7,
-	APPLET_QTBZ2 = 8,
-	APPLET_QUSE = 9,
-	LAST_APPLET = 9
-} applets_enum;
-struct applet_t {
-	const char *name;
-	/* int *func; */
-	APPLET func;
-	const char *opts;
-	const char *desc;
-} applets[] = {
-	/* q must always be the first applet */
-	{"q",         q_main,         "<applet> <args>", "virtual applet"},
-	{"qcheck",    qcheck_main,    "<pkgname>",       "verify mtimes/digests"},
-	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
-	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},
-	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
-	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
-	{"qsearch",   qsearch_main,   "<regex>",         "search pkgname/desc"},
-	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
-	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
-	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
-
-	/* aliases for equery capatability */
-	{"belongs",   qfile_main,     NULL, NULL},
-	/*"changes"*/
-	{"check",     qcheck_main,    NULL, NULL},
-	{"depends",   qdepends_main,  NULL, NULL},
-	/*"depgraph"*/
-	{"files",     qlist_main,     NULL, NULL},
-	/*"glsa"*/
-	{"hasuse",    quse_main,      NULL, NULL},
-	/*"list"*/
-	{"size",      qsize_main,     NULL, NULL},
-	/*"stats"*/
-	/*"uses"*/
-	/*"which"*/
-
-	{NULL, NULL, NULL, NULL}
-};
-
-
+#include "applets.h"
 
 /* Common usage for all applets */
 #define COMMON_FLAGS "ChV"
