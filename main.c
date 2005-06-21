@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.41 2005/06/20 22:11:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.42 2005/06/21 02:12:44 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -88,6 +88,7 @@ static const char *argv0;
 	} while (0)
 #define err(fmt, args...) _err(warn, fmt, ## args)
 #define errf(fmt, args...) _err(warnf, fmt, ## args)
+#define errp(fmt, args...) _err(warnp, fmt, ## args)
 #ifdef EBUG
 #include <sys/resource.h>
 
@@ -115,7 +116,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.41 2005/06/20 22:11:04 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.42 2005/06/21 02:12:44 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -143,6 +144,7 @@ int qlist_main(int, char **);
 int qlop_main(int, char **);
 int qsearch_main(int, char **);
 int qsize_main(int, char **);
+int qtbz2_main(int, char **);
 int quse_main(int, char **);
 
 /* applets we support */
@@ -156,8 +158,9 @@ typedef enum {
 	APPLET_QLOP = 5,
 	APPLET_QSEARCH = 6,
 	APPLET_QSIZE = 7,
-	APPLET_QUSE = 8,
-	LAST_APPLET = 8
+	APPLET_QTBZ2 = 8,
+	APPLET_QUSE = 9,
+	LAST_APPLET = 9
 } applets_enum;
 struct applet_t {
 	const char *name;
@@ -175,7 +178,8 @@ struct applet_t {
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
 	{"qsearch",   qsearch_main,   "<regex>",         "search pkgname/desc"},
 	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
-	{"quse",      quse_main,      "<useflag>",    "find pkgs using useflags"},
+	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
+	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
 
 	/* aliases for equery capatability */
 	{"belongs",   qfile_main,     NULL, NULL},
@@ -664,6 +668,7 @@ void cache_free(portage_cache *cache)
 #include "qlop.c"
 #include "qsearch.c"
 #include "qsize.c"
+#include "qtbz2.c"
 #include "quse.c"
 
 int main(int argc, char **argv)
