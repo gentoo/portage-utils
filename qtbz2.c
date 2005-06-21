@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.2 2005/06/21 02:32:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.3 2005/06/21 23:18:51 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,33 +46,43 @@
 
 
 
-#define QTBZ2_FLAGS "js" COMMON_FLAGS
+#define QTBZ2_FLAGS "jstxO" COMMON_FLAGS
 static struct option const qtbz2_long_opts[] = {
 	{"join",      no_argument, NULL, 'j'},
 	{"split",     no_argument, NULL, 's'},
+	{"tarbz2",    no_argument, NULL, 't'},
+	{"xpak",      no_argument, NULL, 'x'},
+	{"stdout",    no_argument, NULL, 'O'},
 	COMMON_LONG_OPTS
 };
 static const char *qtbz2_opts_help[] = {
 	"Join tar.bz2 + xpak into a tbz2",
 	"Split a tbz2 into a tar.bz2 + xpak",
+	"Just split the tar.bz2",
+	"Just split the xpak",
+	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
 #define qtbz2_usage(ret) usage(ret, QTBZ2_FLAGS, qtbz2_long_opts, qtbz2_opts_help, APPLET_QTBZ2)
 
 
 
-char *tbz2_encode_int(int enc);
-char *tbz2_encode_int(int enc)
+static char tbz2_stdout = 0;
+
+
+
+unsigned char *tbz2_encode_int(int enc);
+unsigned char *tbz2_encode_int(int enc)
 {
-	static char ret[4];
+	static unsigned char ret[4];
 	ret[0] = (enc & 0xff000000) >> 24;
 	ret[1] = (enc & 0x00ff0000) >> 16;
 	ret[2] = (enc & 0x0000ff00) >> 8;
 	ret[3] = (enc & 0x000000ff);
 	return ret;
 }
-int tbz2_decode_int(char *buf);
-int tbz2_decode_int(char *buf)
+int tbz2_decode_int(unsigned char *buf);
+int tbz2_decode_int(unsigned char *buf)
 {
 	int ret;
 	ret = 0;
@@ -141,7 +151,14 @@ void _tbz2_write_file(FILE *src, const char *dst, size_t len)
 	size_t this_write;
 	FILE *out;
 
-	if ((out = fopen(dst, "w")) == NULL)
+	if (!dst) {
+		fseek(src, len, SEEK_CUR);
+		return;
+	}
+
+	if (tbz2_stdout)
+		out = stdout;
+	else if ((out = fopen(dst, "w")) == NULL)
 		return;
 
 	do {
@@ -150,7 +167,8 @@ void _tbz2_write_file(FILE *src, const char *dst, size_t len)
 		len -= this_write;
 	} while (len && this_write);
 
-	fclose(out);
+	if (out != stdout)
+		fclose(out);
 }
 
 char tbz2_decompose(const char *tbz2, const char *tarbz2, const char *xpak);
@@ -197,7 +215,7 @@ close_in_and_ret:
 int qtbz2_main(int argc, char **argv)
 {
 	int i;
-	char action = 0;
+	char action = 0, split_xpak = 1, split_tarbz2 = 1;
 	char *heap_tbz2, *heap_xpak, *heap_tarbz2;
 	char *tbz2, *xpak, *tarbz2;
 
@@ -207,18 +225,20 @@ int qtbz2_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QTBZ2, qtbz2, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qtbz2)
-
 		case 'j': action = 1; break;
 		case 's': action = 2; break;
+		case 't': split_xpak = 0; break;
+		case 'x': split_tarbz2 = 0; break;
+		case 'O': tbz2_stdout = 1; break;
 		}
 	}
 	if (optind == argc) {
 		switch (action) {
-			case 1: join_usage:
-				err("Join usage: <input tar.bz2> <input xpak> [<output tbz2>]");
-			case 2: split_usage:
-				err("Split usage  <input tbz2> [<output tar.bz2> <output xpak>]");
-			default: qtbz2_usage(EXIT_FAILURE);
+		case 1: join_usage:
+			err("Join usage: <input tar.bz2> <input xpak> [<output tbz2>]");
+		case 2: split_usage:
+			err("Split usage  <input tbz2> [<output tar.bz2> <output xpak>]");
+		default: qtbz2_usage(EXIT_FAILURE);
 		}
 	}
 
@@ -270,19 +290,21 @@ int qtbz2_main(int argc, char **argv)
 				xpak = argv[optind];
 		}
 		/* otherwise guess what they should be */
-		if (!tarbz2) {
+		if (!tarbz2 && split_tarbz2) {
 			i = strlen(tbz2);
 			if (i <= 5) goto split_usage;
 			tarbz2 = heap_tarbz2 = xmalloc(i + 4);
 			strcpy(tarbz2, tbz2);
 			strcpy(tarbz2+i-3, "ar.bz2");
-		}
-		if (!xpak) {
+		} else if (!split_tarbz2)
+			tarbz2 = NULL;
+		if (!xpak && split_xpak) {
 			i = strlen(tbz2);
 			if (i <= 5) goto split_usage;
 			xpak = heap_xpak = xstrdup(tbz2);
 			strcpy(xpak+i-4, "xpak");
-		}
+		} else if (!split_xpak)
+			xpak = NULL;
 
 		if (tbz2_decompose(tbz2, tarbz2, xpak))
 			warn("Could not decompose '%s'", tbz2);
