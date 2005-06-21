@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.17 2005/06/20 22:11:39 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.18 2005/06/21 00:06:03 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -48,14 +48,15 @@ APPLET lookup_applet(char *applet)
 	for (i = 0; applets[i].name; ++i) {
 		if (strcmp(applets[i].name, applet) == 0) {
 			DBG("found applet %s at %p", applets[i].name, applets[i].func);
-			argv0 = applets[i].name + 1;
+			argv0 = applets[i].name;
+			if (i && i <= LAST_APPLET) ++argv0; /* chop the leading 'q' */
 			return applets[i].func;
 		}
 	}
 	/* No applet found? Search by shortname then... */
 	if (strlen(applet) > 1) {
 		DBG("Looking up applet (%s) by short name", applet);
-		for (i = 1; applets[i].name; ++i) {
+		for (i = 1; i <= LAST_APPLET; ++i) {
 			if (strcmp(applets[i].name + 1, applet) == 0) {
 				DBG("found applet by short name %s", applets[i].name);
 				argv0 = applets[i].name + 1;
