@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.7 2005/06/21 00:06:42 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.8 2005/06/21 23:17:31 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -121,13 +121,17 @@ eat_version:
 			if (*ptr == '-') {
 				ptr_tmp = ptr;
 				continue;
-			} else if (*ptr != '-' && *ptr != '.' && !isdigit(*ptr)) {
-				ret->PV = ptr_tmp+1;
-				ret->PV[-1] = '\0';
-				goto found_pv;
-			}
-		ret->PV = ptr_tmp+1;
-		*ptr_tmp = '\0';
+			} else if (*ptr != '-' && *ptr != '.' && !isdigit(*ptr))
+				break;
+		if (*ptr_tmp) {
+			ret->PV = ptr_tmp+1;
+			ret->PV[-1] = '\0';
+			goto found_pv;
+		} else {
+			/* atom has no version */
+			ret->PV = ret->PVR = NULL;
+			return ret;
+		}
 		break;
 	}
 
