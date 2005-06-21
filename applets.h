@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.1 2005/06/21 05:02:01 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.2 2005/06/21 23:43:44 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -38,6 +38,7 @@ int qsearch_main(int, char **);
 int qsize_main(int, char **);
 int qtbz2_main(int, char **);
 int quse_main(int, char **);
+int qxpak_main(int, char **);
 
 typedef int (*APPLET)(int, char **);
 
@@ -54,7 +55,8 @@ typedef enum {
 	APPLET_QSIZE = 7,
 	APPLET_QTBZ2 = 8,
 	APPLET_QUSE = 9,
-	LAST_APPLET = 9
+	APPLET_QXPAK = 10,
+	LAST_APPLET = 10
 } applets_enum;
 struct applet_t {
 	const char *name;
@@ -74,6 +76,7 @@ struct applet_t {
 	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
 	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
 	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
+	{"qxpak",     qxpak_main,     "<misc args>",     "manipulate xpak archives"},
 
 
 	/* aliases for equery capatability */
