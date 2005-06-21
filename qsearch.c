@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.14 2005/06/21 05:37:50 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.15 2005/06/21 16:16:02 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -76,10 +76,9 @@ int qsearch_main(int argc, char **argv)
 	char *search_me = NULL;
 	char show_homepage = 0;
 	char search_desc = 1, search_all = 0, search_cache = CACHE_EBUILD;
-	const char *search_vars[] = { "HOMEPAGE=", "DESCRIPTION=" };
-	const char *search_var;
+	const char *search_vars[] = { "DESCRIPTION=", "HOMEPAGE=" };
 	size_t search_len;
-	int i;
+	int i, idx=0;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -91,7 +90,7 @@ int qsearch_main(int argc, char **argv)
 		case 'c': search_cache = CACHE_METADATA; break;
 		case 's': search_desc = 0; break;
 		case 'S': search_desc = 1; break;
-		case 'H': show_homepage = 1; break;
+		case 'H': show_homepage = 1, idx=1; break;
 		}
 	}
 
@@ -109,8 +108,7 @@ int qsearch_main(int argc, char **argv)
 		return 1;
 
 	/* moved these outside of the loop for better asm generation */
-	search_len = (show_homepage ? 9 : 12);
-	search_var = (show_homepage ? search_vars[0] : search_vars[1]);
+	search_len = strlen(search_vars[idx]);
 
 	while (fgets(ebuild, sizeof(ebuild), fp) != NULL) {
 		if ((p = strchr(ebuild, '\n')) != NULL)
@@ -154,7 +152,7 @@ int qsearch_main(int argc, char **argv)
 					while ((fgets(buf, sizeof(buf), ebuildfp)) != NULL) {
 						if (strlen(buf) <= search_len)
 							continue;
-						if (strncmp(buf, search_var, search_len) == 0) {
+						if (strncmp(buf, search_vars[idx], search_len) == 0) {
 							if ((q = strrchr(buf, '"')) != NULL)
 								*q = 0;
 							if (strlen(buf) <= search_len)
