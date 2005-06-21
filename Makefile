@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.17 2005/06/21 04:06:16 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.18 2005/06/21 16:07:20 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -54,7 +54,7 @@ all: q
 	@:
 
 debug:
-	$(MAKE) CFLAGS="$(CFLAGS) -DEBUG -g -ggdb -fno-pie" clean symlinks
+	$(MAKE) CFLAGS="$(CFLAGS) -DEBUG -g3 -ggdb -fno-pie" clean symlinks
 	@-/sbin/chpax  -permsx $(APPLETS)
 	@-/sbin/paxctl -permsx $(APPLETS)
 
@@ -80,6 +80,7 @@ install: all
 		[ -e $$mpage ] \
 			&& cp $$mpage $(PREFIX)/share/man/man1/ || : ;\
 	done
+	(cd $(PREFIX)/bin/ && for applet in $(APPLETS); do [[ ! -e $$applet ]] && ln -s q $${applet} ; done)
 
 symlinks: all
 	./q --install
