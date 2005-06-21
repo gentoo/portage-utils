@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.1 2005/06/21 02:12:44 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.2 2005/06/21 02:32:19 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -61,6 +61,28 @@ static const char *qtbz2_opts_help[] = {
 
 
 
+char *tbz2_encode_int(int enc);
+char *tbz2_encode_int(int enc)
+{
+	static char ret[4];
+	ret[0] = (enc & 0xff000000) >> 24;
+	ret[1] = (enc & 0x00ff0000) >> 16;
+	ret[2] = (enc & 0x0000ff00) >> 8;
+	ret[3] = (enc & 0x000000ff);
+	return ret;
+}
+int tbz2_decode_int(char *buf);
+int tbz2_decode_int(char *buf)
+{
+	int ret;
+	ret = 0;
+	ret += (buf[0] << 24);
+	ret += (buf[1] << 16);
+	ret += (buf[2] << 8);
+	ret += (buf[3]);
+	return ret;
+}
+
 void _tbz2_copy_file(FILE *src, FILE *dst);
 void _tbz2_copy_file(FILE *src, FILE *dst)
 {
@@ -76,7 +98,6 @@ char tbz2_compose(const char *tarbz2, const char *xpak, const char *tbz2);
 char tbz2_compose(const char *tarbz2, const char *xpak, const char *tbz2)
 {
 	FILE *out, *in_tarbz2, *in_xpak;
-	unsigned char tbz2_tail[TBZ2_END_LEN];
 	struct stat st;
 	char ret = 1;
 
@@ -104,12 +125,8 @@ char tbz2_compose(const char *tarbz2, const char *xpak, const char *tbz2)
 	fclose(in_xpak);
 
 	/* save tbz2 tail: OOOOSTOP */
-	tbz2_tail[0] = ((st.st_size) & 0xff000000) >> 24;
-	tbz2_tail[1] = ((st.st_size) & 0x00ff0000) >> 16;
-	tbz2_tail[2] = ((st.st_size) & 0x0000ff00) >> 8;
-	tbz2_tail[3] =  (st.st_size) & 0x000000ff;
-	memcpy(tbz2_tail + 4, TBZ2_END_MSG, TBZ2_END_MSG_LEN);
-	fwrite(tbz2_tail, 1, TBZ2_END_LEN, out);
+	fwrite(tbz2_encode_int(st.st_size), 1, 4, out);
+	fwrite(TBZ2_END_MSG, 1, TBZ2_END_MSG_LEN, out);
 
 	fclose(out);
 	ret = 0;
@@ -160,11 +177,7 @@ char tbz2_decompose(const char *tbz2, const char *tarbz2, const char *xpak)
 	}
 
 	/* calculate xpak's size */
-	xpak_size = 0;
-	xpak_size += (tbz2_tail[0] << 24);
-	xpak_size += (tbz2_tail[1] << 16);
-	xpak_size += (tbz2_tail[2] << 8);
-	xpak_size += (tbz2_tail[3]);
+	xpak_size = tbz2_decode_int(tbz2_tail);
 	/* calculate tarbz2's size */
 	tarbz2_size = st.st_size - xpak_size - TBZ2_END_LEN;
 
