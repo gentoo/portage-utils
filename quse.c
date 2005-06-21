@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.14 2005/06/21 16:07:20 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.15 2005/06/21 22:28:07 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,14 +29,12 @@
 #define QUSE_FLAGS "avKL" COMMON_FLAGS
 static struct option const quse_long_opts[] = {
 	{"all",       no_argument, NULL, 'a'},
-	{"verbose",   no_argument, NULL, 'v'},
 	{"keywords",  no_argument, NULL, 'K'},
 	{"licence",   no_argument, NULL, 'L'},
 	/* {"format",     a_argument, NULL, 'F'}, */
 	COMMON_LONG_OPTS
 };
 static const char *quse_opts_help[] = {
-	"List every package in the cache",
 	"Show annoying things in IUSE",
 	"Use the KEYWORDS vs IUSE",
 	"Use the LICENSE vs IUSE",
@@ -99,7 +97,6 @@ int quse_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QUSE, quse, "")) != -1) {
 		switch (i) {
 		case 'a': all = 1; break;
-		case 'v': verbose = 1; break;
 		case 'K': idx = 1;  break;
 		case 'L': idx = 2; break;
 		/* case 'F': idx = 3, search_vars[idx] = xstrdup(optarg); break; */

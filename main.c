@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.44 2005/06/21 22:26:32 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.45 2005/06/21 22:28:07 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -114,7 +114,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.44 2005/06/21 22:26:32 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.45 2005/06/21 22:28:07 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -134,19 +134,22 @@ static char portcachedir[] = "metadata/cache";
 #include "applets.h"
 
 /* Common usage for all applets */
-#define COMMON_FLAGS "ChV"
+#define COMMON_FLAGS "vChV"
 #define a_argument required_argument
 #define COMMON_LONG_OPTS \
+	{"verbose",   no_argument, NULL, 'v'}, \
 	{"nocolor",   no_argument, NULL, 'C'}, \
 	{"help",      no_argument, NULL, 'h'}, \
 	{"version",   no_argument, NULL, 'V'}, \
 	{NULL,        no_argument, NULL, 0x0}
 #define COMMON_OPTS_HELP \
+	"Make a lot of noise", \
 	"Don't output color", \
 	"Print this help and exit", \
 	"Print version and exit", \
 	NULL
 #define COMMON_GETOPTS_CASES(applet) \
+	case 'v': ++verbose; break; \
 	case 'V': version_barf(); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': color = 0; break; \
