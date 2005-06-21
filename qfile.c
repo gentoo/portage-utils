@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.9 2005/06/19 05:32:12 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.10 2005/06/21 22:26:32 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,6 +41,7 @@ static const char *qfile_opts_help[] = {
 
 static short qfile_quiet = 0;
 
+void qfile(char *path, char *fname);
 void qfile(char *path, char *fname)
 {
 	FILE *fp;

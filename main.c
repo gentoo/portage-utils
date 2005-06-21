@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.43 2005/06/21 04:06:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.44 2005/06/21 22:26:32 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -49,12 +49,12 @@
 static char eat_file(const char *file, char *buf, const size_t bufsize);
 int rematch(const char *, const char *, int);
 static char *rmspace(char *);
-void qfile(char *, char *);
 
 char *initialize_portdir(void);
 void initialize_ebuild_flat(void);
 void reinitialize_ebuild_flat(void);
 void reinitialize_as_needed(void);
+#define _q_unused_ __attribute__((__unused__))
 
 
 
@@ -114,7 +114,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.43 2005/06/21 04:06:16 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.44 2005/06/21 22:26:32 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -130,20 +130,7 @@ static char portcachedir[] = "metadata/cache";
 /* include common library code */
 #include "libq/libq.c"
 
-
-
-/* applet prototypes */
-int q_main(int, char **);
-int qcheck_main(int, char **);
-int qdepends_main(int, char **);
-int qfile_main(int, char **);
-int qlist_main(int, char **);
-int qlop_main(int, char **);
-int qsearch_main(int, char **);
-int qsize_main(int, char **);
-int qtbz2_main(int, char **);
-int quse_main(int, char **);
-
+/* include common applet defs */
 #include "applets.h"
 
 /* Common usage for all applets */
