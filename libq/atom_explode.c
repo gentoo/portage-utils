@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.6 2005/06/20 23:23:57 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.7 2005/06/21 00:06:42 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -81,61 +81,67 @@ depend_atom *atom_explode(const char *atom)
 	}
 
 	/* search for the special suffixes */
+	i = -1;
+	if (strchr(ret->PN, '_') == NULL)
+		goto no_suffix_opt;
 	for (i = 0; i >= 0 && suffixes[i]; ++i) {
 		ptr_tmp = ret->PN;
 
 retry_suffix:
-		if ((ptr = strstr(ptr_tmp, suffixes[i])) != NULL) {
-			/* check this is a real suffix and not _p hitting mod_perl */
-			/* note: '_suff-' in $PN is accepted, but no one uses that ... */
-			len = strlen(ptr);
-			slen = strlen(suffixes[i]);
-			if (slen > len) continue;
-			if (ptr[slen] && !isdigit(ptr[slen]) && ptr[slen]!='-') {
-				/* ok, it was a fake out ... lets skip this 
-				 * fake and try to match the suffix again */
-				ptr_tmp = ptr + 1;
-				goto retry_suffix;
-			}
+		if ((ptr = strstr(ptr_tmp, suffixes[i])) == NULL)
+			continue;
+
+		/* check this is a real suffix and not _p hitting mod_perl */
+		/* note: '_suff-' in $PN is accepted, but no one uses that ... */
+		len = strlen(ptr);
+		slen = strlen(suffixes[i]);
+		if (slen > len) continue;
+		if (ptr[slen] && !isdigit(ptr[slen]) && ptr[slen]!='-') {
+			/* ok, it was a fake out ... lets skip this 
+			 * fake and try to match the suffix again */
+			ptr_tmp = ptr + 1;
+			goto retry_suffix;
+		}
 
 eat_version:
-			/* allow for 1 optional suffix letter */
-			if (ptr[-1] >= 'a' && ptr[-1] <= 'z') {
-				ptr_tmp = ptr--;
-				while (--ptr > ret->PN)
-					if (*ptr != '.' && !isdigit(*ptr))
-						break;
-				if (*ptr != '-') {
-					ptr = ptr_tmp;
-				}
-			}
-
-			/* eat the trailing version number [-.0-9]+ */
-			ptr_tmp = ptr;
+		/* allow for 1 optional suffix letter */
+		if (ptr[-1] >= 'a' && ptr[-1] <= 'z') {
+			ptr_tmp = ptr--;
 			while (--ptr > ret->PN)
-				if (*ptr == '-') {
-					ptr_tmp = ptr;
-					continue;
-				} else if (*ptr != '-' && *ptr != '.' && !isdigit(*ptr)) {
-					ret->PV = ptr_tmp+1;
-					ret->PV[-1] = '\0';
-					goto found_pv;
-				}
-			ret->PV = ptr_tmp+1;
-			*ptr_tmp = '\0';
-			break;
+				if (*ptr != '.' && !isdigit(*ptr))
+					break;
+			if (*ptr != '-') {
+				ptr = ptr_tmp;
+			}
 		}
+
+		/* eat the trailing version number [-.0-9]+ */
+		ptr_tmp = ptr;
+		while (--ptr > ret->PN)
+			if (*ptr == '-') {
+				ptr_tmp = ptr;
+				continue;
+			} else if (*ptr != '-' && *ptr != '.' && !isdigit(*ptr)) {
+				ret->PV = ptr_tmp+1;
+				ret->PV[-1] = '\0';
+				goto found_pv;
+			}
+		ret->PV = ptr_tmp+1;
+		*ptr_tmp = '\0';
+		break;
 	}
+
 	if (i <= -3)
 		errf("Hrm, seem to have hit an infinite loop with %s", atom);
 
-found_pv:
 	i = -1;
 	if (ret->PV) {
+found_pv:
 		sprintf(ret->PVR, "%s-r%i", ret->PV, ret->PR_int);
 	} else {
-		ptr = ret->PN + strlen(ret->PN);
+no_suffix_opt:
 		--i;
+		ptr = ret->PN + strlen(ret->PN);
 		goto eat_version;
 	}
 
