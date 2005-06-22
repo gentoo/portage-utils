@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.17 2005/06/22 04:58:25 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.18 2005/06/22 23:57:53 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -154,7 +154,7 @@ int quse_main(int argc, char **argv)
 				while ((p = strrchr(&buf[0][search_len+1], '\\')) != NULL) *p = ' ';
 
 				if ((size_t)strlen(buf[0]) < (size_t)(search_len+1)) {
-					warnf("err '%s'/%d <= %d\n", buf[0], (int)strlen(buf[0]), search_len+1);
+					warnf("err '%s'/%lu <= %lu\n", buf[0], (unsigned long)strlen(buf[0]), (unsigned long)(search_len+1));
 					continue;
 				}
 
