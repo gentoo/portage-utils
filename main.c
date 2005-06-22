@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.48 2005/06/22 04:58:25 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.49 2005/06/22 23:57:41 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -114,7 +114,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.48 2005/06/22 04:58:25 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.49 2005/06/22 23:57:41 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -384,7 +384,7 @@ const char *initialize_flat(int cache_type)
 	if (access(cache_file, R_OK) == 0)
 		goto ret;
 
-	warn("Updating ebuild %s cache ... ", cache_type == CACHE_EBUILD ? "" : "meta" );
+	warn("Updating ebuild %scache ... ", cache_type == CACHE_EBUILD ? "" : "meta" );
 
 	unlink(cache_file);
 	if (errno != ENOENT) {
