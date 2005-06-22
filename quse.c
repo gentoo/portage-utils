@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.16 2005/06/22 04:31:41 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.17 2005/06/22 04:58:25 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -85,11 +85,9 @@ int quse_main(int argc, char **argv)
 	char ebuild[_POSIX_PATH_MAX];
 	const char *search_var = NULL;
 	const char *search_vars[] = { "IUSE=", "KEYWORDS=", "LICENSE=", search_var };
-	short all=0;
-	int i, idx=0;
-	int search_len;
-
-	all = 0;
+	short all = 0;
+	int i, idx = 0;
+	size_t search_len;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -138,7 +136,8 @@ int quse_main(int argc, char **argv)
 					*p = ' ';
 					memset(buf[1], 0, sizeof(buf[1]));
 
-					fgets(buf[1], sizeof(buf[1]), newfp);
+					if ((fgets(buf[1], sizeof(buf[1]), newfp)) == NULL)
+						continue;
 					lineno++;
 
 					if ((p = strchr(buf[1], '\n')) != NULL)
