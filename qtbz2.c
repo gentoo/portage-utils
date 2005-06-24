@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.3 2005/06/21 23:18:51 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.4 2005/06/24 21:39:43 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -100,6 +100,7 @@ void _tbz2_copy_file(FILE *src, FILE *dst)
 	unsigned char buffer[BUFSIZE*32];
 	while (count) {
 		count = fread(buffer, 1, sizeof(buffer), src);
+		if (!count) return;
 		fwrite(buffer, 1, count, dst);
 	}
 }
