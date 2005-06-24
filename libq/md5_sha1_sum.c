@@ -42,18 +42,18 @@ static unsigned char *hash_bin_to_hex(unsigned char *hash_value,
 	max = (hash_length * 2) + 2;
 	hex_value = xmalloc(max);
 	for (x = len = 0; x < hash_length; x++) {
-		len += snprintf(hex_value + len, max - len, "%02x", hash_value[x]);
+		len += snprintf((char*)(hex_value + len), max - len, "%02x", hash_value[x]);
 	}
 	return (hex_value);
 }
 
-static char *hash_file(const char *filename, uint8_t hash_algo)
+static unsigned char *hash_file(const char *filename, uint8_t hash_algo)
 {
 	int fd;
 	fd = open(filename, O_RDONLY);
 	if (fd != -1) {
 		static uint8_t hash_value_bin[20];
-		static char *hash_value;
+		static unsigned char *hash_value;
 		hash_value = 
 			(hash_fd(fd, -1, hash_algo, hash_value_bin) != -2 ?
 			 hash_bin_to_hex(hash_value_bin, hash_algo == HASH_MD5 ? 16 : 20) :

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.11 2005/06/20 20:17:22 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.12 2005/06/24 21:39:09 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -171,7 +171,7 @@ int qcheck_main(int argc, char **argv)
 							++num_files_unknown;
 							break;
 						}
-						hashed_file = hash_file(file, hash_algo);
+						hashed_file = (char*)hash_file(file, hash_algo);
 						if (!hashed_file) {
 							printf(" %sPERM %4o%s: %s\n", RED, (st.st_mode & 07777), NORM, file);
 							++num_files_unknown;
