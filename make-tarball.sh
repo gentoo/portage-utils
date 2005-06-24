@@ -4,7 +4,6 @@ if [[ $# -ne 1 ]] ; then
 	echo "Usage: $0 <ver>" 1>&2
 	exit 1
 fi
-
 old_files=$(find . -name '.#*')
 if [[ -n ${old_files} ]] ; then
 	echo "Remove these temp files before making a package:"
@@ -13,6 +12,7 @@ if [[ -n ${old_files} ]] ; then
 fi
 
 ver="$1"
+[[ "$ver" == "snap" ]] && ver=$(date -u +%Y%m%d)
 bn="$(basename $(pwd))-${ver}"
 [[ -d "${bn}" ]] && rm -r "${bn}"
 mkdir "${bn}" || exit 1
