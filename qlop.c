@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.11 2005/06/20 06:17:48 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.12 2005/06/25 01:17:06 vapier Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,17 +24,25 @@
  *
  */
 
-#define QLOP_DEFAULT_LOG "/var/log/emerge.log"
+#ifdef __linux__
+# include <asm/param.h>
+# define __QLOP_CURRENT__
+#endif
+
+#define QLOP_DEFAULT_LOGFILE "/var/log/emerge.log"
+#define QLOP_DEFAULT_PIDFILE "/tmp/sandboxpids.tmp"
 
 
 
-#define QLOP_FLAGS "tlusf:" COMMON_FLAGS
+#define QLOP_FLAGS "tluscf:F:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
 	{"time",      no_argument, NULL, 't'},
 	{"list",      no_argument, NULL, 'l'},
 	{"unlist",    no_argument, NULL, 'u'},
 	{"sync",      no_argument, NULL, 's'},
-	{"file",       a_argument, NULL, 'f'},
+	{"current",   no_argument, NULL, 'c'},
+	{"logfile",    a_argument, NULL, 'f'},
+	{"pidfile",    a_argument, NULL, 'F'},
 	COMMON_LONG_OPTS
 };
 
@@ -43,12 +51,26 @@ static const char *qlop_opts_help[] = {
 	"Show merge history",
 	"Show unmerge history",
 	"Show sync history",
-	"Read emerge logfile instead of " QLOP_DEFAULT_LOG,
+	"Show current emerging packages",
+	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
+	"Read emerge pidfile instead of " QLOP_DEFAULT_PIDFILE,
 	COMMON_OPTS_HELP
 };
 
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, APPLET_QLOP)
 
+
+
+static const char *chop_ctime(time_t t);
+static const char *chop_ctime(time_t t)
+{
+	static char ctime_out[50];
+	char *p;
+	snprintf(ctime_out, sizeof(ctime_out), "%s", ctime(&t));
+	if ((p = strchr(ctime_out, '\n')) != NULL)
+		*p = '\0';
+	return ctime_out;
+}
 
 
 unsigned long calculate_average_merge_time(char *pkg, const char *logfile);
@@ -125,7 +147,6 @@ void show_emerge_history(char merged, int argc, char **argv, const char *logfile
 {
 	FILE *fp;
 	char buf[BUFSIZ];
-	char ctime_out[50];
 	char *p, *q;
 	int i;
 	time_t t;
@@ -168,10 +189,7 @@ void show_emerge_history(char merged, int argc, char **argv, const char *logfile
 				q = p+2;
 			}
 
-			sprintf(ctime_out, "%s", ctime(&t));
-			if ((p = strchr(ctime_out, '\n')) != NULL)
-				*p = '\0';
-			printf("%s %s %s%s%s\n", ctime_out, (merged ? ">>>" : "<<<"), GREEN, q, NORM);
+			printf("%s %s %s%s%s\n", chop_ctime(t), (merged ? ">>>" : "<<<"), GREEN, q, NORM);
 		}
 	}
 	fclose(fp);
@@ -182,7 +200,6 @@ void show_sync_history(const char *logfile)
 {
 	FILE *fp;
 	char buf[BUFSIZ];
-	char ctime_out[50];
 	char *p, *q;
 	time_t t;
 
@@ -208,26 +225,115 @@ void show_sync_history(const char *logfile)
 			continue;
 		q = p + 5;
 
-		sprintf(ctime_out, "%s", ctime(&t));
-		if ((p = strchr(ctime_out, '\n')) != NULL)
-			*p = '\0';
-		printf("%s >>> %s%s%s\n", ctime_out, GREEN, q, NORM);
+		printf("%s >>> %s%s%s\n", chop_ctime(t), GREEN, q, NORM);
 	}
 	fclose(fp);
 }
 
+void show_current_emerge(const char *pidfile);
+#ifdef __QLOP_CURRENT__
+void show_current_emerge(const char *pidfile)
+{
+	FILE *fp;
+	pid_t pid;
+	char buf[BUFSIZE], bufstat[300];
+	char path[_POSIX_PATH_MAX];
+	char *p, *q;
+	unsigned long long start_time;
+	double uptime_secs;
+	time_t start_date;
+
+	if ((fp = fopen(pidfile, "r")) == NULL) {
+		warnp("Could not open pidfile '%s'", pidfile);
+		return;
+	}
+
+	/* each line in the sandbox file is a pid */
+	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+		if ((p = strchr(buf, '\n')) != NULL)
+			*p = '\0';
+		pid = (pid_t)atol(buf);
+
+		/* portage renames the cmdline so the package name is first */
+		sprintf(path, "/proc/%i/cmdline", pid);
+		if (!eat_file(path, buf, sizeof(buf)))
+			continue;
+		if (buf[0] == '[' && (p = strchr(buf, ']')) != NULL) {
+			*p = '\0';
+			p = buf+1;
+			q = p + strlen(p) + 1;
+
+			/* open the stat file to figure out how long we have been running */
+			sprintf(path, "/proc/%i/stat", pid);
+			if (!eat_file(path, bufstat, sizeof(bufstat)))
+				continue;
+
+			/* ripped from procps/proc/readproc.c */
+			if ((q = strchr(bufstat, ')')) == NULL)
+				continue;
+			/* grab the start time */
+			sscanf(q + 2,
+				"%*c "
+				"%*d %*d %*d %*d %*d "
+				"%*u %*u %*u %*u %*u "
+				"%*u %*u %*u %*u "
+				"%*d %*d "
+				"%*d "
+				"%*d "
+				"%Lu ",
+				&start_time);
+			/* get uptime */
+			if (!eat_file("/proc/uptime", bufstat, sizeof(bufstat)))
+				continue;
+			sscanf(bufstat, "%lf", &uptime_secs);
+
+			/* figure out when this thing started and then show it */
+			start_date = time(0) - (uptime_secs - (start_time / HZ));
+			printf(
+				" %s*%s %s%s%s\n"
+				"     started: %s%s%s\n"
+				"     elapsed: ", /*%s%llu%s seconds\n",*/
+				BOLD, NORM, BLUE, p, NORM,
+				GREEN, chop_ctime(start_date), NORM);
+			{
+				/* ripped from procps/ps/output.c */
+				unsigned long t;
+				unsigned dd,hh,mm,ss;
+				t = uptime_secs - (start_time / HZ);
+				ss = t%60; t /= 60;
+				mm = t%60; t /= 60;
+				hh = t%24; t /= 24;
+				dd = t;
+				if (dd) printf("%s%u%s days, ", GREEN, dd, NORM);
+				if (hh) printf("%s%u%s hours, ", GREEN, hh, NORM);
+				if (mm) printf("%s%u%s minutes, ", GREEN, mm, NORM);
+				printf("%s%u%s second%s\n", GREEN, ss, NORM, (ss==1?"":"s"));
+			}
+		}
+	}
+
+	fclose(fp);
+}
+#else
+void show_current_emerge(const char _q_unused_ *pidfile)
+{
+	errf("show_current_emerge() is not supported on your OS");
+}
+#endif
+
 int qlop_main(int argc, char **argv)
 {
 	int i;
-	char do_time, do_list, do_unlist, do_sync;
-	char *opt_logfile;
-	const char *logfile = QLOP_DEFAULT_LOG;
+	char do_time, do_list, do_unlist, do_sync, do_current;
+	char *opt_logfile, *opt_pidfile;
+	const char *logfile = QLOP_DEFAULT_LOGFILE,
+	           *pidfile = QLOP_DEFAULT_PIDFILE;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 		argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	opt_logfile = NULL;
-	do_time = do_list = do_unlist = do_sync = 0;
+	opt_logfile = opt_pidfile = NULL;
+	do_time = do_list = do_unlist = do_sync = do_current = 0;
 
 	while ((i = GETOPT_LONG(QLOP, qlop, "")) != -1) {
 		switch (i) {
@@ -237,26 +343,33 @@ int qlop_main(int argc, char **argv)
 			case 'l': do_list = 1; break;
 			case 'u': do_unlist = 1; break;
 			case 's': do_sync = 1; break;
+			case 'c': do_current = 1; break;
 			case 'f':
 				if (opt_logfile) err("Only use -f once");
 				opt_logfile = xstrdup(optarg);
 				break;
+			case 'F':
+				if (opt_pidfile) err("Only use -F once");
+				opt_pidfile = xstrdup(optarg);
+				break;
 		}
 	}
-	if (!do_list && !do_unlist && !do_time && !do_sync)
+	if (!do_list && !do_unlist && !do_time && !do_sync && !do_current)
 		qlop_usage(EXIT_FAILURE);
 	if (opt_logfile != NULL)
 		logfile = opt_logfile;
-	if (do_list && do_unlist) {
-		/* pick one or the other */
-	}
+	if (opt_pidfile != NULL)
+		pidfile = opt_pidfile;
 
 	argc -= optind;
 	argv += optind;
 
-	if (do_list || do_unlist)
-		show_emerge_history(do_list, argc, argv, logfile);
-
+	if (do_list)
+		show_emerge_history(1, argc, argv, logfile);
+	if (do_unlist)
+		show_emerge_history(0, argc, argv, logfile);
+	if (do_current)
+		show_current_emerge(pidfile);
 	if (do_sync)
 		show_sync_history(logfile);
 
@@ -268,6 +381,7 @@ int qlop_main(int argc, char **argv)
 	}
 
 	if (opt_logfile) free(opt_logfile);
+	if (opt_pidfile) free(opt_pidfile);
 
 	return EXIT_SUCCESS;
 }
