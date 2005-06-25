@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.1 2005/06/21 23:43:44 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.2 2005/06/25 01:21:45 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -48,7 +48,7 @@
 
 
 
-#define QXPAK_FLAGS "lxd:O" COMMON_FLAGS
+#define QXPAK_FLAGS "lxcd:O" COMMON_FLAGS
 static struct option const qxpak_long_opts[] = {
 	{"list",      no_argument, NULL, 'l'},
 	{"extract",   no_argument, NULL, 'x'},
@@ -103,13 +103,20 @@ void _xpak_walk_index(_xpak_archive *x, int argc, char **argv, void (*func)(char
 		p += 4;
 		if (argc) {
 			for (i = 0; i < argc; ++i)
-				if (!strcmp(pathname, argv[i]))
+				if (argv[i] && !strcmp(pathname, argv[i])) {
+					argv[i] = NULL;
 					break;
+				}
 			if (i == argc)
 				continue;
 		}
 		(*func)(pathname, pathname_len, data_offset, data_len, x->data);
 	}
+
+	if (argc)
+		for (i = 0; i < argc; ++i)
+			if (argv[i])
+				warn("Could not locate '%s' in archive", argv[i]);
 }
 
 _xpak_archive *_xpak_open(const char *file);
@@ -136,11 +143,15 @@ _xpak_archive *_xpak_open(const char *file)
 	/* calc index and data sizes */
 	ret.index_len = tbz2_decode_int(buf+XPAK_START_MSG_LEN);
 	ret.data_len = tbz2_decode_int(buf+XPAK_START_MSG_LEN+4);
+	if (!ret.index_len || !ret.data_len) {
+		warn("Skipping empty archive '%s'", file);
+		goto close_and_ret;
+	}
 
 	/* clean up before returning */
-	if (xpak_chdir) chdir(xpak_chdir);
-	if (ret.fp != stdin)
-		fclose(ret.fp);
+	if (xpak_chdir)
+		if (chdir(xpak_chdir) != 0)
+			err("Could not chdir to '%s'", xpak_chdir);
 
 	return &ret;
 
@@ -220,24 +231,134 @@ void xpak_extract(const char *file, int argc, char **argv)
 	_xpak_close(x);
 }
 
+void _xpak_add_file(const char *filename, struct stat *st, FILE *findex, int *index_len, FILE *fdata, int *data_len);
+void _xpak_add_file(const char *filename, struct stat *st, FILE *findex, int *index_len, FILE *fdata, int *data_len)
+{
+	FILE *fin;
+	char *p;
+	const char *basefile;
+	int in_len;
+
+	if ((basefile = strrchr(filename, '/')) == NULL) {
+		basefile = filename;
+	} else {
+		++basefile;
+		assert(*basefile);
+	}
+
+	if (verbose == 1)
+		printf("%s\n", basefile);
+	else if (verbose)
+		printf("%s @ offset byte %i\n", basefile, *data_len);
+
+	/* write out the (pathname_len) */
+	in_len = strlen(basefile);
+	p = tbz2_encode_int(in_len);
+	fwrite(p, 1, 4, findex);
+	/* write out the pathname */
+	fwrite(basefile, 1, in_len, findex);
+	/* write out the (data_offset) */
+	p = tbz2_encode_int(*data_len);
+	fwrite(p, 1, 4, findex);
+
+	*index_len += 4 + in_len + 4 + 4;
+
+	/* now open the file, get (data_len), and append the file to the data file */
+	if ((fin = fopen(filename, "r")) == NULL) {
+		warnp("Could not open '%s' for reading", filename);
+fake_data_len:
+		p = tbz2_encode_int(0);
+		fwrite(p, 1, 4, findex);
+		return;
+	}
+	in_len = st->st_size;
+	/* the xpak format can only store files whose size is a 32bit int 
+	 * so we have to make sure we don't store a big file */
+	if (in_len != st->st_size) {
+		warnf("File is too big: %lu", st->st_size);
+		fclose(fin);
+		goto fake_data_len;
+	}
+	p = tbz2_encode_int(in_len);
+	fwrite(p, 1, 4, findex);
+	_tbz2_copy_file(fin, fdata);
+	fclose(fin);
+
+	*data_len += in_len;
+}
 void xpak_create(const char *file, int argc, char **argv);
 void xpak_create(const char *file, int argc, char **argv)
 {
-	err("TODO: create xpak %s", file);
-	argc = 0;
-	argv = NULL;
+	FILE *findex, *fdata, *fout;
+	struct dirent **dir;
+	int i, fidx, numfiles;
+	struct stat st;
+	char path[_POSIX_PATH_MAX], *p;
+	int index_len, data_len;
+
+	if (argc == 0)
+		err("Create usage: <xpak output> <files/dirs to pack>");
+
+	if (strlen(file) >= sizeof(path)-6)
+		err("Pathname is too long: %s", file);
+
+	if ((fout = fopen(file, "w")) == NULL)
+		return;
+	strcpy(path, file); strcat(path, ".index");
+	if ((findex = fopen(path, "w+")) == NULL) {
+		fclose(fout);
+		return;
+	}
+	strcpy(path, file); strcat(path, ".dat");
+	if ((fdata = fopen(path, "w+")) == NULL) {
+		fclose(fout);
+		fclose(findex);
+		return;
+	}
+
+	index_len = data_len = 0;
+	for (i = 0; i < argc; ++i) {
+		stat(argv[i], &st);
+		if (S_ISDIR(st.st_mode)) {
+			if ((numfiles = scandir(argv[i], &dir, filter_hidden, alphasort)) < 0)
+				warn("Directory '%s' is empty; skipping", argv[i]);
+			for (fidx = 0; fidx < numfiles; ++fidx) {
+				snprintf(path, sizeof(path), "%s/%s", argv[i], dir[fidx]->d_name);
+				_xpak_add_file(path, &st, findex, &index_len, fdata, &data_len);
+			}
+			while (numfiles--) free(dir[numfiles]);
+			free(dir);
+		} else if (S_ISREG(st.st_mode)) {
+			_xpak_add_file(argv[i], &st, findex, &index_len, fdata, &data_len);
+		} else
+			warn("Skipping non file/directory '%s'", argv[i]);
+	}
+
+	rewind(findex);
+	rewind(fdata);
+
+	/* "XPAKPACK" + (index_len) + (data_len) + index + data + "XPAKSTOP" */
+	fwrite(XPAK_START_MSG, 1, XPAK_START_MSG_LEN, fout); /* "XPAKPACK" */
+	p = tbz2_encode_int(index_len);
+	fwrite(p, 1, 4, fout);                               /* (index_len) */
+	p = tbz2_encode_int(data_len);
+	fwrite(p, 1, 4, fout);                               /* (data_len) */
+	_tbz2_copy_file(findex, fout);                       /* index */
+	_tbz2_copy_file(fdata, fout);                        /* data */
+	fwrite(XPAK_END_MSG, 1, XPAK_END_MSG_LEN, fout);     /* "XPAKSTOP" */
+
+	strcpy(path, file); strcat(path, ".index"); unlink(path);
+	strcpy(path, file); strcat(path, ".dat");   unlink(path);
+	fclose(findex);
+	fclose(fdata);
+	fclose(fout);
 }
 
 
 
-enum {
-	XPAK_ACT_NONE,
-	XPAK_ACT_LIST,
-	XPAK_ACT_EXTRACT,
-	XPAK_ACT_CREATE
-};
 int qxpak_main(int argc, char **argv)
 {
+	enum { XPAK_ACT_NONE, XPAK_ACT_LIST, XPAK_ACT_EXTRACT, XPAK_ACT_CREATE };
 	int i;
 	char *xpak;
 	char action = XPAK_ACT_NONE;
@@ -253,7 +374,7 @@ int qxpak_main(int argc, char **argv)
 		case 'c': action = XPAK_ACT_CREATE; break;
 		case 'O': xpak_stdout = 1; break;
 		case 'd':
-			if (xpak_chdir) err("Only use -c once");
+			if (xpak_chdir) err("Only use -d once");
 			xpak_chdir = xstrdup(optarg);
 			break;
 		}
