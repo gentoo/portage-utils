@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.18 2005/06/22 23:57:53 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.19 2005/07/07 11:28:31 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -38,7 +38,7 @@ static const char *quse_opts_help[] = {
 	"Show annoying things in IUSE",
 	"Use the KEYWORDS vs IUSE",
 	"Use the LICENSE vs IUSE",
-	/* "Use you own variable formats. -F NAME=", */
+	/* "Use your own variable formats. -F NAME=", */
 	COMMON_OPTS_HELP
 };
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, APPLET_QUSE)
@@ -130,6 +130,7 @@ int quse_main(int argc, char **argv)
 					|| (strstr(buf[0], "  ") != NULL))
 					warn("# Line %d of %s has an annoying %s", lineno, ebuild, buf[0]);
 				}
+#ifdef THIS_SUCKS
 				if ((p = strrchr(&buf[0][search_len+1], '\\')) != NULL) {
 
 				multiline:
@@ -148,13 +149,15 @@ int quse_main(int argc, char **argv)
 					if ((p = strrchr(buf[1], '\\')) != NULL)
 						goto multiline;
 				}
-
+#else
+				remove_extra_space(buf[0]);
+#endif	
 				while ((p = strrchr(&buf[0][search_len+1], '"')) != NULL)  *p = 0;
 				while ((p = strrchr(&buf[0][search_len+1], '\'')) != NULL) *p = 0;
 				while ((p = strrchr(&buf[0][search_len+1], '\\')) != NULL) *p = ' ';
 
 				if ((size_t)strlen(buf[0]) < (size_t)(search_len+1)) {
-					warnf("err '%s'/%lu <= %lu\n", buf[0], (unsigned long)strlen(buf[0]), (unsigned long)(search_len+1));
+					// warnf("err '%s'/%lu <= %lu; line %d\n", buf[0], (unsigned long)strlen(buf[0]), (unsigned long)(search_len+1), lineno);
 					continue;
 				}
 

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.12 2005/06/25 01:17:06 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.13 2005/07/07 11:28:31 solar Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,8 +34,9 @@
 
 
 
-#define QLOP_FLAGS "tluscf:F:" COMMON_FLAGS
+#define QLOP_FLAGS "gtluscf:F:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
+	{"guage",     no_argument, NULL, 'g'},
 	{"time",      no_argument, NULL, 't'},
 	{"list",      no_argument, NULL, 'l'},
 	{"unlist",    no_argument, NULL, 'u'},
@@ -47,6 +48,7 @@ static struct option const qlop_long_opts[] = {
 };
 
 static const char *qlop_opts_help[] = {
+	"Guage the total number of merge times for a specific package",
 	"Calculate merge time for a specific package",
 	"Show merge history",
 	"Show unmerge history",
@@ -72,9 +74,8 @@ static const char *chop_ctime(time_t t)
 	return ctime_out;
 }
 
-
-unsigned long calculate_average_merge_time(char *pkg, const char *logfile);
-unsigned long calculate_average_merge_time(char *pkg, const char *logfile)
+unsigned long calculate_merge_time(char *pkg, const char *logfile, int average);
+unsigned long calculate_merge_time(char *pkg, const char *logfile, int average)
 {
 	FILE *fp;
 	char buf[2][BUFSIZ];
@@ -139,7 +140,9 @@ unsigned long calculate_average_merge_time(char *pkg, const char *logfile)
 	fclose(fp);
 	if (count == 0)
 		return 0;
-	return (merge_time / count);
+	if (average == 1)
+		return (merge_time / count);
+	return count;
 }
 
 void show_emerge_history(char merged, int argc, char **argv, const char *logfile);
@@ -323,7 +326,7 @@ void show_current_emerge(const char _q_unused_ *pidfile)
 
 int qlop_main(int argc, char **argv)
 {
-	int i;
+	int i, average = 1;
 	char do_time, do_list, do_unlist, do_sync, do_current;
 	char *opt_logfile, *opt_pidfile;
 	const char *logfile = QLOP_DEFAULT_LOGFILE,
@@ -344,6 +347,7 @@ int qlop_main(int argc, char **argv)
 			case 'u': do_unlist = 1; break;
 			case 's': do_sync = 1; break;
 			case 'c': do_current = 1; break;
+			case 'g': do_time = 1; average = 0; break;
 			case 'f':
 				if (opt_logfile) err("Only use -f once");
 				opt_logfile = xstrdup(optarg);
@@ -374,10 +378,11 @@ int qlop_main(int argc, char **argv)
 		show_sync_history(logfile);
 
 	if (do_time) {
-		printf("Average merge time (in seconds)\n");
+		if (average)
+			printf("Average merge time (in seconds)\n");
 		for (i = 0; i < argc; ++i)
 			printf("%s%s%s: %lu\n", BLUE, argv[i], NORM, 
-			       calculate_average_merge_time(argv[i], logfile));
+			       calculate_merge_time(argv[i], logfile, average));
 	}
 
 	if (opt_logfile) free(opt_logfile);

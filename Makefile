@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.19 2005/06/21 23:43:44 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.20 2005/07/07 11:28:31 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -60,7 +60,7 @@ debug:
 
 q: $(SRC) libq/*.c *.h libq/*.h
 	@echo $(CC) $(CFLAGS) $(LDFLAGS) main.c -o q
-	@$(CC) $(CFLAGS) $(LDFLAGS) $(WFLAGS) $(HFLAGS) main.c -o q
+	@$(CC) $(WFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q
 
 depend:
 	#$(CC) $(CFLAGS) -MM $(SRC) > .depend
