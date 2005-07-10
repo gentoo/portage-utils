@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.49 2005/06/22 23:57:41 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.50 2005/07/10 00:55:32 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -57,9 +57,13 @@ void reinitialize_as_needed(void);
 #define _q_unused_ __attribute__((__unused__))
 
 
+#ifdef OPTIMIZE_FOR_SIZE
+# define COLOR(c,b) ""
+#else
+# define COLOR(c,b) (color ? "\e[" c ";" b "m" : "")
+#endif
 
 /* color constants */
-#define COLOR(c,b) (color ? "\e[" c ";" b "m" : "")
 #define BOLD      COLOR("00", "01")
 #define NORM      COLOR("00", "00")
 #define BLUE      COLOR("36", "01")
@@ -69,8 +73,6 @@ void reinitialize_as_needed(void);
 #define MAGENTA   COLOR("35", "02")
 #define RED       COLOR("31", "01")
 #define YELLOW    COLOR("33", "01")
-
-
 
 /* helper functions for showing errors */
 static const char *argv0;
@@ -114,7 +116,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.49 2005/06/22 23:57:41 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.50 2005/07/10 00:55:32 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -154,6 +156,7 @@ static char portcachedir[] = "metadata/cache";
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': color = 0; break; \
 	default: applet ## _usage(EXIT_FAILURE); break;
+
 #define GETOPT_LONG(A, a, ex) \
 	getopt_long(argc, argv, ex A ## _FLAGS, a ## _long_opts, NULL)
 /* display usage and exit */
@@ -299,6 +302,8 @@ char *initialize_portdir(void)
 	char buf[_POSIX_PATH_MAX + 8];
 	char *p = getenv("PORTDIR");
 	size_t i;
+	const char *files[] = {"/etc/make.globals", "/etc/make.conf", NULL};
+	int x;
 
 	if (p) {
 		if ((size_t)strlen(p) <= sizeof(portdir)) {
@@ -306,28 +311,30 @@ char *initialize_portdir(void)
 			return portdir;
 		}
 	}
-	if ((fp = fopen("/etc/make.conf", "r")) != NULL) {
-		while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-			if (strncmp(buf, "NOCOLOR=", 8) == 0)
-				color = 0;
-			if (*buf != 'P')
-				continue;
-			if (strncmp(buf, "PORTDIR=", 8) != 0)
-				continue;
-			/* Sorry don't understand bash variables. */
-			if (strchr(buf, '$') != NULL) {
-				warn("Sorry bash variables for your PORTDIR make us cry");
-				continue;
+	for (x = 0; files[x] != NULL; x++) {
+		if ((fp = fopen(files[x], "r")) != NULL) {
+			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+				if (strncmp(buf, "NOCOLOR=", 8) == 0)
+					color = 0;
+				if (*buf != 'P')
+					continue;
+				if (strncmp(buf, "PORTDIR=", 8) != 0)
+					continue;
+				/* Sorry don't understand bash variables. */
+				if (strchr(buf, '$') != NULL) {
+					warn("Sorry bash variables for your PORTDIR make us cry");
+					continue;
+				}
+				for (i = 8; i < (size_t)strlen(buf); i++)
+					if ((buf[i] == '"') || (buf[i] == '\''))
+						buf[i] = ' ';
+
+				rmspace(&buf[8]);
+				if (buf + 8)
+					strncpy(portdir, buf + 8, sizeof(portdir));
 			}
-
-			for (i = 8; i < (size_t)strlen(buf); i++)
-				if ((buf[i] == '"') || (buf[i] == '\''))
-					buf[i] = ' ';
-
-			rmspace(&buf[8]);
-			strncpy(portdir, buf + 8, sizeof(portdir));
+			fclose(fp);
 		}
-		fclose(fp);
 	}
 	return portdir;
 }

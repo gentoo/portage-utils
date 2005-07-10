@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.20 2005/07/07 11:28:31 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.21 2005/07/10 00:55:32 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -30,6 +30,7 @@ WFLAGS    := -Wall -Wunused -Wimplicit -Wshadow -Wformat=2 \
 
 CFLAGS    ?= -O2 -pipe
 #CFLAGS   += -DEBUG -g
+#CFLAGS   += -DOPTIMIZE_FOR_SIZE
 #LDFLAGS  := -pie
 DESTDIR    =
 PREFIX    := $(DESTDIR)/usr
@@ -80,7 +81,7 @@ install: all
 		[ -e $$mpage ] \
 			&& cp $$mpage $(PREFIX)/share/man/man1/ || : ;\
 	done
-	(cd $(PREFIX)/bin/ && for applet in $(APPLETS); do [[ ! -e $$applet ]] && ln -s q $${applet} ; done)
+	(cd $(PREFIX)/bin/ && for applet in $(APPLETS); do [[ ! -e $$applet ]] && ln -s q $${applet} ; done) || :
 
 symlinks: all
 	./q --install

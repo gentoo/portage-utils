@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.2 2005/06/21 23:43:44 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.3 2005/07/10 00:55:32 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -58,6 +58,7 @@ typedef enum {
 	APPLET_QXPAK = 10,
 	LAST_APPLET = 10
 } applets_enum;
+
 struct applet_t {
 	const char *name;
 	/* int *func; */
