@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.50 2005/07/10 00:55:32 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.51 2005/07/16 17:54:03 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -116,7 +116,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.50 2005/07/10 00:55:32 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.51 2005/07/16 17:54:03 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -314,7 +314,7 @@ char *initialize_portdir(void)
 	for (x = 0; files[x] != NULL; x++) {
 		if ((fp = fopen(files[x], "r")) != NULL) {
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-				if (strncmp(buf, "NOCOLOR=", 8) == 0)
+				if ((x > 0) && (strncmp(buf, "NOCOLOR=", 8) == 0))
 					color = 0;
 				if (*buf != 'P')
 					continue;
@@ -622,5 +622,6 @@ int main(int argc, char **argv)
 		color = 0;
 	initialize_portdir();
 	atexit(reinitialize_as_needed);
+	optind = 0;
 	return q_main(argc, argv);
 }
