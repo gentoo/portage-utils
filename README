@@ -1,2 +1,24 @@
 /* Add notes here */
-multiline reads don't yet work for quse/qsearch
+
+- multiline reads don't yet work for quse/qsearch
+
+- quse needs a rewrite.
+
+- Fetching via anoncvs.
+The cvs module for gentoo-projects is mirrored. You may download a 
+pretty recent copy using the following command. Note: that this is not 
+the official cvs server but rather a mirror so it lags about an hour or 
+so behind the real tree which is hosted on cvs.gentoo.org
+
+cvs -d:pserver:anonymous@zarquon.twobit.net:/var/cvsroot -q -z9 co -R gentoo-projects/portage-utils
+
+- Adding applets is easy using the q framework.
+cp template.c qmyapplet.c (all applets use the prefix of the letter 'q') 
+edit applets.h add your prototype, applet definition to the enum then 
+incr LAST_APPLET.  Scroll down the typedef for applets[] and add your 
+applet name following the existing syntax. Please try to keep applet 
+names under 8 chars.
+
+When and where you can please try to use an existing applets and extend 
+on it's functionality by adding more options vs adding a ton of new 
+applets.
