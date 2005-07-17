@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.13 2005/07/07 11:28:31 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.14 2005/07/17 15:01:15 solar Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@
 
 
 
-#define QLOP_FLAGS "gtluscf:F:" COMMON_FLAGS
+#define QLOP_FLAGS "gtluscf:F:H" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
 	{"guage",     no_argument, NULL, 'g'},
 	{"time",      no_argument, NULL, 't'},
@@ -44,11 +44,12 @@ static struct option const qlop_long_opts[] = {
 	{"current",   no_argument, NULL, 'c'},
 	{"logfile",    a_argument, NULL, 'f'},
 	{"pidfile",    a_argument, NULL, 'F'},
+	{"human",     no_argument, NULL, 'H'},
 	COMMON_LONG_OPTS
 };
 
 static const char *qlop_opts_help[] = {
-	"Guage the total number of merge times for a specific package",
+	"Guage the total number of times a specific package as been merged",
 	"Calculate merge time for a specific package",
 	"Show merge history",
 	"Show unmerge history",
@@ -56,12 +57,25 @@ static const char *qlop_opts_help[] = {
 	"Show current emerging packages",
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	"Read emerge pidfile instead of " QLOP_DEFAULT_PIDFILE,
+	"Print seconds in human readable format",
 	COMMON_OPTS_HELP
 };
 
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, APPLET_QLOP)
 
-
+void print_seconds_for_earthlings(const unsigned long t);
+void print_seconds_for_earthlings(const unsigned long t) {
+	unsigned dd, hh, mm, ss;
+	unsigned long tt = t;
+	ss = tt % 60; tt /= 60;
+	mm = tt % 60; tt /= 60;
+	hh = tt % 24; tt /= 24;
+	dd = tt;
+	if (dd) printf("%s%u%s day%s, ", GREEN, dd, NORM, (dd == 1 ? "" : "s"));
+	if (hh) printf("%s%u%s hour%s, ", GREEN, hh, NORM, (hh == 1 ? "" : "s"));
+	if (mm) printf("%s%u%s minute%s, ", GREEN, mm, NORM, (mm == 1 ? "" : "s"));
+	printf("%s%u%s second%s", GREEN, ss, NORM, (ss == 1 ? "" : "s"));
+}
 
 static const char *chop_ctime(time_t t);
 static const char *chop_ctime(time_t t)
@@ -74,8 +88,8 @@ static const char *chop_ctime(time_t t)
 	return ctime_out;
 }
 
-unsigned long calculate_merge_time(char *pkg, const char *logfile, int average);
-unsigned long calculate_merge_time(char *pkg, const char *logfile, int average)
+unsigned long show_merge_times(char *pkg, const char *logfile, int average, char human_readable);
+unsigned long show_merge_times(char *pkg, const char *logfile, int average, char human_readable)
 {
 	FILE *fp;
 	char buf[2][BUFSIZ];
@@ -89,8 +103,10 @@ unsigned long calculate_merge_time(char *pkg, const char *logfile, int average)
 
 	DBG("Searching for %s in %s\n", pkg, logfile);
 
+	// printf("Average merge time (in seconds)\n");
+
 	if ((fp = fopen(logfile, "r")) == NULL)
-		return 0;
+		return 1;
 
 	while ((fgets(buf[0], sizeof(buf[0]), fp)) != NULL) {
 		if (strstr(buf[0], pkg) == NULL)
@@ -128,6 +144,13 @@ unsigned long calculate_merge_time(char *pkg, const char *logfile, int average)
 					if (*buf[1] == '*')
 						break;
 					if ((strncmp(buf[1], "::: completed emerge (", 22)) == 0) {
+						if (!average) {
+							printf("%s%s%s: %lu ",
+								BLUE, atom->PN, NORM, (t[1] - t[0]));
+							if (human_readable)
+								print_seconds_for_earthlings(t[1] - t[0]);
+							puts(NORM);
+						}
 						merge_time += (t[1] - t[0]);
 						count++;
 						break;
@@ -140,9 +163,15 @@ unsigned long calculate_merge_time(char *pkg, const char *logfile, int average)
 	fclose(fp);
 	if (count == 0)
 		return 0;
-	if (average == 1)
-		return (merge_time / count);
-	return count;
+	if (average == 1) {
+		printf("%s%s%s: %lu ", BLUE, pkg, NORM, merge_time / count);
+		if (human_readable)
+			print_seconds_for_earthlings(merge_time / count);
+		puts(NORM);
+		return 0;
+	}
+	printf("%s%s%s: %lu times\n", BLUE, pkg, NORM, count);
+	return 0;
 }
 
 void show_emerge_history(char merged, int argc, char **argv, const char *logfile);
@@ -174,24 +203,22 @@ void show_emerge_history(char merged, int argc, char **argv, const char *logfile
 		*p = 0;
 		q = p + 3;
 
-		t = (time_t)atol(buf);
+		t = (time_t) atol(buf);
 
 		if ((merged && !strncmp(q, "::: completed emerge (", 22))
 		    || (!merged && !strncmp(q, ">>> unmerge success: ", 21))) {
-
 			if (merged) {
 				if ((p = strchr(q, ')')) == NULL)
 					continue;
-				q = p+2;
+				q = p + 2;
 				if ((p = strchr(q, ' ')) == NULL)
 					continue;
 				*p = 0;
 			} else {
 				if ((p = strchr(q, ':')) == NULL)
 					continue;
-				q = p+2;
+				q = p + 2;
 			}
-
 			printf("%s %s %s%s%s\n", chop_ctime(t), (merged ? ">>>" : "<<<"), GREEN, q, NORM);
 		}
 	}
@@ -298,20 +325,8 @@ void show_current_emerge(const char *pidfile)
 				"     elapsed: ", /*%s%llu%s seconds\n",*/
 				BOLD, NORM, BLUE, p, NORM,
 				GREEN, chop_ctime(start_date), NORM);
-			{
-				/* ripped from procps/ps/output.c */
-				unsigned long t;
-				unsigned dd,hh,mm,ss;
-				t = uptime_secs - (start_time / HZ);
-				ss = t%60; t /= 60;
-				mm = t%60; t /= 60;
-				hh = t%24; t /= 24;
-				dd = t;
-				if (dd) printf("%s%u%s days, ", GREEN, dd, NORM);
-				if (hh) printf("%s%u%s hours, ", GREEN, hh, NORM);
-				if (mm) printf("%s%u%s minutes, ", GREEN, mm, NORM);
-				printf("%s%u%s second%s\n", GREEN, ss, NORM, (ss==1?"":"s"));
-			}
+			print_seconds_for_earthlings(uptime_secs - (start_time / HZ));
+			puts(NORM);
 		}
 	}
 
@@ -327,7 +342,7 @@ void show_current_emerge(const char _q_unused_ *pidfile)
 int qlop_main(int argc, char **argv)
 {
 	int i, average = 1;
-	char do_time, do_list, do_unlist, do_sync, do_current;
+	char do_time, do_list, do_unlist, do_sync, do_current, do_human_readable = 0;
 	char *opt_logfile, *opt_pidfile;
 	const char *logfile = QLOP_DEFAULT_LOGFILE,
 	           *pidfile = QLOP_DEFAULT_PIDFILE;
@@ -348,6 +363,7 @@ int qlop_main(int argc, char **argv)
 			case 's': do_sync = 1; break;
 			case 'c': do_current = 1; break;
 			case 'g': do_time = 1; average = 0; break;
+			case 'H': do_human_readable = 1; break;
 			case 'f':
 				if (opt_logfile) err("Only use -f once");
 				opt_logfile = xstrdup(optarg);
@@ -378,11 +394,8 @@ int qlop_main(int argc, char **argv)
 		show_sync_history(logfile);
 
 	if (do_time) {
-		if (average)
-			printf("Average merge time (in seconds)\n");
 		for (i = 0; i < argc; ++i)
-			printf("%s%s%s: %lu\n", BLUE, argv[i], NORM, 
-			       calculate_merge_time(argv[i], logfile, average));
+			show_merge_times(argv[i], logfile, average, do_human_readable);
 	}
 
 	if (opt_logfile) free(opt_logfile);
