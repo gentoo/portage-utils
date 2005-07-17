@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.14 2005/07/17 15:01:15 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.15 2005/07/17 15:24:55 solar Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -38,26 +38,26 @@
 static struct option const qlop_long_opts[] = {
 	{"guage",     no_argument, NULL, 'g'},
 	{"time",      no_argument, NULL, 't'},
+	{"human",     no_argument, NULL, 'H'},
 	{"list",      no_argument, NULL, 'l'},
 	{"unlist",    no_argument, NULL, 'u'},
 	{"sync",      no_argument, NULL, 's'},
 	{"current",   no_argument, NULL, 'c'},
 	{"logfile",    a_argument, NULL, 'f'},
 	{"pidfile",    a_argument, NULL, 'F'},
-	{"human",     no_argument, NULL, 'H'},
 	COMMON_LONG_OPTS
 };
 
 static const char *qlop_opts_help[] = {
-	"Guage the total number of times a specific package as been merged",
+	"Guage the total number of times a specific package as been merged (implies -t)",
 	"Calculate merge time for a specific package",
+	"Print seconds in human readable format (needs -t)",
 	"Show merge history",
 	"Show unmerge history",
 	"Show sync history",
 	"Show current emerging packages",
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	"Read emerge pidfile instead of " QLOP_DEFAULT_PIDFILE,
-	"Print seconds in human readable format",
 	COMMON_OPTS_HELP
 };
 
@@ -103,8 +103,6 @@ unsigned long show_merge_times(char *pkg, const char *logfile, int average, char
 
 	DBG("Searching for %s in %s\n", pkg, logfile);
 
-	// printf("Average merge time (in seconds)\n");
-
 	if ((fp = fopen(logfile, "r")) == NULL)
 		return 1;
 
@@ -149,6 +147,7 @@ unsigned long show_merge_times(char *pkg, const char *logfile, int average, char
 								BLUE, atom->PN, NORM, (t[1] - t[0]));
 							if (human_readable)
 								print_seconds_for_earthlings(t[1] - t[0]);
+							printf(" %s", chop_ctime(t[0]));
 							puts(NORM);
 						}
 						merge_time += (t[1] - t[0]);
@@ -164,10 +163,12 @@ unsigned long show_merge_times(char *pkg, const char *logfile, int average, char
 	if (count == 0)
 		return 0;
 	if (average == 1) {
-		printf("%s%s%s: %lu ", BLUE, pkg, NORM, merge_time / count);
+		printf("%s%s%s: ", BLUE, pkg, NORM);
 		if (human_readable)
 			print_seconds_for_earthlings(merge_time / count);
-		puts(NORM);
+		else
+			printf("%lu seconds average", merge_time / count);
+		printf(" for %lu merges\n", count);
 		return 0;
 	}
 	printf("%s%s%s: %lu times\n", BLUE, pkg, NORM, count);
