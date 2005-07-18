@@ -19,6 +19,6 @@ incr LAST_APPLET.  Scroll down the typedef for applets[] and add your
 applet name following the existing syntax. Please try to keep applet 
 names under 8 chars.
 
-When and where you can please try to use an existing applets and extend 
-on it's functionality by adding more options vs adding a ton of new 
-applets.
+When and where you can please try to use an existing applet and extend 
+on it's functionality by adding more options vs adding a bunch of new 
+little applets.

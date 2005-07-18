@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.51 2005/07/16 17:54:03 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.52 2005/07/18 00:29:50 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -68,9 +68,9 @@ void reinitialize_as_needed(void);
 #define NORM      COLOR("00", "00")
 #define BLUE      COLOR("36", "01")
 #define DKBLUE    COLOR("34", "01")
-#define CYAN      COLOR("36", "02")
+#define CYAN      COLOR("00", "36")
 #define GREEN     COLOR("32", "01")
-#define MAGENTA   COLOR("35", "02")
+#define MAGENTA   COLOR("00", "35")
 #define RED       COLOR("31", "01")
 #define YELLOW    COLOR("33", "01")
 
@@ -116,7 +116,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.51 2005/07/16 17:54:03 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.52 2005/07/18 00:29:50 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -179,16 +179,16 @@ static void usage(int status, const char *flags, struct option const opts[],
 			DKBLUE, applets[blabber].opts, NORM,
 			RED, NORM, applets[blabber].desc);
 	}
-
 	printf("\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
 	for (i = 0; opts[i].name; ++i) {
 		assert(help[i] != NULL); /* this assert is a life saver when adding new applets. */
 		if (opts[i].has_arg == no_argument)
 			printf("  -%c, --%-13s%s*%s %s\n", opts[i].val,
-			       opts[i].name, RED, NORM, help[i]);
+				opts[i].name, RED, NORM, help[i]);
 		else
 			printf("  -%c, --%-6s %s<arg>%s %s*%s %s\n", opts[i].val,
-			       opts[i].name, DKBLUE, NORM, RED, NORM, help[i]);
+				opts[i].name, DKBLUE, NORM, RED, NORM, help[i]);
+		}
 	}
 	exit(status);
 }
@@ -197,7 +197,7 @@ static void version_barf(void)
 #ifndef VERSION
 # define VERSION "cvs"
 #endif
-	printf("portage-utils-%s: compiled %s\n%s\n"
+	printf("portage-utils-%s: compiled on %s\n%s\n"
 	       "%s written for Gentoo by <solar and vapier @ gentoo.org>\n",
 	       VERSION, __DATE__, rcsid, argv0);
 	exit(EXIT_SUCCESS);
