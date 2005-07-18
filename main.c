@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.52 2005/07/18 00:29:50 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.53 2005/07/18 02:05:33 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -116,7 +116,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.52 2005/07/18 00:29:50 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.53 2005/07/18 02:05:33 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -188,7 +188,6 @@ static void usage(int status, const char *flags, struct option const opts[],
 		else
 			printf("  -%c, --%-6s %s<arg>%s %s*%s %s\n", opts[i].val,
 				opts[i].name, DKBLUE, NORM, RED, NORM, help[i]);
-		}
 	}
 	exit(status);
 }
