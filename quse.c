@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.20 2005/07/18 00:29:50 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.21 2005/07/19 22:26:46 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -116,6 +116,7 @@ int quse_main(int argc, char **argv)
 	initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
 
 	search_len = strlen(search_vars[idx]);
+	assert(search_len < sizeof(buf0));
 
 	if ((fp = fopen(CACHE_EBUILD_FILE, "r")) == NULL)
 		return 1;
@@ -189,18 +190,18 @@ int quse_main(int argc, char **argv)
 						strcpy(buf1, buf0);
 						while ((p = strchr(buf1, ' ')) != NULL) {
 							*p = 0;
-							assert(p + 1 != NULL);
+							// assert(p + 1 != NULL);
 							for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
-								assert(buf1 != NULL);
-								assert(argv[i] != NULL);
-								printf("%s %s %d %d %d %d\n", argv[i], buf1, i, sizeof(buf0), sizeof(buf1), sizeof(buf2));
+							//	assert(buf1 != NULL);
+							//	assert(argv[i] != NULL);
+							//	printf("%s %s %d %d %d %d\n", argv[i], buf1, i, sizeof(buf0), sizeof(buf1), sizeof(buf2));
 								if (strcmp(buf1, argv[i]) == 0) {
 									ok = 1;
 									break;
 								}
-								printf("- %d strcmp(%s, %s) = 0\n", i, argv[i], buf1);
+							//	printf("- %d strcmp(%s, %s) = 0\n", i, argv[i], buf1);
 							}
-							assert(p + 1 != NULL);
+							// assert(p + 1 != NULL);
 							strcpy(buf2, p + 1);
 							strcpy(buf1, buf2);
 						}
