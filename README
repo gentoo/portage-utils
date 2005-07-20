@@ -4,6 +4,12 @@ vapier@gentoo.org
 
 /* Add notes here */
 
+- relative qfile doesnt quite work:
+  $ cd /bin
+  $ qfile bash
+  app-shells/bash (/bin/bash)
+  app-shells/bash (/etc/bash)
+
 - multiline reads don't yet work for quse/qsearch
 
 - quse needs a rewrite.
