@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.10 2005/06/21 22:26:32 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.11 2005/07/20 04:57:26 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -47,7 +47,7 @@ void qfile(char *path, char *fname)
 	FILE *fp;
 	DIR *dir;
 	struct dirent *dentry;
-	char *p, *ptr;
+	char *p;
 	size_t flen = strlen(fname);
 	int base = 0;
 	char buf[1024];
@@ -75,22 +75,21 @@ void qfile(char *path, char *fname)
 
 		snprintf(pkg, sizeof(pkg), "%s/%s", basename(path), dentry->d_name);
 		while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-			if ((p = strchr(buf, ' ')) == NULL)
+			contents_entry *e;
+
+			e = contents_parse_line(buf);
+			if (!e)
 				continue;
-			*p++;
-			if ((ptr = strdup(p)) == NULL)
-				continue;
-			if ((p = strchr(ptr, '\n')) != NULL)
-				*p = '\0';
-			if ((p = strchr(ptr, ' ')) != NULL)
-				*p++ = 0;
-			if (strncmp(base ? basename(ptr) : ptr, fname, flen) != 0
-			    || strlen(base ? basename(ptr) : ptr) != flen) {
-				free(ptr);
+
+			p = xstrdup(e->name);
+			if (strncmp(base ? basename(p) : p, fname, flen) != 0
+			    || strlen(base ? basename(p) : p) != flen) {
+				free(p);
 				continue;
 			}
 			if ((atom = atom_explode(pkg)) == NULL) {
 				warn("invalid atom %s", pkg);
+				free(p);
 				continue;
 			}
 			printf("%s%s/%s%s%s", BOLD, atom->CATEGORY, BLUE,
@@ -99,10 +98,10 @@ void qfile(char *path, char *fname)
 			if (qfile_quiet == 1)
 				puts("");
 			else
-				printf(" (%s)\n", ptr);
+				printf(" (%s)\n", p);
 
 			atom_implode(atom);
-			free(ptr);
+			free(p);
 			found++;
 		}
 		fclose(fp);
