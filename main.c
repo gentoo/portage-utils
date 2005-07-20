@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.54 2005/07/20 04:49:44 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.55 2005/07/20 04:51:13 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -116,7 +116,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.54 2005/07/20 04:49:44 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.55 2005/07/20 04:51:13 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -295,6 +295,9 @@ static char *remove_extra_space(char *str)
 	return str;
 }
 
+/* 
+ * Parse a line of CONTENTS file and provide access to the individual fields
+ */
 typedef enum {
 	CONTENTS_DIR, CONTENTS_OBJ, CONTENTS_SYM
 } contents_type;
