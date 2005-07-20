@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.9 2005/06/14 23:30:54 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.10 2005/07/20 05:07:14 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -57,7 +57,6 @@ int qsize_main(int argc, char **argv)
 	int i;
 	struct dirent *dentry, *de;
 	char search_all = 0;
-	char *p, *q;
 	struct stat st;
 	char fs_size = 0, summary = 0, summary_only = 0;
 	size_t num_all_bytes, num_all_files, num_all_nonfiles;
@@ -131,26 +130,18 @@ int qsize_main(int argc, char **argv)
 
 			num_files = num_nonfiles = num_bytes = 0;
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-				if ((p = strchr(buf, '\n')) != NULL)
-					*p = '\0';
-				if ((p = strchr(buf, ' ')) == NULL)
+				contents_entry *e;
+
+				e = contents_parse_line(buf);
+				if (!e)
 					continue;
-				++p;
-				switch (*buf) {
-				case '\n':   /* newline */
-					break;
-				case 'o':    /* obj */
-				case 's':    /* sym */
-					if ((q = strchr(p, ' ')) != NULL)
-						*q = '\0';
+
+				if (e->type == CONTENTS_OBJ || e->type == CONTENTS_SYM) {
 					++num_files;
-					if (!lstat(p, &st))
+					if (!lstat(e->name, &st))
 						num_bytes += (fs_size ? st.st_blocks * S_BLKSIZE : st.st_size);
-					break;
-				default:
+				} else
 					++num_nonfiles;
-					break;
-				}
 			}
 			fclose(fp);
 			num_all_bytes += num_bytes;

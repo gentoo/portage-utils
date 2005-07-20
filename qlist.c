@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.9 2005/06/19 04:54:15 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.10 2005/07/20 05:07:14 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,14 +26,20 @@
 
 
 
-#define QLIST_FLAGS "I" COMMON_FLAGS
+#define QLIST_FLAGS "Idos" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
+	{"dir",       no_argument, NULL, 'd'},
+	{"obj",       no_argument, NULL, 'o'},
+	{"sym",       no_argument, NULL, 's'},
 	/* {"file",       a_argument, NULL, 'f'}, */
 	COMMON_LONG_OPTS
 };
 static const char *qlist_opts_help[] = {
 	"Just show installed packages",
+	"Only show directories",
+	"Only show objects",
+	"Only show symlinks",
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
@@ -46,21 +52,29 @@ int qlist_main(int argc, char **argv)
 	DIR *dir, *dirp;
 	int i;
 	char just_pkgname = 0;
+	char show_dir, show_obj, show_sym;
 	struct dirent *dentry, *de;
-	char *p, *q;
 	struct stat st;
 	char buf[_POSIX_PATH_MAX];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
+	show_dir = show_obj = show_sym = 0;
+
 	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)
 		case 'I': just_pkgname = 1; break;
+		case 'd': show_dir = 1; break;
+		case 'o': show_obj = 1; break;
+		case 's': show_sym = 1; break;
 		case 'f': break;
 		}
 	}
+	/* default to showing syms and objs */
+	if (!show_dir && !show_obj && !show_sym)
+		show_obj = show_sym = 1;
 	if ((argc == optind) && (!just_pkgname))
 		qlist_usage(EXIT_FAILURE);
 
@@ -112,26 +126,16 @@ int qlist_main(int argc, char **argv)
 				continue;
 
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-				if ((p = strchr(buf, '\n')) != NULL)
-					*p = '\0';
-				if ((p = strchr(buf, ' ')) == NULL)
+				contents_entry *e;
+
+				e = contents_parse_line(buf);
+				if (!e)
 					continue;
-				++p;
-				switch (*buf) {
-				case '\n':   /* newline */
-					break;
-				case 'd':    /* dir */
-					/*printf("%s", p);*/
-					break;
-				case 'o':    /* obj */
-				case 's':    /* sym */
-					if ((q = strchr(p, ' ')) != NULL)
-						*q = '\0';
-					printf("%s\n", p);
-					break;
-				default:
-					break;
-				}
+
+				if ((e->type == CONTENTS_DIR && show_dir) || \
+				    (e->type == CONTENTS_OBJ && show_obj) || \
+				    (e->type == CONTENTS_SYM && show_sym))
+					printf("%s\n", e->name);
 			}
 			fclose(fp);
 		}
