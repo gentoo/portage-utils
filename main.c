@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.53 2005/07/18 02:05:33 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.54 2005/07/20 04:49:44 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -116,7 +116,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.53 2005/07/18 02:05:33 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.54 2005/07/20 04:49:44 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -293,6 +293,84 @@ static char *remove_extra_space(char *str)
 	strcpy(str, buf);
 	free(buf);
 	return str;
+}
+
+typedef enum {
+	CONTENTS_DIR, CONTENTS_OBJ, CONTENTS_SYM
+} contents_type;
+typedef struct {
+	contents_type type;
+	char *_data;
+	char *name;
+	char *sym_target;
+	char *digest;
+	char *mtime_str;
+	long mtime;
+} contents_entry;
+
+contents_entry *contents_parse_line(char *line);
+contents_entry *contents_parse_line(char *line)
+{
+	static contents_entry e;
+	char *p;
+
+	if (!line || !*line || *line == '\n')
+		return NULL;
+
+	/* chop trailing newline */
+	if ((p = strrchr(line, '\n')) != NULL)
+		*p = '\0';
+
+	memset(&e, 0x00, sizeof(e));
+	e._data = line;
+
+	if (!strncmp(e._data, "obj ", 4))
+		e.type = CONTENTS_OBJ;
+	else if (!strncmp(e._data, "dir ", 4))
+		e.type = CONTENTS_DIR;
+	else if (!strncmp(e._data, "sym ", 4))
+		e.type = CONTENTS_SYM;
+	else
+		return NULL;
+
+	e.name = e._data + 4;
+
+	switch (e.type) {
+		/* dir /bin */
+		case CONTENTS_DIR:
+			break;
+
+		/* obj /bin/bash 62ed51c8b23866777552643ec57614b0 1120707577 */
+		case CONTENTS_OBJ:
+			if ((e.mtime_str = strrchr(e.name, ' ')) == NULL)
+				return NULL;
+			*e.mtime_str++ = '\0';
+			if ((e.digest = strrchr(e.name, ' ')) == NULL)
+				return NULL;
+			*e.digest++ = '\0';
+			break;
+
+		/* sym /bin/sh -> bash 1120707577 */
+		case CONTENTS_SYM:
+			if ((e.mtime_str = strrchr(e.name, ' ')) == NULL)
+				return NULL;
+			*e.mtime_str++ = '\0';
+			if ((e.sym_target = strstr(e.name, " -> ")) == NULL)
+				return NULL;
+			*e.sym_target = '\0';
+			e.sym_target += 4;
+			break;
+	}
+
+	if (e.mtime_str) {
+		e.mtime = strtol(e.mtime_str, NULL, 10);
+		if (e.mtime == LONG_MAX) {
+			e.mtime = 0;
+			e.mtime_str = NULL;
+		}
+	}
+
+	return &e;
 }
 
 char *initialize_portdir(void)

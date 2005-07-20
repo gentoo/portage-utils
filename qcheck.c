@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.12 2005/06/24 21:39:09 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.13 2005/07/20 04:49:44 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -47,7 +47,6 @@ int qcheck_main(int argc, char **argv)
 	char search_all = 0;
 	struct stat st;
 	size_t num_files, num_files_ok, num_files_unknown;
-	char *p;
 	char buf[_POSIX_PATH_MAX], root[_POSIX_PATH_MAX] = "";
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -116,89 +115,61 @@ int qcheck_main(int argc, char **argv)
 			num_files = num_files_ok = num_files_unknown = 0;
 			printf("Checking %s%s/%s%s ...\n", GREEN, dentry->d_name, de->d_name, NORM);
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-				if ((p = strchr(buf, '\n')) != NULL)
-					*p = '\0';
-				if ((p = strchr(buf, ' ')) == NULL)
+				contents_entry *e;
+
+				e = contents_parse_line(buf);
+				if (!e)
 					continue;
-				++p;
-				switch (*buf) {
-				case '\n':   /* newline */
-					break;
-				case 'd':    /* dir */
-				case 'o':    /* obj */
-				case 's': {  /* sym */
-					char *file, *digest, *mtime_ascii;
-					long mtime;
 
-					/* parse the CONTENTS file */
-					file = p;
-					digest = mtime_ascii = NULL;
-					mtime = 0;
-					if ((p = strchr(file, ' ')) != NULL)
-						*p = '\0';
-					if (*buf == 'o' && p) {
-						digest = p+1;
-						if ((mtime_ascii = strchr(digest, ' ')) != NULL) {
-							*mtime_ascii = '\0';
-							++mtime_ascii;
-							mtime = strtol(mtime_ascii, NULL, 10);
-							if (mtime == LONG_MAX) {
-								warn("Invalid mtime '%s'", mtime_ascii);
-								mtime = 0;
-								mtime_ascii = NULL;
-							}
-						}
-					}
-
-					/* run our little checks */
-					++num_files;
-					if (lstat(file, &st)) {
-						/* make sure file exists */
-						printf(" %sAFK%s: %s\n", RED, NORM, file);
-						break;
-					}
-					if (digest && S_ISREG(st.st_mode)) {
-						/* validate digest (handles MD5 / SHA1) */
-						uint8_t hash_algo;
-						char *hashed_file;
-						switch (strlen(digest)) {
-							case 32: hash_algo = HASH_MD5; break;
-							case 40: hash_algo = HASH_SHA1; break;
-							default: hash_algo = 0; break;
-						}
-						if (!hash_algo) {
-							printf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n", RED, NORM, digest, file);
-							++num_files_unknown;
-							break;
-						}
-						hashed_file = (char*)hash_file(file, hash_algo);
-						if (!hashed_file) {
-							printf(" %sPERM %4o%s: %s\n", RED, (st.st_mode & 07777), NORM, file);
-							++num_files_unknown;
-							break;
-						} else if (strcmp(digest, hashed_file)) {
-							const char *digest_disp;
-							switch (hash_algo) {
-								case HASH_MD5:  digest_disp = "MD5"; break;
-								case HASH_SHA1: digest_disp = "SHA1"; break;
-								default:        digest_disp = "UNK"; break;
-							}
-							printf(" %s%s-DIGEST%s: %s\n", RED, digest_disp, NORM, file);
-							break;
-						}
-					}
-					if (mtime && mtime != st.st_mtime) {
-						/* validate last modification time */
-						printf(" %sMTIME%s: %s\n", RED, NORM, file);
-						break;
-					}
-					++num_files_ok;
-					break;
+				/* run our little checks */
+				++num_files;
+				if (lstat(e->name, &st)) {
+					/* make sure file exists */
+					printf(" %sAFK%s: %s\n", RED, NORM, e->name);
+					continue;
 				}
-				default:
-					warnf("Unhandled: '%s'", buf);
-					break;
+				if (e->digest && S_ISREG(st.st_mode)) {
+					/* validate digest (handles MD5 / SHA1) */
+					uint8_t hash_algo;
+					char *hashed_file;
+					switch (strlen(e->digest)) {
+						case 32: hash_algo = HASH_MD5; break;
+						case 40: hash_algo = HASH_SHA1; break;
+						default: hash_algo = 0; break;
+					}
+					if (!hash_algo) {
+						printf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n", RED, NORM, e->digest, e->name);
+						++num_files_unknown;
+						continue;
+					}
+					hashed_file = (char*)hash_file(e->name, hash_algo);
+					if (!hashed_file) {
+						printf(" %sPERM %4o%s: %s\n", RED, (st.st_mode & 07777), NORM, e->name);
+						++num_files_unknown;
+						continue;
+					} else if (strcmp(e->digest, hashed_file)) {
+						const char *digest_disp;
+						switch (hash_algo) {
+							case HASH_MD5:  digest_disp = "MD5"; break;
+							case HASH_SHA1: digest_disp = "SHA1"; break;
+							default:        digest_disp = "UNK"; break;
+						}
+						printf(" %s%s-DIGEST%s: %s", RED, digest_disp, NORM, e->name);
+						if (verbose)
+							printf(" (recorded '%s' != actual '%s')", e->digest, hashed_file);
+						printf("\n");
+						continue;
+					}
 				}
+				if (e->mtime && e->mtime != st.st_mtime) {
+					/* validate last modification time */
+					printf(" %sMTIME%s: %s", RED, NORM, e->name);
+					if (verbose)
+						printf(" (recorded '%lu' != actual '%lu')", (unsigned long)st.st_mtime, e->mtime);
+					printf("\n");
+					continue;
+				}
+				++num_files_ok;
 			}
 			fclose(fp);
 			printf("  %2$s*%1$s %3$s%4$lu%1$s out of %3$s%5$lu%1$s file%6$s are good\n",
