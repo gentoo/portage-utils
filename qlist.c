@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.10 2005/07/20 05:07:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.11 2005/07/21 23:58:30 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -132,10 +132,24 @@ int qlist_main(int argc, char **argv)
 				if (!e)
 					continue;
 
-				if ((e->type == CONTENTS_DIR && show_dir) || \
-				    (e->type == CONTENTS_OBJ && show_obj) || \
-				    (e->type == CONTENTS_SYM && show_sym))
-					printf("%s\n", e->name);
+				switch (e->type) {
+					case CONTENTS_DIR:
+						if (show_dir)
+							printf("%s/\n", e->name);
+						break;
+					case CONTENTS_OBJ:
+						if (show_obj)
+							printf("%s\n", e->name);
+						break;
+					case CONTENTS_SYM:
+						if (show_sym) {
+							if (verbose)
+								printf("%s -> %s\n", e->name, e->sym_target);
+							else
+								printf("%s\n", e->name);
+						}
+						break;
+				}
 			}
 			fclose(fp);
 		}
