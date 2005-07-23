@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.21 2005/07/10 00:55:32 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.22 2005/07/23 04:56:32 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -19,14 +19,16 @@
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
-        then echo "$(1)"; else echo "$(2)"; fi)
+	then echo "$(1)"; else echo "$(2)"; fi)
 
 ####################################################
 WFLAGS    := -Wall -Wunused -Wimplicit -Wshadow -Wformat=2 \
              -Wmissing-declarations -Wmissing-prototypes -Wwrite-strings \
-             -Wbad-function-cast -Wnested-externs -Wcomment -Wsequence-point \
-             -Wchar-subscripts -Winline -Wno-format-nonliteral \
-             $(call check_gcc, -Wdeclaration-after-statement -Wextra)
+             -Wbad-function-cast -Wnested-externs -Wcomment -Winline \
+             -Wchar-subscripts -Wcast-align -Wno-format-nonliteral \
+             $(call check_gcc, -Wdeclaration-after-statement) \
+             $(call check-gcc, -Wsequence-point) \
+             $(call check-gcc, -Wextra)
 
 CFLAGS    ?= -O2 -pipe
 #CFLAGS   += -DEBUG -g
