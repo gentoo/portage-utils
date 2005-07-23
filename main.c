@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.55 2005/07/20 04:51:13 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.56 2005/07/23 04:57:37 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -76,9 +76,10 @@ void reinitialize_as_needed(void);
 
 /* helper functions for showing errors */
 static const char *argv0;
+/* we need the space before the last comma or we trigger a bug in gcc-2 :( */
 #define warn(fmt, args...) \
-	fprintf(stderr, "%s%s%s: " fmt "\n", RED, argv0, NORM, ## args)
-#define warnf(fmt, args...) warn("%s%s()%s: " fmt, YELLOW, __FUNCTION__, NORM, ## args)
+	fprintf(stderr, "%s%s%s: " fmt "\n", RED, argv0, NORM , ## args)
+#define warnf(fmt, args...) warn("%s%s()%s: " fmt, YELLOW, __FUNCTION__, NORM , ## args)
 #define warnp(fmt, args...) warn(fmt ": %s", ## args, strerror(errno))
 #define warnfp(fmt, args...) warnf(fmt ": %s", ## args, strerror(errno))
 #define _err(wfunc, fmt, args...) \
@@ -116,7 +117,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.55 2005/07/20 04:51:13 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.56 2005/07/23 04:57:37 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
