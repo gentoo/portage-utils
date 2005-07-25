@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.11 2005/07/20 04:57:26 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.12 2005/07/25 23:32:39 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,8 +65,7 @@ void qfile(char *path, char *fname)
 	while ((dentry = readdir(dir))) {
 		if (dentry->d_name[0] == '.')
 			continue;
-		if (asprintf(&p, "%s/%s/CONTENTS", path, dentry->d_name) == -1)
-			continue;
+		xasprintf(&p, "%s/%s/CONTENTS", path, dentry->d_name);
 		if ((fp = fopen(p, "r")) == NULL) {
 			free(p);
 			continue;
@@ -135,16 +134,21 @@ int qfile_main(int argc, char **argv)
 	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
 		return EXIT_FAILURE;
 
+	/* CONTENTS stores dir names w/out trailing / so clean up input */
+	for (i = optind; i < argc; ++i) {
+		p = argv[i] + strlen(argv[i]) - 1;
+		if (*p == '/')
+			*p = '\0';
+	}
+
 	/* open /var/db/pkg */
 	while ((dentry = readdir(dir)) != NULL) {
 		if (dentry->d_name[0] == '.')
 			continue;
-		for (i = optind; i < argc; ++i) {
-			if (asprintf(&p, "%s/%s", portvdb, dentry->d_name) != -1) {
-				qfile(p, argv[i]);
-				free(p);
-			}
-		}
+		xasprintf(&p, "%s/%s", portvdb, dentry->d_name);
+		for (i = optind; i < argc; ++i)
+			qfile(p, argv[i]);
+		free(p);
 	}
 	closedir(dir);
 
