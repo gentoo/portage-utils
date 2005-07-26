@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.5 2005/06/20 06:25:29 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.6 2005/07/26 01:25:26 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -374,7 +374,7 @@ int qdepends_main(int argc, char **argv)
 
 			snprintf(buf, sizeof(buf), "%s/%s/%s/USE", portvdb,
 			         dentry->d_name, de->d_name);
-			assert(eat_file(buf, use, sizeof(use)) == 0);
+			assert(eat_file(buf, use, sizeof(use)) == 1);
 			for (ptr = use; *ptr; ++ptr)
 				if (*ptr == '\n' || *ptr == '\t')
 					*ptr = ' ';
