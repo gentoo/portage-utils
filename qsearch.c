@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.15 2005/06/21 16:16:02 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.16 2005/08/05 04:12:59 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,27 +24,6 @@
  *
  */
 
-
-/* functional description of search options based on emerge(1) */
-
-#if 0
-/* --searchdesc (-S) */
-char qsearch_searchdesc_help[] =
-	"Matches the search string against the description field as well as the package name.\n"
-	"Take caution as the descriptions are also matched as regular expressions.\n";
-
-/* --search (-s) */
-char qsearch_search_help[] =
-	"Searches for matches of the supplied string in the portage tree.\n"
-	"The --search string is a regular expression.\n"
-	"For example, qsearch --search '^kde' searches for any package that starts with 'kde'\n"
-	"qsearch --search 'gcc$' searches for any package that ends with 'gcc'\n"
-	"qsearch --search 'office' searches for any package that contains the word 'office'.\n"
-	"If you want to search the package descriptions as well, use the --searchdesc option.\n";
-#endif
-
-
-
 #define QSEARCH_FLAGS "acsSH" COMMON_FLAGS
 static struct option const qsearch_long_opts[] = {
 	{"all",       no_argument, NULL, 'a'},
@@ -57,13 +36,12 @@ static struct option const qsearch_long_opts[] = {
 static const char *qsearch_opts_help[] = {
 	"List the descriptions of every package in the cache",
 	"Use the portage cache",
-	"Regex search package names",
+	"Regex search package basenames",
 	"Regex search package descriptions",
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, APPLET_QSEARCH)
-
 
 
 int qsearch_main(int argc, char **argv)
@@ -75,7 +53,7 @@ int qsearch_main(int argc, char **argv)
 	char *p, *q, *str;
 	char *search_me = NULL;
 	char show_homepage = 0;
-	char search_desc = 1, search_all = 0, search_cache = CACHE_EBUILD;
+	char search_desc = 1, search_all = 0, search_name = 0, search_cache = CACHE_EBUILD;
 	const char *search_vars[] = { "DESCRIPTION=", "HOMEPAGE=" };
 	size_t search_len;
 	int i, idx=0;
@@ -88,14 +66,15 @@ int qsearch_main(int argc, char **argv)
 		COMMON_GETOPTS_CASES(qsearch)
 		case 'a': search_all = 1; break;
 		case 'c': search_cache = CACHE_METADATA; break;
-		case 's': search_desc = 0; break;
-		case 'S': search_desc = 1; break;
+		case 's': search_desc = 0; search_name = 1; break;
+		case 'S': search_desc = 1; search_name = 0; break;
 		case 'H': show_homepage = 1, idx=1; break;
 		}
 	}
 
 	if (search_all) {
 		search_desc = 1;
+		search_name = 0;
 	} else {
 		if (argc == optind)
 			qsearch_usage(EXIT_FAILURE);
@@ -143,11 +122,9 @@ int qsearch_main(int argc, char **argv)
 
 			if ((strcmp(p, last)) != 0) {
 				strncpy(last, p, sizeof(last));
-				if (!search_desc) {
-					if ((rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE)) == 0)
-						printf("%s\n", last);
-					continue;
-				}
+				if (search_name)
+					if ((rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE)) != 0)
+						continue;
 				if ((ebuildfp = fopen(ebuild, "r")) != NULL) {
 					while ((fgets(buf, sizeof(buf), ebuildfp)) != NULL) {
 						if (strlen(buf) <= search_len)
@@ -158,7 +135,7 @@ int qsearch_main(int argc, char **argv)
 							if (strlen(buf) <= search_len)
 								break;
 							q = buf + search_len + 1;
-							if (!search_all && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
+							if (!search_all && !search_name && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
 								break;
 							printf("%s%s/%s%s%s %s\n", 
 								BOLD, dirname(p), BLUE, basename(p), NORM, q);
