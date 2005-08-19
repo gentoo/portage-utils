@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.13 2005/08/19 03:43:56 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.14 2005/08/19 04:14:50 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -54,7 +54,7 @@ void qfile(char *path, char *fname)
 	char pkg[126];
 	depend_atom *atom;
 
-	if (chdir(path) != 0 || (dir = opendir(path)) == NULL)
+	if (chdir(path) != 0 || (dir = opendir(".")) == NULL)
 		return;
 
 	if (!strchr(fname, '/'))
@@ -131,7 +131,9 @@ int qfile_main(int argc, char **argv)
 	if (argc == optind)
 		qfile_usage(EXIT_FAILURE);
 
-	
+	if (chdir(portroot))
+		errp("could not chdir(%s) for ROOT", portroot);
+
 	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
@@ -143,15 +145,12 @@ int qfile_main(int argc, char **argv)
 	}
 
 	/* open /var/db/pkg */
-	while ((dentry = readdir(dir)) != NULL) {
-		if (dentry->d_name[0] == '.')
-			continue;
+	while ((dentry = q_vdb_get_next_dir(dir))) {
 		xasprintf(&p, "%s%s/%s", portroot, portvdb, dentry->d_name);
 		for (i = optind; i < argc; ++i)
 			qfile(p, argv[i]);
 		free(p);
 	}
-	closedir(dir);
 
 	return (found ? EXIT_SUCCESS : EXIT_FAILURE);
 }

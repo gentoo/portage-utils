@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.14 2005/08/19 03:43:56 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.15 2005/08/19 04:14:50 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -45,7 +45,7 @@ int qcheck_main(int argc, char **argv)
 	char search_all = 0;
 	struct stat st;
 	size_t num_files, num_files_ok, num_files_unknown;
-	char buf[_POSIX_PATH_MAX];
+	char buf[_POSIX_PATH_MAX], filename[_POSIX_PATH_MAX];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -59,19 +59,14 @@ int qcheck_main(int argc, char **argv)
 	if ((argc == optind) && !search_all)
 		qcheck_usage(EXIT_FAILURE);
 
+	if (chdir(portroot))
+		errp("could not chdir(%s) for ROOT", portroot);
+
 	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
-	while ((dentry = readdir(dir))) {
-		/* search for a category directory */
-		if (dentry->d_name[0] == '.')
-			continue;
-		if (strchr(dentry->d_name, '-') == NULL)
-			continue;
-		stat(dentry->d_name, &st);
-		if (!S_ISDIR(st.st_mode))
-			continue;
+	while ((dentry = q_vdb_get_next_dir(dir))) {
 		if (chdir(dentry->d_name) != 0)
 			continue;
 		if ((dirp = opendir(".")) == NULL)
@@ -110,6 +105,11 @@ int qcheck_main(int argc, char **argv)
 				e = contents_parse_line(buf);
 				if (!e)
 					continue;
+
+				if (strcmp(portroot, "/") != 0) {
+					snprintf(filename, sizeof(filename), "%s%s", portroot, e->name);
+					e->name = filename;
+				}
 
 				/* run our little checks */
 				++num_files;
@@ -175,6 +175,6 @@ int qcheck_main(int argc, char **argv)
 		closedir(dirp);
 		chdir("..");
 	}
-	closedir(dir);
+
 	return EXIT_SUCCESS;
 }

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.1 2005/08/19 03:47:01 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.2 2005/08/19 04:14:50 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -38,33 +38,6 @@ static const char *qpkg_opts_help[] = {
 
 
 #define QPKG_BINDIR "/var/tmp/binpkgs"
-struct dirent *q_vdb_get_next_dir(DIR *dir);
-struct dirent *q_vdb_get_next_dir(DIR *dir)
-{
-	/* search for a category directory */
-	struct dirent *ret;
-//	struct stat st;
-
-another_please:
-	ret = readdir(dir);
-	if (ret == NULL) {
-		closedir(dir);
-		return NULL;
-	}
-
-	if (ret->d_name[0] == '.' || ret->d_name[0] == '-')
-		goto another_please;
-	if (strchr(ret->d_name, '-') == NULL)
-		goto another_please;
-
-/*
-	stat(ret->d_name, &st);
-	if (!S_ISDIR(st.st_mode))
-		goto another_please;
-*/
-
-	return ret;
-}
 
 int qpkg_make(depend_atom *atom);
 int qpkg_make(depend_atom *atom)
@@ -159,6 +132,9 @@ int qpkg_main(int argc, char **argv)
 	}
 	if (argc == optind)
 		qpkg_usage(EXIT_FAILURE);
+
+	if (chdir(portroot))
+		errp("could not chdir(%s) for ROOT", portroot);
 
 	/* setup temp dirs */
 	i = 0;

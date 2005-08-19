@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.12 2005/08/19 03:43:56 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.13 2005/08/19 04:14:50 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -54,7 +54,6 @@ int qlist_main(int argc, char **argv)
 	char just_pkgname = 0;
 	char show_dir, show_obj, show_sym;
 	struct dirent *dentry, *de;
-	struct stat st;
 	char buf[_POSIX_PATH_MAX];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -78,19 +77,14 @@ int qlist_main(int argc, char **argv)
 	if ((argc == optind) && (!just_pkgname))
 		qlist_usage(EXIT_FAILURE);
 
+	if (chdir(portroot))
+		errp("could not chdir(%s) for ROOT", portroot);
+
 	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
-	while ((dentry = readdir(dir))) {
-		/* search for a category directory */
-		if (dentry->d_name[0] == '.')
-			continue;
-		if (strchr(dentry->d_name, '-') == NULL)
-			continue;
-		stat(dentry->d_name, &st);
-		if (!S_ISDIR(st.st_mode))
-			continue;
+	while ((dentry = q_vdb_get_next_dir(dir))) {
 		if (chdir(dentry->d_name) != 0)
 			continue;
 		if ((dirp = opendir(".")) == NULL)
@@ -156,6 +150,6 @@ int qlist_main(int argc, char **argv)
 		closedir(dirp);
 		chdir("..");
 	}
-	closedir(dir);
+
 	return EXIT_SUCCESS;
 }

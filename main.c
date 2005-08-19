@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.59 2005/08/19 03:47:01 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.60 2005/08/19 04:14:50 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -117,7 +117,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.59 2005/08/19 03:47:01 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.60 2005/08/19 04:14:50 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -295,6 +295,28 @@ static char *remove_extra_space(char *str)
 	strcpy(str, buf);
 	free(buf);
 	return str;
+}
+
+/* helper func for scanning the vdb */
+struct dirent *q_vdb_get_next_dir(DIR *dir);
+struct dirent *q_vdb_get_next_dir(DIR *dir)
+{
+	/* search for a category directory */
+	struct dirent *ret;
+
+another_please:
+	ret = readdir(dir);
+	if (ret == NULL) {
+		closedir(dir);
+		return NULL;
+	}
+
+	if (ret->d_name[0] == '.' || ret->d_name[0] == '-')
+		goto another_please;
+	if (strchr(ret->d_name, '-') == NULL)
+		goto another_please;
+
+	return ret;
 }
 
 /* 
@@ -704,8 +726,6 @@ int main(int argc, char **argv)
 	if (getenv("NOCOLOR"))
 		color = 0;
 	portroot = (getenv("ROOT") ? : "/");
-	if (chdir(portroot))
-		errp("could not chdir(%s) for ROOT", portroot);
 	initialize_portdir();
 	atexit(reinitialize_as_needed);
 	optind = 0;
