@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.2 2005/06/25 01:21:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.3 2005/08/19 03:06:05 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -216,16 +216,27 @@ void xpak_extract(const char *file, int argc, char **argv)
 {
 	_xpak_archive *x;
 	char buf[BUFSIZE], ext[BUFSIZE*32];
+	size_t in;
+
+	if (argc == 0)
+		err("Extract usage: <xpak output> <files/dirs to extract>");
 
 	x = _xpak_open(file);
 	if (!x) return;
 
 	x->index = buf;
 	x->data = ext;
+
 	assert((size_t)x->index_len < sizeof(buf));
-	assert(fread(x->index, 1, x->index_len, x->fp) == (size_t)x->index_len);
+	in = fread(x->index, 1, x->index_len, x->fp);
+	if (in != x->index_len)
+		err("index chunk: read %i bytes, wanted %i bytes", (int)in, (int)x->index_len);
+
 	assert((size_t)x->data_len < sizeof(ext));
-	assert(fread(x->data, 1, x->data_len, x->fp) == (size_t)x->data_len);
+	in = fread(x->data, 1, x->data_len, x->fp);
+	if (in != x->data_len)
+		err("data chunk: read %i bytes, wanted %i bytes", (int)in, (int)x->data_len);
+
 	_xpak_walk_index(x, argc, argv, &_xpak_extract_callback);
 
 	_xpak_close(x);
@@ -324,6 +335,7 @@ void xpak_create(const char *file, int argc, char **argv)
 				warn("Directory '%s' is empty; skipping", argv[i]);
 			for (fidx = 0; fidx < numfiles; ++fidx) {
 				snprintf(path, sizeof(path), "%s/%s", argv[i], dir[fidx]->d_name);
+				stat(path, &st);
 				_xpak_add_file(path, &st, findex, &index_len, fdata, &data_len);
 			}
 			while (numfiles--) free(dir[numfiles]);
