@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.8 2005/06/21 23:17:31 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.9 2005/08/19 03:37:04 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,6 +29,7 @@ typedef struct {
 	char *PN;
 	int PR_int;
 	char *PV, *PVR;
+	char *P;
 } depend_atom;
 
 depend_atom *atom_explode(const char *atom);
@@ -43,11 +44,12 @@ depend_atom *atom_explode(const char *atom)
 	/* we allocate mem for atom struct and two strings (strlen(atom)).
 	 * the first string is for CAT/PN/PV while the second is for PVR */
 	slen = strlen(atom);
-	len = sizeof(*ret) + slen * sizeof(*atom) * 2 + 2;
+	len = sizeof(*ret) + slen * sizeof(*atom) * 3 + 3;
 	ret = (depend_atom*)xmalloc(len);
 	memset(ret, 0x00, len);
 	ptr = (char*)ret;
-	ret->PVR = ptr + sizeof(*ret);
+	ret->P = ptr + sizeof(*ret);
+	ret->PVR = ret->P + slen + 1;
 	ret->CATEGORY = ret->PVR + slen + 1;
 	memcpy(ret->CATEGORY, atom, slen);
 
@@ -142,6 +144,7 @@ eat_version:
 	if (ret->PV) {
 found_pv:
 		sprintf(ret->PVR, "%s-r%i", ret->PV, ret->PR_int);
+		sprintf(ret->P, "%s-%s", ret->PN, (ret->PR_int ? ret->PVR : ret->PV));
 	} else {
 no_suffix_opt:
 		--i;

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.4 2005/06/21 22:40:20 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.5 2005/08/19 03:37:04 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -37,13 +37,14 @@
 #include "../../libq/atom_explode.c"
 
 #define boom(a,s) \
-	printf("%s -> %s / %s - %s [%s] [r%i]\n", \
-	       s, a->CATEGORY, a->PN, \
+	printf("%s -> %s / [%s] %s - %s [%s] [r%i]\n", \
+	       s, a->CATEGORY, a->P, a->PN, \
 	       a->PVR, a->PV, a->PR_int)
 int main(int argc, char *argv[])
 {
 	int i;
 	depend_atom *a;
+//	printf("input -> CATEGORY / [P] PN - PVR [PV] [PR_int]\n");
 	for (i = 1; i < argc; ++i) {
 		a = atom_explode(argv[i]);
 		boom(a,argv[i]);
