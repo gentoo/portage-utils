@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.10 2005/07/20 05:07:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.11 2005/08/19 03:43:56 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -83,7 +83,7 @@ int qsize_main(int argc, char **argv)
 	if ((argc == optind) && !search_all)
 		qsize_usage(EXIT_FAILURE);
 
-	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
+	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
 	num_all_bytes = num_all_files = num_all_nonfiles = 0;
@@ -123,7 +123,7 @@ int qsize_main(int argc, char **argv)
 					continue;
 			}
 
-			snprintf(buf, sizeof(buf), "%s/%s/%s/CONTENTS", portvdb,
+			snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb,
 			         dentry->d_name, de->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.57 2005/08/19 01:47:23 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.58 2005/08/19 03:43:56 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -117,7 +117,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.57 2005/08/19 01:47:23 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.58 2005/08/19 03:43:56 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -126,7 +126,7 @@ static int verbose = 0;
 static char reinitialize = 0;
 
 static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
-static char portvdb[] = "/var/db/pkg";
+static char portvdb[] = "var/db/pkg";
 static char portcachedir[] = "metadata/cache";
 static const char *portroot;
 
@@ -704,7 +704,7 @@ int main(int argc, char **argv)
 		color = 0;
 	portroot = (getenv("ROOT") ? : "/");
 	if (chdir(portroot))
-		errp("cannot chdir to ROOT");
+		errp("could not chdir(%s) for ROOT", portroot);
 	initialize_portdir();
 	atexit(reinitialize_as_needed);
 	optind = 0;

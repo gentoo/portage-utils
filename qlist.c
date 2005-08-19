@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.11 2005/07/21 23:58:30 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.12 2005/08/19 03:43:56 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -78,7 +78,7 @@ int qlist_main(int argc, char **argv)
 	if ((argc == optind) && (!just_pkgname))
 		qlist_usage(EXIT_FAILURE);
 
-	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
+	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
@@ -120,7 +120,7 @@ int qlist_main(int argc, char **argv)
 				continue;
 			}
 
-			snprintf(buf, sizeof(buf), "%s/%s/%s/CONTENTS", portvdb,
+			snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb,
 			         dentry->d_name, de->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;

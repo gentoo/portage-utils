@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.12 2005/07/25 23:32:39 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.13 2005/08/19 03:43:56 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -131,7 +131,8 @@ int qfile_main(int argc, char **argv)
 	if (argc == optind)
 		qfile_usage(EXIT_FAILURE);
 
-	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
+	
+	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
 	/* CONTENTS stores dir names w/out trailing / so clean up input */
@@ -145,7 +146,7 @@ int qfile_main(int argc, char **argv)
 	while ((dentry = readdir(dir)) != NULL) {
 		if (dentry->d_name[0] == '.')
 			continue;
-		xasprintf(&p, "%s/%s", portvdb, dentry->d_name);
+		xasprintf(&p, "%s%s/%s", portroot, portvdb, dentry->d_name);
 		for (i = optind; i < argc; ++i)
 			qfile(p, argv[i]);
 		free(p);

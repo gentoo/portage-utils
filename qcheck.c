@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.13 2005/07/20 04:49:44 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.14 2005/08/19 03:43:56 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -25,15 +25,13 @@
  */
 
 
-#define QCHECK_FLAGS "ar:" COMMON_FLAGS
+#define QCHECK_FLAGS "a" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
 	{"all",  no_argument, NULL, 'a'},
-	{"root", no_argument, NULL, 'r'},
 	COMMON_LONG_OPTS
 };
 static const char *qcheck_opts_help[] = {
 	"List all packages",
-	"Chroot before package verification",
 	COMMON_OPTS_HELP
 };
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, APPLET_QCHECK)
@@ -47,7 +45,7 @@ int qcheck_main(int argc, char **argv)
 	char search_all = 0;
 	struct stat st;
 	size_t num_files, num_files_ok, num_files_unknown;
-	char buf[_POSIX_PATH_MAX], root[_POSIX_PATH_MAX] = "";
+	char buf[_POSIX_PATH_MAX];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -56,20 +54,12 @@ int qcheck_main(int argc, char **argv)
 		switch (i) {
 		COMMON_GETOPTS_CASES(qcheck)
 		case 'a': search_all = 1; break;
-		case 'r': strncpy(root, optarg, sizeof(root)); break;
 		}
 	}
 	if ((argc == optind) && !search_all)
 		qcheck_usage(EXIT_FAILURE);
 
-	/* cheap trick for now */
-	if (*root) {
-		if (chroot(root) != 0) {
-			warn("failed to chroot to '%s' : %s", root, strerror(errno));
-			return EXIT_FAILURE;
-		}
-	}
-	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
+	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
@@ -107,7 +97,7 @@ int qcheck_main(int argc, char **argv)
 					continue;
 			}
 
-			snprintf(buf, sizeof(buf), "%s/%s/%s/CONTENTS", portvdb,
+			snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb,
 			         dentry->d_name, de->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;

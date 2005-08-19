@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.6 2005/07/26 01:25:26 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.7 2005/08/19 03:43:56 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -324,7 +324,7 @@ int qdepends_main(int argc, char **argv)
 	if (argc == optind)
 		qdepends_usage(EXIT_FAILURE);
 
-	if (chdir(portvdb) != 0 || (dir = opendir(portvdb)) == NULL)
+	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
@@ -359,7 +359,7 @@ int qdepends_main(int argc, char **argv)
 			if (i == argc)
 				continue;
 
-			snprintf(buf, sizeof(buf), "%s/%s/%s/%s", portvdb,
+			snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb,
 			         dentry->d_name, de->d_name, depend_file);
 			if (!eat_file(buf, depend, sizeof(buf)))
 				continue;
@@ -372,7 +372,7 @@ int qdepends_main(int argc, char **argv)
 
 			printf("%s%s/%s%s%s: ", BOLD, dentry->d_name, BLUE, de->d_name, NORM);
 
-			snprintf(buf, sizeof(buf), "%s/%s/%s/USE", portvdb,
+			snprintf(buf, sizeof(buf), "%s%s/%s/%s/USE", portroot, portvdb,
 			         dentry->d_name, de->d_name);
 			assert(eat_file(buf, use, sizeof(use)) == 1);
 			for (ptr = use; *ptr; ++ptr)
