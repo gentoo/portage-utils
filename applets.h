@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.3 2005/07/10 00:55:32 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.4 2005/08/19 03:47:01 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,6 +39,7 @@ int qsize_main(int, char **);
 int qtbz2_main(int, char **);
 int quse_main(int, char **);
 int qxpak_main(int, char **);
+int qpkg_main(int, char **);
 
 typedef int (*APPLET)(int, char **);
 
@@ -56,7 +57,8 @@ typedef enum {
 	APPLET_QTBZ2 = 8,
 	APPLET_QUSE = 9,
 	APPLET_QXPAK = 10,
-	LAST_APPLET = 10
+	APPLET_QPKG = 11,
+	LAST_APPLET = 11
 } applets_enum;
 
 struct applet_t {
@@ -78,6 +80,7 @@ struct applet_t {
 	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
 	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
 	{"qxpak",     qxpak_main,     "<misc args>",     "manipulate xpak archives"},
+	{"qpkg",      qpkg_main,      "<misc args>",     "manipulate Gentoo binpkgs"},
 
 
 	/* aliases for equery capatability */
@@ -94,6 +97,9 @@ struct applet_t {
 	/*"stats"*/
 	/*"uses"*/
 	/*"which"*/
+
+	/* alias for quickpkg */
+	{"uickpkg",   qpkg_main,      NULL, NULL},
 
 	{NULL, NULL, NULL, NULL}
 };

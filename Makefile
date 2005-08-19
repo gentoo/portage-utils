@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.24 2005/08/19 01:46:17 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.25 2005/08/19 03:47:01 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -45,7 +45,7 @@ HFLAGS    += -DVERSION=\"$(PV)\"
 endif
 
 #####################################################
-APPLETS    = q qfile qlist qsearch quse qsize qcheck qdepends qlop qtbz2 qxpak
+APPLETS    = q qfile qlist qsearch quse qsize qcheck qdepends qlop qtbz2 qxpak qpkg
 SRC        = $(APPLETS:%=%.c) main.c
 MPAGES     = man/q.1
 
