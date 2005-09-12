@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.15 2005/07/17 15:24:55 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.16 2005/09/12 02:34:05 vapier Exp $
  *
  * 2005 Ned Ludd	- <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -62,6 +62,9 @@ static const char *qlop_opts_help[] = {
 };
 
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, APPLET_QLOP)
+
+#define QLOP_LIST    0x01
+#define QLOP_UNLIST  0x02
 
 void print_seconds_for_earthlings(const unsigned long t);
 void print_seconds_for_earthlings(const unsigned long t) {
@@ -175,11 +178,11 @@ unsigned long show_merge_times(char *pkg, const char *logfile, int average, char
 	return 0;
 }
 
-void show_emerge_history(char merged, int argc, char **argv, const char *logfile);
-void show_emerge_history(char merged, int argc, char **argv, const char *logfile)
+void show_emerge_history(char listflag, int argc, char **argv, const char *logfile);
+void show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
 {
 	FILE *fp;
-	char buf[BUFSIZ];
+	char buf[BUFSIZ], merged;
 	char *p, *q;
 	int i;
 	time_t t;
@@ -206,22 +209,24 @@ void show_emerge_history(char merged, int argc, char **argv, const char *logfile
 
 		t = (time_t) atol(buf);
 
-		if ((merged && !strncmp(q, "::: completed emerge (", 22))
-		    || (!merged && !strncmp(q, ">>> unmerge success: ", 21))) {
-			if (merged) {
-				if ((p = strchr(q, ')')) == NULL)
-					continue;
-				q = p + 2;
-				if ((p = strchr(q, ' ')) == NULL)
-					continue;
-				*p = 0;
-			} else {
-				if ((p = strchr(q, ':')) == NULL)
-					continue;
-				q = p + 2;
-			}
-			printf("%s %s %s%s%s\n", chop_ctime(t), (merged ? ">>>" : "<<<"), GREEN, q, NORM);
+		if ((listflag & QLOP_LIST) && !strncmp(q, "::: completed emerge (", 22)) {
+			merged = 1;
+			if ((p = strchr(q, ')')) == NULL)
+				continue;
+			q = p + 2;
+			if ((p = strchr(q, ' ')) == NULL)
+				continue;
+			*p = 0;
+		} else if((listflag & QLOP_UNLIST) && !strncmp(q, ">>> unmerge success: ", 21)) {
+			merged = 0;
+			if ((p = strchr(q, ':')) == NULL)
+				continue;
+			q = p + 2;
 		}
+		else
+			continue;
+		printf("%s %s %s%s%s\n", chop_ctime(t), (merged ? ">>>" : "<<<"), (merged ? GREEN : RED), q, NORM);
+
 	}
 	fclose(fp);
 }
@@ -385,10 +390,12 @@ int qlop_main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-	if (do_list)
-		show_emerge_history(1, argc, argv, logfile);
-	if (do_unlist)
-		show_emerge_history(0, argc, argv, logfile);
+	if (do_list && do_unlist)
+		show_emerge_history(QLOP_LIST | QLOP_UNLIST, argc, argv, logfile);
+	else if (do_list)
+		show_emerge_history(QLOP_LIST, argc, argv, logfile);
+	else if (do_unlist)
+		show_emerge_history(QLOP_UNLIST, argc, argv, logfile);
 	if (do_current)
 		show_current_emerge(pidfile);
 	if (do_sync)
