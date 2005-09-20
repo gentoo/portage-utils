@@ -1,10 +1,11 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.13 2005/08/19 04:14:50 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.14 2005/09/20 14:21:45 azarah Exp $
  *
- * 2005 Ned Ludd        - <solar@gentoo.org>
- * 2005 Mike Frysinger  - <vapier@gentoo.org>
+ * 2005 Ned Ludd         - <solar@gentoo.org>
+ * 2005 Mike Frysinger   - <vapier@gentoo.org>
+ * 2005 Martin Schlemmer - <azarah@gentoo.org>
  *
  ********************************************************************
  * This program is free software; you can redistribute it and/or
@@ -26,9 +27,10 @@
 
 
 
-#define QLIST_FLAGS "Idos" COMMON_FLAGS
+#define QLIST_FLAGS "Iedos" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
+	{"exact",     no_argument, NULL, 'e'},
 	{"dir",       no_argument, NULL, 'd'},
 	{"obj",       no_argument, NULL, 'o'},
 	{"sym",       no_argument, NULL, 's'},
@@ -37,6 +39,7 @@ static struct option const qlist_long_opts[] = {
 };
 static const char *qlist_opts_help[] = {
 	"Just show installed packages",
+	"Exact match (only CAT/PN or PN without PV)",
 	"Only show directories",
 	"Only show objects",
 	"Only show symlinks",
@@ -44,7 +47,6 @@ static const char *qlist_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, APPLET_QLIST)
-
 
 
 int qlist_main(int argc, char **argv)
@@ -65,6 +67,7 @@ int qlist_main(int argc, char **argv)
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)
 		case 'I': just_pkgname = 1; break;
+		case 'e': exact = 1; break;
 		case 'd': show_dir = 1; break;
 		case 'o': show_obj = 1; break;
 		case 's': show_sym = 1; break;
@@ -99,11 +102,27 @@ int qlist_main(int argc, char **argv)
 			/* see if this cat/pkg is requested */
 			for (i = optind; i < argc; ++i) {
 				snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, 
-				         de->d_name);
-				if (rematch(argv[i], buf, REG_EXTENDED) == 0)
-					break;
-				if (rematch(argv[i], de->d_name, REG_EXTENDED) == 0)
-					break;
+					 de->d_name);
+
+				if (exact) {
+					depend_atom *atom;
+					if ((atom = atom_explode(buf)) == NULL) {
+						warn("invalid atom %s", buf);
+						continue;
+					}
+					snprintf(buf, sizeof(buf), "%s/%s",
+						 atom->CATEGORY, atom->PN);
+					atom_implode(atom);
+					if (strcmp(argv[i], buf) == 0)
+						break;
+					if (strcmp(argv[i], strstr(buf, "/") + 1) == 0)
+						break;
+				} else {
+					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
+						break;
+					if (rematch(argv[i], de->d_name, REG_EXTENDED) == 0)
+						break;
+				}
 			}
 			if ((i == argc) && (argc != optind))
 				continue;
