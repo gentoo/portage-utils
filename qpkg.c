@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.3 2005/09/22 22:46:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.4 2005/09/22 22:47:12 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -77,7 +77,7 @@ int qpkg_make(depend_atom *atom)
 	if ((out = fopen(filelist, "w")) == NULL)
 		return -4;
 
-	printf("   %s-%s %s/%s: ", GREEN, NORM, atom->CATEGORY, atom->P);
+	printf(" %s-%s %s/%s: ", GREEN, NORM, atom->CATEGORY, atom->P);
 	fflush(stdout);
 
 	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
@@ -126,7 +126,7 @@ int qpkg_make(depend_atom *atom)
 
 int qpkg_main(int argc, char **argv)
 {
-	size_t s;
+	size_t s, pkgs_made;
 	int i;
 	DIR *dir, *dirp;
 	struct dirent *dentry_cat, *dentry_pkg;
@@ -164,9 +164,8 @@ retry_mkdir:
 			errp("could not chmod(0750) temp bindir '%s'", bindir);
 	}
 
-	printf(" %s*%s Building packages ...\n", GREEN, NORM);
-
 	/* first process any arguments which point to /var/db/pkg */
+	pkgs_made = 0;
 	s = strlen(portvdb);
 	for (i = optind; i < argc; ++i) {
 		size_t asize = strlen(argv[i]);
@@ -185,7 +184,7 @@ retry_mkdir:
 
 		atom = atom_explode(argv[i]);
 		if (atom) {
-			qpkg_make(atom);
+			if (!qpkg_make(atom)) ++pkgs_made;
 			atom_implode(atom);
 		} else
 			warn("could not explode '%s'", argv[i]);
@@ -218,13 +217,17 @@ retry_mkdir:
 				if (!argv[i]) continue;
 
 				if (!strcmp(argv[i], atom->PN) || !strcmp(argv[i], atom->P))
-					qpkg_make(atom);
+					if (!qpkg_make(atom)) ++pkgs_made;
 			}
 			atom_implode(atom);
 		}
 	}
 
-	printf(" %s*%s Packages can be found in %s\n", GREEN, NORM, bindir);
+	s = (argc - optind) - pkgs_made;
+	if (s)
+		printf(" %s*%s %i package%s could not be matched :/\n", RED, NORM, (int)s, (s > 1 ? "s" : ""));
+	if (pkgs_made)
+		printf(" %s*%s Packages can be found in %s\n", GREEN, NORM, bindir);
 
-	return EXIT_SUCCESS;
+	return (pkgs_made ? EXIT_SUCCESS : EXIT_FAILURE);
 }
