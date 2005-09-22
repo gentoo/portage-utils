@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.2 2005/08/19 04:14:50 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.3 2005/09/22 22:46:11 vapier Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -37,7 +37,19 @@ static const char *qpkg_opts_help[] = {
 
 
 
-#define QPKG_BINDIR "/var/tmp/binpkgs"
+const char *qpkg_get_bindir(void);
+const char *qpkg_get_bindir(void)
+{
+	static char *qpkg_bindir = NULL;
+	if (getuid() == 0)
+		return "/var/tmp/binpkgs";
+	if (qpkg_bindir == NULL) {
+		if (getenv("HOME") == NULL)
+			errp("Your $HOME env var isn't set, aborting");
+		xasprintf(&qpkg_bindir, "%s/binpkgs", getenv("HOME"));
+	}
+	return qpkg_bindir;
+}
 
 int qpkg_make(depend_atom *atom);
 int qpkg_make(depend_atom *atom)
@@ -53,7 +65,7 @@ int qpkg_make(depend_atom *atom)
 	if ((fp = fopen(buf, "r")) == NULL)
 		return -1;
 
-	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", QPKG_BINDIR);
+	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", qpkg_get_bindir());
 	if ((i = mkstemp(tmpdir)) == -1)
 		return -2;
 	close(i);
@@ -98,7 +110,7 @@ int qpkg_make(depend_atom *atom)
 	unlink(xpak);
 	unlink(tbz2);
 
-	snprintf(tbz2, sizeof(tbz2), "%s/%s.tbz2", QPKG_BINDIR, atom->P);
+	snprintf(tbz2, sizeof(tbz2), "%s/%s.tbz2", qpkg_get_bindir(), atom->P);
 	if (rename(buf, tbz2)) {
 		warnp("could not move '%s' to '%s'", buf, tbz2);
 		return 1;
@@ -120,6 +132,7 @@ int qpkg_main(int argc, char **argv)
 	struct dirent *dentry_cat, *dentry_pkg;
 	struct stat st;
 	char buf[BUFSIZE];
+	const char *bindir;
 	depend_atom *atom;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -138,18 +151,17 @@ int qpkg_main(int argc, char **argv)
 
 	/* setup temp dirs */
 	i = 0;
+	bindir = qpkg_get_bindir();
 retry_mkdir:
-	if (mkdir(QPKG_BINDIR, 0750) == -1) {
-		stat(QPKG_BINDIR, &st);
+	if (mkdir(bindir, 0750) == -1) {
+		lstat(bindir, &st);
 		if (!S_ISDIR(st.st_mode)) {
-			unlink(QPKG_BINDIR);
+			unlink(bindir);
 			if (!i++) goto retry_mkdir;
-			errp("could not create temp bindir '%s'", QPKG_BINDIR);
+			errp("could not create temp bindir '%s'", bindir);
 		}
-		if (chmod(QPKG_BINDIR, 0750))
-			errp("could not chmod(0750) temp bindir '%s'", QPKG_BINDIR);
-		if (chown(QPKG_BINDIR, 0, 0))
-			errp("could not chown(0:0) temp bindir '%s'", QPKG_BINDIR);
+		if (chmod(bindir, 0750))
+			errp("could not chmod(0750) temp bindir '%s'", bindir);
 	}
 
 	printf(" %s*%s Building packages ...\n", GREEN, NORM);
@@ -212,7 +224,7 @@ retry_mkdir:
 		}
 	}
 
-	printf(" %s*%s Packages can be found in %s\n", GREEN, NORM, QPKG_BINDIR);
+	printf(" %s*%s Packages can be found in %s\n", GREEN, NORM, bindir);
 
 	return EXIT_SUCCESS;
 }
