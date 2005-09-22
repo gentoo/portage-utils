@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.16 2005/08/05 04:12:59 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.17 2005/09/22 14:53:37 azarah Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,12 +24,13 @@
  *
  */
 
-#define QSEARCH_FLAGS "acsSH" COMMON_FLAGS
+#define QSEARCH_FLAGS "acsSNH" COMMON_FLAGS
 static struct option const qsearch_long_opts[] = {
 	{"all",       no_argument, NULL, 'a'},
 	{"cache",     no_argument, NULL, 'c'},
 	{"search",    no_argument, NULL, 's'},
 	{"desc",       a_argument, NULL, 'S'},
+	{"name-only", no_argument, NULL, 'N'},
 	{"homepage",  no_argument, NULL, 'H'},
 	COMMON_LONG_OPTS
 };
@@ -38,6 +39,7 @@ static const char *qsearch_opts_help[] = {
 	"Use the portage cache",
 	"Regex search package basenames",
 	"Regex search package descriptions",
+	"Only show package name",
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
@@ -52,7 +54,7 @@ int qsearch_main(int argc, char **argv)
 	char last[126] = "";
 	char *p, *q, *str;
 	char *search_me = NULL;
-	char show_homepage = 0;
+	char show_homepage = 0, show_name_only = 0;
 	char search_desc = 1, search_all = 0, search_name = 0, search_cache = CACHE_EBUILD;
 	const char *search_vars[] = { "DESCRIPTION=", "HOMEPAGE=" };
 	size_t search_len;
@@ -68,6 +70,7 @@ int qsearch_main(int argc, char **argv)
 		case 'c': search_cache = CACHE_METADATA; break;
 		case 's': search_desc = 0; search_name = 1; break;
 		case 'S': search_desc = 1; search_name = 0; break;
+		case 'N': show_name_only = 1; break;
 		case 'H': show_homepage = 1, idx=1; break;
 		}
 	}
@@ -104,7 +107,9 @@ int qsearch_main(int argc, char **argv)
 					strncpy(last, pcache->atom->PN, sizeof(last));
 					if ((rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE)) == 0)
 						printf("%s%s/%s%s%s %s\n", BOLD, pcache->atom->CATEGORY, BLUE,
-						       pcache->atom->PN, NORM, (show_homepage ? pcache->HOMEPAGE : pcache->DESCRIPTION));
+						       pcache->atom->PN, NORM,
+						       (show_name_only ? "" :
+						        (show_homepage ? pcache->HOMEPAGE : pcache->DESCRIPTION)));
 				}
 				cache_free(pcache);
 			} else {
@@ -138,7 +143,8 @@ int qsearch_main(int argc, char **argv)
 							if (!search_all && !search_name && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
 								break;
 							printf("%s%s/%s%s%s %s\n", 
-								BOLD, dirname(p), BLUE, basename(p), NORM, q);
+								BOLD, dirname(p), BLUE, basename(p), NORM,
+								(show_name_only ? "" : q));
 							break;
 						}
 					}
