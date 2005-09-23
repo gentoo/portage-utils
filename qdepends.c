@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.8 2005/08/19 04:14:50 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.9 2005/09/23 22:03:18 solar Exp $
  *
  * 2005 Ned Ludd        - <solar@gentoo.org>
  * 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,7 +46,6 @@ static const char *qdepends_opts_help[] = {
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, APPLET_QDEPENDS)
 
 
-
 /* structures / types / etc ... */
 typedef enum {
 	DEP_NULL = 0,
@@ -78,8 +77,11 @@ dep_node *dep_grow_tree(char *depend);
 void dep_burn_tree(dep_node *root);
 void dep_prune_use(dep_node *root, char *use);
 char *dep_flatten_tree(dep_node *root);
-
-
+dep_node *_dep_grow_node(dep_type type, char *info, size_t info_len);
+void _dep_attach(dep_node *root, dep_node *attach_me, int type);
+void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos);
+void _dep_burn_node(dep_node *node);
+int qdepends_main_vdb(const char *depend_file, int argc, char **argv);
 
 #ifdef EBUG
 void print_word(char *ptr, int num);
@@ -91,7 +93,7 @@ void print_word(char *ptr, int num)
 }
 #endif
 
-dep_node *_dep_grow_node(dep_type type, char *info, size_t info_len);
+
 dep_node *_dep_grow_node(dep_type type, char *info, size_t info_len)
 {
 	dep_node *ret;
@@ -119,7 +121,7 @@ dep_node *_dep_grow_node(dep_type type, char *info, size_t info_len)
 
 	return ret;
 }
-void _dep_burn_node(dep_node *node);
+
 void _dep_burn_node(dep_node *node)
 {
 	assert(node);
@@ -132,7 +134,7 @@ enum {
 	_DEP_NEIGH = 1,
 	_DEP_CHILD = 2
 };
-void _dep_attach(dep_node *root, dep_node *attach_me, int type);
+
 void _dep_attach(dep_node *root, dep_node *attach_me, int type)
 {
 	if (type == _DEP_NEIGH) {
@@ -267,7 +269,6 @@ void dep_prune_use(dep_node *root, char *use)
 	if (root->children) dep_prune_use(root->children, use);
 }
 
-void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos);
 void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos)
 {
 	if (root->type == DEP_NULL) goto this_node_sucks;
@@ -281,6 +282,7 @@ void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos)
 this_node_sucks:
 	if (root->neighbor) _dep_flatten_tree(root->neighbor, buf, pos);
 }
+
 char *dep_flatten_tree(dep_node *root)
 {
 	static char flat[8192];
@@ -292,36 +294,15 @@ char *dep_flatten_tree(dep_node *root)
 
 
 
-int qdepends_main(int argc, char **argv)
-{
+int qdepends_main_vdb(const char *depend_file, int argc, char **argv) {
 	DIR *dir, *dirp;
 	struct dirent *dentry, *de;
 	signed long len;
 	int i;
-	const char *depend_file;
 	char *ptr;
 	char buf[_POSIX_PATH_MAX];
 	char depend[8192], use[8192];
 	dep_node *dep_tree;
-	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", "CDEPEND", NULL };
-	depend_file = depend_files[0];
-
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
-	while ((i = GETOPT_LONG(QDEPENDS, qdepends, "")) != -1) {
-		switch (i) {
-		COMMON_GETOPTS_CASES(qdepends)
-
-		case 'd': depend_file = depend_files[0]; break;
-		case 'r': depend_file = depend_files[1]; break;
-		case 'p': depend_file = depend_files[2]; break;
-		case 'c': depend_file = depend_files[3]; break;
-		case 'a': depend_file = NULL; break;
-		}
-	}
-	if (argc == optind)
-		qdepends_usage(EXIT_FAILURE);
 
 	if (chdir(portroot))
 		errp("could not chdir(%s) for ROOT", portroot);
@@ -390,4 +371,32 @@ int qdepends_main(int argc, char **argv)
 	}
 
 	return EXIT_SUCCESS;
+}
+
+int qdepends_main(int argc, char **argv)
+{
+	int i;
+	const char *depend_file;
+
+	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", "CDEPEND", NULL };
+	depend_file = depend_files[0];
+
+	DBG("argc=%d argv[0]=%s argv[1]=%s",
+	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
+
+	while ((i = GETOPT_LONG(QDEPENDS, qdepends, "")) != -1) {
+		switch (i) {
+		COMMON_GETOPTS_CASES(qdepends)
+
+		case 'd': depend_file = depend_files[0]; break;
+		case 'r': depend_file = depend_files[1]; break;
+		case 'p': depend_file = depend_files[2]; break;
+		case 'c': depend_file = depend_files[3]; break;
+		case 'a': depend_file = NULL; break;
+		}
+	}
+	if (argc == optind)
+		qdepends_usage(EXIT_FAILURE);
+
+	return qdepends_main_vdb(depend_file, argc, argv);
 }
