@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.15 2005/09/24 01:56:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.16 2005/09/24 02:33:39 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -109,8 +109,11 @@ int qlist_main(int argc, char **argv)
 				continue;
 
 			if (just_pkgname) {
+				depend_atom *pkgname;
+				pkgname = (verbose ? NULL : atom_explode(de->d_name));
 				printf("%s%s/%s%s%s\n", BOLD, dentry->d_name, BLUE, 
-				       de->d_name, NORM);
+				       (pkgname ? pkgname->PN : de->d_name), NORM);
+				if (pkgname) atom_implode(pkgname);
 				continue;
 			}
 
