@@ -1,30 +1,11 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/template.c,v 1.1 2005/06/21 00:07:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/template.c,v 1.2 2005/09/24 01:56:36 vapier Exp $
  *
- * 2005 Ned Ludd        - <solar@gentoo.org>
- * 2005 Mike Frysinger  - <vapier@gentoo.org>
- *
- ********************************************************************
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
- *
+ * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  */
-
-
 
 #define QTEMP_FLAGS "" COMMON_FLAGS
 static struct option const qtemp_long_opts[] = {

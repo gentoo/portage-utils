@@ -1,11 +1,10 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.5 2005/08/19 03:37:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.6 2005/09/24 01:56:37 vapier Exp $
  *
- * 2005 Ned Ludd        - <solar@gentoo.org>
- * 2005 Mike Frysinger  - <vapier@gentoo.org>
- *
+ * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #define _GNU_SOURCE
