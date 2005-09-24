@@ -1,18 +1,20 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.10 2005/09/24 01:56:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.11 2005/09/24 15:46:07 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#define QDEPENDS_FLAGS "drpac" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpacNq:" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
 	{"depend",    no_argument, NULL, 'd'},
 	{"rdepend",   no_argument, NULL, 'r'},
 	{"pdepend",   no_argument, NULL, 'p'},
 	{"cdepend",   no_argument, NULL, 'c'},
+	{"query",      a_argument, NULL, 'q'},
+	{"name-only", no_argument, NULL, 'N'},
 	{"all",       no_argument, NULL, 'a'},
 	COMMON_LONG_OPTS
 };
@@ -21,10 +23,15 @@ static const char *qdepends_opts_help[] = {
 	"Show RDEPEND info",
 	"Show PDEPEND info",
 	"Show CDEPEND info",
+	"Query everything for <arg>",
+	"Only show package name",
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, APPLET_QDEPENDS)
+
+
+static char qdep_name_only = 0;
 
 
 /* structures / types / etc ... */
@@ -50,7 +57,6 @@ struct _dep_node {
 typedef struct _dep_node dep_node;
 
 
-
 /* prototypes */
 #define dep_dump_tree(r) _dep_dump_tree(r,0)
 void _dep_dump_tree(dep_node *root, int space);
@@ -63,6 +69,7 @@ void _dep_attach(dep_node *root, dep_node *attach_me, int type);
 void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos);
 void _dep_burn_node(dep_node *node);
 int qdepends_main_vdb(const char *depend_file, int argc, char **argv);
+int qdepends_vdb_deep(const char *depend_file, char *query);
 
 #ifdef EBUG
 void print_word(char *ptr, int num);
@@ -326,8 +333,16 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv) {
 			/*dep_dump_tree(dep_tree);*/
 			/*printf("\n");*/
 
-			printf("%s%s/%s%s%s: ", BOLD, dentry->d_name, BLUE, de->d_name, NORM);
-
+			if (qdep_name_only) {
+				depend_atom *atom = NULL;
+				snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, de->d_name);
+				if ((atom = atom_explode(buf)) != NULL) {
+					printf("%s%s/%s%s%s: ", BOLD, dentry->d_name, BLUE, atom->PN, NORM);
+					atom_implode(atom);
+				}
+			} else {
+				printf("%s%s/%s%s%s: ", BOLD, dentry->d_name, BLUE, de->d_name, NORM);
+			}
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/USE", portroot, portvdb,
 			         dentry->d_name, de->d_name);
 			assert(eat_file(buf, use, sizeof(use)) == 1);
@@ -354,11 +369,91 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv) {
 	return EXIT_SUCCESS;
 }
 
+int qdepends_vdb_deep(const char *depend_file, char *query) {
+	DIR *dir, *dirp;
+	struct dirent *dentry, *de;
+	signed long len;
+	char *ptr;
+	char buf[_POSIX_PATH_MAX];
+	char depend[8192], use[8192];
+	dep_node *dep_tree;
+
+	if (chdir(portroot))
+		errp("could not chdir(%s) for ROOT", portroot);
+
+	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
+		return EXIT_FAILURE;
+
+	/* open /var/db/pkg */
+	while ((dentry = q_vdb_get_next_dir(dir))) {
+		if (chdir(dentry->d_name) != 0)
+			continue;
+		if ((dirp = opendir(".")) == NULL)
+			continue;
+
+		/* open the cateogry */
+		while ((de = readdir(dirp)) != NULL) {
+			if (*de->d_name == '.')
+				continue;
+
+			snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb,
+			         dentry->d_name, de->d_name, depend_file);
+			if (!eat_file(buf, depend, sizeof(buf)))
+				continue;
+			IF_DEBUG(puts(depend));
+
+			dep_tree = dep_grow_tree(depend);
+			if (dep_tree == NULL) continue;
+			/*dep_dump_tree(dep_tree);*/
+			/*printf("\n");*/
+
+			// printf("%s%s/%s%s%s: ", BOLD, dentry->d_name, BLUE, de->d_name, NORM);
+
+			snprintf(buf, sizeof(buf), "%s%s/%s/%s/USE", portroot, portvdb,
+			         dentry->d_name, de->d_name);
+			assert(eat_file(buf, use, sizeof(use)) == 1);
+			for (ptr = use; *ptr; ++ptr)
+				if (*ptr == '\n' || *ptr == '\t')
+					*ptr = ' ';
+			len = strlen(use);
+			assert(len+1 < (signed long)sizeof(use));
+			use[len] = ' ';
+			use[len+1] = '\0';
+			memmove(use+1, use, len);
+			use[0] = ' ';
+
+			dep_prune_use(dep_tree, use);
+			/*dep_dump_tree(dep_tree);*/
+
+			ptr = dep_flatten_tree(dep_tree);
+			if (rematch(query, ptr, REG_EXTENDED) == 0) {
+				if (qdep_name_only) {
+					depend_atom *atom = NULL;
+					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, de->d_name);
+					if ((atom = atom_explode(buf)) != NULL) {
+						printf("%s%s/%s%s%s%c", BOLD, dentry->d_name, BLUE, atom->PN, NORM, verbose ? ':' : '\n');
+						atom_implode(atom);
+					}
+				} else {
+					printf("%s%s/%s%s%s%c", BOLD, dentry->d_name, BLUE, de->d_name, NORM, verbose ? ':' : '\n');
+				}
+				if (verbose)
+					printf(" %s\n", dep_flatten_tree(dep_tree));
+			}
+			dep_burn_tree(dep_tree);
+		}
+		closedir(dirp);
+		chdir("..");
+	}
+
+	return EXIT_SUCCESS;
+}
+
 int qdepends_main(int argc, char **argv)
 {
 	int i;
+	char *query = NULL;
 	const char *depend_file;
-
 	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", "CDEPEND", NULL };
 	depend_file = depend_files[0];
 
@@ -374,10 +469,15 @@ int qdepends_main(int argc, char **argv)
 		case 'p': depend_file = depend_files[2]; break;
 		case 'c': depend_file = depend_files[3]; break;
 		case 'a': depend_file = NULL; break;
+		case 'q': query = optarg; break;
+		case 'N': qdep_name_only = 1; break;
 		}
 	}
-	if (argc == optind)
+	if ((argc == optind) && (query == NULL))
 		qdepends_usage(EXIT_FAILURE);
+
+	if (query != NULL)
+		return qdepends_vdb_deep(depend_file, query);
 
 	return qdepends_main_vdb(depend_file, argc, argv);
 }
