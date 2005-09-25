@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.11 2005/09/24 15:46:07 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.12 2005/09/25 12:38:39 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -196,6 +196,8 @@ dep_node *dep_grow_tree(char *depend)
 		case ')': {
 			--paren_balanced;
 			_maybe_consume_word(DEP_NORM);
+			if (curr_node->parent == NULL)
+				fprintf(stderr, "FIXME:\a %s", depend);
 			assert(curr_node->parent);
 			curr_node = curr_node->parent;
 			curr_attach = _DEP_NEIGH;
@@ -404,10 +406,6 @@ int qdepends_vdb_deep(const char *depend_file, char *query) {
 
 			dep_tree = dep_grow_tree(depend);
 			if (dep_tree == NULL) continue;
-			/*dep_dump_tree(dep_tree);*/
-			/*printf("\n");*/
-
-			// printf("%s%s/%s%s%s: ", BOLD, dentry->d_name, BLUE, de->d_name, NORM);
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/USE", portroot, portvdb,
 			         dentry->d_name, de->d_name);
@@ -423,7 +421,6 @@ int qdepends_vdb_deep(const char *depend_file, char *query) {
 			use[0] = ' ';
 
 			dep_prune_use(dep_tree, use);
-			/*dep_dump_tree(dep_tree);*/
 
 			ptr = dep_flatten_tree(dep_tree);
 			if (rematch(query, ptr, REG_EXTENDED) == 0) {

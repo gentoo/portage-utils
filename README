@@ -12,6 +12,9 @@ vapier@gentoo.org
 
 -- We cant/wont do relative paths unless we force dot slash ./behavior
 
+- FIXME: mozilla-launcher's rdeps breaks dep_grow_tree() with an assertion failed. 
+  RDEPEND="|| ( ( x11-misc/xtoolwait x11-apps/xdpyinfo ) virtual/x11 )"
+
 - multiline reads don't yet work for quse/qsearch
 
 - quse needs a rewrite.
