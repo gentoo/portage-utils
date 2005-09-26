@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.13 2005/09/26 04:31:00 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.14 2005/09/26 04:39:54 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -210,6 +210,10 @@ dep_node *dep_grow_tree(char *depend)
 		assert(paren_balanced >= 0);
 	}
 	assert(paren_balanced == 0);
+
+	/* if the depend buffer wasnt terminated with a space,
+	 * we may have a word sitting in the buffer to consume */
+	_maybe_consume_word(DEP_NORM);
 
 #undef _maybe_consume_word
 
