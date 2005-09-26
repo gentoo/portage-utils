@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.12 2005/09/25 12:38:39 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.13 2005/09/26 04:31:00 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -473,8 +473,16 @@ int qdepends_main(int argc, char **argv)
 	if ((argc == optind) && (query == NULL))
 		qdepends_usage(EXIT_FAILURE);
 
-	if (query != NULL)
-		return qdepends_vdb_deep(depend_file, query);
+	if (!depend_file) {
+		int ret = 0;
+		for (i = 0; depend_files[i]; ++i) {
+			printf(" %s*%s %s\n", GREEN, NORM, depend_files[i]);
+			ret += (query ? qdepends_vdb_deep(depend_files[i], query)
+			              : qdepends_main_vdb(depend_files[i], argc, argv));
+		}
+		return ret;
+	}
 
-	return qdepends_main_vdb(depend_file, argc, argv);
+	return (query ? qdepends_vdb_deep(depend_file, query)
+	              : qdepends_main_vdb(depend_file, argc, argv));
 }
