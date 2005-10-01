@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.15 2005/10/01 21:55:58 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.16 2005/10/01 23:27:36 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -145,7 +145,7 @@ void _dep_attach(dep_node *root, dep_node *attach_me, int type)
 dep_node *dep_grow_tree(char *depend)
 {
 	signed long paren_balanced;
-	char *word, *ptr;
+	char *word, *ptr, *p;
 	int curr_attach;
 	dep_node *ret, *curr_node, *new_node;
 
@@ -153,6 +153,9 @@ dep_node *dep_grow_tree(char *depend)
 	paren_balanced = 0;
 	curr_attach = _DEP_NEIGH;
 	word = NULL;
+
+	p = strrchr(depend, '\n');
+	if (p != NULL) *p = 0;
 
 #define _maybe_consume_word(t) \
 	do { \
@@ -202,7 +205,7 @@ dep_node *dep_grow_tree(char *depend)
 			// FIXME: vapier
 			// RDEPEND="|| ( ( foo bar ) baz )"
 			if (curr_node->parent == NULL) {
-				fprintf(stderr, "FIXME: http://bugs.gentoo.org\a *DEP = %s", depend);
+				warnf("Invalid dep handling or syntax: %s", depend);
 				break;
 			}
 
