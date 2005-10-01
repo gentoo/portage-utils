@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.61 2005/09/24 01:56:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.62 2005/10/01 23:18:00 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -100,7 +100,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.61 2005/09/24 01:56:36 vapier Exp $";
+static const char *rcsid = "$Id: main.c,v 1.62 2005/10/01 23:18:00 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -223,8 +223,7 @@ int rematch(const char *regex, const char *match, int cflags)
 	if ((match == NULL) || (regex == NULL))
 		return EXIT_FAILURE;
 
-	ret = regcomp(&preg, regex, cflags);
-	if (ret) {
+	if ((ret = regcomp(&preg, regex, cflags))) {
 		char err[256];
 		if (regerror(ret, &preg, err, sizeof(err)))
 			warnf("regcomp failed: %s", err);
@@ -262,7 +261,8 @@ static char *remove_extra_space(char *str)
 	size_t len, pos = 0;
 	char *buf;
 
-	if (str == NULL) return NULL;
+	if (str == NULL)
+		return NULL;
 	len = strlen(str);
 	buf = (char*)xmalloc(len+1);
 	memset(buf, 0, len+1);
@@ -287,7 +287,7 @@ struct dirent *q_vdb_get_next_dir(DIR *dir)
 	/* search for a category directory */
 	struct dirent *ret;
 
-another_please:
+next_entry:
 	ret = readdir(dir);
 	if (ret == NULL) {
 		closedir(dir);
@@ -295,9 +295,9 @@ another_please:
 	}
 
 	if (ret->d_name[0] == '.' || ret->d_name[0] == '-')
-		goto another_please;
+		goto next_entry;
 	if (strchr(ret->d_name, '-') == NULL)
-		goto another_please;
+		goto next_entry;
 
 	return ret;
 }
