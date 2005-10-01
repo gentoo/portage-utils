@@ -1,18 +1,19 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.14 2005/09/26 04:39:54 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.15 2005/10/01 21:55:58 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#define QDEPENDS_FLAGS "drpacNq:" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpacNk:q:" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
 	{"depend",    no_argument, NULL, 'd'},
 	{"rdepend",   no_argument, NULL, 'r'},
 	{"pdepend",   no_argument, NULL, 'p'},
 	{"cdepend",   no_argument, NULL, 'c'},
+	{"key",        a_argument, NULL, 'k'},
 	{"query",      a_argument, NULL, 'q'},
 	{"name-only", no_argument, NULL, 'N'},
 	{"all",       no_argument, NULL, 'a'},
@@ -23,6 +24,7 @@ static const char *qdepends_opts_help[] = {
 	"Show RDEPEND info",
 	"Show PDEPEND info",
 	"Show CDEPEND info",
+	"User defined vdb key",
 	"Query everything for <arg>",
 	"Only show package name",
 	"Show all DEPEND info",
@@ -196,8 +198,14 @@ dep_node *dep_grow_tree(char *depend)
 		case ')': {
 			--paren_balanced;
 			_maybe_consume_word(DEP_NORM);
-			if (curr_node->parent == NULL)
-				fprintf(stderr, "FIXME:\a %s", depend);
+
+			// FIXME: vapier
+			// RDEPEND="|| ( ( foo bar ) baz )"
+			if (curr_node->parent == NULL) {
+				fprintf(stderr, "FIXME: http://bugs.gentoo.org\a *DEP = %s", depend);
+				break;
+			}
+
 			assert(curr_node->parent);
 			curr_node = curr_node->parent;
 			curr_attach = _DEP_NEIGH;
@@ -455,7 +463,7 @@ int qdepends_main(int argc, char **argv)
 	int i;
 	char *query = NULL;
 	const char *depend_file;
-	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", "CDEPEND", NULL };
+	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", "CDEPEND", NULL, NULL };
 	depend_file = depend_files[0];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -469,6 +477,7 @@ int qdepends_main(int argc, char **argv)
 		case 'r': depend_file = depend_files[1]; break;
 		case 'p': depend_file = depend_files[2]; break;
 		case 'c': depend_file = depend_files[3]; break;
+		case 'k': depend_file = optarg; break;
 		case 'a': depend_file = NULL; break;
 		case 'q': query = optarg; break;
 		case 'N': qdep_name_only = 1; break;
