@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.16 2005/10/01 23:27:36 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.17 2005/10/04 00:22:29 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,10 +41,11 @@ typedef enum {
 	DEP_NULL = 0,
 	DEP_NORM = 1,
 	DEP_USE = 2,
-	DEP_OR = 3
+	DEP_OR = 3,
+	DEP_GROUP = 4
 } dep_type;
 #ifdef EBUG
-static const char *_dep_names[] = { "NULL", "NORM", "USE", "OR" };
+static const char *_dep_names[] = { "NULL", "NORM", "USE", "OR", "GROUP" };
 #endif
 
 struct _dep_node {
@@ -89,7 +90,7 @@ dep_node *_dep_grow_node(dep_type type, char *info, size_t info_len)
 	dep_node *ret;
 	size_t len;
 
-	if (type == DEP_OR)
+	if (type == DEP_OR || type == DEP_GROUP)
 		info = NULL;
 
 	len = sizeof(*ret);
@@ -148,8 +149,10 @@ dep_node *dep_grow_tree(char *depend)
 	char *word, *ptr, *p;
 	int curr_attach;
 	dep_node *ret, *curr_node, *new_node;
+	dep_type prev_type;
 
 	ret = curr_node = new_node = NULL;
+	prev_type = DEP_NULL;
 	paren_balanced = 0;
 	curr_attach = _DEP_NEIGH;
 	word = NULL;
@@ -170,6 +173,7 @@ dep_node *dep_grow_tree(char *depend)
 		curr_attach = _DEP_NEIGH; \
 		curr_node = new_node; \
 	} \
+	prev_type = t; \
 	word = NULL; \
 	} while (0)
 
@@ -181,13 +185,19 @@ dep_node *dep_grow_tree(char *depend)
 
 		switch (*ptr) {
 		case '?': {
-			assert(word != NULL);
+			if (word == NULL) {
+				warnf("Found a ? but no USE flag");
+				goto error_out;
+			}
 			_maybe_consume_word(DEP_USE);
 			curr_attach = _DEP_CHILD;
 			continue;
 		}
 		case '|': {
-			assert(ptr[1] == '|');
+			if (ptr[1] != '|') {
+				warnf("Found a | but not ||");
+				goto error_out;
+			}
 			word = ptr++;
 			_maybe_consume_word(DEP_OR);
 			curr_attach = _DEP_CHILD;
@@ -195,21 +205,28 @@ dep_node *dep_grow_tree(char *depend)
 		}
 		case '(': {
 			++paren_balanced;
-			_maybe_consume_word(DEP_NORM);
+			if (prev_type == DEP_OR || prev_type == DEP_USE) {
+				_maybe_consume_word(DEP_NORM);
+				prev_type = DEP_NULL;
+			} else {
+				if (word) {
+					warnf("New group has word in queue");
+					goto error_out;
+				}
+				word = ptr;
+				_maybe_consume_word(DEP_GROUP);
+				curr_attach = _DEP_CHILD;
+			}
 			break;
 		}
 		case ')': {
 			--paren_balanced;
 			_maybe_consume_word(DEP_NORM);
 
-			// FIXME: vapier
-			// RDEPEND="|| ( ( foo bar ) baz )"
 			if (curr_node->parent == NULL) {
-				warnf("Invalid dep handling or syntax: %s", depend);
-				break;
+				warnf("Group lacks a parent");
+				goto error_out;
 			}
-
-			assert(curr_node->parent);
 			curr_node = curr_node->parent;
 			curr_attach = _DEP_NEIGH;
 			break;
@@ -218,9 +235,16 @@ dep_node *dep_grow_tree(char *depend)
 			if (!word)
 				word = ptr;
 		}
-		assert(paren_balanced >= 0);
+
+		/* fall through to the paren failure below */
+		if (paren_balanced < 0)
+			break;
 	}
-	assert(paren_balanced == 0);
+
+	if (paren_balanced != 0) {
+		warnf("Parenthesis unbalanced");
+		goto error_out;
+	}
 
 	/* if the depend buffer wasnt terminated with a space,
 	 * we may have a word sitting in the buffer to consume */
@@ -229,6 +253,14 @@ dep_node *dep_grow_tree(char *depend)
 #undef _maybe_consume_word
 
 	return ret;
+
+error_out:
+	warnf("DEPEND: %s", depend);
+	if (ret) {
+		dep_dump_tree(ret);
+		dep_burn_tree(ret);
+	}
+	return NULL;
 }
 
 #ifdef EBUG
@@ -248,6 +280,8 @@ void _dep_dump_tree(dep_node *root, int space)
 this_node_sucks:
 	if (root->neighbor) _dep_dump_tree(root->neighbor, space);
 }
+#else
+void _dep_dump_tree(dep_node *root, int space) {;}
 #endif
 
 void dep_burn_tree(dep_node *root)
@@ -343,12 +377,11 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv) {
 			         dentry->d_name, de->d_name, depend_file);
 			if (!eat_file(buf, depend, sizeof(buf)))
 				continue;
-			IF_DEBUG(puts(depend));
 
 			dep_tree = dep_grow_tree(depend);
 			if (dep_tree == NULL) continue;
-			/*dep_dump_tree(dep_tree);*/
-			/*printf("\n");*/
+			IF_DEBUG(puts(depend));
+			IF_DEBUG(dep_dump_tree(dep_tree));
 
 			if (qdep_name_only) {
 				depend_atom *atom = NULL;
