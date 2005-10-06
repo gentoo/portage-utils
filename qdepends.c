@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.17 2005/10/04 00:22:29 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.18 2005/10/06 15:53:41 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -25,7 +25,7 @@ static const char *qdepends_opts_help[] = {
 	"Show PDEPEND info",
 	"Show CDEPEND info",
 	"User defined vdb key",
-	"Query everything for <arg>",
+	"Query reverse deps",
 	"Only show package name",
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
