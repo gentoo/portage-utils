@@ -1,16 +1,17 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.16 2005/09/24 02:33:39 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.17 2005/10/16 21:13:57 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  * Copyright 2005 Martin Schlemmer - <azarah@gentoo.org>
  */
 
-#define QLIST_FLAGS "Iedos" COMMON_FLAGS
+#define QLIST_FLAGS "IDedos" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
+	{"dups",      no_argument, NULL, 'D'},
 	{"exact",     no_argument, NULL, 'e'},
 	{"dir",       no_argument, NULL, 'd'},
 	{"obj",       no_argument, NULL, 'o'},
@@ -20,6 +21,7 @@ static struct option const qlist_long_opts[] = {
 };
 static const char *qlist_opts_help[] = {
 	"Just show installed packages",
+	"Only show package dups (slotted)",
 	"Exact match (only CAT/PN or PN without PV)",
 	"Only show directories",
 	"Only show objects",
@@ -32,11 +34,11 @@ static const char *qlist_opts_help[] = {
 
 int qlist_main(int argc, char **argv)
 {
-	DIR *dir, *dirp;
+	DIR *dir;
 	int i;
-	char just_pkgname = 0;
+	char just_pkgname = 0, dups_only = 0;
 	char show_dir, show_obj, show_sym;
-	struct dirent *dentry, *de;
+	struct dirent *dentry, **de;
 	char buf[_POSIX_PATH_MAX];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -52,6 +54,7 @@ int qlist_main(int argc, char **argv)
 		case 'd': show_dir = 1; break;
 		case 'o': show_obj = 1; break;
 		case 's': show_sym = 1; break;
+		case 'D': dups_only = 1; exact = 1; just_pkgname = 1; break;
 		case 'f': break;
 		}
 	}
@@ -69,21 +72,24 @@ int qlist_main(int argc, char **argv)
 
 	/* open /var/db/pkg */
 	while ((dentry = q_vdb_get_next_dir(dir))) {
+		int a, x;
+		char last[_POSIX_PATH_MAX];
+
 		if (chdir(dentry->d_name) != 0)
-			continue;
-		if ((dirp = opendir(".")) == NULL)
 			continue;
 
 		/* open the cateogry */
-		while ((de = readdir(dirp)) != NULL) {
+		if ((a = scandir(".", &de, filter_hidden, alphasort)) < 0)
+			continue;
+
+		strcpy(last, "");
+		for (x = 0 ; x < a; x++) {
 			FILE *fp;
-			if (*de->d_name == '.')
-				continue;
 
 			/* see if this cat/pkg is requested */
 			for (i = optind; i < argc; ++i) {
 				snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, 
-					 de->d_name);
+					 de[x]->d_name);
 
 				if (exact) {
 					depend_atom *atom;
@@ -101,7 +107,7 @@ int qlist_main(int argc, char **argv)
 				} else {
 					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
 						break;
-					if (rematch(argv[i], de->d_name, REG_EXTENDED) == 0)
+					if (rematch(argv[i], de[x]->d_name, REG_EXTENDED) == 0)
 						break;
 				}
 			}
@@ -110,15 +116,24 @@ int qlist_main(int argc, char **argv)
 
 			if (just_pkgname) {
 				depend_atom *pkgname;
-				pkgname = (verbose ? NULL : atom_explode(de->d_name));
+				if (dups_only) {
+					pkgname = atom_explode(de[x]->d_name);
+					if ((strcmp(pkgname->PN, last)) == 0)
+						printf("%s%s/%s%s%s\n", BOLD, dentry->d_name, BLUE,
+							(verbose ? de[x]->d_name : pkgname->PN), NORM);
+					strncpy(last, pkgname->PN, sizeof(last));
+					atom_implode(pkgname);
+					continue;
+				}
+				pkgname = (verbose ? NULL : atom_explode(de[x]->d_name));
 				printf("%s%s/%s%s%s\n", BOLD, dentry->d_name, BLUE, 
-				       (pkgname ? pkgname->PN : de->d_name), NORM);
+				       (pkgname ? pkgname->PN : de[x]->d_name), NORM);
 				if (pkgname) atom_implode(pkgname);
 				continue;
 			}
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb,
-			         dentry->d_name, de->d_name);
+			         dentry->d_name, de[x]->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;
 
@@ -150,7 +165,7 @@ int qlist_main(int argc, char **argv)
 			}
 			fclose(fp);
 		}
-		closedir(dirp);
+		while(a--) free(de[a]);
 		chdir("..");
 	}
 
