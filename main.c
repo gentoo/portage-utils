@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.63 2005/10/02 14:14:48 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.64 2005/10/18 05:28:50 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -63,20 +63,20 @@ static const char *argv0;
 #define warn(fmt, args...) \
 	fprintf(stderr, "%s%s%s: " fmt "\n", RED, argv0, NORM , ## args)
 #define warnf(fmt, args...) warn("%s%s()%s: " fmt, YELLOW, __FUNCTION__, NORM , ## args)
-#define warnp(fmt, args...) warn(fmt ": %s", ## args, strerror(errno))
-#define warnfp(fmt, args...) warnf(fmt ": %s", ## args, strerror(errno))
+#define warnp(fmt, args...) warn(fmt ": %s" , ## args , strerror(errno))
+#define warnfp(fmt, args...) warnf(fmt ": %s" , ## args , strerror(errno))
 #define _err(wfunc, fmt, args...) \
 	do { \
-	wfunc(fmt, ## args); \
+	wfunc(fmt , ## args); \
 	exit(EXIT_FAILURE); \
 	} while (0)
-#define err(fmt, args...) _err(warn, fmt, ## args)
-#define errf(fmt, args...) _err(warnf, fmt, ## args)
-#define errp(fmt, args...) _err(warnp, fmt, ## args)
+#define err(fmt, args...) _err(warn, fmt , ## args)
+#define errf(fmt, args...) _err(warnf, fmt , ## args)
+#define errp(fmt, args...) _err(warnp, fmt , ## args)
 #ifdef EBUG
 #include <sys/resource.h>
 
-# define DBG(fmt, args...) warnf(fmt, ## args)
+# define DBG(fmt, args...) warnf(fmt , ## args)
 # define IF_DEBUG(x) x
 void init_coredumps(void);
 void init_coredumps(void)
@@ -100,7 +100,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.63 2005/10/02 14:14:48 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.64 2005/10/18 05:28:50 vapier Exp $";
 
 static char color = 1;
 static char exact = 0;
