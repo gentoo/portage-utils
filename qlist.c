@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.17 2005/10/16 21:13:57 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.18 2005/10/18 03:24:06 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -85,6 +85,9 @@ int qlist_main(int argc, char **argv)
 		strcpy(last, "");
 		for (x = 0 ; x < a; x++) {
 			FILE *fp;
+
+			if (de[x]->d_name[0] == '.' || de[x]->d_name[0] == '-')
+				continue;
 
 			/* see if this cat/pkg is requested */
 			for (i = optind; i < argc; ++i) {
