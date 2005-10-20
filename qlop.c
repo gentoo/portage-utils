@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.17 2005/09/24 01:56:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.18 2005/10/20 00:03:02 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -13,7 +13,6 @@
 #endif
 
 #define QLOP_DEFAULT_LOGFILE "/var/log/emerge.log"
-#define QLOP_DEFAULT_PIDFILE "/tmp/sandboxpids.tmp"
 
 
 
@@ -27,7 +26,6 @@ static struct option const qlop_long_opts[] = {
 	{"sync",      no_argument, NULL, 's'},
 	{"current",   no_argument, NULL, 'c'},
 	{"logfile",    a_argument, NULL, 'f'},
-	{"pidfile",    a_argument, NULL, 'F'},
 	COMMON_LONG_OPTS
 };
 
@@ -40,7 +38,6 @@ static const char *qlop_opts_help[] = {
 	"Show sync history",
 	"Show current emerging packages",
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
-	"Read emerge pidfile instead of " QLOP_DEFAULT_PIDFILE,
 	COMMON_OPTS_HELP
 };
 
@@ -249,41 +246,42 @@ void show_sync_history(const char *logfile)
 	fclose(fp);
 }
 
-void show_current_emerge(const char *pidfile);
+void show_current_emerge(void);
 #ifdef __QLOP_CURRENT__
-void show_current_emerge(const char *pidfile)
+void show_current_emerge(void)
 {
-	FILE *fp;
+	DIR *proc;
+	struct dirent *de;
 	pid_t pid;
 	char buf[BUFSIZE], bufstat[300];
-	char path[_POSIX_PATH_MAX];
+	char path[50];
 	char *p, *q;
-	unsigned long long start_time;
+	unsigned long long start_time = 0;
 	double uptime_secs;
 	time_t start_date;
 
-	if ((fp = fopen(pidfile, "r")) == NULL) {
-		warnp("Could not open pidfile '%s'", pidfile);
+	if ((proc = opendir("/proc")) == NULL) {
+		warnp("Could not open /proc");
 		return;
 	}
 
-	/* each line in the sandbox file is a pid */
-	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-		if ((p = strchr(buf, '\n')) != NULL)
-			*p = '\0';
-		pid = (pid_t)atol(buf);
+	while ((de = readdir(proc)) != NULL) {
+
+		if ((pid = (pid_t)atol(de->d_name)) == 0)
+			continue;
 
 		/* portage renames the cmdline so the package name is first */
-		sprintf(path, "/proc/%i/cmdline", pid);
+		snprintf(path, sizeof(path), "/proc/%i/cmdline", pid);
 		if (!eat_file(path, buf, sizeof(buf)))
 			continue;
+
 		if (buf[0] == '[' && (p = strchr(buf, ']')) != NULL) {
 			*p = '\0';
 			p = buf+1;
 			q = p + strlen(p) + 1;
 
 			/* open the stat file to figure out how long we have been running */
-			sprintf(path, "/proc/%i/stat", pid);
+			snprintf(path, sizeof(path), "/proc/%i/stat", pid);
 			if (!eat_file(path, bufstat, sizeof(bufstat)))
 				continue;
 
@@ -319,12 +317,15 @@ void show_current_emerge(const char *pidfile)
 		}
 	}
 
-	fclose(fp);
+	closedir(proc);
+
+	if (start_time == 0 && verbose)
+		puts("No emerge processes located");
 }
 #else
-void show_current_emerge(const char _q_unused_ *pidfile)
+void show_current_emerge(void)
 {
-	errf("show_current_emerge() is not supported on your OS");
+	errf("not supported on your crapbox OS");
 }
 #endif
 
@@ -332,14 +333,13 @@ int qlop_main(int argc, char **argv)
 {
 	int i, average = 1;
 	char do_time, do_list, do_unlist, do_sync, do_current, do_human_readable = 0;
-	char *opt_logfile, *opt_pidfile;
-	const char *logfile = QLOP_DEFAULT_LOGFILE,
-	           *pidfile = QLOP_DEFAULT_PIDFILE;
+	char *opt_logfile;
+	const char *logfile = QLOP_DEFAULT_LOGFILE;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 		argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	opt_logfile = opt_pidfile = NULL;
+	opt_logfile = NULL;
 	do_time = do_list = do_unlist = do_sync = do_current = 0;
 
 	while ((i = GETOPT_LONG(QLOP, qlop, "")) != -1) {
@@ -357,18 +357,12 @@ int qlop_main(int argc, char **argv)
 				if (opt_logfile) err("Only use -f once");
 				opt_logfile = xstrdup(optarg);
 				break;
-			case 'F':
-				if (opt_pidfile) err("Only use -F once");
-				opt_pidfile = xstrdup(optarg);
-				break;
 		}
 	}
 	if (!do_list && !do_unlist && !do_time && !do_sync && !do_current)
 		qlop_usage(EXIT_FAILURE);
 	if (opt_logfile != NULL)
 		logfile = opt_logfile;
-	if (opt_pidfile != NULL)
-		pidfile = opt_pidfile;
 
 	argc -= optind;
 	argv += optind;
@@ -380,7 +374,7 @@ int qlop_main(int argc, char **argv)
 	else if (do_unlist)
 		show_emerge_history(QLOP_UNLIST, argc, argv, logfile);
 	if (do_current)
-		show_current_emerge(pidfile);
+		show_current_emerge();
 	if (do_sync)
 		show_sync_history(logfile);
 
@@ -390,7 +384,6 @@ int qlop_main(int argc, char **argv)
 	}
 
 	if (opt_logfile) free(opt_logfile);
-	if (opt_pidfile) free(opt_pidfile);
 
 	return EXIT_SUCCESS;
 }
