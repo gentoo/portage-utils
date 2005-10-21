@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.15 2005/09/24 01:56:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.16 2005/10/21 13:34:29 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,18 +22,27 @@ static const char *qfile_opts_help[] = {
 
 static short qfile_quiet = 0;
 
-void qfile(char *path, char *fname);
-void qfile(char *path, char *fname)
+void qfile(char *path, char *fullname);
+void qfile(char *path, char *fullname)
 {
 	FILE *fp;
 	DIR *dir;
 	struct dirent *dentry;
 	char *p;
-	size_t flen = strlen(fname);
+	size_t flen;
 	int base = 0;
+	char fname[_POSIX_PATH_MAX];
 	char buf[1024];
 	char pkg[126];
 	depend_atom *atom;
+
+	strncpy(fname, fullname, sizeof(fname));
+
+	/* ../foo/bar paths wont work but we do it this way cuz realpath() sucks  */
+	if ((fname[0] == '.') && ((p = getenv("PWD")) != NULL))
+		snprintf(fname, sizeof(fname), "%s%s", p, &fullname[1]);
+
+	flen = strlen(fname);
 
 	if (chdir(path) != 0 || (dir = opendir(".")) == NULL)
 		return;
@@ -109,6 +118,7 @@ int qfile_main(int argc, char **argv)
 			case 'e': exact = 1; break;
 		}
 	}
+	if (!exact && verbose) exact++;
 	if (argc == optind)
 		qfile_usage(EXIT_FAILURE);
 
