@@ -1,11 +1,16 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.22 2005/09/24 01:56:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.23 2005/10/21 13:26:14 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  */
+
+/*
+ quse -CKe -- '-*' {'~',-,}{alpha,amd64,hppa,ia64,ppc,ppc64,sparc,x86}
+ quse -Ke --  nls
+*/
 
 #define QUSE_FLAGS "eavKL" COMMON_FLAGS
 static struct option const quse_long_opts[] = {
@@ -171,21 +176,23 @@ int quse_main(int argc, char **argv)
 						strcpy(buf1, buf0);
 						while ((p = strchr(buf1, ' ')) != NULL) {
 							*p = 0;
-							// assert(p + 1 != NULL);
 							for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
-							//	assert(buf1 != NULL);
-							//	assert(argv[i] != NULL);
-							//	printf("%s %s %d %d %d %d\n", argv[i], buf1, i, sizeof(buf0), sizeof(buf1), sizeof(buf2));
 								if (strcmp(buf1, argv[i]) == 0) {
 									ok = 1;
 									break;
 								}
-							//	printf("- %d strcmp(%s, %s) = 0\n", i, argv[i], buf1);
 							}
-							// assert(p + 1 != NULL);
 							strcpy(buf2, p + 1);
 							strcpy(buf1, buf2);
+							if ((strchr(buf1, ' ')) == NULL)
+								for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
+									if (strcmp(buf1, argv[i]) == 0) {
+										ok = 1;
+									}
+								}
 						}
+						
+						
 					}
 				}
 				if (ok) {
