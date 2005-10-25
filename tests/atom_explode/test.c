@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.6 2005/09/24 01:56:37 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.7 2005/10/25 00:35:34 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -37,7 +37,7 @@
 
 #define boom(a,s) \
 	printf("%s -> %s / [%s] %s - %s [%s] [r%i]\n", \
-	       s, a->CATEGORY, a->P, a->PN, \
+	       s, (a->CATEGORY?:"null"), a->P, a->PN, \
 	       a->PVR, a->PV, a->PR_int)
 int main(int argc, char *argv[])
 {

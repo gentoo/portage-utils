@@ -4,14 +4,14 @@ d=$PWD
 cd /usr/portage/metadata/cache || exit 1
 
 echo -n "atom_explode():"
-time find . -mindepth 2 -type f -printf '%P\n' | "$d"/q > "$d"/me
+time find . -mindepth 2 -type f -printf '%P\n%f\n' | "$d"/q > "$d"/me
 echo
 
 echo -n "portage:"
-time find . -mindepth 2 -type f -printf '%P\n' | "$d"/atom-explode.py > "$d"/py
+time find . -mindepth 2 -type f -printf '%P\n%f\n' | "$d"/atom-explode.py > "$d"/py
 echo
 
-if diff -u "$d"/me "$d"/py ; then
+if diff -U 0 "$d"/me "$d"/py ; then
 	echo "PASSED"
 else
 	echo "FAIL ! :("
