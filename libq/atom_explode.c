@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.10 2005/09/24 01:56:37 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.11 2005/10/25 00:36:21 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -25,15 +25,16 @@ depend_atom *atom_explode(const char *atom)
 	const char *suffixes[] = { "_alpha", "_beta", "_pre", "_rc", "_p", NULL };
 
 	/* we allocate mem for atom struct and two strings (strlen(atom)).
-	 * the first string is for CAT/PN/PV while the second is for PVR */
+	 * the first string is for CAT/PN/PV while the second is for PVR.
+	 * PVR needs an extra byte for the 'r' which is injected. */
 	slen = strlen(atom);
-	len = sizeof(*ret) + slen * sizeof(*atom) * 3 + 3;
+	len = sizeof(*ret) + slen * sizeof(*atom) * 3 + 3 + 1;
 	ret = (depend_atom*)xmalloc(len);
 	memset(ret, 0x00, len);
 	ptr = (char*)ret;
 	ret->P = ptr + sizeof(*ret);
 	ret->PVR = ret->P + slen + 1;
-	ret->CATEGORY = ret->PVR + slen + 1;
+	ret->CATEGORY = ret->PVR + slen + 1 + 1;
 	memcpy(ret->CATEGORY, atom, slen);
 
 	/* break up the CATEOGRY and PVR */
