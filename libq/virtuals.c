@@ -1,11 +1,12 @@
-/* 
+/*
+ * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.2 2005/10/29 06:10:01 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.3 2005/10/29 07:34:38 solar Exp $
  *
- * These functions should be made to use a linked list and cache all 
- * the virtuals in 1 profile read pass to reduce file i/o
- * We would also need to make a pass on provides.
+ * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  *
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.3 2005/10/29 07:34:38 solar Exp $
  */
 
 #include <stdio.h>
@@ -16,7 +17,147 @@
  <jstubbs> but it's /etc/portage/.../virtuals ; /var/db/pkg/*/*/PROVIDE ; /etc/make.profile stacking ; */
 #endif
 
-static char *resolve_local_profile_virtual(char *virtual) {
+
+#include <stdlib.h>
+#include <string.h>
+
+/* used to queue a lot of things */
+struct queue_t {
+	char *name;   
+	char *item;
+	struct queue_t *next;
+};
+
+typedef struct queue_t queue;
+
+queue *del_set(char *s, queue *q, int *ok);
+queue *add_set(char *vv, char *ss, queue *q);
+
+void free_virtuals(queue *list);
+
+/* add something to a queue */
+queue *add_set(char *vv, char *ss, queue *q)
+{
+	queue *ll, *z;
+	char *s, *ptr;   
+	char *v, *vptr;
+
+	s = xstrdup(ss);
+	v = xstrdup(vv);   
+	ptr = xmalloc(strlen(ss));
+	vptr = xmalloc(strlen(vv));
+
+   
+	do {      
+		*ptr = 0;
+		*vptr = 0;      
+		rmspace(ptr);
+		rmspace(s);      
+		rmspace(vptr);
+		rmspace(vv);
+      
+		ll = (queue *) xmalloc(sizeof(queue));
+		ll->next = NULL;
+		ll->name = (char *) xmalloc(strlen(v) + 1);
+      		ll->item = (char *) xmalloc(strlen(s) + 1);
+		strcpy(ll->item, s);      
+		strcpy(ll->name, v);
+      
+		if (q == NULL)
+			q = ll;
+		else {
+			z = q;
+			while (z->next != NULL)
+				z = z->next;
+			z->next = ll;
+      
+		}
+
+		*v = 0;
+		strcpy(v, vptr);
+		*s = 0;
+		strcpy(s, ptr);
+
+	} while (v[0]);
+	free(s);   
+	free(ptr);
+	free(v);   
+	free(vptr);
+	return q;
+}
+
+/* remove someone from a queue */
+queue *del_set(char *s, queue *q, int *ok)
+{   
+	queue *ll, *list, *old;
+	ll = q;
+	list = q;
+	old = q;   
+	*ok = 0;
+   
+	while (ll != NULL) {
+		if (strcmp(ll->name, s) == 0) {
+			if (ll == list) {
+				list = (ll->next);
+				free(ll->name);
+				free(ll->item);
+				free(ll);
+				ll = list;
+	
+			} else {
+				old->next = ll->next;
+				free(ll->name);	    
+				free(ll->item);
+				free(ll);	    
+				ll = old->next;
+			}
+			*ok = 1;
+		} else {
+			old = ll;
+			ll = ll->next;
+		}
+	}
+	return list;
+}
+
+/* clear out a list */
+void free_sets(queue *list);
+void free_sets(queue *list)
+{
+	queue *ll, *q;
+	ll = list;   
+	while (ll != NULL) {
+		q = ll->next;
+		free(ll->name);      
+		free(ll->item);
+		free(ll);
+		ll = q;
+	}
+}
+
+int virtual_exists(char *name, queue *list);
+int virtual_exists(char *name, queue *list)
+{
+	queue *ll;
+	for (ll = list; ll != NULL; ll = ll->next)
+		if ((strcmp(ll->name, name)) == 0)
+			return 0;
+	return 1;
+}
+
+void print_sets(queue *list);
+void print_sets(queue *list)
+{
+	queue *ll;
+	for (ll = list; ll != NULL; ll = ll->next)
+		printf("%s -> %s\n", ll->name, ll->item);
+}
+
+
+queue *virtuals = NULL;
+
+static queue *resolve_local_profile_virtuals();
+static queue *resolve_local_profile_virtuals() {
 	char buf[BUFSIZ];
 	FILE *fp;
 	char *p;
@@ -29,83 +170,26 @@ static char *resolve_local_profile_virtual(char *virtual) {
 				if (*buf != 'v') continue;
 				for (p = buf ; *p != 0; ++p) if (isspace(*p)) *p = ' ';
 				if ((p = strchr(buf, ' ')) != NULL) {
+					int ok = 0;
 					*p = 0;
-					if ((strcmp(virtual, buf)) == 0) {
-						fclose(fp);
-						return rmspace(++p);
-					}
+					virtuals = del_set(buf, virtuals, &ok);
+					virtuals = add_set(buf, rmspace(++p), virtuals);
+					ok = 0;
 				}
 			}
 			fclose(fp);
 		}
 	}
-	return NULL;
+	return virtuals;
 }
-
-
-/*
-static char *resolve_profile_virtual(char *virtual);
-static char *resolve_profile_virtual(char *virtual) {
-	static char buf[BUFSIZ];
-	static char *p;
-	FILE *fp;
-
-	if ((p = resolve_local_profile_virtual(virtual)) != NULL)
-		return p;
-
-	if ((chdir("/etc/")) == (-1))
-		return virtual;
-
-	memset(buf, 0, sizeof(buf));
-
-	if ((readlink("make.profile", buf, sizeof(buf))) != (-1)) {
-		chdir(buf);
-		getcwd(buf, sizeof(buf));
-		if (access(buf, R_OK) != 0)
-			return virtual;
-	vstart:
-		if ((fp = fopen("virtuals", "r")) != NULL) {
-			while((fgets(buf, sizeof(buf), fp)) != NULL) {
-				if (*buf != 'v') continue;
-				for (p = buf ; *p != 0; ++p) if (isspace(*p)) *p = ' ';
-				if ((p = strchr(buf, ' ')) != NULL) {
-					*p = 0;
-					if ((strcmp(virtual, buf)) == 0) {
-						fclose(fp);
-						return rmspace(++p);
-					}
-				}
-			}
-			fclose(fp);
-		}
-		if ((fp = fopen("parent", "r")) != NULL) {
-			while((fgets(buf, sizeof(buf), fp)) != NULL) {
-				rmspace(buf);
-				if (!*buf) continue;
-				if (*buf == '#') continue;
-				if (isspace(*buf)) continue;
-				fclose(fp);
-				if ((chdir(buf)) == (-1)) {
-					fclose(fp);
-					return virtual;
-				}
-				goto vstart;
-			}
-			fclose(fp);
-		}
-	}
-	return virtual;
-}
-
-*/
-
-queue *virtuals = NULL;
 
 static queue *resolve_virtuals();
 static queue *resolve_virtuals() {
 	static char buf[BUFSIZ];
 	static char *p;
 	FILE *fp;
+
+	virtuals = resolve_local_profile_virtuals();
 
 	if ((chdir("/etc/")) == (-1))
 		return virtuals;
@@ -124,7 +208,8 @@ static queue *resolve_virtuals() {
 				for (p = buf ; *p != 0; ++p) if (isspace(*p)) *p = ' ';
 				if ((p = strchr(buf, ' ')) != NULL) {
 					*p = 0;
-					virtuals = addq(rmspace(++p), virtuals);
+					if ((virtual_exists(buf, virtuals)) != 0)
+						virtuals = add_set(buf, rmspace(++p), virtuals);
 				}
 			}
 			fclose(fp);
