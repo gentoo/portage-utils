@@ -10,8 +10,6 @@ vapier@gentoo.org
   app-shells/bash (/bin/bash)
   app-shells/bash (/etc/bash)
 
--- We cant/wont do relative paths unless we force dot slash ./behavior
-
 - multiline reads don't yet work for quse/qsearch
 
 - quse needs a rewrite.

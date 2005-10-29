@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.5 2005/09/24 01:56:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.6 2005/10/29 06:10:01 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,12 +35,12 @@ typedef enum {
 	APPLET_QFILE = 3,
 	APPLET_QLIST = 4,
 	APPLET_QLOP = 5,
-	APPLET_QSEARCH = 6,
-	APPLET_QSIZE = 7,
-	APPLET_QTBZ2 = 8,
-	APPLET_QUSE = 9,
-	APPLET_QXPAK = 10,
-	APPLET_QPKG = 11,
+	APPLET_QPKG = 6,
+	APPLET_QSEARCH = 7,
+	APPLET_QSIZE = 8,
+	APPLET_QTBZ2 = 9,
+	APPLET_QUSE = 10,
+	APPLET_QXPAK = 11,
 	LAST_APPLET = 11
 } applets_enum;
 
@@ -58,12 +58,12 @@ struct applet_t {
 	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},
 	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
+	{"qpkg",      qpkg_main,      "<misc args>",     "manipulate Gentoo binpkgs"},
 	{"qsearch",   qsearch_main,   "<regex>",         "search pkgname/desc"},
 	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
 	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
 	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
 	{"qxpak",     qxpak_main,     "<misc args>",     "manipulate xpak archives"},
-	{"qpkg",      qpkg_main,      "<misc args>",     "manipulate Gentoo binpkgs"},
 
 
 	/* aliases for equery capatability */

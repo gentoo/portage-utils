@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.16 2005/10/21 13:34:29 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.17 2005/10/29 06:10:01 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -38,9 +38,13 @@ void qfile(char *path, char *fullname)
 
 	strncpy(fname, fullname, sizeof(fname));
 
-	/* ../foo/bar paths wont work but we do it this way cuz realpath() sucks  */
-	if ((fname[0] == '.') && ((p = getenv("PWD")) != NULL))
-		snprintf(fname, sizeof(fname), "%s%s", p, &fullname[1]);
+	if ((fname[0] == '.') && ((p = getenv("PWD")) != NULL)) {
+		char tmp[PATH_MAX];
+		snprintf(tmp, sizeof(fname), "%s/%s", p, fullname);
+		errno = 0;
+		realpath(tmp, fname);
+		assert(errno == 0);
+	}
 
 	flen = strlen(fname);
 

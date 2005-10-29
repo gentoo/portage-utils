@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.18 2005/10/06 15:53:41 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.19 2005/10/29 06:10:01 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -73,6 +73,7 @@ void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos);
 void _dep_burn_node(dep_node *node);
 int qdepends_main_vdb(const char *depend_file, int argc, char **argv);
 int qdepends_vdb_deep(const char *depend_file, char *query);
+
 
 #ifdef EBUG
 void print_word(char *ptr, int num);
@@ -500,6 +501,7 @@ int qdepends_main(int argc, char **argv)
 	char *query = NULL;
 	const char *depend_file;
 	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", "CDEPEND", NULL, NULL };
+
 	depend_file = depend_files[0];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -521,7 +523,7 @@ int qdepends_main(int argc, char **argv)
 	}
 	if ((argc == optind) && (query == NULL))
 		qdepends_usage(EXIT_FAILURE);
-
+	
 	if (!depend_file) {
 		int ret = 0;
 		for (i = 0; depend_files[i]; ++i) {

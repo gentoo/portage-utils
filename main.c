@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.65 2005/10/21 13:42:55 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.66 2005/10/29 06:10:01 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -25,8 +25,6 @@
 #include <libgen.h>
 #include <limits.h>
 #include <assert.h>
-
-
 
 /* prototypes and such */
 static char eat_file(const char *file, char *buf, const size_t bufsize);
@@ -98,7 +96,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.65 2005/10/21 13:42:55 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.66 2005/10/29 06:10:01 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
