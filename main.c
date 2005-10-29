@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.66 2005/10/29 06:10:01 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.67 2005/10/29 09:26:41 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -54,6 +54,7 @@ void reinitialize_as_needed(void);
 #define MAGENTA   COLOR("00", "35")
 #define RED       COLOR("31", "01")
 #define YELLOW    COLOR("33", "01")
+#define WHITE     COLOR("01", "38")
 
 /* helper functions for showing errors */
 static const char *argv0;
@@ -96,7 +97,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.66 2005/10/29 06:10:01 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.67 2005/10/29 09:26:41 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -756,6 +757,10 @@ int main(int argc, char **argv)
 	argv0 = argv[0];
 	if (getenv("NOCOLOR"))
 		color = 0;
+#if 0
+	if (ttyname(1) == NULL)
+		color = 0;
+#endif
 	portroot = (getenv("ROOT") ? : "/");
 	initialize_portdir();
 	atexit(reinitialize_as_needed);

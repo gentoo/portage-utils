@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.18 2005/10/18 03:24:06 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.19 2005/10/29 09:26:41 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -137,6 +137,10 @@ int qlist_main(int argc, char **argv)
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb,
 			         dentry->d_name, de[x]->d_name);
+
+			if (verbose > 1)
+				printf("%s%s/%s%s%s\n%sCONTENTS%s:\n", BOLD, dentry->d_name, BLUE, de[x]->d_name, NORM, DKBLUE, NORM);
+
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;
 
@@ -150,16 +154,16 @@ int qlist_main(int argc, char **argv)
 				switch (e->type) {
 					case CONTENTS_DIR:
 						if (show_dir)
-							printf("%s/\n", e->name);
+							printf("%s%s%s/\n", verbose > 1 ? YELLOW : "" , e->name, NORM);
 						break;
 					case CONTENTS_OBJ:
 						if (show_obj)
-							printf("%s\n", e->name);
+							printf("%s%s%s\n", verbose > 1 ? WHITE : "" , e->name, NORM);
 						break;
 					case CONTENTS_SYM:
 						if (show_sym) {
 							if (verbose)
-								printf("%s -> %s\n", e->name, e->sym_target);
+								printf("%s%s -> %s%s\n", verbose > 1 ? CYAN : "", e->name, e->sym_target, NORM);
 							else
 								printf("%s\n", e->name);
 						}
