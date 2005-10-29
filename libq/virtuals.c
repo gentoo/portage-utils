@@ -1,12 +1,12 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.4 2005/10/29 09:28:46 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.5 2005/10/29 23:19:12 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.4 2005/10/29 09:28:46 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.5 2005/10/29 23:19:12 solar Exp $
  */
 
 #include <stdio.h>
@@ -35,7 +35,7 @@ queue *add_set(char *vv, char *ss, queue *q);
 
 void free_virtuals(queue *list);
 
-/* add something to a queue */
+/* add a set to a cache */
 queue *add_set(char *vv, char *ss, queue *q)
 {
 	queue *ll, *z;
@@ -84,7 +84,7 @@ queue *add_set(char *vv, char *ss, queue *q)
 	return q;
 }
 
-/* remove someone from a queue */
+/* remove a set from a cache. matches ->name and frees name,item */
 queue *del_set(char *s, queue *q, int *ok)
 {   
 	queue *ll, *list, *old;
@@ -187,6 +187,7 @@ static queue *resolve_virtuals() {
 	static char *p;
 	FILE *fp;
 
+	free_sets(virtuals);
 	virtuals = resolve_local_profile_virtuals();
 
 	if ((chdir("/etc/")) == (-1))

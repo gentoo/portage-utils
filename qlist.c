@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.19 2005/10/29 09:26:41 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.20 2005/10/29 23:19:12 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -21,7 +21,7 @@ static struct option const qlist_long_opts[] = {
 };
 static const char *qlist_opts_help[] = {
 	"Just show installed packages",
-	"Only show package dups (slotted)",
+	"Only show package dups",
 	"Exact match (only CAT/PN or PN without PV)",
 	"Only show directories",
 	"Only show objects",
@@ -32,6 +32,25 @@ static const char *qlist_opts_help[] = {
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, APPLET_QLIST)
 
 
+queue *filter_dups(queue *sets);
+queue *filter_dups(queue *sets) {
+	queue *ll = NULL;
+	queue *dups = NULL;
+	queue *list = NULL;
+
+	for (list = sets ; list != NULL;  list = list->next) {
+		for ( ll = sets ; ll != NULL; ll = ll->next) {
+			if ((strcmp(ll->name, list->name) == 0) && (strcmp(ll->item, list->item) != 0)) {
+					int ok = 0;
+					dups = del_set(ll->item, dups, &ok);
+					ok = 0;
+					dups = add_set(ll->item, ll->item, dups);
+				}
+		}
+	}
+	return dups;
+}
+
 int qlist_main(int argc, char **argv)
 {
 	DIR *dir;
@@ -40,6 +59,8 @@ int qlist_main(int argc, char **argv)
 	char show_dir, show_obj, show_sym;
 	struct dirent *dentry, **de;
 	char buf[_POSIX_PATH_MAX];
+	queue *sets = NULL;
+	depend_atom *pkgname, *atom;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -73,7 +94,6 @@ int qlist_main(int argc, char **argv)
 	/* open /var/db/pkg */
 	while ((dentry = q_vdb_get_next_dir(dir))) {
 		int a, x;
-		char last[_POSIX_PATH_MAX];
 
 		if (chdir(dentry->d_name) != 0)
 			continue;
@@ -82,7 +102,6 @@ int qlist_main(int argc, char **argv)
 		if ((a = scandir(".", &de, filter_hidden, alphasort)) < 0)
 			continue;
 
-		strcpy(last, "");
 		for (x = 0 ; x < a; x++) {
 			FILE *fp;
 
@@ -95,7 +114,6 @@ int qlist_main(int argc, char **argv)
 					 de[x]->d_name);
 
 				if (exact) {
-					depend_atom *atom;
 					if ((atom = atom_explode(buf)) == NULL) {
 						warn("invalid atom %s", buf);
 						continue;
@@ -118,13 +136,10 @@ int qlist_main(int argc, char **argv)
 				continue;
 
 			if (just_pkgname) {
-				depend_atom *pkgname;
 				if (dups_only) {
 					pkgname = atom_explode(de[x]->d_name);
-					if ((strcmp(pkgname->PN, last)) == 0)
-						printf("%s%s/%s%s%s\n", BOLD, dentry->d_name, BLUE,
-							(verbose ? de[x]->d_name : pkgname->PN), NORM);
-					strncpy(last, pkgname->PN, sizeof(last));
+					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, pkgname->P);
+					sets = add_set(pkgname->PN, buf, sets);
 					atom_implode(pkgname);
 					continue;
 				}
@@ -154,11 +169,11 @@ int qlist_main(int argc, char **argv)
 				switch (e->type) {
 					case CONTENTS_DIR:
 						if (show_dir)
-							printf("%s%s%s/\n", verbose > 1 ? YELLOW : "" , e->name, NORM);
+							printf("%s%s%s/\n", verbose > 1 ? YELLOW : "" , e->name, verbose > 1 ? NORM : "");
 						break;
 					case CONTENTS_OBJ:
 						if (show_obj)
-							printf("%s%s%s\n", verbose > 1 ? WHITE : "" , e->name, NORM);
+							printf("%s%s%s\n", verbose > 1 ? WHITE : "" , e->name, verbose > 1 ? NORM : "");
 						break;
 					case CONTENTS_SYM:
 						if (show_sym) {
@@ -176,5 +191,18 @@ int qlist_main(int argc, char **argv)
 		chdir("..");
 	}
 
+	if (dups_only) {
+		queue *ll, *dups = filter_dups(sets);
+		for (ll = dups; ll != NULL; ll = ll->next) {
+			atom = atom_explode(ll->item);
+			printf("%s%s/%s%s%s\n", BOLD, atom->CATEGORY, BLUE,
+				(verbose ? atom->P : atom->PN), NORM);
+			atom_implode(atom);
+		}
+		free_sets(dups);
+		free_sets(sets);
+	}
 	return EXIT_SUCCESS;
 }
+
+
