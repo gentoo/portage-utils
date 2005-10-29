@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.20 2005/10/29 09:28:46 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.21 2005/10/29 09:31:49 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -343,10 +343,10 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv) {
 	char buf[_POSIX_PATH_MAX];
 	char depend[8192], use[8192];
 	dep_node *dep_tree;
-
+#if 0
 	virtuals = resolve_virtuals();
 	print_sets(virtuals);
-
+#endif
 	if (chdir(portroot))
 		errp("could not chdir(%s) for ROOT", portroot);
 
