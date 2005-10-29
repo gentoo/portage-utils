@@ -16,5 +16,4 @@
 
 /* custom libs */
 #include "atom_explode.c"
-// #include "queue.c"
-// #include "virtuals.c"
+#include "virtuals.c"

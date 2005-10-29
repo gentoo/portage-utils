@@ -1,12 +1,12 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.3 2005/10/29 07:34:38 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.4 2005/10/29 09:28:46 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.3 2005/10/29 07:34:38 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.4 2005/10/29 09:28:46 solar Exp $
  */
 
 #include <stdio.h>
@@ -46,7 +46,6 @@ queue *add_set(char *vv, char *ss, queue *q)
 	v = xstrdup(vv);   
 	ptr = xmalloc(strlen(ss));
 	vptr = xmalloc(strlen(vv));
-
    
 	do {      
 		*ptr = 0;
@@ -70,7 +69,6 @@ queue *add_set(char *vv, char *ss, queue *q)
 			while (z->next != NULL)
 				z = z->next;
 			z->next = ll;
-      
 		}
 
 		*v = 0;

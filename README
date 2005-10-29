@@ -4,15 +4,9 @@ vapier@gentoo.org
 
 /* Add notes here */
 
-- relative qfile doesnt quite work:
-  $ cd /bin
-  $ qfile bash
-  app-shells/bash (/bin/bash)
-  app-shells/bash (/etc/bash)
+disable color when tty = NULL; may break less?
 
 - multiline reads don't yet work for quse/qsearch
-
-- quse needs a rewrite.
 
 - Speed is everything.
   Having your PORTDIR and VDB on the right file system helps dramatically
