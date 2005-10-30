@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.68 2005/10/30 00:48:51 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.69 2005/10/30 16:19:12 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -60,8 +60,12 @@ void cleanup(void);
 /* helper functions for showing errors */
 static const char *argv0;
 /* we need the space before the last comma or we trigger a bug in gcc-2 :( */
+#if defined OPTIMIZE_FOR_SIZE && (OPTIMIZE_FOR_SIZE > 1)
+#define warn(fmt, args...)
+#else
 #define warn(fmt, args...) \
 	fprintf(stderr, "%s%s%s: " fmt "\n", RED, argv0, NORM , ## args)
+#endif
 #define warnf(fmt, args...) warn("%s%s()%s: " fmt, YELLOW, __FUNCTION__, NORM , ## args)
 #define warnp(fmt, args...) warn(fmt ": %s" , ## args , strerror(errno))
 #define warnfp(fmt, args...) warnf(fmt ": %s" , ## args , strerror(errno))
@@ -98,7 +102,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.68 2005/10/30 00:48:51 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.69 2005/10/30 16:19:12 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
