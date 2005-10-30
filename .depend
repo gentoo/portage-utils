@@ -1,5 +1,5 @@
 main.o: main.c libq/libq.c libq/busybox.h libq/xmalloc.c libq/xstrdup.c \
   libq/xasprintf.c libq/hash_fd.c libq/md5_sha1_sum.c \
-  libq/human_readable.c libq/atom_explode.c applets.h q.c qcheck.c \
-  qdepends.c qfile.c qlist.c qlop.c qsearch.c qsize.c qtbz2.c quse.c \
-  qxpak.c qpkg.c
+  libq/human_readable.c libq/atom_explode.c libq/virtuals.c applets.h q.c \
+  qcheck.c qdepends.c qfile.c qlist.c qlop.c qsearch.c qsize.c qtbz2.c \
+  quse.c qxpak.c qpkg.c
