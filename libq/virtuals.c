@@ -1,13 +1,14 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.5 2005/10/29 23:19:12 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.6 2005/10/30 00:48:51 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.5 2005/10/29 23:19:12 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.6 2005/10/30 00:48:51 solar Exp $
  */
+
 
 #include <stdio.h>
 #include <unistd.h>
@@ -133,14 +134,14 @@ void free_sets(queue *list)
 	}
 }
 
-int virtual_exists(char *name, queue *list);
-int virtual_exists(char *name, queue *list)
+char *virtual(char *name, queue *list);
+char *virtual(char *name, queue *list)
 {
 	queue *ll;
 	for (ll = list; ll != NULL; ll = ll->next)
 		if ((strcmp(ll->name, name)) == 0)
-			return 0;
-	return 1;
+			return ll->item;
+	return NULL;
 }
 
 void print_sets(queue *list);
@@ -184,8 +185,13 @@ static queue *resolve_local_profile_virtuals() {
 static queue *resolve_virtuals();
 static queue *resolve_virtuals() {
 	static char buf[BUFSIZ];
+	static char savecwd[_POSIX_PATH_MAX];
 	static char *p;
 	FILE *fp;
+
+	memset(buf, 0, sizeof(buf));
+
+	getcwd(savecwd, sizeof(savecwd));
 
 	free_sets(virtuals);
 	virtuals = resolve_local_profile_virtuals();
@@ -193,7 +199,6 @@ static queue *resolve_virtuals() {
 	if ((chdir("/etc/")) == (-1))
 		return virtuals;
 
-	memset(buf, 0, sizeof(buf));
 
 	if ((readlink("make.profile", buf, sizeof(buf))) != (-1)) {
 		chdir(buf);
@@ -207,7 +212,7 @@ static queue *resolve_virtuals() {
 				for (p = buf ; *p != 0; ++p) if (isspace(*p)) *p = ' ';
 				if ((p = strchr(buf, ' ')) != NULL) {
 					*p = 0;
-					if ((virtual_exists(buf, virtuals)) != 0)
+					if (virtual(buf, virtuals) == NULL)
 						virtuals = add_set(buf, rmspace(++p), virtuals);
 				}
 			}
@@ -222,6 +227,7 @@ static queue *resolve_virtuals() {
 				fclose(fp);
 				if ((chdir(buf)) == (-1)) {
 					fclose(fp);
+					chdir(savecwd);
 					return virtuals;
 				}
 				goto vstart;
@@ -229,5 +235,6 @@ static queue *resolve_virtuals() {
 			fclose(fp);
 		}
 	}
+	chdir(savecwd);
 	return virtuals;
 }

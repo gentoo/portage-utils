@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.67 2005/10/29 09:26:41 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.68 2005/10/30 00:48:51 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,6 +35,7 @@ char *initialize_portdir(void);
 void initialize_ebuild_flat(void);
 void reinitialize_ebuild_flat(void);
 void reinitialize_as_needed(void);
+void cleanup(void);
 #define _q_unused_ __attribute__((__unused__))
 
 
@@ -97,7 +98,7 @@ void init_coredumps(void)
 
 
 /* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.67 2005/10/29 09:26:41 solar Exp $";
+static const char *rcsid = "$Id: main.c,v 1.68 2005/10/30 00:48:51 solar Exp $";
 
 static char color = 1;
 static char exact = 0;
@@ -738,6 +739,10 @@ void cache_free(portage_cache *cache)
 	free(cache);
 }
 
+void cleanup() {
+	free_sets(virtuals);
+}
+
 #include "q.c"
 #include "qcheck.c"
 #include "qdepends.c"
@@ -764,6 +769,7 @@ int main(int argc, char **argv)
 	portroot = (getenv("ROOT") ? : "/");
 	initialize_portdir();
 	atexit(reinitialize_as_needed);
+	atexit(cleanup);
 	optind = 0;
 	return q_main(argc, argv);
 }

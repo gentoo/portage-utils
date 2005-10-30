@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.21 2005/10/29 09:31:49 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.22 2005/10/30 00:48:51 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -314,6 +314,14 @@ void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos)
 	if (root->type == DEP_NULL) goto this_node_sucks;
 	if (root->type == DEP_NORM) {
 		size_t len = strlen(root->info);
+#if SPANKY
+		if (*root->info == 'v')
+			if (strncmp(root->info, "virtual/", 8) == 0) {
+				if (virtuals == NULL)
+					virtuals = resolve_virtuals();
+				IF_DEBUG(fprintf(stderr, "(%s->%s)", root->info, virtual(root->info, virtuals)));
+			}
+#endif
 		memcpy(buf + *pos, root->info, len);
 		*pos += len+1;
 		buf[*pos-1] = ' ';
@@ -343,10 +351,7 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv) {
 	char buf[_POSIX_PATH_MAX];
 	char depend[8192], use[8192];
 	dep_node *dep_tree;
-#if 0
-	virtuals = resolve_virtuals();
-	print_sets(virtuals);
-#endif
+
 	if (chdir(portroot))
 		errp("could not chdir(%s) for ROOT", portroot);
 
