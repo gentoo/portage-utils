@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.23 2005/10/21 13:26:14 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.24 2005/10/31 23:07:03 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -12,12 +12,13 @@
  quse -Ke --  nls
 */
 
-#define QUSE_FLAGS "eavKL" COMMON_FLAGS
+#define QUSE_FLAGS "eavKLD" COMMON_FLAGS
 static struct option const quse_long_opts[] = {
 	{"exact",     no_argument, NULL, 'e'},
 	{"all",       no_argument, NULL, 'a'},
 	{"keywords",  no_argument, NULL, 'K'},
-	{"licence",   no_argument, NULL, 'L'},
+	{"license",   no_argument, NULL, 'L'},
+	{"describe",  no_argument, NULL, 'D'},
 	/* {"format",     a_argument, NULL, 'F'}, */
 	COMMON_LONG_OPTS
 };
@@ -26,6 +27,7 @@ static const char *quse_opts_help[] = {
 	"Show annoying things in IUSE",
 	"Use the KEYWORDS vs IUSE",
 	"Use the LICENSE vs IUSE",
+	"Describe the USE flag",
 	/* "Use your own variable formats. -F NAME=", */
 	COMMON_OPTS_HELP
 };
@@ -65,6 +67,89 @@ static void print_highlighted_use_flags(char *str, int ind, int argc, char **arg
 	}
 }
 
+int quse_describe_flag(int argc, char **argv);
+int quse_describe_flag(int argc, char **argv)
+{
+	char buf[BUFSIZE], *p;
+	FILE *fp[3];
+	int i, f;
+	size_t s;
+
+	if ((chdir(portdir)) != 0)
+		errp("chdir to PORTDIR '%s' failed", portdir);
+
+	if ((fp[0] = fopen("profiles/use.desc", "r")) == NULL)
+		warnp("skipping use.desc");
+	if ((fp[1] = fopen("profiles/use.local.desc", "r")) == NULL)
+		warnp("skipping use.local.desc");
+	if ((fp[2] = fopen("profiles/arch.list", "r")) == NULL)
+		warnp("skipping arch.list");
+	if ((fp[3] = fopen("profiles/lang.desc", "r")) == NULL)
+		warnp("skipping lang.desc");
+
+	for (i=optind; i<argc; ++i) {
+		s = strlen(argv[i]);
+
+		for (f=0; f<=sizeof(fp)/sizeof(*fp); ++f) {
+			if (fp[f] == NULL)
+				continue;
+
+			while (fgets(buf, sizeof(buf), fp[f]) != NULL) {
+				if (buf[0] == '#' || buf[0] == '\n')
+					continue;
+
+				if ((p = strrchr(buf, '\n')) != NULL)
+					*p = '\0';
+
+				switch (f) {
+					case 0: /* Global use.desc */
+						if (!strncmp(buf, argv[i], s))
+							if (buf[s] == ' ' && buf[s+1] == '-') {
+								printf("%sglobal%s:%s%s%s: %s\n", BOLD, NORM, BLUE, argv[i], NORM, buf+s+3);
+								goto skip_file;
+							}
+						break;
+
+					case 1: /* Local use.local.desc */
+						if ((p = strchr(buf, ':')) == NULL)
+							break;
+						++p;
+						if (!strncmp(p, argv[i], s)) {
+							if (p[s] == ' ' && p[s+1] == '-') {
+								*p = '\0';
+								printf("%slocal%s:%s%s%s:%s%s%s %s\n", BOLD, NORM, BLUE, argv[i], NORM, BOLD, buf, NORM, p+s+3);
+							}
+						}
+						break;
+
+					case 2: /* Architectures arch.list */
+						if (!strcmp(buf, argv[i])) {
+							printf("%sarch%s:%s%s%s: %s architecture\n", BOLD, NORM, BLUE, argv[i], NORM, argv[i]);
+							goto skip_file;
+						}
+						break;
+
+					case 3: /* Languages lang.desc */
+						if (!strncmp(buf, argv[i], s))
+							if (buf[s] == ' ' && buf[s+1] == '-') {
+								printf("%slang%s:%s%s%s: %s lingua\n", BOLD, NORM, BLUE, argv[i], NORM, buf+s+3);
+								goto skip_file;
+							}
+						break;
+				}
+			}
+
+skip_file:
+			rewind(fp[f]);
+		}
+	}
+
+	for (f=0; f<=sizeof(fp)/sizeof(*fp); ++f)
+		fclose(fp[f]);
+
+	return 0;
+}
+
 int quse_main(int argc, char **argv)
 {
 	FILE *fp;
@@ -79,7 +164,7 @@ int quse_main(int argc, char **argv)
 	const char *search_var = NULL;
 	const char *search_vars[] = { "IUSE=", "KEYWORDS=", "LICENSE=", search_var };
 	short all = 0;
-	int regexp_matching = 1 , i, idx = 0;
+	int regexp_matching = 1, i, idx = 0;
 	size_t search_len;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -89,14 +174,18 @@ int quse_main(int argc, char **argv)
 		switch (i) {
 		case 'e': regexp_matching = 0; break;
 		case 'a': all = 1; break;
-		case 'K': idx = 1;  break;
+		case 'K': idx = 1; break;
 		case 'L': idx = 2; break;
+		case 'D': idx = -1; break;
 		/* case 'F': idx = 3, search_vars[idx] = xstrdup(optarg); break; */
 		COMMON_GETOPTS_CASES(quse)
 		}
 	}
-	if (argc == optind && !all)
+	if (argc == optind && !all && idx >= 0)
 		quse_usage(EXIT_FAILURE);
+
+	if (idx == -1)
+		return quse_describe_flag(argc, argv);
 
 	if (all) optind = argc;
 	initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
