@@ -1,24 +1,17 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.6 2005/10/30 00:48:51 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.7 2005/10/31 14:37:01 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.6 2005/10/30 00:48:51 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.7 2005/10/31 14:37:01 solar Exp $
  */
 
 
 #include <stdio.h>
 #include <unistd.h>
-
-#if 0
- <jstubbs> portage/{,profile/}virtuals should both behave the same now.
- <jstubbs> but it's /etc/portage/.../virtuals ; /var/db/pkg/*/*/PROVIDE ; /etc/make.profile stacking ; */
-#endif
-
-
 #include <stdlib.h>
 #include <string.h>
 
