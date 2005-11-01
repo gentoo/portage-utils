@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.26 2005/11/01 16:58:14 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.27 2005/11/01 19:08:39 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -201,11 +201,41 @@ int quse_main(int argc, char **argv)
 			*p = 0;
 		if ((newfp = fopen(ebuild, "r")) != NULL) {
 			unsigned int lineno = 0;
+			char revision[64];
+			char user[64];
+
+			revision[0] = 0;
+			user[0] = 0;
+
 			while ((fgets(buf0, sizeof(buf0), newfp)) != NULL) {
 				int ok = 0;
 				char warned = 0;
 				lineno++;
 
+				if (*buf0 == '#') {
+					if ((strncmp(buf0, "# $Header: /", 12)) == 0) {
+						if ((p = strrchr(buf0, ' ')) == NULL) continue;
+						*p = 0;
+						if ((p = strrchr(buf0, ' ')) == NULL) continue;
+						*p = 0;
+						if ((p = strchr(buf0, ' ')) == NULL) continue;
+						strcpy(buf0, p+1);
+						if ((p = strchr(buf0, ' ')) == NULL) continue;
+						strcpy(buf0, p+1);
+						if ((p = strchr(buf0, ' ')) == NULL) continue;
+						strcpy(buf0, p+1);
+						if ((p = strchr(buf0, ' ')) == NULL) continue;
+						*p = 0;
+						strncpy(revision, buf0, sizeof(revision));
+						strcpy(buf0, p+1);
+						if ((p = strchr(buf0, ' ')) == NULL) continue;
+						strcpy(buf0, p+1);
+						if ((p = strchr(buf0, ' ')) == NULL) continue;
+						strcpy(buf0, p+1);
+						strncpy(user, buf0, sizeof(user));
+					}
+					continue;
+				}
 				if ((strncmp(buf0, search_vars[idx], search_len)) != 0)
 					continue;
 
@@ -221,7 +251,6 @@ int quse_main(int argc, char **argv)
 						warn("# Line %d of %s has an annoying %s", lineno, ebuild, buf0);
 					}
 				}
-
 #ifdef THIS_SUCKS
 				if ((p = strrchr(&buf0[search_len+1], '\\')) != NULL) {
 
@@ -243,7 +272,7 @@ int quse_main(int argc, char **argv)
 				}
 #else
 				remove_extra_space(buf0);
-#endif	
+#endif
 				while ((p = strrchr(&buf0[search_len+1], '"')) != NULL)  *p = 0;
 				while ((p = strrchr(&buf0[search_len+1], '\'')) != NULL) *p = 0;
 				while ((p = strrchr(&buf0[search_len+1], '\\')) != NULL) *p = ' ';
@@ -297,6 +326,9 @@ int quse_main(int argc, char **argv)
 					}
 				}
 				if (ok) {
+					if (verbose > 3)
+						printf("%s %s ", user == NULL ? "0" : user , revision == NULL ? "0" : revision);
+
 					printf("%s%s%s ", CYAN, ebuild, NORM);
 					print_highlighted_use_flags(&buf0[search_len+1], optind, argc, argv);
 					puts(NORM);
