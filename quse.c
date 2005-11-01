@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.24 2005/10/31 23:07:03 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.25 2005/11/01 15:31:22 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -212,6 +212,7 @@ int quse_main(int argc, char **argv)
 					*p = 0;
 				if (verbose) {
 					if ((strchr(buf0, '\t') != NULL)
+					|| (strchr(buf0, '$') != NULL)
 					|| (strchr(buf0, '\\') != NULL)
 					|| (strchr(buf0, '\'') != NULL)
 					|| (strstr(buf0, "  ") != NULL))
