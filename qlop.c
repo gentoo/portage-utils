@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.18 2005/10/20 00:03:02 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.19 2005/11/01 21:58:04 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -86,8 +86,10 @@ unsigned long show_merge_times(char *pkg, const char *logfile, int average, char
 
 	DBG("Searching for %s in %s\n", pkg, logfile);
 
-	if ((fp = fopen(logfile, "r")) == NULL)
+	if ((fp = fopen(logfile, "r")) == NULL) {
+		warnp("Opening %s failed: %s\n", logfile, strerror(errno));
 		return 1;
+	}
 
 	while ((fgets(buf[0], sizeof(buf[0]), fp)) != NULL) {
 		if (strstr(buf[0], pkg) == NULL)
