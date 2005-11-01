@@ -1,12 +1,12 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.7 2005/10/31 14:37:01 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.8 2005/11/01 21:12:12 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.7 2005/10/31 14:37:01 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.8 2005/11/01 21:12:12 solar Exp $
  */
 
 
@@ -23,6 +23,9 @@ struct queue_t {
 };
 
 typedef struct queue_t queue;
+
+/* global */
+queue *virtuals = NULL;
 
 queue *del_set(char *s, queue *q, int *ok);
 queue *add_set(char *vv, char *ss, queue *q);
@@ -145,8 +148,7 @@ void print_sets(queue *list)
 		printf("%s -> %s\n", ll->name, ll->item);
 }
 
-
-queue *virtuals = NULL;
+extern queue *resolve_vdb_virtuals();
 
 static queue *resolve_local_profile_virtuals();
 static queue *resolve_local_profile_virtuals() {
@@ -188,6 +190,7 @@ static queue *resolve_virtuals() {
 
 	free_sets(virtuals);
 	virtuals = resolve_local_profile_virtuals();
+	virtuals = resolve_vdb_virtuals();
 
 	if ((chdir("/etc/")) == (-1))
 		return virtuals;
@@ -231,3 +234,4 @@ static queue *resolve_virtuals() {
 	chdir(savecwd);
 	return virtuals;
 }
+

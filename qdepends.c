@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.22 2005/10/30 00:48:51 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.23 2005/11/01 21:12:12 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -314,7 +314,7 @@ void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos)
 	if (root->type == DEP_NULL) goto this_node_sucks;
 	if (root->type == DEP_NORM) {
 		size_t len = strlen(root->info);
-#if SPANKY
+#if 1
 		if (*root->info == 'v')
 			if (strncmp(root->info, "virtual/", 8) == 0) {
 				if (virtuals == NULL)

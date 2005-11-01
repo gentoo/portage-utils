@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.27 2005/11/01 19:08:39 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.28 2005/11/01 21:12:12 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -327,7 +327,7 @@ int quse_main(int argc, char **argv)
 				}
 				if (ok) {
 					if (verbose > 3)
-						printf("%s %s ", user == NULL ? "0" : user , revision == NULL ? "0" : revision);
+						printf("%s %s ", *user ? user : "MISSING", *revision ? revision : "MISSING");
 
 					printf("%s%s%s ", CYAN, ebuild, NORM);
 					print_highlighted_use_flags(&buf0[search_len+1], optind, argc, argv);
