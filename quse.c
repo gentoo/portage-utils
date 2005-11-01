@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.25 2005/11/01 15:31:22 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.26 2005/11/01 16:58:14 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -203,6 +203,7 @@ int quse_main(int argc, char **argv)
 			unsigned int lineno = 0;
 			while ((fgets(buf0, sizeof(buf0), newfp)) != NULL) {
 				int ok = 0;
+				char warned = 0;
 				lineno++;
 
 				if ((strncmp(buf0, search_vars[idx], search_len)) != 0)
@@ -210,14 +211,17 @@ int quse_main(int argc, char **argv)
 
 				if ((p = strchr(buf0, '\n')) != NULL)
 					*p = 0;
-				if (verbose) {
+				if (verbose > 1) {
 					if ((strchr(buf0, '\t') != NULL)
 					|| (strchr(buf0, '$') != NULL)
 					|| (strchr(buf0, '\\') != NULL)
 					|| (strchr(buf0, '\'') != NULL)
-					|| (strstr(buf0, "  ") != NULL))
-					warn("# Line %d of %s has an annoying %s", lineno, ebuild, buf0);
+					|| (strstr(buf0, "  ") != NULL)) {
+						warned = 1;
+						warn("# Line %d of %s has an annoying %s", lineno, ebuild, buf0);
+					}
 				}
+
 #ifdef THIS_SUCKS
 				if ((p = strrchr(&buf0[search_len+1], '\\')) != NULL) {
 
@@ -243,6 +247,13 @@ int quse_main(int argc, char **argv)
 				while ((p = strrchr(&buf0[search_len+1], '"')) != NULL)  *p = 0;
 				while ((p = strrchr(&buf0[search_len+1], '\'')) != NULL) *p = 0;
 				while ((p = strrchr(&buf0[search_len+1], '\\')) != NULL) *p = ' ';
+
+				if (verbose && warned == 0) {
+					if ((strchr(buf0, '$') != NULL) || (strchr(buf0, '\\') != NULL)) {
+						warned=1;
+						warn("# Line %d of %s has an annoying %s", lineno, ebuild, buf0);
+					}
+				}
 
 				if ((size_t)strlen(buf0) < (size_t)(search_len+1)) {
 					// warnf("err '%s'/%lu <= %lu; line %d\n", buf0, (unsigned long)strlen(buf0), (unsigned long)(search_len+1), lineno);
