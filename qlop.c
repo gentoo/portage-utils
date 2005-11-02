@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.19 2005/11/01 21:58:04 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.20 2005/11/02 04:21:00 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -87,7 +87,7 @@ unsigned long show_merge_times(char *pkg, const char *logfile, int average, char
 	DBG("Searching for %s in %s\n", pkg, logfile);
 
 	if ((fp = fopen(logfile, "r")) == NULL) {
-		warnp("Opening %s failed: %s\n", logfile, strerror(errno));
+		warnp("Could not open logfile '%s'", logfile);
 		return 1;
 	}
 
@@ -169,8 +169,10 @@ void show_emerge_history(char listflag, int argc, char **argv, const char *logfi
 	int i;
 	time_t t;
 
-	if ((fp = fopen(logfile, "r")) == NULL)
+	if ((fp = fopen(logfile, "r")) == NULL) {
+		warnp("Could not open logfile '%s'", logfile);
 		return;
+	}
 
 	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 		if (strlen(buf) < 30)
@@ -221,8 +223,10 @@ void show_sync_history(const char *logfile)
 	char *p, *q;
 	time_t t;
 
-	if ((fp = fopen(logfile, "r")) == NULL)
+	if ((fp = fopen(logfile, "r")) == NULL) {
+		warnp("Could not open logfile '%s'", logfile);
 		return;
+	}
 
 	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 		if (strlen(buf) < 35)
