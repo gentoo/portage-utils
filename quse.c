@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.28 2005/11/01 21:12:12 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.29 2005/11/02 00:30:09 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -241,12 +241,18 @@ int quse_main(int argc, char **argv)
 
 				if ((p = strchr(buf0, '\n')) != NULL)
 					*p = 0;
+				if ((p = strchr(buf0, '#')) != NULL) {
+					if (buf0 != p && p[-1] == ' ')
+						p[-1] = 0;
+					else
+						*p = 0;
+				}
 				if (verbose > 1) {
 					if ((strchr(buf0, '\t') != NULL)
-					|| (strchr(buf0, '$') != NULL)
-					|| (strchr(buf0, '\\') != NULL)
-					|| (strchr(buf0, '\'') != NULL)
-					|| (strstr(buf0, "  ") != NULL)) {
+					    || (strchr(buf0, '$') != NULL)
+					    || (strchr(buf0, '\\') != NULL)
+					    || (strchr(buf0, '\'') != NULL)
+					    || (strstr(buf0, "  ") != NULL)) {
 						warned = 1;
 						warn("# Line %d of %s has an annoying %s", lineno, ebuild, buf0);
 					}
