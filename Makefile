@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.25 2005/08/19 03:47:01 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.26 2005/11/02 02:20:59 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -31,6 +31,7 @@ WFLAGS    := -Wall -Wunused -Wimplicit -Wshadow -Wformat=2 \
              $(call check-gcc, -Wextra)
 
 CFLAGS    ?= -O2 -pipe
+CFLAGS    += -funsigned-char
 #CFLAGS   += -DEBUG -g
 #CFLAGS   += -DOPTIMIZE_FOR_SIZE
 #LDFLAGS  := -pie
@@ -66,6 +67,9 @@ endif
 depend:
 	#$(CC) $(CFLAGS) -MM $(SRC) > .depend
 	$(CC) $(CFLAGS) -MM main.c > .depend
+
+check:
+	$(MAKE) -C tests $@
 
 clean:
 	-rm -f q
