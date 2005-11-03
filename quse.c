@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.29 2005/11/02 00:30:09 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.30 2005/11/03 05:53:14 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -309,8 +309,15 @@ int quse_main(int argc, char **argv)
 					} else {
 						remove_extra_space(buf0);
 						assert(buf0 != NULL);
-						strcpy(buf1, buf0);
-						while ((p = strchr(buf1, ' ')) != NULL) {
+						strcpy(buf1, &buf0[search_len+1]);
+
+						for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
+							if (strcmp(buf1, argv[i]) == 0) {
+								ok = 1;
+								break;
+							}
+						}
+						if (ok == 0) while ((p = strchr(buf1, ' ')) != NULL) {
 							*p = 0;
 							for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
 								if (strcmp(buf1, argv[i]) == 0) {
@@ -327,8 +334,6 @@ int quse_main(int argc, char **argv)
 									}
 								}
 						}
-						
-						
 					}
 				}
 				if (ok) {
