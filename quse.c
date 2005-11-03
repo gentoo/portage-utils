@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.30 2005/11/03 05:53:14 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.31 2005/11/03 06:29:58 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -201,8 +201,8 @@ int quse_main(int argc, char **argv)
 			*p = 0;
 		if ((newfp = fopen(ebuild, "r")) != NULL) {
 			unsigned int lineno = 0;
-			char revision[64];
-			char user[64];
+			char revision[sizeof(buf0)];
+			char user[sizeof(buf0)];
 
 			revision[0] = 0;
 			user[0] = 0;
@@ -213,27 +213,8 @@ int quse_main(int argc, char **argv)
 				lineno++;
 
 				if (*buf0 == '#') {
-					if ((strncmp(buf0, "# $Header: /", 12)) == 0) {
-						if ((p = strrchr(buf0, ' ')) == NULL) continue;
-						*p = 0;
-						if ((p = strrchr(buf0, ' ')) == NULL) continue;
-						*p = 0;
-						if ((p = strchr(buf0, ' ')) == NULL) continue;
-						strcpy(buf0, p+1);
-						if ((p = strchr(buf0, ' ')) == NULL) continue;
-						strcpy(buf0, p+1);
-						if ((p = strchr(buf0, ' ')) == NULL) continue;
-						strcpy(buf0, p+1);
-						if ((p = strchr(buf0, ' ')) == NULL) continue;
-						*p = 0;
-						strncpy(revision, buf0, sizeof(revision));
-						strcpy(buf0, p+1);
-						if ((p = strchr(buf0, ' ')) == NULL) continue;
-						strcpy(buf0, p+1);
-						if ((p = strchr(buf0, ' ')) == NULL) continue;
-						strcpy(buf0, p+1);
-						strncpy(user, buf0, sizeof(user));
-					}
+					if ((strncmp(buf0, "# $Header: /", 12)) == 0)
+						sscanf(buf0, "%*s %*s %*s %s %*s %*s %s %*s %*s", (char *) &revision, (char *) &user);
 					continue;
 				}
 				if ((strncmp(buf0, search_vars[idx], search_len)) != 0)
