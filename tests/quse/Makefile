@@ -6,4 +6,4 @@ test check:
 	touch q
 
 clean:
-	rm -f q
+	rm -f q PORTDIR-* *.squashfs

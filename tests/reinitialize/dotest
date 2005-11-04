@@ -1,0 +1,5 @@
+if ../../q -Cr ; then
+	echo PASSED
+else
+	echo FAILED
+fi

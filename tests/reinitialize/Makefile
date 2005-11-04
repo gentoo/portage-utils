@@ -1,9 +1,8 @@
 all q:
-	touch q
+	@touch q
 
 test check:
 	./dotest
-	touch q
 
 clean:
 	rm -f q

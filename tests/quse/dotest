@@ -1,0 +1,25 @@
+#!/bin/sh
+
+###### faster test needed.########
+exit 0
+##################################
+type -p mksquashfs || exit 0
+
+export PORTDIR=$(portageq envvar PORTDIR) ;
+
+arches="x86 amd64 ppc"
+
+for arch in $arches; do
+	mkdir -p PORTDIR-${arch}
+	cd PORTDIR-${arch} || exit 1
+	[[ ! -e arch.${arch} ]] && quse -CKe ${arch} > arch.${arch} ;
+	awk '{print $1}' < arch.${arch} | cut -d / -f 1-2 | uniq | while read cpn ; do mkdir -p $cpn ; done ; 
+	for ebuild in $(awk '{print $1}' < arch.${arch}) ; do cp $PORTDIR/$ebuild ./$ebuild; done ;
+	quse -CKe ${arch} | awk '{print $1}' | cut -d / -f 1-2 | uniq | while read cpn ; do cp -a $PORTDIR/$cpn/files ./$cpn/; done ;
+	cp -a $PORTDIR/{eclass,profiles,licences} . ; sync ; 
+	find . -type d -name CVS | while read foo; do rm $foo/* ; sync ; rmdir $foo ; done ;
+	mksquashfs ./ ../PORTDIR-${arch}.squashfs -noappend -e arch.${arch} ; 
+	rm -rf *-*
+	cd -
+done
+ls -lh PORTDIR-*.squashfs
