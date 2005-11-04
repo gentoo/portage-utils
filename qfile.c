@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.17 2005/10/29 06:10:01 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.18 2005/11/04 03:06:43 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -88,7 +88,7 @@ void qfile(char *path, char *fullname)
 			printf("%s%s/%s%s%s", BOLD, atom->CATEGORY, BLUE,
 				(exact ? dentry->d_name : atom->PN), NORM);
 
-			if (qfile_quiet == 1)
+			if (qfile_quiet)
 				puts("");
 			else
 				printf(" (%s)\n", p);
@@ -118,7 +118,7 @@ int qfile_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QFILE, qfile, "")) != -1) {
 		switch (i) {
 			COMMON_GETOPTS_CASES(qfile)
-			case 'q': qfile_quiet = 1; break;
+			case 'q': qfile_quiet += 1; break;
 			case 'e': exact = 1; break;
 		}
 	}

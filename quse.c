@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.31 2005/11/03 06:29:58 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.32 2005/11/04 03:06:43 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -202,11 +202,12 @@ int quse_main(int argc, char **argv)
 		if ((newfp = fopen(ebuild, "r")) != NULL) {
 			unsigned int lineno = 0;
 			char revision[sizeof(buf0)];
+			char date[sizeof(buf0)];
 			char user[sizeof(buf0)];
 
 			revision[0] = 0;
 			user[0] = 0;
-
+			date[0] = 0;
 			while ((fgets(buf0, sizeof(buf0), newfp)) != NULL) {
 				int ok = 0;
 				char warned = 0;
@@ -214,7 +215,7 @@ int quse_main(int argc, char **argv)
 
 				if (*buf0 == '#') {
 					if ((strncmp(buf0, "# $Header: /", 12)) == 0)
-						sscanf(buf0, "%*s %*s %*s %s %*s %*s %s %*s %*s", (char *) &revision, (char *) &user);
+						sscanf(buf0, "%*s %*s %*s %s %s %*s %s %*s %*s", (char *) &revision, (char *) &date, (char *) &user);
 					continue;
 				}
 				if ((strncmp(buf0, search_vars[idx], search_len)) != 0)
@@ -319,7 +320,7 @@ int quse_main(int argc, char **argv)
 				}
 				if (ok) {
 					if (verbose > 3)
-						printf("%s %s ", *user ? user : "MISSING", *revision ? revision : "MISSING");
+						printf("%s %s %s ", *user ? user : "MISSING", *revision ? revision : "MISSING", *date ? date : "MISSING");
 
 					printf("%s%s%s ", CYAN, ebuild, NORM);
 					print_highlighted_use_flags(&buf0[search_len+1], optind, argc, argv);
