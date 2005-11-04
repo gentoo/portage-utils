@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.20 2005/10/29 23:19:12 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.21 2005/11/04 18:56:07 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -192,11 +192,19 @@ int qlist_main(int argc, char **argv)
 	}
 
 	if (dups_only) {
+		char last[126];
 		queue *ll, *dups = filter_dups(sets);
+		last[0] = 0;
+
 		for (ll = dups; ll != NULL; ll = ll->next) {
+			int ok = 1;
 			atom = atom_explode(ll->item);
-			printf("%s%s/%s%s%s\n", BOLD, atom->CATEGORY, BLUE,
-				(verbose ? atom->P : atom->PN), NORM);
+			if (strcmp(last, atom->PN) == 0)
+				if (!verbose)
+					ok = 0;
+			strncpy(last, atom->PN, sizeof(last));
+			if (ok)	printf("%s%s/%s%s%s\n", BOLD, atom->CATEGORY, BLUE,
+					(verbose ? atom->P : atom->PN), NORM);
 			atom_implode(atom);
 		}
 		free_sets(dups);
