@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.27 2005/11/04 04:16:13 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.28 2005/11/04 23:26:13 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -23,7 +23,7 @@ check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; 
 
 ####################################################
 WFLAGS    := -Wall -Wunused -Wimplicit -Wshadow -Wformat=2 \
-             -Wmissing-declarations -Wmissing-prototypes -Wwrite-strings \
+             -Wmissing-declarations -Wno-missing-prototypes -Wwrite-strings \
              -Wbad-function-cast -Wnested-externs -Wcomment -Winline \
              -Wchar-subscripts -Wcast-align -Wno-format-nonliteral \
              $(call check_gcc, -Wdeclaration-after-statement) \
