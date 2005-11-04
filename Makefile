@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.26 2005/11/02 02:20:59 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.27 2005/11/04 04:16:13 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -68,15 +68,17 @@ depend:
 	#$(CC) $(CFLAGS) -MM $(SRC) > .depend
 	$(CC) $(CFLAGS) -MM main.c > .depend
 
-check:
+check: symlinks
 	$(MAKE) -C tests $@
 
 clean:
 	-rm -f q
 
-distclean: clean depend
+distclean: clean testclean depend
 	-rm -f *~ core
 	-rm -f `find . -type l`
+testclean:
+	cd tests && $(MAKE) clean
 
 install: all
 	-$(MKDIR) $(PREFIX)/bin/ $(PREFIX)/share/man/man1/

@@ -16,9 +16,9 @@ ver="$1"
 bn="$(basename $(pwd))-${ver}"
 [[ -d "${bn}" ]] && rm -r "${bn}"
 mkdir "${bn}" || exit 1
-cp -r Makefile README *.[ch] man libq "${bn}/" || exit 1
+cp -r Makefile README *.[ch] man libq tests "${bn}/" || exit 1
 ls q?*.c | sed -e 's:\.c$::' > "${bn}"/applet-list
-rm -rf "${bn}"/{man,libq}/CVS
+find "${bn}" -type d -name CVS -exec rm -rf '{}' \;
 tar -jcvvf "${bn}".tar.bz2 ${bn} || exit 1
 rm -r "${bn}" || exit 1
 du -b "${bn}".tar.bz2
