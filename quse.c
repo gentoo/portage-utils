@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.32 2005/11/04 03:06:43 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.33 2005/11/05 17:45:55 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -71,21 +71,16 @@ int quse_describe_flag(int argc, char **argv);
 int quse_describe_flag(int argc, char **argv)
 {
 	char buf[BUFSIZE], *p;
-	FILE *fp[3];
 	int i, f;
 	size_t s;
+	const char *search_files[] = { "use.desc", "use.local.desc", "arch.list", "lang.desc" };
+	FILE *fp[3];
 
-	if ((chdir(portdir)) != 0)
-		errp("chdir to PORTDIR '%s' failed", portdir);
-
-	if ((fp[0] = fopen("profiles/use.desc", "r")) == NULL)
-		warnp("skipping use.desc");
-	if ((fp[1] = fopen("profiles/use.local.desc", "r")) == NULL)
-		warnp("skipping use.local.desc");
-	if ((fp[2] = fopen("profiles/arch.list", "r")) == NULL)
-		warnp("skipping arch.list");
-	if ((fp[3] = fopen("profiles/lang.desc", "r")) == NULL)
-		warnp("skipping lang.desc");
+	for ( i = 0; i < sizeof(search_files[0]); i++) {
+		snprintf(buf, sizeof(buf), "%s/profiles/%s", portdir, search_files[i]);
+		if ((fp[i] = fopen(buf, "r")) == NULL)
+			warnp("skipping %s", search_files[i]);
+	}
 
 	for (i=optind; i<argc; ++i) {
 		s = strlen(argv[i]);
