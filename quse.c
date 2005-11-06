@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.33 2005/11/05 17:45:55 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.34 2005/11/06 18:07:17 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -33,23 +33,26 @@ static const char *quse_opts_help[] = {
 };
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, APPLET_QUSE)
 
-static void print_highlighted_use_flags(char *str, int ind, int argc, char **argv) {
-	char *p;
-	size_t pos, len;
+int quse_describe_flag(int ind, int argc, char **argv);
 
+static void print_highlighted_use_flags(char *string, int ind, int argc, char **argv) {
+	char *str, *p;
+	char buf[BUFSIZ];
+	size_t pos, len;
 	short highlight = 0;
 	int i;
+
+	strncpy(buf, string, sizeof(buf));
+	str = buf;
+	remove_extra_space(str);
+	rmspace(str);
 
 	if (!color) {
 		printf("%s", str);
 		return;
 	}
 
-	remove_extra_space(str);
-	rmspace(str);
-
 	len = strlen(str);
-
 	for (pos = 0; pos < len; pos++) {
 		highlight = 0;
 		if ((p = strchr(str, ' ')) != NULL)
@@ -66,9 +69,37 @@ static void print_highlighted_use_flags(char *str, int ind, int argc, char **arg
 			str = p + 1;
 	}
 }
+#if 0
+void makeargv(char *string, int *argc, char ***argv);
+void makeargv(char *string, int *argc, char ***argv) {
+	int curc = 2;
+	char *q, *p, *str;        
+	(*argv) = (char **) malloc(sizeof(char **) * curc);
 
-int quse_describe_flag(int argc, char **argv);
-int quse_describe_flag(int argc, char **argv)
+	*argc = 1;        
+	(*argv)[0] = xstrdup(argv0);
+	q = xstrdup(string);        
+	str = q;
+
+	remove_extra_space(str);        
+	rmspace(str);
+
+	while (str) {
+		if ((p = strchr(str, ' ')) != NULL)
+			*(p++) = '\0';
+
+                if (*argc == curc) {
+			curc *= 2;
+			(*argv) = (char **) realloc(*argv, sizeof(char **) * curc);
+                }
+                (*argv)[*argc] = xstrdup(str);
+                (*argc)++;
+                str = p;
+        }
+	free(q);
+}
+#endif
+int quse_describe_flag(int ind, int argc, char **argv)
 {
 	char buf[BUFSIZE], *p;
 	int i, f;
@@ -82,7 +113,7 @@ int quse_describe_flag(int argc, char **argv)
 			warnp("skipping %s", search_files[i]);
 	}
 
-	for (i=optind; i<argc; ++i) {
+	for (i = ind; i < argc; i++) {
 		s = strlen(argv[i]);
 
 		for (f=0; f<=sizeof(fp)/sizeof(*fp); ++f) {
@@ -100,7 +131,7 @@ int quse_describe_flag(int argc, char **argv)
 					case 0: /* Global use.desc */
 						if (!strncmp(buf, argv[i], s))
 							if (buf[s] == ' ' && buf[s+1] == '-') {
-								printf("%sglobal%s:%s%s%s: %s\n", BOLD, NORM, BLUE, argv[i], NORM, buf+s+3);
+								printf(" %sglobal%s:%s%s%s: %s\n", BOLD, NORM, BLUE, argv[i], NORM, buf+s+3);
 								goto skip_file;
 							}
 						break;
@@ -112,14 +143,14 @@ int quse_describe_flag(int argc, char **argv)
 						if (!strncmp(p, argv[i], s)) {
 							if (p[s] == ' ' && p[s+1] == '-') {
 								*p = '\0';
-								printf("%slocal%s:%s%s%s:%s%s%s %s\n", BOLD, NORM, BLUE, argv[i], NORM, BOLD, buf, NORM, p+s+3);
+								printf(" %slocal%s:%s%s%s:%s%s%s %s\n", BOLD, NORM, BLUE, argv[i], NORM, BOLD, buf, NORM, p+s+3);
 							}
 						}
 						break;
 
 					case 2: /* Architectures arch.list */
 						if (!strcmp(buf, argv[i])) {
-							printf("%sarch%s:%s%s%s: %s architecture\n", BOLD, NORM, BLUE, argv[i], NORM, argv[i]);
+							printf(" %sarch%s:%s%s%s: %s architecture\n", BOLD, NORM, BLUE, argv[i], NORM, argv[i]);
 							goto skip_file;
 						}
 						break;
@@ -127,7 +158,7 @@ int quse_describe_flag(int argc, char **argv)
 					case 3: /* Languages lang.desc */
 						if (!strncmp(buf, argv[i], s))
 							if (buf[s] == ' ' && buf[s+1] == '-') {
-								printf("%slang%s:%s%s%s: %s lingua\n", BOLD, NORM, BLUE, argv[i], NORM, buf+s+3);
+								printf(" %slang%s:%s%s%s: %s lingua\n", BOLD, NORM, BLUE, argv[i], NORM, buf+s+3);
 								goto skip_file;
 							}
 						break;
@@ -180,7 +211,7 @@ int quse_main(int argc, char **argv)
 		quse_usage(EXIT_FAILURE);
 
 	if (idx == -1)
-		return quse_describe_flag(argc, argv);
+		return quse_describe_flag(optind, argc, argv);
 
 	if (all) optind = argc;
 	initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
@@ -320,6 +351,17 @@ int quse_main(int argc, char **argv)
 					printf("%s%s%s ", CYAN, ebuild, NORM);
 					print_highlighted_use_flags(&buf0[search_len+1], optind, argc, argv);
 					puts(NORM);
+					if (verbose > 1) {
+						char **ARGV = NULL;
+						int ARGC = 0;
+						makeargv(&buf0[search_len+1], &ARGC, &ARGV);
+						if (ARGC > 0) {
+							quse_describe_flag(1, ARGC, ARGV);
+							for (i = 0; i < ARGC; i++)
+								free(ARGV[i]);
+							free(ARGV);
+						}
+					}
 				}
 				break;
 			}

@@ -1,17 +1,4 @@
-#Usage: help2man [OPTION]... EXECUTABLE
-#
-# -n, --name=STRING       description for the NAME paragraph
-# -s, --section=SECTION   section number for manual page (1, 6, 8)
-# -m, --manual=TEXT       name of manual (User Commands, ...)
-# -S, --source=TEXT       source of program (FSF, Debian, ...)
-# -i, --include=FILE      include material from `FILE'
-# -I, --opt-include=FILE  include material from `FILE' if it exists
-# -o, --output=FILE       send output to `FILE'
-# -p, --info-page=TEXT    name of Texinfo manual
-# -N, --no-info           suppress pointer to Texinfo manual
-#     --help              print this help, then exit
-#     --version           print version number, then exit
-
+#!/bin/sh
 export NOCOLOR=1
 
 APPLETS=$(../q | grep -e ' : ' | awk '{print $1}' | grep ^q)

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.70 2005/11/01 21:12:12 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.71 2005/11/06 18:07:17 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -36,6 +36,22 @@ void initialize_ebuild_flat(void);
 void reinitialize_ebuild_flat(void);
 void reinitialize_as_needed(void);
 void cleanup(void);
+
+
+/* variables to control runtime behavior */
+static const char *rcsid = "$Id: main.c,v 1.71 2005/11/06 18:07:17 solar Exp $";
+
+static char color = 1;
+static char exact = 0;
+static int found = 0;
+static int verbose = 0;
+static char reinitialize = 0;
+
+static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
+static char portvdb[] = "var/db/pkg";
+static char portcachedir[] = "metadata/cache";
+static const char *portroot;
+
 #define _q_unused_ __attribute__((__unused__))
 
 
@@ -101,21 +117,6 @@ void init_coredumps(void)
 
 
 
-/* variables to control runtime behavior */
-static const char *rcsid = "$Id: main.c,v 1.70 2005/11/01 21:12:12 solar Exp $";
-
-static char color = 1;
-static char exact = 0;
-static int found = 0;
-static int verbose = 0;
-static char reinitialize = 0;
-
-static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
-static char portvdb[] = "var/db/pkg";
-static char portcachedir[] = "metadata/cache";
-static const char *portroot;
-
-
 /* include common library code */
 #include "libq/libq.c"
 
@@ -123,22 +124,25 @@ static const char *portroot;
 #include "applets.h"
 
 /* Common usage for all applets */
-#define COMMON_FLAGS "vChV"
+#define COMMON_FLAGS "vQChV"
 #define a_argument required_argument
 #define COMMON_LONG_OPTS \
 	{"verbose",   no_argument, NULL, 'v'}, \
+	{"quiet",     no_argument, NULL, 'Q'}, \
 	{"nocolor",   no_argument, NULL, 'C'}, \
 	{"help",      no_argument, NULL, 'h'}, \
 	{"version",   no_argument, NULL, 'V'}, \
 	{NULL,        no_argument, NULL, 0x0}
 #define COMMON_OPTS_HELP \
 	"Make a lot of noise", \
+	"Suppress warnings and errors", \
 	"Don't output color", \
 	"Print this help and exit", \
 	"Print version and exit", \
 	NULL
 #define COMMON_GETOPTS_CASES(applet) \
 	case 'v': ++verbose; break; \
+	case 'Q': stderr = freopen("/dev/null", "w", stderr); ; break; \
 	case 'V': version_barf(); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': color = 0; break; \
@@ -280,6 +284,35 @@ static char *remove_extra_space(char *str)
 	strcpy(str, buf);
 	free(buf);
 	return str;
+}
+
+void makeargv(char *string, int *argc, char ***argv);
+void makeargv(char *string, int *argc, char ***argv) {
+	int curc = 2;
+	char *q, *p, *str;        
+	(*argv) = (char **) malloc(sizeof(char **) * curc);
+
+	*argc = 1;        
+	(*argv)[0] = xstrdup(argv0);
+	q = xstrdup(string);        
+	str = q;
+
+	remove_extra_space(str);        
+	rmspace(str);
+
+	while (str) {
+		if ((p = strchr(str, ' ')) != NULL)
+			*(p++) = '\0';
+
+                if (*argc == curc) {
+			curc *= 2;
+			(*argv) = (char **) realloc(*argv, sizeof(char **) * curc);
+                }
+                (*argv)[*argc] = xstrdup(str);
+                (*argc)++;
+                str = p;
+        }
+	free(q);
 }
 
 /* helper func for scanning the vdb */
@@ -755,6 +788,7 @@ void cache_free(portage_cache *cache)
 #include "quse.c"
 #include "qxpak.c"
 #include "qpkg.c"
+#include "qgrep.c"
 
 queue *resolve_vdb_virtuals();
 queue *resolve_vdb_virtuals() {
@@ -837,3 +871,4 @@ int main(int argc, char **argv)
 	optind = 0;
 	return q_main(argc, argv);
 }
+
