@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/template.c,v 1.2 2005/09/24 01:56:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/template.c,v 1.3 2005/11/06 18:35:50 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -14,8 +14,9 @@ static struct option const qtemp_long_opts[] = {
 static const char *qtemp_opts_help[] = {
 	COMMON_OPTS_HELP
 };
-#define qtemp_usage(ret) usage(ret, QTEMP_FLAGS, qtemp_long_opts, qtemp_opts_help, APPLET_QTEMP)
 
+#define QTEMP_RCSID "$Id: template.c,v 1.3 2005/11/06 18:35:50 solar Exp $"
+#define qtemp_usage(ret) usage(ret, QTEMP_FLAGS, qtemp_long_opts, qtemp_opts_help, APPLET_QTEMP)
 
 
 int qtemp_main(int argc, char **argv)
