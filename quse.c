@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.34 2005/11/06 18:07:17 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.35 2005/11/06 19:14:41 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -31,6 +31,7 @@ static const char *quse_opts_help[] = {
 	/* "Use your own variable formats. -F NAME=", */
 	COMMON_OPTS_HELP
 };
+static char quse_rcsid[] = "$Id: quse.c,v 1.35 2005/11/06 19:14:41 solar Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, APPLET_QUSE)
 
 int quse_describe_flag(int ind, int argc, char **argv);

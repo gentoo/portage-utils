@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.19 2005/09/24 01:56:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.20 2005/11/06 19:14:41 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -18,8 +18,8 @@ static const char *q_opts_help[] = {
 	"Reinitialize ebuild cache",
 	COMMON_OPTS_HELP
 };
+static char q_rcsid[] = "$Id: q.c,v 1.20 2005/11/06 19:14:41 solar Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, APPLET_Q)
-
 
 
 APPLET lookup_applet(char *applet);

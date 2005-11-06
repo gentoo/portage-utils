@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.5 2005/09/24 01:56:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.6 2005/11/06 19:14:41 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -44,6 +44,7 @@ static const char *qtbz2_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
+static char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.6 2005/11/06 19:14:41 solar Exp $";
 #define qtbz2_usage(ret) usage(ret, QTBZ2_FLAGS, qtbz2_long_opts, qtbz2_opts_help, APPLET_QTBZ2)
 
 

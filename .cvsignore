@@ -1,3 +1,5 @@
 .cvsignore
 q
 *bz2
+*.patch
+*.diff
