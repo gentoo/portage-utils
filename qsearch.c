@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.20 2005/11/06 19:14:41 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.21 2005/11/10 04:34:35 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,7 +26,7 @@ static const char *qsearch_opts_help[] = {
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-static char qsearch_rcsid[] = "$Id: qsearch.c,v 1.20 2005/11/06 19:14:41 solar Exp $";
+static char qsearch_rcsid[] = "$Id: qsearch.c,v 1.21 2005/11/10 04:34:35 solar Exp $";
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, APPLET_QSEARCH)
 
 
@@ -36,6 +36,8 @@ int qsearch_main(int argc, char **argv)
 	char buf[_POSIX_PATH_MAX];
 	char ebuild[_POSIX_PATH_MAX];
 	char last[126] = "";
+	char dp[126] = "";
+	char bp[126] = "";
 	char *p, *q, *str;
 	char *search_me = NULL;
 	char show_homepage = 0, show_name_only = 0;
@@ -126,8 +128,12 @@ int qsearch_main(int argc, char **argv)
 							q = buf + search_len + 1;
 							if (!search_all && !search_name && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
 								break;
+							// hppa/arm dirname(),basename() eats the ptr so we need to copy the variables before 
+							// doing operations with them.
+							strncpy(dp, p, sizeof(dp));
+							strncpy(bp, p, sizeof(bp));
 							printf("%s%s/%s%s%s %s\n", 
-								BOLD, dirname(p), BLUE, basename(p), NORM,
+								BOLD, dirname(dp), BLUE, basename(bp), NORM,
 								(show_name_only ? "" : q));
 							break;
 						}
