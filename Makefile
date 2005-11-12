@@ -1,6 +1,6 @@
 # Copyright 2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.29 2005/11/06 18:07:17 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.30 2005/11/12 15:56:43 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -33,7 +33,7 @@ WFLAGS    := -Wall -Wunused -Wimplicit -Wshadow -Wformat=2 \
 CFLAGS    ?= -O2 -pipe
 CFLAGS    += -funsigned-char
 #CFLAGS   += -DEBUG -g
-#CFLAGS   += -DOPTIMIZE_FOR_SIZE
+#CFLAGS   += -Os -s -DOPTIMIZE_FOR_SIZE=2
 #LDFLAGS  := -pie
 DESTDIR    =
 PREFIX    := $(DESTDIR)/usr

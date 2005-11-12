@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.72 2005/11/06 19:14:41 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.73 2005/11/12 15:56:43 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,7 +39,6 @@ void cleanup(void);
 
 
 /* variables to control runtime behavior */
-static char color = 1;
 static char exact = 0;
 static int found = 0;
 static int verbose = 0;
@@ -53,23 +52,23 @@ static const char *portroot;
 #define _q_unused_ __attribute__((__unused__))
 
 
-#ifdef OPTIMIZE_FOR_SIZE
-# define COLOR(c,b) ""
-#else
-# define COLOR(c,b) (color ? "\e[" c ";" b "m" : "")
-#endif
-
 /* color constants */
-#define BOLD      COLOR("00", "01")
-#define NORM      COLOR("00", "00")
-#define BLUE      COLOR("36", "01")
-#define DKBLUE    COLOR("34", "01")
-#define CYAN      COLOR("00", "36")
-#define GREEN     COLOR("32", "01")
-#define MAGENTA   COLOR("00", "35")
-#define RED       COLOR("31", "01")
-#define YELLOW    COLOR("33", "01")
-#define WHITE     COLOR("01", "38")
+#define _MAKE_COLOR(c,b) "\e[" c ";" b "m"
+static const char *BOLD = _MAKE_COLOR("00", "01");
+static const char *NORM = _MAKE_COLOR("00", "00");
+static const char *BLUE = _MAKE_COLOR("36", "01");
+static const char *DKBLUE = _MAKE_COLOR("34", "01");
+static const char *CYAN = _MAKE_COLOR("00", "36");
+static const char *GREEN = _MAKE_COLOR("32", "01");
+static const char *MAGENTA = _MAKE_COLOR("00", "35");
+static const char *RED = _MAKE_COLOR("31", "01");
+static const char *YELLOW = _MAKE_COLOR("33", "01");
+static const char *WHITE = _MAKE_COLOR("01", "38");
+
+void no_colors(void);
+void no_colors() {
+	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = MAGENTA = RED = YELLOW = WHITE = "";
+}
 
 /* helper functions for showing errors */
 static const char *argv0;
@@ -143,7 +142,7 @@ void init_coredumps(void)
 	case 'Q': stderr = freopen("/dev/null", "w", stderr); ; break; \
 	case 'V': version_barf( applet ## _rcsid ); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
-	case 'C': color = 0; break; \
+	case 'C': no_colors(); break; \
 	default: applet ## _usage(EXIT_FAILURE); break;
 
 #define GETOPT_LONG(A, a, ex) \
@@ -435,7 +434,7 @@ char *initialize_portdir(void)
 		if ((fp = fopen(files[x], "r")) != NULL) {
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 				if ((x > 0) && (strncmp(buf, "NOCOLOR=", 8) == 0))
-					color = 0;
+					no_colors();
 				if (*buf != 'P')
 					continue;
 				if (strncmp(buf, "PORTDIR=", 8) != 0)
@@ -858,10 +857,10 @@ int main(int argc, char **argv)
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
 	if (getenv("NOCOLOR"))
-		color = 0;
+		no_colors();
 #if 0
 	if (ttyname(1) == NULL)
-		color = 0;
+		no_colors();
 #endif
 	portroot = (getenv("ROOT") ? : "/");
 	initialize_portdir();
@@ -869,4 +868,3 @@ int main(int argc, char **argv)
 	optind = 0;
 	return q_main(argc, argv);
 }
-
