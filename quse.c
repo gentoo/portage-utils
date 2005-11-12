@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.35 2005/11/06 19:14:41 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.36 2005/11/12 15:13:53 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -31,7 +31,7 @@ static const char *quse_opts_help[] = {
 	/* "Use your own variable formats. -F NAME=", */
 	COMMON_OPTS_HELP
 };
-static char quse_rcsid[] = "$Id: quse.c,v 1.35 2005/11/06 19:14:41 solar Exp $";
+static char quse_rcsid[] = "$Id: quse.c,v 1.36 2005/11/12 15:13:53 solar Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, APPLET_QUSE)
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -70,36 +70,7 @@ static void print_highlighted_use_flags(char *string, int ind, int argc, char **
 			str = p + 1;
 	}
 }
-#if 0
-void makeargv(char *string, int *argc, char ***argv);
-void makeargv(char *string, int *argc, char ***argv) {
-	int curc = 2;
-	char *q, *p, *str;        
-	(*argv) = (char **) malloc(sizeof(char **) * curc);
 
-	*argc = 1;        
-	(*argv)[0] = xstrdup(argv0);
-	q = xstrdup(string);        
-	str = q;
-
-	remove_extra_space(str);        
-	rmspace(str);
-
-	while (str) {
-		if ((p = strchr(str, ' ')) != NULL)
-			*(p++) = '\0';
-
-                if (*argc == curc) {
-			curc *= 2;
-			(*argv) = (char **) realloc(*argv, sizeof(char **) * curc);
-                }
-                (*argv)[*argc] = xstrdup(str);
-                (*argc)++;
-                str = p;
-        }
-	free(q);
-}
-#endif
 int quse_describe_flag(int ind, int argc, char **argv)
 {
 	char buf[BUFSIZE], *p;
