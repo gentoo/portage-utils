@@ -1,0 +1,14 @@
+#!/bin/bash
+
+die() {
+	echo "FAILED: $*"
+	exit 1
+}
+
+cp ../../q .
+./q -i || die "./q -i"
+for app in $(./q -Ch | grep ' : ' | awk '{print $1}') ; do
+	[ ! -e $app ] && die "$app does not exist"
+done
+echo "PASSED"
+exit 0
