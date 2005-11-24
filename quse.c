@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.38 2005/11/24 20:24:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.39 2005/11/24 20:37:40 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -31,7 +31,7 @@ static const char *quse_opts_help[] = {
 	/* "Use your own variable formats. -F NAME=", */
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.38 2005/11/24 20:24:45 vapier Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.39 2005/11/24 20:37:40 vapier Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, APPLET_QUSE)
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -79,7 +79,7 @@ int quse_describe_flag(int ind, int argc, char **argv)
 	const char *search_files[] = { "use.desc", "use.local.desc", "arch.list", "lang.desc" };
 	FILE *fp[3];
 
-	for ( i = 0; i < sizeof(search_files[0]); i++) {
+	for (i = 0; i < sizeof(search_files)/sizeof(*search_files); ++i) {
 		snprintf(buf, sizeof(buf), "%s/profiles/%s", portdir, search_files[i]);
 		if ((fp[i] = fopen(buf, "r")) == NULL)
 			warnp("skipping %s", search_files[i]);
