@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.21 2005/11/06 19:14:41 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.22 2005/11/24 20:24:45 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -28,7 +28,6 @@ static struct option const qlop_long_opts[] = {
 	{"logfile",    a_argument, NULL, 'f'},
 	COMMON_LONG_OPTS
 };
-
 static const char *qlop_opts_help[] = {
 	"Guage the total number of times a specific package as been merged (implies -t)",
 	"Calculate merge time for a specific package",
@@ -40,7 +39,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static char qlop_rcsid[] = "$Id: qlop.c,v 1.21 2005/11/06 19:14:41 solar Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.22 2005/11/24 20:24:45 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, APPLET_QLOP)
 
 #define QLOP_LIST    0x01
