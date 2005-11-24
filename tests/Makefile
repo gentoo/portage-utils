@@ -1,12 +1,17 @@
-TESTS = reinitialize atom_explode qfile quse
+TESTS = reinitialize atom_explode qfile quse install
 
 all: check
 
-../q:
-	cd ../ && $(MAKE) symlinks 
-
-test check: ../q
-	for test in $(TESTS) ; do (cd $$test && $(MAKE) all test && cd ..); done || exit 1
+test check:
+	for test in $(TESTS) ; do \
+		cd $$test ; \
+		$(MAKE) check || exit 1 ; \
+		cd .. ; \
+	done
 
 clean:
-	for test in $(TESTS) ; do (cd $$test && $(MAKE) clean && cd ..); done || exit 1
+	for test in $(TESTS) ; do \
+		cd $$test ; \
+		$(MAKE) clean ; \
+		cd .. ; \
+	done

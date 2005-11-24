@@ -1,7 +1,9 @@
-all q:
+all: q
+
+q: test.c
 	$(CC) $(CFLAGS) test.c -o q
 
-test check:
+test check: q
 	./dotest
 
 clean:
