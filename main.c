@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.73 2005/11/12 15:56:43 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.74 2005/11/24 20:27:50 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,11 @@ static const char *portroot;
 
 
 /* color constants */
-#define _MAKE_COLOR(c,b) "\e[" c ";" b "m"
+#ifdef OPTIMIZE_FOR_SIZE
+# define _MAKE_COLOR(c,b) ""
+#else
+# define _MAKE_COLOR(c,b) "\e[" c ";" b "m"
+#endif
 static const char *BOLD = _MAKE_COLOR("00", "01");
 static const char *NORM = _MAKE_COLOR("00", "00");
 static const char *BLUE = _MAKE_COLOR("36", "01");
@@ -179,7 +183,7 @@ static void usage(int status, const char *flags, struct option const opts[],
 	}
 	exit(status);
 }
-static void version_barf(char *Id)
+static void version_barf(const char *Id)
 {
 #ifndef VERSION
 # define VERSION "cvs"
