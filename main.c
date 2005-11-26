@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.75 2005/11/26 15:43:13 betelgeuse Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.76 2005/11/26 15:50:06 betelgeuse Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -178,7 +178,7 @@ static void usage(int status, const char *flags, struct option const opts[],
 			printf("  -%c, --%-15s%s*%s %s\n", opts[i].val,
 				opts[i].name, RED, NORM, help[i]);
 		else
-			printf("  -%c, --%-6s %s<arg>%s %s*%s %s\n", opts[i].val,
+			printf("  -%c, --%-8s %s<arg>%s %s*%s %s\n", opts[i].val,
 				opts[i].name, DKBLUE, NORM, RED, NORM, help[i]);
 	}
 	exit(status);
