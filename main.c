@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.74 2005/11/24 20:27:50 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.75 2005/11/26 15:43:13 betelgeuse Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -175,7 +175,7 @@ static void usage(int status, const char *flags, struct option const opts[],
 	for (i = 0; opts[i].name; ++i) {
 		assert(help[i] != NULL); /* this assert is a life saver when adding new applets. */
 		if (opts[i].has_arg == no_argument)
-			printf("  -%c, --%-13s%s*%s %s\n", opts[i].val,
+			printf("  -%c, --%-15s%s*%s %s\n", opts[i].val,
 				opts[i].name, RED, NORM, help[i]);
 		else
 			printf("  -%c, --%-6s %s<arg>%s %s*%s %s\n", opts[i].val,

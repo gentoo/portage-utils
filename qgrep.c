@@ -1,28 +1,31 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.3 2005/11/24 20:24:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.4 2005/11/26 15:43:13 betelgeuse Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005 Petteri Räty    - <betelgeuse@gentoo.org>
  */
 
-#define QGREP_FLAGS "Iice" COMMON_FLAGS
+#define QGREP_FLAGS "IiHce" COMMON_FLAGS
 static struct option const qgrep_long_opts[] = {
-	{"invert-match", no_argument, NULL, 'I'},
-	{"ignore-case",  no_argument, NULL, 'i'},
-	{"count",        no_argument, NULL, 'c'},
-	{"regexp",       no_argument, NULL, 'e'},
+	{"invert-match",  no_argument, NULL, 'I'},
+	{"ignore-case",   no_argument, NULL, 'i'},
+	{"with-filename", no_argument, NULL, 'H'},
+	{"count",         no_argument, NULL, 'c'},
+	{"regexp",        no_argument, NULL, 'e'},
 	COMMON_LONG_OPTS
 };
 static const char *qgrep_opts_help[] = {
 	"select non-matching lines",
 	"ignore case distinctions",
+	"print the filename for each match",
 	"only print a count of matching lines per FILE",
 	"use PATTERN as a regular expression",
 	COMMON_OPTS_HELP
 };
-static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.3 2005/11/24 20:24:45 vapier Exp $";
+static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.4 2005/11/26 15:43:13 betelgeuse Exp $";
 #define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, APPLET_QGREP)
 
 int qgrep_main(int argc, char **argv)
@@ -31,8 +34,9 @@ int qgrep_main(int argc, char **argv)
 	int count = 0;
 	char *p;
 	char do_count, do_regex;
-        FILE *fp;
-        char ebuild[_POSIX_PATH_MAX];
+	char show_filename;
+	FILE *fp;
+	char ebuild[_POSIX_PATH_MAX];
 	char buf0[BUFSIZ];
 	int reflags = REG_NOSUB;
 	char invert_match = 0;
@@ -43,7 +47,7 @@ int qgrep_main(int argc, char **argv)
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	do_count = do_regex = 0;
+	do_count = do_regex = show_filename = 0;
 
 	while ((i = GETOPT_LONG(QGREP, qgrep, "")) != -1) {
 		switch (i) {
@@ -54,6 +58,7 @@ int qgrep_main(int argc, char **argv)
 			break;
 		case 'c': do_count = 1; break;
 		case 'e': do_regex = 1; break;
+		case 'H': show_filename = 1; break;
 		COMMON_GETOPTS_CASES(qgrep)
 		}
 	}
@@ -94,7 +99,7 @@ int qgrep_main(int argc, char **argv)
 
 				count++;
 				if (do_count) continue;
-				if (verbose) {
+				if (verbose || show_filename) {
 					printf("%s:", ebuild); 
 					if (verbose > 1) printf("%d:", lineno);
 					printf(" ");
