@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.40 2005/11/24 20:49:58 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.41 2005/12/03 00:16:04 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -31,7 +31,7 @@ static const char *quse_opts_help[] = {
 	/* "Use your own variable formats. -F NAME=", */
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.40 2005/11/24 20:49:58 vapier Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.41 2005/12/03 00:16:04 vapier Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, APPLET_QUSE)
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -73,7 +73,7 @@ static void print_highlighted_use_flags(char *string, int ind, int argc, char **
 
 int quse_describe_flag(int ind, int argc, char **argv)
 {
-#define NUM_SEARCH_FILES (sizeof(search_files) / sizeof(*search_files))
+#define NUM_SEARCH_FILES ARR_SIZE(search_files)
 	char buf[BUFSIZE], *p;
 	int i, f;
 	size_t s;

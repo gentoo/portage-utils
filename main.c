@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.76 2005/11/26 15:50:06 betelgeuse Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.77 2005/12/03 00:16:04 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -94,8 +94,9 @@ static const char *argv0;
 #define err(fmt, args...) _err(warn, fmt , ## args)
 #define errf(fmt, args...) _err(warnf, fmt , ## args)
 #define errp(fmt, args...) _err(warnp, fmt , ## args)
+#define ARR_SIZE(arr) (sizeof(arr) / sizeof(*arr))
 #ifdef EBUG
-#include <sys/resource.h>
+# include <sys/resource.h>
 
 # define DBG(fmt, args...) warnf(fmt , ## args)
 # define IF_DEBUG(x) x
