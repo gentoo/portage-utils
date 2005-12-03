@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.77 2005/12/03 00:16:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.78 2005/12/03 00:19:21 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -31,7 +31,7 @@ static char eat_file(const char *file, char *buf, const size_t bufsize);
 int rematch(const char *, const char *, int);
 static char *rmspace(char *);
 
-char *initialize_portdir(void);
+void initialize_portage_env(void);
 void initialize_ebuild_flat(void);
 void reinitialize_ebuild_flat(void);
 void reinitialize_as_needed(void);
@@ -45,9 +45,10 @@ static int verbose = 0;
 static char reinitialize = 0;
 
 static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
+static char portarch[20] = "";
 static char portvdb[] = "var/db/pkg";
 static char portcachedir[] = "metadata/cache";
-static const char *portroot;
+static char portroot[_POSIX_PATH_MAX] = "/";
 
 #define _q_unused_ __attribute__((__unused__))
 
@@ -420,48 +421,112 @@ contents_entry *contents_parse_line(char *line)
 	return &e;
 }
 
-char *initialize_portdir(void)
+void initialize_portage_env(void)
 {
+	char nocolor = 0;
+	int i, f;
+	struct stat st;
 	FILE *fp;
-	char buf[_POSIX_PATH_MAX + 8];
-	char *p = getenv("PORTDIR");
-	size_t i;
-	const char *files[] = {"/etc/make.globals", "/etc/make.conf", NULL};
-	int x;
+	char buf[BUFSIZE], *s, *p;
 
-	if (p) {
-		if ((size_t)strlen(p) <= sizeof(portdir)) {
-			strcpy(portdir, p);
-			return portdir;
-		}
-	}
-	for (x = 0; files[x] != NULL; x++) {
-		if ((fp = fopen(files[x], "r")) != NULL) {
-			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-				if ((x > 0) && (strncmp(buf, "NOCOLOR=", 8) == 0))
-					no_colors();
-				if (*buf != 'P')
+	char profile[_POSIX_PATH_MAX], portage_file[_POSIX_PATH_MAX];
+	const char *files[] = {portage_file, "/etc/make.globals", "/etc/make.conf"};
+	struct {
+		const char *name;
+		const size_t name_len;
+		const int type;
+		char *value;
+		const size_t value_len;
+	} vars_to_read[] = {
+		{"ARCH",    4, 2, portarch, sizeof(portarch)},
+		{"NOCOLOR", 7, 1, &nocolor, 1},
+		{"PORTDIR", 7, 2, portdir, sizeof(portdir)},
+		{"ROOT",    4, 2, portroot, sizeof(portroot)}
+	};
+
+	f = 0;
+	if (readlink("/etc/make.profile", profile, sizeof(profile)) == -1)
+		strcpy(profile, "/etc/make.profile");
+	do {
+		if (f == 0)
+			snprintf(portage_file, sizeof(portage_file), "%s/make.defaults", profile);
+		IF_DEBUG(printf("profile %s\n", files[f]));
+
+		if ((fp=fopen(files[f], "r")) != NULL) {
+			while (fgets(buf, sizeof(buf), fp) != NULL) {
+				rmspace(buf);
+				if (*buf == '#' || *buf == '\0')
 					continue;
-				if (strncmp(buf, "PORTDIR=", 8) != 0)
-					continue;
-				/* Sorry don't understand bash variables. */
-				if (strchr(buf, '$') != NULL) {
-					warn("Sorry bash variables for your PORTDIR make us cry");
-					continue;
+				for (i=0; i<ARR_SIZE(vars_to_read); ++i) {
+					if (buf[vars_to_read[i].name_len] != '=' && buf[vars_to_read[i].name_len] != ' ')
+						continue;
+					if (strncmp(buf, vars_to_read[i].name, vars_to_read[i].name_len))
+						continue;
+
+					/* make sure we handle spaces between the varname, the =, and the value:
+					 * VAR=val   VAR = val   VAR="val"
+					 */
+					s = buf + vars_to_read[i].name_len;
+					if ((p = strchr(s, '=')) != NULL)
+						s = p + 1;
+					while (isspace(*s))
+						++s;
+					if (*s == '"' || *s == '\'') {
+						++s;
+						s[strlen(s)-1] = '\0';
+					}
+
+					switch (vars_to_read[i].type) {
+					case 1: *vars_to_read[i].value = 1; break;
+					case 2: strncpy(vars_to_read[i].value, s, vars_to_read[i].value_len); break;
+					}
 				}
-				for (i = 8; i < (size_t)strlen(buf); i++)
-					if ((buf[i] == '"') || (buf[i] == '\''))
-						buf[i] = ' ';
-
-				rmspace(&buf[8]);
-				if (buf + 8)
-					strncpy(portdir, buf + 8, sizeof(portdir));
 			}
 			fclose(fp);
 		}
+
+		if (f > 0) {
+			if (++f < ARR_SIZE(files))
+				continue;
+			else
+				break;
+		}
+
+		/* everything below here is to figure out what the next parent is */
+		snprintf(portage_file, sizeof(portage_file), "%s/parent", profile);
+		if (stat(portage_file, &st) == 0) {
+			eat_file(portage_file, buf, sizeof(buf));
+			rmspace(buf);
+			portage_file[strlen(portage_file)-7] = '\0';
+			snprintf(profile, sizeof(profile), "%s/%s", portage_file, buf);
+		} else {
+			f = 1;
+		}
+	} while (1);
+
+	/* finally, check the env */
+	for (i=0; i<ARR_SIZE(vars_to_read); ++i) {
+		s = getenv(vars_to_read[i].name);
+		if (s != NULL) {
+			switch (vars_to_read[i].type) {
+			case 1: *vars_to_read[i].value = 1; break;
+			case 2: strncpy(vars_to_read[i].value, s, vars_to_read[i].value_len); break;
+			}
+		}
+		IF_DEBUG(
+			printf("%s = ", vars_to_read[i].name);
+			switch (vars_to_read[i].type) {
+			case 1: printf("%i\n", *vars_to_read[i].value); break;
+			case 2: puts(vars_to_read[i].value); break;
+			}
+		)
 	}
-	return portdir;
+
+	if (nocolor)
+		no_colors();
 }
+
+
 
 /* The logic for ebuild.x should be moved into /var/cache */
 /* and allow for user defined --cache files */
@@ -861,14 +926,11 @@ int main(int argc, char **argv)
 {
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
-	if (getenv("NOCOLOR"))
-		no_colors();
 #if 0
 	if (ttyname(1) == NULL)
 		no_colors();
 #endif
-	portroot = (getenv("ROOT") ? : "/");
-	initialize_portdir();
+	initialize_portage_env();
 	atexit(cleanup);
 	optind = 0;
 	return q_main(argc, argv);
