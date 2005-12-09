@@ -1,0 +1,33 @@
+#!/bin/bash
+
+add() { RSYNC_OPTS="${RSYNC_OPTS} $@" ; }
+RSYNC_OPTS="--recursive --links --safe-links --perms --times --compress 
+--force --whole-file --delete --delete-after --stats --timeout=${RSYNC_TIMEOUT}
+--exclude=/distfiles --exclude=/local --exclude=/packages --progress"
+
+get_portage_var() {
+	local var=$1 val
+	[[ -n ${!var} ]] && return 0
+	val=$(source /etc/make.globals 2>/dev/null ; source /etc/make.conf 2>/dev/null ; echo ${!var})
+	[[ -n ${val} ]] && export ${var}=${val} && return
+	export ${var}=$(portageq envvar ${var})
+	[[ -z ${!var} ]] && export ${var}=$2
+}
+get_portage_var PORTDIR /usr/portage
+get_portage_var RSYNC_TIMEOUT 300
+get_portage_var RSYNC_EXCLUDEFROM
+get_portage_var SYNC
+[[ -z ${SYNC} ]] && echo could not get SYNC var && exit 1
+[[ -n ${RSYNC_EXCLUDEFROM} ]] && add --exclude-from="${RSYNC_EXCLUDEFROM}"
+
+for x in "$@" ; do
+	case ${x} in
+	-v|--verbose) add --verbose ;;
+	-q|--quiet)   add --quiet ;;
+	*) echo unknown opt "$*" ; exit 1 ;;
+	esac
+done
+
+set -x
+/usr/bin/rsync ${RSYNC_OPTS} ${SYNC} ${PORTDIR}
+/usr/bin/rsync --progress -a ${PORTDIR}/metadata/cache/ /var/cache/edb/dep${PORTDIR}/
