@@ -20,14 +20,20 @@ get_portage_var SYNC
 [[ -z ${SYNC} ]] && echo could not get SYNC var && exit 1
 [[ -n ${RSYNC_EXCLUDEFROM} ]] && add --exclude-from="${RSYNC_EXCLUDEFROM}"
 
+METADATA_ONLY=0
 for x in "$@" ; do
 	case ${x} in
 	-v|--verbose) add --verbose ;;
 	-q|--quiet)   add --quiet ;;
+	--metadata)   METADATA_ONLY=1 ;;
 	*) echo unknown opt "$*" ; exit 1 ;;
 	esac
 done
 
 set -x
-/usr/bin/rsync ${RSYNC_OPTS} ${SYNC} ${PORTDIR}
-/usr/bin/rsync --progress -a ${PORTDIR}/metadata/cache/ /var/cache/edb/dep${PORTDIR}/
+if [[ ${METADATA_ONLY} -eq 1 ]] ; then
+	/usr/bin/rsync ${RSYNC_OPTS} ${SYNC}/profiles ${SYNC}/metadata ${PORTDIR}
+else
+	/usr/bin/rsync ${RSYNC_OPTS} ${SYNC} ${PORTDIR}
+	/usr/bin/rsync --progress -a ${PORTDIR}/metadata/cache/ /var/cache/edb/dep${PORTDIR}/
+fi
