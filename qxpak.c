@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.6 2005/11/24 20:24:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.7 2005/12/11 18:58:13 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,8 +46,8 @@ static const char *qxpak_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.6 2005/11/24 20:24:45 vapier Exp $";
-#define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, APPLET_QXPAK)
+static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.7 2005/12/11 18:58:13 solar Exp $";
+#define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, lookup_applet_idx("qxpak"))
 
 
 

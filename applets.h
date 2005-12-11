@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.7 2005/11/06 18:07:17 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.8 2005/12/11 18:58:13 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,27 +24,9 @@ int quse_main(int, char **);
 int qxpak_main(int, char **);
 int qpkg_main(int, char **);
 int qgrep_main(int, char **);
+int qatom_main(int, char **);
 
 typedef int (*APPLET)(int, char **);
-
-/* applets we support */
-typedef enum {
-	FIRST_APPLET = 0,
-	APPLET_Q = 0,
-	APPLET_QCHECK = 1,
-	APPLET_QDEPENDS = 2,
-	APPLET_QFILE = 3,
-	APPLET_QGREP = 4,
-	APPLET_QLIST = 5,
-	APPLET_QLOP = 6,
-	APPLET_QPKG = 7,
-	APPLET_QSEARCH = 8,
-	APPLET_QSIZE = 9,
-	APPLET_QTBZ2 = 10,
-	APPLET_QUSE = 11,
-	APPLET_QXPAK = 12,
-	LAST_APPLET = 12
-} applets_enum;
 
 struct applet_t {
 	const char *name;
@@ -55,6 +37,7 @@ struct applet_t {
 } applets[] = {
 	/* q must always be the first applet */
 	{"q",         q_main,         "<applet> <args>", "virtual applet"},
+	{"qatom",     qatom_main,     "<pkg>",           "split atom strings"},
 	{"qcheck",    qcheck_main,    "<pkgname>",       "verify mtimes/digests"},
 	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
 	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},

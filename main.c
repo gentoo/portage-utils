@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.78 2005/12/03 00:19:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.79 2005/12/11 18:58:13 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -36,7 +36,7 @@ void initialize_ebuild_flat(void);
 void reinitialize_ebuild_flat(void);
 void reinitialize_as_needed(void);
 void cleanup(void);
-
+int lookup_applet_idx(const char *);
 
 /* variables to control runtime behavior */
 static char exact = 0;
@@ -155,14 +155,14 @@ void init_coredumps(void)
 	getopt_long(argc, argv, ex A ## _FLAGS, a ## _long_opts, NULL)
 /* display usage and exit */
 static void usage(int status, const char *flags, struct option const opts[], 
-                  const char *help[], applets_enum blabber)
+                  const char *help[], int blabber)
 {
 	unsigned long i;
-	if (blabber == APPLET_Q) {
+	if (blabber == 0) {
 		printf("%sUsage:%s %sq%s %s<applet> [arguments]...%s\n\n", GREEN, 
 			NORM, YELLOW, NORM, DKBLUE, NORM);
 		printf("%sCurrently defined applets:%s\n", GREEN, NORM);
-		for (i = FIRST_APPLET; i <= LAST_APPLET; ++i)
+		for (i = 0; i <= 13; ++i)
 			printf(" %s%8s%s %s%-16s%s%s:%s %s\n",
 				YELLOW, applets[i].name, NORM, 
 				DKBLUE, applets[i].opts, NORM,
@@ -856,6 +856,7 @@ void cache_free(portage_cache *cache)
 #include "qxpak.c"
 #include "qpkg.c"
 #include "qgrep.c"
+#include "qatom.c"
 
 queue *resolve_vdb_virtuals();
 queue *resolve_vdb_virtuals() {

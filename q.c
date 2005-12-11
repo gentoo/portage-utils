@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.21 2005/11/24 20:24:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.22 2005/12/11 18:58:13 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -18,8 +18,8 @@ static const char *q_opts_help[] = {
 	"Reinitialize ebuild cache",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.21 2005/11/24 20:24:45 vapier Exp $";
-#define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, APPLET_Q)
+static const char q_rcsid[] = "$Id: q.c,v 1.22 2005/12/11 18:58:13 solar Exp $";
+#define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 
 APPLET lookup_applet(char *applet);
@@ -30,14 +30,14 @@ APPLET lookup_applet(char *applet)
 		if (strcmp(applets[i].name, applet) == 0) {
 			DBG("found applet %s at %p", applets[i].name, applets[i].func);
 			argv0 = applets[i].name;
-			if (i && i <= LAST_APPLET) ++argv0; /* chop the leading 'q' */
+			if (i && applets[i].desc != NULL) ++argv0; /* chop the leading 'q' */
 			return applets[i].func;
 		}
 	}
 	/* No applet found? Search by shortname then... */
 	if (strlen(applet) > 1) {
 		DBG("Looking up applet (%s) by short name", applet);
-		for (i = 1; i <= LAST_APPLET; ++i) {
+		for (i = 1; applets[i].desc != NULL; ++i) {
 			if (strcmp(applets[i].name + 1, applet) == 0) {
 				DBG("found applet by short name %s", applets[i].name);
 				argv0 = applets[i].name + 1;
@@ -47,6 +47,16 @@ APPLET lookup_applet(char *applet)
 	}
 	/* still nothing ?  those bastards ... */
 	warn("Unknown applet '%s'", applet);
+	return 0;
+}
+
+// int lookup_applet_idx(char *applet);
+int lookup_applet_idx(const char *applet)
+{
+	unsigned int i;
+	for (i = 0; applets[i].name; i++)
+		if (strcmp(applets[i].name, applet) == 0)
+			return i;
 	return 0;
 }
 
@@ -85,7 +95,7 @@ int q_main(int argc, char **argv)
 				warnf("could not chdir to '%s': %s", buf, strerror(errno));
 				return 1;
 			}
-			for (i = 1; i <= LAST_APPLET; ++i) {
+			for (i = 1; applets[i].desc != NULL; ++i) {
 				printf(" %s ...", applets[i].name);
 				errno = 0;
 				symlink("q", applets[i].name);

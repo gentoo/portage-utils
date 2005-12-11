@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.18 2005/11/24 20:24:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.19 2005/12/11 18:58:13 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -16,8 +16,8 @@ static const char *qcheck_opts_help[] = {
 	"List all packages",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.18 2005/11/24 20:24:45 vapier Exp $";
-#define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, APPLET_QCHECK)
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.19 2005/12/11 18:58:13 solar Exp $";
+#define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 
 int qcheck_main(int argc, char **argv)
