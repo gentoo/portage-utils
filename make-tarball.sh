@@ -4,7 +4,7 @@ if [[ $# -ne 1 ]] ; then
 	echo "Usage: $0 <ver>" 1>&2
 	exit 1
 fi
-old_files=$(find . -name '.#*')
+old_files=$(find . -name '.#*' -o -name '*.o')
 if [[ -n ${old_files} ]] ; then
 	echo "Remove these temp files before making a package:"
 	echo "${old_files}"
