@@ -1,10 +1,5 @@
 #!/bin/bash
 
-add() { RSYNC_OPTS="${RSYNC_OPTS} $@" ; }
-RSYNC_OPTS="--recursive --links --safe-links --perms --times --compress 
---force --whole-file --delete --delete-after --stats --timeout=${RSYNC_TIMEOUT}
---exclude=/distfiles --exclude=/local --exclude=/packages --progress"
-
 get_portage_var() {
 	local var=$1 val
 	[[ -n ${!var} ]] && return 0
@@ -18,6 +13,11 @@ get_portage_var RSYNC_TIMEOUT 300
 get_portage_var RSYNC_EXCLUDEFROM
 get_portage_var SYNC
 [[ -z ${SYNC} ]] && echo could not get SYNC var && exit 1
+
+add() { RSYNC_OPTS="${RSYNC_OPTS} $@" ; }
+RSYNC_OPTS="--recursive --links --safe-links --perms --times --compress 
+--force --whole-file --delete --delete-after --stats --timeout=${RSYNC_TIMEOUT}
+--exclude=/distfiles --exclude=/local --exclude=/packages --progress"
 [[ -n ${RSYNC_EXCLUDEFROM} ]] && add --exclude-from="${RSYNC_EXCLUDEFROM}"
 
 METADATA_ONLY=0
