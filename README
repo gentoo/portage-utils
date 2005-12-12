@@ -1,3 +1,7 @@
+# Copyright 2005 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/README,v 1.14 2005/12/12 04:24:59 solar Exp $
+
 Developers to contact:
 solar@gentoo.org
 vapier@gentoo.org
@@ -30,11 +34,10 @@ cvs -d:pserver:anonymous@zarquon.twobit.net:/var/cvsroot -q -z9 co -R gentoo-pro
 
 - Adding applets is easy using the q framework.
 cp template.c qmyapplet.c (all applets use the prefix of the letter 'q') 
-edit applets.h add your prototype, applet definition to the enum then 
-incr LAST_APPLET.  Scroll down the typedef for applets[] and add your 
-applet name following the existing syntax. Please try to keep applet 
-names under 8 chars.  Finally, edit main.c, scroll to the bottom, and 
-add your applet to the #include list.
+edit applets.h add your prototype, then scroll down the typedef for 
+applets[] and add your applet name following the existing syntax. Please 
+try to keep applet names under 8 chars.  Finally, edit main.c, scroll to 
+the bottom, and add your applet to the #include list.
 
 When and where you can please try to use an existing applet and extend 
 on it's functionality by adding more options vs adding a bunch of new 
