@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.79 2005/12/11 18:58:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.80 2005/12/12 04:20:54 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -162,7 +162,7 @@ static void usage(int status, const char *flags, struct option const opts[],
 		printf("%sUsage:%s %sq%s %s<applet> [arguments]...%s\n\n", GREEN, 
 			NORM, YELLOW, NORM, DKBLUE, NORM);
 		printf("%sCurrently defined applets:%s\n", GREEN, NORM);
-		for (i = 0; i <= 13; ++i)
+		for (i = 0; applets[i].desc; ++i)
 			printf(" %s%8s%s %s%-16s%s%s:%s %s\n",
 				YELLOW, applets[i].name, NORM, 
 				DKBLUE, applets[i].opts, NORM,
