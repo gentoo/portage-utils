@@ -1,7 +1,8 @@
 #!/bin/bash
 
 d=$PWD
-cd /usr/portage/metadata/cache || exit 1
+[[ $PORTDIR == "" ]] && PORTDIR=$(portageq envvar PORTDIR)
+cd ${PORTDIR}/metadata/cache || exit 1
 
 echo -n "atom_explode():"
 time find . -mindepth 2 -type f -printf '%P\n%f\n' | "$d"/q > "$d"/me
