@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.24 2005/12/11 18:58:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.25 2005/12/30 08:06:59 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,7 +39,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.24 2005/12/11 18:58:13 solar Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.25 2005/12/30 08:06:59 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -208,8 +208,18 @@ void show_emerge_history(char listflag, int argc, char **argv, const char *logfi
 		}
 		else
 			continue;
-		printf("%s %s %s%s%s\n", chop_ctime(t), (merged ? ">>>" : "<<<"), (merged ? GREEN : RED), q, NORM);
-
+		if (!quiet)
+			printf("%s %s %s%s%s\n", chop_ctime(t), (merged ? ">>>" : "<<<"), (merged ? GREEN : RED), q, NORM);
+		else {
+			depend_atom *atom;
+			atom = atom_explode(q);
+			if (quiet == 1)
+				printf("%s ", chop_ctime(t));
+			if (quiet <= 2)
+				printf("%s ", (merged ? ">>>" : "<<<"));
+			printf("%s%s/%s%s\n", (merged ? GREEN : RED), atom->CATEGORY, atom->PN, NORM);
+			atom_implode(atom);
+		}
 	}
 	fclose(fp);
 }
