@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.26 2005/12/11 18:58:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.27 2005/12/30 05:22:52 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.26 2005/12/11 18:58:13 solar Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.27 2005/12/30 05:22:52 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -72,7 +72,7 @@ void _dep_attach(dep_node *root, dep_node *attach_me, int type);
 void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos);
 void _dep_burn_node(dep_node *node);
 int qdepends_main_vdb(const char *depend_file, int argc, char **argv);
-int qdepends_vdb_deep(const char *depend_file, char *query);
+int qdepends_vdb_deep(const char *depend_file, const char *query);
 
 
 #ifdef EBUG
@@ -428,7 +428,7 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv) {
 	return EXIT_SUCCESS;
 }
 
-int qdepends_vdb_deep(const char *depend_file, char *query) {
+int qdepends_vdb_deep(const char *depend_file, const char *query) {
 	DIR *dir, *dirp;
 	struct dirent *dentry, *de;
 	signed long len;
@@ -506,7 +506,7 @@ int qdepends_vdb_deep(const char *depend_file, char *query) {
 int qdepends_main(int argc, char **argv)
 {
 	int i;
-	char *query = NULL;
+	const char *query = NULL;
 	const char *depend_file;
 	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", "CDEPEND", NULL, NULL };
 
@@ -531,7 +531,7 @@ int qdepends_main(int argc, char **argv)
 	}
 	if ((argc == optind) && (query == NULL))
 		qdepends_usage(EXIT_FAILURE);
-	
+
 	if (!depend_file) {
 		int ret = 0;
 		for (i = 0; depend_files[i]; ++i) {
