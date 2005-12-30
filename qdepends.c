@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.29 2005/12/30 05:37:57 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.30 2005/12/30 05:45:06 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.29 2005/12/30 05:37:57 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.30 2005/12/30 05:45:06 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -346,7 +346,7 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 {
 	DIR *dir, *dirp;
 	struct dirent *dentry, *de;
-	signed long len;
+	size_t len;
 	int i;
 	char *ptr;
 	char buf[8192];
@@ -405,20 +405,25 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 			} else {
 				printf("%s%s/%s%s%s: ", BOLD, dentry->d_name, BLUE, de->d_name, NORM);
 			}
+
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/USE", portroot, portvdb,
 			         dentry->d_name, de->d_name);
-			assert(eat_file(buf, use, sizeof(use)) == 1);
-			for (ptr = use; *ptr; ++ptr)
-				if (*ptr == '\n' || *ptr == '\t')
-					*ptr = ' ';
-			len = strlen(use);
-			assert(len+1 < (signed long)sizeof(use));
-			use[len] = ' ';
-			use[len+1] = '\0';
-			memmove(use+1, use, len);
-			use[0] = ' ';
+			if (!eat_file(buf, use, sizeof(use))) {
+				warn("Could not eat_file(%s), you'll prob have incorrect output", buf);
+			} else {
+				for (ptr = use; *ptr; ++ptr)
+					if (*ptr == '\n' || *ptr == '\t')
+						*ptr = ' ';
+				len = strlen(use);
+				assert(len+1 < sizeof(use));
+				use[len] = ' ';
+				use[len+1] = '\0';
+				memmove(use+1, use, len);
+				use[0] = ' ';
 
-			dep_prune_use(dep_tree, use);
+				dep_prune_use(dep_tree, use);
+			}
+
 			/*dep_dump_tree(dep_tree);*/
 			printf("%s\n", dep_flatten_tree(dep_tree));
 
@@ -435,7 +440,7 @@ int qdepends_vdb_deep(const char *depend_file, const char *query)
 {
 	DIR *dir, *dirp;
 	struct dirent *dentry, *de;
-	signed long len;
+	size_t len;
 	char *ptr;
 	char buf[_Q_PATH_MAX];
 	char depend[8192], use[8192];
@@ -477,7 +482,7 @@ int qdepends_vdb_deep(const char *depend_file, const char *query)
 				if (*ptr == '\n' || *ptr == '\t')
 					*ptr = ' ';
 			len = strlen(use);
-			assert(len+1 < (signed long)sizeof(use));
+			assert(len+1 < sizeof(use));
 			use[len] = ' ';
 			use[len+1] = '\0';
 			memmove(use+1, use, len);
