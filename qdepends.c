@@ -1,20 +1,20 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.30 2005/12/30 05:45:06 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.31 2005/12/30 07:52:45 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#define QDEPENDS_FLAGS "drpacNk:q:" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpacNk:Q:" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
 	{"depend",    no_argument, NULL, 'd'},
 	{"rdepend",   no_argument, NULL, 'r'},
 	{"pdepend",   no_argument, NULL, 'p'},
 	{"cdepend",   no_argument, NULL, 'c'},
 	{"key",        a_argument, NULL, 'k'},
-	{"query",      a_argument, NULL, 'q'},
+	{"query",      a_argument, NULL, 'Q'},
 	{"name-only", no_argument, NULL, 'N'},
 	{"all",       no_argument, NULL, 'a'},
 	COMMON_LONG_OPTS
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.30 2005/12/30 05:45:06 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.31 2005/12/30 07:52:45 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -536,7 +536,7 @@ int qdepends_main(int argc, char **argv)
 		case 'c': depend_file = depend_files[3]; break;
 		case 'k': depend_file = optarg; break;
 		case 'a': depend_file = NULL; break;
-		case 'q': query = optarg; break;
+		case 'Q': query = optarg; break;
 		case 'N': qdep_name_only = 1; break;
 		}
 	}

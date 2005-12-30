@@ -1,27 +1,23 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.21 2005/12/30 05:37:57 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.22 2005/12/30 07:52:45 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#define QFILE_FLAGS "eq" COMMON_FLAGS
+#define QFILE_FLAGS "e" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"exact",       no_argument, NULL, 'e'},
-	{"quiet",       no_argument, NULL, 'q'},
 	COMMON_LONG_OPTS
 };
 static const char *qfile_opts_help[] = {
 	"Exact match",
-	"Output package only",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.21 2005/12/30 05:37:57 vapier Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.22 2005/12/30 07:52:45 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
-
-static short qfile_quiet = 0;
 
 void qfile(char *path, char *fullname);
 void qfile(char *path, char *fullname)
@@ -89,7 +85,7 @@ void qfile(char *path, char *fullname)
 			printf("%s%s/%s%s%s", BOLD, atom->CATEGORY, BLUE,
 				(exact ? dentry->d_name : atom->PN), NORM);
 
-			if (qfile_quiet)
+			if (quiet)
 				puts("");
 			else
 				printf(" (%s)\n", p);
@@ -114,12 +110,9 @@ int qfile_main(int argc, char **argv)
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	qfile_quiet = 0;
-
 	while ((i = GETOPT_LONG(QFILE, qfile, "")) != -1) {
 		switch (i) {
 			COMMON_GETOPTS_CASES(qfile)
-			case 'q': qfile_quiet += 1; break;
 			case 'e': exact = 1; break;
 		}
 	}

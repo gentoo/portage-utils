@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.81 2005/12/30 05:37:57 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.82 2005/12/30 07:52:45 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -49,6 +49,7 @@ int lookup_applet_idx(const char *);
 static char exact = 0;
 static int found = 0;
 static int verbose = 0;
+static int quiet = 0;
 static char reinitialize = 0;
 
 static char portdir[_Q_PATH_MAX] = "/usr/portage";
@@ -134,25 +135,25 @@ void init_coredumps(void)
 #include "applets.h"
 
 /* Common usage for all applets */
-#define COMMON_FLAGS "vQChV"
+#define COMMON_FLAGS "vqChV"
 #define a_argument required_argument
 #define COMMON_LONG_OPTS \
 	{"verbose",   no_argument, NULL, 'v'}, \
-	{"quiet",     no_argument, NULL, 'Q'}, \
+	{"quiet",     no_argument, NULL, 'q'}, \
 	{"nocolor",   no_argument, NULL, 'C'}, \
 	{"help",      no_argument, NULL, 'h'}, \
 	{"version",   no_argument, NULL, 'V'}, \
 	{NULL,        no_argument, NULL, 0x0}
 #define COMMON_OPTS_HELP \
 	"Make a lot of noise", \
-	"Suppress warnings and errors", \
+	"Tighter output; suppress warnings", \
 	"Don't output color", \
 	"Print this help and exit", \
 	"Print version and exit", \
 	NULL
 #define COMMON_GETOPTS_CASES(applet) \
 	case 'v': ++verbose; break; \
-	case 'Q': stderr = freopen("/dev/null", "w", stderr); ; break; \
+	case 'q': ++quiet; stderr = freopen("/dev/null", "w", stderr); break; \
 	case 'V': version_barf( applet ## _rcsid ); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': no_colors(); break; \
