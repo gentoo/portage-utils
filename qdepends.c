@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.27 2005/12/30 05:22:52 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.28 2005/12/30 05:36:50 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.27 2005/12/30 05:22:52 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.28 2005/12/30 05:36:50 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -342,13 +342,14 @@ char *dep_flatten_tree(dep_node *root)
 
 
 
-int qdepends_main_vdb(const char *depend_file, int argc, char **argv) {
+int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
+{
 	DIR *dir, *dirp;
 	struct dirent *dentry, *de;
 	signed long len;
 	int i;
 	char *ptr;
-	char buf[_POSIX_PATH_MAX];
+	char buf[8192];
 	char depend[8192], use[8192];
 	dep_node *dep_tree;
 
@@ -384,8 +385,10 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv) {
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb,
 			         dentry->d_name, de->d_name, depend_file);
-			if (!eat_file(buf, depend, sizeof(buf)))
+			if (!eat_file(buf, depend, sizeof(buf))) {
+				warn("i'm such a fatty, could not eat_file(%s)", buf);
 				continue;
+			}
 
 			dep_tree = dep_grow_tree(depend);
 			if (dep_tree == NULL) continue;
@@ -428,7 +431,8 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv) {
 	return EXIT_SUCCESS;
 }
 
-int qdepends_vdb_deep(const char *depend_file, const char *query) {
+int qdepends_vdb_deep(const char *depend_file, const char *query)
+{
 	DIR *dir, *dirp;
 	struct dirent *dentry, *de;
 	signed long len;
@@ -457,8 +461,10 @@ int qdepends_vdb_deep(const char *depend_file, const char *query) {
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb,
 			         dentry->d_name, de->d_name, depend_file);
-			if (!eat_file(buf, depend, sizeof(buf)))
+			if (!eat_file(buf, depend, sizeof(buf))) {
+				warn("i'm such a fatty, could not eat_file(%s)", buf);
 				continue;
+			}
 			IF_DEBUG(puts(depend));
 
 			dep_tree = dep_grow_tree(depend);
