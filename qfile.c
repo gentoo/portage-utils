@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.20 2005/12/11 18:58:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.21 2005/12/30 05:37:57 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -18,7 +18,7 @@ static const char *qfile_opts_help[] = {
 	"Output package only",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.20 2005/12/11 18:58:13 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.21 2005/12/30 05:37:57 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 static short qfile_quiet = 0;
@@ -32,7 +32,7 @@ void qfile(char *path, char *fullname)
 	char *p;
 	size_t flen;
 	int base = 0;
-	char fname[_POSIX_PATH_MAX];
+	char fname[_Q_PATH_MAX];
 	char buf[1024];
 	char pkg[126];
 	depend_atom *atom;

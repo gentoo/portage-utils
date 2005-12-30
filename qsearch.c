@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.23 2005/12/11 18:58:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.24 2005/12/30 05:37:57 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,15 +26,15 @@ static const char *qsearch_opts_help[] = {
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.23 2005/12/11 18:58:13 solar Exp $";
+static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.24 2005/12/30 05:37:57 vapier Exp $";
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
 
 
 int qsearch_main(int argc, char **argv)
 {
 	FILE *fp;
-	char buf[_POSIX_PATH_MAX];
-	char ebuild[_POSIX_PATH_MAX];
+	char buf[_Q_PATH_MAX];
+	char ebuild[_Q_PATH_MAX];
 	char last[126] = "";
 	char dp[126] = "";
 	char bp[126] = "";

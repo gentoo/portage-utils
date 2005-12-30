@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.80 2005/12/12 04:20:54 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.81 2005/12/30 05:37:57 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,6 +26,13 @@
 #include <limits.h>
 #include <assert.h>
 
+/* make sure our buffers are as big as they can be */
+#if PATH_MAX > _POSIX_PATH_MAX
+# define _Q_PATH_MAX PATH_MAX
+#else
+# define _Q_PATH_MAX _POSIX_PATH_MAX
+#endif
+
 /* prototypes and such */
 static char eat_file(const char *file, char *buf, const size_t bufsize);
 int rematch(const char *, const char *, int);
@@ -44,11 +51,11 @@ static int found = 0;
 static int verbose = 0;
 static char reinitialize = 0;
 
-static char portdir[_POSIX_PATH_MAX] = "/usr/portage";
+static char portdir[_Q_PATH_MAX] = "/usr/portage";
 static char portarch[20] = "";
 static char portvdb[] = "var/db/pkg";
 static char portcachedir[] = "metadata/cache";
-static char portroot[_POSIX_PATH_MAX] = "/";
+static char portroot[_Q_PATH_MAX] = "/";
 
 #define _q_unused_ __attribute__((__unused__))
 
@@ -429,7 +436,7 @@ void initialize_portage_env(void)
 	FILE *fp;
 	char buf[BUFSIZE], *s, *p;
 
-	char profile[_POSIX_PATH_MAX], portage_file[_POSIX_PATH_MAX];
+	char profile[_Q_PATH_MAX], portage_file[_Q_PATH_MAX];
 	const char *files[] = {portage_file, "/etc/make.globals", "/etc/make.conf"};
 	struct {
 		const char *name;
@@ -608,7 +615,7 @@ const char *initialize_flat(int cache_type)
 		if ((b = scandir(category[i]->d_name, &pn, filter_hidden, alphasort)) < 0)
 			continue;
 		for (c = 0; c < b; c++) {
-			char de[_POSIX_PATH_MAX];
+			char de[_Q_PATH_MAX];
 
 			snprintf(de, sizeof(de), "%s/%s", category[i]->d_name, pn[c]->d_name);
 

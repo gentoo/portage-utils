@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.16 2005/12/11 18:58:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.17 2005/12/30 05:37:57 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -28,7 +28,7 @@ static const char *qsize_opts_help[] = {
 	"Display size in bytes",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.16 2005/12/11 18:58:13 solar Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.17 2005/12/30 05:37:57 vapier Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
 
@@ -45,7 +45,7 @@ int qsize_main(int argc, char **argv)
 	size_t num_bytes, num_files, num_nonfiles;
 	size_t disp_units = 0;
 	const char *str_disp_units = NULL;
-	char buf[_POSIX_PATH_MAX];
+	char buf[_Q_PATH_MAX];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");

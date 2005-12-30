@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.42 2005/12/11 18:58:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.43 2005/12/30 05:37:57 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -31,7 +31,7 @@ static const char *quse_opts_help[] = {
 	/* "Use your own variable formats. -F NAME=", */
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.42 2005/12/11 18:58:13 solar Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.43 2005/12/30 05:37:57 vapier Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -154,11 +154,11 @@ int quse_main(int argc, char **argv)
 	FILE *fp;
 	char *p;
 
-	char buf0[_POSIX_PATH_MAX];
-	char buf1[_POSIX_PATH_MAX];
-	char buf2[_POSIX_PATH_MAX];
+	char buf0[_Q_PATH_MAX];
+	char buf1[_Q_PATH_MAX];
+	char buf2[_Q_PATH_MAX];
 
-	char ebuild[_POSIX_PATH_MAX];
+	char ebuild[_Q_PATH_MAX];
 
 	const char *search_var = NULL;
 	const char *search_vars[] = { "IUSE=", "KEYWORDS=", "LICENSE=", search_var };

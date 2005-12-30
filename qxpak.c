@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.7 2005/12/11 18:58:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.8 2005/12/30 05:37:57 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,7 +46,7 @@ static const char *qxpak_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.7 2005/12/11 18:58:13 solar Exp $";
+static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.8 2005/12/30 05:37:57 vapier Exp $";
 #define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, lookup_applet_idx("qxpak"))
 
 
@@ -286,7 +286,7 @@ void xpak_create(const char *file, int argc, char **argv)
 	struct dirent **dir;
 	int i, fidx, numfiles;
 	struct stat st;
-	char path[_POSIX_PATH_MAX], *p;
+	char path[_Q_PATH_MAX], *p;
 	int index_len, data_len;
 
 	if (argc == 0)
