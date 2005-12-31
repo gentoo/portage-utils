@@ -1,18 +1,17 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.31 2005/12/30 07:52:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.32 2005/12/31 17:27:26 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#define QDEPENDS_FLAGS "drpacNk:Q:" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpaNk:Q:" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
 	{"depend",    no_argument, NULL, 'd'},
 	{"rdepend",   no_argument, NULL, 'r'},
 	{"pdepend",   no_argument, NULL, 'p'},
-	{"cdepend",   no_argument, NULL, 'c'},
 	{"key",        a_argument, NULL, 'k'},
 	{"query",      a_argument, NULL, 'Q'},
 	{"name-only", no_argument, NULL, 'N'},
@@ -23,14 +22,13 @@ static const char *qdepends_opts_help[] = {
 	"Show DEPEND info (default)",
 	"Show RDEPEND info",
 	"Show PDEPEND info",
-	"Show CDEPEND info",
 	"User defined vdb key",
 	"Query reverse deps",
 	"Only show package name",
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.31 2005/12/30 07:52:45 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.32 2005/12/31 17:27:26 solar Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -385,6 +383,12 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb,
 			         dentry->d_name, de->d_name, depend_file);
+
+			/* >=portage-2.1_pre3 wont ensure these files always exist. */
+			/* So we must verify they exist before attempting to eat_file on them. */
+			if (access(buf, R_OK) != 0)
+				continue;
+
 			if (!eat_file(buf, depend, sizeof(buf))) {
 				warn("i'm such a fatty, could not eat_file(%s)", buf);
 				continue;
@@ -519,7 +523,7 @@ int qdepends_main(int argc, char **argv)
 	int i;
 	const char *query = NULL;
 	const char *depend_file;
-	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", "CDEPEND", NULL, NULL };
+	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", NULL, NULL };
 
 	depend_file = depend_files[0];
 
@@ -533,7 +537,6 @@ int qdepends_main(int argc, char **argv)
 		case 'd': depend_file = depend_files[0]; break;
 		case 'r': depend_file = depend_files[1]; break;
 		case 'p': depend_file = depend_files[2]; break;
-		case 'c': depend_file = depend_files[3]; break;
 		case 'k': depend_file = optarg; break;
 		case 'a': depend_file = NULL; break;
 		case 'Q': query = optarg; break;
