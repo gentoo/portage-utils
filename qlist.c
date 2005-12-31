@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.25 2005/12/30 05:37:57 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.26 2005/12/31 17:12:28 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,7 +29,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.25 2005/12/30 05:37:57 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.26 2005/12/31 17:12:28 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 
@@ -54,11 +54,10 @@ queue *filter_dups(queue *sets) {
 
 int qlist_main(int argc, char **argv)
 {
-	DIR *dir;
-	int i;
+	int i, j, dfd;
 	char just_pkgname = 0, dups_only = 0;
 	char show_dir, show_obj, show_sym;
-	struct dirent *dentry, **de;
+	struct dirent *dentry, **de, **cde;
 	char buf[_Q_PATH_MAX];
 	queue *sets = NULL;
 	depend_atom *pkgname, *atom;
@@ -89,13 +88,18 @@ int qlist_main(int argc, char **argv)
 	if (chdir(portroot))
 		errp("could not chdir(%s) for ROOT", portroot);
 
-	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
+	if (chdir(portvdb) != 0)
+		return EXIT_FAILURE;
+
+	if ((dfd = scandir(".", &cde, filter_hidden, alphasort)) < 0)
 		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
-	while ((dentry = q_vdb_get_next_dir(dir))) {
+	for (j = 0; j < dfd ; j++) {
 		int a, x;
-
+		dentry = cde[j];
+		if (dentry->d_name[0] == '-')
+			continue;
 		if (chdir(dentry->d_name) != 0)
 			continue;
 
@@ -211,6 +215,7 @@ int qlist_main(int argc, char **argv)
 		free_sets(dups);
 		free_sets(sets);
 	}
+	while(dfd--) free(cde[dfd]);
 	return EXIT_SUCCESS;
 }
 
