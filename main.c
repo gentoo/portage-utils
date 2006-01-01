@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.82 2005/12/30 07:52:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.83 2006/01/01 01:04:18 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -584,7 +584,7 @@ const char *initialize_flat(int cache_type)
 		if (st.st_size == 0)
 			unlink(cache_file);
 
-	/* assuming --sync is used with --delete this will get recreated after every merged */
+	/* assuming --sync is used with --delete this will get recreated after every merge */
 	if (access(cache_file, R_OK) == 0)
 		goto ret;
 
@@ -850,6 +850,62 @@ void cache_free(portage_cache *cache)
 	atom_implode(cache->atom);
 	free(cache);
 }
+
+#ifdef SOLAR_WAS_HERE
+depend_atom **get_vdb_atoms(void);
+depend_atom **get_vdb_atoms(void) {
+	int cfd, j;
+	int dfd, i;
+
+	char buf[_Q_PATH_MAX];
+
+	struct dirent **cat;
+	struct dirent **pf;
+
+	depend_atom *atom = NULL;
+
+	if (chdir(portroot))
+		errp("could not chdir(%s) for ROOT", portroot);
+
+	if (chdir(portvdb) != 0)
+		return NULL;
+
+	memset(buf, 0, sizeof(buf));
+	/* scan the cat first */
+	if ((cfd = scandir(".", &cat, filter_hidden, alphasort)) < 0)
+		return NULL;
+
+	for (j = 0; j < cfd ; j++) {
+		if (cat[j]->d_name[0] == '-')
+			continue;
+		if (chdir(cat[j]->d_name) != 0)
+			continue;
+		if ((dfd = scandir(".", &pf, filter_hidden, alphasort)) < 0) {
+			chdir("..");
+			continue;
+		}
+		for (i = 0; i < dfd; i++) {
+			if (pf[i]->d_name[0] == '-')
+				continue;
+			snprintf(buf, sizeof(buf), "%s/%s", cat[j]->d_name, pf[i]->d_name);
+			atom = atom_explode(buf);
+			printf("%s %s %s", atom->CATEGORY, atom->PN, atom->PV);                
+			if (verbose || atom->PR_int)
+				printf(" r%i", atom->PR_int);
+			putchar('\n');
+			atom_implode(atom);
+
+		}
+		chdir("..");
+		while(dfd--) free(pf[dfd]);
+	}
+
+	/* cleanup */
+	if (cfd) while(cfd--) free(cat[cfd]);
+	
+	return NULL;
+}
+#endif
 
 #include "q.c"
 #include "qcheck.c"

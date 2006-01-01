@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.8 2005/12/11 18:58:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.9 2006/01/01 01:04:18 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -14,7 +14,7 @@ static struct option const qpkg_long_opts[] = {
 static const char *qpkg_opts_help[] = {
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.8 2005/12/11 18:58:13 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.9 2006/01/01 01:04:18 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 
@@ -190,7 +190,7 @@ retry_mkdir:
 			snprintf(buf, sizeof(buf), "%s/%s", dentry_cat->d_name, dentry_pkg->d_name);
 			atom = atom_explode(buf);
 			if (!atom) {
-				warn("could not explode '%s'", argv[i]);
+				warn("could not explode '%s'", buf);
 				continue;
 			}
 
