@@ -13,7 +13,9 @@
 #include "hash_fd.c"
 #include "md5_sha1_sum.c"
 #include "human_readable.c"
-
+#include "rmspace.c"
+#include "libq.h"
+#include "colors.c"
 /* custom libs */
 #include "atom_explode.c"
 #include "virtuals.c"

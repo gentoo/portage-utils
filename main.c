@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.83 2006/01/01 01:04:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.84 2006/01/01 21:38:06 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -85,25 +85,7 @@ void no_colors() {
 
 /* helper functions for showing errors */
 static const char *argv0;
-/* we need the space before the last comma or we trigger a bug in gcc-2 :( */
-#if defined OPTIMIZE_FOR_SIZE && (OPTIMIZE_FOR_SIZE > 1)
-#define warn(fmt, args...)
-#else
-#define warn(fmt, args...) \
-	fprintf(stderr, "%s%s%s: " fmt "\n", RED, argv0, NORM , ## args)
-#endif
-#define warnf(fmt, args...) warn("%s%s()%s: " fmt, YELLOW, __FUNCTION__, NORM , ## args)
-#define warnp(fmt, args...) warn(fmt ": %s" , ## args , strerror(errno))
-#define warnfp(fmt, args...) warnf(fmt ": %s" , ## args , strerror(errno))
-#define _err(wfunc, fmt, args...) \
-	do { \
-	wfunc(fmt , ## args); \
-	exit(EXIT_FAILURE); \
-	} while (0)
-#define err(fmt, args...) _err(warn, fmt , ## args)
-#define errf(fmt, args...) _err(warnf, fmt , ## args)
-#define errp(fmt, args...) _err(warnp, fmt , ## args)
-#define ARR_SIZE(arr) (sizeof(arr) / sizeof(*arr))
+
 #ifdef EBUG
 # include <sys/resource.h>
 
@@ -252,22 +234,6 @@ int rematch(const char *regex, const char *match, int cflags)
 	regfree(&preg);
 
 	return ret;
-}
-
-/* removed leading/trailing extraneous white space */
-static char *rmspace(char *s)
-{
-	register char *p;
-	/* find the start of trailing space and set it to \0 */
-	for (p = s + strlen(s) - 1; (isspace(*p) && p >= s); --p);
-	if (p != s + strlen(s) - 1)
-		*(p + 1) = 0;
-	/* find the end of leading space and set p to it */
-	for (p = s; (isspace(*p) && *p); ++p);
-	/* move the memory backward to overwrite leading space */
-	if (p != s)
-		memmove(s, p, strlen(p)+1);
-	return s;
 }
 
 /* removes adjacent extraneous white space */
