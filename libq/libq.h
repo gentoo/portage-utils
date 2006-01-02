@@ -18,3 +18,6 @@
 #define errp(fmt, args...) _err(warnp, fmt , ## args)
 #define ARR_SIZE(arr) (sizeof(arr) / sizeof(*arr))
 
+#ifndef BUFSIZE
+# define BUFSIZE 8192
+#endif

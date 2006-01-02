@@ -1,12 +1,12 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.8 2005/11/01 21:12:12 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.9 2006/01/02 20:38:15 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.8 2005/11/01 21:12:12 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.9 2006/01/02 20:38:15 solar Exp $
  */
 
 
@@ -148,7 +148,65 @@ void print_sets(queue *list)
 		printf("%s -> %s\n", ll->name, ll->item);
 }
 
-extern queue *resolve_vdb_virtuals();
+queue *resolve_vdb_virtuals(char *vdb);
+queue *resolve_vdb_virtuals(char *vdb) {
+        DIR *dir, *dirp;
+        struct dirent *dentry_cat, *dentry_pkg;
+        char buf[BUFSIZE];
+        depend_atom *atom;
+
+	chdir("/");
+
+        /* now try to run through vdb and locate matches for user inputs */
+        if ((dir = opendir(vdb)) == NULL)
+                return virtuals;
+
+        /* scan all the categories */
+        while ((dentry_cat = q_vdb_get_next_dir(dir)) != NULL) {
+                snprintf(buf, sizeof(buf), "%s/%s", vdb, dentry_cat->d_name);
+                if ((dirp = opendir(buf)) == NULL)
+                        continue;
+
+                /* scan all the packages in this category */
+                while ((dentry_pkg = q_vdb_get_next_dir(dirp)) != NULL) {
+			FILE *fp;
+			char *p;
+                        /* see if user wants any of these packages */
+			snprintf(buf, sizeof(buf), "%s/%s/%s/PROVIDE", vdb, dentry_cat->d_name, dentry_pkg->d_name);
+			if ((fp = fopen(buf, "r")) != NULL) {
+				fgets(buf, sizeof(buf), fp);
+
+				if ((p = strrchr(buf, '\n')) != NULL)
+					*p = 0;
+
+				rmspace(buf);
+
+				if (*buf) {
+					int ok = 0;
+					char *v, *tmp = xstrdup(buf);
+		                        snprintf(buf, sizeof(buf), "%s/%s", dentry_cat->d_name, dentry_pkg->d_name);
+
+					atom = atom_explode(buf);
+					if (!atom) {
+						warn("could not explode '%s'", buf);
+						continue;
+                        		}
+					sprintf(buf, "%s/%s", atom->CATEGORY, atom->PN);
+					if ((v = virtual(tmp, virtuals)) != NULL) {
+						// IF_DEBUG(fprintf(stderr, "%s provided by %s (removing)\n", tmp, v));
+						virtuals = del_set(tmp,  virtuals, &ok);
+					}
+					virtuals = add_set(tmp, buf, virtuals);
+					// IF_DEBUG(fprintf(stderr, "%s provided by %s/%s (adding)\n", tmp, atom->CATEGORY, dentry_pkg->d_name));
+					free(tmp);
+					atom_implode(atom);
+				}
+				fclose(fp);
+			}
+                }
+        }
+	return virtuals;
+}
 
 static queue *resolve_local_profile_virtuals();
 static queue *resolve_local_profile_virtuals() {
@@ -190,7 +248,7 @@ static queue *resolve_virtuals() {
 
 	free_sets(virtuals);
 	virtuals = resolve_local_profile_virtuals();
-	virtuals = resolve_vdb_virtuals();
+	// virtuals = resolve_vdb_virtuals(portvdb);
 
 	if ((chdir("/etc/")) == (-1))
 		return virtuals;

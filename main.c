@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.84 2006/01/01 21:38:06 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.85 2006/01/02 20:38:15 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -61,27 +61,9 @@ static char portroot[_Q_PATH_MAX] = "/";
 #define _q_unused_ __attribute__((__unused__))
 
 
-/* color constants */
-#ifdef OPTIMIZE_FOR_SIZE
-# define _MAKE_COLOR(c,b) ""
-#else
-# define _MAKE_COLOR(c,b) "\e[" c ";" b "m"
+#ifndef BUFSIZE
+# define BUFSIZE 8192
 #endif
-static const char *BOLD = _MAKE_COLOR("00", "01");
-static const char *NORM = _MAKE_COLOR("00", "00");
-static const char *BLUE = _MAKE_COLOR("36", "01");
-static const char *DKBLUE = _MAKE_COLOR("34", "01");
-static const char *CYAN = _MAKE_COLOR("00", "36");
-static const char *GREEN = _MAKE_COLOR("32", "01");
-static const char *MAGENTA = _MAKE_COLOR("00", "35");
-static const char *RED = _MAKE_COLOR("31", "01");
-static const char *YELLOW = _MAKE_COLOR("33", "01");
-static const char *WHITE = _MAKE_COLOR("01", "38");
-
-void no_colors(void);
-void no_colors() {
-	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = MAGENTA = RED = YELLOW = WHITE = "";
-}
 
 /* helper functions for showing errors */
 static const char *argv0;
@@ -104,14 +86,14 @@ void init_coredumps(void)
 # define IF_DEBUG(x)
 #endif
 
-#ifndef BUFSIZE
-# define BUFSIZE 8192
-#endif
-
-
-
 /* include common library code */
 #include "libq/libq.c"
+
+void no_colors(void);
+void no_colors() {
+	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = MAGENTA = RED = YELLOW = WHITE = "";
+}
+
 
 /* include common applet defs */
 #include "applets.h"
@@ -292,6 +274,7 @@ void makeargv(char *string, int *argc, char ***argv) {
 	free(q);
 }
 
+#if 0
 /* helper func for scanning the vdb */
 struct dirent *q_vdb_get_next_dir(DIR *dir);
 struct dirent *q_vdb_get_next_dir(DIR *dir)
@@ -313,7 +296,7 @@ next_entry:
 
 	return ret;
 }
-
+#endif
 /* 
  * Parse a line of CONTENTS file and provide access to the individual fields
  */
@@ -888,6 +871,7 @@ depend_atom **get_vdb_atoms(void) {
 #include "qgrep.c"
 #include "qatom.c"
 
+#if 0
 queue *resolve_vdb_virtuals();
 queue *resolve_vdb_virtuals() {
         DIR *dir, *dirp;
@@ -947,6 +931,7 @@ queue *resolve_vdb_virtuals() {
         }
 	return virtuals;
 }
+#endif
 
 void cleanup() {
 	reinitialize_as_needed();

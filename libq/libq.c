@@ -7,6 +7,8 @@
 
 /* busybox imports */
 #include "busybox.h"
+#include "libq.h"
+#include "colors.c"
 #include "xmalloc.c"
 #include "xstrdup.c"
 #include "xasprintf.c"
@@ -14,8 +16,11 @@
 #include "md5_sha1_sum.c"
 #include "human_readable.c"
 #include "rmspace.c"
-#include "libq.h"
-#include "colors.c"
+
 /* custom libs */
 #include "atom_explode.c"
-#include "virtuals.c"
+
+#ifndef _LIB_Q
+# include "vdb_get_next_dir.c"
+# include "virtuals.c"
+#endif
