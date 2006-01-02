@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.87 2006/01/02 22:51:08 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.88 2006/01/02 23:33:00 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -57,6 +57,7 @@ static char portarch[20] = "";
 static char portvdb[] = "var/db/pkg";
 static char portcachedir[] = "metadata/cache";
 static char portroot[_Q_PATH_MAX] = "/";
+static char config_protect[_Q_PATH_MAX] = "/etc/";
 
 #define _q_unused_ __attribute__((__unused__))
 
@@ -397,6 +398,7 @@ void initialize_portage_env(void)
 		const size_t value_len;
 	} vars_to_read[] = {
 		{"ARCH",    4, _Q_STR,  portarch, sizeof(portarch)},
+		{"CONFIG_PROTECT",    4, _Q_STR,  config_protect, sizeof(portroot)},
 		{"NOCOLOR", 7, _Q_BOOL, &nocolor, 1},
 		{"PORTDIR", 7, _Q_STR,  portdir, sizeof(portdir)},
 		{"ROOT",    4, _Q_STR,  portroot, sizeof(portroot)}

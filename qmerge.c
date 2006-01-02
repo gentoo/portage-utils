@@ -2,19 +2,21 @@
 // #include <stdlib.h>
 
 
-#define QMERGE_FLAGS "fp" COMMON_FLAGS
+#define QMERGE_FLAGS "fpl" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
 	{"fetch",     no_argument, NULL, 'f'},
 	{"pretend",   no_argument, NULL, 'p'},
+	{"list",   no_argument, NULL, 'l'},
         COMMON_LONG_OPTS
 };
 static const char *qmerge_opts_help[] = {
 	"fetch only. dont merge",
 	"pretend only. dont do final merge",
+	"list installable packages",
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.2 2006/01/02 22:35:35 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.3 2006/01/02 23:33:00 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 
@@ -22,8 +24,9 @@ char binhost[512] = "";		// "ftp://tinderbox.x86.dev.gentoo.org/default-linux/x8
 char pkgdir[512] = "";		// /usr/portage/packages/
 char port_tmpdir[512] = "/var/tmp/portage/portage-pkg/";
 
-char merge = 1;
+char fetch_only = 0;
 char pretend = 0;
+char list_packages = 0;
 
 struct pkg_t {
 	char PF[64];
@@ -132,7 +135,7 @@ void pkg_merge(depend_atom *atom) {
 	char tarball[255];
 	char *p;
 
-	if (!merge) return;
+	if (fetch_only) return;
 
 	if (chdir(port_tmpdir) != 0) errf("!!! chdir(port_tmpdir)");
 
@@ -276,19 +279,31 @@ void pkg_fetch(int, char **);
 void pkg_fetch(int argc, char **argv) {
 	depend_atom *atom;
 	char buf[255];
+	char buf2[255];
 	char *hash;
 	int i;
 
 	snprintf(buf, sizeof(buf), "%s/%s", Pkg.CATEGORY, Pkg.PF);
 	if ((atom = atom_explode(buf)) == NULL)
-		errf("%s/%s is not a valud atom", Pkg.CATEGORY, Pkg.PF);
+		errf("%s/%s is not a valid atom", Pkg.CATEGORY, Pkg.PF);
+
+	snprintf(buf2, sizeof(buf2), "%s/%s", Pkg.CATEGORY, atom->PN);
 
 	for (i = 1; i < argc; i++) {
+		int match = 0;
+
 		if (argv[i][0] == '-')
 			continue;
 
 		/* verify this is the requested package */
-		if ((strcmp(argv[i], atom->PN)) != 0)
+		if ((strcmp(argv[i], buf)) == 0)
+			match = 1;
+		if ((strcmp(argv[i], Pkg.PF)) == 0)
+			match = 1;
+	 	if ((strcmp(argv[i], atom->PN)) == 0)
+			match = 1;
+
+		if (match != 1)
 			continue;
 
 		/* check to see if file exists and it's checksum matches */
@@ -336,6 +351,7 @@ void pkg_fetch(int argc, char **argv) {
 
 		if (!quiet) printf("MD5: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, Pkg.PF);
 		fflush(stdout);
+
 		/* attempt to merge it */
 		pkg_merge(atom);
 	}
@@ -359,8 +375,12 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 	while((fgets(buf, sizeof(buf), fp)) != NULL) {
 		lineno++;
 		if (*buf == '\n') {
-			if (strlen(Pkg.PF) > 0)
-				pkg_fetch(argc, argv);
+			if (strlen(Pkg.PF) > 0) {
+				if (list_packages)
+					printf("%s/%s\n", Pkg.CATEGORY, Pkg.PF);
+				else
+					pkg_fetch(argc, argv);
+			}
 			memset(&Pkg, 0, sizeof(Pkg));
 			continue;
 		}
@@ -410,9 +430,21 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 
 
 int qmerge_main(int argc, char **argv) {
+	int i;
 	const char *Packages = "Packages";
+
 	if (argc < 2)
 		qmerge_usage(EXIT_FAILURE);
+
+	while ((i = GETOPT_LONG(QMERGE, qmerge, "")) != -1) {
+		switch (i) {
+			case 'l': list_packages = 1; break;
+			case 'f': fetch_only = 1; break;
+			case 'p': pretend = 1; break;
+			COMMON_GETOPTS_CASES(qmerge)
+		}
+	}
+	// if (argc == optind) qmerge_usage(EXIT_FAILURE);
 	qmerge_initialize(Packages);
 	parse_packages(Packages, argc, argv);
 	return 0;
