@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.86 2006/01/02 22:35:35 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.87 2006/01/02 22:51:08 vapier Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -388,17 +388,18 @@ void initialize_portage_env(void)
 
 	char profile[_Q_PATH_MAX], portage_file[_Q_PATH_MAX];
 	const char *files[] = {portage_file, "/etc/make.globals", "/etc/make.conf"};
+	typedef enum { _Q_BOOL, _Q_STR } var_types;
 	struct {
 		const char *name;
 		const size_t name_len;
-		const int type;
+		const var_types type;
 		char *value;
 		const size_t value_len;
 	} vars_to_read[] = {
-		{"ARCH",    4, 2, portarch, sizeof(portarch)},
-		{"NOCOLOR", 7, 1, &nocolor, 1},
-		{"PORTDIR", 7, 2, portdir, sizeof(portdir)},
-		{"ROOT",    4, 2, portroot, sizeof(portroot)}
+		{"ARCH",    4, _Q_STR,  portarch, sizeof(portarch)},
+		{"NOCOLOR", 7, _Q_BOOL, &nocolor, 1},
+		{"PORTDIR", 7, _Q_STR,  portdir, sizeof(portdir)},
+		{"ROOT",    4, _Q_STR,  portroot, sizeof(portroot)}
 	};
 
 	f = 0;
@@ -434,8 +435,8 @@ void initialize_portage_env(void)
 					}
 
 					switch (vars_to_read[i].type) {
-					case 1: *vars_to_read[i].value = 1; break;
-					case 2: strncpy(vars_to_read[i].value, s, vars_to_read[i].value_len); break;
+					case _Q_BOOL: *vars_to_read[i].value = 1; break;
+					case _Q_STR: strncpy(vars_to_read[i].value, s, vars_to_read[i].value_len); break;
 					}
 				}
 			}
@@ -466,15 +467,15 @@ void initialize_portage_env(void)
 		s = getenv(vars_to_read[i].name);
 		if (s != NULL) {
 			switch (vars_to_read[i].type) {
-			case 1: *vars_to_read[i].value = 1; break;
-			case 2: strncpy(vars_to_read[i].value, s, vars_to_read[i].value_len); break;
+			case _Q_BOOL: *vars_to_read[i].value = 1; break;
+			case _Q_STR: strncpy(vars_to_read[i].value, s, vars_to_read[i].value_len); break;
 			}
 		}
 		IF_DEBUG(
 			printf("%s = ", vars_to_read[i].name);
 			switch (vars_to_read[i].type) {
-			case 1: printf("%i\n", *vars_to_read[i].value); break;
-			case 2: puts(vars_to_read[i].value); break;
+			case _Q_BOOL: printf("%i\n", *vars_to_read[i].value); break;
+			case _Q_STR: puts(vars_to_read[i].value); break;
 			}
 		)
 	}
