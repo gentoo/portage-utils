@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.85 2006/01/02 20:38:15 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.86 2006/01/02 22:35:35 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -864,6 +864,7 @@ depend_atom **get_vdb_atoms(void) {
 #include "qlop.c"
 #include "qsearch.c"
 #include "qsize.c"
+#include "qmerge.c"
 #include "qtbz2.c"
 #include "quse.c"
 #include "qxpak.c"

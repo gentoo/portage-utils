@@ -1,16 +1,27 @@
-#include <stdio.h>
-#include <stdlib.h>
+// #include <stdio.h>
+// #include <stdlib.h>
 
-static const char *argv0 = "qmerge";
-// static const char *argv0 = "";
 
-#include "libq/libq.c"
+#define QMERGE_FLAGS "fp" COMMON_FLAGS
+static struct option const qmerge_long_opts[] = {
+	{"fetch",     no_argument, NULL, 'f'},
+	{"pretend",   no_argument, NULL, 'p'},
+        COMMON_LONG_OPTS
+};
+static const char *qmerge_opts_help[] = {
+	"fetch only. dont merge",
+	"pretend only. dont do final merge",
+        COMMON_OPTS_HELP
+};
+
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.2 2006/01/02 22:35:35 solar Exp $";
+#define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
+
 
 char binhost[512] = "";		// "ftp://tinderbox.x86.dev.gentoo.org/default-linux/x86/2005.1/All";
 char pkgdir[512] = "";		// /usr/portage/packages/
 char port_tmpdir[512] = "/var/tmp/portage/portage-pkg/";
-char verbose = 0;
-char quiet = 0;
+
 char merge = 1;
 char pretend = 0;
 
@@ -25,29 +36,35 @@ struct pkg_t {
 	char USE[BUFSIZ];
 } Pkg;
 
-int interactive_rename(char *src, char *dst) {
+int interactive_rename(const char *, const char *);
+int interactive_rename(const char *src, const char *dst) {
 	struct stat st;
 	int ret = 0;
-
-	char *ARGV[] = { "/bin/busybox", "mv", "-i", src, dst , NULL };
+	char buf[1024];
+	char **ARGV = NULL;
+	int ARGC = 0;
 
 	if (stat(dst, &st) != (-1))
 		warn("%s exists\n", dst);
 
-	printf(">>> %s %d\n", dst, ret);
+	snprintf(buf, sizeof(buf), "/bin/busybox mv -i %s %s", src, dst);
+	makeargv(buf, &ARGC, &ARGV);
 
+	if (!quiet) printf("%s>>>%s %s\n", GREEN, NORM, dst);
 	ret = execv(ARGV[0], ARGV );
 	
 	return ret;
 }
 
-void fetch(char *destdir, char *src) {
+void fetch(const char *, const char *);
+void fetch(const char *destdir, const char *src) {
 	char buf[BUFSIZ];
 	snprintf(buf, sizeof(buf), "/bin/busybox wget %s -P %s %s/%s", (quiet ? "-q" : ""), destdir, binhost, src);
 	system(buf);
 }
 
-void qmerge_initialize(char *Packages) {
+void qmerge_initialize(const char *);
+void qmerge_initialize(const char *Packages) {
 	FILE *fp;
 	char buf[BUFSIZ];
 	char *p;
@@ -90,6 +107,7 @@ void qmerge_initialize(char *Packages) {
 		fetch("./", Packages);
 }
 
+char *best_version(depend_atom *);
 char *best_version(depend_atom *atom) {
 	static char buf[1024];
 	FILE *fp;
@@ -107,9 +125,9 @@ char *best_version(depend_atom *atom) {
 	return (char *) buf;
 }
 
+void pkg_merge(depend_atom *);
 void pkg_merge(depend_atom *atom) {
 	FILE *fp, *contents;
-	struct dirent **namelist;
 	char buf[1024];
 	char tarball[255];
 	char *p;
@@ -245,6 +263,7 @@ void pkg_merge(depend_atom *atom) {
 	chdir(port_tmpdir);
 }
 
+int unlink_empty(char *);
 int unlink_empty(char *buf) {
 	struct stat st;
 	if ((stat(buf, &st)) != (-1))
@@ -253,17 +272,16 @@ int unlink_empty(char *buf) {
 	return (-1);
 }
 
+void pkg_fetch(int, char **);
 void pkg_fetch(int argc, char **argv) {
 	depend_atom *atom;
 	char buf[255];
 	char *hash;
 	int i;
 
-	int installed = 0;
-
 	snprintf(buf, sizeof(buf), "%s/%s", Pkg.CATEGORY, Pkg.PF);
 	if ((atom = atom_explode(buf)) == NULL)
-		errf("%s is not a valud atom");
+		errf("%s/%s is not a valud atom", Pkg.CATEGORY, Pkg.PF);
 
 	for (i = 1; i < argc; i++) {
 		if (argv[i][0] == '-')
@@ -325,7 +343,8 @@ void pkg_fetch(int argc, char **argv) {
 	atom_implode(atom);
 }
 
-void parse_packages(char *Packages, int argc, char **argv) {
+void parse_packages(const char *, int , char **);
+void parse_packages(const char *Packages, int argc, char **argv) {
 	FILE *fp;
 	char buf[BUFSIZ];
 	char value[BUFSIZ];
@@ -389,68 +408,12 @@ void parse_packages(char *Packages, int argc, char **argv) {
 	fclose(fp);
 }
 
-void usage() {
-	warn("qmerge <pkg> <pkg>...");
-	exit(1);
-}
 
 int qmerge_main(int argc, char **argv) {
-	char *Packages = "Packages";
-	int i;
+	const char *Packages = "Packages";
 	if (argc < 2)
-		usage();
-	for (i = 1; i < argc; i++) {
-		if (argv[i][0] != '-') 
-			continue;
-		if ((strcmp(argv[i], "-v") == 0) || (strcmp(argv[i], "--verbose") == 0))
-			verbose++;
-		if ((strcmp(argv[i], "-q") == 0) || (strcmp(argv[i], "--quiet") == 0))
-			quiet = 1;
-		if ((strcmp(argv[i], "-f") == 0) || (strcmp(argv[i], "--fetch") == 0))
-			merge = 0;
-		if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0))
-			usage();
-		if ((strcmp(argv[i], "-p") == 0) || (strcmp(argv[i], "--pretend") == 0))
-			pretend = 1;
-	}
+		qmerge_usage(EXIT_FAILURE);
 	qmerge_initialize(Packages);
 	parse_packages(Packages, argc, argv);
 	return 0;
 }
-
-int main(int argc, char **argv) {
-	return qmerge_main(argc, argv);
-}
-
-#if 0
-      struct stat {
-             dev_t     st_dev;     /* ID of device containing file */
-             ino_t     st_ino;     /* inode number */
-             mode_t    st_mode;    /* protection */
-             nlink_t   st_nlink;   /* number of hard links */
-             uid_t     st_uid;     /* user ID of owner */
-             gid_t     st_gid;     /* group ID of owner */
-             dev_t     st_rdev;    /* device ID (if special file) */
-             off_t     st_size;    /* total size, in bytes */
-             blksize_t st_blksize; /* blocksize for filesystem I/O */
-             blkcnt_t  st_blocks;  /* number of blocks allocated */
-             time_t    st_atime;   /* time of last access */
-             time_t    st_mtime;   /* time of last modification */
-             time_t    st_ctime;   /* time of last status change */
-         };
-#define S_ISDIR(mode)    __S_ISTYPE((mode), __S_IFDIR)
-#define S_ISCHR(mode)    __S_ISTYPE((mode), __S_IFCHR)
-#define S_ISBLK(mode)    __S_ISTYPE((mode), __S_IFBLK)
-#define S_ISREG(mode)    __S_ISTYPE((mode), __S_IFREG)
-#ifdef __S_IFIFO
-# define S_ISFIFO(mode)  __S_ISTYPE((mode), __S_IFIFO)
-#endif
-#ifdef __S_IFLNK
-# define S_ISLNK(mode)   __S_ISTYPE((mode), __S_IFLNK)
-#endif
-
-#if defined __USE_BSD && !defined __S_IFLNK
-# define S_ISLNK(mode)  0
-#endif
-
-#endif /* if 0 */

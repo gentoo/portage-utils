@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.8 2005/12/11 18:58:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.9 2006/01/02 22:35:35 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -25,6 +25,7 @@ int qxpak_main(int, char **);
 int qpkg_main(int, char **);
 int qgrep_main(int, char **);
 int qatom_main(int, char **);
+int qmerge_main(int, char **);
 
 typedef int (*APPLET)(int, char **);
 
@@ -44,6 +45,7 @@ struct applet_t {
 	{"qgrep",     qgrep_main,     "<misc args>",     "grep in ebuilds"},
 	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
+	{"qmerge",    qmerge_main,    "<pkgname> ..",    "fetch and merge binary package"},
 	{"qpkg",      qpkg_main,      "<misc args>",     "manipulate Gentoo binpkgs"},
 	{"qsearch",   qsearch_main,   "<regex>",         "search pkgname/desc"},
 	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
