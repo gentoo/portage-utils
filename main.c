@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.88 2006/01/02 23:33:00 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.89 2006/01/03 15:40:53 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -58,6 +58,11 @@ static char portvdb[] = "var/db/pkg";
 static char portcachedir[] = "metadata/cache";
 static char portroot[_Q_PATH_MAX] = "/";
 static char config_protect[_Q_PATH_MAX] = "/etc/";
+
+char binhost[512] = "";         // "ftp://tinderbox.x86.dev.gentoo.org/default-linux/x86/2005.1/All";
+char pkgdir[512] = "";          // /usr/portage/packages/
+char port_tmpdir[512] = "/var/tmp/portage/portage-pkg/";
+
 
 #define _q_unused_ __attribute__((__unused__))
 
@@ -398,9 +403,11 @@ void initialize_portage_env(void)
 		const size_t value_len;
 	} vars_to_read[] = {
 		{"ARCH",    4, _Q_STR,  portarch, sizeof(portarch)},
-		{"CONFIG_PROTECT",    4, _Q_STR,  config_protect, sizeof(portroot)},
+		{"CONFIG_PROTECT",    14, _Q_STR,  config_protect, sizeof(config_protect)},
 		{"NOCOLOR", 7, _Q_BOOL, &nocolor, 1},
 		{"PORTDIR", 7, _Q_STR,  portdir, sizeof(portdir)},
+		{"PORTAGE_BINHOST",   15, _Q_STR,  binhost, sizeof(binhost)},
+		{"PKGDIR",  6, _Q_STR,  pkgdir, sizeof(pkgdir)},
 		{"ROOT",    4, _Q_STR,  portroot, sizeof(portroot)}
 	};
 

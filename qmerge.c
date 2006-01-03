@@ -20,13 +20,8 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.6 2006/01/03 06:12:10 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.7 2006/01/03 15:40:53 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
-
-
-char binhost[512] = "";		// "ftp://tinderbox.x86.dev.gentoo.org/default-linux/x86/2005.1/All";
-char pkgdir[512] = "";		// /usr/portage/packages/
-char port_tmpdir[512] = "/var/tmp/portage/portage-pkg/";
 
 char fetch_only = 0;
 char pretend = 0;
@@ -71,40 +66,15 @@ void fetch(const char *destdir, const char *src) {
 
 void qmerge_initialize(const char *, int);
 void qmerge_initialize(const char *Packages, int force_download) {
-	FILE *fp;
-	char buf[BUFSIZ];
-	char *p;
-
-	if ((fp = fopen("/etc/make.conf", "r")) == NULL)
-		exit(1);
-
-	while((fgets(buf, sizeof(buf), fp)) != NULL) {
-		int i = 0;
-		if ((p = strchr(buf, '\n')) != NULL)
-			*p = 0;
-		if (*buf != 'P') continue;
-		for (i = 0; i < strlen(buf); i++) {
-			if ((buf[i] == '\"') || (buf[i] == '\'')) {
-				buf[i] = ' ';
-				rmspace(&buf[i]);
-			}
-		}
-		if ((strncmp(buf, "PORTAGE_BINHOST=", 16)) == 0) {
-			if (strchr(buf, '$') != NULL)
-				errf("bash variables can not be used for PORAGE_BINHOST= setting");
-			strncpy(binhost, &buf[16], sizeof(binhost));
-		}
-		if ((strncmp(buf, "PKGDIR=", 7)) == 0) {
-			if (strchr(buf, '$') != NULL)
-				errf("bash variables can not be used for PKGDIR= setting");
-			strncpy(pkgdir, &buf[7], sizeof(pkgdir));
-			strncat(pkgdir, "/All", sizeof(pkgdir));
-		}
+	if (pkgdir[0] == '/') {
+		int len = strlen(pkgdir);
+		if (len > 5)
+			if ((strcmp(&pkgdir[len-4], "/All")) != 0)
+				strncat(pkgdir, "/All", sizeof(pkgdir));
 	}
-	fclose(fp);
 
 	if ((access(pkgdir, R_OK|W_OK|X_OK)) != 0)
-		errf("Fatal errors with %s", pkgdir);
+		errf("Fatal errors with PKGDIR='%s'", pkgdir);
 
 	mkdir(port_tmpdir, 0755);
 
