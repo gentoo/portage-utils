@@ -2,21 +2,23 @@
 // #include <stdlib.h>
 
 
-#define QMERGE_FLAGS "fpl" COMMON_FLAGS
+#define QMERGE_FLAGS "fply" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
 	{"fetch",     no_argument, NULL, 'f'},
 	{"pretend",   no_argument, NULL, 'p'},
-	{"list",   no_argument, NULL, 'l'},
+	{"list",      no_argument, NULL, 'l'},
+	{"yes",       no_argument, NULL, 'y'},
         COMMON_LONG_OPTS
 };
 static const char *qmerge_opts_help[] = {
 	"fetch only. dont merge",
 	"pretend only. dont do final merge",
 	"list installable packages",
+	"interactive, prompt before overwrite",
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.3 2006/01/02 23:33:00 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.4 2006/01/03 00:41:41 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 
@@ -27,7 +29,7 @@ char port_tmpdir[512] = "/var/tmp/portage/portage-pkg/";
 char fetch_only = 0;
 char pretend = 0;
 char list_packages = 0;
-
+char interactive = 1;
 struct pkg_t {
 	char PF[64];
 	char CATEGORY[64];
@@ -41,22 +43,20 @@ struct pkg_t {
 
 int interactive_rename(const char *, const char *);
 int interactive_rename(const char *src, const char *dst) {
-	struct stat st;
-	int ret = 0;
 	char buf[1024];
-	char **ARGV = NULL;
-	int ARGC = 0;
+#if 0
+	struct stat st;
 
-	if (stat(dst, &st) != (-1))
-		warn("%s exists\n", dst);
+	if (stat(dst, &st) == (-1))
+		warn("%s does exist", dst);
+	else
+		warn("%s exists", dst);
+#endif
+	snprintf(buf, sizeof(buf), "/bin/busybox mv %s %s %s", interactive ? "-i" : "", src, dst);
+	system(buf);
+	if (verbose) printf("%s>>>%s %s\n", GREEN, NORM, dst);
 
-	snprintf(buf, sizeof(buf), "/bin/busybox mv -i %s %s", src, dst);
-	makeargv(buf, &ARGC, &ARGV);
-
-	if (!quiet) printf("%s>>>%s %s\n", GREEN, NORM, dst);
-	ret = execv(ARGV[0], ARGV );
-	
-	return ret;
+	return 0;
 }
 
 void fetch(const char *, const char *);
@@ -133,7 +133,11 @@ void pkg_merge(depend_atom *atom) {
 	FILE *fp, *contents;
 	char buf[1024];
 	char tarball[255];
+	char installed_version[126];
 	char *p;
+	int i;
+	char **ARGV = NULL;
+	int ARGC = 0;
 
 	if (fetch_only) return;
 
@@ -142,6 +146,15 @@ void pkg_merge(depend_atom *atom) {
 	mkdir(Pkg.PF, 0710);
 	if (chdir(Pkg.PF) != 0) errf("!!! chdir(%s)", Pkg.PF);
 
+	/* check for an already install pkg */
+	snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, Pkg.PF);
+	p = best_version(atom);
+
+	if (*p) {
+		strncpy(installed_version, p, sizeof(installed_version));
+	} else  {
+		installed_version[0] = 0;
+	}
 	
 	/* split the tbz and xpak data */
 	snprintf(tarball, sizeof(tarball), "%s.tbz2", Pkg.PF);
@@ -163,18 +176,21 @@ void pkg_merge(depend_atom *atom) {
 	snprintf(buf, sizeof(buf), "/bin/busybox tar -jx%sf %s.tar.bz2 -C image/", ((verbose > 1) ? "v" : ""), Pkg.PF);
 	system(buf);
 	fflush(stdout);
+
 	/* check for an already install pkg */
 	snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, Pkg.PF);
-	p = best_version(atom);
-	if (*p) {
-		if ((strcmp(p, buf)) == 0) {
-			if (verbose) fprintf(stderr, "%s already installed\n", buf);
+
+	if (installed_version[0]) {
+		if ((strcmp(installed_version, buf)) == 0) {
+			if (verbose) 
+				fprintf(stderr, "%s already installed\n", installed_version);
 		} else {
-			if (verbose) printf("local: %s remote %s\n", p, buf);
+			if (verbose)
+				printf("local: %s remote %s\n", installed_version, buf);
 		}
 	} else {
-		if (verbose) printf("Installing %s\n", buf);
-		
+		if (verbose)
+			printf("Installing %s\n", buf);
 	}
 
 	if ((contents = fopen("vdb/CONTENTS", "w")) == NULL)
@@ -183,6 +199,8 @@ void pkg_merge(depend_atom *atom) {
 	chdir("image");
 	if ((fp = popen("/bin/busybox find .", "r")) == NULL)
 		errf("come on wtf!");
+
+	makeargv(config_protect, &ARGC, &ARGV);
 
 	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 		struct stat st;
@@ -211,16 +229,30 @@ void pkg_merge(depend_atom *atom) {
 		if (S_ISREG(st.st_mode)) {
 			struct timeval tv;
 			char *hash;
+			int protected = 0;
 
 			hash = hash_file(buf, HASH_MD5);
 
 			snprintf(line, sizeof(line), "obj %s %s %lu", &buf[1], hash, st.st_mtime);
 
-			if ((strncmp("/etc/", &buf[1], 5)) == 0) {
-				if ((access(&buf[1], R_OK)) == 0) {
-					printf("CFG: %s\n", &buf[1]);
-					continue;
-				}
+/*
+			/etc
+			/usr/kde/2/share/config
+			/usr/kde/3/share/config
+			/var/qmail/control
+*/
+			for (i = 1; i < ARGC; i++)
+				if ((strncmp(ARGV[i], &buf[1], strlen(ARGV[i]))) == 0)
+					if ((access(&buf[1], R_OK)) == 0)
+						protected = 1;
+
+			if ((strncmp("/etc/", &buf[1], 5)) == 0)
+				if ((access(&buf[1], R_OK)) == 0)
+					protected = 1;
+
+			if (protected) {
+				printf("CFG: %s\n", &buf[1]);
+				continue;
 			}
 
 			if (interactive_rename(buf, &buf[1]) != 0)
@@ -246,6 +278,13 @@ void pkg_merge(depend_atom *atom) {
 		if (*line) fprintf(contents, "%s\n", line);
 	}
 
+                                                
+	if (ARGC > 0) {
+		for (i = 0; i < ARGC; i++)
+			free(ARGV[i]);
+		free(ARGV);
+	}
+
 	fclose(contents);
 	fclose(fp);
 
@@ -261,6 +300,7 @@ void pkg_merge(depend_atom *atom) {
 			mkdir(buf, 0755);
 		}
 		strncat(buf, Pkg.PF, sizeof(buf));
+		/* not quiet perfect when a version is already installed */
 		interactive_rename("vdb", buf);
 	}
 	chdir(port_tmpdir);
@@ -441,6 +481,7 @@ int qmerge_main(int argc, char **argv) {
 			case 'l': list_packages = 1; break;
 			case 'f': fetch_only = 1; break;
 			case 'p': pretend = 1; break;
+			case 'y': interactive = 0; break;
 			COMMON_GETOPTS_CASES(qmerge)
 		}
 	}
