@@ -2,23 +2,25 @@
 // #include <stdlib.h>
 
 
-#define QMERGE_FLAGS "fply" COMMON_FLAGS
+#define QMERGE_FLAGS "fplyrF" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
 	{"fetch",     no_argument, NULL, 'f'},
 	{"pretend",   no_argument, NULL, 'p'},
 	{"list",      no_argument, NULL, 'l'},
 	{"yes",       no_argument, NULL, 'y'},
+	{"force",     no_argument, NULL, 'F'},
         COMMON_LONG_OPTS
 };
 static const char *qmerge_opts_help[] = {
 	"fetch only. dont merge",
 	"pretend only. dont do final merge",
-	"list installable packages",
-	"interactive, prompt before overwrite",
+	"list available packages",
+	"dont prompt before overwrite",
+	"forced download of current binary package cache",
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.5 2006/01/03 02:05:34 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.6 2006/01/03 06:12:10 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 
@@ -67,8 +69,8 @@ void fetch(const char *destdir, const char *src) {
 	system(buf);
 }
 
-void qmerge_initialize(const char *);
-void qmerge_initialize(const char *Packages) {
+void qmerge_initialize(const char *, int);
+void qmerge_initialize(const char *Packages, int force_download) {
 	FILE *fp;
 	char buf[BUFSIZ];
 	char *p;
@@ -106,7 +108,10 @@ void qmerge_initialize(const char *Packages) {
 
 	mkdir(port_tmpdir, 0755);
 
-	if (chdir(port_tmpdir) != 0) errf("!!! chdir(port_tmpdir)");
+	if (chdir(port_tmpdir) != 0)
+		errf("!!! chdir(%s) %s", port_tmpdir, strerror(errno));
+	if (force_download)
+		unlink(Packages);
 	if (access(Packages, R_OK) != 0)
 		fetch("./", Packages);
 }
@@ -129,6 +134,8 @@ char *best_version(depend_atom *atom) {
 	return (char *) buf;
 }
 
+
+/* oh shit getting into pkg mgt here. wishlist vercmp() function */
 void pkg_merge(depend_atom *);
 void pkg_merge(depend_atom *atom) {
 	FILE *fp, *contents;
@@ -142,10 +149,10 @@ void pkg_merge(depend_atom *atom) {
 
 	if (fetch_only) return;
 
-	if (chdir(port_tmpdir) != 0) errf("!!! chdir(port_tmpdir)");
+	if (chdir(port_tmpdir) != 0) errf("!!! chdir(%s) %s", port_tmpdir, strerror(errno));
 
 	mkdir(Pkg.PF, 0710);
-	if (chdir(Pkg.PF) != 0) errf("!!! chdir(%s)", Pkg.PF);
+	if (chdir(Pkg.PF) != 0) errf("!!! chdir(%s) %s", Pkg.PF, strerror(errno));
 
 	/* check for an already install pkg */
 	snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, Pkg.PF);
@@ -235,13 +242,8 @@ void pkg_merge(depend_atom *atom) {
 			hash = hash_file(buf, HASH_MD5);
 
 			snprintf(line, sizeof(line), "obj %s %s %lu", &buf[1], hash, st.st_mtime);
+			/* /etc /usr/kde/2/share/config /usr/kde/3/share/config	/var/qmail/control */
 
-/*
-			/etc
-			/usr/kde/2/share/config
-			/usr/kde/3/share/config
-			/var/qmail/control
-*/
 			for (i = 1; i < ARGC; i++)
 				if ((strncmp(ARGV[i], &buf[1], strlen(ARGV[i]))) == 0)
 					if ((access(&buf[1], R_OK)) == 0)
@@ -302,7 +304,13 @@ void pkg_merge(depend_atom *atom) {
 		}
 		strncat(buf, Pkg.PF, sizeof(buf));
 		/* not quiet perfect when a version is already installed */
-		interactive_rename("vdb", buf);
+		if (access(buf, X_OK) == 0) {
+			char buf2[sizeof(buf)] = "";
+			snprintf(buf2, sizeof(buf2), "rm -rf %s", buf);
+			system(buf2);
+		} else
+			interactive_rename("vdb", buf);
+		
 	}
 	chdir(port_tmpdir);
 }
@@ -506,12 +514,13 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 int qmerge_main(int argc, char **argv) {
 	int i;
 	const char *Packages = "Packages";
-
+	char force_download = 0;
 	if (argc < 2)
 		qmerge_usage(EXIT_FAILURE);
 
 	while ((i = GETOPT_LONG(QMERGE, qmerge, "")) != -1) {
 		switch (i) {
+			case 'F': force_download = 1; break;
 			case 'l': list_packages = 1; break;
 			case 'f': fetch_only = 1; break;
 			case 'p': pretend = 1; break;
@@ -520,7 +529,7 @@ int qmerge_main(int argc, char **argv) {
 		}
 	}
 	// if (argc == optind) qmerge_usage(EXIT_FAILURE);
-	qmerge_initialize(Packages);
+	qmerge_initialize(Packages, force_download);
 	parse_packages(Packages, argc, argv);
 	return 0;
 }
