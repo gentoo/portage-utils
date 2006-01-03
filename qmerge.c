@@ -18,7 +18,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.4 2006/01/03 00:41:41 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.5 2006/01/03 02:05:34 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 
@@ -33,6 +33,7 @@ char interactive = 1;
 struct pkg_t {
 	char PF[64];
 	char CATEGORY[64];
+	char DESC[126];
 	char LICENSE[64];
 	char RDEPEND[BUFSIZ];
 	char MD5[34];
@@ -399,12 +400,35 @@ void pkg_fetch(int argc, char **argv) {
 	atom_implode(atom);
 }
 
+void print_Pkg(int);
+void print_Pkg(int full) {
+	printf("%s%s/%s%s%s %sKB\n", BOLD, Pkg.CATEGORY, BLUE, Pkg.PF, NORM,
+		make_human_readable_str(Pkg.SIZE, 1, KILOBYTE));
+
+	if (full == 0)
+		return;
+
+	if (Pkg.DESC[0])
+		printf("  %sDesc%s:%s      %s\n", MAGENTA, YELLOW, NORM, Pkg.DESC);
+	if (Pkg.LICENSE[0])
+		printf("  %sLicense%s:%s   %s\n", MAGENTA, YELLOW, NORM, Pkg.LICENSE);
+	if (Pkg.RDEPEND[0])
+		printf("  %sRdepend%s:%s   %s\n", MAGENTA, YELLOW, NORM, Pkg.RDEPEND);
+	if (Pkg.MD5[0])
+		printf("  %sMd5%s:%s       %s\n", MAGENTA, YELLOW, NORM, Pkg.MD5);
+	if (Pkg.SLOT[0])
+		printf("  %sSlot%s:%s      %s\n", MAGENTA, YELLOW, NORM, Pkg.SLOT);
+	if (Pkg.USE[0])
+		printf("  %sUse%s:%s       %s\n", MAGENTA, YELLOW, NORM, Pkg.USE);	
+}
+
 void parse_packages(const char *, int , char **);
 void parse_packages(const char *Packages, int argc, char **argv) {
 	FILE *fp;
 	char buf[BUFSIZ];
 	char value[BUFSIZ];
 	char *p;
+	int i;
 	long lineno = 0;
 
 	if ((fp = fopen(Packages, "r")) == NULL)
@@ -416,10 +440,17 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 		lineno++;
 		if (*buf == '\n') {
 			if (strlen(Pkg.PF) > 0) {
-				if (list_packages)
-					printf("%s/%s\n", Pkg.CATEGORY, Pkg.PF);
-				else
+				if (list_packages) {
+					if (argc != optind) {
+						for ( i = 0 ; i < argc; i++)
+							if (strncmp(argv[i], Pkg.PF, strlen(argv[i])) == 0)
+								print_Pkg(1);
+					} else {
+						print_Pkg(verbose);
+					}
+				} else {
 					pkg_fetch(argc, argv);
+				}
 			}
 			memset(&Pkg, 0, sizeof(Pkg));
 			continue;
@@ -459,6 +490,9 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 				break;
 			case 'C':
 				if ((strcmp(buf, "CATEGORY:")) == 0) strncpy(Pkg.CATEGORY, value, sizeof(Pkg.CATEGORY));
+				break;
+			case 'D':
+				if ((strcmp(buf, "DESC:")) == 0) strncpy(Pkg.DESC, value, sizeof(Pkg.DESC));
 				break;
 			default:
 				fprintf(stderr, "Unhandled parms %s\n", buf);
