@@ -1,10 +1,10 @@
 /*
- * Copyright 2005 Gentoo Foundation
+ * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.11 2005/10/25 00:36:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.12 2006/01/05 03:14:10 vapier Exp $
  *
- * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 typedef struct {
@@ -14,6 +14,12 @@ typedef struct {
 	char *PV, *PVR;
 	char *P;
 } depend_atom;
+
+#define _USE_CACHE
+#ifdef _USE_CACHE
+static depend_atom *_atom_cache = NULL;
+static size_t _atom_cache_len = 0;
+#endif
 
 depend_atom *atom_explode(const char *atom);
 depend_atom *atom_explode(const char *atom)
@@ -29,7 +35,17 @@ depend_atom *atom_explode(const char *atom)
 	 * PVR needs an extra byte for the 'r' which is injected. */
 	slen = strlen(atom);
 	len = sizeof(*ret) + slen * sizeof(*atom) * 3 + 3 + 1;
+#ifdef _USE_CACHE
+	if (len <= _atom_cache_len) {
+		ret = _atom_cache;
+	} else {
+		if (_atom_cache) free(_atom_cache);
+		_atom_cache = ret = (depend_atom*)xmalloc(len);
+		_atom_cache_len = len;
+	}
+#else
 	ret = (depend_atom*)xmalloc(len);
+#endif
 	memset(ret, 0x00, len);
 	ptr = (char*)ret;
 	ret->P = ptr + sizeof(*ret);
@@ -144,5 +160,7 @@ void atom_implode(depend_atom *atom)
 {
 	if (!atom)
 		errf("Atom is empty !");
+#ifndef _USE_CACHE
 	free(atom);
+#endif
 }
