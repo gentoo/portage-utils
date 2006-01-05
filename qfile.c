@@ -1,10 +1,10 @@
 /*
- * Copyright 2005 Gentoo Foundation
+ * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.22 2005/12/30 07:52:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.23 2006/01/05 03:35:43 vapier Exp $
  *
- * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #define QFILE_FLAGS "e" COMMON_FLAGS
@@ -16,7 +16,7 @@ static const char *qfile_opts_help[] = {
 	"Exact match",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.22 2005/12/30 07:52:45 vapier Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.23 2006/01/05 03:35:43 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 void qfile(char *path, char *fullname);
