@@ -17,7 +17,9 @@ bn="$(basename $(pwd))-${ver}"
 [[ -d "${bn}" ]] && rm -r "${bn}"
 mkdir "${bn}" || exit 1
 cp -r Makefile README *.[ch] man libq tests "${bn}/" || exit 1
-ls q?*.c | sed -e 's:\.c$::' > "${bn}"/applet-list
+for applet in $(grep ^APPLETS Makefile  | cut -d = -f 2); do
+	[[ $applet != q ]] && echo $applet
+done | sort > "${bn}"/applet-list
 find "${bn}" -type d -name CVS -exec rm -rf '{}' \;
 tar -jcvvf "${bn}".tar.bz2 ${bn} || exit 1
 rm -r "${bn}" || exit 1

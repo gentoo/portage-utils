@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.28 2006/01/05 03:35:43 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.29 2006/01/06 01:59:30 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,7 +29,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.28 2006/01/05 03:35:43 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.29 2006/01/06 01:59:30 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 
@@ -59,6 +59,7 @@ int qlist_main(int argc, char **argv)
 	char show_dir, show_obj, show_sym;
 	struct dirent **de, **cat;
 	char buf[_Q_PATH_MAX];
+	char swap[_Q_PATH_MAX];
 	queue *sets = NULL;
 	depend_atom *pkgname, *atom;
 
@@ -123,12 +124,12 @@ int qlist_main(int argc, char **argv)
 						warn("invalid atom %s", buf);
 						continue;
 					}
-					snprintf(buf, sizeof(buf), "%s/%s",
+					snprintf(swap, sizeof(buf), "%s/%s",
 						 atom->CATEGORY, atom->PN);
 					atom_implode(atom);
-					if (strcmp(argv[i], buf) == 0)
+					if ((strcmp(argv[i], swap) == 0) || (strcmp(argv[i], buf) == 0))
 						break;
-					if (strcmp(argv[i], strstr(buf, "/") + 1) == 0)
+					if ((strcmp(argv[i], strstr(swap, "/") + 1) == 0) || (strcmp(argv[i], strstr(buf, "/") + 1) == 0))
 						break;
 				} else {
 					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
