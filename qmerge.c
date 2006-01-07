@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.9 2006/01/07 23:18:07 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.10 2006/01/07 23:24:55 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,7 +9,7 @@
 
 #ifdef APPLET_qmerge
 
-#define QMERGE_FLAGS "flipyF" COMMON_FLAGS
+#define QMERGE_FLAGS "flipy" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
 	{"fetch",     no_argument, NULL, 'f'},
 	{"list",      no_argument, NULL, 'l'},
@@ -27,7 +27,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.9 2006/01/07 23:18:07 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.10 2006/01/07 23:24:55 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -538,4 +538,3 @@ int qmerge_main(int argc, char **argv) {
 	errf("%s", err_noapplet);
 }
 #endif /* APPLET_qmerge */
-
