@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.35 2006/01/07 16:25:28 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.36 2006/01/07 16:51:31 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -67,7 +67,7 @@ endif
 
 depend:
 	#$(CC) $(CFLAGS) -MM $(SRC) > .depend
-	$(CC) $(CFLAGS) -MM main.c > .depend
+	$(CC) $(HFLAGS) $(CFLAGS) -MM main.c > .depend
 
 check: symlinks
 	$(MAKE) -C tests $@

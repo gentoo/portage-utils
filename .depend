@@ -3,4 +3,4 @@ main.o: main.c libq/libq.c libq/busybox.h libq/libq.h libq/colors.c \
   libq/md5_sha1_sum.c libq/human_readable.c libq/rmspace.c \
   libq/atom_explode.c libq/vdb_get_next_dir.c libq/virtuals.c applets.h \
   q.c qcheck.c qdepends.c qfile.c qlist.c qlop.c qsearch.c qsize.c \
-  qtbz2.c qxpak.c qpkg.c qatom.c
+  qmerge.c qtbz2.c quse.c qxpak.c qpkg.c qgrep.c qatom.c
