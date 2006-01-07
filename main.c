@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.92 2006/01/07 16:25:28 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.93 2006/01/07 23:18:07 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -59,10 +59,9 @@ static char portcachedir[] = "metadata/cache";
 static char portroot[_Q_PATH_MAX] = "/";
 static char config_protect[_Q_PATH_MAX] = "/etc/";
 
-char binhost[512] = "";         // "ftp://tinderbox.x86.dev.gentoo.org/default-linux/x86/2005.1/All";
-char pkgdir[512] = "";          // /usr/portage/packages/
-char port_tmpdir[512] = "/var/tmp/portage/portage-pkg/";
-
+char binhost[512] = "ftp://tinderbox.x86.dev.gentoo.org/default-linux/x86/2005.1/All";
+char pkgdir[512] = "/usr/portage/packages/";
+char port_tmpdir[512] = "/var/tmp/portage/";
 
 const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
@@ -409,6 +408,7 @@ void initialize_portage_env(void)
 		{"NOCOLOR", 7, _Q_BOOL, &nocolor, 1},
 		{"PORTDIR", 7, _Q_STR,  portdir, sizeof(portdir)},
 		{"PORTAGE_BINHOST",   15, _Q_STR,  binhost, sizeof(binhost)},
+		{"PORTAGE_TMPDIR",    14, _Q_STR,  port_tmpdir, sizeof(port_tmpdir)},
 		{"PKGDIR",  6, _Q_STR,  pkgdir, sizeof(pkgdir)},
 		{"ROOT",    4, _Q_STR,  portroot, sizeof(portroot)}
 	};
@@ -482,13 +482,13 @@ void initialize_portage_env(void)
 			case _Q_STR: strncpy(vars_to_read[i].value, s, vars_to_read[i].value_len); break;
 			}
 		}
-		IF_DEBUG(
-			printf("%s = ", vars_to_read[i].name);
+		if (getenv("DEBUG") IF_DEBUG(|| 1)) {
+			fprintf(stderr, "%s = ", vars_to_read[i].name);
 			switch (vars_to_read[i].type) {
-			case _Q_BOOL: printf("%i\n", *vars_to_read[i].value); break;
-			case _Q_STR: puts(vars_to_read[i].value); break;
+			case _Q_BOOL: fprintf(stderr, "%i\n", *vars_to_read[i].value); break;
+			case _Q_STR: fprintf(stderr, "%s\n", vars_to_read[i].value); break;
 			}
-		)
+		}
 	}
 
 	if (nocolor)

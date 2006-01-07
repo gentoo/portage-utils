@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.8 2006/01/07 16:25:28 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.9 2006/01/07 23:18:07 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -16,23 +16,20 @@ static struct option const qmerge_long_opts[] = {
 	{"install",   no_argument, NULL, 'i'},
 	{"pretend",   no_argument, NULL, 'p'},
 	{"yes",       no_argument, NULL, 'y'},
-	{"force",     no_argument, NULL, 'F'},
         COMMON_LONG_OPTS
 };
 static const char *qmerge_opts_help[] = {
-	"fetch only. dont merge",
+	"force download overwriting any existing files",
 	"list available packages",
 	"install package",
 	"pretend only",
 	"dont prompt before overwriting",
-	"force download overwriting any existing files",
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.8 2006/01/07 16:25:28 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.9 2006/01/07 23:18:07 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
-char fetch_only = 0;
 char pretend = 0;
 char list_packages = 0;
 char interactive = 1;
@@ -45,7 +42,8 @@ struct pkg_t {
 	char DESC[126];
 	char LICENSE[64];
 	char RDEPEND[BUFSIZ];
-	char MD5[34];
+	char MD5[32];
+	/* char SHA1[40]; */
 	char SLOT[64];
 	size_t SIZE;
 	char USE[BUFSIZ];
@@ -72,7 +70,8 @@ int interactive_rename(const char *src, const char *dst) {
 void fetch(const char *, const char *);
 void fetch(const char *destdir, const char *src) {
 	char buf[BUFSIZ];
-	snprintf(buf, sizeof(buf), "/bin/busybox wget %s -P %s %s/%s", (quiet ? "-q" : ""), destdir, binhost, src);
+	snprintf(buf, sizeof(buf), "%s/bin/busybox wget %s -P %s %s/%s", force_download ? "" : pretend ? "echo " : "",
+		(quiet ? "-q" : ""), destdir, binhost, src);
 	system(buf);
 }
 
@@ -96,7 +95,7 @@ void qmerge_initialize(const char *Packages) {
 	mkdir(port_tmpdir, 0755);
 
 	if (chdir(port_tmpdir) != 0)
-		errf("!!! chdir(%s) %s", port_tmpdir, strerror(errno));
+		errf("!!! chdir(PORTAGE_TMPDIR %s) %s", port_tmpdir, strerror(errno));
 	if (force_download)
 		unlink(Packages);
 	if (access(Packages, R_OK) != 0)
@@ -134,7 +133,6 @@ void pkg_merge(depend_atom *atom) {
 	char **ARGV = NULL;
 	int ARGC = 0;
 
-	if (fetch_only) return;
 	if (!install) return;
 
 	if (chdir(port_tmpdir) != 0) errf("!!! chdir(%s) %s", port_tmpdir, strerror(errno));
@@ -228,6 +226,7 @@ void pkg_merge(depend_atom *atom) {
 			int protected = 0;
 
 			hash = hash_file(buf, HASH_MD5);
+			// sha1_hash = hash_file(buf, HASH_SHA1);
 
 			snprintf(line, sizeof(line), "obj %s %s %lu", &buf[1], hash, st.st_mtime);
 			/* /etc /usr/kde/2/share/config /usr/kde/3/share/config	/var/qmail/control */
@@ -259,16 +258,17 @@ void pkg_merge(depend_atom *atom) {
 		}
 		if (S_ISLNK(st.st_mode)) {
 			char path[sizeof(buf)];
-
+			memset(&path, 0, sizeof(path));
 			/* symlinks are unfinished */
 			readlink(buf, path, sizeof(path));
 			snprintf(line, sizeof(line), "sym %s -> %s", &buf[1], path);
 			warnf("%s", line);
+			assert(strlen(path));;
+			assert(strlen(&buf[1]));
 		}
 		/* Save the line to the contents file */
 		if (*line) fprintf(contents, "%s\n", line);
 	}
-
                                                 
 	if (ARGC > 0) {
 		for (i = 0; i < ARGC; i++)
@@ -301,6 +301,11 @@ void pkg_merge(depend_atom *atom) {
 		
 	}
 	chdir(port_tmpdir);
+}
+
+int pkg_unmerge(char *);
+int pkg_unmerge(char *pkg) {
+	return 1;
 }
 
 int unlink_empty(char *);
@@ -399,8 +404,14 @@ void pkg_fetch(int argc, char **argv) {
 
 void print_Pkg(int);
 void print_Pkg(int full) {
-	printf("%s%s/%s%s%s %sKB\n", BOLD, Pkg.CATEGORY, BLUE, Pkg.PF, NORM,
-		make_human_readable_str(Pkg.SIZE, 1, KILOBYTE));
+
+	if (!Pkg.CATEGORY[0]) errf("CATEGORY is NULL");
+	if (!Pkg.PF[0]) errf("PF is NULL");
+
+	printf("%s%s/%s%s%s%s%s%s\n", BOLD, Pkg.CATEGORY, BLUE, Pkg.PF, NORM,
+		!quiet ? " [" : "", 
+		!quiet ? make_human_readable_str(Pkg.SIZE, 1, KILOBYTE) : "",
+		!quiet ? "KB]" : "");
 
 	if (full == 0)
 		return;
@@ -436,12 +447,12 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 	while((fgets(buf, sizeof(buf), fp)) != NULL) {
 		lineno++;
 		if (*buf == '\n') {
-			if (strlen(Pkg.PF) > 0) {
+			if ((strlen(Pkg.PF) > 0) && (strlen(Pkg.CATEGORY) > 0)) {
 				if (list_packages) {
 					if (argc != optind) {
 						for ( i = 0 ; i < argc; i++)
-							if (strncmp(argv[i], Pkg.PF, strlen(argv[i])) == 0)
-								print_Pkg(1);
+							if ((strncmp(argv[i], Pkg.PF, strlen(argv[i])) == 0) || (strcmp(argv[i], Pkg.CATEGORY) == 0))
+								print_Pkg(verbose);
 					} else {
 						print_Pkg(verbose);
 					}
@@ -508,12 +519,11 @@ int qmerge_main(int argc, char **argv) {
 
 	while ((i = GETOPT_LONG(QMERGE, qmerge, "")) != -1) {
 		switch (i) {
-			case 'f': fetch_only = 1; break;
+			case 'f': force_download = 1; break;
 			case 'l': list_packages = 1; break;
 			case 'i': install = 1; break;
-			case 'p': pretend = 1; break;
+			case 'p': list_packages = pretend = 1; break;
 			case 'y': interactive = 0; break;
-			case 'F': force_download = 1; break;
 			COMMON_GETOPTS_CASES(qmerge)
 		}
 	}
