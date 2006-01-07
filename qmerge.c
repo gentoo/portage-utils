@@ -1,32 +1,44 @@
-// #include <stdio.h>
-// #include <stdlib.h>
+/*
+ * Copyright 2005-2006 Gentoo Foundation
+ * Distributed under the terms of the GNU General Public License v2
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.8 2006/01/07 16:25:28 solar Exp $
+ *
+ * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
+ */
 
+#ifdef APPLET_qmerge
 
-#define QMERGE_FLAGS "fplyrF" COMMON_FLAGS
+#define QMERGE_FLAGS "flipyF" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
 	{"fetch",     no_argument, NULL, 'f'},
-	{"pretend",   no_argument, NULL, 'p'},
 	{"list",      no_argument, NULL, 'l'},
+	{"install",   no_argument, NULL, 'i'},
+	{"pretend",   no_argument, NULL, 'p'},
 	{"yes",       no_argument, NULL, 'y'},
 	{"force",     no_argument, NULL, 'F'},
         COMMON_LONG_OPTS
 };
 static const char *qmerge_opts_help[] = {
 	"fetch only. dont merge",
-	"pretend only. dont do final merge",
 	"list available packages",
-	"dont prompt before overwrite",
-	"forced download of current binary package cache",
+	"install package",
+	"pretend only",
+	"dont prompt before overwriting",
+	"force download overwriting any existing files",
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.7 2006/01/03 15:40:53 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.8 2006/01/07 16:25:28 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char fetch_only = 0;
 char pretend = 0;
 char list_packages = 0;
 char interactive = 1;
+char install = 0;
+char force_download = 0;
+
 struct pkg_t {
 	char PF[64];
 	char CATEGORY[64];
@@ -64,15 +76,20 @@ void fetch(const char *destdir, const char *src) {
 	system(buf);
 }
 
-void qmerge_initialize(const char *, int);
-void qmerge_initialize(const char *Packages, int force_download) {
+void qmerge_initialize(const char *);
+void qmerge_initialize(const char *Packages) {
 	if (pkgdir[0] == '/') {
 		int len = strlen(pkgdir);
-		if (len > 5)
+		if (len > 5) {
 			if ((strcmp(&pkgdir[len-4], "/All")) != 0)
 				strncat(pkgdir, "/All", sizeof(pkgdir));
+		} else
+			errf("PKGDIR=%s is to short to be valid", pkgdir);
 	}
 
+	if (!binhost[0])
+		errf("PORTAGE_BINHOST= does not appear to be valid");
+	
 	if ((access(pkgdir, R_OK|W_OK|X_OK)) != 0)
 		errf("Fatal errors with PKGDIR='%s'", pkgdir);
 
@@ -118,6 +135,7 @@ void pkg_merge(depend_atom *atom) {
 	int ARGC = 0;
 
 	if (fetch_only) return;
+	if (!install) return;
 
 	if (chdir(port_tmpdir) != 0) errf("!!! chdir(%s) %s", port_tmpdir, strerror(errno));
 
@@ -278,8 +296,8 @@ void pkg_merge(depend_atom *atom) {
 			char buf2[sizeof(buf)] = "";
 			snprintf(buf2, sizeof(buf2), "rm -rf %s", buf);
 			system(buf2);
-		} else
-			interactive_rename("vdb", buf);
+		}
+		interactive_rename("vdb", buf);
 		
 	}
 	chdir(port_tmpdir);
@@ -328,17 +346,18 @@ void pkg_fetch(int argc, char **argv) {
 		/* check to see if file exists and it's checksum matches */
 		snprintf(buf, sizeof(buf), "%s/%s.tbz2", pkgdir, Pkg.PF);
 		unlink_empty(buf);
+		if (force_download) unlink(buf);
 
 		if (access(buf, R_OK) == 0) {
 			hash = (char*) hash_file(buf, HASH_MD5);
 			if (strcmp(hash, Pkg.MD5) == 0) {
-				if (!quiet) printf("MD5: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, Pkg.PF);
+				printf("MD5: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, Pkg.PF);
 				/* attempt to merge it */
 				pkg_merge(atom);
 				continue;
 			}
 		}
-		if (!quiet)
+		if (verbose)
 			printf("Fetching %s/%s.tbz2\n", atom->CATEGORY, Pkg.PF);
 
 		fflush(stdout);
@@ -368,7 +387,7 @@ void pkg_fetch(int argc, char **argv) {
 			continue;
 		}
 
-		if (!quiet) printf("MD5: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, Pkg.PF);
+		printf("MD5: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, Pkg.PF);
 		fflush(stdout);
 
 		/* attempt to merge it */
@@ -484,22 +503,29 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 int qmerge_main(int argc, char **argv) {
 	int i;
 	const char *Packages = "Packages";
-	char force_download = 0;
 	if (argc < 2)
 		qmerge_usage(EXIT_FAILURE);
 
 	while ((i = GETOPT_LONG(QMERGE, qmerge, "")) != -1) {
 		switch (i) {
-			case 'F': force_download = 1; break;
-			case 'l': list_packages = 1; break;
 			case 'f': fetch_only = 1; break;
+			case 'l': list_packages = 1; break;
+			case 'i': install = 1; break;
 			case 'p': pretend = 1; break;
 			case 'y': interactive = 0; break;
+			case 'F': force_download = 1; break;
 			COMMON_GETOPTS_CASES(qmerge)
 		}
 	}
 	// if (argc == optind) qmerge_usage(EXIT_FAILURE);
-	qmerge_initialize(Packages, force_download);
+	qmerge_initialize(Packages);
 	parse_packages(Packages, argc, argv);
 	return 0;
 }
+
+#else /* ! APPLET_qmerge */
+int qmerge_main(int argc, char **argv) {
+	errf("%s", err_noapplet);
+}
+#endif /* APPLET_qmerge */
+

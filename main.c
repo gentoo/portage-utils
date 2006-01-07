@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.91 2006/01/06 01:59:30 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.92 2006/01/07 16:25:28 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -63,6 +63,8 @@ char binhost[512] = "";         // "ftp://tinderbox.x86.dev.gentoo.org/default-l
 char pkgdir[512] = "";          // /usr/portage/packages/
 char port_tmpdir[512] = "/var/tmp/portage/portage-pkg/";
 
+
+const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
 #define _q_unused_ __attribute__((__unused__))
 
@@ -867,7 +869,6 @@ depend_atom **get_vdb_atoms(void) {
 #endif
 
 #include "q.c"
-
 #include "qcheck.c"
 #include "qdepends.c"
 #include "qfile.c"
@@ -875,9 +876,7 @@ depend_atom **get_vdb_atoms(void) {
 #include "qlop.c"
 #include "qsearch.c"
 #include "qsize.c"
-#ifdef APPLET_qmerge
-# include "qmerge.c"
-#endif
+#include "qmerge.c"
 #include "qtbz2.c"
 #include "quse.c"
 #include "qxpak.c"
