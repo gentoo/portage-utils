@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.10 2006/01/07 23:24:55 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.11 2006/01/08 07:15:49 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,29 +9,29 @@
 
 #ifdef APPLET_qmerge
 
-#define QMERGE_FLAGS "flipy" COMMON_FLAGS
+#define QMERGE_FLAGS "fsipy" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
 	{"fetch",     no_argument, NULL, 'f'},
-	{"list",      no_argument, NULL, 'l'},
+	{"search",    no_argument, NULL, 's'},
 	{"install",   no_argument, NULL, 'i'},
 	{"pretend",   no_argument, NULL, 'p'},
 	{"yes",       no_argument, NULL, 'y'},
         COMMON_LONG_OPTS
 };
 static const char *qmerge_opts_help[] = {
-	"force download overwriting any existing files",
-	"list available packages",
+	"force download overwriting existing files",
+	"search available packages",
 	"install package",
 	"pretend only",
 	"dont prompt before overwriting",
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.10 2006/01/07 23:24:55 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.11 2006/01/08 07:15:49 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
-char list_packages = 0;
+char search_pkgs = 0;
 char interactive = 1;
 char install = 0;
 char force_download = 0;
@@ -42,40 +42,68 @@ struct pkg_t {
 	char DESC[126];
 	char LICENSE[64];
 	char RDEPEND[BUFSIZ];
-	char MD5[32];
-	/* char SHA1[40]; */
+	char MD5[34];
+	/* char SHA1[42]; */
 	char SLOT[64];
 	size_t SIZE;
 	char USE[BUFSIZ];
 } Pkg;
 
 int interactive_rename(const char *, const char *);
-int interactive_rename(const char *src, const char *dst) {
-	char buf[1024];
-#if 0
-	struct stat st;
+void fetch(const char *, const char *);
+void qmerge_initialize(const char *);
+char *best_version(depend_atom *);
+void pkg_merge(depend_atom *);
+int pkg_unmerge(char *);
+int unlink_empty(char *);
+void pkg_fetch(int, char **);
+void print_Pkg(int);
+int parse_packages(const char *, int , char **);
 
-	if (stat(dst, &st) == (-1))
-		warn("%s does exist", dst);
-	else
-		warn("%s exists", dst);
-#endif
-	snprintf(buf, sizeof(buf), "/bin/busybox mv %s %s %s", interactive ? "-i" : "", src, dst);
+int interactive_rename(const char *src, const char *dst) {
+	FILE *fp;
+	char *p;
+	char buf[1024];
+	struct stat st;
+	char check_interactive = interactive;
+
+	if (stat(dst, &st) != (-1)) {
+		snprintf(buf, sizeof(buf), "qfile -Cqv %s", dst);
+		if ((fp = popen(buf, "r")) != NULL) {
+			buf[0] = '\0';
+			if ((fgets(buf, sizeof(buf), fp)) != NULL)
+				if ((p = strchr(buf, '\n')) != NULL) {
+					*p = 0;
+					p = xstrdup(buf);
+					snprintf(buf, sizeof(buf), "%s/%s", Pkg.CATEGORY, Pkg.PF);
+					if (strcmp(buf, p) == 0)
+						check_interactive = 0;
+					else
+						warn("%s owns %s", p, dst);
+					free(p);
+				}
+			pclose(fp);
+		}
+	}
+	snprintf(buf, sizeof(buf), "/bin/busybox mv %s %s %s", check_interactive ? "-i" : "", src, dst);
 	system(buf);
-	if (verbose) printf("%s>>>%s %s\n", GREEN, NORM, dst);
+	if (!quiet) printf("%s>>>%s %s\n", GREEN, NORM, dst);
 
 	return 0;
 }
 
-void fetch(const char *, const char *);
 void fetch(const char *destdir, const char *src) {
 	char buf[BUFSIZ];
+
+	fflush(stdout);
+	fflush(stderr);
 	snprintf(buf, sizeof(buf), "%s/bin/busybox wget %s -P %s %s/%s", force_download ? "" : pretend ? "echo " : "",
 		(quiet ? "-q" : ""), destdir, binhost, src);
 	system(buf);
+	fflush(stdout);
+	fflush(stderr);
 }
 
-void qmerge_initialize(const char *);
 void qmerge_initialize(const char *Packages) {
 	if (pkgdir[0] == '/') {
 		int len = strlen(pkgdir);
@@ -102,7 +130,6 @@ void qmerge_initialize(const char *Packages) {
 		fetch("./", Packages);
 }
 
-char *best_version(depend_atom *);
 char *best_version(depend_atom *atom) {
 	static char buf[1024];
 	FILE *fp;
@@ -122,7 +149,6 @@ char *best_version(depend_atom *atom) {
 
 
 /* oh shit getting into pkg mgt here. wishlist vercmp() function */
-void pkg_merge(depend_atom *);
 void pkg_merge(depend_atom *atom) {
 	FILE *fp, *contents;
 	char buf[1024];
@@ -191,13 +217,19 @@ void pkg_merge(depend_atom *atom) {
 		errf("come on wtf?");
 
 	chdir("image");
+	if ((strstr(features, "noman")) != NULL)
+		system("rm -rf ./usr/share/man");
+	if ((strstr(features, "noinfo"))   != NULL)
+		system("rm -rf ./usr/share/info");
+	if ((strstr(features, "nodoc")) != NULL)
+		system("rm -rf ./usr/share/doc");
 	if ((fp = popen("/bin/busybox find .", "r")) == NULL)
 		errf("come on wtf!");
 
 	makeargv(config_protect, &ARGC, &ARGV);
 
 	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-		struct stat st;
+		struct stat st, lst;
 		char line[BUFSIZ];
 
 		if ((p = strrchr(buf, '\n')) != NULL)
@@ -215,11 +247,14 @@ void pkg_merge(depend_atom *atom) {
 
 		if (pretend) continue;
 
+		/* portage has code that handes fifo's but it looks unused */
+
 		if (S_ISDIR(st.st_mode)) {
 			mkdir(&buf[1], st.st_mode);
 			chown(&buf[1], st.st_uid, st.st_gid);
 			snprintf(line, sizeof(line), "dir %s", &buf[1]);
 		}
+
 		if (S_ISREG(st.st_mode)) {
 			struct timeval tv;
 			char *hash;
@@ -239,10 +274,12 @@ void pkg_merge(depend_atom *atom) {
 			if ((strncmp("/etc/", &buf[1], 5)) == 0)
 				if ((access(&buf[1], R_OK)) == 0)
 					protected = 1;
-
 			if (protected) {
-				printf("CFG: %s\n", &buf[1]);
-				continue;
+				char *target_hash = hash_file(&buf[1], HASH_MD5);
+				if (strcmp(target_hash, hash) != 0) {
+					printf("CFG: %s\n", &buf[1]);
+					continue;
+				}
 			}
 
 			if (interactive_rename(buf, &buf[1]) != 0)
@@ -256,15 +293,38 @@ void pkg_merge(depend_atom *atom) {
 			// utimes(&buf[1], &tv);
 
 		}
+
+		/* symlinks are unfinished */
 		if (S_ISLNK(st.st_mode)) {
+			/*
+			  save pwd
+			  get the dirname of the symlink from buf1
+			  chdir to it's dirname unless it's a dir itself
+			  symlink src dest
+			  report an errors along the way
+			*/
 			char path[sizeof(buf)];
+			char pwd[sizeof(buf)];
+			char tmp[sizeof(buf)];
+
 			memset(&path, 0, sizeof(path));
-			/* symlinks are unfinished */
-			readlink(buf, path, sizeof(path));
-			snprintf(line, sizeof(line), "sym %s -> %s", &buf[1], path);
-			warnf("%s", line);
-			assert(strlen(path));;
+
 			assert(strlen(&buf[1]));
+			readlink(buf, path, sizeof(path));
+			assert(strlen(path));;
+
+			snprintf(line, sizeof(line), "sym %s -> %s", &buf[1], path);
+			strcpy(tmp, &buf[1]);
+			if (tmp[0] != '/') errf("sym does not start with /");
+
+			getcwd(pwd, sizeof(pwd));
+			if (chdir(dirname(tmp)) != 0) /* tmp gets eatten up now by the dirname call */
+				errf("chdir to symbolic dirname %s: %s", tmp, strerror(errno));
+			if (lstat(path, &lst) != (-1)) {
+				unlink(&buf[1]);
+			}
+			if ((symlink(path, &buf[1])) != 0) warn("symlink failed %s -> %s", path, &buf[1]);
+			chdir(pwd);
 		}
 		/* Save the line to the contents file */
 		if (*line) fprintf(contents, "%s\n", line);
@@ -291,24 +351,22 @@ void pkg_merge(depend_atom *atom) {
 			mkdir(buf, 0755);
 		}
 		strncat(buf, Pkg.PF, sizeof(buf));
-		/* not quiet perfect when a version is already installed */
+		/* FIXME */
+		/* not perfect when a version is already installed */
 		if (access(buf, X_OK) == 0) {
 			char buf2[sizeof(buf)] = "";
 			snprintf(buf2, sizeof(buf2), "rm -rf %s", buf);
 			system(buf2);
 		}
 		interactive_rename("vdb", buf);
-		
 	}
 	chdir(port_tmpdir);
 }
 
-int pkg_unmerge(char *);
 int pkg_unmerge(char *pkg) {
 	return 1;
 }
 
-int unlink_empty(char *);
 int unlink_empty(char *buf) {
 	struct stat st;
 	if ((stat(buf, &st)) != (-1))
@@ -317,13 +375,11 @@ int unlink_empty(char *buf) {
 	return (-1);
 }
 
-void pkg_fetch(int, char **);
 void pkg_fetch(int argc, char **argv) {
 	depend_atom *atom;
-	char buf[255];
-	char buf2[255];
+	char buf[255], buf2[255];
 	char *hash;
-	int i;
+	int i, match = 0;
 
 	snprintf(buf, sizeof(buf), "%s/%s", Pkg.CATEGORY, Pkg.PF);
 	if ((atom = atom_explode(buf)) == NULL)
@@ -332,7 +388,6 @@ void pkg_fetch(int argc, char **argv) {
 	snprintf(buf2, sizeof(buf2), "%s/%s", Pkg.CATEGORY, atom->PN);
 
 	for (i = 1; i < argc; i++) {
-		int match = 0;
 
 		if (argv[i][0] == '-')
 			continue;
@@ -365,15 +420,9 @@ void pkg_fetch(int argc, char **argv) {
 		if (verbose)
 			printf("Fetching %s/%s.tbz2\n", atom->CATEGORY, Pkg.PF);
 
-		fflush(stdout);
-		fflush(stderr);
-
 		/* fetch the package */
 		snprintf(buf, sizeof(buf), "%s.tbz2", Pkg.PF);
 		fetch(pkgdir, buf);
-
-		fflush(stdout);
-		fflush(stderr);
 
 		/* verify the pkg exists now. unlink if zero bytes */
 		snprintf(buf, sizeof(buf), "%s/%s.tbz2", pkgdir, Pkg.PF);
@@ -388,7 +437,7 @@ void pkg_fetch(int argc, char **argv) {
 		/* verify it's checksum */
 		hash = (char*) hash_file(buf, HASH_MD5);
 		if ((strcmp(hash, Pkg.MD5)) != 0) {
-			printf("MD5: [%sER%s] %s != %s %s/%s\n", RED, NORM, hash, Pkg.MD5, atom->CATEGORY, Pkg.PF);
+			printf("MD5: [%sER%s] (%s) != (%s) %s/%s\n", RED, NORM, hash, Pkg.MD5, atom->CATEGORY, Pkg.PF);
 			continue;
 		}
 
@@ -402,7 +451,6 @@ void pkg_fetch(int argc, char **argv) {
 	atom_implode(atom);
 }
 
-void print_Pkg(int);
 void print_Pkg(int full) {
 
 	if (!Pkg.CATEGORY[0]) errf("CATEGORY is NULL");
@@ -429,9 +477,7 @@ void print_Pkg(int full) {
 	if (Pkg.USE[0])
 		printf("  %sUse%s:%s       %s\n", MAGENTA, YELLOW, NORM, Pkg.USE);	
 }
-
-void parse_packages(const char *, int , char **);
-void parse_packages(const char *Packages, int argc, char **argv) {
+int parse_packages(const char *Packages, int argc, char **argv) {
 	FILE *fp;
 	char buf[BUFSIZ];
 	char value[BUFSIZ];
@@ -440,7 +486,7 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 	long lineno = 0;
 
 	if ((fp = fopen(Packages, "r")) == NULL)
-		exit(1);
+		err("Unable to open package file %s: %s", Packages, strerror(errno));
 
 	memset(&Pkg, 0, sizeof(Pkg));
 
@@ -448,7 +494,7 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 		lineno++;
 		if (*buf == '\n') {
 			if ((strlen(Pkg.PF) > 0) && (strlen(Pkg.CATEGORY) > 0)) {
-				if (list_packages) {
+				if (search_pkgs) {
 					if (argc != optind) {
 						for ( i = 0 ; i < argc; i++)
 							if ((strncmp(argv[i], Pkg.PF, strlen(argv[i])) == 0) || (strcmp(argv[i], Pkg.CATEGORY) == 0))
@@ -457,6 +503,7 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 						print_Pkg(verbose);
 					}
 				} else {
+					/* this name is misleading */
 					pkg_fetch(argc, argv);
 				}
 			}
@@ -474,7 +521,6 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 		*p = 0;
 		++p;
 		strncpy(value, p, sizeof(value));
-		// printf("%s=%s\n", buf, value);
 
 		switch(*buf) {
 			case 'U':
@@ -508,6 +554,7 @@ void parse_packages(const char *Packages, int argc, char **argv) {
 		}
 	}
 	fclose(fp);
+	return 0;
 }
 
 
@@ -520,17 +567,16 @@ int qmerge_main(int argc, char **argv) {
 	while ((i = GETOPT_LONG(QMERGE, qmerge, "")) != -1) {
 		switch (i) {
 			case 'f': force_download = 1; break;
-			case 'l': list_packages = 1; break;
+			case 's': search_pkgs = 1; break;
 			case 'i': install = 1; break;
-			case 'p': list_packages = pretend = 1; break;
+			case 'p': search_pkgs = pretend = 1; break;
 			case 'y': interactive = 0; break;
 			COMMON_GETOPTS_CASES(qmerge)
 		}
 	}
 	// if (argc == optind) qmerge_usage(EXIT_FAILURE);
 	qmerge_initialize(Packages);
-	parse_packages(Packages, argc, argv);
-	return 0;
+	return parse_packages(Packages, argc, argv);
 }
 
 #else /* ! APPLET_qmerge */

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.93 2006/01/07 23:18:07 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.94 2006/01/08 07:15:49 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -33,6 +33,12 @@
 # define _Q_PATH_MAX _POSIX_PATH_MAX
 #endif
 
+#if defined(__i386__) && defined(__linux__) && !defined(__UCLIBC__)
+# define PORTAGE_BINHOST "ftp://tinderbox.x86.dev.gentoo.org/default-linux/x86/2005.1/All"
+#else
+# define PORTAGE_BINHOST ""
+#endif
+
 /* prototypes and such */
 static char eat_file(const char *file, char *buf, const size_t bufsize);
 int rematch(const char *, const char *, int);
@@ -59,9 +65,11 @@ static char portcachedir[] = "metadata/cache";
 static char portroot[_Q_PATH_MAX] = "/";
 static char config_protect[_Q_PATH_MAX] = "/etc/";
 
-char binhost[512] = "ftp://tinderbox.x86.dev.gentoo.org/default-linux/x86/2005.1/All";
 char pkgdir[512] = "/usr/portage/packages/";
 char port_tmpdir[512] = "/var/tmp/portage/";
+
+char binhost[512] = PORTAGE_BINHOST;
+char features[512] = "noman noinfo nodoc";
 
 const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
@@ -406,6 +414,7 @@ void initialize_portage_env(void)
 		{"ARCH",    4, _Q_STR,  portarch, sizeof(portarch)},
 		{"CONFIG_PROTECT",    14, _Q_STR,  config_protect, sizeof(config_protect)},
 		{"NOCOLOR", 7, _Q_BOOL, &nocolor, 1},
+		{"FEATURES",8, _Q_STR,  features, sizeof(features)},
 		{"PORTDIR", 7, _Q_STR,  portdir, sizeof(portdir)},
 		{"PORTAGE_BINHOST",   15, _Q_STR,  binhost, sizeof(binhost)},
 		{"PORTAGE_TMPDIR",    14, _Q_STR,  port_tmpdir, sizeof(port_tmpdir)},
