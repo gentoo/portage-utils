@@ -1,21 +1,25 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.12 2006/01/05 03:14:10 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.13 2006/01/11 01:37:07 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
 
+typedef enum { VER_ALPHA=0, VER_BETA, VER_PRE, VER_RC, VER_NORM, VER_P } atom_suffixes;
+const char * const atom_suffixes_str[] = { "_alpha", "_beta", "_pre", "_rc", "_/*bogus*/", "_p", NULL };
+
 typedef struct {
 	char *CATEGORY;
 	char *PN;
 	int PR_int;
+	char letter;
+	atom_suffixes suffix;
 	char *PV, *PVR;
 	char *P;
 } depend_atom;
 
-#define _USE_CACHE
 #ifdef _USE_CACHE
 static depend_atom *_atom_cache = NULL;
 static size_t _atom_cache_len = 0;
@@ -28,7 +32,6 @@ depend_atom *atom_explode(const char *atom)
 	char *ptr, *ptr_tmp;
 	size_t len, slen;
 	int i;
-	const char *suffixes[] = { "_alpha", "_beta", "_pre", "_rc", "_p", NULL };
 
 	/* we allocate mem for atom struct and two strings (strlen(atom)).
 	 * the first string is for CAT/PN/PV while the second is for PVR.
@@ -51,6 +54,7 @@ depend_atom *atom_explode(const char *atom)
 	ret->P = ptr + sizeof(*ret);
 	ret->PVR = ret->P + slen + 1;
 	ret->CATEGORY = ret->PVR + slen + 1 + 1;
+	ret->suffix = VER_NORM;
 	memcpy(ret->CATEGORY, atom, slen);
 
 	/* break up the CATEOGRY and PVR */
@@ -86,17 +90,17 @@ depend_atom *atom_explode(const char *atom)
 	i = -1;
 	if (strchr(ret->PN, '_') == NULL)
 		goto no_suffix_opt;
-	for (i = 0; i >= 0 && suffixes[i]; ++i) {
+	for (i = 0; i >= 0 && atom_suffixes_str[i]; ++i) {
 		ptr_tmp = ret->PN;
 
 retry_suffix:
-		if ((ptr = strstr(ptr_tmp, suffixes[i])) == NULL)
+		if ((ptr = strstr(ptr_tmp, atom_suffixes_str[i])) == NULL)
 			continue;
 
 		/* check this is a real suffix and not _p hitting mod_perl */
 		/* note: '_suff-' in $PN is accepted, but no one uses that ... */
 		len = strlen(ptr);
-		slen = strlen(suffixes[i]);
+		slen = strlen(atom_suffixes_str[i]);
 		if (slen > len) continue;
 		if (ptr[slen] && !isdigit(ptr[slen]) && ptr[slen]!='-') {
 			/* ok, it was a fake out ... lets skip this 
@@ -104,6 +108,8 @@ retry_suffix:
 			ptr_tmp = ptr + 1;
 			goto retry_suffix;
 		}
+
+		ret->suffix = i;
 
 eat_version:
 		/* allow for 1 optional suffix letter */
@@ -143,6 +149,9 @@ eat_version:
 	i = -1;
 	if (ret->PV) {
 found_pv:
+		ptr = (ret->suffix == VER_NORM ? (ret->PV + strlen(ret->PV)) : strrchr(ret->PV, '_')) - 1;
+		if (*ptr >= 'a' && *ptr <= 'z')
+			ret->letter = *ptr;
 		sprintf(ret->PVR, "%s-r%i", ret->PV, ret->PR_int);
 		sprintf(ret->P, "%s-%s", ret->PN, (ret->PR_int ? ret->PVR : ret->PV));
 	} else {
