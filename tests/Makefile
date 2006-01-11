@@ -1,4 +1,4 @@
-TESTS = reinitialize atom_explode qfile quse install
+TESTS = reinitialize atom_compare atom_explode qfile quse install
 
 all: check
 
