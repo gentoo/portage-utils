@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.12 2006/01/09 13:31:41 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.13 2006/01/12 15:05:53 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -27,7 +27,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.12 2006/01/09 13:31:41 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.13 2006/01/12 15:05:53 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -621,6 +621,6 @@ int qmerge_main(int argc, char **argv) {
 
 #else /* ! APPLET_qmerge */
 int qmerge_main(int argc, char **argv) {
-	errf("%s", err_noapplet);
+	errf("%s%s%s", err_noapplet, DKGREEN, NORM);
 }
 #endif /* APPLET_qmerge */
