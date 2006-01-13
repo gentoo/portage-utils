@@ -7,6 +7,7 @@
 
 /* busybox imports */
 #include "busybox.h"
+#include "i18n.h"
 #include "libq.h"
 #include "colors.c"
 #include "xmalloc.c"

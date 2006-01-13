@@ -3,7 +3,7 @@
 #define warn(fmt, args...)
 #else
 #define warn(fmt, args...) \
-	fprintf(stderr, "%s%s%s: " fmt "\n", RED, argv0, NORM , ## args)
+	fprintf(stderr, _("%s%s%s: " fmt "\n"), RED, argv0, NORM , ## args)
 #endif
 #define warnf(fmt, args...) warn("%s%s()%s: " fmt, YELLOW, __FUNCTION__, NORM , ## args)
 #define warnp(fmt, args...) warn(fmt ": %s" , ## args , strerror(errno))

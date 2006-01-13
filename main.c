@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.95 2006/01/12 15:05:53 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.96 2006/01/13 18:42:18 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -70,11 +70,11 @@ char port_tmpdir[512] = "/var/tmp/portage/";
 
 char binhost[512] = PORTAGE_BINHOST;
 char features[512] = "noman noinfo nodoc";
+char accept_license[512] = "*";
 
 const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
 #define _q_unused_ __attribute__((__unused__))
-
 
 #ifndef BUFSIZE
 # define BUFSIZE 8192
@@ -153,22 +153,22 @@ static void usage(int status, const char *flags, struct option const opts[],
 			printf(" %s%8s%s %s%-16s%s%s:%s %s\n",
 				YELLOW, applets[i].name, NORM, 
 				DKBLUE, applets[i].opts, NORM,
-				RED, NORM, applets[i].desc);
+				RED, NORM, _(applets[i].desc));
 	} else {
 		printf("%sUsage:%s %s%s%s %s%s%s %s:%s %s\n", GREEN, NORM,
 			YELLOW, applets[blabber].name, NORM,
 			DKBLUE, applets[blabber].opts, NORM,
-			RED, NORM, applets[blabber].desc);
+			RED, NORM, _(applets[blabber].desc));
 	}
 	printf("\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
 	for (i = 0; opts[i].name; ++i) {
 		assert(help[i] != NULL); /* this assert is a life saver when adding new applets. */
 		if (opts[i].has_arg == no_argument)
 			printf("  -%c, --%-15s%s*%s %s\n", opts[i].val,
-				opts[i].name, RED, NORM, help[i]);
+				opts[i].name, RED, NORM, _(help[i]));
 		else
 			printf("  -%c, --%-8s %s<arg>%s %s*%s %s\n", opts[i].val,
-				opts[i].name, DKBLUE, NORM, RED, NORM, help[i]);
+				opts[i].name, DKBLUE, NORM, RED, NORM, _(help[i]));
 	}
 	exit(status);
 }
@@ -393,6 +393,44 @@ contents_entry *contents_parse_line(char *line)
 	return &e;
 }
 
+char *strincr_var(const char *, char *, char *, const size_t );
+char *strincr_var(const char *name, char *s, char *value, const size_t value_len) {
+	char buf[BUFSIZ];
+	char *p;
+
+	strncat(value, " ", value_len);
+	strncat(value, s, value_len);
+
+	while ((p = strstr(value, "-*")) != NULL)
+		memset(value, ' ', (strlen(value)-strlen(p))+2);
+
+	/* This function is mainly used by the startup code for parsing 
+		make.conf and stacking variables remove.
+		variables can be in the form of ${v} or $v
+		works:
+			FEATURES="${FEATURES} foo"
+			FEATURES="$FEATURES foo"
+			FEATURES="baz bar -* foo"
+
+		wont work:
+			FEATURES="${OTHERVAR} foo"
+			FEATURES="-nls nls -nls"
+	*/
+
+	snprintf(buf, sizeof(buf), "${%s}", name);
+	if ((p = strstr(value, buf)) != NULL)
+		memset(p, ' ', strlen(name)+3);
+
+	snprintf(buf, sizeof(buf), "$%s", name);
+	if ((p = strstr(value, buf)) != NULL)
+		memset(p, ' ', strlen(name)+1);
+
+	remove_extra_space(value);
+	/* we should sort here */
+
+	return (char *) value;
+}
+
 void initialize_portage_env(void)
 {
 	char nocolor = 0;
@@ -403,7 +441,7 @@ void initialize_portage_env(void)
 
 	char profile[_Q_PATH_MAX], portage_file[_Q_PATH_MAX];
 	const char *files[] = {portage_file, "/etc/make.globals", "/etc/make.conf"};
-	typedef enum { _Q_BOOL, _Q_STR } var_types;
+	typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR } var_types;
 	struct {
 		const char *name;
 		const size_t name_len;
@@ -411,10 +449,11 @@ void initialize_portage_env(void)
 		char *value;
 		const size_t value_len;
 	} vars_to_read[] = {
+		{"ACCEPT_LICENSE", 14, _Q_STR,  accept_license, sizeof(accept_license)},
 		{"ARCH",    4, _Q_STR,  portarch, sizeof(portarch)},
 		{"CONFIG_PROTECT",    14, _Q_STR,  config_protect, sizeof(config_protect)},
 		{"NOCOLOR", 7, _Q_BOOL, &nocolor, 1},
-		{"FEATURES",8, _Q_STR,  features, sizeof(features)},
+		{"FEATURES",8, _Q_ISTR,  features, sizeof(features)},
 		{"PORTDIR", 7, _Q_STR,  portdir, sizeof(portdir)},
 		{"PORTAGE_BINHOST",   15, _Q_STR,  binhost, sizeof(binhost)},
 		{"PORTAGE_TMPDIR",    14, _Q_STR,  port_tmpdir, sizeof(port_tmpdir)},
@@ -457,6 +496,7 @@ void initialize_portage_env(void)
 					switch (vars_to_read[i].type) {
 					case _Q_BOOL: *vars_to_read[i].value = 1; break;
 					case _Q_STR: strncpy(vars_to_read[i].value, s, vars_to_read[i].value_len); break;
+					case _Q_ISTR: strincr_var(vars_to_read[i].name, s, vars_to_read[i].value, vars_to_read[i].value_len); break;
 					}
 				}
 			}
@@ -489,13 +529,15 @@ void initialize_portage_env(void)
 			switch (vars_to_read[i].type) {
 			case _Q_BOOL: *vars_to_read[i].value = 1; break;
 			case _Q_STR: strncpy(vars_to_read[i].value, s, vars_to_read[i].value_len); break;
+			case _Q_ISTR: strincr_var(vars_to_read[i].name, s, vars_to_read[i].value, vars_to_read[i].value_len); break;
 			}
 		}
 		if (getenv("DEBUG") IF_DEBUG(|| 1)) {
 			fprintf(stderr, "%s = ", vars_to_read[i].name);
 			switch (vars_to_read[i].type) {
 			case _Q_BOOL: fprintf(stderr, "%i\n", *vars_to_read[i].value); break;
-			case _Q_STR: fprintf(stderr, "%s\n", vars_to_read[i].value); break;
+			case _Q_STR:
+			case _Q_ISTR: fprintf(stderr, "%s\n", vars_to_read[i].value); break;
 			}
 		}
 	}
@@ -893,6 +935,7 @@ depend_atom **get_vdb_atoms(void) {
 #include "qgrep.c"
 #include "qatom.c"
 
+
 void cleanup() {
 	reinitialize_as_needed();
 	free_sets(virtuals);
@@ -902,6 +945,13 @@ int main(int argc, char **argv)
 {
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
+
+#ifdef ENABLE_NLS
+	setlocale(LC_ALL, "");
+	bindtextdomain(argv0, "/usr/share/locale");
+	textdomain(argv0);
+#endif
+
 #if 0
 	if (ttyname(1) == NULL)
 		no_colors();
