@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.1 2006/01/11 23:46:40 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.2 2006/01/14 21:51:30 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -49,6 +49,17 @@ int atom_compare(const depend_atom * const a1, const depend_atom * const a2)
 		s1 = a1->PV;
 		s2 = a2->PV;
 		while (s1 || s2) {
+			if (s1 && s2) {
+				/* deal with leading zeros */
+				while (*s1 == '0' && *s2 == '0') {
+					++s1;
+					++s2;
+				}
+				if (*s1 == '0' && isdigit(*s2))
+					return OLDER;
+				else if (*s2 == '0' && isdigit(*s1))
+					return NEWER;
+			}
 			n1 = (s1 ? atol(s1) : 0);
 			n2 = (s2 ? atol(s2) : 0);
 			if (n1 < n2)
