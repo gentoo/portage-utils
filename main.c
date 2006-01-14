@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.96 2006/01/13 18:42:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.97 2006/01/14 01:31:24 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -946,11 +946,9 @@ int main(int argc, char **argv)
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
 
-#ifdef ENABLE_NLS
 	setlocale(LC_ALL, "");
 	bindtextdomain(argv0, "/usr/share/locale");
 	textdomain(argv0);
-#endif
 
 #if 0
 	if (ttyname(1) == NULL)

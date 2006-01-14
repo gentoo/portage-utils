@@ -1,5 +1,5 @@
-#ifndef I18N_H
-#define I18N_H
+#ifndef _I18N_H
+#define _I18N_H
 
 #ifdef ENABLE_NLS
 # include <locale.h>
@@ -7,6 +7,9 @@
 # define _(String) gettext (String)
 #else
 # define _(String) (String)
+# define setlocale(x,y)
+# define bindtextdomain(x,y)
+# define textdomain(x)
 #endif
 
 #endif
