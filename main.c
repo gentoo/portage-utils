@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.97 2006/01/14 01:31:24 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.98 2006/01/16 15:52:35 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -71,6 +71,7 @@ char port_tmpdir[512] = "/var/tmp/portage/";
 char binhost[512] = PORTAGE_BINHOST;
 char features[512] = "noman noinfo nodoc";
 char accept_license[512] = "*";
+char install_mask[1024] = "";
 
 const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
@@ -106,9 +107,10 @@ void init_coredumps(void)
 
 void no_colors(void);
 void no_colors() {
-	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = MAGENTA = RED = YELLOW = WHITE = "";
+	// echo $(awk '{print $4,"="}' libq/colors.c  | grep ^* |cut -c 2-| grep ^[A-Z] |tr '\n' ' ') = \"\"\;
+	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = DKGREEN = MAGENTA = RED = YELLOW = BRYELLOW = WHITE = "";
+	setenv("NOCOLOR", "true", 1);
 }
-
 
 /* include common applet defs */
 #include "applets.h"
@@ -258,6 +260,16 @@ static char *remove_extra_space(char *str)
 	strcpy(str, buf);
 	free(buf);
 	return str;
+}
+
+void freeargv(int, char **);
+void freeargv(int argc, char **argv) {
+	int i;
+        if (argc > 0) {
+                for (i = 0; i < argc; i++)
+                        free(argv[i]);
+                free(argv);
+        }
 }
 
 void makeargv(char *string, int *argc, char ***argv);
@@ -450,6 +462,7 @@ void initialize_portage_env(void)
 		const size_t value_len;
 	} vars_to_read[] = {
 		{"ACCEPT_LICENSE", 14, _Q_STR,  accept_license, sizeof(accept_license)},
+		{"INSTALL_MASK", 12, _Q_ISTR,  install_mask, sizeof(install_mask)},
 		{"ARCH",    4, _Q_STR,  portarch, sizeof(portarch)},
 		{"CONFIG_PROTECT",    14, _Q_STR,  config_protect, sizeof(config_protect)},
 		{"NOCOLOR", 7, _Q_BOOL, &nocolor, 1},
@@ -954,6 +967,9 @@ int main(int argc, char **argv)
 	if (ttyname(1) == NULL)
 		no_colors();
 #endif
+	if (getenv("TERM") == NULL)
+		no_colors();
+
 	initialize_portage_env();
 	atexit(cleanup);
 	optind = 0;
