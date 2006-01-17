@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.14 2006/01/16 15:52:35 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.15 2006/01/17 15:53:38 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,7 +29,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.14 2006/01/16 15:52:35 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.15 2006/01/17 15:53:38 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -142,6 +142,8 @@ void qmerge_initialize(const char *Packages) {
 
 	if (chdir(port_tmpdir) != 0)
 		errf("!!! chdir(PORTAGE_TMPDIR %s) %s", port_tmpdir, strerror(errno));
+	if (chdir("portage") != 0)
+		errf("!!! chdir(%s/portage) %s", port_tmpdir, strerror(errno));
 	if (force_download)
 		unlink(Packages);
 	if (access(Packages, R_OK) != 0)
@@ -183,13 +185,13 @@ int config_protected(const char *buf, int ARGC, char **ARGV) {
 	return 0;
 }
 
-static char *grab_slot(char *, char *);
-static char *grab_slot(char *CATEGORY, char *PF) {
+static char *grab_vdb_item(const char *, const char *, const char *);
+static char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF) {
 	static char buf[_Q_PATH_MAX];
 	char *p;
 	FILE *fp;
 
-	snprintf(buf, sizeof(buf), "%s%s/%s/%s/SLOT", portroot, portvdb, CATEGORY, PF);
+	snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb, CATEGORY, PF, item);
 	if ((fp = fopen(buf, "r")) == NULL)
 		return NULL;
 	fgets(buf, sizeof(buf), fp);
@@ -205,7 +207,6 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 	FILE *fp, *contents;
 	char buf[1024];
 	char tarball[255];
-	char installed_version[126];
 	char *p;
 	int i;
 	char **iargv = NULL, **ARGV = NULL;
@@ -216,14 +217,41 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 
 	if (!install) return;
 	if (pretend) return;
-
+#if 0
+	if (pkg->RDEPEND[0]) {
+		makeargv(pkg->RDEPEND, &ARGC, &ARGV);
+		// Walk the rdepends here. Merging what need be.
+		for (i = 1; i < ARGC; i++) {
+			depend_atom *subatom;
+			switch(ARGV[i][0]) {
+				case '<':
+				case '>':
+				case '!':
+				case '|':
+					fprintf(stderr, "Unhandled depstring %s\n", ARGV[i]);
+					break;
+				default:
+					if ((subatom = atom_explode(ARGV[i])) != NULL) {
+						// p = best_version();
+						fprintf(stderr, "+dep %s", ARGV[i]);
+						atom_implode(subatom);
+					} else {
+						fprintf(stderr, "Cant explode atom %s\n", ARGV[i]);
+					}
+					break;
+			}
+		}
+		freeargv(ARGC, ARGV);
+		ARGC = 0; ARGV = NULL;
+	}
+#endif
 	if (chdir(port_tmpdir) != 0) errf("!!! chdir(%s) %s", port_tmpdir, strerror(errno));
 
 	mkdir(pkg->PF, 0755);
 	// mkdir(pkg->PF, 0710);
 	if (chdir(pkg->PF) != 0) errf("!!! chdir(%s) %s", pkg->PF, strerror(errno));
 
-	system("rm -rf ./*"); // this line does funny things to nano's highlighting.
+	system("busybox rm -rf ./*"); // this line does funny things to nano's highlighting.
 
 	/* split the tbz and xpak data */
 	snprintf(tarball, sizeof(tarball), "%s.tbz2", pkg->PF);
@@ -259,9 +287,6 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 	/* check for an already installed pkg */
 	snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, pkg->PF);
 
-
-{	/* do stuff with this area of code */
-	// p = best_version(atom->CATEGORY, pkg->PF);
 	// Unmerge the other versions */
 	p = best_version(atom->CATEGORY, atom->PN);
 	if (*p) {
@@ -280,7 +305,7 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 				case OLDER:
 				case EQUAL:
 					u = 1;
-					slot = grab_slot(atom->CATEGORY, basename(pf));
+					slot = grab_vdb_item("SLOT", atom->CATEGORY, basename(pf));
 					if (pkg->SLOT[0] && slot) {
 						if (strcmp(pkg->SLOT, slot) != 0)
 							u = 0;
@@ -296,7 +321,6 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 		freeargv(ARGC, ARGV);
 		ARGC = 0; ARGV = NULL;
 	}
-}
 	assert(chdir("image") == 0);
 
 	if (stat("./", &st) == (-1))
@@ -315,14 +339,14 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 			continue;
 		}
 		printf("%s<<<%s %s\n", YELLOW, NORM, buf);
-		snprintf(buf, sizeof(buf), "rm -rf ./%s\n", iargv[i]);
+		snprintf(buf, sizeof(buf), "busybox rm -rf ./%s", iargv[i]);
 		system(buf);
 	}
 	freeargv(iargc, iargv);	/* install_mask */
 
-	if ((strstr(features, "noinfo")) != NULL) if (access("./usr/share/info", R_OK) == 0) system("rm -rf ./usr/share/info");
-	if ((strstr(features, "noman"))  != NULL) if (access("./usr/share/man",  R_OK) == 0) system("rm -rf ./usr/share/man");
-	if ((strstr(features, "nodoc"))  != NULL) if (access("./usr/share/doc",  R_OK) == 0) system("rm -rf ./usr/share/doc");
+	if ((strstr(features, "noinfo")) != NULL) if (access("./usr/share/info", R_OK) == 0) system("busybox rm -rf ./usr/share/info");
+	if ((strstr(features, "noman"))  != NULL) if (access("./usr/share/man",  R_OK) == 0) system("busybox rm -rf ./usr/share/man");
+	if ((strstr(features, "nodoc"))  != NULL) if (access("./usr/share/doc",  R_OK) == 0) system("busybox rm -rf ./usr/share/doc");
 
 	/* we dont care about the return code */
 	rmdir("./usr/share");
@@ -451,7 +475,7 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 	freeargv(ARGC, ARGV);	/* config_protect */
 
 	fclose(contents);
-	fclose(fp);
+	pclose(fp);
 
 	chdir(port_tmpdir);
 	chdir(pkg->PF);
@@ -470,7 +494,7 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 	if (access(buf, X_OK) == 0) {
 		char buf2[sizeof(buf)] = "";
 		/* we need to compare CONTENTS in it and remove any file not provided by our CONTENTS */
-		snprintf(buf2, sizeof(buf2), "rm -rf %s", buf);
+		snprintf(buf2, sizeof(buf2), "busybox rm -rf %s", buf);
 		system(buf2);
 	}
 	interactive_rename("vdb", buf, pkg);
@@ -566,8 +590,7 @@ int pkg_unmerge(char *cat, char *pkgname) {
 
 	freeargv(argc, argv);
 
-	snprintf(buf, sizeof(buf), "rm -rf %s/%s/%s/%s", portroot, portvdb, cat, pkgname);
-	// puts(buf);
+	snprintf(buf, sizeof(buf), "busybox rm -rf %s/%s/%s/%s", portroot, portvdb, cat, pkgname);
 	system(buf);
 
 	return 1;
@@ -635,6 +658,9 @@ int pkg_verify_checksums(char *buf, struct pkg_t *pkg, depend_atom *atom) {
 			ret++;
 		}
 	}
+
+	if (!pkg->SHA1[0] && !pkg->MD5[0])
+		return 1;
 
 	if ((strstr("strict", features) == 0) && ret)
 		errf("strict is set in features");
@@ -722,16 +748,18 @@ void print_Pkg(int full, struct pkg_t *pkg) {
 
 	if (pkg->DESC[0])
 		printf(" %sDesc%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->DESC);
+	if (pkg->SHA1[0])
+		printf(" %sSha1%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->SHA1);
+	if (pkg->MD5[0])
+		printf(" %sMd5%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->MD5);
+	if (!pkg->MD5[0] && !pkg->SHA1[0])
+		printf(" %sSums%s:%s %s(MISSING!)%s\n", DKGREEN, YELLOW, NORM, RED, NORM);
+	if (pkg->SLOT[0])
+		printf(" %sSlot%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->SLOT);
 	if (pkg->LICENSE[0])
 		printf(" %sLicense%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->LICENSE);
 	if (pkg->RDEPEND[0])
 		printf(" %sRdepend%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->RDEPEND);
-	if (pkg->MD5[0])
-		printf(" %sMd5%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->MD5);
-	if (pkg->SHA1[0])
-		printf(" %sSha1%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->SHA1);
-	if (pkg->SLOT[0])
-		printf(" %sSlot%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->SLOT);
 	if (pkg->USE[0])
 		printf(" %sUse%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->USE);
 
@@ -875,7 +903,6 @@ int qmerge_main(int argc, char **argv) {
 	if (uninstall)
 		return unmerge_packages(argc, argv);
 
-	// if (argc == optind) qmerge_usage(EXIT_FAILURE);
 	qmerge_initialize(Packages);
 	return parse_packages(Packages, argc, argv);
 }
