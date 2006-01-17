@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.15 2006/01/17 15:53:38 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.16 2006/01/17 20:51:58 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,7 +29,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.15 2006/01/17 15:53:38 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.16 2006/01/17 20:51:58 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -635,12 +635,13 @@ int match_pkg(char *name, struct pkg_t *pkg) {
 	return match;
 }
 
-int pkg_verify_checksums(char *buf, struct pkg_t *pkg, depend_atom *atom) {
+
+int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom) {
 	char *hash;
 	int ret = 0;
 
 	if (pkg->MD5[0]) {
-		hash = (char*) hash_file(buf, HASH_MD5);
+		hash = (char*) hash_file(fname, HASH_MD5);
 		if (strcmp(hash, pkg->MD5) == 0) {
 			printf("MD5:  [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
 		} else {
@@ -650,11 +651,11 @@ int pkg_verify_checksums(char *buf, struct pkg_t *pkg, depend_atom *atom) {
 	}
 
 	if (pkg->SHA1[0]) {
-		hash = (char*) hash_file(buf, HASH_SHA1);
+		hash = (char*) hash_file(fname, HASH_SHA1);
 		if (strcmp(hash, pkg->SHA1) == 0) {
 			printf("SHA1: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
 		} else {
-			warn("SHA1: [%sER%s] (%s) != (%s) %s/%s\n", RED, NORM, hash, pkg->MD5, atom->CATEGORY, pkg->PF);
+			warn("SHA1: [%sER%s] (%s) != (%s) %s/%s\n", RED, NORM, hash, pkg->SHA1, atom->CATEGORY, pkg->PF);
 			ret++;
 		}
 	}
