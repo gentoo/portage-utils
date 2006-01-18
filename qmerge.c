@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.16 2006/01/17 20:51:58 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.17 2006/01/18 23:00:18 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,7 +29,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.16 2006/01/17 20:51:58 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.17 2006/01/18 23:00:18 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -63,9 +63,10 @@ void pkg_fetch(int, char **, struct pkg_t *);
 void print_Pkg(int, struct pkg_t *);
 int parse_packages(const char *, int, char **);
 int config_protected(const char *, int, char **);
-int match_pkg(char *, struct pkg_t *); 
+int match_pkg(const char *, struct pkg_t *); 
 int pkg_verify_checksums(char *, struct pkg_t *, depend_atom *);
 int unmerge_packages(int, char **);
+char *find_binpkg(const char *);
 
 
 int interactive_rename(const char *src, const char *dst, struct pkg_t *pkg) {
@@ -100,7 +101,7 @@ int interactive_rename(const char *src, const char *dst, struct pkg_t *pkg) {
 		if (ret == 0)
 			printf("%s>>>%s %s\n", GREEN, NORM, dst);
 		else
-			printf("%s!!!%s %s\n", RED, NORM, dst);
+			warn("%s!!!%s %s ret=%d", RED, NORM, dst, ret);
 	}
 
 	return ret;
@@ -217,13 +218,14 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 
 	if (!install) return;
 	if (pretend) return;
-#if 0
+#if 1
 	if (pkg->RDEPEND[0]) {
 		makeargv(pkg->RDEPEND, &ARGC, &ARGV);
 		// Walk the rdepends here. Merging what need be.
 		for (i = 1; i < ARGC; i++) {
 			depend_atom *subatom;
 			switch(ARGV[i][0]) {
+				case '=':
 				case '<':
 				case '>':
 				case '!':
@@ -232,8 +234,8 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 					break;
 				default:
 					if ((subatom = atom_explode(ARGV[i])) != NULL) {
-						// p = best_version();
-						fprintf(stderr, "+dep %s", ARGV[i]);
+						char *dep = find_binpkg(ARGV[i]);
+						fprintf(stderr, "+dep %s:%s\n", ARGV[i], dep);
 						atom_implode(subatom);
 					} else {
 						fprintf(stderr, "Cant explode atom %s\n", ARGV[i]);
@@ -477,8 +479,8 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 	fclose(contents);
 	pclose(fp);
 
-	chdir(port_tmpdir);
-	chdir(pkg->PF);
+	if (chdir(port_tmpdir) != 0) errf("!!! chdir(%s) %s", port_tmpdir, strerror(errno));
+	if (chdir(pkg->PF) != 0) errf("!!! chdir(%s) %s", pkg->PF, strerror(errno));
 
 	snprintf(buf, sizeof(buf), "/var/db/pkg/%s/", pkg->CATEGORY);
 	if (access(buf, R_OK|W_OK|X_OK) != 0) {
@@ -606,7 +608,7 @@ int unlink_empty(char *buf) {
 
 
 
-int match_pkg(char *name, struct pkg_t *pkg) {
+int match_pkg(const char *name, struct pkg_t *pkg) {
 	depend_atom *atom;
 	char buf[255], buf2[255];
 	int match = 0;
@@ -645,7 +647,7 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom) {
 		if (strcmp(hash, pkg->MD5) == 0) {
 			printf("MD5:  [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
 		} else {
-			warn("MD5:  [%sER%s] (%s) != (%s) %s/%s\n", RED, NORM, hash, pkg->MD5, atom->CATEGORY, pkg->PF);
+			warn("MD5:  [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->MD5, atom->CATEGORY, pkg->PF);
 			ret++;
 		}
 	}
@@ -655,7 +657,7 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom) {
 		if (strcmp(hash, pkg->SHA1) == 0) {
 			printf("SHA1: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
 		} else {
-			warn("SHA1: [%sER%s] (%s) != (%s) %s/%s\n", RED, NORM, hash, pkg->SHA1, atom->CATEGORY, pkg->PF);
+			warn("SHA1: [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->SHA1, atom->CATEGORY, pkg->PF);
 			ret++;
 		}
 	}
@@ -800,6 +802,79 @@ int unmerge_packages(int argc, char **argv) {
 	return 0;
 }
 
+
+char *find_binpkg(const char *name) {
+	FILE *fp;
+	char buf[BUFSIZ];
+	char value[BUFSIZ];
+	char *p;
+	char PF[sizeof(Pkg.PF)];
+	char CATEGORY[sizeof(Pkg.CATEGORY)];
+
+	static char best_match[sizeof(Pkg.PF)+2+sizeof(Pkg.CATEGORY)];
+
+	best_match[0] = 0;
+
+	snprintf(buf, sizeof(buf), "%s/portage/Packages", port_tmpdir);
+
+	if ((fp = fopen(buf, "r")) == NULL)
+		err("Unable to open package file %s: %s", buf, strerror(errno));
+
+	while((fgets(buf, sizeof(buf), fp)) != NULL) {
+		if (*buf == '\n') {
+			if (PF[0] && CATEGORY[0]) {
+				int ret;
+				snprintf(buf, sizeof(buf), "%s/%s", CATEGORY, PF);
+				if (strstr(buf, name) != NULL) {
+					depend_atom *atom;
+
+					if (!best_match[0])
+						strncpy(best_match, buf, sizeof(best_match));
+
+					atom = atom_explode(buf);
+					snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
+					ret = atom_compare_str(name, buf);
+					switch(ret) {
+						case OLDER: break;
+						case NEWER:
+						case EQUAL:
+							snprintf(buf, sizeof(buf), "%s/%s", CATEGORY, PF);
+							ret = atom_compare_str(buf, best_match);
+							if (ret == NEWER || ret == EQUAL)
+								strncpy(best_match, buf, sizeof(best_match));
+							// printf("[%s == %s] = %d; %s/%s\n", name, buf, ret, CATEGORY, PF);
+						default:
+							break;
+					}
+					atom_implode(atom);
+				}
+			}
+			continue;
+		}
+		if ((p = strchr(buf, '\n')) != NULL)
+			*p = 0;
+
+		memset(&value, 0, sizeof(value));
+		if ((p = strchr(buf, ':')) == NULL)
+			continue;
+		if ((p = strchr(buf, ' ')) == NULL)
+			continue;
+		*p = 0;
+		++p;
+		strncpy(value, p, sizeof(value));
+
+		if (*buf) {
+			if ((strcmp(buf, "PF:")) == 0)
+				strncpy(PF, value, sizeof(PF));
+			if ((strcmp(buf, "CATEGORY:")) == 0)
+				strncpy(CATEGORY, value, sizeof(CATEGORY));
+		}
+	}
+	fclose(fp);
+	return best_match;
+}
+
+
 int parse_packages(const char *Packages, int argc, char **argv) {
 	FILE *fp;
 	char buf[BUFSIZ];
@@ -905,6 +980,7 @@ int qmerge_main(int argc, char **argv) {
 		return unmerge_packages(argc, argv);
 
 	qmerge_initialize(Packages);
+
 	return parse_packages(Packages, argc, argv);
 }
 
