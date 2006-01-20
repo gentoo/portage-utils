@@ -1,13 +1,16 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.17 2006/01/18 23:00:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.18 2006/01/20 19:31:43 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qmerge
+
+// #define BUSYBOX "/bin/busybox"
+#define BUSYBOX ""
 
 #define QMERGE_FLAGS "fsiUpy" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
@@ -29,7 +32,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.17 2006/01/18 23:00:18 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.18 2006/01/20 19:31:43 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -38,6 +41,7 @@ char interactive = 1;
 char install = 0;
 char uninstall = 0;
 char force_download = 0;
+char follow_rdepends = 0;
 
 struct pkg_t {
 	char PF[64];
@@ -68,7 +72,24 @@ int pkg_verify_checksums(char *, struct pkg_t *, depend_atom *);
 int unmerge_packages(int, char **);
 char *find_binpkg(const char *);
 
+struct pkg_t *grab_binpkg_info(const char *);
 
+int q_unlink_q(char *, const char *, int);
+int q_unlink_q(char *path, const char *func, int line) {
+	if ((strcmp(path, "/bin/sh") == 0) || (strcmp(path, BUSYBOX) == 0)) {
+		warn("Oh hell no: unlink(%s) from %s line %d", path, func, line);
+		return 1;
+	}
+	if (pretend)
+		return 0;
+	return unlink(path);
+}
+
+#define unlink_q(path) q_unlink_q(path, __FUNCTION__, __LINE__)
+
+#define qprintf(fmt, args...) { do { if (!quiet) fprintf(stdout, _( fmt ), ## args); } while (0); }
+
+// rewrite using copyfile() utimes() stat(), lstat(), read() and perms.
 int interactive_rename(const char *src, const char *dst, struct pkg_t *pkg) {
 	FILE *fp;
 	char *p;
@@ -95,15 +116,12 @@ int interactive_rename(const char *src, const char *dst, struct pkg_t *pkg) {
 			pclose(fp);
 		}
 	}
-	snprintf(buf, sizeof(buf), "/bin/busybox mv %s %s %s", check_interactive ? "-i" : "", src, dst);
+	snprintf(buf, sizeof(buf), BUSYBOX " mv %s %s %s", check_interactive ? "-i" : "", src, dst);
 	ret = (system(buf) << 8);
-	if (!quiet) {
-		if (ret == 0)
-			printf("%s>>>%s %s\n", GREEN, NORM, dst);
-		else
-			warn("%s!!!%s %s ret=%d", RED, NORM, dst, ret);
-	}
-
+	if (ret == 0) {
+		qprintf("%s>>>%s %s\n", GREEN, NORM, dst);
+	} else
+		warn("%s!!!%s %s ret=%d", RED, NORM, dst, ret);
 	return ret;
 }
 
@@ -112,7 +130,7 @@ void fetch(const char *destdir, const char *src) {
 
 	fflush(stdout);
 	fflush(stderr);
-	snprintf(buf, sizeof(buf), "%s/bin/busybox wget %s -P %s %s/%s", force_download ? "" : pretend ? "echo " : "",
+	snprintf(buf, sizeof(buf), "%s " BUSYBOX " wget %s -P %s %s/%s", force_download ? "" : pretend ? "echo " : "",
 		(quiet ? "-q" : ""), destdir, binhost, src);
 	system(buf);
 	fflush(stdout);
@@ -120,9 +138,17 @@ void fetch(const char *destdir, const char *src) {
 }
 
 void qmerge_initialize(const char *Packages) {
+	if (quiet)
+		stderr = freopen("/dev/tty", "w", stderr);
+	if (pretend)
+		follow_rdepends=1;
 
-	if (access("/bin/busybox", X_OK) != 0)
-		err("/bin/busybox must be installed");
+	if (strlen(BUSYBOX))
+		if (access(BUSYBOX, X_OK) != 0)
+			err(BUSYBOX " must be installed");
+
+	if (access("/bin/sh", X_OK) != 0)
+		err("/bin/sh must be installed");
 
 	if (pkgdir[0] == '/') {
 		int len = strlen(pkgdir);
@@ -183,6 +209,8 @@ int config_protected(const char *buf, int ARGC, char **ARGV) {
 	if ((strncmp("/etc", buf, 4)) == 0)
 		if ((access(buf, R_OK)) == 0)
 			return 1;
+	if ((strcmp("/bin/sh", buf)) == 0)
+		return 1;
 	return 0;
 }
 
@@ -217,14 +245,16 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 	struct stat st, lst;
 
 	if (!install) return;
-	if (pretend) return;
-#if 1
-	if (pkg->RDEPEND[0]) {
+	if (!pkg) return;
+	if (!atom) return;
+
+	if (pkg->RDEPEND[0] && follow_rdepends) {
 		makeargv(pkg->RDEPEND, &ARGC, &ARGV);
 		// Walk the rdepends here. Merging what need be.
 		for (i = 1; i < ARGC; i++) {
-			depend_atom *subatom;
+			depend_atom *subatom, *ratom;
 			switch(ARGV[i][0]) {
+				case '~':
 				case '=':
 				case '<':
 				case '>':
@@ -234,9 +264,46 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 					break;
 				default:
 					if ((subatom = atom_explode(ARGV[i])) != NULL) {
-						char *dep = find_binpkg(ARGV[i]);
-						fprintf(stderr, "+dep %s:%s\n", ARGV[i], dep);
+						char *dep;
+						struct pkg_t *subpkg = xmalloc(sizeof(struct pkg_t));
+						char *resolved = NULL;
+
+						dep = NULL;
+						dep = find_binpkg(ARGV[i]);
+
+						if (strncmp(ARGV[i], "virtual/", 8) == 0) {
+							if (virtuals == NULL);
+								virtuals = resolve_virtuals();
+							resolved = find_binpkg(virtual(ARGV[i], virtuals));
+							if (resolved == NULL) warn("puke here cant resolve virtual(%s)", ARGV[i]);
+							if (!strlen(resolved)) warn("puke here cant resolve virtual(%s)", ARGV[i]);
+						} else
+							resolved = NULL;
+
+						if (resolved == NULL)
+							resolved = dep;
+
+						fprintf(stderr, "+dep parent(%s/%s: %s) dep(%s) resolved(%s)\n", pkg->CATEGORY, pkg->PF, ARGV[i], dep, resolved);
+						fflush(stdout);
+						fflush(stderr);
+						ratom = atom_explode(resolved);
+
+						free(subpkg);
+						subpkg = grab_binpkg_info(resolved);
+
+#if 0
+						strcpy(subpkg->CATEGORY, ratom->CATEGORY);
+						strcpy(subpkg->PF, ratom->PN);
+						strcpy(subpkg->RDEPEND, "");
+#endif
+						if (strlen(dep) < 1)
+							err("Cant find a binpkg for %s", ARGV[i]);
+
+						pkg_merge(ratom, subpkg);
+
 						atom_implode(subatom);
+						atom_implode(ratom);
+						free(subpkg);
 					} else {
 						fprintf(stderr, "Cant explode atom %s\n", ARGV[i]);
 					}
@@ -246,14 +313,16 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 		freeargv(ARGC, ARGV);
 		ARGC = 0; ARGV = NULL;
 	}
-#endif
+
+	if (pretend) return;
+
 	if (chdir(port_tmpdir) != 0) errf("!!! chdir(%s) %s", port_tmpdir, strerror(errno));
 
 	mkdir(pkg->PF, 0755);
 	// mkdir(pkg->PF, 0710);
 	if (chdir(pkg->PF) != 0) errf("!!! chdir(%s) %s", pkg->PF, strerror(errno));
 
-	system("busybox rm -rf ./*"); // this line does funny things to nano's highlighting.
+	system(BUSYBOX " rm -rf ./*"); // this line does funny things to nano's highlighting.
 
 	/* split the tbz and xpak data */
 	snprintf(tarball, sizeof(tarball), "%s.tbz2", pkg->PF);
@@ -282,7 +351,7 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 	system(buf);
 
 	/* extrct the binary package data */
-	snprintf(buf, sizeof(buf), "/bin/busybox tar -jx%sf %s.tar.bz2 -C image/", ((verbose > 1) ? "v" : ""), pkg->PF);
+	snprintf(buf, sizeof(buf), BUSYBOX " tar -jx%sf %s.tar.bz2 -C image/", ((verbose > 1) ? "v" : ""), pkg->PF);
 	system(buf);
 	fflush(stdout);
 
@@ -318,7 +387,7 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 					warn("no idea how we reached here.");
 					break;
 			}
-			printf("%s+++%s %s %s %s\n", GREEN, NORM, buf, booga[ret], ARGV[i]);
+			qprintf("%s+++%s %s %s %s\n", GREEN, NORM, buf, booga[ret], ARGV[i]);
 		}
 		freeargv(ARGC, ARGV);
 		ARGC = 0; ARGV = NULL;
@@ -340,20 +409,21 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 			warn("skipping crossmount install masking: %s", buf);
 			continue;
 		}
-		printf("%s<<<%s %s\n", YELLOW, NORM, buf);
-		snprintf(buf, sizeof(buf), "busybox rm -rf ./%s", iargv[i]);
+		qprintf("%s<<<%s %s\n", YELLOW, NORM, buf);
+		snprintf(buf, sizeof(buf), BUSYBOX " rm -rf ./%s", iargv[i]);
 		system(buf);
 	}
 	freeargv(iargc, iargv);	/* install_mask */
+	iargv =0 ; iargv = NULL;
 
-	if ((strstr(features, "noinfo")) != NULL) if (access("./usr/share/info", R_OK) == 0) system("busybox rm -rf ./usr/share/info");
-	if ((strstr(features, "noman"))  != NULL) if (access("./usr/share/man",  R_OK) == 0) system("busybox rm -rf ./usr/share/man");
-	if ((strstr(features, "nodoc"))  != NULL) if (access("./usr/share/doc",  R_OK) == 0) system("busybox rm -rf ./usr/share/doc");
+	if ((strstr(features, "noinfo")) != NULL) if (access("./usr/share/info", R_OK) == 0) system(BUSYBOX " rm -rf ./usr/share/info");
+	if ((strstr(features, "noman"))  != NULL) if (access("./usr/share/man",  R_OK) == 0) system(BUSYBOX " rm -rf ./usr/share/man");
+	if ((strstr(features, "nodoc"))  != NULL) if (access("./usr/share/doc",  R_OK) == 0) system(BUSYBOX " rm -rf ./usr/share/doc");
 
 	/* we dont care about the return code */
 	rmdir("./usr/share");
 
-	if ((fp = popen("/bin/busybox find .", "r")) == NULL)
+	if ((fp = popen(BUSYBOX" find .", "r")) == NULL)
 		errf("come on wtf!");
 
 	if ((contents = fopen("../vdb/CONTENTS", "w")) == NULL)
@@ -407,7 +477,7 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 				char *target_hash = hash_file(&buf[1], HASH_MD5);
 				if (strcmp(target_hash, hash) != 0) {
 					char newbuf[sizeof(buf)];
-					printf("%s***%s %s\n", BRYELLOW, NORM, &buf[1]);
+					qprintf("%s***%s %s\n", BRYELLOW, NORM, &buf[1]);
 					if (verbose) {
 						snprintf(newbuf, sizeof(newbuf), "diff -u %s %s", buf, &buf[1]);
 						system(newbuf);
@@ -418,7 +488,7 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 			if ((lstat(&buf[1], &lst)) != (-1)) {
 				if (S_ISLNK(lst.st_mode)) {
 					warn("%s exists and is a symlink and we are going to overwrite it with a file", &buf[1]);
-					unlink(&buf[1]);
+					unlink_q(&buf[1]);
 				}
 			}
 			if (interactive_rename(buf, &buf[1], pkg) != 0)
@@ -462,7 +532,7 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 			if (chdir(dirname(tmp)) != 0) /* tmp gets eatten up now by the dirname call */
 				errf("chdir to symbolic dirname %s: %s", tmp, strerror(errno));
 			if (lstat(path, &lst) != (-1))
-				unlink(&buf[1]);
+				unlink_q(&buf[1]);
 			// if (path[0] != '/')
 			//	puts("path does not start with /");
 			if ((symlink(path, &buf[1])) != 0)
@@ -496,10 +566,14 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 	if (access(buf, X_OK) == 0) {
 		char buf2[sizeof(buf)] = "";
 		/* we need to compare CONTENTS in it and remove any file not provided by our CONTENTS */
-		snprintf(buf2, sizeof(buf2), "busybox rm -rf %s", buf);
+		snprintf(buf2, sizeof(buf2), BUSYBOX " rm -rf %s", buf);
 		system(buf2);
 	}
 	interactive_rename("vdb", buf, pkg);
+
+	snprintf(buf, sizeof(buf), BUSYBOX " %s.tar.bz2", pkg->PF);
+	unlink_q(buf);
+
 	chdir(port_tmpdir);
 }
 
@@ -519,11 +593,12 @@ int pkg_unmerge(char *cat, char *pkgname) {
 		free_sets(vdb);
 		vdb = NULL;
 #endif
+		fprintf(stderr, "%s!!!%s '%s' '%s' (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
 		fprintf(stderr, "%s!!!%s %s/%s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
 		// fprintf(stderr, "%s!!!%s %s %s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, pkgname);
 		return 1;
 	}
-	printf("%s===%s unmerging %s%s%s/%s%s%s\n", YELLOW, NORM, WHITE, cat, NORM, CYAN, pkgname, NORM);
+	printf("%s===%s %s%s%s/%s%s%s\n", YELLOW, NORM, WHITE, cat, NORM, CYAN, pkgname, NORM);
 
 	snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb, cat, pkgname);
 
@@ -549,11 +624,11 @@ int pkg_unmerge(char *cat, char *pkgname) {
 		switch (e->type) {
 			case CONTENTS_DIR:
 				if (!protected)	{ rmdir(e->name); }
-				printf("%s %s%s%s/\n", zing, DKBLUE, e->name, NORM);
+				qprintf("%s %s%s%s/\n", zing, DKBLUE, e->name, NORM);
 				break;
 			case CONTENTS_OBJ:
-				if (!protected)	unlink(e->name);
-				printf("%s %s\n", zing, e->name);
+				if (!protected)	unlink_q(e->name);
+				qprintf("%s %s\n", zing, e->name);
 				break;
 			case CONTENTS_SYM:
 				if (protected) break;
@@ -561,8 +636,8 @@ int pkg_unmerge(char *cat, char *pkgname) {
 				if (e->sym_target[0] != '/') {
 					if (lstat(e->name, &lst) != (-1)) {
 						if (S_ISLNK(lst.st_mode)) {
-							printf("%s %s%s -> %s%s\n", zing, CYAN, e->name, e->sym_target, NORM);
-							unlink(e->name);
+							qprintf("%s %s%s -> %s%s\n", zing, CYAN, e->name, e->sym_target, NORM);
+							unlink_q(e->name);
 							break;
 						}
 					} else {
@@ -573,8 +648,8 @@ int pkg_unmerge(char *cat, char *pkgname) {
 				}
 				if (lstat(e->name, &lst) != (-1)) {
 					if (S_ISLNK(lst.st_mode)) {
-						printf("%s %s%s -> %s%s\n", zing, CYAN, e->name, e->sym_target, NORM);
-						unlink(e->name);
+						qprintf("%s %s%s -> %s%s\n", zing, CYAN, e->name, e->sym_target, NORM);
+						unlink_q(e->name);
 					} else {
 						warn("%s is not a symlink", e->name);
 					}
@@ -583,7 +658,7 @@ int pkg_unmerge(char *cat, char *pkgname) {
 				}
 				break;
 			default:
-				fprintf(stderr, "%s???%s %s%s%s (%d)\n", RED, NORM, WHITE, e->name, NORM, e->type);
+				warn("%s???%s %s%s%s (%d)", RED, NORM, WHITE, e->name, NORM, e->type);
 				break;
 		}
 	}
@@ -592,7 +667,7 @@ int pkg_unmerge(char *cat, char *pkgname) {
 
 	freeargv(argc, argv);
 
-	snprintf(buf, sizeof(buf), "busybox rm -rf %s/%s/%s/%s", portroot, portvdb, cat, pkgname);
+	snprintf(buf, sizeof(buf), BUSYBOX " rm -rf %s/%s/%s/%s", portroot, portvdb, cat, pkgname);
 	system(buf);
 
 	return 1;
@@ -645,7 +720,7 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom) {
 	if (pkg->MD5[0]) {
 		hash = (char*) hash_file(fname, HASH_MD5);
 		if (strcmp(hash, pkg->MD5) == 0) {
-			printf("MD5:  [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
+			qprintf("MD5:  [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
 		} else {
 			warn("MD5:  [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->MD5, atom->CATEGORY, pkg->PF);
 			ret++;
@@ -655,7 +730,7 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom) {
 	if (pkg->SHA1[0]) {
 		hash = (char*) hash_file(fname, HASH_SHA1);
 		if (strcmp(hash, pkg->SHA1) == 0) {
-			printf("SHA1: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
+			qprintf("SHA1: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
 		} else {
 			warn("SHA1: [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->SHA1, atom->CATEGORY, pkg->PF);
 			ret++;
@@ -802,6 +877,86 @@ int unmerge_packages(int argc, char **argv) {
 	return 0;
 }
 
+
+struct pkg_t *grab_binpkg_info(const char *name) {
+	FILE *fp;
+	char buf[BUFSIZ];
+	char value[BUFSIZ];
+	char *p;
+
+	struct pkg_t *pkg = xmalloc(sizeof(struct pkg_t));
+	struct pkg_t *rpkg = xmalloc(sizeof(struct pkg_t));
+
+	static char best_match[sizeof(Pkg.PF)+2+sizeof(Pkg.CATEGORY)];
+
+	best_match[0] = 0;
+
+	memset(pkg, 0, sizeof(struct pkg_t));
+	memset(rpkg, 0, sizeof(struct pkg_t));
+	snprintf(buf, sizeof(buf), "%s/portage/Packages", port_tmpdir);
+
+	if ((fp = fopen(buf, "r")) == NULL)
+		err("Unable to open package file %s: %s", buf, strerror(errno));
+
+	while((fgets(buf, sizeof(buf), fp)) != NULL) {
+		if (*buf == '\n') {
+			if (pkg->PF[0] && pkg->CATEGORY[0]) {
+				int ret;
+				snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
+				if (strstr(buf, name) != NULL) {
+					depend_atom *atom;
+
+					if (!best_match[0])
+						strncpy(best_match, buf, sizeof(best_match));
+
+					atom = atom_explode(buf);
+					snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
+					ret = atom_compare_str(name, buf);
+					switch(ret) {
+						case OLDER: break;
+						case NEWER:
+						case EQUAL:
+							snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
+							ret = atom_compare_str(buf, best_match);
+							if (ret == NEWER || ret == EQUAL) {
+								strncpy(best_match, buf, sizeof(best_match));
+								memcpy(rpkg, pkg, sizeof(struct pkg_t));
+							}
+							// printf("[%s == %s] = %d; %s/%s\n", name, buf, ret, CATEGORY, PF);
+						default:
+							break;
+					}
+					atom_implode(atom);
+				}
+				memset(pkg, 0, sizeof(struct pkg_t));
+			}
+			continue;
+		}
+		if ((p = strchr(buf, '\n')) != NULL)
+			*p = 0;
+
+		memset(value, 0, sizeof(value));
+		if ((p = strchr(buf, ':')) == NULL)
+			continue;
+		if ((p = strchr(buf, ' ')) == NULL)
+			continue;
+		*p = 0;
+		++p;
+		strncpy(value, p, sizeof(value));
+
+		if (*buf) {
+			if ((strcmp(buf, "RDEPEND:")) == 0)
+				strncpy(pkg->RDEPEND, value, sizeof(Pkg.RDEPEND)-1);
+			if ((strcmp(buf, "PF:")) == 0)
+				strncpy(pkg->PF, value, sizeof(Pkg.PF));
+			if ((strcmp(buf, "CATEGORY:")) == 0)
+				strncpy(pkg->CATEGORY, value, sizeof(Pkg.CATEGORY));
+		}
+	}
+	fclose(fp);
+	free(pkg);
+	return rpkg;
+}
 
 char *find_binpkg(const char *name) {
 	FILE *fp;
@@ -971,7 +1126,7 @@ int qmerge_main(int argc, char **argv) {
 			case 's': search_pkgs = 1; break;
 			case 'i': install = 1; break;
 			case 'U': uninstall = 1; break;
-			case 'p': search_pkgs = pretend = 1; break;
+			case 'p': pretend = 1; break;
 			case 'y': interactive = 0; break;
 			COMMON_GETOPTS_CASES(qmerge)
 		}
