@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.10 2006/01/05 03:35:43 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.11 2006/01/21 23:31:24 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.10 2006/01/05 03:35:43 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.11 2006/01/21 23:31:24 solar Exp $
  */
 
 
@@ -28,12 +28,12 @@ typedef struct queue_t queue;
 queue *virtuals = NULL;
 
 queue *del_set(char *s, queue *q, int *ok);
-queue *add_set(char *vv, char *ss, queue *q);
+queue *add_set(const char *vv, const char *ss, queue *q);
 
 void free_virtuals(queue *list);
 
 /* add a set to a cache */
-queue *add_set(char *vv, char *ss, queue *q)
+queue *add_set(const char *vv, const char *ss, queue *q)
 {
 	queue *ll, *z;
 	char *s, *ptr;   
@@ -43,15 +43,15 @@ queue *add_set(char *vv, char *ss, queue *q)
 	v = xstrdup(vv);   
 	ptr = xmalloc(strlen(ss));
 	vptr = xmalloc(strlen(vv));
-   
+   	
 	do {      
 		*ptr = 0;
 		*vptr = 0;      
 		rmspace(ptr);
 		rmspace(s);      
 		rmspace(vptr);
-		rmspace(vv);
-      
+		rmspace(v);
+
 		ll = (queue *) xmalloc(sizeof(queue));
 		ll->next = NULL;
 		ll->name = (char *) xmalloc(strlen(v) + 1);
@@ -74,7 +74,7 @@ queue *add_set(char *vv, char *ss, queue *q)
 		strcpy(s, ptr);
 
 	} while (v[0]);
-	free(s);   
+	free(s);
 	free(ptr);
 	free(v);   
 	free(vptr);

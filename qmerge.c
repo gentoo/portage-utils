@@ -1,25 +1,35 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.18 2006/01/20 19:31:43 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.19 2006/01/21 23:31:24 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qmerge
-
+/*
+  --nomd5                          don't verify MD5 digest of files
+  --nofiles                        don't verify files in package
+  --nodeps                         don't verify package dependencies
+  --noscript                       don't execute %verifyscript (if any)
+  -a, --all                        query/verify all packages
+  -f, --file                       query/verify package(s) owning file
+  -g, --group                      query/verify package(s) in group
+  -p, --package                    query/verify a package file (i.e. a binary *.rpm file)
+*/
 // #define BUSYBOX "/bin/busybox"
 #define BUSYBOX ""
 
-#define QMERGE_FLAGS "fsiUpy" COMMON_FLAGS
+#define QMERGE_FLAGS "fsKUpyO" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
 	{"fetch",   no_argument, NULL, 'f'},
 	{"search",  no_argument, NULL, 's'},
-	{"install", no_argument, NULL, 'i'},
+	{"install", no_argument, NULL, 'K'},
 	{"unmerge", no_argument, NULL, 'U'},
 	{"pretend", no_argument, NULL, 'p'},
 	{"yes",     no_argument, NULL, 'y'},
+	{"nodeps",  no_argument, NULL, 'O'},
         COMMON_LONG_OPTS
 };
 static const char *qmerge_opts_help[] = {
@@ -29,10 +39,11 @@ static const char *qmerge_opts_help[] = {
 	"uninstall package",
 	"pretend only",
 	"dont prompt before overwriting",
+	"dont merge dependencies",
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.18 2006/01/20 19:31:43 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.19 2006/01/21 23:31:24 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -41,7 +52,7 @@ char interactive = 1;
 char install = 0;
 char uninstall = 0;
 char force_download = 0;
-char follow_rdepends = 0;
+char follow_rdepends = 1;
 
 struct pkg_t {
 	char PF[64];
@@ -140,8 +151,6 @@ void fetch(const char *destdir, const char *src) {
 void qmerge_initialize(const char *Packages) {
 	if (quiet)
 		stderr = freopen("/dev/tty", "w", stderr);
-	if (pretend)
-		follow_rdepends=1;
 
 	if (strlen(BUSYBOX))
 		if (access(BUSYBOX, X_OK) != 0)
@@ -248,31 +257,43 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 	if (!pkg) return;
 	if (!atom) return;
 
+	if (!pkg->PF[0] || !pkg->CATEGORY) {
+		warn("%s", "CPF is really NULL");
+		return;
+	}
 	if (pkg->RDEPEND[0] && follow_rdepends) {
+		IF_DEBUG(fprintf(stderr, "\n+Parent: %s/%s\n", pkg->CATEGORY, pkg->PF));
+		IF_DEBUG(fprintf(stderr, "+Depstring: %s\n", pkg->RDEPEND));
+
+		// <hack>
+		if (strncmp(pkg->RDEPEND, "|| ", 3) == 0)
+			strcpy(pkg->RDEPEND, "");
+		// </hack>
+
 		makeargv(pkg->RDEPEND, &ARGC, &ARGV);
 		// Walk the rdepends here. Merging what need be.
 		for (i = 1; i < ARGC; i++) {
 			depend_atom *subatom, *ratom;
 			switch(ARGV[i][0]) {
+				case '|':
+				case '!':
 				case '~':
-				case '=':
 				case '<':
 				case '>':
-				case '!':
-				case '|':
-					fprintf(stderr, "Unhandled depstring %s\n", ARGV[i]);
+				case '=':
+					qprintf("Unhandled depstring %s\n", ARGV[i]);
 					break;
 				default:
 					if ((subatom = atom_explode(ARGV[i])) != NULL) {
 						char *dep;
-						struct pkg_t *subpkg = xmalloc(sizeof(struct pkg_t));
+						struct pkg_t *subpkg;
 						char *resolved = NULL;
 
 						dep = NULL;
 						dep = find_binpkg(ARGV[i]);
 
 						if (strncmp(ARGV[i], "virtual/", 8) == 0) {
-							if (virtuals == NULL);
+							if (virtuals == NULL)
 								virtuals = resolve_virtuals();
 							resolved = find_binpkg(virtual(ARGV[i], virtuals));
 							if (resolved == NULL) warn("puke here cant resolve virtual(%s)", ARGV[i]);
@@ -283,23 +304,27 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 						if (resolved == NULL)
 							resolved = dep;
 
-						fprintf(stderr, "+dep parent(%s/%s: %s) dep(%s) resolved(%s)\n", pkg->CATEGORY, pkg->PF, ARGV[i], dep, resolved);
-						fflush(stdout);
-						fflush(stderr);
-						ratom = atom_explode(resolved);
+						IF_DEBUG(fprintf(stderr, "+Atom: argv0(%s) dep(%s) resolved(%s)\n", ARGV[i], dep, resolved));
 
-						free(subpkg);
-						subpkg = grab_binpkg_info(resolved);
+						// ratom = atom_explode(resolved);
+						subpkg = grab_binpkg_info(resolved);	/* free me later */
 
-#if 0
-						strcpy(subpkg->CATEGORY, ratom->CATEGORY);
-						strcpy(subpkg->PF, ratom->PN);
-						strcpy(subpkg->RDEPEND, "");
-#endif
+						assert(subpkg != NULL);
+						IF_DEBUG(fprintf(stderr, "+Subpkg: %s/%s\n", subpkg->CATEGORY, subpkg->PF));
+
 						if (strlen(dep) < 1)
-							err("Cant find a binpkg for %s", ARGV[i]);
+							err("Cant find a binpkg for %s: depstring(%s)", ARGV[i], pkg->RDEPEND);
 
-						pkg_merge(ratom, subpkg);
+						/* look at installed versions now. If NULL or < merge this pkg */
+						snprintf(buf, sizeof(buf), "%s/%s", subpkg->CATEGORY, subpkg->PF);
+
+						ratom = atom_explode(buf);
+
+						p = best_version(subpkg->CATEGORY, subpkg->PF);
+						// * we dont want to remerge equal versions here */
+						IF_DEBUG(fprintf(stderr, "+Installed: %s\n", p));
+						if (strlen(p) < 1)
+							pkg_merge(ratom, subpkg);
 
 						atom_implode(subatom);
 						atom_implode(ratom);
@@ -314,13 +339,34 @@ void pkg_merge(depend_atom *atom, struct pkg_t *pkg) {
 		ARGC = 0; ARGV = NULL;
 	}
 
-	if (pretend) return;
+	if (pretend) {
+		char install_ver[126] = "";
+		p = best_version(pkg->CATEGORY, pkg->PF);
 
-	if (chdir(port_tmpdir) != 0) errf("!!! chdir(%s) %s", port_tmpdir, strerror(errno));
+		if (strlen(p) < 1)
+			snprintf(buf, sizeof(buf), "%sN%s", GREEN, NORM);
+		else {
+			depend_atom *subatom = atom_explode(p);
+			if (subatom != NULL) {
+				if (subatom->PR_int)
+					snprintf(buf, sizeof(buf), "%s-r%i", subatom->PV, subatom->PR_int);
+				else
+					strncpy(buf, subatom->PV, sizeof(buf));
+
+				snprintf(install_ver, sizeof(install_ver), "[%s%s%s] ", DKBLUE, buf, NORM);
+			}
+			snprintf(buf, sizeof(buf), "%sR%s", YELLOW, NORM);
+		}
+		printf("[%s] %s%s/%s%s %s%s%s%s%s%s\n", buf, DKGREEN, pkg->CATEGORY, pkg->PF, NORM,
+			install_ver, strlen(pkg->USE)>0 ? "(" : "", RED, pkg->USE, NORM, strlen(pkg->USE)>0 ? ")" : "");
+		return;
+	}
+
+	if (chdir(port_tmpdir) != 0) errf("!!! chdir(port_tmpdir %s) %s", port_tmpdir, strerror(errno));
 
 	mkdir(pkg->PF, 0755);
 	// mkdir(pkg->PF, 0710);
-	if (chdir(pkg->PF) != 0) errf("!!! chdir(%s) %s", pkg->PF, strerror(errno));
+	if (chdir(pkg->PF) != 0) errf("!!! chdir(PF %s) %s", pkg->PF, strerror(errno));
 
 	system(BUSYBOX " rm -rf ./*"); // this line does funny things to nano's highlighting.
 
@@ -902,6 +948,7 @@ struct pkg_t *grab_binpkg_info(const char *name) {
 		if (*buf == '\n') {
 			if (pkg->PF[0] && pkg->CATEGORY[0]) {
 				int ret;
+
 				snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
 				if (strstr(buf, name) != NULL) {
 					depend_atom *atom;
@@ -910,19 +957,22 @@ struct pkg_t *grab_binpkg_info(const char *name) {
 						strncpy(best_match, buf, sizeof(best_match));
 
 					atom = atom_explode(buf);
-					snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
+					snprintf(buf, sizeof(buf), "%s/%s-%s", atom->CATEGORY, atom->PN, atom->PV);
+					if (atom->PR_int)
+						snprintf(buf, sizeof(buf), "%s/%s-%s-r%i", atom->CATEGORY, atom->PN, atom->PV, atom->PR_int);
 					ret = atom_compare_str(name, buf);
+					IF_DEBUG(fprintf(stderr, "=== atom_compare(%s, %s) = %d %s\n", name, buf, ret, booga[ret])); // buf(%s) depend(%s)\n", ret, pkg->CATEGORY, pkg->PF, name, pkg->RDEPEND);
 					switch(ret) {
-						case OLDER: break;
-						case NEWER:
 						case EQUAL:
+						case NEWER:
 							snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
 							ret = atom_compare_str(buf, best_match);
 							if (ret == NEWER || ret == EQUAL) {
 								strncpy(best_match, buf, sizeof(best_match));
 								memcpy(rpkg, pkg, sizeof(struct pkg_t));
+								IF_DEBUG(fprintf(stderr, "--- %s/%s depend(%s)\n", rpkg->CATEGORY, rpkg->PF, rpkg->RDEPEND));
 							}
-							// printf("[%s == %s] = %d; %s/%s\n", name, buf, ret, CATEGORY, PF);
+						case OLDER: break;
 						default:
 							break;
 					}
@@ -945,12 +995,24 @@ struct pkg_t *grab_binpkg_info(const char *name) {
 		strncpy(value, p, sizeof(value));
 
 		if (*buf) {
+			/* we dont need all the info */
 			if ((strcmp(buf, "RDEPEND:")) == 0)
-				strncpy(pkg->RDEPEND, value, sizeof(Pkg.RDEPEND)-1);
+				strncpy(pkg->RDEPEND, value, sizeof(Pkg.RDEPEND));
 			if ((strcmp(buf, "PF:")) == 0)
 				strncpy(pkg->PF, value, sizeof(Pkg.PF));
 			if ((strcmp(buf, "CATEGORY:")) == 0)
 				strncpy(pkg->CATEGORY, value, sizeof(Pkg.CATEGORY));
+
+			if ((strcmp(buf, "SLOT:")) == 0)
+				strncpy(pkg->SLOT, value, sizeof(Pkg.SLOT));
+			if ((strcmp(buf, "USE:")) == 0)
+				strncpy(pkg->USE, value, sizeof(Pkg.USE));
+
+			/* checksums. We must have 1 or the other unless --*/
+			if ((strcmp(buf, "MD5:")) == 0)
+				strncpy(pkg->MD5, value, sizeof(Pkg.MD5));
+			if ((strcmp(buf, "SHA1:")) == 0)
+				strncpy(pkg->SHA1, value, sizeof(Pkg.SHA1));
 		}
 	}
 	fclose(fp);
@@ -1108,15 +1170,18 @@ int parse_packages(const char *Packages, int argc, char **argv) {
 			default:
 				break;
 		}
+		memset(&buf, 0, sizeof(buf));
 	}
 	fclose(fp);
 	return 0;
 }
 
-
 int qmerge_main(int argc, char **argv) {
 	int i;
 	const char *Packages = "Packages";
+	int ARGC = argc;
+	char **ARGV = argv;
+
 	if (argc < 2)
 		qmerge_usage(EXIT_FAILURE);
 
@@ -1124,19 +1189,58 @@ int qmerge_main(int argc, char **argv) {
 		switch (i) {
 			case 'f': force_download = 1; break;
 			case 's': search_pkgs = 1; break;
-			case 'i': install = 1; break;
+			/* case 'i': case 'g': */
+			case 'K': install = 1; break;
 			case 'U': uninstall = 1; break;
 			case 'p': pretend = 1; break;
 			case 'y': interactive = 0; break;
+			case 'O': follow_rdepends = 0; break;
 			COMMON_GETOPTS_CASES(qmerge)
 		}
 	}
 	if (uninstall)
 		return unmerge_packages(argc, argv);
 
+	ARGC = argc;
+	ARGV = argv;
+
 	qmerge_initialize(Packages);
 
-	return parse_packages(Packages, argc, argv);
+	if (argc > 1) {
+		queue *world;
+		for (i = 0 ; i < argc ; i++) {
+			if ((strcmp(argv[i], "world") == 0) || (strcmp(argv[i], "system") == 0)) {
+				size_t size = 0;
+				world = get_vdb_atoms();
+				if (world != NULL) {
+					queue *ll;
+					char *ptr;
+
+					for (ll = world; ll != NULL; ll = ll->next)
+						size += (strlen(ll->name) + 1);
+					if (size < 1)
+						continue;
+
+					size += (strlen(argv[0]) + 1);
+					ptr = xmalloc(size);
+					sprintf(ptr, "%s ", argv[0]);
+
+					for (ll = world; ll != NULL; ll = ll->next) {
+						char *p = NULL;
+						asprintf(&p, "%s ", ll->name);
+						strcat(ptr, p);
+						free(p);
+					}
+					ARGC = 0;
+					ARGV = NULL;
+					/* this will leak mem */
+					// follow_rdepends = 0;
+					makeargv(ptr, &ARGC, &ARGV);
+				}
+			}
+		}
+	}
+	return parse_packages(Packages, ARGC, ARGV);
 }
 
 #else /* ! APPLET_qmerge */

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.98 2006/01/16 15:52:35 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.99 2006/01/21 23:31:24 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -876,29 +876,34 @@ void cache_free(portage_cache *cache)
 	free(cache);
 }
 
-#ifdef SOLAR_WAS_HERE
-depend_atom **get_vdb_atoms(void);
-depend_atom **get_vdb_atoms(void) {
+queue *get_vdb_atoms(void);
+queue *get_vdb_atoms(void) {
 	int cfd, j;
 	int dfd, i;
 
 	char buf[_Q_PATH_MAX];
+        static char savecwd[_POSIX_PATH_MAX];
 
 	struct dirent **cat;
 	struct dirent **pf;
 
 	depend_atom *atom = NULL;
+	queue *cpf = NULL;
 
-	if (chdir(portroot))
-		errp("could not chdir(%s) for ROOT", portroot);
+        getcwd(savecwd, sizeof(savecwd));
+
+	assert(chdir(savecwd) == 0);
+
+	if (chdir(portroot) != 0)
+		goto fuckit;
 
 	if (chdir(portvdb) != 0)
-		return NULL;
+		goto fuckit;
 
 	memset(buf, 0, sizeof(buf));
 	/* scan the cat first */
 	if ((cfd = scandir(".", &cat, filter_hidden, alphasort)) < 0)
-		return NULL;
+		goto fuckit;
 
 	for (j = 0; j < cfd ; j++) {
 		if (cat[j]->d_name[0] == '-')
@@ -913,13 +918,15 @@ depend_atom **get_vdb_atoms(void) {
 			if (pf[i]->d_name[0] == '-')
 				continue;
 			snprintf(buf, sizeof(buf), "%s/%s", cat[j]->d_name, pf[i]->d_name);
-			atom = atom_explode(buf);
-			printf("%s %s %s", atom->CATEGORY, atom->PN, atom->PV);                
-			if (verbose || atom->PR_int)
-				printf(" r%i", atom->PR_int);
-			putchar('\n');
+			if ((atom = atom_explode(buf)) == NULL)
+				continue;
+			if (atom->PR_int)
+				snprintf(buf, sizeof(buf), "%s/%s-%s-r%i", atom->CATEGORY, atom->PN, atom->PV , atom->PR_int);
+			else
+				snprintf(buf, sizeof(buf), "%s/%s-%s", atom->CATEGORY, atom->PN, atom->PV);
 			atom_implode(atom);
-
+			cpf = add_set(buf, "0", cpf);
+			
 		}
 		chdir("..");
 		while(dfd--) free(pf[dfd]);
@@ -927,10 +934,11 @@ depend_atom **get_vdb_atoms(void) {
 
 	/* cleanup */
 	if (cfd) while(cfd--) free(cat[cfd]);
-	
-	return NULL;
+
+fuckit:
+	assert(chdir(savecwd) == 0);
+	return cpf;
 }
-#endif
 
 #include "q.c"
 #include "qcheck.c"
@@ -959,9 +967,11 @@ int main(int argc, char **argv)
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
 
+#ifdef ENABLE_NLS
 	setlocale(LC_ALL, "");
 	bindtextdomain(argv0, "/usr/share/locale");
 	textdomain(argv0);
+#endif
 
 #if 0
 	if (ttyname(1) == NULL)
