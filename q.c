@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.25 2006/01/05 03:35:43 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.26 2006/01/23 12:50:58 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -18,7 +18,7 @@ static const char *q_opts_help[] = {
 	"Reinitialize ebuild cache",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.25 2006/01/05 03:35:43 vapier Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.26 2006/01/23 12:50:58 solar Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 
@@ -84,8 +84,9 @@ int q_main(int argc, char **argv)
 		case 'r': reinitialize = 1; return 0;
 		case 'i': {
 			char buf[_Q_PATH_MAX];
-			printf("Installing symlinks:\n");
+			/* always bzero a buffer before using readlink() */
 			memset(buf, 0x00, sizeof(buf));
+			printf("Installing symlinks:\n");
 			if ((readlink("/proc/self/exe", buf, sizeof(buf))) == (-1)) {
 				warnf("could not readlink '/proc/self/exe': %s", strerror(errno));
 				return 1;

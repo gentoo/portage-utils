@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.99 2006/01/21 23:31:24 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.100 2006/01/23 12:50:58 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -480,7 +480,7 @@ void initialize_portage_env(void)
 	do {
 		if (f == 0)
 			snprintf(portage_file, sizeof(portage_file), "%s/make.defaults", profile);
-		IF_DEBUG(printf("profile %s\n", files[f]));
+		IF_DEBUG(fprintf(stderr, "profile %s\n", files[f]));
 
 		if ((fp=fopen(files[f], "r")) != NULL) {
 			while (fgets(buf, sizeof(buf), fp) != NULL) {
@@ -920,6 +920,14 @@ queue *get_vdb_atoms(void) {
 			snprintf(buf, sizeof(buf), "%s/%s", cat[j]->d_name, pf[i]->d_name);
 			if ((atom = atom_explode(buf)) == NULL)
 				continue;
+
+			strncat(buf, "/SLOT", sizeof(buf));
+			if (access(buf, R_OK) == 0) {
+				eat_file(buf, buf, sizeof(buf));
+				rmspace(buf);
+				if (strcmp(buf, "0") != 0);
+			}
+
 			if (atom->PR_int)
 				snprintf(buf, sizeof(buf), "%s/%s-%s-r%i", atom->CATEGORY, atom->PN, atom->PV , atom->PR_int);
 			else

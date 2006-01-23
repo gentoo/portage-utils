@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.39 2006/01/16 15:52:35 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.40 2006/01/23 12:50:58 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -84,11 +84,11 @@ testclean:
 install: all
 	-$(MKDIR) $(PREFIX)/bin/ $(PREFIX)/share/man/man1/
 	$(CP) q $(PREFIX)/bin/
-	for mpage in $(MPAGES) ; do \
+	@[[ ! -d CVS ]] && for mpage in $(MPAGES) ; do \
 		[ -e $$mpage ] \
 			&& cp $$mpage $(PREFIX)/share/man/man1/ || : ;\
-	done
-	(cd $(PREFIX)/bin/ && for applet in $(APPLETS); do [[ ! -e $$applet ]] && ln -s q $${applet} ; done) || :
+	done || :
+	@(cd $(PREFIX)/bin/ && for applet in $(APPLETS); do [[ ! -e $$applet ]] && ln -s q $${applet} ; done) || :
 
 symlinks: all
 	./q --install

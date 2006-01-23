@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.11 2006/01/21 23:31:24 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.12 2006/01/23 12:50:58 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.11 2006/01/21 23:31:24 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.12 2006/01/23 12:50:58 solar Exp $
  */
 
 
@@ -248,7 +248,7 @@ static queue *resolve_virtuals() {
 
 	free_sets(virtuals);
 	virtuals = resolve_local_profile_virtuals();
-	// virtuals = resolve_vdb_virtuals(portvdb);
+	virtuals = resolve_vdb_virtuals(portvdb);
 
 	if ((chdir("/etc/")) == (-1))
 		return virtuals;
@@ -292,4 +292,3 @@ static queue *resolve_virtuals() {
 	chdir(savecwd);
 	return virtuals;
 }
-
