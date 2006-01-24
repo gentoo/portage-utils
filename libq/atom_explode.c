@@ -1,10 +1,14 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.13 2006/01/11 01:37:07 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.14 2006/01/24 00:28:14 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
+ */
+
+/*
+ * TODO: maybe handle incomplete atoms better ?  1.6.8_p9 -> 1.6.8 becomes the PN
  */
 
 typedef enum { VER_ALPHA=0, VER_BETA, VER_PRE, VER_RC, VER_NORM, VER_P } atom_suffixes;
@@ -149,9 +153,11 @@ eat_version:
 	i = -1;
 	if (ret->PV) {
 found_pv:
-		ptr = (ret->suffix == VER_NORM ? (ret->PV + strlen(ret->PV)) : strrchr(ret->PV, '_')) - 1;
-		if (*ptr >= 'a' && *ptr <= 'z')
-			ret->letter = *ptr;
+		ptr = (ret->suffix == VER_NORM ? (ret->PV + strlen(ret->PV)) : strrchr(ret->PV, '_'));
+		if (ptr--) {
+			if (*ptr >= 'a' && *ptr <= 'z')
+				ret->letter = *ptr;
+		}
 		sprintf(ret->PVR, "%s-r%i", ret->PV, ret->PR_int);
 		sprintf(ret->P, "%s-%s", ret->PN, (ret->PR_int ? ret->PVR : ret->PV));
 	} else {
