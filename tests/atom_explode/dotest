@@ -2,7 +2,7 @@
 
 d=$PWD
 [[ $PORTDIR == "" ]] && PORTDIR=$(portageq envvar PORTDIR)
-cd ${PORTDIR}/metadata/cache || exit 1
+cd ${PORTDIR}/metadata/cache || { echo SKIPPED; exit 0 ; }
 
 echo -n "atom_explode():"
 time find . -mindepth 2 -type f -printf '%P\n%f\n' | "$d"/q > "$d"/me
