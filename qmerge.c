@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.20 2006/01/23 12:50:58 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.21 2006/01/24 00:28:32 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -31,7 +31,7 @@ static struct option const qmerge_long_opts[] = {
 	{"yes",     no_argument, NULL, 'y'},
 	{"nodeps",  no_argument, NULL, 'O'},
 	{"nomd5",   no_argument, NULL, '5'},
-        COMMON_LONG_OPTS
+	COMMON_LONG_OPTS
 };
 static const char *qmerge_opts_help[] = {
 	"force download overwriting existing files",
@@ -42,10 +42,10 @@ static const char *qmerge_opts_help[] = {
 	"dont prompt before overwriting",
 	"dont merge dependencies",
 	"don't verify MD5 digest of files",
-        COMMON_OPTS_HELP
+	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.20 2006/01/23 12:50:58 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.21 2006/01/24 00:28:32 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
