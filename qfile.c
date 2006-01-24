@@ -1,11 +1,13 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.23 2006/01/05 03:35:43 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.24 2006/01/24 23:35:08 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
+
+#ifndef OMIT_QFILE
 
 #define QFILE_FLAGS "e" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
@@ -16,7 +18,7 @@ static const char *qfile_opts_help[] = {
 	"Exact match",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.23 2006/01/05 03:35:43 vapier Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.24 2006/01/24 23:35:08 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 void qfile(char *path, char *fullname);
@@ -143,3 +145,5 @@ int qfile_main(int argc, char **argv)
 
 	return (found ? EXIT_SUCCESS : EXIT_FAILURE);
 }
+
+#endif

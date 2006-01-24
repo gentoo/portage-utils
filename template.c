@@ -1,13 +1,13 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/template.c,v 1.8 2006/01/07 16:25:28 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/template.c,v 1.9 2006/01/24 23:35:08 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#ifdef APPLET_qtemp
+#ifndef OMIT_QTEMP
 
 #define QTEMP_FLAGS "" COMMON_FLAGS
 static struct option const qtemp_long_opts[] = {
@@ -17,7 +17,7 @@ static const char *qtemp_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qtemp_rcsid[] = "$Id: template.c,v 1.8 2006/01/07 16:25:28 solar Exp $";
+static const char qtemp_rcsid[] = "$Id: template.c,v 1.9 2006/01/24 23:35:08 vapier Exp $";
 #define qtemp_usage(ret) usage(ret, QTEMP_FLAGS, qtemp_long_opts, qtemp_opts_help, lookup_applet_idx("qtemp"))
 
 
@@ -39,8 +39,4 @@ int qtemp_main(int argc, char **argv)
 	return EXIT_SUCCESS;
 }
 
-#else /* ! APPLET_qtemp */
-int qtemp_main(int argc, char **argv) {
-	errf("%s", err_noapplet);
-}
-#endif /* APPLET_qtemp */
+#endif

@@ -1,0 +1,8 @@
+- unify match behavior:
+ default *foo*
+ -e foo
+ -r (-R ?) regexp foo.*
+
+- disable color when tty = NULL; may break less?
+
+- multiline reads don't yet work for quse/qsearch

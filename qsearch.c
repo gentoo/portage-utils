@@ -1,13 +1,13 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.26 2006/01/07 16:25:28 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.27 2006/01/24 23:35:08 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#ifdef APPLET_qsearch
+#ifndef OMIT_QSEARCH
 
 #define QSEARCH_FLAGS "acsSNH" COMMON_FLAGS
 static struct option const qsearch_long_opts[] = {
@@ -28,7 +28,7 @@ static const char *qsearch_opts_help[] = {
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.26 2006/01/07 16:25:28 solar Exp $";
+static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.27 2006/01/24 23:35:08 vapier Exp $";
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
 
 
@@ -157,9 +157,4 @@ int qsearch_main(int argc, char **argv)
 	return EXIT_SUCCESS;
 }
 
-
-#else /* ! APPLET_qsearch */
-int qsearch_main(int argc, char **argv) {
-	errf("%s", err_noapplet);
-}
-#endif /* APPLET_qsearch */
+#endif

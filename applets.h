@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.12 2006/01/07 16:25:28 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.13 2006/01/24 23:35:08 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -11,27 +11,30 @@
 #define _QAPPLETS_H_
 
 /* applet prototypes */
-int q_main(int, char **);
-int qcheck_main(int, char **);
-int qdepends_main(int, char **);
-int qfile_main(int, char **);
-int qlist_main(int, char **);
-int qlop_main(int, char **);
-int qsearch_main(int, char **);
-int qsize_main(int, char **);
-int qtbz2_main(int, char **);
-int quse_main(int, char **);
-int qxpak_main(int, char **);
-int qpkg_main(int, char **);
-int qgrep_main(int, char **);
-int qatom_main(int, char **);
-int qmerge_main(int, char **);
-
 typedef int (*APPLET)(int, char **);
+
+#define DECLARE_APPLET(applet) \
+	extern int applet##_main(int, char **) __attribute__((weak));
+DECLARE_APPLET(q)
+DECLARE_APPLET(qcheck)
+DECLARE_APPLET(qdepends)
+DECLARE_APPLET(qfile)
+DECLARE_APPLET(qlist)
+DECLARE_APPLET(qlop)
+DECLARE_APPLET(qsearch)
+DECLARE_APPLET(qsize)
+DECLARE_APPLET(qtbz2)
+DECLARE_APPLET(quse)
+DECLARE_APPLET(qxpak)
+DECLARE_APPLET(qpkg)
+DECLARE_APPLET(qgrep)
+DECLARE_APPLET(qatom)
+DECLARE_APPLET(qmerge)
+DECLARE_APPLET(qglsa)
+#undef DECLARE_APPLET
 
 struct applet_t {
 	const char *name;
-	/* int *func; */
 	APPLET func;
 	const char *opts;
 	const char *desc;
@@ -42,6 +45,7 @@ struct applet_t {
 	{"qcheck",    qcheck_main,    "<pkgname>",       "verify mtimes/digests"},
 	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
 	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},
+	{"qglsa",     qglsa_main,     "<action> <list>", "check GLSAs against system"},
 	{"qgrep",     qgrep_main,     "<misc args>",     "grep in ebuilds"},
 	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},

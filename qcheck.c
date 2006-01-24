@@ -1,11 +1,13 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.21 2006/01/05 03:35:43 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.22 2006/01/24 23:35:08 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
+
+#ifndef OMIT_QCHECK
 
 #define QCHECK_FLAGS "a" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
@@ -16,7 +18,7 @@ static const char *qcheck_opts_help[] = {
 	"List all packages",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.21 2006/01/05 03:35:43 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.22 2006/01/24 23:35:08 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 
@@ -161,3 +163,5 @@ int qcheck_main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
+
+#endif

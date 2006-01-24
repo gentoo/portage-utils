@@ -1,11 +1,13 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qatom.c,v 1.2 2006/01/11 01:37:07 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qatom.c,v 1.3 2006/01/24 23:35:08 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
+
+#ifndef OMIT_QATOM
 
 #define QATOM_FLAGS "c" COMMON_FLAGS
 static struct option const qatom_long_opts[] = {
@@ -17,7 +19,7 @@ static const char *qatom_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qatom_rcsid[] = "$Id: qatom.c,v 1.2 2006/01/11 01:37:07 vapier Exp $";
+static const char qatom_rcsid[] = "$Id: qatom.c,v 1.3 2006/01/24 23:35:08 vapier Exp $";
 #define qatom_usage(ret) usage(ret, QATOM_FLAGS, qatom_long_opts, qatom_opts_help, lookup_applet_idx("qatom"))
 
 int qatom_main(int argc, char **argv)
@@ -65,3 +67,5 @@ int qatom_main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
+
+#endif

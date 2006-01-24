@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.101 2006/01/24 01:02:26 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.102 2006/01/24 23:35:08 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -154,10 +154,11 @@ static void usage(int status, const char *flags, struct option const opts[],
 			NORM, YELLOW, NORM, DKBLUE, NORM);
 		printf("%sCurrently defined applets:%s\n", GREEN, NORM);
 		for (i = 0; applets[i].desc; ++i)
-			printf(" %s%8s%s %s%-16s%s%s:%s %s\n",
-				YELLOW, applets[i].name, NORM, 
-				DKBLUE, applets[i].opts, NORM,
-				RED, NORM, _(applets[i].desc));
+			if (applets[i].func)
+				printf(" %s%8s%s %s%-16s%s%s:%s %s\n",
+					YELLOW, applets[i].name, NORM, 
+					DKBLUE, applets[i].opts, NORM,
+					RED, NORM, _(applets[i].desc));
 	} else {
 		printf("%sUsage:%s %s%s%s %s%s%s %s:%s %s\n", GREEN, NORM,
 			YELLOW, applets[blabber].name, NORM,
@@ -950,23 +951,6 @@ fuckit:
 	return cpf;
 }
 
-#include "q.c"
-#include "qcheck.c"
-#include "qdepends.c"
-#include "qfile.c"
-#include "qlist.c"
-#include "qlop.c"
-#include "qsearch.c"
-#include "qsize.c"
-#include "qmerge.c"
-#include "qtbz2.c"
-#include "quse.c"
-#include "qxpak.c"
-#include "qpkg.c"
-#include "qgrep.c"
-#include "qatom.c"
-
-
 void cleanup() {
 	reinitialize_as_needed();
 	free_sets(virtuals);
@@ -998,3 +982,6 @@ int main(int argc, char **argv)
 	optind = 0;
 	return q_main(argc, argv);
 }
+
+#include "config.h"
+#include "include_applets.h"

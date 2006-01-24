@@ -1,16 +1,14 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/README,v 1.15 2006/01/05 03:35:43 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/README,v 1.16 2006/01/24 23:35:08 vapier Exp $
 
 Developers to contact:
-solar@gentoo.org
-vapier@gentoo.org
+	solar@gentoo.org
+	vapier@gentoo.org
 
-/* Add notes here */
 
-disable color when tty = NULL; may break less?
 
-- multiline reads don't yet work for quse/qsearch
+Dev Notes:
 
 - Speed is everything.
   Having your PORTDIR and VDB on the right file system helps dramatically
@@ -32,13 +30,14 @@ so behind the real tree which is hosted on cvs.gentoo.org
 
 cvs -d:pserver:anonymous@zarquon.twobit.net:/var/cvsroot -q -z9 co -R gentoo-projects/portage-utils
 
+
 - Adding applets is easy using the q framework.
-cp template.c qmyapplet.c (all applets use the prefix of the letter 'q') 
-edit applets.h add your prototype, then scroll down the typedef for 
-applets[] and add your applet name following the existing syntax. Please 
-try to keep applet names under 8 chars.  Finally, edit main.c, scroll to 
-the bottom, and add your applet to the #include list.
+  Note: Please try to keep applet names under 8 chars.
+	* cp template.c qmyapplet.c (all applets use the prefix of the letter 'q') 
+	* applets.h: add your prototype (see DECLARE_APPLET macro)
+	* applets.h: add a new line to applets[] following the existing syntax
+	* run `make depend` to auto regenerate dependent files
 
 When and where you can please try to use an existing applet and extend 
-on it's functionality by adding more options vs adding a bunch of new 
+on its functionality by adding more options vs adding a bunch of new 
 little applets.
