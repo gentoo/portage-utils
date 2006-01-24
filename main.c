@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.100 2006/01/23 12:50:58 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.101 2006/01/24 01:02:26 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -75,6 +75,8 @@ char install_mask[1024] = "";
 
 const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
+FILE *saved_stderr;
+
 #define _q_unused_ __attribute__((__unused__))
 
 #ifndef BUFSIZE
@@ -134,7 +136,7 @@ void no_colors() {
 	NULL
 #define COMMON_GETOPTS_CASES(applet) \
 	case 'v': ++verbose; break; \
-	case 'q': ++quiet; stderr = freopen("/dev/null", "w", stderr); break; \
+	case 'q': ++quiet; if (stderr == saved_stderr) stderr = fopen("/dev/null", "w"); break; \
 	case 'V': version_barf( applet ## _rcsid ); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': no_colors(); break; \
@@ -968,12 +970,15 @@ fuckit:
 void cleanup() {
 	reinitialize_as_needed();
 	free_sets(virtuals);
+	if (saved_stderr != stderr)
+		fclose(stderr);
 }
 
 int main(int argc, char **argv)
 {
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
+	saved_stderr = stderr;
 
 #ifdef ENABLE_NLS
 	setlocale(LC_ALL, "");

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.21 2006/01/24 00:28:32 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.22 2006/01/24 01:02:26 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,18 +34,18 @@ static struct option const qmerge_long_opts[] = {
 	COMMON_LONG_OPTS
 };
 static const char *qmerge_opts_help[] = {
-	"force download overwriting existing files",
-	"search available packages",
-	"install package",
-	"uninstall package",
-	"pretend only",
-	"dont prompt before overwriting",
-	"dont merge dependencies",
-	"don't verify MD5 digest of files",
-	COMMON_OPTS_HELP
+	"Force download overwriting existing files",
+	"Search available packages",
+	"Install package",
+	"Uninstall package",
+	"Pretend only",
+	"Don't prompt before overwriting",
+	"Don't merge dependencies",
+	"Don't verify MD5 digest of files",
+        COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.21 2006/01/24 00:28:32 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.22 2006/01/24 01:02:26 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -101,7 +101,8 @@ int q_unlink_q(char *path, const char *func, int line) {
 
 #define unlink_q(path) q_unlink_q(path, __FUNCTION__, __LINE__)
 
-#define qprintf(fmt, args...) { do { if (!quiet) fprintf(stdout, _( fmt ), ## args); } while (0); }
+#define qfprintf(stream, fmt, args...) { do { if (!quiet) fprintf(stream, _( fmt ), ## args); } while (0); }
+#define qprintf(fmt, args...) qfprintf(stdout, _( fmt ), ## args)
 
 // rewrite using copyfile() utimes() stat(), lstat(), read() and perms.
 int interactive_rename(const char *src, const char *dst, struct pkg_t *pkg) {
@@ -158,7 +159,7 @@ void fetch(const char *destdir, const char *src) {
 
 void qmerge_initialize(const char *Packages) {
 	if (quiet)
-		stderr = freopen("/dev/tty", "w", stderr);
+		stderr = saved_stderr;
 
 	if (strlen(BUSYBOX))
 		if (access(BUSYBOX, X_OK) != 0)
@@ -285,7 +286,7 @@ queue *resolve_rdepends(const int level, const struct pkg_t *package, queue *dep
 			case '<':
 			case '>':
 			case '=':
-				qprintf("Unhandled depstring %s\n", ARGV[i]);
+				qfprintf(stderr, "Unhandled depstring %s\n", ARGV[i]);
 				break;
 			default:
 				if ((subatom = atom_explode(ARGV[i])) != NULL) {
@@ -367,22 +368,52 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 	}
 	if (pretend) {
 		char install_ver[126] = "";
+		char c = 'N';
 		p = best_version(pkg->CATEGORY, atom->PN);
 
-		if (strlen(p) < 1)
+		if (strlen(p) < 1) {
+			c = 'N';
 			snprintf(buf, sizeof(buf), "%sN%s", GREEN, NORM);
-		else {
+		} else {
 			depend_atom *subatom = atom_explode(p);
 			if (subatom != NULL) {
 				if (subatom->PR_int)
+					snprintf(buf, sizeof(buf), "%s-%s-r%i", subatom->PN, subatom->PV, subatom->PR_int);
+				else
+					snprintf(buf, sizeof(buf), "%s-%s", subatom->PN, subatom->PV);
+
+				if (atom->PR_int)
+					snprintf(install_ver, sizeof(install_ver), "%s-%s-r%i", atom->PN, atom->PV, atom->PR_int);
+				else
+					snprintf(install_ver, sizeof(install_ver), "%s-%s", atom->PN, atom->PV);
+
+				ret = atom_compare_str(install_ver, buf);
+				switch(ret) {
+					case EQUAL: c = 'R'; break;
+					case NEWER: c = 'U'; break;
+					case OLDER: c = 'D'; break;
+					default: c = '?'; break;
+				}
+
+				if (subatom->PR_int)
 					snprintf(buf, sizeof(buf), "%s-r%i", subatom->PV, subatom->PR_int);
 				else
-					strncpy(buf, subatom->PV, sizeof(buf));
+					snprintf(buf, sizeof(buf), "%s", subatom->PV);
 
 				snprintf(install_ver, sizeof(install_ver), "[%s%s%s] ", DKBLUE, buf, NORM);
 				atom_implode(subatom);
 			}
-			snprintf(buf, sizeof(buf), "%sR%s", YELLOW, NORM);
+			if (c == 'R')
+				snprintf(buf, sizeof(buf), "%s%c%s", YELLOW, c, NORM);
+			if ((c == 'U') || (c == 'D'))
+				snprintf(buf, sizeof(buf), "%s%c%s", BLUE, c, NORM);
+#ifdef UPGRADE_ONLY
+			switch(c) {
+				case 'N':
+				case 'U': break;
+				default: return;
+			}
+#endif
 		}
 		printf("[%s] ", buf);
 		for (i = 0; i < level; i++) putchar(' ');
@@ -394,8 +425,10 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 		IF_DEBUG(fprintf(stderr, "+Depstring: %s\n", pkg->RDEPEND));
 
 		// <hack>
-		if (strncmp(pkg->RDEPEND, "|| ", 3) == 0)
+		if (strncmp(pkg->RDEPEND, "|| ", 3) == 0) {
+			qfprintf(stderr, "fix this rdepend hack %s\n", pkg->RDEPEND);
 			strcpy(pkg->RDEPEND, "");
+		}
 		// </hack>
 
 		makeargv(pkg->RDEPEND, &ARGC, &ARGV);
@@ -409,7 +442,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 				case '<':
 				case '>':
 				case '=':
-					qprintf("Unhandled depstring %s\n", ARGV[i]);
+					qfprintf(stderr, "Unhandled depstring %s\n", ARGV[i]);
 					break;
 				default:
 					if ((subatom = atom_explode(ARGV[i])) != NULL) {
@@ -424,7 +457,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 							if (virtuals == NULL)
 								virtuals = resolve_virtuals();
 							resolved = find_binpkg(virtual(ARGV[i], virtuals));
-							if ((resolved == NULL) || (!strlen(resolved))) warn("puke here cant resolve virtual(%s %s)", ARGV[i], virtual(ARGV[i], virtuals));
+							if ((resolved == NULL) || (!strlen(resolved))) warn("we could puke here now that we cant resolve virtual(%s %s)", ARGV[i], virtual(ARGV[i], virtuals));
 						} else
 							resolved = NULL;
 
