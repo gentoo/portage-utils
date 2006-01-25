@@ -1,13 +1,13 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.11 2006/01/24 23:35:08 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.12 2006/01/25 01:51:42 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#ifndef OMIT_QPKG
+#ifdef APPLET_qpkg
 
 #define QPKG_FLAGS "" COMMON_FLAGS
 static struct option const qpkg_long_opts[] = {
@@ -16,7 +16,7 @@ static struct option const qpkg_long_opts[] = {
 static const char *qpkg_opts_help[] = {
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.11 2006/01/24 23:35:08 vapier Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.12 2006/01/25 01:51:42 vapier Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 

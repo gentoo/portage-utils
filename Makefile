@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.41 2006/01/24 23:35:08 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.42 2006/01/25 01:51:42 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -46,11 +46,11 @@ HFLAGS    += -DVERSION=\"$(PV)\"
 endif
 
 #####################################################
-APPLETS_SHELL := sed -n '/^DECLARE_APPLET/s:.*(\(.*\)).*:\1:p' applets.h
-APPLETS   := $(shell $(APPLETS_SHELL))
+APPLETS   := $(shell sed -n '/^DECLARE_APPLET/s:.*(\(.*\))$$:\1:p' applets.h)
 SRC       := $(APPLETS:%=%.c) main.c
 MPAGES    := man/q.1
-HFLAGS += $(shell for x in $(APPLETS) ; do echo -n "-DAPPLET_$$x "; done)
+HFLAGS    += $(foreach a,$(APPLETS),-DAPPLET_$a)
+
 all: q
 	@:
 
@@ -66,7 +66,7 @@ endif
 	@$(CC) $(WFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q
 
 depend:
-	$(APPLETS_SHELL) | sed -e 's:^:#include ":;s:$$:.c":' > include_applets.h
+	sed -n '/^DECLARE_APPLET/s:.*(\(.*\)).*:#include "\1.c":p' applets.h > include_applets.h
 	@#$(CC) $(CFLAGS) -MM $(SRC) > .depend
 	$(CC) $(HFLAGS) $(CFLAGS) -MM main.c > .depend
 

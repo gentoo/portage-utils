@@ -1,14 +1,14 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.30 2006/01/24 23:35:08 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.31 2006/01/25 01:51:42 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  * Copyright 2005 Martin Schlemmer - <azarah@gentoo.org>
  */
 
-#ifndef OMIT_QLIST
+#ifdef APPLET_qlist
 
 #define QLIST_FLAGS "IDedos" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
@@ -31,7 +31,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.30 2006/01/24 23:35:08 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.31 2006/01/25 01:51:42 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 

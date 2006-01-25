@@ -1,13 +1,13 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.34 2006/01/24 23:35:08 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.35 2006/01/25 01:51:42 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#ifndef OMIT_QDEPENDS
+#ifdef APPLET_qdepends
 
 #define QDEPENDS_FLAGS "drpaNk:Q:" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.34 2006/01/24 23:35:08 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.35 2006/01/25 01:51:42 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
