@@ -4,7 +4,7 @@ static char *rmspace(char *s)
 {
 	register char *p;
 	/* find the start of trailing space and set it to \0 */
-	for (p = s + strlen(s) - 1; (isspace(*p) && p >= s); --p);
+	for (p = s + strlen(s) - 1; (p >= s && isspace(*p)); --p);
 	if (p != s + strlen(s) - 1)
 		*(p + 1) = 0;
 	/* find the end of leading space and set p to it */
