@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.42 2006/01/25 01:51:42 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.43 2006/01/25 04:03:11 vapier Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -56,8 +56,8 @@ all: q
 
 debug:
 	$(MAKE) CFLAGS="$(CFLAGS) -DEBUG -g3 -ggdb -fno-pie" clean symlinks
-	@-/sbin/chpax  -permsx $(APPLETS)
-	@-/sbin/paxctl -permsx $(APPLETS)
+	@-/sbin/chpax  -permsx q
+	@-/sbin/paxctl -permsx q
 
 q: $(SRC) libq/*.c *.h libq/*.h
 ifeq ($(subst s,,$(MAKEFLAGS)),$(MAKEFLAGS))
