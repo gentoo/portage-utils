@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/template.c,v 1.10 2006/01/25 01:51:42 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/template.c,v 1.11 2006/01/26 02:32:04 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -17,7 +17,7 @@ static const char *qtemp_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qtemp_rcsid[] = "$Id: template.c,v 1.10 2006/01/25 01:51:42 vapier Exp $";
+static const char qtemp_rcsid[] = "$Id: template.c,v 1.11 2006/01/26 02:32:04 vapier Exp $";
 #define qtemp_usage(ret) usage(ret, QTEMP_FLAGS, qtemp_long_opts, qtemp_opts_help, lookup_applet_idx("qtemp"))
 
 
@@ -39,4 +39,6 @@ int qtemp_main(int argc, char **argv)
 	return EXIT_SUCCESS;
 }
 
+#else
+DEFINE_APPLET_STUB(qtemp)
 #endif

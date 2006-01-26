@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.12 2006/01/25 01:51:42 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.13 2006/01/26 02:32:04 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -27,7 +27,7 @@ static const char *qgrep_opts_help[] = {
 	"Use PATTERN as a regular expression",
 	COMMON_OPTS_HELP
 };
-static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.12 2006/01/25 01:51:42 vapier Exp $";
+static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.13 2006/01/26 02:32:04 vapier Exp $";
 #define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, lookup_applet_idx("qgrep"))
 
 int qgrep_main(int argc, char **argv)
@@ -120,4 +120,6 @@ int qgrep_main(int argc, char **argv)
 	return EXIT_SUCCESS;
 }
 
+#else
+DEFINE_APPLET_STUB(qgrep)
 #endif

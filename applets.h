@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.14 2006/01/25 01:51:42 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.15 2006/01/26 02:32:04 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,6 +32,11 @@ DECLARE_APPLET(qatom)
 DECLARE_APPLET(qmerge) /* disable */
 DECLARE_APPLET(qglsa) /* disable */
 #undef DECLARE_APPLET
+
+#define DEFINE_APPLET_STUB(applet) \
+	int applet##_main(int argc, char **argv) { \
+		err("Sorry, this applet has been disabled"); \
+	}
 
 struct applet_t {
 	const char *name;

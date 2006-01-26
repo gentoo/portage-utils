@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.35 2006/01/25 01:51:42 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.36 2006/01/26 02:32:04 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.35 2006/01/25 01:51:42 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.36 2006/01/26 02:32:04 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -562,4 +562,6 @@ int qdepends_main(int argc, char **argv)
 	              : qdepends_main_vdb(depend_file, argc, argv));
 }
 
+#else
+DEFINE_APPLET_STUB(qdepends)
 #endif
