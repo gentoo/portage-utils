@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.25 2006/01/26 02:32:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.26 2006/01/28 20:41:45 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -11,12 +11,7 @@
 
 /*
   --nofiles                        don't verify files in package
-  --noscript                       don't execute %verifyscript (if any)
-
-  -a, --all                        query/verify all packages
-  -f, --file                       query/verify package(s) owning file
-  -g, --group                      query/verify package(s) in group
-  -p, --package                    query/verify a package file (i.e. a binary *.rpm file)
+  --noscript                       don't execute pkg_{pre,post}{inst,rm} (if any)
 */
 
 // #define BUSYBOX "/bin/busybox"
@@ -34,6 +29,7 @@ static struct option const qmerge_long_opts[] = {
 	{"nomd5",   no_argument, NULL, '5'},
 	COMMON_LONG_OPTS
 };
+
 static const char *qmerge_opts_help[] = {
 	"Force download overwriting existing files",
 	"Search available packages",
@@ -46,7 +42,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.25 2006/01/26 02:32:04 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.26 2006/01/28 20:41:45 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -143,16 +139,20 @@ int interactive_rename(const char *src, const char *dst, struct pkg_t *pkg) {
 
 void fetch(const char *destdir, const char *src) {
 	char buf[BUFSIZ];
-	// char *env = NULL;
 
 	fflush(stdout);
 	fflush(stderr);
-	// "/usr/bin/wget -t 5 --passive-ftp -P ${DISTDIR} ${URI}"
-	// getenv("FETCHCOMMAND");
-	// asprintf(&env, "DISTDIR='%s' URI='%s/%s' ", destdir, binhost, src);
 
-	snprintf(buf, sizeof(buf), "%s " BUSYBOX " wget %s -P %s %s/%s", (force_download || install) ? "" : pretend ? "echo " : "",
-		(quiet ? "-q" : ""), destdir, binhost, src);
+#if 0
+	if (getenv("FETCHCOMMAND") != NULL) {
+		snprintf(buf, sizeof(buf), "(export DISTDIR='%s' URI='%s/%s' ; %s)", 
+			destdir, binhost, src, getenv("FETCHCOMMAND"));
+	} else 
+#endif
+	{
+		snprintf(buf, sizeof(buf), "%s " BUSYBOX " wget %s -P %s %s/%s", (force_download || install) ? "" : pretend ? "echo " : "",
+			(quiet ? "-q" : ""), destdir, binhost, src);
+	}
 	system(buf);
 	fflush(stdout);
 	fflush(stderr);
@@ -1347,6 +1347,13 @@ int qmerge_main(int argc, char **argv) {
 			COMMON_GETOPTS_CASES(qmerge)
 		}
 	}
+
+	/* Short circut this. */
+	if (getenv("QMERGE") == NULL) {
+		pretend = 1;
+		nomd5 = 1;
+		uninstall = 0;
+	}
 	if (uninstall)
 		return unmerge_packages(argc, argv);
 
@@ -1358,7 +1365,7 @@ int qmerge_main(int argc, char **argv) {
 	if (argc > 1) {
 		queue *world;
 		for (i = 0 ; i < argc ; i++) {
-			if ((strcmp(argv[i], "world") == 0) || (strcmp(argv[i], "system") == 0)) {
+			if ((strcmp(argv[i], "world") == 0)) {
 				size_t size = 0;
 				world = get_vdb_atoms();
 				if (world != NULL) {

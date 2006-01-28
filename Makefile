@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.43 2006/01/25 04:03:11 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.44 2006/01/28 20:41:45 solar Exp $
 ####################################################################
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -46,7 +46,7 @@ HFLAGS    += -DVERSION=\"$(PV)\"
 endif
 
 #####################################################
-APPLETS   := $(shell sed -n '/^DECLARE_APPLET/s:.*(\(.*\))$$:\1:p' applets.h)
+APPLETS   := $(shell sed -n '/^DECLARE_APPLET/s:.*(\(.*\))$$:\1:p' applets.h|sort)
 SRC       := $(APPLETS:%=%.c) main.c
 MPAGES    := man/q.1
 HFLAGS    += $(foreach a,$(APPLETS),-DAPPLET_$a)
