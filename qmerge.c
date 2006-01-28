@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.26 2006/01/28 20:41:45 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.27 2006/01/28 21:01:47 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -42,7 +42,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.26 2006/01/28 20:41:45 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.27 2006/01/28 21:01:47 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -1349,10 +1349,12 @@ int qmerge_main(int argc, char **argv) {
 	}
 
 	/* Short circut this. */
-	if (getenv("QMERGE") == NULL) {
-		pretend = 1;
-		nomd5 = 1;
-		uninstall = 0;
+	if ((install || uninstall) && !pretend) {
+		if (getenv("QMERGE") == NULL) {
+			uninstall = 0;
+			install = 0;
+			warn("Using these options are likely to break your system at this point. export QMERGE=1; if you think you know what your doing.");
+		}
 	}
 	if (uninstall)
 		return unmerge_packages(argc, argv);
