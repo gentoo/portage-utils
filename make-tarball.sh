@@ -17,7 +17,8 @@ bn="$(basename $(pwd))-${ver}"
 [[ -d "${bn}" ]] && rm -r "${bn}"
 mkdir "${bn}" || exit 1
 cp -r Makefile README *.[ch] man libq tests "${bn}/" || exit 1
-for applet in $(grep ^APPLETS Makefile  | cut -d = -f 2); do
+APPLETS=$(awk -F'"' '{print $2}'  include_applets.h | cut -d . -f 1)
+for applet in ${APPLETS} ; do
 	[[ $applet != q ]] && echo $applet
 done | sort > "${bn}"/applet-list
 find "${bn}" -type d -name CVS -exec rm -rf '{}' \;
