@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.33 2006/02/09 05:55:19 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.34 2006/02/09 06:02:15 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -33,7 +33,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.33 2006/02/09 05:55:19 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.34 2006/02/09 06:02:15 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 
@@ -75,7 +75,7 @@ int qlist_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)
-		case 'a': qlist_all = 1; break;
+		case 'a': qlist_all = 1;
 		case 'I': just_pkgname = 1; break;
 		case 'e': exact = 1; break;
 		case 'd': show_dir = 1; break;
