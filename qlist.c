@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.32 2006/01/26 02:32:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.33 2006/02/09 05:55:19 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -10,11 +10,12 @@
 
 #ifdef APPLET_qlist
 
-#define QLIST_FLAGS "IDedos" COMMON_FLAGS
+#define QLIST_FLAGS "IDeados" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
 	{"dups",      no_argument, NULL, 'D'},
 	{"exact",     no_argument, NULL, 'e'},
+	{"all",       no_argument, NULL, 'a'},
 	{"dir",       no_argument, NULL, 'd'},
 	{"obj",       no_argument, NULL, 'o'},
 	{"sym",       no_argument, NULL, 's'},
@@ -25,13 +26,14 @@ static const char *qlist_opts_help[] = {
 	"Just show installed packages",
 	"Only show package dups",
 	"Exact match (only CAT/PN or PN without PV)",
+	"Show every installed package",
 	"Only show directories",
 	"Only show objects",
 	"Only show symlinks",
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.32 2006/01/26 02:32:04 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.33 2006/02/09 05:55:19 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 
@@ -57,7 +59,7 @@ queue *filter_dups(queue *sets) {
 int qlist_main(int argc, char **argv)
 {
 	int i, j, dfd;
-	char just_pkgname = 0, dups_only = 0;
+	char qlist_all = 0, just_pkgname = 0, dups_only = 0;
 	char show_dir, show_obj, show_sym;
 	struct dirent **de, **cat;
 	char buf[_Q_PATH_MAX];
@@ -73,6 +75,7 @@ int qlist_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)
+		case 'a': qlist_all = 1; break;
 		case 'I': just_pkgname = 1; break;
 		case 'e': exact = 1; break;
 		case 'd': show_dir = 1; break;
@@ -152,10 +155,14 @@ int qlist_main(int argc, char **argv)
 					continue;
 				}
 				pkgname = (verbose ? NULL : atom_explode(de[x]->d_name));
+				if ((qlist_all + just_pkgname) < 2)
 				printf("%s%s/%s%s%s\n", BOLD, cat[j]->d_name, BLUE, 
 				       (pkgname ? pkgname->PN : de[x]->d_name), NORM);
-				if (pkgname) atom_implode(pkgname);
-				continue;
+				if (pkgname)
+					atom_implode(pkgname);
+
+				if (qlist_all == 0)
+					continue;
 			}
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb,
