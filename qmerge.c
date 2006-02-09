@@ -1,13 +1,15 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.27 2006/01/28 21:01:47 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.28 2006/02/09 02:37:02 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qmerge
+
+#include <glob.h>
 
 /*
   --nofiles                        don't verify files in package
@@ -42,7 +44,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.27 2006/01/28 21:01:47 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.28 2006/02/09 02:37:02 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -346,7 +348,23 @@ queue *resolve_rdepends(const int level, const struct pkg_t *package, queue *dep
 }
 #endif
 
-/* oh shit getting into pkg mgt here. wishlist vercmp() function */
+
+void crossmount_rm(char *, const size_t size, const char *, const struct stat);
+void crossmount_rm(char *buf, const size_t size, const char *fname, const struct stat st) {
+	struct stat lst;
+
+	if (lstat(buf, &lst) == (-1))
+		return;
+	if (lst.st_dev != st.st_dev) {
+		warn("skipping crossmount install masking: %s", buf);
+		return;
+	}
+	qprintf("%s<<<%s %s\n", YELLOW, NORM, buf);
+	snprintf(buf, size, BUSYBOX " rm -rf ./%s", fname);
+	system(buf);
+}
+
+/* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
 void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 	FILE *fp, *contents;
 	char buf[1024];
@@ -408,13 +426,13 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 				snprintf(buf, sizeof(buf), "%s%c%s", YELLOW, c, NORM);
 			if ((c == 'U') || (c == 'D'))
 				snprintf(buf, sizeof(buf), "%s%c%s", BLUE, c, NORM);
-#ifdef UPGRADE_ONLY
-			switch(c) {
-				case 'N':
-				case 'U': break;
-				default: return;
+			if (level) {
+				switch(c) {
+					case 'N':
+					case 'U': break;
+					default: qprintf("[%c] %d %s\n", c, level, pkg->PF); return;
+				}
 			}
-#endif
 		}
 		printf("[%s] ", buf);
 		for (i = 0; i < level; i++) putchar(' ');
@@ -591,16 +609,24 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 	for (i = 1; i < iargc; i++) {
 		if (iargv[i][0] != '/')
 			continue;
+
 		snprintf(buf, sizeof(buf), ".%s", iargv[i]);
-		if (lstat(buf, &lst) == (-1))
-			continue;
-		if (lst.st_dev != st.st_dev) {
-			warn("skipping crossmount install masking: %s", buf);
+		if ((strchr(iargv[i], '*') != NULL) || (strchr(iargv[i], '{') != NULL)) {
+			int g;
+			glob_t globbuf;
+
+			globbuf.gl_offs = 0;
+			if ((glob(buf, GLOB_DOOFFS|GLOB_BRACE, NULL, &globbuf)) == 0) {
+				for (g = 0; g < globbuf.gl_pathc; g++) {
+					strncpy(buf, globbuf.gl_pathv[g], sizeof(buf));
+					qprintf("globbed: %s\n", globbuf.gl_pathv[g]);
+					crossmount_rm(buf, sizeof(buf), globbuf.gl_pathv[g], st);
+				}
+				globfree(&globbuf);
+			}
 			continue;
 		}
-		qprintf("%s<<<%s %s\n", YELLOW, NORM, buf);
-		snprintf(buf, sizeof(buf), BUSYBOX " rm -rf ./%s", iargv[i]);
-		system(buf);
+		crossmount_rm(buf, sizeof(buf), iargv[i], st);
 	}
 	freeargv(iargc, iargv);	/* install_mask */
 	iargv =0 ; iargv = NULL;
