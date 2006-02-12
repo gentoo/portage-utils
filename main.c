@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.104 2006/02/11 16:24:46 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.105 2006/02/12 23:54:05 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -562,10 +562,6 @@ void initialize_portage_env(void)
 		no_colors();
 }
 
-
-
-/* The logic for ebuild.x should be moved into /var/cache */
-/* and allow for user defined --cache files */
 enum {
 	CACHE_EBUILD = 1,
 	CACHE_METADATA = 2
@@ -579,7 +575,7 @@ int filter_hidden(const struct dirent *dentry)
 	return 1;
 }
 
-#define CACHE_EBUILD_FILE ".ebuild.x"
+#define CACHE_EBUILD_FILE (getenv("CACHE_EBUILD_FILE") ? getenv("CACHE_EBUILD_FILE") : ".ebuild.x")
 #define CACHE_METADATA_FILE ".metadata.x"
 const char *initialize_flat(int cache_type);
 const char *initialize_flat(int cache_type)

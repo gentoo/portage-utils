@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.48 2006/01/26 02:32:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.49 2006/02/12 23:54:05 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -33,7 +33,7 @@ static const char *quse_opts_help[] = {
 	/* "Use your own variable formats. -F NAME=", */
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.48 2006/01/26 02:32:04 vapier Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.49 2006/02/12 23:54:05 solar Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -164,7 +164,7 @@ int quse_main(int argc, char **argv)
 
 	const char *search_var = NULL;
 	const char *search_vars[] = { "IUSE=", "KEYWORDS=", "LICENSE=", search_var };
-	short all = 0;
+	short quse_all = 0;
 	int regexp_matching = 1, i, idx = 0;
 	size_t search_len;
 
@@ -174,7 +174,7 @@ int quse_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QUSE, quse, "")) != -1) {
 		switch (i) {
 		case 'e': regexp_matching = 0; break;
-		case 'a': all = 1; break;
+		case 'a': quse_all = 1; break;
 		case 'K': idx = 1; break;
 		case 'L': idx = 2; break;
 		case 'D': idx = -1; break;
@@ -182,13 +182,13 @@ int quse_main(int argc, char **argv)
 		COMMON_GETOPTS_CASES(quse)
 		}
 	}
-	if (argc == optind && !all && idx >= 0)
+	if (argc == optind && !quse_all && idx >= 0)
 		quse_usage(EXIT_FAILURE);
 
 	if (idx == -1)
 		return quse_describe_flag(optind, argc, argv);
 
-	if (all) optind = argc;
+	if (quse_all) optind = argc;
 	initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
 
 	search_len = strlen(search_vars[idx]);
@@ -278,7 +278,7 @@ int quse_main(int argc, char **argv)
 					continue;
 				}
 
-				if ((argc == optind) || (all)) {
+				if ((argc == optind) || (quse_all)) {
 					ok = 1;
 				} else {
 					ok = 0;

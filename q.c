@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.29 2006/02/11 16:24:46 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.30 2006/02/12 23:54:05 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *q_opts_help[] = {
 	"Reinitialize metadata cache",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.29 2006/02/11 16:24:46 solar Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.30 2006/02/12 23:54:05 solar Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 
@@ -83,8 +83,8 @@ int q_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
-		case 'm': reinitialize_metacache = 1;
-		case 'r': reinitialize = 1; return 0;
+		case 'm': reinitialize_metacache = 1; break;
+		case 'r': reinitialize = 1; break;
 		case 'i': {
 			char buf[_Q_PATH_MAX];
 			/* always bzero a buffer before using readlink() */
@@ -108,6 +108,8 @@ int q_main(int argc, char **argv)
 		}
 		}
 	}
+	if (reinitialize || reinitialize_metacache)
+		return 0;
 	if (argc == optind)
 		q_usage(EXIT_FAILURE);
 	if ((func = lookup_applet(argv[optind])) == NULL)
