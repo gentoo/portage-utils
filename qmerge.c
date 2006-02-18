@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.30 2006/02/12 23:54:05 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.31 2006/02/18 22:33:50 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -10,6 +10,7 @@
 #ifdef APPLET_qmerge
 
 #include <glob.h>
+#include <fnmatch.h>
 
 /*
   --nofiles                        don't verify files in package
@@ -44,7 +45,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.30 2006/02/12 23:54:05 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.31 2006/02/18 22:33:50 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -364,6 +365,38 @@ void crossmount_rm(char *buf, const size_t size, const char *fname, const struct
 	system(buf);
 }
 
+
+void install_mask_pwd(int argc, char **argv, const struct stat st);
+void install_mask_pwd(int iargc, char **iargv, const struct stat st) {
+	char buf[1024];
+	int i;
+
+	for (i = 1; i < iargc; i++) {
+
+		if (iargv[i][0] != '/')
+			continue;
+
+		snprintf(buf, sizeof(buf), ".%s", iargv[i]);
+
+		if ((strchr(iargv[i], '*') != NULL) || (strchr(iargv[i], '{') != NULL)) {
+			int g;
+			glob64_t globbuf;
+
+			globbuf.gl_offs = 0;
+			if ((glob64(buf, GLOB_DOOFFS|GLOB_BRACE, NULL, &globbuf)) == 0) {
+				for (g = 0; g < globbuf.gl_pathc; g++) {
+					strncpy(buf, globbuf.gl_pathv[g], sizeof(buf));
+					// qprintf("globbed: %s\n", globbuf.gl_pathv[g]);
+					crossmount_rm(buf, sizeof(buf), globbuf.gl_pathv[g], st);
+				}
+				globfree64(&globbuf);
+			}
+			continue;
+		}
+		crossmount_rm(buf, sizeof(buf), iargv[i], st);
+	}
+}
+
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
 void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 	FILE *fp, *contents;
@@ -371,11 +404,14 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 	char tarball[255];
 	char *p;
 	int i;
-	char **iargv = NULL, **ARGV = NULL;
-	int iargc = 0, ARGC = 0;
+	char **ARGV = NULL;
+	int ARGC = 0;
 	const char *saved_argv0 = argv0;
 	int ret, saved_optind = optind;
 	struct stat st, lst;
+
+	char **iargv = NULL;
+	int iargc = 0;
 
 	if (!install) return;
 	if (!pkg) return;
@@ -605,31 +641,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 		err("Cant stat pwd");
 
 	makeargv(install_mask, &iargc, &iargv);
-
-	for (i = 1; i < iargc; i++) {
-		if (iargv[i][0] != '/')
-			continue;
-
-		snprintf(buf, sizeof(buf), ".%s", iargv[i]);
-		if ((strchr(iargv[i], '*') != NULL) || (strchr(iargv[i], '{') != NULL)) {
-			int g;
-			glob64_t globbuf;
-
-			globbuf.gl_offs = 0;
-			if ((glob64(buf, GLOB_DOOFFS|GLOB_BRACE, NULL, &globbuf)) == 0) {
-				for (g = 0; g < globbuf.gl_pathc; g++) {
-					strncpy(buf, globbuf.gl_pathv[g], sizeof(buf));
-					// qprintf("globbed: %s\n", globbuf.gl_pathv[g]);
-					crossmount_rm(buf, sizeof(buf), globbuf.gl_pathv[g], st);
-				}
-				globfree64(&globbuf);
-			}
-			continue;
-		}
-		crossmount_rm(buf, sizeof(buf), iargv[i], st);
-	}
-	freeargv(iargc, iargv);	/* install_mask */
-	iargv =0 ; iargv = NULL;
+	install_mask_pwd(iargc, iargv, st);
 
 	if ((strstr(features, "noinfo")) != NULL) if (access("./usr/share/info", R_OK) == 0) system(BUSYBOX " rm -rf ./usr/share/info");
 	if ((strstr(features, "noman"))  != NULL) if (access("./usr/share/man",  R_OK) == 0) system(BUSYBOX " rm -rf ./usr/share/man");
@@ -649,15 +661,26 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 		char line[BUFSIZ];
 		int protected = 0;
+		char matched = 0;
 
 		if ((p = strrchr(buf, '\n')) != NULL)
 			*p = 0;
+
 		if (buf[0] != '.')
 			continue;
 
 		if (((strcmp(buf, ".")) == 0) || ((strcmp(buf, "..")) == 0))
 			continue;
 
+		for (i = 1; i < iargc; i++) {
+			int fn;
+			if ((fn = fnmatch(iargv[i], buf, 0)) == 0)
+				matched = 1;
+		}
+		if (matched) {
+			unlink(buf);
+			continue;
+		}
 		/* use lstats for symlinks */
 		lstat(buf, &st);
 
@@ -760,6 +783,10 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 	}
 
 	freeargv(ARGC, ARGV);	/* config_protect */
+	freeargv(iargc, iargv);	/* install_mask */
+
+	iargv =0 ; iargv = NULL;
+
 
 	fclose(contents);
 	pclose(fp);
@@ -783,6 +810,10 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 		/* we need to compare CONTENTS in it and remove any file not provided by our CONTENTS */
 		snprintf(buf2, sizeof(buf2), BUSYBOX " rm -rf %s", buf);
 		system(buf2);
+	}
+	if ((fp = fopen("vdb/COUNTER", "w")) != NULL) {
+		fputs("0", fp);
+		fclose(fp);
 	}
 	interactive_rename("vdb", buf, pkg);
 
