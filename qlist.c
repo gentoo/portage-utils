@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.34 2006/02/09 06:02:15 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.35 2006/02/19 23:25:09 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -33,7 +33,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.34 2006/02/09 06:02:15 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.35 2006/02/19 23:25:09 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 
@@ -155,9 +155,16 @@ int qlist_main(int argc, char **argv)
 					continue;
 				}
 				pkgname = (verbose ? NULL : atom_explode(de[x]->d_name));
-				if ((qlist_all + just_pkgname) < 2)
-				printf("%s%s/%s%s%s\n", BOLD, cat[j]->d_name, BLUE, 
-				       (pkgname ? pkgname->PN : de[x]->d_name), NORM);
+				if ((qlist_all + just_pkgname) < 2) {
+					char *slot = NULL;
+#if 0
+					if (verbose > 1)
+						slot = grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name);
+#endif
+					printf("%s%s/%s%s%s%s%s%s\n", BOLD, cat[j]->d_name, BLUE, 
+					       (pkgname ? pkgname->PN : de[x]->d_name), NORM,
+						slot ? " [" : "", slot ? slot : "", slot ? "]" : "");
+				}
 				if (pkgname)
 					atom_implode(pkgname);
 
@@ -218,8 +225,16 @@ int qlist_main(int argc, char **argv)
 				if (!verbose)
 					ok = 0;
 			strncpy(last, atom->PN, sizeof(last));
-			if (ok)	printf("%s%s/%s%s%s\n", BOLD, atom->CATEGORY, BLUE,
-					(verbose ? atom->P : atom->PN), NORM);
+			if (ok)	{
+				char *slot = NULL;
+#if 0
+				if (verbose > 1)
+					slot = (char *) grab_vdb_item("SLOT", (const char *) atom->CATEGORY, (const char *) atom->P);
+#endif
+				printf("%s%s/%s%s%s%s%s%s\n", BOLD, atom->CATEGORY, BLUE,
+					(verbose ? atom->P : atom->PN), NORM,
+					slot ? "[" : "", slot ? slot : "", slot ? "]" : "");
+			}
 			atom_implode(atom);
 		}
 		free_sets(dups);

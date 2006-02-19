@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.31 2006/02/18 22:33:50 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.32 2006/02/19 23:25:09 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,8 +9,14 @@
 
 #ifdef APPLET_qmerge
 
-#include <glob.h>
 #include <fnmatch.h>
+#include <glob.h>
+
+#if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__OpenBSD__) || defined(__NetBSD__)
+# define glob64_t glob_t
+# define globfree64 globfree
+# define glob64 glob
+#endif /* BSD */
 
 /*
   --nofiles                        don't verify files in package
@@ -45,7 +51,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.31 2006/02/18 22:33:50 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.32 2006/02/19 23:25:09 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -249,6 +255,7 @@ static char *grab_vdb_item(const char *item, const char *CATEGORY, const char *P
 	if ((p = strchr(buf, '\n')) != NULL)
 		*p = 0;
 	fclose(fp);
+	rmspace(buf);
 	return buf;
 }
 
