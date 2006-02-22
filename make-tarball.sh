@@ -16,12 +16,12 @@ ver="$1"
 bn="$(basename $(pwd))-${ver}"
 [[ -d "${bn}" ]] && rm -r "${bn}"
 mkdir "${bn}" || exit 1
-cp -r Makefile README *.[ch] man libq tests "${bn}/" || exit 1
+cp -r .depend Makefile README TODO *.[ch] qsync man libq tests "${bn}/" || exit 1
 APPLETS=$(awk -F'"' '{print $2}'  include_applets.h | cut -d . -f 1)
 for applet in ${APPLETS} ; do
 	[[ $applet != q ]] && echo $applet
 done | sort > "${bn}"/applet-list
-find "${bn}" -type d -name CVS -exec rm -rf '{}' \;
-tar -jcvvf "${bn}".tar.bz2 ${bn} || exit 1
+find "${bn}" -type d -name CVS -exec rm -rf '{}' \; 2>/dev/null
+tar jcf "${bn}".tar.bz2 ${bn} || exit 1
 rm -r "${bn}" || exit 1
 du -b "${bn}".tar.bz2

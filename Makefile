@@ -1,21 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.44 2006/01/28 20:41:45 solar Exp $
-####################################################################
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License as
-# published by the Free Software Foundation; either version 2 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-# MA 02111-1307, USA.
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.45 2006/02/22 00:39:44 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -35,7 +20,7 @@ CFLAGS    += -funsigned-char
 #CFLAGS   += -DEBUG -g
 #CFLAGS   += -Os -s -DOPTIMIZE_FOR_SIZE=2
 #LDFLAGS  := -pie
-DESTDIR    =
+DESTDIR   :=
 PREFIX    := $(DESTDIR)/usr
 STRIP     := strip
 MKDIR     := mkdir -p
@@ -43,16 +28,21 @@ CP        := cp
 
 ifdef PV
 HFLAGS    += -DVERSION=\"$(PV)\"
+else
+PV        := cvs
 endif
+ifndef PF
+PF        := portage-utils-$(PV)
+endif
+DOCS      := TODO README qsync
 
 #####################################################
 APPLETS   := $(shell sed -n '/^DECLARE_APPLET/s:.*(\(.*\))$$:\1:p' applets.h|sort)
 SRC       := $(APPLETS:%=%.c) main.c
-MPAGES    := man/q.1
 HFLAGS    += $(foreach a,$(APPLETS),-DAPPLET_$a)
 
 all: q
-	@:
+	@true
 
 debug:
 	$(MAKE) CFLAGS="$(CFLAGS) -DEBUG -g3 -ggdb -fno-pie" clean symlinks
@@ -65,7 +55,7 @@ ifeq ($(subst s,,$(MAKEFLAGS)),$(MAKEFLAGS))
 endif
 	@$(CC) $(WFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q
 
-depend:
+.depend: $(SRC)
 	sed -n '/^DECLARE_APPLET/s:.*(\(.*\)).*:#include "\1.c":p' applets.h > include_applets.h
 	@#$(CC) $(CFLAGS) -MM $(SRC) > .depend
 	$(CC) $(HFLAGS) $(CFLAGS) -MM main.c > .depend
@@ -73,9 +63,11 @@ depend:
 check: symlinks
 	$(MAKE) -C tests $@
 
+dist:
+	./make-tarball.sh $(PV)
+
 clean:
 	-rm -f q
-
 distclean: clean testclean depend
 	-rm -f *~ core
 	-rm -f `find . -type l`
@@ -83,13 +75,24 @@ testclean:
 	cd tests && $(MAKE) clean
 
 install: all
-	-$(MKDIR) $(PREFIX)/bin/ $(PREFIX)/share/man/man1/
+	-$(MKDIR) $(PREFIX)/bin/
 	$(CP) q $(PREFIX)/bin/
-	@[[ ! -d CVS ]] && for mpage in $(MPAGES) ; do \
-		[ -e $$mpage ] \
-			&& cp $$mpage $(PREFIX)/share/man/man1/ || : ;\
-	done || :
-	@(cd $(PREFIX)/bin/ && for applet in $(APPLETS); do [[ ! -e $$applet ]] && ln -s q $${applet} ; done) || :
+	if [[ ! -d CVS ]] ; then \
+		$(MKDIR) $(PREFIX)/share/man/man1/ ; \
+		for mpage in $(wildcard man/*.1) ; do \
+			[ -e $$mpage ] \
+				&& cp $$mpage $(PREFIX)/share/man/man1/ || : ;\
+		done ; \
+		$(MKDIR) $(PREFIX)/share/doc/$(PF) ; \
+		for doc in $(DOCS) ; do \
+			cp $$doc $(PREFIX)/share/doc/$(PF)/ ; \
+		done ; \
+	fi
+	(cd $(PREFIX)/bin/ ; \
+		for applet in $(APPLETS); do \
+			[[ ! -e $$applet ]] && ln -s q $${applet} ; \
+		done \
+	)
 
 symlinks: all
 	./q --install
