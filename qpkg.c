@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.13 2006/01/26 02:32:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.14 2006/02/23 04:07:37 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -16,7 +16,7 @@ static struct option const qpkg_long_opts[] = {
 static const char *qpkg_opts_help[] = {
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.13 2006/01/26 02:32:04 vapier Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.14 2006/02/23 04:07:37 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 
@@ -200,7 +200,7 @@ retry_mkdir:
 			for (i = optind; i < argc; ++i) {
 				if (!argv[i]) continue;
 
-				if (!strcmp(argv[i], atom->PN) || !strcmp(argv[i], atom->P))
+				if (!strcmp(argv[i], atom->PN) || !strcmp(argv[i], atom->P) || !strcmp(argv[i], "world"))
 					if (!qpkg_make(atom)) ++pkgs_made;
 			}
 			atom_implode(atom);
