@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.32 2006/02/19 23:25:09 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.33 2006/02/23 04:33:15 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -51,7 +51,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.32 2006/02/19 23:25:09 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.33 2006/02/23 04:33:15 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char pretend = 0;
@@ -1431,34 +1431,34 @@ int qmerge_main(int argc, char **argv) {
 	if (argc > 1) {
 		queue *world;
 		for (i = 0 ; i < argc ; i++) {
-			if ((strcmp(argv[i], "world") == 0)) {
-				size_t size = 0;
-				world = get_vdb_atoms();
-				if (world != NULL) {
-					queue *ll;
-					char *ptr;
+			size_t size = 0;
+			if ((strcmp(argv[i], "world") != 0))
+				continue;
+			world = get_vdb_atoms();
+			if (world != NULL) {
+				queue *ll;
+				char *ptr;
 
-					for (ll = world; ll != NULL; ll = ll->next)
-						size += (strlen(ll->name) + 1);
-					if (size < 1)
-						continue;
+				for (ll = world; ll != NULL; ll = ll->next)
+					size += (strlen(ll->name) + 1);
+				if (size < 1)
+					continue;
 
-					size += (strlen(argv[0]) + 1);
-					ptr = xmalloc(size);
-					sprintf(ptr, "%s ", argv[0]);
+				size += (strlen(argv[0]) + 1);
+				ptr = xmalloc(size);
+				sprintf(ptr, "%s ", argv[0]);
 
-					for (ll = world; ll != NULL; ll = ll->next) {
-						char *p = NULL;
-						asprintf(&p, "%s ", ll->name);
-						strcat(ptr, p);
-						free(p);
-					}
-					ARGC = 0;
-					ARGV = NULL;
-					/* this will leak mem */
-					// follow_rdepends = 0;
-					makeargv(ptr, &ARGC, &ARGV);
+				for (ll = world; ll != NULL; ll = ll->next) {
+					char *p = NULL;
+					asprintf(&p, "%s ", ll->name);
+					strcat(ptr, p);
+					free(p);
 				}
+				ARGC = 0;
+				ARGV = NULL;
+				/* this will leak mem */
+				// follow_rdepends = 0;
+				makeargv(ptr, &ARGC, &ARGV);
 			}
 		}
 	}

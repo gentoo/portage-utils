@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.14 2006/02/23 04:07:37 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.15 2006/02/23 04:33:15 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,17 +9,20 @@
 
 #ifdef APPLET_qpkg
 
-#define QPKG_FLAGS "" COMMON_FLAGS
+#define QPKG_FLAGS "p" COMMON_FLAGS
 static struct option const qpkg_long_opts[] = {
+	{"pretend",   no_argument, NULL, 'p'},
 	COMMON_LONG_OPTS
 };
 static const char *qpkg_opts_help[] = {
+	"pretend only",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.14 2006/02/23 04:07:37 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.15 2006/02/23 04:33:15 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 
+extern char pretend;
 
 const char *qpkg_get_bindir(void);
 const char *qpkg_get_bindir(void)
@@ -44,6 +47,11 @@ int qpkg_make(depend_atom *atom)
 	int i;
 	char *xpak_argv[2];
 	struct stat st;
+
+	if (pretend) {
+		printf(" %s-%s %s/%s:\n", GREEN, NORM, atom->CATEGORY, atom->P);
+		return 0;
+	}
 
 	snprintf(buf, sizeof(buf), "%s/%s/%s/CONTENTS", portvdb, atom->CATEGORY, atom->P);
 	if ((fp = fopen(buf, "r")) == NULL)
@@ -124,6 +132,7 @@ int qpkg_main(int argc, char **argv)
 
 	while ((i = GETOPT_LONG(QPKG, qpkg, "")) != -1) {
 		switch (i) {
+		case 'p': pretend = 1; break;
 		COMMON_GETOPTS_CASES(qpkg)
 		}
 	}
@@ -208,7 +217,7 @@ retry_mkdir:
 	}
 
 	s = (argc - optind) - pkgs_made;
-	if (s)
+	if (s && !pretend)
 		printf(" %s*%s %i package%s could not be matched :/\n", RED, NORM, (int)s, (s > 1 ? "s" : ""));
 	if (pkgs_made)
 		printf(" %s*%s Packages can be found in %s\n", GREEN, NORM, bindir);
