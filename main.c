@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.105 2006/02/12 23:54:05 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.106 2006/02/26 02:14:05 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -56,6 +56,7 @@ static char exact = 0;
 static int found = 0;
 static int verbose = 0;
 static int quiet = 0;
+static char pretend = 0;
 static char reinitialize = 0;
 static char reinitialize_metacache = 0;
 static char portdir[_Q_PATH_MAX] = "/usr/portage";
