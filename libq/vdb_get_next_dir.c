@@ -17,7 +17,8 @@ next_entry:
 	if (ret->d_name[0] == '.' || ret->d_name[0] == '-')
 		goto next_entry;
 	if (strchr(ret->d_name, '-') == NULL)
-		goto next_entry;
+		if ((strcmp(ret->d_name, "virtual")) != 0)
+			goto next_entry;
 
 	return ret;
 }

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.107 2006/02/26 02:15:50 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.108 2006/02/26 02:31:46 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -613,7 +613,8 @@ const char *initialize_flat(int cache_type)
 		if (!S_ISDIR(st.st_mode))
 			continue;
 		if (strchr(category[i]->d_name, '-') == NULL)
-			continue;
+			if ((strncmp(category[i]->d_name, "virtual", 7)) != 0)
+				continue;
 
 		if ((b = scandir(category[i]->d_name, &pn, filter_hidden, alphasort)) < 0)
 			continue;
