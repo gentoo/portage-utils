@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.106 2006/02/26 02:14:05 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.107 2006/02/26 02:15:50 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -305,29 +305,6 @@ void makeargv(char *string, int *argc, char ***argv) {
 	free(q);
 }
 
-#if 0
-/* helper func for scanning the vdb */
-struct dirent *q_vdb_get_next_dir(DIR *dir);
-struct dirent *q_vdb_get_next_dir(DIR *dir)
-{
-	/* search for a category directory */
-	struct dirent *ret;
-
-next_entry:
-	ret = readdir(dir);
-	if (ret == NULL) {
-		closedir(dir);
-		return NULL;
-	}
-
-	if (ret->d_name[0] == '.' || ret->d_name[0] == '-')
-		goto next_entry;
-	if (strchr(ret->d_name, '-') == NULL)
-		goto next_entry;
-
-	return ret;
-}
-#endif
 /* 
  * Parse a line of CONTENTS file and provide access to the individual fields
  */
