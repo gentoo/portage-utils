@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.49 2006/02/12 23:54:05 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.50 2006/03/09 02:44:06 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -14,14 +14,14 @@
  quse -Ke --  nls
 */
 
-#define QUSE_FLAGS "eavKLD" COMMON_FLAGS
+#define QUSE_FLAGS "eavKLDF:" COMMON_FLAGS
 static struct option const quse_long_opts[] = {
 	{"exact",     no_argument, NULL, 'e'},
 	{"all",       no_argument, NULL, 'a'},
 	{"keywords",  no_argument, NULL, 'K'},
 	{"license",   no_argument, NULL, 'L'},
 	{"describe",  no_argument, NULL, 'D'},
-	/* {"format",     a_argument, NULL, 'F'}, */
+	{"format",     a_argument, NULL, 'F'},
 	COMMON_LONG_OPTS
 };
 static const char *quse_opts_help[] = {
@@ -30,10 +30,10 @@ static const char *quse_opts_help[] = {
 	"Use the KEYWORDS vs IUSE",
 	"Use the LICENSE vs IUSE",
 	"Describe the USE flag",
-	/* "Use your own variable formats. -F NAME=", */
+	"Use your own variable formats. -F NAME=",
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.49 2006/02/12 23:54:05 solar Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.50 2006/03/09 02:44:06 solar Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -178,7 +178,7 @@ int quse_main(int argc, char **argv)
 		case 'K': idx = 1; break;
 		case 'L': idx = 2; break;
 		case 'D': idx = -1; break;
-		/* case 'F': idx = 3, search_vars[idx] = xstrdup(optarg); break; */
+		case 'F': idx = 3, search_vars[idx] = xstrdup(optarg); break;
 		COMMON_GETOPTS_CASES(quse)
 		}
 	}
