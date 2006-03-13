@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.34 2006/02/26 02:14:05 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.35 2006/03/13 01:32:03 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -51,7 +51,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.34 2006/02/26 02:14:05 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.35 2006/03/13 01:32:03 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -241,8 +241,8 @@ int config_protected(const char *buf, int ARGC, char **ARGV) {
 	return 0;
 }
 
-static char *grab_vdb_item(const char *, const char *, const char *);
-static char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF) {
+char *grab_vdb_item(const char *, const char *, const char *);
+char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF) {
 	static char buf[_Q_PATH_MAX];
 	char *p;
 	FILE *fp;

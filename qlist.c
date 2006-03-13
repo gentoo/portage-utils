@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.35 2006/02/19 23:25:09 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.36 2006/03/13 01:32:03 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -10,9 +10,10 @@
 
 #ifdef APPLET_qlist
 
-#define QLIST_FLAGS "IDeados" COMMON_FLAGS
+#define QLIST_FLAGS "ISDeados" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
+	{"slots",     no_argument, NULL, 'S'},
 	{"dups",      no_argument, NULL, 'D'},
 	{"exact",     no_argument, NULL, 'e'},
 	{"all",       no_argument, NULL, 'a'},
@@ -24,6 +25,7 @@ static struct option const qlist_long_opts[] = {
 };
 static const char *qlist_opts_help[] = {
 	"Just show installed packages",
+	"Display installed packages with slots",
 	"Only show package dups",
 	"Exact match (only CAT/PN or PN without PV)",
 	"Show every installed package",
@@ -33,9 +35,10 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.35 2006/02/19 23:25:09 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.36 2006/03/13 01:32:03 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
+extern char *grab_vdb_item(const char *, const char *, const char *);
 
 queue *filter_dups(queue *sets);
 queue *filter_dups(queue *sets) {
@@ -60,7 +63,7 @@ int qlist_main(int argc, char **argv)
 {
 	int i, j, dfd;
 	char qlist_all = 0, just_pkgname = 0, dups_only = 0;
-	char show_dir, show_obj, show_sym;
+	char show_dir, show_obj, show_sym, show_slots;
 	struct dirent **de, **cat;
 	char buf[_Q_PATH_MAX];
 	char swap[_Q_PATH_MAX];
@@ -70,13 +73,14 @@ int qlist_main(int argc, char **argv)
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	show_dir = show_obj = show_sym = 0;
+	show_dir = show_obj = show_sym = show_slots = 0;
 
 	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)
 		case 'a': qlist_all = 1;
 		case 'I': just_pkgname = 1; break;
+		case 'S': just_pkgname = 1; show_slots = 1; break;
 		case 'e': exact = 1; break;
 		case 'd': show_dir = 1; break;
 		case 'o': show_obj = 1; break;
@@ -157,13 +161,11 @@ int qlist_main(int argc, char **argv)
 				pkgname = (verbose ? NULL : atom_explode(de[x]->d_name));
 				if ((qlist_all + just_pkgname) < 2) {
 					char *slot = NULL;
-#if 0
-					if (verbose > 1)
+					if (show_slots)
 						slot = grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name);
-#endif
-					printf("%s%s/%s%s%s%s%s%s\n", BOLD, cat[j]->d_name, BLUE, 
+					printf("%s%s/%s%s%s%s%s%s%s\n", BOLD, cat[j]->d_name, BLUE, 
 					       (pkgname ? pkgname->PN : de[x]->d_name), NORM,
-						slot ? " [" : "", slot ? slot : "", slot ? "]" : "");
+						YELLOW, slot ? " ": "", slot ? slot : "", NORM);
 				}
 				if (pkgname)
 					atom_implode(pkgname);
@@ -227,13 +229,11 @@ int qlist_main(int argc, char **argv)
 			strncpy(last, atom->PN, sizeof(last));
 			if (ok)	{
 				char *slot = NULL;
-#if 0
-				if (verbose > 1)
+				if (show_slots)
 					slot = (char *) grab_vdb_item("SLOT", (const char *) atom->CATEGORY, (const char *) atom->P);
-#endif
-				printf("%s%s/%s%s%s%s%s%s\n", BOLD, atom->CATEGORY, BLUE,
+				printf("%s%s/%s%s%s%s%s%s%s\n", BOLD, atom->CATEGORY, BLUE,
 					(verbose ? atom->P : atom->PN), NORM,
-					slot ? "[" : "", slot ? slot : "", slot ? "]" : "");
+					YELLOW, slot ? " " : "", slot ? slot : "", NORM);
 			}
 			atom_implode(atom);
 		}
