@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.109 2006/03/13 02:48:49 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.110 2006/03/13 03:31:54 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -856,6 +856,24 @@ void cache_free(portage_cache *cache)
 		errf("Cache is empty !");
 	atom_implode(cache->atom);
 	free(cache);
+}
+
+char *grab_vdb_item(const char *, const char *, const char *);
+char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF) {
+        static char buf[_Q_PATH_MAX];
+        char *p;
+        FILE *fp;
+
+	snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb, CATEGORY, PF, item);
+	if ((fp = fopen(buf, "r")) == NULL)
+		return NULL;        
+	fgets(buf, sizeof(buf), fp);
+	if ((p = strchr(buf, '\n')) != NULL)                
+		*p = 0;
+	fclose(fp);
+	rmspace(buf);
+        
+	return buf;
 }
 
 queue *get_vdb_atoms(void);
