@@ -18,3 +18,98 @@ static const char *YELLOW = _MAKE_COLOR("33", "01");
 static const char *BRYELLOW = _MAKE_COLOR("01", "33");
 static const char *WHITE = _MAKE_COLOR("01", "38");
 
+
+static const char *COLOR_MAP = "/etc/portage/color.map";
+
+#ifndef ARR_SIZE
+# define ARR_SIZE(arr) (sizeof(arr) / sizeof(*arr))
+#endif
+
+#define COLOR _MAKE_COLOR
+
+typedef struct {
+	const char *name;
+	char value[16];
+} cpairtype;
+
+
+static cpairtype color_pairs[] = {
+	{"blue", COLOR("34", "01") },
+	{"brown", COLOR("00", "33") },
+	{"darkblue", COLOR("00", "34") },
+	{"darkgreen", COLOR("00", "32") },
+	{"darkred", COLOR("00", "31") },
+	{"faint", COLOR("00", "2") },
+	{"fuchsia", COLOR("35", "01") },
+	{"green", COLOR("32", "01") },
+	{"purple", COLOR("00", "35") },
+	{"red", COLOR("31", "01") },
+	{"teal", COLOR("00", "36") },
+	{"turquoise", COLOR("36", "01") },
+	{"yellow", COLOR("01", "33") },
+	{"white", COLOR("01", "38") },
+	{"eol", COLOR("00", "00") },
+};
+
+void color_remap(void);
+void color_remap(void) {
+	FILE *fp;
+	int i;
+	char buf[512];
+	char *p;
+
+	if (access(COLOR_MAP, R_OK) != 0)
+		return;
+
+	if ((fp = fopen(COLOR_MAP, "r")) == NULL)
+		return;
+	while(fgets(buf, sizeof(buf), fp) != NULL) {
+		if (strchr(buf, '=') == NULL)
+			continue;
+		if (buf[0] == '#')
+			continue;
+		/* eat the end of the buffer first */
+		if ((p = strchr(buf, '\r')) != NULL)
+			*p = 0;
+		if ((p = strchr(buf, '\n')) != NULL)
+			*p = 0;
+
+		p = strchr(buf, '=');
+		*p = 0; /* split the pair */
+		for (i = 0 ; i < ARR_SIZE(color_pairs); i++)
+			if (strcmp(buf, color_pairs[i].name) == 0)
+				snprintf(color_pairs[i].value, sizeof(color_pairs[i].value), "\e[%s", p + 1);
+	}
+	fclose(fp);
+
+#if 0
+	for (i = 0 ; i < ARR_SIZE(color_pairs); i++) {
+
+		/* unmapped: MAGENTA YELLOW */
+
+		if (strcmp(color_pairs[i].name, "white") == 0)
+			WHITE = color_pairs[i].value;
+
+		if (strcmp(color_pairs[i].name, "green") == 0)
+			GREEN = color_pairs[i].value;
+		if (strcmp(color_pairs[i].name, "darkgreen") == 0)
+			DKGREEN = color_pairs[i].value;
+
+		if (strcmp(color_pairs[i].name, "darkred") == 0)
+			RED = color_pairs[i].value;
+
+		if (strcmp(color_pairs[i].name, "blue") == 0)
+			DKBLUE = color_pairs[i].value;
+
+		if (strcmp(color_pairs[i].name, "turquoise") == 0)
+			BLUE = color_pairs[i].value;
+
+		if (strcmp(color_pairs[i].name, "yellow") == 0)
+			BRYELLOW = color_pairs[i].value;
+
+		if (strcmp(color_pairs[i].name, "teal") == 0)
+			CYAN = color_pairs[i].value;
+
+	}
+#endif
+}
