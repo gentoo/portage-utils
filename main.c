@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.110 2006/03/13 03:31:54 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.111 2006/03/17 23:53:04 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -78,6 +78,13 @@ const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
 FILE *saved_stderr;
 
+#if defined(__APPLE__) || defined(__NetBSD__) || defined(__OpenBSD__)
+# define SET_STDERR(fp) err("Darwin/NetBSD/OpenBSD have stupid stdout handling")
+#else
+# define SET_STDERR(fp) stderr = fp
+#endif
+
+
 #define _q_unused_ __attribute__((__unused__))
 
 #ifndef BUFSIZE
@@ -137,7 +144,13 @@ void no_colors() {
 	NULL
 #define COMMON_GETOPTS_CASES(applet) \
 	case 'v': ++verbose; break; \
-	case 'q': ++quiet; if (stderr == saved_stderr) stderr = fopen("/dev/null", "w"); break; \
+	case 'q': ++quiet; \
+		if (stderr == saved_stderr) { \
+			FILE *stderr_fp = NULL; \
+			stderr_fp = fopen("/dev/null", "w"); \
+			SET_STDERR(stderr_fp); \
+		} \
+		break; \
 	case 'V': version_barf( applet ## _rcsid ); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': no_colors(); break; \

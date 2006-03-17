@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.37 2006/03/13 03:55:09 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.38 2006/03/17 23:53:04 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,9 +26,10 @@
 // #define BUSYBOX "/bin/busybox"
 #define BUSYBOX ""
 
-#define QMERGE_FLAGS "fsKUpyO5" COMMON_FLAGS
+#define QMERGE_FLAGS "fFsKUpyO5" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
 	{"fetch",   no_argument, NULL, 'f'},
+	{"force",   no_argument, NULL, 'F'},
 	{"search",  no_argument, NULL, 's'},
 	{"install", no_argument, NULL, 'K'},
 	{"unmerge", no_argument, NULL, 'U'},
@@ -41,6 +42,7 @@ static struct option const qmerge_long_opts[] = {
 
 static const char *qmerge_opts_help[] = {
 	"Force download overwriting existing files",
+	"Force download overwriting existing files (skipping Packages)",
 	"Search available packages",
 	"Install package",
 	"Uninstall package",
@@ -51,7 +53,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.37 2006/03/13 03:55:09 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.38 2006/03/17 23:53:04 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -168,7 +170,7 @@ void fetch(const char *destdir, const char *src) {
 
 void qmerge_initialize(const char *Packages) {
 	if (quiet)
-		stderr = saved_stderr;
+		SET_STDERR(saved_stderr);
 
 	if (strlen(BUSYBOX))
 		if (access(BUSYBOX, X_OK) != 0)
@@ -198,10 +200,10 @@ void qmerge_initialize(const char *Packages) {
 		errf("!!! chdir(PORTAGE_TMPDIR %s) %s", port_tmpdir, strerror(errno));
 	if (chdir("portage") != 0)
 		errf("!!! chdir(%s/portage) %s", port_tmpdir, strerror(errno));
-	if (force_download)
+	if (force_download && force_download != 2)
 		unlink(Packages);
-	if (access(Packages, R_OK) != 0)
-		fetch("./", Packages);
+	if ((access(Packages, R_OK) != 0) && (force_download != 2))
+			fetch("./", Packages);
 }
 
 char *best_version(const char *CATEGORY, const char *PN) {
@@ -1382,6 +1384,7 @@ int qmerge_main(int argc, char **argv) {
 	while ((i = GETOPT_LONG(QMERGE, qmerge, "")) != -1) {
 		switch (i) {
 			case 'f': force_download = 1; break;
+			case 'F': force_download = 2; break;
 			case 's': search_pkgs = 1; break;
 			/* case 'i': case 'g': */
 			case 'K': install = 1; break;
