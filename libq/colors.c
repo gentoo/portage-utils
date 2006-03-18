@@ -82,7 +82,7 @@ void color_remap(void) {
 	}
 	fclose(fp);
 
-#if 0
+#if 1
 	for (i = 0 ; i < ARR_SIZE(color_pairs); i++) {
 
 		/* unmapped: MAGENTA YELLOW */

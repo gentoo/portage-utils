@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.38 2006/03/17 23:53:04 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.39 2006/03/18 01:58:55 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -11,12 +11,6 @@
 
 #include <fnmatch.h>
 #include <glob.h>
-
-#if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-# define glob64_t glob_t
-# define globfree64 globfree
-# define glob64 glob
-#endif /* BSD */
 
 /*
   --nofiles                        don't verify files in package
@@ -53,7 +47,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.38 2006/03/17 23:53:04 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.39 2006/03/18 01:58:55 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -107,9 +101,6 @@ int q_unlink_q(char *path, const char *func, int line) {
 }
 
 #define unlink_q(path) q_unlink_q(path, __FUNCTION__, __LINE__)
-
-#define qfprintf(stream, fmt, args...) { do { if (!quiet) fprintf(stream, _( fmt ), ## args); } while (0); }
-#define qprintf(fmt, args...) qfprintf(stdout, _( fmt ), ## args)
 
 // rewrite using copyfile() utimes() stat(), lstat(), read() and perms.
 int interactive_rename(const char *src, const char *dst, struct pkg_t *pkg) {
@@ -328,7 +319,7 @@ queue *resolve_rdepends(const int level, const struct pkg_t *package, queue *dep
 					atom_implode(subatom);
 					free(subpkg);
 				} else {
-					fprintf(stderr, "Cant explode atom %s\n", ARGV[i]);
+					qfprintf(stderr, "Cant explode atom %s\n", ARGV[i]);
 				}
 				break;
 		}
@@ -371,16 +362,16 @@ void install_mask_pwd(int iargc, char **iargv, const struct stat st) {
 
 		if ((strchr(iargv[i], '*') != NULL) || (strchr(iargv[i], '{') != NULL)) {
 			int g;
-			glob64_t globbuf;
+			glob_t globbuf;
 
 			globbuf.gl_offs = 0;
-			if ((glob64(buf, GLOB_DOOFFS|GLOB_BRACE, NULL, &globbuf)) == 0) {
+			if ((glob(buf, GLOB_DOOFFS|GLOB_BRACE, NULL, &globbuf)) == 0) {
 				for (g = 0; g < globbuf.gl_pathc; g++) {
 					strncpy(buf, globbuf.gl_pathv[g], sizeof(buf));
 					// qprintf("globbed: %s\n", globbuf.gl_pathv[g]);
 					crossmount_rm(buf, sizeof(buf), globbuf.gl_pathv[g], st);
 				}
-				globfree64(&globbuf);
+				globfree(&globbuf);
 			}
 			continue;
 		}
@@ -539,7 +530,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 						atom_implode(ratom);
 						free(subpkg);
 					} else {
-						fprintf(stderr, "Cant explode atom %s\n", ARGV[i]);
+						qfprintf(stderr, "Cant explode atom %s\n", ARGV[i]);
 					}
 					break;
 			}
@@ -830,9 +821,9 @@ int pkg_unmerge(char *cat, char *pkgname) {
 		free_sets(vdb);
 		vdb = NULL;
 #endif
-		fprintf(stderr, "%s!!!%s '%s' '%s' (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
-		fprintf(stderr, "%s!!!%s %s/%s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
-		// fprintf(stderr, "%s!!!%s %s %s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, pkgname);
+		qfprintf(stderr, "%s!!!%s '%s' '%s' (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
+		qfprintf(stderr, "%s!!!%s %s/%s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
+		// qfprintf(stderr, "%s!!!%s %s %s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, pkgname);
 		return 1;
 	}
 	printf("%s===%s %s%s%s/%s%s%s\n", YELLOW, NORM, WHITE, cat, NORM, CYAN, pkgname, NORM);

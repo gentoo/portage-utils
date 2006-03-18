@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.111 2006/03/17 23:53:04 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.112 2006/03/18 01:58:55 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -77,6 +77,9 @@ char install_mask[1024] = "";
 const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
 FILE *saved_stderr;
+
+#define qfprintf(stream, fmt, args...) do { if (!quiet) fprintf(stream, _( fmt ), ## args); } while (0)
+#define qprintf(fmt, args...) qfprintf(stdout, _( fmt ), ## args)
 
 #if defined(__APPLE__) || defined(__NetBSD__) || defined(__OpenBSD__)
 # define SET_STDERR(fp) err("Darwin/NetBSD/OpenBSD have stupid stdout handling")
