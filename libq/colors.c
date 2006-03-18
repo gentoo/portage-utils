@@ -82,7 +82,6 @@ void color_remap(void) {
 	}
 	fclose(fp);
 
-#if 1
 	for (i = 0 ; i < ARR_SIZE(color_pairs); i++) {
 
 		/* unmapped: MAGENTA YELLOW */
@@ -92,10 +91,11 @@ void color_remap(void) {
 
 		if (strcmp(color_pairs[i].name, "green") == 0)
 			GREEN = color_pairs[i].value;
+
 		if (strcmp(color_pairs[i].name, "darkgreen") == 0)
 			DKGREEN = color_pairs[i].value;
 
-		if (strcmp(color_pairs[i].name, "darkred") == 0)
+		if (strcmp(color_pairs[i].name, "red") == 0)
 			RED = color_pairs[i].value;
 
 		if (strcmp(color_pairs[i].name, "blue") == 0)
@@ -111,5 +111,4 @@ void color_remap(void) {
 			CYAN = color_pairs[i].value;
 
 	}
-#endif
 }
