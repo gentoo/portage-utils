@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.29 2006/01/26 02:32:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.30 2006/03/19 12:57:41 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.29 2006/01/26 02:32:04 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.30 2006/03/19 12:57:41 solar Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -129,8 +129,14 @@ unsigned long show_merge_times(char *pkg, const char *logfile, int average, char
 						break;
 					if ((strncmp(buf[1], "::: completed emerge (", 22)) == 0) {
 						if (!average) {
-							printf("%s%s%s: %s: ",
-								BLUE, atom->PN, NORM, chop_ctime(t[0]));
+							strcpy(buf[1], "");
+							if (verbose) {
+								if (atom->PR_int)
+									snprintf(buf[1], sizeof(buf[1]), "-%s-r%i", atom->PV,  atom->PR_int);
+								else
+									snprintf(buf[1], sizeof(buf[1]), "-%s", atom->PV);
+							}
+							printf("%s%s%s%s: %s: ", BLUE, atom->PN, buf[1], NORM, chop_ctime(t[0]));
 							if (human_readable)
 								print_seconds_for_earthlings(t[1] - t[0]);
 							else
