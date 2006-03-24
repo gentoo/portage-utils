@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.39 2006/03/18 01:58:55 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.40 2006/03/24 18:10:58 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -11,6 +11,10 @@
 
 #include <fnmatch.h>
 #include <glob.h>
+
+#ifndef GLOB_BRACE
+# define GLOB_BRACE     (1 << 10)	/* Expand "{a,b}" to "a" "b".  */
+#endif
 
 /*
   --nofiles                        don't verify files in package
@@ -47,7 +51,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.39 2006/03/18 01:58:55 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.40 2006/03/24 18:10:58 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;

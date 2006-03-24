@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.113 2006/03/19 00:32:39 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.114 2006/03/24 18:10:57 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -658,7 +658,7 @@ const char *initialize_flat(int cache_type)
 			if ((e = scandir(de, &eb, filter_hidden, alphasort)) < 0)
 				continue;
 			for (d = 0 ; d < e; d++) {
-				if ((p = rindex(eb[d]->d_name, '.')) != NULL)
+				if ((p = strrchr(eb[d]->d_name, '.')) != NULL)
 					if (strcmp(p, ".ebuild") == 0) {
 						count++;
 						fprintf(fp, "%s/%s/%s\n", category[i]->d_name, pn[c]->d_name, eb[d]->d_name);
