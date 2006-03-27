@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.114 2006/03/24 18:10:57 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.115 2006/03/27 01:40:13 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -82,7 +82,7 @@ FILE *saved_stderr;
 #define qprintf(fmt, args...) qfprintf(stdout, _( fmt ), ## args)
 
 #if defined(__APPLE__) || defined(__NetBSD__) || defined(__OpenBSD__)
-# define SET_STDERR(fp) /* err("Darwin/NetBSD/OpenBSD have stupid stdout handling") */
+# define SET_STDERR(fp) /* err("Darwin/NetBSD/OpenBSD have stupid stderr handling") */
 #else
 # define SET_STDERR(fp) stderr = fp
 #endif
