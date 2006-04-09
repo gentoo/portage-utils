@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.41 2006/04/09 02:03:21 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.42 2006/04/09 17:08:29 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -51,7 +51,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.41 2006/04/09 02:03:21 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.42 2006/04/09 17:08:29 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -276,7 +276,7 @@ queue *resolve_rdepends(const int level, const struct pkg_t *package, queue *dep
 			case '<':
 			case '>':
 			case '=':
-				qfprintf(stderr, "Unhandled depstring %s\n", ARGV[i]);
+				IF_DEBUG(qfprintf(stderr, "Unhandled depstring %s\n", ARGV[i]));
 				break;
 			default:
 				if ((subatom = atom_explode(ARGV[i])) != NULL) {
@@ -432,13 +432,17 @@ void qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg) {
 			snprintf(buf, sizeof(buf), "%s%c%s", YELLOW, c, NORM);
 		if ((c == 'U') || (c == 'D'))
 			snprintf(buf, sizeof(buf), "%s%c%s", BLUE, c, NORM);
+#if 0
 		if (level) {
 			switch(c) {
 				case 'N':
 				case 'U': break;
-				default: qprintf("[%c] %d %s\n", c, level, pkg->PF); return;
+				default:
+					qprintf("[%c] %d %s\n", c, level, pkg->PF); return;
+					break;
 			}
 		}
+#endif
 	}
 	printf("[%s] ", buf);
 	for (i = 0; i < level; i++) putchar(' ');
@@ -467,7 +471,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 	if (!atom) return;
 
 	if (!pkg->PF[0] || !pkg->CATEGORY) {
-		warn("%s", "CPF is really NULL");
+		if (verbose) warn("CPF is really NULL at level %d", level);
 		return;
 	}
 
@@ -479,7 +483,8 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 
 		// <hack>
 		if (strncmp(pkg->RDEPEND, "|| ", 3) == 0) {
-			qfprintf(stderr, "fix this rdepend hack %s\n", pkg->RDEPEND);
+			if (verbose)
+				qfprintf(stderr, "fix this rdepend hack %s\n", pkg->RDEPEND);
 			strcpy(pkg->RDEPEND, "");
 		}
 		// </hack>
@@ -495,7 +500,8 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 				case '<':
 				case '>':
 				case '=':
-					qfprintf(stderr, "Unhandled depstring %s\n", ARGV[i]);
+					if (verbose)
+						qfprintf(stderr, "Unhandled depstring %s\n", ARGV[i]);
 					break;
 				default:
 					if ((subatom = atom_explode(ARGV[i])) != NULL) {
@@ -1012,6 +1018,15 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg) {
 		/* verify this is the requested package */
 		if (match_pkg(argv[i], pkg) < 1)
 			continue;
+
+		/* qmerge -pv patch */
+		if (pretend) {
+			int level = 0;
+			if (!install) install++;
+			// qprint_tree_node(level, atom, pkg);
+			pkg_merge(level, atom, pkg);
+			continue;
+		}
 
 		/* check to see if file exists and it's checksum matches */
 		snprintf(buf, sizeof(buf), "%s/%s.tbz2", pkgdir, pkg->PF);
