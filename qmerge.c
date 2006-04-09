@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.40 2006/03/24 18:10:58 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.41 2006/04/09 02:03:21 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -51,7 +51,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.40 2006/03/24 18:10:58 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.41 2006/04/09 02:03:21 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -383,6 +383,69 @@ void install_mask_pwd(int iargc, char **iargv, const struct stat st) {
 	}
 }
 
+
+char *atom2str(depend_atom *atom, char *buf, size_t size);
+char *atom2str(depend_atom *atom, char *buf, size_t size) {
+	if (atom->PR_int)
+		snprintf(buf, size, "%s-%s-r%i", atom->PN, atom->PV, atom->PR_int);
+	else
+		snprintf(buf, size, "%s-%s", atom->PN, atom->PV);
+	return buf;
+}
+
+void qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg);
+void qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg) {
+	char buf[1024];
+	char *p;
+	int i, ret;
+
+	char install_ver[126] = "";
+	char c = 'N';
+
+	if (!pretend)
+		return;
+
+	p = best_version(pkg->CATEGORY, atom->PN);
+	if (strlen(p) < 1) {
+		c = 'N';
+		snprintf(buf, sizeof(buf), "%sN%s", GREEN, NORM);
+	} else {
+		depend_atom *subatom = atom_explode(p);
+		if (subatom != NULL) {
+			atom2str(subatom, buf, sizeof(buf));
+			atom2str(atom, install_ver, sizeof(install_ver));
+			ret = atom_compare_str(install_ver, buf);
+			switch(ret) {
+				case EQUAL: c = 'R'; break;
+				case NEWER: c = 'U'; break;
+				case OLDER: c = 'D'; break;
+				default: c = '?'; break;
+			}
+			if (subatom->PR_int)
+				snprintf(buf, sizeof(buf), "%s-r%i", subatom->PV, subatom->PR_int);
+			else
+				snprintf(buf, sizeof(buf), "%s", subatom->PV);
+			snprintf(install_ver, sizeof(install_ver), "[%s%s%s] ", DKBLUE, buf, NORM);
+			atom_implode(subatom);
+		}
+		if (c == 'R')
+			snprintf(buf, sizeof(buf), "%s%c%s", YELLOW, c, NORM);
+		if ((c == 'U') || (c == 'D'))
+			snprintf(buf, sizeof(buf), "%s%c%s", BLUE, c, NORM);
+		if (level) {
+			switch(c) {
+				case 'N':
+				case 'U': break;
+				default: qprintf("[%c] %d %s\n", c, level, pkg->PF); return;
+			}
+		}
+	}
+	printf("[%s] ", buf);
+	for (i = 0; i < level; i++) putchar(' ');
+	printf("%s%s/%s%s %s%s%s%s%s%s\n", DKGREEN, pkg->CATEGORY, pkg->PF, NORM,
+		install_ver, strlen(pkg->USE)>0 ? "(" : "", RED, pkg->USE, NORM, strlen(pkg->USE)>0 ? ")" : "");
+}
+
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
 void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 	FILE *fp, *contents;
@@ -407,60 +470,9 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 		warn("%s", "CPF is really NULL");
 		return;
 	}
-	if (pretend) {
-		char install_ver[126] = "";
-		char c = 'N';
-		p = best_version(pkg->CATEGORY, atom->PN);
 
-		if (strlen(p) < 1) {
-			c = 'N';
-			snprintf(buf, sizeof(buf), "%sN%s", GREEN, NORM);
-		} else {
-			depend_atom *subatom = atom_explode(p);
-			if (subatom != NULL) {
-				if (subatom->PR_int)
-					snprintf(buf, sizeof(buf), "%s-%s-r%i", subatom->PN, subatom->PV, subatom->PR_int);
-				else
-					snprintf(buf, sizeof(buf), "%s-%s", subatom->PN, subatom->PV);
+	qprint_tree_node(level, atom, pkg);
 
-				if (atom->PR_int)
-					snprintf(install_ver, sizeof(install_ver), "%s-%s-r%i", atom->PN, atom->PV, atom->PR_int);
-				else
-					snprintf(install_ver, sizeof(install_ver), "%s-%s", atom->PN, atom->PV);
-
-				ret = atom_compare_str(install_ver, buf);
-				switch(ret) {
-					case EQUAL: c = 'R'; break;
-					case NEWER: c = 'U'; break;
-					case OLDER: c = 'D'; break;
-					default: c = '?'; break;
-				}
-
-				if (subatom->PR_int)
-					snprintf(buf, sizeof(buf), "%s-r%i", subatom->PV, subatom->PR_int);
-				else
-					snprintf(buf, sizeof(buf), "%s", subatom->PV);
-
-				snprintf(install_ver, sizeof(install_ver), "[%s%s%s] ", DKBLUE, buf, NORM);
-				atom_implode(subatom);
-			}
-			if (c == 'R')
-				snprintf(buf, sizeof(buf), "%s%c%s", YELLOW, c, NORM);
-			if ((c == 'U') || (c == 'D'))
-				snprintf(buf, sizeof(buf), "%s%c%s", BLUE, c, NORM);
-			if (level) {
-				switch(c) {
-					case 'N':
-					case 'U': break;
-					default: qprintf("[%c] %d %s\n", c, level, pkg->PF); return;
-				}
-			}
-		}
-		printf("[%s] ", buf);
-		for (i = 0; i < level; i++) putchar(' ');
-		printf("%s%s/%s%s %s%s%s%s%s%s\n", DKGREEN, pkg->CATEGORY, pkg->PF, NORM,
-			install_ver, strlen(pkg->USE)>0 ? "(" : "", RED, pkg->USE, NORM, strlen(pkg->USE)>0 ? ")" : "");
-	}
 	if (pkg->RDEPEND[0] && follow_rdepends) {
 		IF_DEBUG(fprintf(stderr, "\n+Parent: %s/%s\n", pkg->CATEGORY, pkg->PF));
 		IF_DEBUG(fprintf(stderr, "+Depstring: %s\n", pkg->RDEPEND));
@@ -1102,10 +1114,7 @@ int unmerge_packages(int argc, char **argv) {
 		p = best_version(NULL, argv[i]);
 		if (!*p) continue;
 		if ((atom = atom_explode(p)) == NULL) continue;
-
-		snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
-		if (atom->PR_int)
-			snprintf(buf, sizeof(buf), "%s-%s-r%i", atom->PN, atom->PV, atom->PR_int);
+		atom2str(atom, buf, sizeof(buf));
 		pkg_unmerge(atom->CATEGORY, buf);
 		atom_implode(atom);
 	}

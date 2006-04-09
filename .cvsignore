@@ -3,3 +3,5 @@ q
 *bz2
 *.patch
 *.diff
+portage-utils-*
+contrib
