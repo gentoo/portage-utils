@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.24 2006/01/26 02:32:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.25 2006/04/15 15:10:42 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,16 +9,18 @@
 
 #ifdef APPLET_qcheck
 
-#define QCHECK_FLAGS "a" COMMON_FLAGS
+#define QCHECK_FLAGS "au" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
-	{"all",  no_argument, NULL, 'a'},
+	{"all",     no_argument, NULL, 'a'},
+	{"update",  no_argument, NULL, 'u'},
 	COMMON_LONG_OPTS
 };
 static const char *qcheck_opts_help[] = {
 	"List all packages",
+	"Update chksum and mtimes for packages",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.24 2006/01/26 02:32:04 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.25 2006/04/15 15:10:42 solar Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 
@@ -28,9 +30,11 @@ int qcheck_main(int argc, char **argv)
 	int i;
 	struct dirent *dentry, *de;
 	char search_all = 0;
+	char qc_update = 0;
 	struct stat st;
 	size_t num_files, num_files_ok, num_files_unknown;
 	char buf[_Q_PATH_MAX], filename[_Q_PATH_MAX];
+	char buffer[_Q_PATH_MAX];
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -39,6 +43,7 @@ int qcheck_main(int argc, char **argv)
 		switch (i) {
 		COMMON_GETOPTS_CASES(qcheck)
 		case 'a': search_all = 1; break;
+		case 'u': qc_update = 1; break;
 		}
 	}
 	if ((argc == optind) && !search_all)
@@ -59,9 +64,11 @@ int qcheck_main(int argc, char **argv)
 
 		/* open the cateogry */
 		while ((de = readdir(dirp)) != NULL) {
-			FILE *fp;
+			FILE *fp, *fpx;
 			if (*de->d_name == '.')
 				continue;
+
+			fp = fpx = NULL;
 
 			/* see if this cat/pkg is requested */
 			if (!search_all) {
@@ -81,12 +88,22 @@ int qcheck_main(int argc, char **argv)
 			         dentry->d_name, de->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;
-
+			strncat(buf, "~", sizeof(buf));
 			num_files = num_files_ok = num_files_unknown = 0;
-			printf("Checking %s%s/%s%s ...\n", GREEN, dentry->d_name, de->d_name, NORM);
+			printf("%sing %s%s/%s%s ...\n",
+				(qc_update ? "Updat" : "Check"), 
+				GREEN, dentry->d_name, de->d_name, NORM);
+			if (qc_update) {
+				if ((fpx = fopen(buf, "w")) == NULL) {
+					fclose(fp);
+					warn("unable to fopen(%s, w): %s", buf, strerror(errno));
+					continue;
+				}
+			}
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 				contents_entry *e;
 
+				strcpy(buffer, buf);
 				e = contents_parse_line(buf);
 				if (!e)
 					continue;
@@ -119,11 +136,21 @@ int qcheck_main(int argc, char **argv)
 					}
 					hashed_file = (char*)hash_file(e->name, hash_algo);
 					if (!hashed_file) {
+						if (qc_update) {
+							fprintf(fpx, "%s", buffer);
+							if (!verbose)
+								continue;
+						}
 						printf(" %sPERM %4o%s: %s\n", RED, (st.st_mode & 07777), NORM, e->name);
 						++num_files_unknown;
 						continue;
 					} else if (strcmp(e->digest, hashed_file)) {
 						const char *digest_disp;
+						if (qc_update) {
+							fprintf(fpx, "obj %s %s %lu\n", e->name, hashed_file, st.st_mtime);
+							if (!verbose)
+								continue;
+						}
 						switch (hash_algo) {
 							case HASH_MD5:  digest_disp = "MD5"; break;
 							case HASH_SHA1: digest_disp = "SHA1"; break;
@@ -135,6 +162,9 @@ int qcheck_main(int argc, char **argv)
 						printf("\n");
 						continue;
 					}
+				} else {
+					if (qc_update)
+						fprintf(fpx, "%s", buffer);
 				}
 				if (e->mtime && e->mtime != st.st_mtime) {
 					/* validate last modification time */
@@ -147,6 +177,16 @@ int qcheck_main(int argc, char **argv)
 				++num_files_ok;
 			}
 			fclose(fp);
+			if (qc_update) {
+				fclose(fpx);
+				snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb,
+					dentry->d_name, de->d_name);
+				strcpy(buffer, buf);
+				strncat(buffer, "~", sizeof(buffer));
+				rename(buffer, buf);
+				if (!verbose)
+					continue;
+			}
 			printf("  %2$s*%1$s %3$s%4$lu%1$s out of %3$s%5$lu%1$s file%6$s are good\n",
 			       NORM, BOLD, BLUE,
 			       (unsigned long)num_files_ok,
