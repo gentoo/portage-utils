@@ -9,4 +9,5 @@
 
 - standardize/unify/clean up misc handling of colors
 
-- add a --fix/--update to qcheck
+- qmerge: dep resolver needs spanktastic love.
+- qmerge: needs safe deleting.
