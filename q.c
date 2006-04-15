@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.30 2006/02/12 23:54:05 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.31 2006/04/15 21:04:03 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *q_opts_help[] = {
 	"Reinitialize metadata cache",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.30 2006/02/12 23:54:05 solar Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.31 2006/04/15 21:04:03 solar Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 
@@ -28,6 +28,10 @@ APPLET lookup_applet(char *applet);
 APPLET lookup_applet(char *applet)
 {
 	unsigned int i;
+
+	if (strlen(applet) < 1)
+		return NULL;
+
 	for (i = 0; applets[i].name; ++i) {
 		if (strcmp(applets[i].name, applet) == 0) {
 			DBG("found applet %s at %p", applets[i].name, applets[i].func);
@@ -36,17 +40,17 @@ APPLET lookup_applet(char *applet)
 			return applets[i].func;
 		}
 	}
+
 	/* No applet found? Search by shortname then... */
-	if (strlen(applet) > 1) {
-		DBG("Looking up applet (%s) by short name", applet);
-		for (i = 1; applets[i].desc != NULL; ++i) {
-			if (strcmp(applets[i].name + 1, applet) == 0) {
-				DBG("found applet by short name %s", applets[i].name);
-				argv0 = applets[i].name + 1;
-				return applets[i].func;
-			}
+	DBG("Looking up applet (%s) by short name", applet);
+	for (i = 1; applets[i].desc != NULL; ++i) {
+		if (strcmp(applets[i].name + 1, applet) == 0) {
+			DBG("found applet by short name %s", applets[i].name);
+			argv0 = applets[i].name + 1;
+			return applets[i].func;
 		}
 	}
+
 	/* still nothing ?  those bastards ... */
 	warn("Unknown applet '%s'", applet);
 	return NULL;
