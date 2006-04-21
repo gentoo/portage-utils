@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.12 2006/01/26 02:32:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.13 2006/04/21 03:13:25 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -48,7 +48,7 @@ static const char *qxpak_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.12 2006/01/26 02:32:04 vapier Exp $";
+static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.13 2006/04/21 03:13:25 vapier Exp $";
 #define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, lookup_applet_idx("qxpak"))
 
 
@@ -73,7 +73,7 @@ void _xpak_walk_index(_xpak_archive *x, int argc, char **argv, void (*func)(char
 
 	p = x->index;
 	while ((p - x->index) < x->index_len) {
-		pathname_len = tbz2_decode_int(p);
+		pathname_len = tbz2_decode_int((unsigned char*)p);
 		assert((size_t)pathname_len < sizeof(pathname));
 		p += 4;
 		memcpy(pathname, p, pathname_len);
@@ -81,9 +81,9 @@ void _xpak_walk_index(_xpak_archive *x, int argc, char **argv, void (*func)(char
 		if (strchr(pathname, '/') != NULL || strchr(pathname, '\\') != NULL)
 			err("Index contains a file with a path: '%s'", pathname);
 		p += pathname_len;
-		data_offset = tbz2_decode_int(p);
+		data_offset = tbz2_decode_int((unsigned char*)p);
 		p += 4;
-		data_len = tbz2_decode_int(p);
+		data_len = tbz2_decode_int((unsigned char*)p);
 		p += 4;
 		if (argc) {
 			for (i = 0; i < argc; ++i)
@@ -125,8 +125,8 @@ _xpak_archive *_xpak_open(const char *file)
 	}
 
 	/* calc index and data sizes */
-	ret.index_len = tbz2_decode_int(buf+XPAK_START_MSG_LEN);
-	ret.data_len = tbz2_decode_int(buf+XPAK_START_MSG_LEN+4);
+	ret.index_len = tbz2_decode_int((unsigned char*)buf+XPAK_START_MSG_LEN);
+	ret.data_len = tbz2_decode_int((unsigned char*)buf+XPAK_START_MSG_LEN+4);
 	if (!ret.index_len || !ret.data_len) {
 		warn("Skipping empty archive '%s'", file);
 		goto close_and_ret;
@@ -230,7 +230,7 @@ void _xpak_add_file(const char *filename, struct stat *st, FILE *findex, int *in
 void _xpak_add_file(const char *filename, struct stat *st, FILE *findex, int *index_len, FILE *fdata, int *data_len)
 {
 	FILE *fin;
-	char *p;
+	unsigned char *p;
 	const char *basefile;
 	int in_len;
 
@@ -288,7 +288,8 @@ void xpak_create(const char *file, int argc, char **argv)
 	struct dirent **dir;
 	int i, fidx, numfiles;
 	struct stat st;
-	char path[_Q_PATH_MAX], *p;
+	char path[_Q_PATH_MAX];
+	unsigned char *p;
 	int index_len, data_len;
 
 	if (argc == 0)
