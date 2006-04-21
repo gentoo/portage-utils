@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.115 2006/03/27 01:40:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.116 2006/04/21 03:00:04 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,6 +32,8 @@
 #else
 # define _Q_PATH_MAX _POSIX_PATH_MAX
 #endif
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*arr))
 
 #if defined(__i386__) && defined(__linux__) && !defined(__UCLIBC__)
 # define PORTAGE_BINHOST "ftp://tinderbox.x86.dev.gentoo.org/default-linux/x86/2005.1/All"
