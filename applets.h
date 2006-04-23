@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.16 2006/01/28 20:41:45 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.17 2006/04/23 20:51:44 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -80,6 +80,7 @@ struct applet_t {
 
 	/* alias for quickpkg */
 	{"uickpkg",   qpkg_main,      NULL, NULL},
+	/* {"glsa",      qglsa_main,     NULL, NULL}, */
 
 	{NULL, NULL, NULL, NULL}
 };
