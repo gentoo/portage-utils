@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.36 2006/03/13 01:32:03 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.37 2006/04/23 20:34:39 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,7 +35,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.36 2006/03/13 01:32:03 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.37 2006/04/23 20:34:39 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
@@ -49,11 +49,11 @@ queue *filter_dups(queue *sets) {
 	for (list = sets ; list != NULL;  list = list->next) {
 		for ( ll = sets ; ll != NULL; ll = ll->next) {
 			if ((strcmp(ll->name, list->name) == 0) && (strcmp(ll->item, list->item) != 0)) {
-					int ok = 0;
-					dups = del_set(ll->item, dups, &ok);
-					ok = 0;
-					dups = add_set(ll->item, ll->item, dups);
-				}
+				int ok = 0;
+				dups = del_set(ll->item, dups, &ok);
+				ok = 0;
+				dups = add_set(ll->item, ll->item, dups);
+			}
 		}
 	}
 	return dups;
