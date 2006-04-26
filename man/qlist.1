@@ -6,13 +6,16 @@ qlist \- manual page for qlist
 .B qlist
 \fI<pkgname> : list files owned by pkgname\fR
 .SH DESCRIPTION
-Options: \fB\-[ISDeadosvqChV]\fR
+Options: \fB\-[ISUDeadosvqChV]\fR
 .TP
 \fB\-I\fR, \fB\-\-installed\fR
 * Just show installed packages
 .TP
 \fB\-S\fR, \fB\-\-slots\fR
 * Display installed packages with slots
+.TP
+\fB\-U\fR, \fB\-\-umap\fR
+* Display installed packages with flags used
 .TP
 \fB\-D\fR, \fB\-\-dups\fR
 * Only show package dups
@@ -47,4 +50,4 @@ Options: \fB\-[ISDeadosvqChV]\fR
 \fB\-V\fR, \fB\-\-version\fR
 * Print version and exit
 .PP
-$Id: qlist.1,v 1.14 2006/04/15 21:31:08 solar Exp $
+$Id: qlist.1,v 1.15 2006/04/26 23:58:44 solar Exp $

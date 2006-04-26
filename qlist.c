@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.37 2006/04/23 20:34:39 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.38 2006/04/26 23:58:44 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -10,10 +10,11 @@
 
 #ifdef APPLET_qlist
 
-#define QLIST_FLAGS "ISDeados" COMMON_FLAGS
+#define QLIST_FLAGS "ISUDeados" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
 	{"slots",     no_argument, NULL, 'S'},
+	{"umap",      no_argument, NULL, 'U'},
 	{"dups",      no_argument, NULL, 'D'},
 	{"exact",     no_argument, NULL, 'e'},
 	{"all",       no_argument, NULL, 'a'},
@@ -26,6 +27,7 @@ static struct option const qlist_long_opts[] = {
 static const char *qlist_opts_help[] = {
 	"Just show installed packages",
 	"Display installed packages with slots",
+	"Display installed packages with flags used",
 	"Only show package dups",
 	"Exact match (only CAT/PN or PN without PV)",
 	"Show every installed package",
@@ -35,7 +37,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.37 2006/04/23 20:34:39 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.38 2006/04/26 23:58:44 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
@@ -59,11 +61,63 @@ queue *filter_dups(queue *sets) {
 	return dups;
 }
 
+static char *grab_pkg_umap(char *CAT, char *PV) {
+	static char umap[BUFSIZ] = "";
+	char *use = NULL;
+	char *iuse = NULL;
+	int use_argc = 0, iuse_argc = 0;
+	char **use_argv = NULL, **iuse_argv = NULL;
+	queue *ll = NULL;
+	queue *sets = NULL;
+	int i, u;
+
+	if ((use = grab_vdb_item("USE", CAT, PV)) == NULL)
+		return NULL;
+
+	/* grab_vdb is a static function so save it to memory right away */
+	makeargv(use, &use_argc, &use_argv);
+	if ((iuse = grab_vdb_item("IUSE", CAT, PV)) != NULL) {
+
+		memset(umap, 0, sizeof(umap));
+		makeargv(iuse, &iuse_argc, &iuse_argv);
+		for (u = 1 ; u < use_argc; u++) {
+			for (i = 1 ; i < iuse_argc; i++) {
+				if ((strcmp(use_argv[u], iuse_argv[i])) == 0) {
+					strncat(umap, use_argv[u], sizeof(umap));
+					strncat(umap, " ", sizeof(umap));
+				}
+			}
+		}
+		freeargv(iuse_argc, iuse_argv);
+	}
+	freeargv(use_argc, use_argv);
+
+	/* filter out the dup use flags */
+	use_argc = 0; use_argv = NULL;
+	makeargv(umap, &use_argc, &use_argv);
+	for (i = 1 ; i < use_argc; i++) {
+		int ok = 0;
+		sets = del_set(use_argv[i], sets, &ok);
+		sets = add_set(use_argv[i], use_argv[i], sets);
+	}
+	memset(umap, 0, sizeof(umap)); /* reset the buffer */
+	strcpy(umap, "");
+	for (ll = sets; ll != NULL; ll = ll->next) {
+		strncat(umap, ll->name, sizeof(umap));
+		strncat(umap, " ", sizeof(umap));
+	}
+	freeargv(use_argc, use_argv);
+	free_sets(sets);
+	/* end filter */
+
+	return (char *) umap;
+}
+
 int qlist_main(int argc, char **argv)
 {
 	int i, j, dfd;
 	char qlist_all = 0, just_pkgname = 0, dups_only = 0;
-	char show_dir, show_obj, show_sym, show_slots;
+	char show_dir, show_obj, show_sym, show_slots, show_umap;
 	struct dirent **de, **cat;
 	char buf[_Q_PATH_MAX];
 	char swap[_Q_PATH_MAX];
@@ -73,7 +127,7 @@ int qlist_main(int argc, char **argv)
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	show_dir = show_obj = show_sym = show_slots = 0;
+	show_dir = show_obj = show_sym = show_slots = show_umap = 0;
 
 	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
 		switch (i) {
@@ -81,6 +135,7 @@ int qlist_main(int argc, char **argv)
 		case 'a': qlist_all = 1;
 		case 'I': just_pkgname = 1; break;
 		case 'S': just_pkgname = 1; show_slots = 1; break;
+		case 'U': just_pkgname = 1; show_umap = 1; break;
 		case 'e': exact = 1; break;
 		case 'd': show_dir = 1; break;
 		case 'o': show_obj = 1; break;
@@ -160,12 +215,28 @@ int qlist_main(int argc, char **argv)
 				}
 				pkgname = (verbose ? NULL : atom_explode(de[x]->d_name));
 				if ((qlist_all + just_pkgname) < 2) {
-					char *slot = NULL;
+					char *slot, *umap;
+
+					umap = slot = NULL;
+
 					if (show_slots)
 						slot = grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name);
-					printf("%s%s/%s%s%s%s%s%s%s\n", BOLD, cat[j]->d_name, BLUE, 
+
+					/* display it */
+					printf("%s%s/%s%s%s%s%s%s%s", BOLD, cat[j]->d_name, BLUE, 
 					       (pkgname ? pkgname->PN : de[x]->d_name), NORM,
 						YELLOW, slot ? " ": "", slot ? slot : "", NORM);
+
+					/* map USE->IUSE */
+					if (show_umap) {
+						if ((umap = grab_pkg_umap(cat[j]->d_name, de[x]->d_name)) != NULL) {
+							rmspace(umap);
+							if (strlen(umap))
+								printf(" (%s%s%s)", RED, umap, NORM);
+						}
+					}
+
+					putchar('\n');
 				}
 				if (pkgname)
 					atom_implode(pkgname);
