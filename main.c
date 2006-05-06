@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.117 2006/04/23 20:51:44 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.118 2006/05/06 04:50:33 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -93,16 +93,9 @@ char install_mask[1024] = "";
 
 const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
-FILE *saved_stderr;
-
 #define qfprintf(stream, fmt, args...) do { if (!quiet) fprintf(stream, _( fmt ), ## args); } while (0)
 #define qprintf(fmt, args...) qfprintf(stdout, _( fmt ), ## args)
 
-#if defined(__APPLE__) || defined(__NetBSD__) || defined(__OpenBSD__)
-# define SET_STDERR(fp) /* err("Darwin/NetBSD/OpenBSD have stupid stderr handling") */
-#else
-# define SET_STDERR(fp) stderr = fp
-#endif
 
 
 #define _q_unused_ __attribute__((__unused__))
@@ -164,13 +157,7 @@ void no_colors() {
 	NULL
 #define COMMON_GETOPTS_CASES(applet) \
 	case 'v': ++verbose; break; \
-	case 'q': ++quiet; \
-		if (stderr == saved_stderr) { \
-			FILE *stderr_fp = NULL; \
-			stderr_fp = fopen("/dev/null", "w"); \
-			SET_STDERR(stderr_fp); \
-		} \
-		break; \
+	case 'q': ++quiet; freopen("/dev/null", "w", stderr); break; \
 	case 'V': version_barf( applet ## _rcsid ); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': no_colors(); break; \
@@ -984,15 +971,13 @@ fuckit:
 void cleanup() {
 	reinitialize_as_needed();
 	free_sets(virtuals);
-	if (saved_stderr != stderr)
-		fclose(stderr);
+	fclose(stderr);
 }
 
 int main(int argc, char **argv)
 {
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
-	saved_stderr = stderr;
 
 #ifdef ENABLE_NLS
 	setlocale(LC_ALL, "");

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.42 2006/04/09 17:08:29 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.43 2006/05/06 04:50:33 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -51,7 +51,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.42 2006/04/09 17:08:29 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.43 2006/05/06 04:50:33 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -164,9 +164,6 @@ void fetch(const char *destdir, const char *src) {
 }
 
 void qmerge_initialize(const char *Packages) {
-	if (quiet)
-		SET_STDERR(saved_stderr);
-
 	if (strlen(BUSYBOX))
 		if (access(BUSYBOX, X_OK) != 0)
 			err(BUSYBOX " must be installed");
