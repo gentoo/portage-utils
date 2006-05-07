@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.50 2006/03/09 02:44:06 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.51 2006/05/07 18:11:36 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -14,7 +14,7 @@
  quse -Ke --  nls
 */
 
-#define QUSE_FLAGS "eavKLDF:" COMMON_FLAGS
+#define QUSE_FLAGS "eavKLDF:N" COMMON_FLAGS
 static struct option const quse_long_opts[] = {
 	{"exact",     no_argument, NULL, 'e'},
 	{"all",       no_argument, NULL, 'a'},
@@ -22,6 +22,7 @@ static struct option const quse_long_opts[] = {
 	{"license",   no_argument, NULL, 'L'},
 	{"describe",  no_argument, NULL, 'D'},
 	{"format",     a_argument, NULL, 'F'},
+	{"name-only", no_argument, NULL, 'N'},
 	COMMON_LONG_OPTS
 };
 static const char *quse_opts_help[] = {
@@ -31,12 +32,15 @@ static const char *quse_opts_help[] = {
 	"Use the LICENSE vs IUSE",
 	"Describe the USE flag",
 	"Use your own variable formats. -F NAME=",
+	"Only show package name",
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.50 2006/03/09 02:44:06 solar Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.51 2006/05/07 18:11:36 solar Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(int ind, int argc, char **argv);
+
+char quse_name_only = 0;
 
 static void print_highlighted_use_flags(char *string, int ind, int argc, char **argv) {
 	char *str, *p;
@@ -44,6 +48,9 @@ static void print_highlighted_use_flags(char *string, int ind, int argc, char **
 	size_t pos, len;
 	short highlight = 0;
 	int i;
+
+	if (quse_name_only)
+		return;
 
 	strncpy(buf, string, sizeof(buf));
 	str = buf;
@@ -179,6 +186,7 @@ int quse_main(int argc, char **argv)
 		case 'L': idx = 2; break;
 		case 'D': idx = -1; break;
 		case 'F': idx = 3, search_vars[idx] = xstrdup(optarg); break;
+		case 'N': quse_name_only = 1; break;
 		COMMON_GETOPTS_CASES(quse)
 		}
 	}
