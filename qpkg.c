@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.15 2006/02/23 04:33:15 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.16 2006/05/09 19:30:27 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,32 +9,36 @@
 
 #ifdef APPLET_qpkg
 
-#define QPKG_FLAGS "p" COMMON_FLAGS
+#define QPKG_FLAGS "pP:" COMMON_FLAGS
 static struct option const qpkg_long_opts[] = {
-	{"pretend",   no_argument, NULL, 'p'},
+	{"pretend",  no_argument, NULL, 'p'},
+	{"pkgdir",    a_argument, NULL, 'P'},
 	COMMON_LONG_OPTS
 };
 static const char *qpkg_opts_help[] = {
 	"pretend only",
+	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.15 2006/02/23 04:33:15 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.16 2006/05/09 19:30:27 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 
 extern char pretend;
 
+static char *qpkg_bindir = NULL;
+
 const char *qpkg_get_bindir(void);
 const char *qpkg_get_bindir(void)
 {
-	static char *qpkg_bindir = NULL;
+	if (qpkg_bindir != NULL)
+		return qpkg_bindir;
 	if (getuid() == 0)
 		return "/var/tmp/binpkgs";
-	if (qpkg_bindir == NULL) {
-		if (getenv("HOME") == NULL)
-			errp("Your $HOME env var isn't set, aborting");
-		xasprintf(&qpkg_bindir, "%s/binpkgs", getenv("HOME"));
-	}
+	if (getenv("HOME") == NULL)
+		errp("Your $HOME env var isn't set, aborting");
+	xasprintf(&qpkg_bindir, "%s/binpkgs", getenv("HOME"));
+
 	return qpkg_bindir;
 }
 
@@ -133,6 +137,7 @@ int qpkg_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QPKG, qpkg, "")) != -1) {
 		switch (i) {
 		case 'p': pretend = 1; break;
+		case 'P': qpkg_bindir = xstrdup(optarg); break;
 		COMMON_GETOPTS_CASES(qpkg)
 		}
 	}
