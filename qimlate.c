@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.1 2006/05/12 18:24:14 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.2 2006/05/12 20:36:02 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort  - <tcort@gentoo.org>
  */
@@ -24,7 +24,7 @@ static const char *qimlate_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.1 2006/05/12 18:24:14 solar Exp $";
+static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.2 2006/05/12 20:36:02 tcort Exp $";
 #define qimlate_usage(ret) usage(ret, QIMLATE_FLAGS, qimlate_long_opts, qimlate_opts_help, lookup_applet_idx("qimlate"))
 
 #define NUM_ARCHES (16)
@@ -156,7 +156,7 @@ int vercmp(const void *x, const void *y) {
 int qimlate_main(int argc, char **argv)
 {
 	int i, j, k, l, m, numcat, numpkg, numebld, test_arch = 0, fnd, keywords[NUM_ARCHES];
-	char *pathcat, *pathpkg, *pathebld;
+	char *pathcat, *pathpkg, *pathebld, *pathcache;
 	struct direct **categories, **packages, **ebuilds;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -171,19 +171,24 @@ int qimlate_main(int argc, char **argv)
 	if (argc != optind + 1 || !(test_arch = decode_arch(argv[optind])))
 		qimlate_usage(EXIT_FAILURE);
 
-	numcat = scandir("/usr/portage/metadata/cache", &categories, file_select, alphasort);
+	pathcache = (char *) xmalloc(strlen(portdir) + strlen("/metadata/cache") + 1);
+	strcpy(pathcache,portdir);
+	strcat(pathcache+strlen(portdir),"/metadata/cache/");
+
+	numcat = scandir(pathcache, &categories, file_select, alphasort);
 	for (i = 0; i < numcat; i++) {
 
-		pathcat = (char *) xmalloc(13 /* "/usr/portage/" */ + strlen(categories[i]->d_name) + 1 /* '\0' */);
-		strcpy(pathcat,"/usr/portage/");
-		strcat(pathcat+strlen("/usr/portage/"), categories[i]->d_name);
+		pathcat = (char *) xmalloc(strlen(portdir) + 1 /* '/' */ + strlen(categories[i]->d_name) + 1 /* '\0' */);
+		strcpy(pathcat,portdir);
+		strcat(pathcat+strlen(portdir), "/");
+		strcat(pathcat+strlen(portdir) + 1, categories[i]->d_name);
 
 		current_category = categories[i]->d_name;
 
 		numpkg = scandir(pathcat, &packages, file_select, alphasort);
 
 		for (j = 0; j < numpkg; j++) {
-			pathpkg = (char *) xmalloc(13 /* "/usr/portage/" */ + strlen(categories[i]->d_name) + 1 /* '/' */ + strlen(packages[j]->d_name) + 1 /* '\0' */);
+			pathpkg = (char *) xmalloc(strlen(portdir) + 1 /* '/' */ + strlen(categories[i]->d_name) + 1 /* '/' */ + strlen(packages[j]->d_name) + 1 /* '\0' */);
 			fnd = 0;
 
 			strcpy(pathpkg,pathcat);
@@ -195,12 +200,12 @@ int qimlate_main(int argc, char **argv)
 			free(pathpkg);
 
 			for (k = 0; k < numebld; k++) {
-				pathebld = (char *) xmalloc(strlen("/usr/portage/metadata/cache/") + strlen(categories[i]->d_name) + 1 + strlen(ebuilds[k]->d_name) + 1);
+				pathebld = (char *) xmalloc(strlen(pathcache) + strlen(categories[i]->d_name) + 1 + strlen(ebuilds[k]->d_name) + 1);
 
-				strcpy(pathebld,"/usr/portage/metadata/cache/");
-				strcat(pathebld+strlen("/usr/portage/metadata/cache/"),categories[i]->d_name);
-				strcat(pathebld+strlen("/usr/portage/metadata/cache/")+strlen(categories[i]->d_name),"/");
-				strcat(pathebld+strlen("/usr/portage/metadata/cache/")+strlen(categories[i]->d_name)+1,ebuilds[k]->d_name);
+				strcpy(pathebld,pathcache);
+				strcat(pathebld+strlen(pathcache),categories[i]->d_name);
+				strcat(pathebld+strlen(pathcache)+strlen(categories[i]->d_name),"/");
+				strcat(pathebld+strlen(pathcache)+strlen(categories[i]->d_name)+1,ebuilds[k]->d_name);
 
 				pathebld[strlen(pathebld)-7] = '\0';
 
@@ -214,7 +219,7 @@ int qimlate_main(int argc, char **argv)
 							for (l = 0; l < NUM_ARCHES && !fnd; l++) {
 								if (keywords[l] == stable) {
 									fnd = 1;
-									printf("%s%s/%s%s%s ",BOLD,current_category,BLUE,pathebld+strlen("/usr/portage/metadata/cache/")+strlen(categories[i]->d_name)+1,NORM);
+									printf("%s%s/%s%s%s ",BOLD,current_category,BLUE,pathebld+strlen(pathcache)+strlen(categories[i]->d_name)+1,NORM);
 									for (m = 0; m < NUM_ARCHES; m++)
 										switch (keywords[m]) {
 											case stable: printf("%s%c%s%s ",GREEN,status[keywords[m]],arches[m],NORM); break;
@@ -238,6 +243,7 @@ int qimlate_main(int argc, char **argv)
 		free(pathcat);
 		free(categories[i]);
 	}
+	free(pathcache);
 	free(categories);
 
 	return EXIT_SUCCESS;
