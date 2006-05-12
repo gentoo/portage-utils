@@ -13,4 +13,5 @@
 #include "qgrep.c"
 #include "qatom.c"
 #include "qmerge.c"
+#include "qimlate.c"
 #include "qglsa.c"

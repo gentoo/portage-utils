@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.17 2006/04/23 20:51:44 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.18 2006/05/12 18:23:55 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,6 +30,7 @@ DECLARE_APPLET(qpkg)
 DECLARE_APPLET(qgrep)
 DECLARE_APPLET(qatom)
 DECLARE_APPLET(qmerge)
+DECLARE_APPLET(qimlate)
 DECLARE_APPLET(qglsa) /* disable */
 #undef DECLARE_APPLET
 
@@ -61,6 +62,7 @@ struct applet_t {
 	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
 	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
 	{"qxpak",     qxpak_main,     "<misc args>",     "manipulate xpak archives"},
+	{"qimlate",   qimlate_main,   "<arch>",          "check for packages that can be marked stable"},
 
 
 	/* aliases for equery capatability */
