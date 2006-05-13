@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.26 2006/01/26 02:32:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.27 2006/05/13 22:49:31 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -18,7 +18,7 @@ static const char *qfile_opts_help[] = {
 	"Exact match",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.26 2006/01/26 02:32:04 vapier Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.27 2006/05/13 22:49:31 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 void qfile(char *path, char *fullname);
@@ -40,9 +40,7 @@ void qfile(char *path, char *fullname)
 	if ((fname[0] == '.') && ((p = getenv("PWD")) != NULL)) {
 		char tmp[PATH_MAX];
 		snprintf(tmp, sizeof(fname), "%s/%s", p, fullname);
-		errno = 0;
-		realpath(tmp, fname);
-		assert(errno == 0);
+		assert(realpath(tmp, fname) != NULL);
 	}
 
 	flen = strlen(fname);
