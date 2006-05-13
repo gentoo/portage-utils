@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.2 2006/05/12 20:36:02 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.3 2006/05/13 17:21:57 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort  - <tcort@gentoo.org>
  */
@@ -24,7 +24,7 @@ static const char *qimlate_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.2 2006/05/12 20:36:02 tcort Exp $";
+static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.3 2006/05/13 17:21:57 tcort Exp $";
 #define qimlate_usage(ret) usage(ret, QIMLATE_FLAGS, qimlate_long_opts, qimlate_opts_help, lookup_applet_idx("qimlate"))
 
 #define NUM_ARCHES (16)
@@ -114,7 +114,9 @@ int file_select(const struct dirent *entry) {
 
 int ebuild_select(const struct dirent *entry);
 int ebuild_select(const struct dirent *entry) {
-	return (strlen(current_package) < strlen(entry->d_name) && strncmp(entry->d_name, current_package, strlen(current_package)) == 0);
+	return (strlen(current_package) < strlen(entry->d_name) && 
+		(strlen(entry->d_name) > 7) && !strcmp(entry->d_name+strlen(entry->d_name)-7,".ebuild") &&
+		!strncmp(entry->d_name, current_package, strlen(current_package)));
 }
 
 int vercmp(const void *x, const void *y);
@@ -176,6 +178,12 @@ int qimlate_main(int argc, char **argv)
 	strcat(pathcache+strlen(portdir),"/metadata/cache/");
 
 	numcat = scandir(pathcache, &categories, file_select, alphasort);
+	if (numcat == (-1))
+		err("%s %s", pathcache, strerror(errno));
+
+	if (!numcat)
+		warn("%s is empty!", pathcache);
+
 	for (i = 0; i < numcat; i++) {
 
 		pathcat = (char *) xmalloc(strlen(portdir) + 1 /* '/' */ + strlen(categories[i]->d_name) + 1 /* '\0' */);
@@ -186,6 +194,11 @@ int qimlate_main(int argc, char **argv)
 		current_category = categories[i]->d_name;
 
 		numpkg = scandir(pathcat, &packages, file_select, alphasort);
+		if (numcat == (-1))
+			err("%s %s", pathcat, strerror(errno));
+
+		if (!numcat)
+			warn("%s is empty!",pathcat);
 
 		for (j = 0; j < numpkg; j++) {
 			pathpkg = (char *) xmalloc(strlen(portdir) + 1 /* '/' */ + strlen(categories[i]->d_name) + 1 /* '/' */ + strlen(packages[j]->d_name) + 1 /* '\0' */);
@@ -197,6 +210,11 @@ int qimlate_main(int argc, char **argv)
 
 			current_package = packages[j]->d_name;
 			numebld = scandir(pathpkg, &ebuilds, ebuild_select, vercmp);
+			if (numebld == (-1))
+				err("%s %s", pathpkg, strerror(errno));
+			if (!numebld)
+				warn("%s is empty!",pathpkg);
+
 			free(pathpkg);
 
 			for (k = 0; k < numebld; k++) {
@@ -210,27 +228,29 @@ int qimlate_main(int argc, char **argv)
 				pathebld[strlen(pathebld)-7] = '\0';
 
 				if (!fnd) {
-					read_keywords(pathebld,keywords);
-
-					switch (keywords[test_arch]) {
-						case stable: fnd = 1; break;
-						case none: break;
-						default:
-							for (l = 0; l < NUM_ARCHES && !fnd; l++) {
-								if (keywords[l] == stable) {
-									fnd = 1;
-									printf("%s%s/%s%s%s ",BOLD,current_category,BLUE,pathebld+strlen(pathcache)+strlen(categories[i]->d_name)+1,NORM);
-									for (m = 0; m < NUM_ARCHES; m++)
-										switch (keywords[m]) {
-											case stable: printf("%s%c%s%s ",GREEN,status[keywords[m]],arches[m],NORM); break;
-											case testing: printf("%s%c%s%s ",YELLOW,status[keywords[m]],arches[m],NORM); break;
-											default: break;
-										}
-									printf("\n");
+					if (read_keywords(pathebld,keywords) < 0) {
+						warn("Failed to read keywords for %s%s/%s%s%s",BOLD,current_category,BLUE,pathebld+strlen(pathcache)+strlen(categories[i]->d_name)+1,NORM);
+					} else {
+						switch (keywords[test_arch]) {
+							case stable: fnd = 1; break;
+							case none: break;
+							default:
+								for (l = 0; l < NUM_ARCHES && !fnd; l++) {
+									if (keywords[l] == stable) {
+										fnd = 1;
+										printf("%s%s/%s%s%s ",BOLD,current_category,BLUE,pathebld+strlen(pathcache)+strlen(categories[i]->d_name)+1,NORM);
+										for (m = 0; m < NUM_ARCHES; m++)
+											switch (keywords[m]) {
+												case stable: printf("%s%c%s%s ",GREEN,status[keywords[m]],arches[m],NORM); break;
+												case testing: printf("%s%c%s%s ",YELLOW,status[keywords[m]],arches[m],NORM); break;
+												default: break;
+											}
+										printf("\n");
+									}
 								}
-							}
-					}
+						}
 
+					}
 				}
 
 				free(pathebld);
