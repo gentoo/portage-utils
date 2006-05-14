@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.4 2006/05/14 00:17:14 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.5 2006/05/14 17:26:59 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort  - <tcort@gentoo.org>
  */
@@ -24,14 +24,14 @@ static const char *qimlate_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.4 2006/05/14 00:17:14 tcort Exp $";
+static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.5 2006/05/14 17:26:59 tcort Exp $";
 #define qimlate_usage(ret) usage(ret, QIMLATE_FLAGS, qimlate_long_opts, qimlate_opts_help, lookup_applet_idx("qimlate"))
 
 #define NUM_ARCHES (16)
-enum { unknown = 0, alpha, amd64, arm, hppa, ia64, m68k, mips, ppc, ppc64, ppc_macos, s390, sh, sparc, x86, x86_fbsd };
+enum { q_unknown = 0, q_alpha, q_amd64, q_arm, q_hppa, q_ia64, q_m68k, q_mips, q_ppc, q_ppc64, q_ppc_macos, q_s390, q_sh, q_sparc, q_x86, q_x86_fbsd };
 enum { none = 0, testing, stable };
 
-char  arches[NUM_ARCHES][10] = {"unknown", "alpha", "amd64", "arm", "hppa", "ia64", "m68k", "mips", "ppc", "ppc64", "ppc-macos", "s390", "sh", "sparc", "x86", "x86-fbsd" };
+const char  arches[NUM_ARCHES][10] = {"unknown", "alpha", "amd64", "arm", "hppa", "ia64", "m68k", "mips", "ppc", "ppc64", "ppc-macos", "s390", "sh", "sparc", "x86", "x86-fbsd" };
 char  status[3]              = {'-','~','+'};
 
 char *current_package;
@@ -52,34 +52,34 @@ int decode_arch(char *arch) {
 
 	switch (strlen(arch)) {
 		case 3:
-			if      (!strcmp(arch,"x86")) return x86;
-			else if (!strcmp(arch,"ppc")) return ppc;
-			else if (!strcmp(arch,"arm")) return arm;
-			else return unknown;
+			if      (!strcmp(arch,"x86")) return q_x86;
+			else if (!strcmp(arch,"ppc")) return q_ppc;
+			else if (!strcmp(arch,"arm")) return q_arm;
+			else return q_unknown;
 		case 4:
-			if      (!strcmp(arch,"mips")) return mips;
-			else if (!strcmp(arch,"hppa")) return hppa;
-			else if (!strcmp(arch,"ia64")) return ia64;
-			else if (!strcmp(arch,"s390")) return s390;
-			else if (!strcmp(arch,"m68k")) return m68k;
-			else return unknown;
+			if      (!strcmp(arch,"mips")) return q_mips;
+			else if (!strcmp(arch,"hppa")) return q_hppa;
+			else if (!strcmp(arch,"ia64")) return q_ia64;
+			else if (!strcmp(arch,"s390")) return q_s390;
+			else if (!strcmp(arch,"m68k")) return q_m68k;
+			else return q_unknown;
 		case 5:
-			if      (!strcmp(arch,"amd64")) return amd64;
-			else if (!strcmp(arch,"ppc64")) return ppc64;
-			else if (!strcmp(arch,"sparc")) return sparc;
-			else if (!strcmp(arch,"alpha")) return alpha;
-			else return unknown;
+			if      (!strcmp(arch,"amd64")) return q_amd64;
+			else if (!strcmp(arch,"ppc64")) return q_ppc64;
+			else if (!strcmp(arch,"sparc")) return q_sparc;
+			else if (!strcmp(arch,"alpha")) return q_alpha;
+			else return q_unknown;
 		case 8:
-			if (!strcmp(arch,"x86-fbsd")) return x86_fbsd;
-			else return unknown;
+			if (!strcmp(arch,"x86-fbsd")) return q_x86_fbsd;
+			else return q_unknown;
 		case 9:
-			if (!strcmp(arch,"ppc-macos")) return ppc_macos;
-			else return unknown;
+			if (!strcmp(arch,"ppc-macos")) return q_ppc_macos;
+			else return q_unknown;
 		case 2:
-			if (!strcmp(arch,"sh")) return sh;
-			else return unknown;
+			if (!strcmp(arch,"sh")) return q_sh;
+			else return q_unknown;
 		default:
-			return unknown;
+			return q_unknown;
 
 	}
 }
