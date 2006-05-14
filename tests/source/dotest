@@ -1,0 +1,63 @@
+#!/bin/bash
+
+testit() {
+	if [ -s $1 ] ; then
+		echo FAIL: $1
+		cat $1
+		rm -f $1
+		exit 1
+	fi
+	rm -f $1
+	echo PASS: $1
+}
+
+
+#
+# check for misc common typos
+#
+find ../.. \
+	'(' -type d -a '(' -name CVS -o -name tests ')' -prune ')' \
+	-o '(' -type f -a -print0 ')' | xargs -0 \
+	grep -I \
+		-e '\<compatability\>' \
+		-e '\<compatable\>' \
+		-e '\<fordeground\>' \
+		-e '\<depency\>' \
+		-e '\<defalt\>' \
+		-e '\<remaing\>' \
+		-e '\<queuing\>' \
+		-e '\<detatch\>' \
+		-e '\<sempahore\>' \
+		-e '\<reprenstative\>' \
+		-e '\<overriden\>' \
+		-e '\<readed\>' \
+		-e '\<formated\>' \
+		-e '\<algorithic\>' \
+		-e '\<deamon\>' \
+		-e '\<derefernce\>' \
+		| sed -e "s:^\.\./\.\./::g" > src.typos
+testit src.typos
+
+
+
+#
+# don't allow obsolete functions
+#
+find ../.. '(' -name '*.c' -o -name '*.h' ')' -print0 | xargs -0 \
+	grep -E -e '\<(bcmp|bcopy|bzero|getwd|index|mktemp|rindex|utimes)\>[[:space:]]*\(' \
+	| sed -e "s:^\.\./\.\./::g" > src.obsolete.funcs
+testit src.obsolete.funcs
+
+
+
+#
+# don't allow obsolete headers
+#
+find ../.. '(' -name '*.c' -o -name '*.h' ')' -print0 | xargs -0 \
+	grep -E -e '\<(malloc|memory|sys/(errno|fcntl|signal|stropts|termios|unistd))\.h\>' \
+	| sed -e "s:^\.\./\.\./::g" > src.obsolete.headers
+testit src.obsolete.headers
+
+
+
+exit 0
