@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.3 2006/05/13 17:21:57 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.4 2006/05/14 00:17:14 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort  - <tcort@gentoo.org>
  */
@@ -24,7 +24,7 @@ static const char *qimlate_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.3 2006/05/13 17:21:57 tcort Exp $";
+static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.4 2006/05/14 00:17:14 tcort Exp $";
 #define qimlate_usage(ret) usage(ret, QIMLATE_FLAGS, qimlate_long_opts, qimlate_opts_help, lookup_applet_idx("qimlate"))
 
 #define NUM_ARCHES (16)
@@ -109,7 +109,7 @@ int read_keywords(char *pkg, int *keywords) {
 
 int file_select(const struct dirent *entry);
 int file_select(const struct dirent *entry) {
-	return !((strcmp(entry->d_name,  ".") == 0) || (strcmp(entry->d_name, "..") == 0) || (strcmp(entry->d_name, "metadata.xml") == 0));
+	return !(entry->d_name[0] == '.' || (strcmp(entry->d_name, "metadata.xml") == 0));
 }
 
 int ebuild_select(const struct dirent *entry);
