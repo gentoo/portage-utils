@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.18 2006/05/12 18:23:55 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.19 2006/05/14 01:18:53 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,6 +53,7 @@ struct applet_t {
 	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},
 	{"qglsa",     qglsa_main,     "<action> <list>", "check GLSAs against system"},
 	{"qgrep",     qgrep_main,     "<misc args>",     "grep in ebuilds"},
+	{"qimlate",   qimlate_main,   "<arch>",          "check for packages that can be marked stable"},
 	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
 	{"qmerge",    qmerge_main,    "<pkgnames>",      "fetch and merge binary package"},
@@ -62,7 +63,6 @@ struct applet_t {
 	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
 	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
 	{"qxpak",     qxpak_main,     "<misc args>",     "manipulate xpak archives"},
-	{"qimlate",   qimlate_main,   "<arch>",          "check for packages that can be marked stable"},
 
 
 	/* aliases for equery capatability */
