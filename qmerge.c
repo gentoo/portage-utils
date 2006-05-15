@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.46 2006/05/15 00:48:41 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.47 2006/05/15 00:49:02 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -51,7 +51,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.46 2006/05/15 00:48:41 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.47 2006/05/15 00:49:02 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -704,7 +704,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 		// syntax: obj filename hash mtime
 		if (S_ISREG(st.st_mode)) { // regular file
 			struct timeval tv;
-			char *hash;
+			unsigned char *hash;
 
 			hash = hash_file(buf, HASH_MD5);
 
@@ -713,8 +713,8 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 
 			protected = config_protected(&buf[1], ARGC, ARGV);
 			if (protected) {
-				char *target_hash = hash_file(&buf[1], HASH_MD5);
-				if (strcmp(target_hash, hash) != 0) {
+				unsigned char *target_hash = hash_file(&buf[1], HASH_MD5);
+				if (memcmp(target_hash, hash, 16) != 0) {
 					char newbuf[sizeof(buf)];
 					qprintf("%s***%s %s\n", BRYELLOW, NORM, &buf[1]);
 					if (verbose) {
