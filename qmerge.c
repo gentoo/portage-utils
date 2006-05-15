@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.45 2006/05/11 22:20:55 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.46 2006/05/15 00:48:41 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -51,7 +51,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.45 2006/05/11 22:20:55 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.46 2006/05/15 00:48:41 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -106,7 +106,7 @@ int q_unlink_q(char *path, const char *func, int line) {
 
 #define unlink_q(path) q_unlink_q(path, __FUNCTION__, __LINE__)
 
-// rewrite using copyfile() utimes() stat(), lstat(), read() and perms.
+// rewrite using copyfile() utime() stat(), lstat(), read() and perms.
 int interactive_rename(const char *src, const char *dst, struct pkg_t *pkg) {
 	FILE *fp;
 	char *p;
@@ -738,7 +738,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 
 			tv.tv_sec = st.st_mtime;
 			tv.tv_usec = 0;
-			// utimes(&buf[1], &tv);
+			// utime(&buf[1], &tv);
 		}
 
 		/* symlinks are unfinished */
