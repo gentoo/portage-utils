@@ -269,6 +269,8 @@ static void sha1_end(unsigned char hval[], struct sha1_ctx_t *ctx)
  *     3 (smallest)        5.1                4912
  */
 
+# define MD5_DIGEST_SIZE 16
+
 # define MD5SUM_SIZE_VS_SPEED 2
 
 /* Handle endian-ness */
