@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.5 2006/05/14 17:26:59 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.6 2006/05/16 21:33:55 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort  - <tcort@gentoo.org>
  */
@@ -24,7 +24,7 @@ static const char *qimlate_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.5 2006/05/14 17:26:59 tcort Exp $";
+static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.6 2006/05/16 21:33:55 tcort Exp $";
 #define qimlate_usage(ret) usage(ret, QIMLATE_FLAGS, qimlate_long_opts, qimlate_opts_help, lookup_applet_idx("qimlate"))
 
 #define NUM_ARCHES (16)
@@ -173,7 +173,7 @@ int qimlate_main(int argc, char **argv)
 	if (argc != optind + 1 || !(test_arch = decode_arch(argv[optind])))
 		qimlate_usage(EXIT_FAILURE);
 
-	pathcache = (char *) xmalloc(strlen(portdir) + strlen("/metadata/cache") + 1);
+	pathcache = (char *) xmalloc(strlen(portdir) + strlen("/metadata/cache/") + 1);
 	strcpy(pathcache,portdir);
 	strcat(pathcache+strlen(portdir),"/metadata/cache/");
 
@@ -194,10 +194,10 @@ int qimlate_main(int argc, char **argv)
 		current_category = categories[i]->d_name;
 
 		numpkg = scandir(pathcat, &packages, file_select, alphasort);
-		if (numcat == (-1))
+		if (numpkg == (-1))
 			err("%s %s", pathcat, strerror(errno));
 
-		if (!numcat)
+		if (!numpkg)
 			warn("%s is empty!",pathcat);
 
 		for (j = 0; j < numpkg; j++) {
