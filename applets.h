@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.19 2006/05/14 01:18:53 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.20 2006/05/19 19:34:56 tcort Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ DECLARE_APPLET(qpkg)
 DECLARE_APPLET(qgrep)
 DECLARE_APPLET(qatom)
 DECLARE_APPLET(qmerge)
-DECLARE_APPLET(qimlate)
+DECLARE_APPLET(qcache)
 DECLARE_APPLET(qglsa) /* disable */
 #undef DECLARE_APPLET
 
@@ -48,12 +48,12 @@ struct applet_t {
 	/* q must always be the first applet */
 	{"q",         q_main,         "<applet> <args>", "virtual applet"},
 	{"qatom",     qatom_main,     "<pkg>",           "split atom strings"},
+	{"qcache",    qcache_main,    "<action> <args>", "search the metadata cache"},
 	{"qcheck",    qcheck_main,    "<pkgname>",       "verify mtimes/digests"},
 	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
 	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},
 	{"qglsa",     qglsa_main,     "<action> <list>", "check GLSAs against system"},
 	{"qgrep",     qgrep_main,     "<misc args>",     "grep in ebuilds"},
-	{"qimlate",   qimlate_main,   "<arch>",          "check for packages that can be marked stable"},
 	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
 	{"qmerge",    qmerge_main,    "<pkgnames>",      "fetch and merge binary package"},
