@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.6 2006/05/16 21:33:55 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qimlate.c,v 1.7 2006/05/19 03:48:27 solar Exp $
  *
  * Copyright 2006 Thomas A. Cort  - <tcort@gentoo.org>
  */
@@ -16,26 +16,47 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define QIMLATE_FLAGS "" COMMON_FLAGS
+#define QIMLATE_FLAGS "m:" COMMON_FLAGS
 static struct option const qimlate_long_opts[] = {
+	{"match", a_argument, NULL, 'm'},
 	COMMON_LONG_OPTS
 };
 static const char *qimlate_opts_help[] = {
+	"Match pkgname",
 	COMMON_OPTS_HELP
 };
 
-static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.6 2006/05/16 21:33:55 tcort Exp $";
+static const char qimlate_rcsid[] = "$Id: qimlate.c,v 1.7 2006/05/19 03:48:27 solar Exp $";
 #define qimlate_usage(ret) usage(ret, QIMLATE_FLAGS, qimlate_long_opts, qimlate_opts_help, lookup_applet_idx("qimlate"))
 
-#define NUM_ARCHES (16)
-enum { q_unknown = 0, q_alpha, q_amd64, q_arm, q_hppa, q_ia64, q_m68k, q_mips, q_ppc, q_ppc64, q_ppc_macos, q_s390, q_sh, q_sparc, q_x86, q_x86_fbsd };
 enum { none = 0, testing, stable };
-
-const char  arches[NUM_ARCHES][10] = {"unknown", "alpha", "amd64", "arm", "hppa", "ia64", "m68k", "mips", "ppc", "ppc64", "ppc-macos", "s390", "sh", "sparc", "x86", "x86-fbsd" };
-char  status[3]              = {'-','~','+'};
-
+char status[3] = {'-','~','+'};
 char *current_package;
 char *current_category;
+char *qimlate_match = NULL;
+
+struct arch_list_t {
+	const char *name;
+} archlist[] = { 
+	{ "unknown" },
+	{ "alpha" },
+	{ "amd64" },
+	{ "arm" },
+	{ "hppa" },
+	{ "ia64" },
+	{ "m68k" },
+	{ "mips" },
+	{ "ppc" },
+	{ "ppc64" }, 
+	{ "ppc-macos" },
+	{ "s390" },
+	{ "sh" },
+	{ "sparc" },
+	{ "x86" },
+	{ "x86-fbsd" }
+};
+
+#define NUM_ARCHES ARRAY_SIZE(archlist)
 
 int decode_status(char c);
 int decode_status(char c) {
@@ -46,48 +67,24 @@ int decode_status(char c) {
 	}
 }
 
-int decode_arch(char *arch);
-int decode_arch(char *arch) {
-	if (arch[0] == '~' || arch[0] == '-') arch += 1;
+int decode_arch(const char *arch);
+int decode_arch(const char *arch) {
+	int i;
+	char *p = (char *) arch;
 
-	switch (strlen(arch)) {
-		case 3:
-			if      (!strcmp(arch,"x86")) return q_x86;
-			else if (!strcmp(arch,"ppc")) return q_ppc;
-			else if (!strcmp(arch,"arm")) return q_arm;
-			else return q_unknown;
-		case 4:
-			if      (!strcmp(arch,"mips")) return q_mips;
-			else if (!strcmp(arch,"hppa")) return q_hppa;
-			else if (!strcmp(arch,"ia64")) return q_ia64;
-			else if (!strcmp(arch,"s390")) return q_s390;
-			else if (!strcmp(arch,"m68k")) return q_m68k;
-			else return q_unknown;
-		case 5:
-			if      (!strcmp(arch,"amd64")) return q_amd64;
-			else if (!strcmp(arch,"ppc64")) return q_ppc64;
-			else if (!strcmp(arch,"sparc")) return q_sparc;
-			else if (!strcmp(arch,"alpha")) return q_alpha;
-			else return q_unknown;
-		case 8:
-			if (!strcmp(arch,"x86-fbsd")) return q_x86_fbsd;
-			else return q_unknown;
-		case 9:
-			if (!strcmp(arch,"ppc-macos")) return q_ppc_macos;
-			else return q_unknown;
-		case 2:
-			if (!strcmp(arch,"sh")) return q_sh;
-			else return q_unknown;
-		default:
-			return q_unknown;
+	if (*p == '~' || *p == '-')
+		p++;
 
-	}
+	for (i = 0 ; i < NUM_ARCHES; i++)
+		if (strcmp(archlist[i].name, p) == 0) 
+			return i;
+	return 0;
 }
 
 int read_keywords(char *pkg, int *keywords);
 int read_keywords(char *pkg, int *keywords) {
 	int fd, i;
-	char c, arch[16], count = 0;
+	char c, arch[NUM_ARCHES], count = 0;
 
 	memset(keywords,none,NUM_ARCHES*sizeof(int));
 
@@ -96,7 +93,7 @@ int read_keywords(char *pkg, int *keywords) {
 	while (read(fd,&c,1)) {
 		if (c == '\n' && ++count == 8) {
 			do { /* read KEYWORDS line */
-				for (i = 0; read(fd,&c,1) && c != ' ' && c != '\n' && i < 16; i++) arch[i] = c;
+				for (i = 0; read(fd,&c,1) && c != ' ' && c != '\n' && i < NUM_ARCHES; i++) arch[i] = c;
 				arch[i] = '\0';
 				keywords[decode_arch(arch)] = decode_status(arch[0]);
 			} while (c != '\n');
@@ -166,6 +163,7 @@ int qimlate_main(int argc, char **argv)
 
 	while ((i = GETOPT_LONG(QIMLATE, qimlate, "")) != -1) {
 		switch (i) {
+		case 'm': qimlate_match = optarg; break;
 		COMMON_GETOPTS_CASES(qimlate)
 		}
 	}
@@ -194,10 +192,13 @@ int qimlate_main(int argc, char **argv)
 		current_category = categories[i]->d_name;
 
 		numpkg = scandir(pathcat, &packages, file_select, alphasort);
-		if (numpkg == (-1))
-			err("%s %s", pathcat, strerror(errno));
+		if (numpkg == (-1)) {
+			warn("%s %s", pathcat, strerror(errno));
+			free(pathcat);
+			continue;
+		}
 
-		if (!numpkg)
+		if (!numpkg && verbose)
 			warn("%s is empty!",pathcat);
 
 		for (j = 0; j < numpkg; j++) {
@@ -209,15 +210,28 @@ int qimlate_main(int argc, char **argv)
 			strcat(pathpkg+strlen(pathcat)+strlen("/"),packages[j]->d_name);
 
 			current_package = packages[j]->d_name;
+
+			if (qimlate_match) {
+				if (strcmp(current_package, qimlate_match) != 0) {
+					free(pathpkg);
+					continue;
+				}
+			}
 			numebld = scandir(pathpkg, &ebuilds, ebuild_select, vercmp);
-			if (numebld == (-1))
-				err("%s %s", pathpkg, strerror(errno));
-			if (!numebld)
+			if (numebld == (-1)) {
+				free(pathpkg);
+				continue;
+			}
+			if (!numebld && verbose)
 				warn("%s is empty!",pathpkg);
 
 			free(pathpkg);
 
 			for (k = 0; k < numebld; k++) {
+				if (fnd) {
+					free(ebuilds[k]);
+					continue;
+				}
 				pathebld = (char *) xmalloc(strlen(pathcache) + strlen(categories[i]->d_name) + 1 + strlen(ebuilds[k]->d_name) + 1);
 
 				strcpy(pathebld,pathcache);
@@ -227,32 +241,31 @@ int qimlate_main(int argc, char **argv)
 
 				pathebld[strlen(pathebld)-7] = '\0';
 
-				if (!fnd) {
-					if (read_keywords(pathebld,keywords) < 0) {
+				if (read_keywords(pathebld,keywords) < 0) {
+					if (verbose)
 						warn("Failed to read keywords for %s%s/%s%s%s",BOLD,current_category,BLUE,pathebld+strlen(pathcache)+strlen(categories[i]->d_name)+1,NORM);
-					} else {
-						switch (keywords[test_arch]) {
-							case stable: fnd = 1; break;
-							case none: break;
-							default:
-								for (l = 0; l < NUM_ARCHES && !fnd; l++) {
-									if (keywords[l] == stable) {
-										fnd = 1;
-										printf("%s%s/%s%s%s ",BOLD,current_category,BLUE,pathebld+strlen(pathcache)+strlen(categories[i]->d_name)+1,NORM);
-										for (m = 0; m < NUM_ARCHES; m++)
-											switch (keywords[m]) {
-												case stable: printf("%s%c%s%s ",GREEN,status[keywords[m]],arches[m],NORM); break;
-												case testing: printf("%s%c%s%s ",YELLOW,status[keywords[m]],arches[m],NORM); break;
-												default: break;
-											}
-										printf("\n");
-									}
+					goto freeit;
+				} 
+				switch (keywords[test_arch]) {
+					case stable: fnd = 1; break;
+					case none: break;
+					default:
+						for (l = 0; l < NUM_ARCHES && !fnd; l++) {
+							if (keywords[l] != stable)
+								continue;
+							fnd = 1;
+							printf("%s%s/%s%s%s ",BOLD,current_category,BLUE,pathebld+strlen(pathcache)+strlen(categories[i]->d_name)+1,NORM);
+							for (m = 0; m < NUM_ARCHES; m++) {
+								switch (keywords[m]) {
+									case stable: printf("%s%c%s%s ",GREEN,status[keywords[m]],archlist[m].name,NORM); break;
+									case testing: printf("%s%c%s%s ",YELLOW,status[keywords[m]],archlist[m].name,NORM); break;
+									default: break;
 								}
+							}
+							printf("\n");
 						}
-
-					}
 				}
-
+			freeit:
 				free(pathebld);
 				free(ebuilds[k]);
 			}
