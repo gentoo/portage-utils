@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.1 2006/05/19 19:34:56 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.2 2006/05/21 22:44:54 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -16,17 +16,18 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define QCACHE_FLAGS "m:i:d:t:a:p" COMMON_FLAGS
+#define QCACHE_FLAGS "m:idta" COMMON_FLAGS
 static struct option const qcache_long_opts[] = {
-	{"match", a_argument, NULL, 'm'},
-	{"imlate", a_argument, NULL, 'i'},
-	{"dropped", a_argument, NULL, 'd'},
-	{"testing-only", a_argument, NULL, 't'},
-	{"all", a_argument, NULL, 'a'},
+	{"match",    a_argument, NULL, 'm'},
+	{"imlate",  no_argument, NULL, 'i'},
+	{"dropped", no_argument, NULL, 'd'},
+	{"testing", no_argument, NULL, 't'},
+	{"all",     no_argument, NULL, 'a'},
 	COMMON_LONG_OPTS
 };
+
 static const char *qcache_opts_help[] = {
-	"Match pkgname",
+	"match pkgname",
 	"list packages that can be marked stable",
 	"list packages that have dropped keywords on a version bump",
 	"list packages that have ~arch versions, but no stable versions",
@@ -34,7 +35,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.1 2006/05/19 19:34:56 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.2 2006/05/21 22:44:54 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 enum { none = 0, testing, stable };
@@ -301,19 +302,18 @@ void qcache_imlate(char *path, char *category, char *ebuild, int current, int nu
 
 	if (read_keywords(path,keywords) < 0) {
 		warn("Failed to read keywords for %s%s/%s%s%s",BOLD,category,BLUE,ebuild,NORM);
-	} else {
-		switch (keywords[test_arch]) {
-			case stable: qcache_skip = 1; break;
-			case none: break;
-			default:
-				for (i = 0; i < NUM_ARCHES && !(qcache_skip); i++) {
-					if (keywords[i] == stable) {
-						qcache_skip = 1;
-						print_keywords(category,ebuild,keywords);
-					}
-				}
-		}
-
+		return;
+	}
+	switch (keywords[test_arch]) {
+		case stable: qcache_skip = 1; break;
+		case none: break;
+		default:
+			for (i = 0; i < NUM_ARCHES && !(qcache_skip); i++) {
+				if (keywords[i] != stable)
+					continue;
+				qcache_skip = 1;
+				print_keywords(category,ebuild,keywords);
+			}
 	}
 }
 
@@ -326,29 +326,27 @@ void qcache_dropped(char *path, char *category, char *ebuild, int current, int n
 
 	if (read_keywords(path,keywords) < 0) {
 		warn("Failed to read keywords for %s%s/%s%s%s",BOLD,category,BLUE,ebuild,NORM);
-	} else {
-		if (keywords[test_arch] != none) {
+		return;
+	}
+	if (keywords[test_arch] != none) {
+		qcache_skip = 1;
+
+		if (possible) {
+			char *temp = ebuild;
 			qcache_skip = 1;
 
-			if (possible) {
-				char *temp = ebuild;
-				qcache_skip = 1;
+			do {
+				temp = strchr((temp),'-') + 1;
+			} while (!isdigit(*temp));
+			*(temp-1) = '\0';
 
-				do {
-					temp = strchr((temp),'-') + 1;
-				} while (!isdigit(*temp));
-				*(temp-1) = '\0';
-
-				printf("%s%s/%s%s%s\n",BOLD,category,BLUE,ebuild,NORM);
-			}
-
-			return;
-		} else {
-			for (i = 0; i < NUM_ARCHES; i++) {
-				if (keywords[i] != none) {
-					possible = 1;
-				}
-			}
+			printf("%s%s/%s%s%s\n",BOLD,category,BLUE,ebuild,NORM);
+		}
+		return;
+	}
+	for (i = 0; i < NUM_ARCHES; i++) {
+		if (keywords[i] != none) {
+			possible = 1;
 		}
 	}
 }
@@ -362,23 +360,24 @@ void qcache_testing_only(char *path, char *category, char *ebuild, int current, 
 
 	if (read_keywords(path,keywords) < 0) {
 		warn("Failed to read keywords for %s%s/%s%s%s",BOLD,category,BLUE,ebuild,NORM);
-	} else {
-		if (keywords[test_arch] == stable) {
-			qcache_skip = 1;
-			return;
-		} else if (keywords[test_arch] == testing) possible = 1;
+		return;
+	}
+	if (keywords[test_arch] == stable) {
+		qcache_skip = 1;
+		return;
+	}
+	if (keywords[test_arch] == testing) possible = 1;
 
-		if (current == num && possible) {
-			char *temp = ebuild;
-			qcache_skip = 1;
+	if (current == num && possible) {
+		char *temp = ebuild;
+		qcache_skip = 1;
 
-			do {
-				temp = strchr((temp),'-') + 1;
-			} while (!isdigit(*temp));
-			*(temp-1) = '\0';
+		do {
+			temp = strchr((temp),'-') + 1;
+		} while (!isdigit(*temp));
+		*(temp-1) = '\0';
 
-			printf("%s%s/%s%s%s\n",BOLD,category,BLUE,ebuild,NORM);
-		}
+		printf("%s%s/%s%s%s\n",BOLD,category,BLUE,ebuild,NORM);
 	}
 }
 
@@ -388,7 +387,9 @@ void qcache_all(char *path, char *category, char *ebuild, int current, int num) 
 
 	if (read_keywords(path,keywords) < 0) {
 		warn("Failed to read keywords for %s%s/%s%s%s",BOLD,category,BLUE,ebuild,NORM);
-	} else if (keywords[test_arch] != none) {
+		return;
+	}
+	if (keywords[test_arch] != none) {
 		char *temp = ebuild;
 		qcache_skip = 1;
 
@@ -414,11 +415,16 @@ int qcache_main(int argc, char **argv) {
 		case 'd':
 		case 't':
 		case 'a':
-			if (action) qcache_usage(EXIT_FAILURE); /* trying to use more than 1 action */
-			action = i; test_arch = decode_arch(optarg); break;
+			if (action)
+				qcache_usage(EXIT_FAILURE); /* trying to use more than 1 action */
+			action = i;
+			break;
 		COMMON_GETOPTS_CASES(qcache)
 		}
 	}
+
+	if (optind < argc)
+		test_arch = decode_arch(argv[optind]);
 
 	if (!test_arch)
 		qcache_usage(EXIT_FAILURE);
