@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.3 2006/05/21 22:55:23 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.4 2006/05/22 05:25:11 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -16,9 +16,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define QCACHE_FLAGS "m:idta" COMMON_FLAGS
+#define QCACHE_FLAGS "m:c:idta" COMMON_FLAGS
 static struct option const qcache_long_opts[] = {
 	{"match",    a_argument, NULL, 'm'},
+	{"matchcat", a_argument, NULL, 'c'},
 	{"imlate",  no_argument, NULL, 'i'},
 	{"dropped", no_argument, NULL, 'd'},
 	{"testing", no_argument, NULL, 't'},
@@ -28,6 +29,7 @@ static struct option const qcache_long_opts[] = {
 
 static const char *qcache_opts_help[] = {
 	"match pkgname",
+	"match catname",
 	"list packages that can be marked stable",
 	"list packages that have dropped keywords on a version bump",
 	"list packages that have ~arch versions, but no stable versions",
@@ -35,14 +37,15 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.3 2006/05/21 22:55:23 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.4 2006/05/22 05:25:11 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 enum { none = 0, testing, stable };
 char status[3] = {'-','~','+'};
 char *current_package;
 char *current_category;
-char *qcache_match = NULL;
+char *qcache_match    = NULL;
+char *qcache_matchcat = NULL;
 int qcache_skip, test_arch;
 
 struct arch_list_t {
@@ -220,10 +223,20 @@ int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip) 
 
 		current_category = categories[i]->d_name;
 
+		if (qcache_matchcat) {
+			if (strcmp(current_category, qcache_matchcat) != 0) {
+				free(pathcat);
+				free(categories[i]);
+				continue;
+			}
+		}
+
+
 		numpkg = scandir(pathcat, &packages, file_select, alphasort);
 		if (numpkg == (-1)) {
 			warn("%s %s", pathcat, strerror(errno));
 			free(pathcat);
+			free(categories[i]);
 			continue;
 		}
 
@@ -243,12 +256,14 @@ int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip) 
 			if (qcache_match) {
 				if (strcmp(current_package, qcache_match) != 0) {
 					free(pathpkg);
+					free(packages[j]);
 					continue;
 				}
 			}
 			numebld = scandir(pathpkg, &ebuilds, ebuild_select, vercmp);
 			if (numebld == (-1)) {
 				free(pathpkg);
+				free(packages[j]);
 				continue;
 			}
 			if (!numebld && verbose)
@@ -410,7 +425,8 @@ int qcache_main(int argc, char **argv) {
 
 	while ((i = GETOPT_LONG(QCACHE, qcache, "")) != -1) {
 		switch (i) {
-		case 'm': qcache_match = optarg; break;
+		case 'm': qcache_match    = optarg; break;
+		case 'c': qcache_matchcat = optarg; break;
 		case 'i':
 		case 'd':
 		case 't':
