@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.119 2006/05/14 21:37:31 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.120 2006/05/24 03:23:56 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -958,10 +958,12 @@ queue *get_vdb_atoms(void) {
 		}
 		chdir("..");
 		while(dfd--) free(pf[dfd]);
+		free(pf);
 	}
 
 	/* cleanup */
-	if (cfd) while(cfd--) free(cat[cfd]);
+	while(cfd--) free(cat[cfd]);
+	free(cat);
 
 fuckit:
 	assert(chdir(savecwd) == 0);
