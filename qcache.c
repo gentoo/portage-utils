@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.5 2006/05/24 15:34:58 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.6 2006/05/24 15:56:51 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -38,7 +38,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.5 2006/05/24 15:34:58 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.6 2006/05/24 15:56:51 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 enum { none = 0, testing, stable };
@@ -102,6 +102,9 @@ int read_keywords(char *file, int *keywords) {
 
 	memset(keywords, none, NUM_ARCHES*sizeof(int));
 
+	if (pkg == NULL || pkg->KEYWORDS == NULL)
+		return -1;
+
 	arch = strtok(pkg->KEYWORDS, delim);
 	keywords[decode_arch(arch)] = decode_status(arch[0]);
 
@@ -141,34 +144,7 @@ int ebuild_select(const struct dirent *entry) {
 
 int vercmp(const void *x, const void *y);
 int vercmp(const void *x, const void *y) {
-	depend_atom *a1, *a2;
-	int cclen = strlen(current_category), rc;
-
-	char *s1 = (char *) xmalloc(strlen((*((const struct dirent **)x))->d_name) + cclen + 2);
-	char *s2 = (char *) xmalloc(strlen((*((const struct dirent **)y))->d_name) + cclen + 2);
-
-	strcpy(s1,current_category);
-	strcpy(s2,current_category);
-
-	strcat(s1+cclen,"/");
-	strcat(s2+cclen,"/");
-
-	strcat(s1+cclen+1, (*((const struct dirent **)x))->d_name);
-	strcat(s2+cclen+1, (*((const struct dirent **)y))->d_name);
-
-	/* remove '.ebuild' */
-	s1[strlen(s1)-7] = '\0';
-	s2[strlen(s2)-7] = '\0';
-
-	a1 = atom_explode(s1);
-	a2 = atom_explode(s2);
-
-	rc = atom_compare(a1, a2);
-
-	free(s1); free(s2);
-	free(a1); free(a2);
-
-	switch (rc) {
+	switch (atom_compare_str((*((const struct dirent **)x))->d_name, (*((const struct dirent **)y))->d_name)) {
 		case NEWER: return -1;
 		case OLDER: return  1;
 		default:    return  0;
@@ -454,4 +430,3 @@ int qcache_main(int argc, char **argv) {
 #else
 DEFINE_APPLET_STUB(qcache)
 #endif
-
