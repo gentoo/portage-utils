@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.26 2006/04/15 20:59:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.27 2006/05/24 03:30:42 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *qcheck_opts_help[] = {
 	"Update chksum and mtimes for packages",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.26 2006/04/15 20:59:13 solar Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.27 2006/05/24 03:30:42 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 
@@ -149,7 +149,7 @@ int qcheck_main(int argc, char **argv)
 						if (qc_update) {
 							fprintf(fpx, "obj %s %s %lu\n", e->name, hashed_file, st.st_mtime);
 							if (!verbose)
-								continue;
+								goto free_and_more_hash;
 						}
 						switch (hash_algo) {
 							case HASH_MD5:  digest_disp = "MD5"; break;
@@ -160,10 +160,13 @@ int qcheck_main(int argc, char **argv)
 						if (verbose)
 							printf(" (recorded '%s' != actual '%s')", e->digest, hashed_file);
 						printf("\n");
+free_and_more_hash:
+						free(hashed_file);
 						continue;
 					} else {
 						if (qc_update)
 							fputs(buffer, fpx);
+						free(hashed_file);
 					}
 				} else {
 					if (qc_update)
