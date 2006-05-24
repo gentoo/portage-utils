@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.29 2006/01/26 02:32:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.30 2006/05/24 03:25:30 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -28,7 +28,7 @@ static const char *qsearch_opts_help[] = {
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.29 2006/01/26 02:32:04 vapier Exp $";
+static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.30 2006/05/24 03:25:30 vapier Exp $";
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
 
 
@@ -117,7 +117,7 @@ int qsearch_main(int argc, char **argv)
 				strncpy(last, p, sizeof(last));
 				if (search_name)
 					if ((rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE)) != 0)
-						continue;
+						goto no_cache_ebuild_match;
 				if ((ebuildfp = fopen(ebuild, "r")) != NULL) {
 					while ((fgets(buf, sizeof(buf), ebuildfp)) != NULL) {
 						if (strlen(buf) <= search_len)
@@ -147,6 +147,7 @@ int qsearch_main(int argc, char **argv)
 					reinitialize = 1;
 				}
 			}
+no_cache_ebuild_match:
 			free(str);
 
 			break;
