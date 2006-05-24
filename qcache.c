@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.4 2006/05/22 05:25:11 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.5 2006/05/24 15:34:58 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/dir.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -37,7 +38,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.4 2006/05/22 05:25:11 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.5 2006/05/24 15:34:58 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 enum { none = 0, testing, stable };
@@ -94,27 +95,21 @@ int decode_arch(const char *arch) {
 	return 0;
 }
 
-int read_keywords(char *pkg, int *keywords);
-int read_keywords(char *pkg, int *keywords) {
-	int fd, i;
-	char c, arch[NUM_ARCHES], count = 0;
+int read_keywords(char *file, int *keywords);
+int read_keywords(char *file, int *keywords) {
+	char *arch, delim[2] = { ' ', '\0' };
+	portage_cache *pkg = cache_read_file(file);
 
-	memset(keywords,none,NUM_ARCHES*sizeof(int));
+	memset(keywords, none, NUM_ARCHES*sizeof(int));
 
-	if ((fd = open(pkg, O_RDONLY)) < 0) return fd;
+	arch = strtok(pkg->KEYWORDS, delim);
+	keywords[decode_arch(arch)] = decode_status(arch[0]);
 
-	while (read(fd,&c,1)) {
-		if (c == '\n' && ++count == 8) {
-			do { /* read KEYWORDS line */
-				for (i = 0; read(fd,&c,1) && c != ' ' && c != '\n' && i < NUM_ARCHES; i++) arch[i] = c;
-				arch[i] = '\0';
-				keywords[decode_arch(arch)] = decode_status(arch[0]);
-			} while (c != '\n');
-			break;
-		}
-	}
+	while ((arch = strtok(NULL, delim)))
+		keywords[decode_arch(arch)] = decode_status(arch[0]);
 
-	return close(fd);
+	cache_free(pkg);
+	return 0;
 }
 
 void print_keywords(char *category, char *ebuild, int *keywords);
