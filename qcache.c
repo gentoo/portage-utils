@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.6 2006/05/24 15:56:51 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.7 2006/05/25 14:24:49 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -17,9 +17,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define QCACHE_FLAGS "m:c:idta" COMMON_FLAGS
+#define QCACHE_FLAGS "p:c:idta" COMMON_FLAGS
 static struct option const qcache_long_opts[] = {
-	{"match",    a_argument, NULL, 'm'},
+	{"matchpkg", a_argument, NULL, 'p'},
 	{"matchcat", a_argument, NULL, 'c'},
 	{"imlate",  no_argument, NULL, 'i'},
 	{"dropped", no_argument, NULL, 'd'},
@@ -38,15 +38,13 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.6 2006/05/24 15:56:51 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.7 2006/05/25 14:24:49 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 enum { none = 0, testing, stable };
 char status[3] = {'-','~','+'};
-char *current_package;
-char *current_category;
-char *qcache_match    = NULL;
-char *qcache_matchcat = NULL;
+char *current_package,  *current_category;
+char *qcache_matchpkg = NULL, *qcache_matchcat = NULL;
 int qcache_skip, test_arch;
 
 struct arch_list_t {
@@ -89,7 +87,7 @@ int decode_arch(const char *arch) {
 	if (*p == '~' || *p == '-')
 		p++;
 
-	for (i = 0 ; i < NUM_ARCHES; i++)
+	for (i = 1; i < NUM_ARCHES; i++)
 		if (strcmp(archlist[i].name, p) == 0) 
 			return i;
 	return 0;
@@ -224,8 +222,8 @@ int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip) 
 
 			current_package = packages[j]->d_name;
 
-			if (qcache_match) {
-				if (strcmp(current_package, qcache_match) != 0) {
+			if (qcache_matchpkg) {
+				if (strcmp(current_package, qcache_matchpkg) != 0) {
 					free(pathpkg);
 					free(packages[j]);
 					continue;
@@ -396,7 +394,7 @@ int qcache_main(int argc, char **argv) {
 
 	while ((i = GETOPT_LONG(QCACHE, qcache, "")) != -1) {
 		switch (i) {
-		case 'm': qcache_match    = optarg; break;
+		case 'p': qcache_matchpkg = optarg; break;
 		case 'c': qcache_matchcat = optarg; break;
 		case 'i':
 		case 'd':
