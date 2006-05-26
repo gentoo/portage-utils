@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.46 2006/02/23 04:05:21 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.47 2006/05/26 01:46:16 solar Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -36,6 +36,11 @@ PF        := portage-utils-$(PV)
 endif
 DOCS      := TODO README qsync
 
+ifdef PYTHON
+PYFLAGS   ?= $(shell python-config) -DWANT_PYTHON
+LDFLAGS   += -ldl -pthread -lutil /usr/lib/libpython2.4.so
+endif
+
 #####################################################
 APPLETS   := $(shell sed -n '/^DECLARE_APPLET/s:.*(\(.*\))$$:\1:p' applets.h|sort)
 SRC       := $(APPLETS:%=%.c) main.c
@@ -51,9 +56,9 @@ debug:
 
 q: $(SRC) libq/*.c *.h libq/*.h
 ifeq ($(subst s,,$(MAKEFLAGS)),$(MAKEFLAGS))
-	@echo $(CC) $(CFLAGS) $(LDFLAGS) main.c -o q
+	@echo $(CC) $(CFLAGS) $(PYFLAGS) $(LDFLAGS) main.c -o q
 endif
-	@$(CC) $(WFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q
+	@$(CC) $(WFLAGS) $(PYFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q
 
 .depend: $(SRC)
 	sed -n '/^DECLARE_APPLET/s:.*(\(.*\)).*:#include "\1.c":p' applets.h > include_applets.h

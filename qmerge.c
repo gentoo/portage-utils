@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.47 2006/05/15 00:49:02 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.48 2006/05/26 01:46:16 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -51,7 +51,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.47 2006/05/15 00:49:02 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.48 2006/05/26 01:46:16 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -830,7 +830,7 @@ int pkg_unmerge(char *cat, char *pkgname) {
 	int argc;
 	char **argv;
 
-	if ((strstr(pkgname, " ") != NULL) || (strstr(cat, " ") != NULL)) {
+	if ((strchr(pkgname, ' ') != NULL) || (strchr(cat, ' ') != NULL)) {
 #if 0
 		queue *vdb = NULL;
 		free_sets(vdb);
@@ -867,7 +867,7 @@ int pkg_unmerge(char *cat, char *pkgname) {
 
 		protected = config_protected(e->name, argc, argv);
 		snprintf(zing, sizeof(zing), "%s%s%s", protected ? YELLOW : GREEN, protected ? "***" : "<<<" , NORM);
-
+		/* Should we remove in order symlinks,objects,dirs ? */ 
 		switch (e->type) {
 			case CONTENTS_DIR:
 				if (!protected)	{ rmdir(e->name); }
@@ -929,8 +929,6 @@ int unlink_empty(char *buf) {
 	return (-1);
 }
 
-
-
 int match_pkg(const char *name, struct pkg_t *pkg) {
 	depend_atom *atom;
 	char buf[255], buf2[255];
@@ -959,7 +957,6 @@ int match_pkg(const char *name, struct pkg_t *pkg) {
 
 	return match;
 }
-
 
 int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom) {
 	char *hash;

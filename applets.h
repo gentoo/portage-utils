@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.20 2006/05/19 19:34:56 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.21 2006/05/26 01:46:16 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -31,6 +31,7 @@ DECLARE_APPLET(qgrep)
 DECLARE_APPLET(qatom)
 DECLARE_APPLET(qmerge)
 DECLARE_APPLET(qcache)
+DECLARE_APPLET(qpy)
 DECLARE_APPLET(qglsa) /* disable */
 #undef DECLARE_APPLET
 
@@ -58,6 +59,7 @@ struct applet_t {
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
 	{"qmerge",    qmerge_main,    "<pkgnames>",      "fetch and merge binary package"},
 	{"qpkg",      qpkg_main,      "<misc args>",     "manipulate Gentoo binpkgs"},
+	{"qpy",      qpy_main,      "<misc args>",     "python interface"},
 	{"qsearch",   qsearch_main,   "<regex>",         "search pkgname/desc"},
 	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
 	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},

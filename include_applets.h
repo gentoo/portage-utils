@@ -14,4 +14,5 @@
 #include "qatom.c"
 #include "qmerge.c"
 #include "qcache.c"
+#include "qpy.c"
 #include "qglsa.c"
