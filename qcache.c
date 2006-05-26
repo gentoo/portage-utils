@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.7 2006/05/25 14:24:49 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.8 2006/05/26 17:34:10 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -38,7 +38,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.7 2006/05/25 14:24:49 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.8 2006/05/26 17:34:10 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 enum { none = 0, testing, stable };
@@ -168,13 +168,13 @@ int vercmp(const void *x, const void *y) {
  */
 int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip);
 int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip) {
-	int i, j, k, numcat, numpkg, numebld;
+	int i, j, k, numcat, numpkg, numebld, len;
 	char *pathcat, *pathpkg, *pathebld, *pathcache, *ebuild, *category;
 	struct direct **categories, **packages, **ebuilds;
 
-	pathcache = (char *) xmalloc(strlen(portdir) + strlen("/metadata/cache/") + 1);
-	strcpy(pathcache,portdir);
-	strcat(pathcache+strlen(portdir),"/metadata/cache/");
+	len = strlen(portdir) + strlen(portcachedir) + 3;
+	pathcache = (char *) xmalloc(len);
+	snprintf(pathcache,len,"%s/%s/",portdir,portcachedir);
 
 	numcat = scandir(pathcache, &categories, file_select, alphasort);
 	if (numcat == (-1))
@@ -184,11 +184,9 @@ int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip) 
 		warn("%s is empty!", pathcache);
 
 	for (i = 0; i < numcat; i++) {
-
-		pathcat = (char *) xmalloc(strlen(portdir) + 1 /* '/' */ + strlen(categories[i]->d_name) + 1 /* '\0' */);
-		strcpy(pathcat,portdir);
-		strcat(pathcat+strlen(portdir), "/");
-		strcat(pathcat+strlen(portdir) + 1, categories[i]->d_name);
+		len = strlen(portdir) + strlen(categories[i]->d_name) + 2;
+		pathcat = (char *) xmalloc(len);
+		snprintf(pathcat,len,"%s/%s",portdir,categories[i]->d_name);
 
 		current_category = categories[i]->d_name;
 
@@ -213,13 +211,11 @@ int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip) 
 			warn("%s is empty!",pathcat);
 
 		for (j = 0; j < numpkg; j++) {
-			pathpkg = (char *) xmalloc(strlen(portdir) + 1 /* '/' */ + strlen(categories[i]->d_name) + 1 /* '/' */ + strlen(packages[j]->d_name) + 1 /* '\0' */);
+			len = strlen(pathcat) + strlen(packages[j]->d_name) + 2;
+			pathpkg = (char *) xmalloc(len);
 			*skip = 0;
 
-			strcpy(pathpkg,pathcat);
-			strcat(pathpkg+strlen(pathcat),"/");
-			strcat(pathpkg+strlen(pathcat)+strlen("/"),packages[j]->d_name);
-
+			snprintf(pathpkg,len,"%s/%s",pathcat,packages[j]->d_name);
 			current_package = packages[j]->d_name;
 
 			if (qcache_matchpkg) {
@@ -245,15 +241,14 @@ int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip) 
 					free(ebuilds[k]);
 					continue;
 				}
-				pathebld = (char *) xmalloc(strlen(pathcache) + strlen(categories[i]->d_name) + 1 + strlen(ebuilds[k]->d_name) + 1);
+				len = strlen(pathcache) + strlen(categories[i]->d_name) + strlen(ebuilds[k]->d_name) + 2;
+
+				pathebld = (char *) xmalloc(len);
 				category = (char *) xmalloc(strlen(categories[i]->d_name) + 1);
 				ebuild   = (char *) xmalloc(strlen(ebuilds[k]->d_name) + 1);
 				memset(ebuild,0,strlen(ebuilds[k]->d_name+1));
 
-				strcpy(pathebld,pathcache);
-				strcat(pathebld+strlen(pathcache),categories[i]->d_name);
-				strcat(pathebld+strlen(pathcache)+strlen(categories[i]->d_name),"/");
-				strcat(pathebld+strlen(pathcache)+strlen(categories[i]->d_name)+1,ebuilds[k]->d_name);
+				snprintf(pathebld,len,"%s%s/%s",pathcache,categories[i]->d_name,ebuilds[k]->d_name);
 				pathebld[strlen(pathebld)-7] = '\0';
 
 				strncpy(ebuild,ebuilds[k]->d_name,strlen(ebuilds[k]->d_name)-7);
