@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.16 2006/05/09 19:30:27 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.17 2006/06/04 22:10:27 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.16 2006/05/09 19:30:27 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.17 2006/06/04 22:10:27 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 
@@ -130,6 +130,7 @@ int qpkg_main(int argc, char **argv)
 	char buf[BUFSIZE];
 	const char *bindir;
 	depend_atom *atom;
+	int restrict_chmod = 0;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -137,7 +138,12 @@ int qpkg_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QPKG, qpkg, "")) != -1) {
 		switch (i) {
 		case 'p': pretend = 1; break;
-		case 'P': qpkg_bindir = xstrdup(optarg); break;
+		case 'P':
+			restrict_chmod = 1;
+			qpkg_bindir = xstrdup(optarg);
+			if ((access(qpkg_bindir, W_OK) != 0))
+				err("%s: %s", qpkg_bindir, strerror(errno));
+			break;
 		COMMON_GETOPTS_CASES(qpkg)
 		}
 	}
@@ -158,8 +164,9 @@ retry_mkdir:
 			if (!i++) goto retry_mkdir;
 			errp("could not create temp bindir '%s'", bindir);
 		}
-		if (chmod(bindir, 0750))
-			errp("could not chmod(0750) temp bindir '%s'", bindir);
+		if (!restrict_chmod)
+			if (chmod(bindir, 0750))
+				errp("could not chmod(0750) temp bindir '%s'", bindir);
 	}
 
 	/* first process any arguments which point to /var/db/pkg */
@@ -205,16 +212,16 @@ retry_mkdir:
 			/* see if user wants any of these packages */
 			snprintf(buf, sizeof(buf), "%s/%s", dentry_cat->d_name, dentry_pkg->d_name);
 			atom = atom_explode(buf);
+			snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
 			if (!atom) {
 				warn("could not explode '%s'", buf);
 				continue;
 			}
 
-			s = strlen(atom->CATEGORY);
 			for (i = optind; i < argc; ++i) {
 				if (!argv[i]) continue;
 
-				if (!strcmp(argv[i], atom->PN) || !strcmp(argv[i], atom->P) || !strcmp(argv[i], "world"))
+				if (!strcmp(argv[i], atom->PN) || !strcmp(argv[i], atom->P) || !strcmp(argv[i], buf) || !strcmp(argv[i], "world"))
 					if (!qpkg_make(atom)) ++pkgs_made;
 			}
 			atom_implode(atom);
