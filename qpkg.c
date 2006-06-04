@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.18 2006/06/04 22:54:28 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.19 2006/06/04 23:09:24 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.18 2006/06/04 22:54:28 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.19 2006/06/04 23:09:24 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 
@@ -156,6 +156,8 @@ int qpkg_main(int argc, char **argv)
 	/* setup temp dirs */
 	i = 0;
 	bindir = qpkg_get_bindir();
+	if (*bindir != '/')
+		err("%s is not within valid use", bindir);
 retry_mkdir:
 	if (mkdir(bindir, 0750) == -1) {
 		lstat(bindir, &st);
