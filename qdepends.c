@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.36 2006/01/26 02:32:04 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.37 2006/06/04 22:11:16 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.36 2006/01/26 02:32:04 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.37 2006/06/04 22:11:16 solar Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -448,8 +448,8 @@ int qdepends_vdb_deep(const char *depend_file, const char *query)
 	struct dirent *dentry, *de;
 	size_t len;
 	char *ptr;
-	char buf[_Q_PATH_MAX];
-	char depend[8192], use[8192];
+	char buf[_Q_PATH_MAX*2];
+	char depend[8192*2], use[8192*2];
 	dep_node *dep_tree;
 
 	if (chdir(portroot))
@@ -472,7 +472,7 @@ int qdepends_vdb_deep(const char *depend_file, const char *query)
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb,
 			         dentry->d_name, de->d_name, depend_file);
-			if (!eat_file(buf, depend, sizeof(buf))) {
+			if (!eat_file(buf, depend, sizeof(depend))) {
 				warn("i'm such a fatty, could not eat_file(%s)", buf);
 				continue;
 			}
