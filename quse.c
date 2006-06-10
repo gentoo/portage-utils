@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.51 2006/05/07 18:11:36 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.52 2006/06/10 14:01:21 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,7 +35,7 @@ static const char *quse_opts_help[] = {
 	"Only show package name",
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.51 2006/05/07 18:11:36 solar Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.52 2006/06/10 14:01:21 vapier Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -88,6 +88,8 @@ int quse_describe_flag(int ind, int argc, char **argv)
 	size_t s;
 	const char *search_files[] = { "use.desc", "use.local.desc", "arch.list", "lang.desc" };
 	FILE *fp[NUM_SEARCH_FILES];
+	DIR *d;
+	struct dirent *de;
 
 	for (i = 0; i < NUM_SEARCH_FILES; ++i) {
 		snprintf(buf, sizeof(buf), "%s/profiles/%s", portdir, search_files[i]);
@@ -154,6 +156,47 @@ skip_file:
 
 	for (f=0; f<NUM_SEARCH_FILES; ++f)
 		fclose(fp[f]);
+
+	/* now scan the desc dir */
+	snprintf(buf, sizeof(buf), "%s/profiles/desc/", portdir);
+	d = opendir(buf);
+	while ((de = readdir(d)) != NULL) {
+		if (strcmp(de->d_name+strlen(de->d_name)-5, ".desc"))
+			continue;
+
+		snprintf(buf, sizeof(buf), "%s/profiles/desc/%s", portdir, de->d_name);
+		if ((fp[0]=fopen(buf, "r")) == NULL) {
+			warn("Could not open '%s' for reading; skipping", de->d_name);
+			continue;
+		}
+
+		while (fgets(buf, sizeof(buf), fp[0]) != NULL) {
+			if (buf[0] == '#' || buf[0] == '\n')
+				continue;
+
+			if ((p = strrchr(buf, '\n')) != NULL)
+				*p = '\0';
+
+			if ((p = strchr(buf, '-')) == NULL) {
+invalid_line:
+				warn("Invalid line in '%s': %s", de->d_name, buf);
+				continue;
+			}
+			while (p[-1] != ' ' && p[1] != ' ') {
+				/* maybe the flag has a '-' in it ... */
+				if ((p = strchr(p+1, '-')) == NULL)
+					goto invalid_line;
+			}
+			p[-1] = '\0';
+			p += 2;
+
+			for (i = ind; i < argc; i++)
+				if (!strcmp(argv[i], buf))
+					printf(" %s%s%s:%s%s%s: %s\n", BOLD, de->d_name, NORM, BLUE, argv[i], NORM, p);
+		}
+		close(f);
+	}
+	closedir(d);
 
 	return 0;
 }
