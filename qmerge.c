@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.48 2006/05/26 01:46:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.49 2006/07/03 14:45:22 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -51,7 +51,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.48 2006/05/26 01:46:16 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.49 2006/07/03 14:45:22 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -61,6 +61,7 @@ char uninstall = 0;
 char force_download = 0;
 char follow_rdepends = 1;
 char nomd5 = 0;
+char qmerge_strict = 0;
 
 struct pkg_t {
 	char PF[64];
@@ -87,7 +88,7 @@ void print_Pkg(int, struct pkg_t *);
 int parse_packages(const char *, int, char **);
 int config_protected(const char *, int, char **);
 int match_pkg(const char *, struct pkg_t *); 
-int pkg_verify_checksums(char *, struct pkg_t *, depend_atom *);
+int pkg_verify_checksums(char *, struct pkg_t *, depend_atom *, int strict, int display);
 int unmerge_packages(int, char **);
 char *find_binpkg(const char *);
 
@@ -958,7 +959,7 @@ int match_pkg(const char *name, struct pkg_t *pkg) {
 	return match;
 }
 
-int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom) {
+int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom, int strict, int display) {
 	char *hash;
 	int ret = 0;
 
@@ -978,9 +979,11 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom) {
 	if (pkg->SHA1[0]) {
 		hash = (char*) hash_file(fname, HASH_SHA1);
 		if (strcmp(hash, pkg->SHA1) == 0) {
-			qprintf("SHA1: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
+			if (display)
+				qprintf("SHA1: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
 		} else {
-			warn("SHA1: [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->SHA1, atom->CATEGORY, pkg->PF);
+			if (display)
+				warn("SHA1: [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->SHA1, atom->CATEGORY, pkg->PF);
 			ret++;
 		}
 	}
@@ -988,7 +991,7 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom) {
 	if (!pkg->SHA1[0] && !pkg->MD5[0])
 		return 1;
 
-	if ((strstr("strict", features) == 0) && ret)
+	if (strict && ret)
 		errf("strict is set in features");
 
 	return ret;
@@ -1026,14 +1029,19 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg) {
 		/* check to see if file exists and it's checksum matches */
 		snprintf(buf, sizeof(buf), "%s/%s.tbz2", pkgdir, pkg->PF);
 		unlink_empty(buf);
-		if (force_download) unlink(buf);
+		if (force_download) {
+			if (access(buf, R_OK) == 0)
+				if ((pkg->SHA1[0]) || (pkg->MD5[0]))
+					if ((pkg_verify_checksums(buf, pkg, atom, 0, 0)) != 0)
+						unlink(buf);
+		}
 
 		if (access(buf, R_OK) == 0) {
 			if ((!pkg->SHA1[0]) && (!pkg->MD5[0])) {
 				warn("No checksum data for %s", buf);
 				continue;
 			} else {
-				if ((pkg_verify_checksums(buf, pkg, atom)) == 0) {
+				if ((pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1)) == 0) {
 					pkg_merge(0, atom, pkg);
 					continue;
 				}
@@ -1056,7 +1064,7 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg) {
 			continue;
 		}
 
-		if ((pkg_verify_checksums(buf, pkg, atom)) == 0) {
+		if ((pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1)) == 0) {
 			pkg_merge(0, atom, pkg);
 			continue;
 		}
@@ -1410,6 +1418,8 @@ int qmerge_main(int argc, char **argv) {
 			COMMON_GETOPTS_CASES(qmerge)
 		}
 	}
+
+	qmerge_strict = (strstr("strict", features) == 0) ? 1 : 0;
 
 	/* Short circut this. */
 	if ((install || uninstall) && !pretend) {
