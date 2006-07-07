@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.10 2006/07/07 04:03:11 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.11 2006/07/07 14:06:13 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -41,7 +41,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.10 2006/07/07 04:03:11 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.11 2006/07/07 14:06:13 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 enum { none = 0, testing, stable };
@@ -77,14 +77,24 @@ struct filetype_list_t {
 	const char *name;
 } filetypes[] = {
 	{ ".tar.bz2" },
+	{ ".texinfo" },
 	{ ".tar.gz" },
 	{ ".patch" },
+	{ ".html" },
+	{ ".bin" },
 	{ ".bz2" },
 	{ ".deb" },
+	{ ".jar" },
+	{ ".pdf" },
 	{ ".rpm" },
+	{ ".tar" },
 	{ ".tgz" },
+	{ ".txt" },
+	{ ".wsz" },
+	{ ".xpi" },
 	{ ".zip" },
 	{ ".rar" },
+	{ ".7z" },
 	{ ".gz" },
 	{ ".Z" },
 };
