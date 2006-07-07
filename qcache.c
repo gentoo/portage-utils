@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.8 2006/05/26 17:34:10 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.9 2006/07/07 03:09:41 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -16,14 +16,16 @@
 #include <sys/dir.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <time.h>
 
-#define QCACHE_FLAGS "p:c:idta" COMMON_FLAGS
+#define QCACHE_FLAGS "p:c:idtas" COMMON_FLAGS
 static struct option const qcache_long_opts[] = {
 	{"matchpkg", a_argument, NULL, 'p'},
 	{"matchcat", a_argument, NULL, 'c'},
 	{"imlate",  no_argument, NULL, 'i'},
 	{"dropped", no_argument, NULL, 'd'},
 	{"testing", no_argument, NULL, 't'},
+	{"stats",   no_argument, NULL, 's'},
 	{"all",     no_argument, NULL, 'a'},
 	COMMON_LONG_OPTS
 };
@@ -34,18 +36,19 @@ static const char *qcache_opts_help[] = {
 	"list packages that can be marked stable",
 	"list packages that have dropped keywords on a version bump",
 	"list packages that have ~arch versions, but no stable versions",
+	"display statistics about the portage tree",
 	"list all packages that have at least one version keyworded for an arch",
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.8 2006/05/26 17:34:10 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.9 2006/07/07 03:09:41 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 enum { none = 0, testing, stable };
 char status[3] = {'-','~','+'};
 char *current_package,  *current_category;
 char *qcache_matchpkg = NULL, *qcache_matchcat = NULL;
-int qcache_skip, test_arch;
+int qcache_skip, qcache_last = 0, qcache_numcat, test_arch;
 
 struct arch_list_t {
 	const char *name;
@@ -69,6 +72,21 @@ struct arch_list_t {
 };
 
 #define NUM_ARCHES ARRAY_SIZE(archlist)
+
+struct filetype_list_t {
+	const char *name;
+} filetypes[] = {
+	{ ".tar.bz2" },
+	{ ".tar.gz" },
+	{ ".patch" },
+	{ ".bz2" },
+	{ ".zip" },
+	{ ".rar" },
+	{ ".gz" },
+	{ ".Z" },
+};
+
+#define NUM_FILETYPES ARRAY_SIZE(filetypes)
 
 int decode_status(char c);
 int decode_status(char c) {
@@ -108,6 +126,37 @@ int read_keywords(char *file, int *keywords) {
 
 	while ((arch = strtok(NULL, delim)))
 		keywords[decode_arch(arch)] = decode_status(arch[0]);
+
+	cache_free(pkg);
+	return 0;
+}
+
+int count_srcuri_filetypes(char *file, unsigned int *cnt);
+int count_srcuri_filetypes(char *file, unsigned int *cnt) {
+	unsigned int i;
+	char *uri, delim[2] = { ' ', '\0' };
+	portage_cache *pkg = cache_read_file(file);
+
+	if (pkg == NULL || pkg->SRC_URI == NULL)
+		return -1;
+
+	if ((uri = strtok(pkg->SRC_URI, delim))) {
+		for (i = 0; i < NUM_FILETYPES; i++) {
+			if (!strncmp(strlen(uri)-strlen(filetypes[i].name)+uri,filetypes[i].name,strlen(filetypes[i].name))) {
+				cnt[i]++;
+				break;
+			}
+		}
+	}
+
+	while ((uri = strtok(NULL, delim))) {
+		for (i = 0; i < NUM_FILETYPES; i++) {
+			if (!strncmp(strlen(uri)-strlen(filetypes[i].name)+uri,filetypes[i].name,strlen(filetypes[i].name))) {
+				cnt[i]++;
+				break;
+			}
+		}
+	}
 
 	cache_free(pkg);
 	return 0;
@@ -176,7 +225,7 @@ int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip) 
 	pathcache = (char *) xmalloc(len);
 	snprintf(pathcache,len,"%s/%s/",portdir,portcachedir);
 
-	numcat = scandir(pathcache, &categories, file_select, alphasort);
+	qcache_numcat = numcat = scandir(pathcache, &categories, file_select, alphasort);
 	if (numcat == (-1))
 		err("%s %s", pathcache, strerror(errno));
 
@@ -197,7 +246,6 @@ int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip) 
 				continue;
 			}
 		}
-
 
 		numpkg = scandir(pathcat, &packages, file_select, alphasort);
 		if (numpkg == (-1)) {
@@ -237,6 +285,7 @@ int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip) 
 			free(pathpkg);
 
 			for (k = 0; k < numebld; k++) {
+
 				if ((*skip)) {
 					free(ebuilds[k]);
 					continue;
@@ -253,6 +302,9 @@ int traverse_metadata_cache(void (*func)(char*,char*,char*,int,int), int *skip) 
 
 				strncpy(ebuild,ebuilds[k]->d_name,strlen(ebuilds[k]->d_name)-7);
 				strcpy(category,categories[i]->d_name);
+
+				if ((k+1) == numebld && (j+1) == numpkg && (i+1) == numcat) 
+					qcache_last = 1;
 
 				if (!(*skip))
 					func(pathebld,category,ebuild,k+1,numebld);
@@ -360,6 +412,111 @@ void qcache_testing_only(char *path, char *category, char *ebuild, int current, 
 	}
 }
 
+void qcache_stats(char *path, char *category, char *ebuild, int current, int num);
+void qcache_stats(char *path, char *category, char *ebuild, int current, int num) {
+	static unsigned int filetype_count[NUM_FILETYPES];
+	static unsigned int numpkg = 0, numebld = 0;
+	static unsigned int packages_stable[NUM_ARCHES];
+	static unsigned int packages_testing[NUM_ARCHES];
+	static time_t runtime;
+	int keywords[NUM_ARCHES], i, current_package_keywords[NUM_ARCHES];
+
+	if (!numpkg) {
+		memset(packages_stable,0,NUM_ARCHES);
+		memset(packages_testing,0,NUM_ARCHES);
+		memset(filetype_count,0,NUM_FILETYPES*sizeof(unsigned int));
+		runtime = time(NULL);
+	}
+
+	if (current == 1) {
+		numpkg++;
+		memset(current_package_keywords,none,NUM_ARCHES);
+	}
+
+	numebld++;
+
+	if (read_keywords(path,keywords) < 0) {
+		warn("Failed to read keywords for %s%s/%s%s%s",BOLD,category,BLUE,ebuild,NORM);
+		return;
+	}
+
+	for (i = 0; i < NUM_ARCHES; i++) {
+		switch (keywords[i]) {
+			case stable:
+				current_package_keywords[i] = stable;
+				break;
+			case testing:
+				if (current_package_keywords[i] != stable)
+					current_package_keywords[i] = testing;
+			default:
+				break;
+		}
+	}
+
+	if (current == num) {
+		for (i = 0; i < NUM_ARCHES; i++) {
+			switch(current_package_keywords[i]) {
+				case stable:
+					packages_stable[i]++;
+					break;
+				case testing:
+					packages_testing[i]++;
+				default:
+					break;
+			}
+		}
+	}
+
+	count_srcuri_filetypes(path,filetype_count);
+
+	if (qcache_last) {
+		unsigned int distfiles_total = 0;
+
+		for (i = 0; i < NUM_FILETYPES; i++) {
+			distfiles_total += filetype_count[i];
+		}
+
+		printf("+-------------------------+\n");
+		printf("|   general statistics    |\n");
+		printf("+---------------+---------+\n");
+		printf("| %s%13s%s | %s%7d%s |\n",RED,"architectures",NORM,BLUE,(int)NUM_ARCHES,NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",RED,"categories",NORM,BLUE,qcache_numcat,NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",RED,"packages",NORM,BLUE,numpkg,NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",RED,"ebuilds",NORM,BLUE,numebld,NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",RED,"distfiles",NORM,BLUE,distfiles_total,NORM);
+		printf("+---------------+---------+\n\n");
+
+		printf("+----------------------------------------------------------+\n");
+		printf("|                   keyword distribution                   |\n");
+		printf("+--------------+---------+---------+---------+-------------+\n");
+		printf("| %s%12s%s |%s%8s%s |%s%8s%s |%s%8s%s | %s%8s%s |\n",RED,"architecture",NORM,RED,"stable",NORM,RED,"~arch",NORM,RED,"total",NORM,RED,"total/#pkgs",NORM);
+		printf("|              |         |%s%8s%s |         |             |\n",RED,"only",NORM);
+		printf("+--------------+---------+---------+---------+-------------+\n");
+
+		for (i = 1; i < NUM_ARCHES; i++) {
+			printf("| %s%12s%s |",GREEN,archlist[i].name,NORM);
+			printf("%s%8d%s |",BLUE,packages_stable[i],NORM);
+			printf("%s%8d%s |",BLUE,packages_testing[i],NORM);
+			printf("%s%8d%s |",BLUE,packages_testing[i]+packages_stable[i],NORM);
+			printf("%s%11.2f%s%% |\n",BLUE,(100.0*(packages_testing[i]+packages_stable[i]))/numpkg,NORM);
+		}
+		printf("+--------------+---------+---------+---------+-------------+\n\n");
+
+		printf("+----------------------+\n");
+		printf("|distfiles distribution|\n");
+		printf("+------------+---------+\n");
+		printf("|  %sextension%s |   %scount%s |\n",RED,NORM,RED,NORM);
+		printf("+------------+---------+\n");
+
+		for (i = 0; i < NUM_FILETYPES; i++) {
+			printf("| %s%10s%s | %s%7d%s |\n",GREEN,filetypes[i].name,NORM,BLUE,filetype_count[i],NORM);
+		}
+		printf("+------------+---------+\n\n");
+
+		printf("Completed in %s%d%s seconds.\n",BLUE,(int)(time(NULL)-runtime),NORM);
+	}
+}
+
 void qcache_all(char *path, char *category, char *ebuild, int current, int num);
 void qcache_all(char *path, char *category, char *ebuild, int current, int num) {
 	int keywords[NUM_ARCHES];
@@ -394,6 +551,7 @@ int qcache_main(int argc, char **argv) {
 		case 'i':
 		case 'd':
 		case 't':
+		case 's':
 		case 'a':
 			if (action)
 				qcache_usage(EXIT_FAILURE); /* trying to use more than 1 action */
@@ -406,13 +564,14 @@ int qcache_main(int argc, char **argv) {
 	if (optind < argc)
 		test_arch = decode_arch(argv[optind]);
 
-	if (!test_arch)
+	if (!test_arch && action != 's')
 		qcache_usage(EXIT_FAILURE);
 
 	switch (action) {
 		case 'i': return traverse_metadata_cache(qcache_imlate,&qcache_skip);
 		case 'd': return traverse_metadata_cache(qcache_dropped,&qcache_skip);
 		case 't': return traverse_metadata_cache(qcache_testing_only,&qcache_skip);
+		case 's': return traverse_metadata_cache(qcache_stats,&qcache_skip);
 		case 'a': return traverse_metadata_cache(qcache_all,&qcache_skip);
 	}
 
