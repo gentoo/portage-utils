@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.120 2006/05/24 03:23:56 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.121 2006/07/09 19:54:45 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,19 +35,28 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*arr))
 
+// http://tinderbox.dev.gentoo.org/default-linux/arm
+// http://tinderbox.dev.gentoo.org/default-linux/hppa
+
 #ifdef __linux__
+#undef  URL
+#define URL "http://tinderbox.dev.gentoo.org"
 # ifdef __i386__
 #  ifdef __UCLIBC__
-#   define PORTAGE_BINHOST "ftp://tinderbox.x86.dev.gentoo.org/uclibc/i386"
+#   define PORTAGE_BINHOST URL "/uclibc/i386"
 #  else
 #   ifdef __SSP__
-#    define PORTAGE_BINHOST "ftp://tinderbox.x86.dev.gentoo.org/hardened/x86"
+#    define PORTAGE_BINHOST URL "/hardened/x86"
 #   else
-#    define PORTAGE_BINHOST "ftp://tinderbox.x86.dev.gentoo.org/default-linux/x86/2005.1/All"
+#    define PORTAGE_BINHOST URL "/default-linux/x86/All"
 #   endif
 #  endif
-#  if defined(__powerpc__) && defined(__SSP__) && !defined(__UCLIBC__)
-#   define PORTAGE_BINHOST "ftp://tinderbox.x86.dev.gentoo.org/hardened/ppc"
+#  if defined(__powerpc__) && defined(__SSP__)
+#   if !defined(__UCLIBC__)
+#    define PORTAGE_BINHOST URL "/hardened/ppc"
+#   else
+#    define PORTAGE_BINHOST URL "/uclibc/ppc"
+#   endif
 #  endif
 # endif
 #endif
@@ -689,6 +698,8 @@ const char *initialize_flat(int cache_type)
 	if (secs < 0) secs = 0;
 	if (frac < 0) frac = 0;
 	warn("Finished %u entries in %d.%06d seconds", count, secs, frac);
+	if (secs > 100)
+		warn("You should consider a faster file system such as reiserfs for PORTDIR='%s'", portdir);
 ret:
 	return cache_file;
 }
