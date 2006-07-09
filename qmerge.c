@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.50 2006/07/04 14:01:32 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.51 2006/07/09 19:01:53 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,7 @@
 // #define BUSYBOX "/bin/busybox"
 #define BUSYBOX ""
 
-#define QMERGE_FLAGS "fFsKUpyO5" COMMON_FLAGS
+#define QMERGE_FLAGS "fFsKUpuyO5" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
 	{"fetch",   no_argument, NULL, 'f'},
 	{"force",   no_argument, NULL, 'F'},
@@ -32,6 +32,7 @@ static struct option const qmerge_long_opts[] = {
 	{"install", no_argument, NULL, 'K'},
 	{"unmerge", no_argument, NULL, 'U'},
 	{"pretend", no_argument, NULL, 'p'},
+	{"update",  no_argument, NULL, 'u'},
 	{"yes",     no_argument, NULL, 'y'},
 	{"nodeps",  no_argument, NULL, 'O'},
 	{"nomd5",   no_argument, NULL, '5'},
@@ -45,13 +46,14 @@ static const char *qmerge_opts_help[] = {
 	"Install package",
 	"Uninstall package",
 	"Pretend only",
+	"Update only",
 	"Don't prompt before overwriting",
 	"Don't merge dependencies",
 	"Don't verify MD5 digest of files",
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.50 2006/07/04 14:01:32 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.51 2006/07/09 19:01:53 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -62,6 +64,7 @@ char force_download = 0;
 char follow_rdepends = 1;
 char nomd5 = 0;
 char qmerge_strict = 0;
+char update_only = 0;
 
 struct pkg_t {
 	char PF[64];
@@ -338,6 +341,8 @@ void crossmount_rm(char *, const size_t size, const char *, const struct stat);
 void crossmount_rm(char *buf, const size_t size, const char *fname, const struct stat st) {
 	struct stat lst;
 
+	assert(pretend == 0);
+
 	if (lstat(buf, &lst) == (-1))
 		return;
 	if (lst.st_dev != st.st_dev) {
@@ -391,8 +396,8 @@ char *atom2str(depend_atom *atom, char *buf, size_t size) {
 	return buf;
 }
 
-void qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg);
-void qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg) {
+char qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg);
+char qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg) {
 	char buf[1024];
 	char *p;
 	int i, ret;
@@ -401,7 +406,7 @@ void qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg) {
 	char c = 'N';
 
 	if (!pretend)
-		return;
+		return 0;
 
 	p = best_version(pkg->CATEGORY, atom->PN);
 	if (strlen(p) < 1) {
@@ -426,6 +431,8 @@ void qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg) {
 			snprintf(install_ver, sizeof(install_ver), "[%s%s%s] ", DKBLUE, buf, NORM);
 			atom_implode(subatom);
 		}
+		if (((c == 'R') || (c == 'D')) && update_only && level)
+			return c;
 		if (c == 'R')
 			snprintf(buf, sizeof(buf), "%s%c%s", YELLOW, c, NORM);
 		if ((c == 'U') || (c == 'D'))
@@ -446,6 +453,7 @@ void qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg) {
 	for (i = 0; i < level; i++) putchar(' ');
 	printf("%s%s/%s%s %s%s%s%s%s%s\n", DKGREEN, pkg->CATEGORY, pkg->PF, NORM,
 		install_ver, strlen(pkg->USE)>0 ? "(" : "", RED, pkg->USE, NORM, strlen(pkg->USE)>0 ? ")" : "");
+	return c;
 }
 
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
@@ -460,7 +468,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 	const char *saved_argv0 = argv0;
 	int ret, saved_optind = optind;
 	struct stat st, lst;
-
+	char c;
 	char **iargv = NULL;
 	int iargc = 0;
 
@@ -473,7 +481,10 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg) {
 		return;
 	}
 
-	qprint_tree_node(level, atom, pkg);
+	c = qprint_tree_node(level, atom, pkg);
+
+	// if (((c == 'R') || (c == 'D')) && update_only)
+	//	return;
 
 	if (pkg->RDEPEND[0] && follow_rdepends) {
 		IF_DEBUG(fprintf(stderr, "\n+Parent: %s/%s\n", pkg->CATEGORY, pkg->PF));
@@ -1411,6 +1422,7 @@ int qmerge_main(int argc, char **argv) {
 			case 'K': install = 1; break;
 			case 'U': uninstall = 1; break;
 			case 'p': pretend = 1; break;
+			case 'u': update_only = 1;
 			case 'y': interactive = 0; break;
 			case 'O': follow_rdepends = 0; break;
 			case '5': nomd5 = 1; break;

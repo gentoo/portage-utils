@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.47 2006/05/26 01:46:16 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.48 2006/07/09 19:01:53 solar Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -37,8 +37,8 @@ endif
 DOCS      := TODO README qsync
 
 ifdef PYTHON
-PYFLAGS   ?= $(shell python-config) -DWANT_PYTHON
-LDFLAGS   += -ldl -pthread -lutil /usr/lib/libpython2.4.so
+PYFLAGS   ?= $(shell python-config) -DWANT_PYTHON -ldl -pthread -lutil /usr/lib/libpython2.4.so
+#PYFLAGS  += -lpython2.4
 endif
 
 #####################################################
@@ -51,11 +51,11 @@ all: q
 
 debug:
 	$(MAKE) CFLAGS="$(CFLAGS) -DEBUG -g3 -ggdb -fno-pie" clean symlinks
-	@-/sbin/chpax  -permsx q
-	@-/sbin/paxctl -permsx q
+	@-/usr/bin/scanelf -o /dev/null -BXxz permsx q
 
 q: $(SRC) libq/*.c *.h libq/*.h
 ifeq ($(subst s,,$(MAKEFLAGS)),$(MAKEFLAGS))
+	@echo $(foreach a,$(APPLETS), : $a) :
 	@echo $(CC) $(CFLAGS) $(PYFLAGS) $(LDFLAGS) main.c -o q
 endif
 	@$(CC) $(WFLAGS) $(PYFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q
