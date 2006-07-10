@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.12 2006/07/10 05:25:09 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.13 2006/07/10 23:45:41 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/dir.h>
 #include <sys/types.h>
+
 #include <sys/stat.h>
 #include <time.h>
 
@@ -41,7 +42,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.12 2006/07/10 05:25:09 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.13 2006/07/10 23:45:41 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 enum { none = 0, testing, stable };
@@ -96,10 +97,21 @@ struct filetype_list_t {
 	{ ".rar" },
 	{ ".7z" },
 	{ ".gz" },
-	{ ".Z" },
+	{ ".Z" }
 };
 
 #define NUM_FILETYPES ARRAY_SIZE(filetypes)
+
+struct protocol_list_t {
+	const char *name;
+} protocols[] = {
+	{ "mirror://" },
+	{ "https://" },
+	{ "http://" },
+	{ "ftp://" }
+};
+
+#define NUM_PROTOCOLS ARRAY_SIZE(protocols)
 
 int decode_status(char c);
 int decode_status(char c) {
@@ -165,6 +177,68 @@ int count_srcuri_filetypes(char *file, unsigned int *cnt) {
 	while ((uri = strtok(NULL, delim))) {
 		for (i = 0; i < NUM_FILETYPES; i++) {
 			if (!strncmp(strlen(uri)-strlen(filetypes[i].name)+uri,filetypes[i].name,strlen(filetypes[i].name))) {
+				cnt[i]++;
+				break;
+			}
+		}
+	}
+
+	cache_free(pkg);
+	return 0;
+}
+
+int count_srcuri_protocols(char *file, unsigned int *cnt);
+int count_srcuri_protocols(char *file, unsigned int *cnt) {
+	unsigned int i;
+	char *uri, delim[2] = { ' ', '\0' };
+	portage_cache *pkg = cache_read_file(file);
+
+	if (pkg == NULL || pkg->SRC_URI == NULL)
+		return -1;
+
+	if ((uri = strtok(pkg->SRC_URI, delim))) {
+		for (i = 0; i < NUM_PROTOCOLS; i++) {
+			if (!strncmp(uri,protocols[i].name,strlen(protocols[i].name))) {
+				cnt[i]++;
+				break;
+			}
+		}
+	}
+
+	while ((uri = strtok(NULL, delim))) {
+		for (i = 0; i < NUM_PROTOCOLS; i++) {
+			if (!strncmp(uri,protocols[i].name,strlen(protocols[i].name))) {
+				cnt[i]++;
+				break;
+			}
+		}
+	}
+
+	cache_free(pkg);
+	return 0;
+}
+
+int count_homepage_protocols(char *file, unsigned int *cnt);
+int count_homepage_protocols(char *file, unsigned int *cnt) {
+	unsigned int i;
+	char *uri, delim[2] = { ' ', '\0' };
+	portage_cache *pkg = cache_read_file(file);
+
+	if (pkg == NULL || pkg->HOMEPAGE == NULL)
+		return -1;
+
+	if ((uri = strtok(pkg->HOMEPAGE, delim))) {
+		for (i = 0; i < NUM_PROTOCOLS; i++) {
+			if (!strncmp(uri,protocols[i].name,strlen(protocols[i].name))) {
+				cnt[i]++;
+				break;
+			}
+		}
+	}
+
+	while ((uri = strtok(NULL, delim))) {
+		for (i = 0; i < NUM_PROTOCOLS; i++) {
+			if (!strncmp(uri,protocols[i].name,strlen(protocols[i].name))) {
 				cnt[i]++;
 				break;
 			}
@@ -428,6 +502,8 @@ void qcache_testing_only(char *path, char *category, char *ebuild, int current, 
 void qcache_stats(char *path, char *category, char *ebuild, int current, int num);
 void qcache_stats(char *path, char *category, char *ebuild, int current, int num) {
 	static unsigned int filetype_count[NUM_FILETYPES];
+	static unsigned int srcuri_protocol_count[NUM_PROTOCOLS];
+	static unsigned int homepage_protocol_count[NUM_PROTOCOLS];
 	static unsigned int numpkg  = 0;
 	static unsigned int numebld = 0;
 	static unsigned int packages_stable[NUM_ARCHES];
@@ -440,6 +516,8 @@ void qcache_stats(char *path, char *category, char *ebuild, int current, int num
 		memset(packages_stable,0,NUM_ARCHES*sizeof(unsigned int));
 		memset(packages_testing,0,NUM_ARCHES*sizeof(unsigned int));
 		memset(filetype_count,0,NUM_FILETYPES*sizeof(unsigned int));
+		memset(srcuri_protocol_count,0,NUM_PROTOCOLS*sizeof(unsigned int));
+		memset(homepage_protocol_count,0,NUM_PROTOCOLS*sizeof(unsigned int));
 		runtime = time(NULL);
 	}
 
@@ -483,22 +561,24 @@ void qcache_stats(char *path, char *category, char *ebuild, int current, int num
 	}
 
 	count_srcuri_filetypes(path,filetype_count);
+	count_srcuri_protocols(path,srcuri_protocol_count);
+	count_homepage_protocols(path,homepage_protocol_count);
 
 	if (qcache_last) {
-		unsigned int distfiles_total = 0;
+		unsigned int srcuri_total = 0, homepage_total = 0;
 
-		for (i = 0; i < NUM_FILETYPES; i++) {
-			distfiles_total += filetype_count[i];
+		for (i = 0; i < NUM_PROTOCOLS; i++) {
+			srcuri_total += srcuri_protocol_count[i];
 		}
 
 		printf("+-------------------------+\n");
 		printf("|   general statistics    |\n");
 		printf("+---------------+---------+\n");
-		printf("| %s%13s%s | %s%7d%s |\n",RED,"architectures",NORM,BLUE,(int)NUM_ARCHES,NORM);
-		printf("| %s%13s%s | %s%7d%s |\n",RED,"categories",NORM,BLUE,qcache_numcat,NORM);
-		printf("| %s%13s%s | %s%7d%s |\n",RED,"packages",NORM,BLUE,numpkg,NORM);
-		printf("| %s%13s%s | %s%7d%s |\n",RED,"ebuilds",NORM,BLUE,numebld,NORM);
-		printf("| %s%13s%s | %s%7d%s |\n",RED,"distfiles",NORM,BLUE,distfiles_total,NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",GREEN,"architectures",NORM,BLUE,(int)NUM_ARCHES,NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",GREEN,"categories",NORM,BLUE,qcache_numcat,NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",GREEN,"packages",NORM,BLUE,numpkg,NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",GREEN,"ebuilds",NORM,BLUE,numebld,NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",GREEN,"distfiles",NORM,BLUE,srcuri_total,NORM);
 		printf("+---------------+---------+\n\n");
 
 		printf("+----------------------------------------------------------+\n");
@@ -518,7 +598,7 @@ void qcache_stats(char *path, char *category, char *ebuild, int current, int num
 		printf("+--------------+---------+---------+---------+-------------+\n\n");
 
 		printf("+----------------------+\n");
-		printf("|distfiles distribution|\n");
+		printf("|  SRC_URI file types  |\n");
 		printf("+------------+---------+\n");
 		printf("|  %sextension%s |   %scount%s |\n",RED,NORM,RED,NORM);
 		printf("+------------+---------+\n");
@@ -527,6 +607,20 @@ void qcache_stats(char *path, char *category, char *ebuild, int current, int num
 			printf("| %s%10s%s | %s%7d%s |\n",GREEN,filetypes[i].name,NORM,BLUE,filetype_count[i],NORM);
 		}
 		printf("+------------+---------+\n\n");
+
+		printf("+--------------------------------+\n");
+		printf("|       uri protocol counts      |\n");
+		printf("+-----------+---------+----------+\n");
+		printf("|  %sprotocol%s | %sSRC_URI%s | %sHOMEPAGE%s |\n",RED,NORM,RED,NORM,RED,NORM);
+		printf("+-----------+---------+----------+\n");
+
+		for (i = 0; i < NUM_PROTOCOLS; i++) {
+			printf("| %s%9s%s | %s%7d%s |  %s%7d%s |\n",GREEN,protocols[i].name,NORM,BLUE,srcuri_protocol_count[i],NORM,BLUE,homepage_protocol_count[i],NORM);
+			homepage_total += homepage_protocol_count[i];
+		}
+		printf("+-----------+---------+----------+\n");
+		printf("|     %sTotal%s | %s%7d%s |  %s%7d%s |\n",GREEN,NORM,BLUE,srcuri_total,NORM,BLUE,homepage_total,NORM);
+		printf("+-----------+---------+----------+\n\n");
 
 		printf("Completed in %s%d%s seconds.\n",BLUE,(int)(time(NULL)-runtime),NORM);
 	}
