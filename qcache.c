@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.11 2006/07/07 14:06:13 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.12 2006/07/10 05:25:09 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -41,7 +41,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.11 2006/07/07 14:06:13 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.12 2006/07/10 05:25:09 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 enum { none = 0, testing, stable };
@@ -428,22 +428,24 @@ void qcache_testing_only(char *path, char *category, char *ebuild, int current, 
 void qcache_stats(char *path, char *category, char *ebuild, int current, int num);
 void qcache_stats(char *path, char *category, char *ebuild, int current, int num) {
 	static unsigned int filetype_count[NUM_FILETYPES];
-	static unsigned int numpkg = 0, numebld = 0;
+	static unsigned int numpkg  = 0;
+	static unsigned int numebld = 0;
 	static unsigned int packages_stable[NUM_ARCHES];
 	static unsigned int packages_testing[NUM_ARCHES];
+	static int current_package_keywords[NUM_ARCHES];
+	int keywords[NUM_ARCHES], i;
 	static time_t runtime;
-	int keywords[NUM_ARCHES], i, current_package_keywords[NUM_ARCHES];
 
 	if (!numpkg) {
-		memset(packages_stable,0,NUM_ARCHES);
-		memset(packages_testing,0,NUM_ARCHES);
+		memset(packages_stable,0,NUM_ARCHES*sizeof(unsigned int));
+		memset(packages_testing,0,NUM_ARCHES*sizeof(unsigned int));
 		memset(filetype_count,0,NUM_FILETYPES*sizeof(unsigned int));
 		runtime = time(NULL);
 	}
 
 	if (current == 1) {
 		numpkg++;
-		memset(current_package_keywords,none,NUM_ARCHES);
+		memset(current_package_keywords,none,NUM_ARCHES*sizeof(int));
 	}
 
 	numebld++;
