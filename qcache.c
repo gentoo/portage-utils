@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.13 2006/07/10 23:45:41 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.14 2006/07/17 07:13:53 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -42,7 +42,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.13 2006/07/10 23:45:41 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.14 2006/07/17 07:13:53 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 enum { none = 0, testing, stable };
@@ -51,6 +51,7 @@ char *current_package,  *current_category;
 char *qcache_matchpkg = NULL, *qcache_matchcat = NULL;
 int qcache_skip, qcache_last = 0, qcache_numcat, test_arch;
 
+/* XXX: this really needs to be loaded from "arch.list" */
 struct arch_list_t {
 	const char *name;
 } archlist[] = { 
@@ -256,8 +257,13 @@ void print_keywords(char *category, char *ebuild, int *keywords) {
 	printf("%s%s/%s%s%s ",BOLD,category,BLUE,ebuild,NORM);
 	for (i = 0; i < NUM_ARCHES; i++) {
 		switch (keywords[i]) {
-			case stable: printf("%s%c%s%s ",GREEN,status[keywords[i]],archlist[i].name,NORM); break;
-			case testing: printf("%s%c%s%s ",YELLOW,status[keywords[i]],archlist[i].name,NORM); break;
+			case stable:
+				printf("%s%c%s%s ",GREEN,status[keywords[i]],archlist[i].name,NORM);
+				break;
+			case testing:
+				if (!quiet)
+					printf("%s%c%s%s ",YELLOW,status[keywords[i]],archlist[i].name,NORM);
+				break;
 			default: break;
 		}
 	}
