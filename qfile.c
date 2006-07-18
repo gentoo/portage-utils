@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.31 2006/07/18 00:51:53 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.32 2006/07/18 01:33:19 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,20 +9,22 @@
 
 #ifdef APPLET_qfile
 
-#define QFILE_FLAGS "e" COMMON_FLAGS
+#define QFILE_FLAGS "eo" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"exact",       no_argument, NULL, 'e'},
+	{"orphans",     no_argument, NULL, 'o'},
 	COMMON_LONG_OPTS
 };
 static const char *qfile_opts_help[] = {
 	"Exact match",
+	"List orphan files",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.31 2006/07/18 00:51:53 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.32 2006/07/18 01:33:19 solar Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
-void qfile(char *path, int argc, char **base_names, char **dir_names, char **real_dir_names);
-void qfile(char *path, int argc, char **base_names, char **dir_names, char **real_dir_names)
+void qfile(char *path, int argc, char **base_names, char **dir_names, char **real_dir_names, short * non_orphans);
+void qfile(char *path, int argc, char **base_names, char **dir_names, char **real_dir_names, short * non_orphans)
 {
 	FILE *fp;
 	DIR *dir;
@@ -62,6 +64,8 @@ void qfile(char *path, int argc, char **base_names, char **dir_names, char **rea
 
 			for(i = 0; i < argc; i++) {
 				if (base_names[i] == NULL)
+					continue;
+				if (non_orphans != NULL && non_orphans[i])
 					continue;
 				path_ok = (dir_names[i] == NULL && real_dir_names[i] == NULL);
 
@@ -107,25 +111,30 @@ void qfile(char *path, int argc, char **base_names, char **dir_names, char **rea
 				if (!path_ok)
 					continue;
 
-				if ((atom = atom_explode(pkg)) == NULL) {
-					warn("invalid atom %s", pkg);
-					continue;
+				if (non_orphans == NULL) {
+					if ((atom = atom_explode(pkg)) == NULL) {
+						warn("invalid atom %s", pkg);
+						continue;
+					}
+
+					printf("%s%s/%s%s%s", BOLD, atom->CATEGORY, BLUE,
+						(exact ? dentry->d_name : atom->PN), NORM);
+					if (quiet)
+						puts("");
+					else
+						printf(" (%s)\n", e->name);
+	
+					atom_implode(atom);
 				}
-				printf("%s%s/%s%s%s", BOLD, atom->CATEGORY, BLUE,
-					(exact ? dentry->d_name : atom->PN), NORM);
 
-				if (quiet)
-					puts("");
-				else
-					printf(" (%s)\n", e->name);
-
-				atom_implode(atom);
+				non_orphans[i] = 1;
 				found++;
 			}
 		}
 		fclose(fp);
 	}
 	closedir(dir);
+
 	return;
 }
 
@@ -139,6 +148,8 @@ int qfile_main(int argc, char **argv)
 	char ** dirnames;
 	char ** realdirnames;
 	char * pwd;
+	short * non_orphans = NULL;
+	short search_orphans = 0;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -147,6 +158,7 @@ int qfile_main(int argc, char **argv)
 		switch (i) {
 			COMMON_GETOPTS_CASES(qfile)
 			case 'e': exact = 1; break;
+			case 'o': search_orphans = 1; break;
 		}
 	}
 	if (!exact && verbose) exact++;
@@ -158,6 +170,9 @@ int qfile_main(int argc, char **argv)
 
 	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
+
+	if (search_orphans)
+		non_orphans = malloc((argc-optind) * sizeof(short));
 
 	// For each argument, we store its basename, its dirname,
 	// and the realpath of its dirname.
@@ -229,8 +244,26 @@ int qfile_main(int argc, char **argv)
 	/* open /var/db/pkg */
 	while ((dentry = q_vdb_get_next_dir(dir))) {
 		xasprintf(&p, "%s%s/%s", portroot, portvdb, dentry->d_name);
-		qfile(p, (argc-optind), basenames, dirnames, realdirnames);
+		qfile(p, (argc-optind), basenames, dirnames, realdirnames, non_orphans);
 		free(p);
+	}
+
+	if (non_orphans != NULL) {
+		// display orphan files
+		for (i = 0; i < (argc-optind); i++) {
+			if (non_orphans[i]) 
+				continue;
+			if (basenames[i] != NULL) {
+				found = 0; // ~inverse return code (as soon as an orphan is found, return non-zero)
+				if (!quiet) {
+					if (dirnames[i] != NULL)
+						printf("%s/%s\n", dirnames[i], basenames[i]);
+					else 
+						printf("%s\n", basenames[i]);
+				}
+			}
+		}
+		free(non_orphans);
 	}
 
 	for (i = 0; i < (argc-optind); ++i) {
