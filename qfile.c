@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.32 2006/07/18 01:33:19 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.33 2006/07/18 19:43:35 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *qfile_opts_help[] = {
 	"List orphan files",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.32 2006/07/18 01:33:19 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.33 2006/07/18 19:43:35 solar Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 void qfile(char *path, int argc, char **base_names, char **dir_names, char **real_dir_names, short * non_orphans);
@@ -79,7 +79,11 @@ void qfile(char *path, int argc, char **base_names, char **dir_names, char **rea
 						free(entry_dirname);
 						continue;
 					}
-					*p = '\0';
+					if (p == entry_dirname)
+						// (e->name == "/foo") ==> dirname == "/"
+						*(p + 1) = '\0';
+					else
+						*p = '\0';
 					if (dir_names[i] != NULL && 
 							strcmp(entry_dirname, dir_names[i]) == 0)
 						// dir_name == dirname(CONTENTS)
@@ -125,9 +129,9 @@ void qfile(char *path, int argc, char **base_names, char **dir_names, char **rea
 						printf(" (%s)\n", e->name);
 	
 					atom_implode(atom);
+				} else {
+					non_orphans[i] = 1;
 				}
-
-				non_orphans[i] = 1;
 				found++;
 			}
 		}
@@ -255,12 +259,8 @@ int qfile_main(int argc, char **argv)
 				continue;
 			if (basenames[i] != NULL) {
 				found = 0; // ~inverse return code (as soon as an orphan is found, return non-zero)
-				if (!quiet) {
-					if (dirnames[i] != NULL)
-						printf("%s/%s\n", dirnames[i], basenames[i]);
-					else 
-						printf("%s\n", basenames[i]);
-				}
+				if (!quiet)
+					printf("%s\n", argv[i+optind]);
 			}
 		}
 		free(non_orphans);
