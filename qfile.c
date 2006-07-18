@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.30 2006/07/09 18:36:48 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.31 2006/07/18 00:51:53 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -18,29 +18,22 @@ static const char *qfile_opts_help[] = {
 	"Exact match",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.30 2006/07/09 18:36:48 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.31 2006/07/18 00:51:53 solar Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
-void qfile(char *path, char *base_name, char *dir_name, char *real_dir_name);
-void qfile(char *path, char *base_name, char *dir_name, char *real_dir_name)
+void qfile(char *path, int argc, char **base_names, char **dir_names, char **real_dir_names);
+void qfile(char *path, int argc, char **base_names, char **dir_names, char **real_dir_names)
 {
 	FILE *fp;
 	DIR *dir;
 	struct dirent *dentry;
+	char *entry_basename;
+	char *entry_dirname;
 	char *p;
-	char *q;
-	size_t bnlen;
-	size_t dnlen = 0;
-	size_t rdnlen = 0;
 	char buf[1024];
 	char pkg[126];
 	depend_atom *atom;
-
-	bnlen = strlen(base_name);
-	if (dir_name != NULL)
-		dnlen = strlen(dir_name);
-	if (real_dir_name != NULL)
-		rdnlen = strlen(real_dir_name);
+	int i, path_ok;
 
 	if (chdir(path) != 0 || (dir = opendir(".")) == NULL)
 		return;
@@ -58,73 +51,77 @@ void qfile(char *path, char *base_name, char *dir_name, char *real_dir_name)
 		snprintf(pkg, sizeof(pkg), "%s/%s", basename(path), dentry->d_name);
 		while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 			contents_entry *e;
-			int path_ok = 0;
-			if (dir_name == NULL && real_dir_name == NULL)
-				path_ok = 1;
-
 			e = contents_parse_line(buf);
 			if (!e)
 				continue;
 
-			p = xstrdup(e->name);
-			q = basename(p);
-			if (strncmp(q, base_name, bnlen) != 0
-			    || strlen(q) != bnlen) {
-				free(p);
+			// much faster than using basename(), since no need to strdup
+			if ((entry_basename = strrchr(e->name, '/')) == NULL)
 				continue;
-			}
-			free(p);
+			entry_basename++;
 
-			if (!path_ok) {
-				// check the full filepath...
-				p = xstrdup(e->name);
-				q = xstrdup(dirname(p));
-				free(p);
-				if (dnlen == strlen(q)
-				    && strncmp(q, dir_name, dnlen) == 0)
-					// dir_name == dirname(CONTENTS)
-					path_ok = 1;
-				else if (rdnlen == strlen(q)
-				         && strncmp(q, real_dir_name, rdnlen) == 0)
-					// real_dir_name == dirname(CONTENTS)
-					path_ok = 1;
-				else {
-					char rpath[_Q_PATH_MAX];
-					errno = 0;
-					realpath(q, rpath);
-					if (errno != 0) {
-						if (verbose) {
-							warn("Could not read real path of \"%s\": %s", q, strerror(errno));
-							warn("We'll never know whether it was a result for your query...");
-						}
-					} else if (dnlen == strlen(rpath)
-					           && strncmp(rpath, dir_name, dnlen) == 0)
-						// dir_name == realpath(dirname(CONTENTS))
+			for(i = 0; i < argc; i++) {
+				if (base_names[i] == NULL)
+					continue;
+				path_ok = (dir_names[i] == NULL && real_dir_names[i] == NULL);
+
+				if (strcmp(entry_basename, base_names[i]) != 0)
+					continue;
+
+				if (!path_ok) {
+					// check the full filepath...
+					entry_dirname = xstrdup(e->name);
+					if ((p = strrchr(entry_dirname, '/')) == NULL) {
+						free(entry_dirname);
+						continue;
+					}
+					*p = '\0';
+					if (dir_names[i] != NULL && 
+							strcmp(entry_dirname, dir_names[i]) == 0)
+						// dir_name == dirname(CONTENTS)
 						path_ok = 1;
-					else if (rdnlen == strlen(rpath)
-					         && strncmp(rpath, real_dir_name, rdnlen) == 0)
-						// real_dir_name == realpath(dirname(CONTENTS))
+					else if (real_dir_names[i] != NULL && 
+							strcmp(entry_dirname, real_dir_names[i]) == 0)
+						// real_dir_name == dirname(CONTENTS)
 						path_ok = 1;
+					else {
+						char rpath[_Q_PATH_MAX];
+						errno = 0;
+						realpath(entry_dirname, rpath);
+						if (errno != 0) {
+							if (verbose) {
+								warn("Could not read real path of \"%s\": %s", p, strerror(errno));
+								warn("We'll never know whether it was a result for your query...");
+							}
+						} else if (dir_names[i] != NULL && 
+								strcmp(rpath, dir_names[i]) == 0)
+							// dir_name == realpath(dirname(CONTENTS))
+							path_ok = 1;
+						else if (real_dir_names[i] != NULL && 
+								strcmp(rpath, real_dir_names[i]) == 0)
+							// real_dir_name == realpath(dirname(CONTENTS))
+							path_ok = 1;
+					}
+					free(entry_dirname);
 				}
-				free(q);
+				if (!path_ok)
+					continue;
+
+				if ((atom = atom_explode(pkg)) == NULL) {
+					warn("invalid atom %s", pkg);
+					continue;
+				}
+				printf("%s%s/%s%s%s", BOLD, atom->CATEGORY, BLUE,
+					(exact ? dentry->d_name : atom->PN), NORM);
+
+				if (quiet)
+					puts("");
+				else
+					printf(" (%s)\n", e->name);
+
+				atom_implode(atom);
+				found++;
 			}
-			if (!path_ok)
-				continue;
-
-			if ((atom = atom_explode(pkg)) == NULL) {
-				warn("invalid atom %s", pkg);
-				continue;
-			}
-			printf("%s%s/%s%s%s", BOLD, atom->CATEGORY, BLUE,
-				(exact ? dentry->d_name : atom->PN), NORM);
-
-			if (quiet)
-				puts("");
-			else
-				printf(" (%s)\n", e->name);
-
-			atom_implode(atom);
-			found++;
 		}
 		fclose(fp);
 	}
@@ -232,10 +229,7 @@ int qfile_main(int argc, char **argv)
 	/* open /var/db/pkg */
 	while ((dentry = q_vdb_get_next_dir(dir))) {
 		xasprintf(&p, "%s%s/%s", portroot, portvdb, dentry->d_name);
-		for (i = 0; i < (argc-optind); ++i) {
-			if (basenames[i] != NULL)
-				qfile(p, basenames[i], dirnames[i], realdirnames[i]);
-		}
+		qfile(p, (argc-optind), basenames, dirnames, realdirnames);
 		free(p);
 	}
 
