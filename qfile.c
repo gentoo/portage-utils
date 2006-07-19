@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.33 2006/07/18 19:43:35 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.34 2006/07/19 16:20:41 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *qfile_opts_help[] = {
 	"List orphan files",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.33 2006/07/18 19:43:35 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.34 2006/07/19 16:20:41 solar Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 void qfile(char *path, int argc, char **base_names, char **dir_names, char **real_dir_names, short * non_orphans);
@@ -176,13 +176,13 @@ int qfile_main(int argc, char **argv)
 		return EXIT_FAILURE;
 
 	if (search_orphans)
-		non_orphans = malloc((argc-optind) * sizeof(short));
+		non_orphans = xmalloc((argc-optind) * sizeof(short));
 
 	// For each argument, we store its basename, its dirname,
 	// and the realpath of its dirname.
-	basenames = malloc((argc-optind) * sizeof(char*));
-	dirnames = malloc((argc-optind) * sizeof(char*));
-	realdirnames = malloc((argc-optind) * sizeof(char*));
+	basenames = xmalloc((argc-optind) * sizeof(char*));
+	dirnames = xmalloc((argc-optind) * sizeof(char*));
+	realdirnames = xmalloc((argc-optind) * sizeof(char*));
 	if ((pwd = getenv("PWD")) != NULL) {
 		int pwdlen = strlen(pwd);
 		if ((pwdlen > 0) && (pwd[pwdlen-1] == '/'))
@@ -212,8 +212,8 @@ int qfile_main(int argc, char **argv)
 		else if (pwd != NULL)
 			snprintf(abspath, _Q_PATH_MAX, "%s/%s", pwd, argv[i+optind]);
 		else {
-			err("$PWD not found in environment.");
-			err("Skipping query item \"%s\".", argv[i+optind]);
+			warn("$PWD not found in environment.");
+			warn("Skipping query item \"%s\".", argv[i+optind]);
 			continue;
 		}
 
@@ -236,8 +236,8 @@ int qfile_main(int argc, char **argv)
 			errno = 0;
 			realpath(tmppath, abspath);
 			if (errno != 0) {
-				err("Could not read real path of \"%s\": %s", tmppath, strerror(errno));
-				err("Skipping query item \"%s\".", argv[i+optind]);
+				warn("Could not read real path of \"%s\": %s", tmppath, strerror(errno));
+				warn("Skipping query item \"%s\".", argv[i+optind]);
 				continue;
 			}
 			basenames[i] = xstrdup(basename(tmppath));
