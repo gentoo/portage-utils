@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.30 2006/03/19 12:57:41 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.31 2006/07/22 22:23:05 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.30 2006/03/19 12:57:41 solar Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.31 2006/07/22 22:23:05 solar Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -72,18 +72,28 @@ static const char *chop_ctime(time_t t)
 	return ctime_out;
 }
 
-unsigned long show_merge_times(char *pkg, const char *logfile, int average, char human_readable);
-unsigned long show_merge_times(char *pkg, const char *logfile, int average, char human_readable)
+unsigned long show_merge_times(char *package, const char *logfile, int average, char human_readable);
+unsigned long show_merge_times(char *package, const char *logfile, int average, char human_readable)
 {
 	FILE *fp;
-	char buf[2][BUFSIZ];
-	char *p;
+	char cat[126], buf[2][BUFSIZ];
+	char *pkg, *p;
 	unsigned long count, merge_time;
 	time_t t[2];
 	depend_atom *atom;
 	
 	t[0] = t[1] = 0UL;
 	count = merge_time = 0;
+	cat[0] = 0;
+
+	if ((p = strchr(package, '/')) != NULL) {
+		pkg = p + 1;
+		strncpy(cat, package, sizeof(cat));
+		if ((p = strchr(cat, '/')) != NULL)
+			*p = 0;
+	} else {
+		pkg = package;
+	}
 
 	DBG("Searching for %s in %s\n", pkg, logfile);
 
@@ -105,6 +115,7 @@ unsigned long show_merge_times(char *pkg, const char *logfile, int average, char
 		strcpy(buf[1], p + 1);
 		rmspace(buf[1]);
 		if ((strncmp(buf[1], ">>> emerge (", 12)) == 0) {
+			char matched = 0;
 			if ((p = strchr(buf[1], ')')) == NULL)
 				continue;
 			*p = 0;
@@ -115,7 +126,14 @@ unsigned long show_merge_times(char *pkg, const char *logfile, int average, char
 			*p = 0;
 			if ((atom = atom_explode(buf[0])) == NULL)
 				continue;
-			if ((strcmp(pkg, atom->PN)) == 0) {
+
+			if (*cat) {
+				if ((strcmp(cat, atom->CATEGORY) == 0) && (strcmp(pkg, atom->PN) == 0))
+					matched = 1;
+			} else if (strcmp(pkg, atom->PN) == 0)
+				matched = 1;
+
+			if (matched) {
 				while ((fgets(buf[0], sizeof(buf[0]), fp)) != NULL) {
 					if ((p = strchr(buf[0], '\n')) != NULL)
 						*p = 0;
