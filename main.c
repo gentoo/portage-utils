@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.121 2006/07/09 19:54:45 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.122 2006/07/24 20:26:10 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -564,6 +564,8 @@ void initialize_portage_env(void)
 			}
 		}
 	}
+	if (getenv("PORTAGE_QUIET") != NULL)
+		quiet = 1;
 
 	if (nocolor)
 		no_colors();
@@ -620,8 +622,8 @@ const char *initialize_flat(int cache_type)
 	/* assuming --sync is used with --delete this will get recreated after every merge */
 	if (access(cache_file, R_OK) == 0)
 		goto ret;
-
-	warn("Updating ebuild %scache ... ", cache_type == CACHE_EBUILD ? "" : "meta" );
+	if (!quiet)
+		warn("Updating ebuild %scache ... ", cache_type == CACHE_EBUILD ? "" : "meta" );
 
 	unlink(cache_file);
 	if (errno != ENOENT) {
@@ -686,7 +688,9 @@ const char *initialize_flat(int cache_type)
 	fclose(fp);
 	while(a--) free(category[a]);
 	free(category);
-        
+
+	if (quiet) goto ret;
+
 	gettimeofday(&finish, NULL);
 	if (start.tv_usec > finish.tv_usec) {
 		finish.tv_usec += 1000000;
@@ -697,6 +701,7 @@ const char *initialize_flat(int cache_type)
 	secs = (finish.tv_sec - start.tv_sec);
 	if (secs < 0) secs = 0;
 	if (frac < 0) frac = 0;
+
 	warn("Finished %u entries in %d.%06d seconds", count, secs, frac);
 	if (secs > 100)
 		warn("You should consider a faster file system such as reiserfs for PORTDIR='%s'", portdir);
