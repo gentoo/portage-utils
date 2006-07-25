@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.31 2006/07/22 22:23:05 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.32 2006/07/25 14:46:04 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@
 
 #define QLOP_FLAGS "gtluscf:F:H" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
-	{"guage",     no_argument, NULL, 'g'},
+	{"gauge",     no_argument, NULL, 'g'},
 	{"time",      no_argument, NULL, 't'},
 	{"human",     no_argument, NULL, 'H'},
 	{"list",      no_argument, NULL, 'l'},
@@ -31,7 +31,7 @@ static struct option const qlop_long_opts[] = {
 	COMMON_LONG_OPTS
 };
 static const char *qlop_opts_help[] = {
-	"Guage number of times a package has been merged",
+	"Gauge number of times a package has been merged",
 	"Calculate merge time for a specific package",
 	"Print seconds in human readable format (needs -t)",
 	"Show merge history",
@@ -41,7 +41,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.31 2006/07/22 22:23:05 solar Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.32 2006/07/25 14:46:04 solar Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
