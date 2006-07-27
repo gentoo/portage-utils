@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.122 2006/07/24 20:26:10 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.123 2006/07/27 00:10:34 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -483,6 +483,10 @@ void initialize_portage_env(void)
 		{"PKGDIR",  6, _Q_STR,  pkgdir, sizeof(pkgdir)},
 		{"ROOT",    4, _Q_STR,  portroot, sizeof(portroot)}
 	};
+
+	if ((p = strchr(portroot, '/')) != NULL)
+		if (strlen(p) != 1)
+			strncat(portroot, "/", sizeof(portroot));
 
 	f = 0;
 	if (readlink("/etc/make.profile", profile, sizeof(profile)) == -1)
