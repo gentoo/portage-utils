@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.14 2006/07/17 07:13:53 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.15 2006/08/14 16:21:33 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -19,7 +19,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define QCACHE_FLAGS "p:c:idtas" COMMON_FLAGS
+#define QCACHE_FLAGS "p:c:idtans" COMMON_FLAGS
 static struct option const qcache_long_opts[] = {
 	{"matchpkg", a_argument, NULL, 'p'},
 	{"matchcat", a_argument, NULL, 'c'},
@@ -28,24 +28,26 @@ static struct option const qcache_long_opts[] = {
 	{"testing", no_argument, NULL, 't'},
 	{"stats",   no_argument, NULL, 's'},
 	{"all",     no_argument, NULL, 'a'},
+	{"not",     no_argument, NULL, 'n'},
 	COMMON_LONG_OPTS
 };
 
 static const char *qcache_opts_help[] = {
 	"match pkgname",
 	"match catname",
-	"list packages that can be marked stable",
-	"list packages that have dropped keywords on a version bump",
-	"list packages that have ~arch versions, but no stable versions",
+	"list packages that can be marked stable on a given arch",
+	"list packages that have dropped keywords on a version bump on a given arch",
+	"list packages that have ~arch versions, but no stable versions on a given arch",
 	"display statistics about the portage tree",
-	"list all packages that have at least one version keyworded for an arch",
+	"list packages that have at least one version keyworded for on a given arch",
+	"list packages that aren't keyworded on a given arch.",
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.14 2006/07/17 07:13:53 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.15 2006/08/14 16:21:33 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
-enum { none = 0, testing, stable };
+enum { none = 0, testing, stable, minus };
 char status[3] = {'-','~','+'};
 char *current_package,  *current_category;
 char *qcache_matchpkg = NULL, *qcache_matchcat = NULL;
@@ -117,7 +119,7 @@ struct protocol_list_t {
 int decode_status(char c);
 int decode_status(char c) {
 	switch (c) {
-		case '-': return none;
+		case '-': return minus;
 		case '~': return testing;
 		default:  return stable;
 	}
@@ -140,12 +142,19 @@ int decode_arch(const char *arch) {
 int read_keywords(char *file, int *keywords);
 int read_keywords(char *file, int *keywords) {
 	char *arch, delim[2] = { ' ', '\0' };
+	int i;
 	portage_cache *pkg = cache_read_file(file);
 
 	memset(keywords, none, NUM_ARCHES*sizeof(int));
 
 	if (pkg == NULL || pkg->KEYWORDS == NULL)
 		return -1;
+
+	if (strlen(pkg->KEYWORDS) >= 2 && pkg->KEYWORDS[0] == '-' && pkg->KEYWORDS[1] == '*') {
+		for (i = 0; i < NUM_ARCHES; i++) {
+			keywords[i] = minus;
+		}
+	}
 
 	arch = strtok(pkg->KEYWORDS, delim);
 	keywords[decode_arch(arch)] = decode_status(arch[0]);
@@ -429,8 +438,13 @@ void qcache_imlate(char *path, char *category, char *ebuild, int current, int nu
 		return;
 	}
 	switch (keywords[test_arch]) {
-		case stable: qcache_skip = 1; break;
-		case none: break;
+		case stable:
+			qcache_skip = 1;
+			break;
+
+		case none:
+		case minus:
+			break;
 		default:
 			for (i = 0; i < NUM_ARCHES && !(qcache_skip); i++) {
 				if (keywords[i] != stable)
@@ -443,7 +457,7 @@ void qcache_imlate(char *path, char *category, char *ebuild, int current, int nu
 
 void qcache_dropped(char *path, char *category, char *ebuild, int current, int num);
 void qcache_dropped(char *path, char *category, char *ebuild, int current, int num) {
-	int keywords[NUM_ARCHES], i;
+	int keywords[NUM_ARCHES];
 	static int possible = 0;
 
 	if (current == 1) possible = 0;
@@ -452,6 +466,7 @@ void qcache_dropped(char *path, char *category, char *ebuild, int current, int n
 		warn("Failed to read keywords for %s%s/%s%s%s",BOLD,category,BLUE,ebuild,NORM);
 		return;
 	}
+
 	if (keywords[test_arch] != none) {
 		qcache_skip = 1;
 
@@ -466,12 +481,10 @@ void qcache_dropped(char *path, char *category, char *ebuild, int current, int n
 
 			printf("%s%s/%s%s%s\n",BOLD,category,BLUE,ebuild,NORM);
 		}
+
 		return;
-	}
-	for (i = 0; i < NUM_ARCHES; i++) {
-		if (keywords[i] != none) {
-			possible = 1;
-		}
+	} else {
+		possible = 1;
 	}
 }
 
@@ -502,6 +515,30 @@ void qcache_testing_only(char *path, char *category, char *ebuild, int current, 
 		*(temp-1) = '\0';
 
 		printf("%s%s/%s%s%s\n",BOLD,category,BLUE,ebuild,NORM);
+	}
+}
+
+void qcache_not(char *path, char *category, char *ebuild, int current, int num);
+void qcache_not(char *path, char *category, char *ebuild, int current, int num) {
+	int keywords[NUM_ARCHES];
+
+	if (read_keywords(path,keywords) < 0) {
+		warn("Failed to read keywords for %s%s/%s%s%s",BOLD,category,BLUE,ebuild,NORM);
+		return;
+	}
+
+	if (keywords[test_arch] != none) {
+		qcache_skip = 1;
+	} else if (current == num) {
+		char *temp = ebuild;
+		qcache_skip = 1;
+
+		do {
+			temp = strchr((temp),'-') + 1;
+		} while (!isdigit(*temp));
+		*(temp-1) = '\0';
+
+		printf("%s%s/%s%s%s\n",BOLD,category,BLUE,ebuild,NORM);		
 	}
 }
 
@@ -640,7 +677,7 @@ void qcache_all(char *path, char *category, char *ebuild, int current, int num) 
 		warn("Failed to read keywords for %s%s/%s%s%s",BOLD,category,BLUE,ebuild,NORM);
 		return;
 	}
-	if (keywords[test_arch] != none) {
+	if (keywords[test_arch] != none && keywords[test_arch] != minus) {
 		char *temp = ebuild;
 		qcache_skip = 1;
 
@@ -668,6 +705,7 @@ int qcache_main(int argc, char **argv) {
 		case 't':
 		case 's':
 		case 'a':
+		case 'n':
 			if (action)
 				qcache_usage(EXIT_FAILURE); /* trying to use more than 1 action */
 			action = i;
@@ -688,6 +726,7 @@ int qcache_main(int argc, char **argv) {
 		case 't': return traverse_metadata_cache(qcache_testing_only,&qcache_skip);
 		case 's': return traverse_metadata_cache(qcache_stats,&qcache_skip);
 		case 'a': return traverse_metadata_cache(qcache_all,&qcache_skip);
+		case 'n': return traverse_metadata_cache(qcache_not,&qcache_skip);
 	}
 
 	qcache_usage(EXIT_FAILURE);
