@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/README,v 1.19 2006/04/15 02:07:46 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/README,v 1.20 2006/08/19 16:10:24 solar Exp $
 
 Developers to contact:
 	solar@gentoo.org
@@ -22,8 +22,11 @@ Developers to contact:
 - Fetching via anoncvs.
 The cvs module for gentoo-projects is mirrored. You may download a 
 pretty recent copy using the following command. Note: that this is not 
-the official cvs server but rather a mirror so it lags about an hour or 
+the official cvs server but rather a mirror so it lags about a hour or 
 so behind the real tree which is hosted on cvs.gentoo.org
 
 # Obsolete as of Apr 14 2006
 #cvs -d:pserver:anonymous@zarquon.twobit.net:/var/cvsroot -q -z9 co -R gentoo-projects/portage-utils
+
+# Will soon be replaced with.
+#cvs -d:pserver:anonymous@anoncvs.gentoo.org:/var/cvsroot -q -z9 co -R gentoo-projects/portage-utils

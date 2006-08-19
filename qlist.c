@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.40 2006/07/19 16:24:27 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.41 2006/08/19 16:10:24 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -37,7 +37,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.40 2006/07/19 16:24:27 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.41 2006/08/19 16:10:24 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
@@ -111,6 +111,21 @@ static char *grab_pkg_umap(char *CAT, char *PV) {
 	/* end filter */
 
 	return (char *) umap;
+}
+
+static char *umapstr(char display, char *cat, char *name);
+static char *umapstr(char display, char *cat, char *name) {
+	static char buf[BUFSIZ] = "";
+	char *umap = NULL;
+
+	if (!display) return (char *) "";
+	if ((umap = grab_pkg_umap(cat, name)) == NULL)
+		return (char *) "";
+	rmspace(umap);
+	if (!strlen(umap))
+		return (char *) "";
+	snprintf(buf, sizeof(buf), " %s%s%s%s%s", quiet ? "": "(", RED, umap, NORM, quiet ? "": ")");
+	return buf;
 }
 
 int qlist_main(int argc, char **argv)
@@ -215,9 +230,9 @@ int qlist_main(int argc, char **argv)
 				}
 				pkgname = (verbose ? NULL : atom_explode(de[x]->d_name));
 				if ((qlist_all + just_pkgname) < 2) {
-					char *slot, *umap;
+					static char *slot = NULL;
 
-					umap = slot = NULL;
+					slot = NULL;
 
 					if (show_slots)
 						slot = grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name);
@@ -226,22 +241,7 @@ int qlist_main(int argc, char **argv)
 					printf("%s%s/%s%s%s%s%s%s%s", BOLD, cat[j]->d_name, BLUE, 
 					       (pkgname ? pkgname->PN : de[x]->d_name), NORM,
 						YELLOW, slot ? " ": "", slot ? slot : "", NORM);
-
-					/* map USE->IUSE */
-					if (show_umap) {
-						if ((umap = grab_pkg_umap(cat[j]->d_name, de[x]->d_name)) != NULL) {
-							rmspace(umap);
-							if (strlen(umap)) {
-								if (!quiet) {
-									printf(" (%s%s%s)", RED, umap, NORM);
-								} else {
-									printf(" %s%s%s", RED, umap, NORM);
-								}
-							}
-						}
-					}
-
-					putchar('\n');
+					puts(umapstr(show_umap, cat[j]->d_name, de[x]->d_name));
 				}
 				if (pkgname)
 					atom_implode(pkgname);
@@ -308,9 +308,10 @@ int qlist_main(int argc, char **argv)
 				char *slot = NULL;
 				if (show_slots)
 					slot = (char *) grab_vdb_item("SLOT", (const char *) atom->CATEGORY, (const char *) atom->P);
-				printf("%s%s/%s%s%s%s%s%s%s\n", BOLD, atom->CATEGORY, BLUE,
+				printf("%s%s/%s%s%s%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
 					(verbose ? atom->P : atom->PN), NORM,
 					YELLOW, slot ? " " : "", slot ? slot : "", NORM);
+				puts(umapstr(show_umap, atom->CATEGORY, atom->P));
 			}
 			atom_implode(atom);
 		}

@@ -9,12 +9,24 @@ When and where you can please try to use an existing applet and extend
 on its functionality by adding more options vs adding a bunch of new 
 little applets.
 
-# Examples:
- qlist -ao | scanelf -BqgN libssl.so.0.9.6 -f -
-
-
 - Keep behavior consistent
 	* matching:
 		default is sloppy match
 		-e exact match
 		-r regex match
+
+## Examples:
+	* find elf files linking to old openssl
+	qlist -ao | scanelf -BqgN libssl.so.0.9.6 -f -
+
+	* print a package.use
+	qlist -UCq | grep ' ' > package.use
+
+	* find orphan files not owned by andy package in /lib and /usr/lib
+	qfile -o {,/usr}/lib/*
+	
+	# get PORTDIR
+	DEBUG=: ./q -Ch 2>&1 | grep ^PORTDIR | awk '{print $3}
+
+	# Verify all packages
+	qcheck -a
