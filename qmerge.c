@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.51 2006/07/09 19:01:53 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.52 2006/08/21 00:06:39 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.51 2006/07/09 19:01:53 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.52 2006/08/21 00:06:39 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1120,8 +1120,21 @@ void print_Pkg(int full, struct pkg_t *pkg) {
 	atom = atom_explode(buf);
 	if ((atom = atom_explode(buf)) == NULL)
 		return;
-	if ((p = best_version(pkg->CATEGORY, atom->PN)) != NULL)
-		if (*p) printf(" %sInstalled%s:%s %s%s%s\n", DKGREEN, YELLOW, NORM, RED, p, NORM);
+	if ((p = best_version(pkg->CATEGORY, atom->PN)) != NULL) {
+		if (*p) {
+			int ret;
+			char *icolor = (char *) RED;
+			char c = 0;
+			ret = atom_compare_str(buf, p);
+			switch(ret) {                                
+				case EQUAL: icolor = (char *) RED; break;
+				case NEWER: icolor = (char *) YELLOW; break;                          
+				case OLDER: icolor = (char *) BLUE; break;
+				default: icolor = (char *) NORM; break;
+                        }
+			printf(" %sInstalled%s:%s %s%s%s\n", DKGREEN, YELLOW, NORM, icolor, p, NORM);
+		}
+	}
 	atom_implode(atom);
 }
 
