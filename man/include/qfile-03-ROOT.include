@@ -1,0 +1,40 @@
+[Handling of the ROOT variable]
+.PP
+By setting the \fIROOT\fP environment variable, you can force \fBqfile\fP to
+work in the sytem of your choice. This example shows queries for owner of 
+"/bin/sh", first on your main system, and then on a system mounted on "/mnt":
+.nf\fI
+	$ qfile -q /bin/sh
+	app-shells/bash
+	$ ROOT=/mnt qfile -q /bin/sh
+	sys-apps/busybox
+.fi
+.PP
+Note that the query item is "/bin/sh" in both commands: by default, what 
+\fBqfile\fP looks for is file paths as they are recorded in the packages 
+database of the target system, and this paths don't include \fI$ROOT\fP.
+If, at the contrary, you want to query files with their current actual 
+paths (including the mount point), you should add the \fB\-\-root\-prefix\fP 
+(\fB\-R\fP) option:
+.nf\fI
+	$ ROOT=/mnt qfile -Rq /mnt/bin/sh
+	sys-apps/busybox
+.fi
+.PP
+The other difference beetween defaults and \fB\-R\fP queries is the output 
+of files paths.  The former doesn't include the \fI$ROOT\fP prefix, and the 
+later does:
+.nf\fI
+	$ ROOT=/mnt qfile sh
+	sys-apps/busybox (/bin/sh)
+	$ ROOT=/mnt qfile -R sh
+	sys-apps/busybox (/mnt/bin/sh)
+.fi
+.PP
+Sure, the same differences hold when querying for orphan files:
+.nf\fI
+	$ ROOT=/mnt qfile -o $(ls /mnt/bin/ | sed 's:^/mnt::')
+	/bin/dostuff.sh
+	$ ROOT=/mnt qfile -Ro /mnt/bin/*
+	/mnt/bin/dostuff.sh
+.fi

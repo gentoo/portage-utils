@@ -1,0 +1,41 @@
+[Finding orphan files]
+.PP
+\fBqfile\fP can also, with the \fB\-\-orphans\fP option, find files which are 
+not owned by any package.  This behavior is the opposite of the usual file 
+owner search: the output is the list of query items for which no reference has
+been found in your installed packages database.  The \fB\-\-exact\fP option has
+no effect in this mode, whereas \fB\-\-verbose\fP may add a few warning 
+messages.  As for \fB\-\-quiet\fP, it will completly turn off the output, 
+leaving just a silent test command, which returns \fI0\fP if and only if
+there was no orphan in your query items.
+.PP
+Find the orphan libtool files of your system:
+.nf\fI
+	$ qfile -o $(find /lib /usr/lib -name "*.la")
+	/usr/lib/libGL.la
+.fi
+.PP
+Find the libraries needed by the binary "foo" which have not been installed by
+any package:
+.nf\fI
+	$ qfile -o $(scanelf -nq -F%n#F /path/to/foo | tr , '\\n')
+	libinstalledmanually.so.2
+.fi
+.PP
+Script to find the orphan config files on your system 
+(\fBIMPORTANT:\fP this script is just a quick example.  Do not blindly delete
+the files it will list!):
+.nf\fI
+	#!/bin/bash
+	SEARCH_PATHS="$(portageq envvar CONFIG_PROTECT)"
+	SEARCH_MASK="$(portageq envvar CONFIG_PROTECT_MASK) \\
+		/etc/runlevels /etc/portage \\
+		/etc/ssl/certs /etc/ssh \\
+		/etc/bash_completion.d /etc/cups"
+	for path in ${SEARCH_MASK} ; do
+		EXCLUDE="${EXCLUDE} -not -path ${path}/*"
+	done
+	set -f
+	find ${SEARCH_PATHS} ${EXCLUDE} -print0 \\
+		| xargs -0 -n 500 qfile -o
+.fi

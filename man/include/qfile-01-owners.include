@@ -1,0 +1,41 @@
+[Finding files owners]
+.PP
+This is the default behavior of \fBqfile\fP.  It will list the packages which
+own the files (or directories, or symlinks, or anything else Portage can 
+install) you are querying.  Query items may be file paths or simple file names.
+By default, output includes packages names and the complete paths to
+the matching files.  If using \fB\-\-exact\fP, versions of the packages will 
+also be shown.  At the contrary, when using \fB\-\-quiet\fP, only package 
+names are listed, without files paths.  Finally, \fB\-\-verbose\fP is similar
+to \fB\-\-exact\fP, but may adds a few warnings.  The return status of 
+\fBqfile\fP will be \fI0\fP as soon as an owning package has been found for 
+one of the query items.
+.PP
+Find names of package(s) owning "/bin/bash":
+.nf\fI
+	$ qfile -q /bin/bash
+	app-shells/bash
+.fi
+.PP
+Find package(s) owning any file named "bash", and show paths of this files:
+.nf\fI
+	$ qfile bash
+	app-shells/bash (/bin/bash)
+	app-shells/bash (/etc/bash)
+.fi
+.PP
+Find packages(s) owning the file named "bash" in the current directory. Also 
+display their exact version:
+.nf\fI
+	$ cd /bin
+	$ qfile -e ./bash
+	app-shells/bash-3.1_p17 (/bin/bash)
+.fi
+.PP
+Find the package(s) owning the libraries needed by the Bash binary:
+.nf\fI
+	$ qfile $(scanelf -nq -F%n#F /bin/bash | tr , '\\n')
+	sys-libs/ncurses (/lib/libncurses.so.5)
+	sys-libs/glibc (/lib/libdl.so.2)
+	sys-libs/glibc (/lib/libc.so.6)
+.fi

@@ -4,7 +4,9 @@ export NOCOLOR=1
 APPLETS=$(../q | grep -e ' : ' | awk '{print $1}' | grep ^q$1)
 
 for applet in $APPLETS; do
-	help2man -N -S "Gentoo Foundation" -m ${applet} -s 1 -o ${applet}.1 "../q $applet"
+	help2man -N -S "Gentoo Foundation" -m ${applet} -s 1 \
+		$(for incl in include/${applet}-*.include; do echo "-I ${incl}"; done) \
+		-o ${applet}.1 "../q $applet"
 	[[ $? == 0 ]] || continue;
 	sed  -i -e s/'PORTAGE-UTILS-CVS:'/${applet}/g \
 		-e s/'portage-utils-cvs:'/${applet}/g \
