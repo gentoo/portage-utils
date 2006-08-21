@@ -1,5 +1,5 @@
 #!/bin/bash
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/qsync,v 1.6 2005/12/31 00:29:21 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/qsync,v 1.7 2006/08/21 00:14:57 solar Exp $
 
 get_portage_var() {
 	local var=$1 val
@@ -36,7 +36,8 @@ done
 
 set -x
 if [[ ${METADATA_ONLY} -eq 1 ]] ; then
-	/usr/bin/rsync ${RSYNC_OPTS} "$@" ${SYNC}/profiles ${SYNC}/metadata ${PORTDIR}
+	#echo /usr/bin/rsync ${RSYNC_OPTS} "$@" ${SYNC}/profiles ${PORTDIR}
+	/usr/bin/rsync ${RSYNC_OPTS} "$@" ${SYNC}/metadata/ ${PORTDIR}/metadata/
 else
 	/usr/bin/rsync ${RSYNC_OPTS} "$@" ${SYNC} ${PORTDIR} || exit 1
 	/usr/bin/rsync --progress -a ${PORTDIR}/metadata/cache/ /var/cache/edb/dep${PORTDIR}/

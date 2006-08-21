@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.52 2006/08/21 00:06:39 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.53 2006/08/21 00:14:57 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
         COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.52 2006/08/21 00:06:39 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.53 2006/08/21 00:14:57 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1124,7 +1124,6 @@ void print_Pkg(int full, struct pkg_t *pkg) {
 		if (*p) {
 			int ret;
 			char *icolor = (char *) RED;
-			char c = 0;
 			ret = atom_compare_str(buf, p);
 			switch(ret) {                                
 				case EQUAL: icolor = (char *) RED; break;
