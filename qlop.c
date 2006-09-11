@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.32 2006/07/25 14:46:04 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.33 2006/09/11 04:02:01 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.32 2006/07/25 14:46:04 solar Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.33 2006/09/11 04:02:01 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -81,7 +81,7 @@ unsigned long show_merge_times(char *package, const char *logfile, int average, 
 	unsigned long count, merge_time;
 	time_t t[2];
 	depend_atom *atom;
-	
+
 	t[0] = t[1] = 0UL;
 	count = merge_time = 0;
 	cat[0] = 0;
@@ -317,7 +317,7 @@ void show_current_emerge(void)
 		if (!eat_file(path, buf, sizeof(buf)))
 			continue;
 
-		if (buf[0] == '[' && (p = strchr(buf, ']')) != NULL) {
+		if (buf[0] == '[' && (p = strchr(buf, ']')) != NULL && strstr(buf, "sandbox") != NULL) {
 			*p = '\0';
 			p = buf+1;
 			q = p + strlen(p) + 1;
