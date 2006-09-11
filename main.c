@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.123 2006/07/27 00:10:34 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.124 2006/09/11 05:54:12 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -175,18 +175,19 @@ void no_colors() {
 #define GETOPT_LONG(A, a, ex) \
 	getopt_long(argc, argv, ex A ## _FLAGS, a ## _long_opts, NULL)
 /* display usage and exit */
-static void usage(int status, const char *flags, struct option const opts[], 
+static void usage(int status, const char *flags, struct option const opts[],
                   const char *help[], int blabber)
 {
 	unsigned long i;
 	if (blabber == 0) {
-		printf("%sUsage:%s %sq%s %s<applet> [arguments]...%s\n\n", GREEN, 
-			NORM, YELLOW, NORM, DKBLUE, NORM);
+		printf("%sUsage:%s %sq%s %s<applet> <args>%s  : %s"
+			"invoke a portage utility applet\n\n", GREEN,
+			NORM, YELLOW, NORM, DKBLUE, RED, NORM);
 		printf("%sCurrently defined applets:%s\n", GREEN, NORM);
 		for (i = 0; applets[i].desc; ++i)
 			if (applets[i].func)
 				printf(" %s%8s%s %s%-16s%s%s:%s %s\n",
-					YELLOW, applets[i].name, NORM, 
+					YELLOW, applets[i].name, NORM,
 					DKBLUE, applets[i].opts, NORM,
 					RED, NORM, _(applets[i].desc));
 	} else {
