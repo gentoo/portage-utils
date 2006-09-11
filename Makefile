@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.48 2006/07/09 19:01:53 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.49 2006/09/11 05:48:54 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -99,7 +99,12 @@ install: all
 		done \
 	)
 
+man: q
+	cd man && ./mkman.sh
+
 symlinks: all
 	./q --install
 
 -include .depend
+
+.PHONY: all check clean debug dist distclean install man symlinks testclean
