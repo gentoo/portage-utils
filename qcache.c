@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.16 2006/09/16 03:46:41 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.17 2006/09/20 23:52:48 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -48,7 +48,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.16 2006/09/16 03:46:41 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.17 2006/09/20 23:52:48 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -740,11 +740,16 @@ void qcache_stats(qcache_data *data) {
 	static unsigned int numebld = 0;
 	static unsigned int architectures;
 	static unsigned int numcat;
+	static unsigned int *packages_stable;
+	static unsigned int *packages_testing;
+	static int *current_package_keywords;
+	static int *keywords;
+	int i;
 
 	if (!numpkg) {
 		struct direct **categories;
 		char *catpath;
-		int len, i;
+		int len;
 
 		for (i = 0; archlist[i]; i++)
 			architectures++;
@@ -764,11 +769,58 @@ void qcache_stats(qcache_data *data) {
 		free(categories);
 
 		runtime = time(NULL);
+
+		packages_stable          = (unsigned int*) malloc(sizeof(unsigned int)*architectures);
+		packages_testing         = (unsigned int*) malloc(sizeof(unsigned int)*architectures);
+		keywords                 =          (int*) malloc(sizeof(         int)*architectures);
+		current_package_keywords =          (int*) malloc(sizeof(         int)*architectures);
+
+		memset(packages_stable,0,architectures*sizeof(unsigned int));
+		memset(packages_testing,0,architectures*sizeof(unsigned int));
+		memset(keywords,0,architectures*sizeof(int));
+		memset(current_package_keywords,0,architectures*sizeof(int));
 	}
 
 	if (data->cur == 1) {
 		numpkg++;
+		memset(current_package_keywords,0,architectures*sizeof(int));
 	} numebld++;
+
+
+	memset(keywords,0,architectures*sizeof(int));
+	if (read_keywords(data->cache_data->KEYWORDS,keywords) < 0) {
+		warn("Failed to read keywords for %s%s/%s%s%s",BOLD,data->category,BLUE,data->ebuild,NORM);
+		free(keywords);
+		return;
+	}
+
+	for (i = 0; i < architectures; i++) {
+		switch (keywords[i]) {
+			case stable:
+				current_package_keywords[i] = stable;
+				break;
+			case testing:
+				if (current_package_keywords[i] != stable)
+					current_package_keywords[i] = testing;
+			default:
+				break;
+		}
+	}
+
+	if (data->cur == data->num) {
+		for (i = 0; i < architectures; i++) {
+			switch(current_package_keywords[i]) {
+				case stable:
+					packages_stable[i]++;
+					break;
+				case testing:
+					packages_testing[i]++;
+				default:
+					break;
+			}
+		}
+	}
+
 
 	if (qcache_last) {
 		printf("+-------------------------+\n");
@@ -780,7 +832,29 @@ void qcache_stats(qcache_data *data) {
 		printf("| %s%13s%s | %s%7d%s |\n",GREEN,"ebuilds",NORM,BLUE,numebld,NORM);
 		printf("+-------------------------+\n\n");
 
+		printf("+----------------------------------------------------------+\n");
+		printf("|                   keyword distribution                   |\n");
+		printf("+----------------------------------------------------------+\n");
+		printf("| %s%12s%s |%s%8s%s |%s%8s%s |%s%8s%s | %s%8s%s |\n",RED,"architecture",NORM,RED,"stable",NORM,RED,"~arch",NORM,RED,"total",NORM,RED,"total/#pkgs",NORM);
+		printf("|              |         |%s%8s%s |         |             |\n",RED,"only",NORM);
+		printf("+----------------------------------------------------------+\n");
+
+		for (i = 0; i < architectures; i++) {
+			printf("| %s%12s%s |",GREEN,archlist[i],NORM);
+			printf("%s%8d%s |",BLUE,packages_stable[i],NORM);
+			printf("%s%8d%s |",BLUE,packages_testing[i],NORM);
+			printf("%s%8d%s |",BLUE,packages_testing[i]+packages_stable[i],NORM);
+			printf("%s%11.2f%s%% |\n",BLUE,(100.0*(packages_testing[i]+packages_stable[i]))/numpkg,NORM);
+		}
+
+		printf("+----------------------------------------------------------+\n\n");
+
 		printf("Completed in %s%d%s seconds.\n",BLUE,(int)(time(NULL)-runtime),NORM);
+
+		free(packages_stable);
+		free(packages_testing);
+		free(keywords);
+		free(current_package_keywords);
 	}
 }
 
