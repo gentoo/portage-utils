@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.38 2006/06/05 11:43:30 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.39 2006/10/09 21:18:20 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.38 2006/06/05 11:43:30 solar Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.39 2006/10/09 21:18:20 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -336,6 +336,12 @@ char *dep_flatten_tree(dep_node *root)
 	static char flat[8192];
 	size_t pos = 0;
 	_dep_flatten_tree(root, flat, &pos);
+	if (pos == 0) {
+		/* all the nodes were squashed ... for example:
+		 * USE=-selinux RDEPEND="selinux? ( sys-libs/libselinux )"
+		 */
+		return NULL;
+	}
 	flat[pos-1] = '\0';
 	return flat;
 }
@@ -383,6 +389,7 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 			if (i == argc)
 				continue;
 
+			IF_DEBUG(warn("matched %s/%s", dentry->d_name, de->d_name));
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb,
 			         dentry->d_name, de->d_name, depend_file);
 
@@ -396,6 +403,7 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 				continue;
 			}
 
+			IF_DEBUG(warn("growing tree..."));
 			dep_tree = dep_grow_tree(depend);
 			if (dep_tree == NULL) continue;
 			IF_DEBUG(puts(depend));
@@ -431,7 +439,8 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 			}
 
 			/*dep_dump_tree(dep_tree);*/
-			printf("%s\n", dep_flatten_tree(dep_tree));
+			ptr = dep_flatten_tree(dep_tree);
+			printf("%s\n", (ptr == NULL ? "" : ptr));
 
 			dep_burn_tree(dep_tree);
 		}
@@ -470,16 +479,20 @@ int qdepends_vdb_deep(const char *depend_file, const char *query)
 			if (*de->d_name == '.')
 				continue;
 
+			IF_DEBUG(warn("matched %s/%s", dentry->d_name, de->d_name));
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb,
 			         dentry->d_name, de->d_name, depend_file);
+
 			if (!eat_file(buf, depend, sizeof(depend))) {
 				warn("i'm such a fatty, could not eat_file(%s)", buf);
 				continue;
 			}
-			IF_DEBUG(puts(depend));
 
+			IF_DEBUG(warn("growing tree..."));
 			dep_tree = dep_grow_tree(depend);
 			if (dep_tree == NULL) continue;
+			IF_DEBUG(puts(depend));
+			IF_DEBUG(dep_dump_tree(dep_tree));
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/USE", portroot, portvdb,
 			         dentry->d_name, de->d_name);
@@ -497,7 +510,7 @@ int qdepends_vdb_deep(const char *depend_file, const char *query)
 			dep_prune_use(dep_tree, use);
 
 			ptr = dep_flatten_tree(dep_tree);
-			if (rematch(query, ptr, REG_EXTENDED) == 0) {
+			if (ptr && rematch(query, ptr, REG_EXTENDED) == 0) {
 				if (qdep_name_only) {
 					depend_atom *atom = NULL;
 					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, de->d_name);
@@ -509,7 +522,7 @@ int qdepends_vdb_deep(const char *depend_file, const char *query)
 					printf("%s%s/%s%s%s%c", BOLD, dentry->d_name, BLUE, de->d_name, NORM, verbose ? ':' : '\n');
 				}
 				if (verbose)
-					printf(" %s\n", dep_flatten_tree(dep_tree));
+					printf(" %s\n", ptr);
 			}
 			dep_burn_tree(dep_tree);
 		}
