@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.39 2006/10/09 21:18:20 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.40 2006/10/10 03:51:36 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.39 2006/10/09 21:18:20 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.40 2006/10/10 03:51:36 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -393,8 +393,9 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb,
 			         dentry->d_name, de->d_name, depend_file);
 
-			/* >=portage-2.1_pre3 wont ensure these files always exist. */
-			/* So we must verify they exist before attempting to eat_file on them. */
+			/* >=portage-2.1_pre3 wont ensure these files always exist.
+			 * So we must verify they exist before attempting to eat_file on them.
+			 */
 			if (access(buf, R_OK) != 0)
 				continue;
 
@@ -422,6 +423,12 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/USE", portroot, portvdb,
 			         dentry->d_name, de->d_name);
+
+			if (access(buf, R_OK) != 0) {
+				dep_burn_tree(dep_tree);
+				continue;
+			}
+
 			if (!eat_file(buf, use, sizeof(use))) {
 				warn("Could not eat_file(%s), you'll prob have incorrect output", buf);
 			} else {
@@ -482,6 +489,9 @@ int qdepends_vdb_deep(const char *depend_file, const char *query)
 			IF_DEBUG(warn("matched %s/%s", dentry->d_name, de->d_name));
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb,
 			         dentry->d_name, de->d_name, depend_file);
+
+			if (access(buf, R_OK) != 0)
+				continue;
 
 			if (!eat_file(buf, depend, sizeof(depend))) {
 				warn("i'm such a fatty, could not eat_file(%s)", buf);
