@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.124 2006/09/11 05:54:12 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.125 2006/10/12 23:41:04 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -356,6 +356,7 @@ contents_entry *contents_parse_line(char *line)
 {
 	static contents_entry e;
 	char *p;
+	int x;
 
 	if (!line || !*line || *line == '\n')
 		return NULL;
@@ -363,6 +364,16 @@ contents_entry *contents_parse_line(char *line)
 	/* chop trailing newline */
 	if ((p = strrchr(line, '\n')) != NULL)
 		*p = '\0';
+
+	/* ferringb wants to break portage/vdb by using tabs vs spaces 
+	 * so filenames can have lame ass spaces in them.. 
+	 * (I smell Windows near by)
+	 * Anyway we just convert that crap to a space so we can still 
+	 * parse quickly */
+
+	for (x = 0; x < strlen(line); x++)
+		if isspace(line[x])
+			line[x] = ' ';
 
 	memset(&e, 0x00, sizeof(e));
 	e._data = line;
