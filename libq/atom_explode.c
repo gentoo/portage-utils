@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.14 2006/01/24 00:28:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.15 2006/10/14 22:00:24 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -101,16 +101,21 @@ retry_suffix:
 		if ((ptr = strstr(ptr_tmp, atom_suffixes_str[i])) == NULL)
 			continue;
 
-		/* check this is a real suffix and not _p hitting mod_perl */
-		/* note: '_suff-' in $PN is accepted, but no one uses that ... */
+		/* check this is a real suffix and not _p hitting mod_perl.
+		 * we need to scan the whole suffix to handle crap like
+		 * sys-auth/pam_p11-0.1.2 */
 		len = strlen(ptr);
 		slen = strlen(atom_suffixes_str[i]);
 		if (slen > len) continue;
-		if (ptr[slen] && !isdigit(ptr[slen]) && ptr[slen]!='-') {
-			/* ok, it was a fake out ... lets skip this 
-			 * fake and try to match the suffix again */
-			ptr_tmp = ptr + 1;
-			goto retry_suffix;
+		while (slen < len) {
+			if (ptr[slen] && !isdigit(ptr[slen]) && ptr[slen]!='-') {
+				/* ok, it was a fake out ... lets skip this 
+				 * fake and try to match the suffix again
+				 */
+				ptr_tmp = ptr + 1;
+				goto retry_suffix;
+			}
+			++slen;
 		}
 
 		ret->suffix = i;
