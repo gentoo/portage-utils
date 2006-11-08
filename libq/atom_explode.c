@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.15 2006/10/14 22:00:24 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.16 2006/11/08 23:27:11 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -47,11 +47,11 @@ depend_atom *atom_explode(const char *atom)
 		ret = _atom_cache;
 	} else {
 		if (_atom_cache) free(_atom_cache);
-		_atom_cache = ret = (depend_atom*)xmalloc(len);
+		_atom_cache = ret = xmalloc(len);
 		_atom_cache_len = len;
 	}
 #else
-	ret = (depend_atom*)xmalloc(len);
+	ret = xmalloc(len);
 #endif
 	memset(ret, 0x00, len);
 	ptr = (char*)ret;

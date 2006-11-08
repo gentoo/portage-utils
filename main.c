@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.125 2006/10/12 23:41:04 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.126 2006/11/08 23:27:11 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -280,7 +280,7 @@ static char *remove_extra_space(char *str)
 	if (str == NULL)
 		return NULL;
 	len = strlen(str);
-	buf = (char*)xmalloc(len+1);
+	buf = xmalloc(len+1);
 	memset(buf, 0, len+1);
 	for (p = str; *p != 0; ++p) {
 		if (!isspace(*p)) c = *p; else {
