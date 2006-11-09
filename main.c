@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.127 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.128 2006/11/09 00:24:37 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -313,7 +313,7 @@ void makeargv(char *string, int *argc, char ***argv)
 {
 	int curc = 2;
 	char *q, *p, *str;
-	(*argv) = (char **) malloc(sizeof(char **) * curc);
+	(*argv) = xmalloc(sizeof(char **) * curc);
 
 	*argc = 1;
 	(*argv)[0] = xstrdup(argv0);

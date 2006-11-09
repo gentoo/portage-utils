@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.19 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.20 2006/11/09 00:24:37 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -48,7 +48,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.19 2006/11/09 00:18:05 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.20 2006/11/09 00:24:37 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -789,23 +789,19 @@ void qcache_stats(qcache_data *data)
 
 		runtime = time(NULL);
 
-		packages_stable          = (unsigned int*) malloc(sizeof(unsigned int)*architectures);
-		packages_testing         = (unsigned int*) malloc(sizeof(unsigned int)*architectures);
-		keywords                 =          (int*) malloc(sizeof(         int)*architectures);
-		current_package_keywords =          (int*) malloc(sizeof(         int)*architectures);
-
-		memset(packages_stable, 0, architectures*sizeof(unsigned int));
-		memset(packages_testing, 0, architectures*sizeof(unsigned int));
-		memset(keywords, 0, architectures*sizeof(int));
-		memset(current_package_keywords, 0, architectures*sizeof(int));
+		packages_stable          = xcalloc(architectures, sizeof(*packages_stable));
+		packages_testing         = xcalloc(architectures, sizeof(*packages_testing));
+		keywords                 = xcalloc(architectures, sizeof(*keywords));
+		current_package_keywords = xcalloc(architectures, sizeof(*current_package_keywords));
 	}
 
 	if (data->cur == 1) {
 		numpkg++;
-		memset(current_package_keywords, 0, architectures*sizeof(int));
-	} numebld++;
+		memset(current_package_keywords, 0, architectures * sizeof(*current_package_keywords));
+	}
+	++numebld;
 
-	memset(keywords, 0, architectures*sizeof(int));
+	memset(keywords, 0, architectures * sizeof(*keywords));
 	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
 		warn("Failed to read keywords for %s%s/%s%s%s", BOLD, data->category, BLUE, data->ebuild, NORM);
 		free(keywords);

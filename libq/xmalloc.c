@@ -35,3 +35,12 @@ extern void *xmalloc(size_t size)
 		err("Out of memory");
 	return ptr;
 }
+
+extern void *xcalloc(size_t nmemb, size_t size);
+extern void *xcalloc(size_t nmemb, size_t size)
+{
+	void *ptr = calloc(nmemb, size);
+	if (ptr == NULL)
+		err("Out of memory");
+	return ptr;
+}
