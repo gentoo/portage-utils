@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.126 2006/11/08 23:27:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.127 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -138,7 +138,8 @@ void init_coredumps(void)
 #include "libq/libq.c"
 
 void no_colors(void);
-void no_colors() {
+void no_colors()
+{
 	// echo $(awk '{print $4,"="}' libq/colors.c  | grep ^* |cut -c 2-| grep ^[A-Z] |tr '\n' ' ') = \"\"\;
 	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = DKGREEN = MAGENTA = RED = YELLOW = BRYELLOW = WHITE = "";
 	setenv("NOCOLOR", "true", 1);
@@ -297,45 +298,47 @@ static char *remove_extra_space(char *str)
 }
 
 void freeargv(int, char **);
-void freeargv(int argc, char **argv) {
+void freeargv(int argc, char **argv)
+{
 	int i;
-        if (argc > 0) {
-                for (i = 0; i < argc; i++)
-                        free(argv[i]);
-                free(argv);
-        }
+	if (argc > 0) {
+		for (i = 0; i < argc; i++)
+			free(argv[i]);
+		free(argv);
+	}
 }
 
 void makeargv(char *string, int *argc, char ***argv);
-void makeargv(char *string, int *argc, char ***argv) {
+void makeargv(char *string, int *argc, char ***argv)
+{
 	int curc = 2;
-	char *q, *p, *str;        
+	char *q, *p, *str;
 	(*argv) = (char **) malloc(sizeof(char **) * curc);
 
-	*argc = 1;        
+	*argc = 1;
 	(*argv)[0] = xstrdup(argv0);
-	q = xstrdup(string);        
+	q = xstrdup(string);
 	str = q;
 
-	remove_extra_space(str);        
+	remove_extra_space(str);
 	rmspace(str);
 
 	while (str) {
 		if ((p = strchr(str, ' ')) != NULL)
 			*(p++) = '\0';
 
-                if (*argc == curc) {
+		if (*argc == curc) {
 			curc *= 2;
 			(*argv) = (char **) realloc(*argv, sizeof(char **) * curc);
-                }
-                (*argv)[*argc] = xstrdup(str);
-                (*argc)++;
-                str = p;
-        }
+		}
+		(*argv)[*argc] = xstrdup(str);
+		(*argc)++;
+		str = p;
+	}
 	free(q);
 }
 
-/* 
+/*
  * Parse a line of CONTENTS file and provide access to the individual fields
  */
 typedef enum {
@@ -365,10 +368,10 @@ contents_entry *contents_parse_line(char *line)
 	if ((p = strrchr(line, '\n')) != NULL)
 		*p = '\0';
 
-	/* ferringb wants to break portage/vdb by using tabs vs spaces 
-	 * so filenames can have lame ass spaces in them.. 
+	/* ferringb wants to break portage/vdb by using tabs vs spaces
+	 * so filenames can have lame ass spaces in them..
 	 * (I smell Windows near by)
-	 * Anyway we just convert that crap to a space so we can still 
+	 * Anyway we just convert that crap to a space so we can still
 	 * parse quickly */
 
 	for (x = 0; x < strlen(line); x++)
@@ -427,8 +430,9 @@ contents_entry *contents_parse_line(char *line)
 	return &e;
 }
 
-char *strincr_var(const char *, char *, char *, const size_t );
-char *strincr_var(const char *name, char *s, char *value, const size_t value_len) {
+char *strincr_var(const char *, char *, char *, const size_t);
+char *strincr_var(const char *name, char *s, char *value, const size_t value_len)
+{
 	char buf[BUFSIZ];
 	char *p;
 
@@ -438,7 +442,7 @@ char *strincr_var(const char *name, char *s, char *value, const size_t value_len
 	while ((p = strstr(value, "-*")) != NULL)
 		memset(value, ' ', (strlen(value)-strlen(p))+2);
 
-	/* This function is mainly used by the startup code for parsing 
+	/* This function is mainly used by the startup code for parsing
 		make.conf and stacking variables remove.
 		variables can be in the form of ${v} or $v
 		works:
@@ -483,17 +487,17 @@ void initialize_portage_env(void)
 		char *value;
 		const size_t value_len;
 	} vars_to_read[] = {
-		{"ACCEPT_LICENSE", 14, _Q_STR,  accept_license, sizeof(accept_license)},
-		{"INSTALL_MASK", 12, _Q_ISTR,  install_mask, sizeof(install_mask)},
-		{"ARCH",    4, _Q_STR,  portarch, sizeof(portarch)},
-		{"CONFIG_PROTECT",    14, _Q_STR,  config_protect, sizeof(config_protect)},
-		{"NOCOLOR", 7, _Q_BOOL, &nocolor, 1},
-		{"FEATURES",8, _Q_ISTR,  features, sizeof(features)},
-		{"PORTDIR", 7, _Q_STR,  portdir, sizeof(portdir)},
-		{"PORTAGE_BINHOST",   15, _Q_STR,  binhost, sizeof(binhost)},
-		{"PORTAGE_TMPDIR",    14, _Q_STR,  port_tmpdir, sizeof(port_tmpdir)},
-		{"PKGDIR",  6, _Q_STR,  pkgdir, sizeof(pkgdir)},
-		{"ROOT",    4, _Q_STR,  portroot, sizeof(portroot)}
+		{"ACCEPT_LICENSE",   14, _Q_STR,  accept_license, sizeof(accept_license)},
+		{"INSTALL_MASK",     12, _Q_ISTR, install_mask,   sizeof(install_mask)},
+		{"ARCH",              4, _Q_STR,  portarch,       sizeof(portarch)},
+		{"CONFIG_PROTECT",   14, _Q_STR,  config_protect, sizeof(config_protect)},
+		{"NOCOLOR",           7, _Q_BOOL, &nocolor,       1},
+		{"FEATURES",          8, _Q_ISTR, features,       sizeof(features)},
+		{"PORTDIR",           7, _Q_STR,  portdir,        sizeof(portdir)},
+		{"PORTAGE_BINHOST",  15, _Q_STR,  binhost,        sizeof(binhost)},
+		{"PORTAGE_TMPDIR",   14, _Q_STR,  port_tmpdir,    sizeof(port_tmpdir)},
+		{"PKGDIR",            6, _Q_STR,  pkgdir,         sizeof(pkgdir)},
+		{"ROOT",              4, _Q_STR,  portroot,       sizeof(portroot)}
 	};
 
 	if ((p = strchr(portroot, '/')) != NULL)
@@ -639,7 +643,7 @@ const char *initialize_flat(int cache_type)
 	if (access(cache_file, R_OK) == 0)
 		goto ret;
 	if (!quiet)
-		warn("Updating ebuild %scache ... ", cache_type == CACHE_EBUILD ? "" : "meta" );
+		warn("Updating ebuild %scache ... ", cache_type == CACHE_EBUILD ? "" : "meta");
 
 	unlink(cache_file);
 	if (errno != ENOENT) {
@@ -657,7 +661,7 @@ const char *initialize_flat(int cache_type)
 	if ((a = scandir(".", &category, filter_hidden, alphasort)) < 0)
 		goto ret;
 
-	for (i = 0 ; i < a; i++) {
+	for (i = 0; i < a; i++) {
 		stat(category[i]->d_name, &st);
 		if (!S_ISDIR(st.st_mode))
 			continue;
@@ -688,21 +692,21 @@ const char *initialize_flat(int cache_type)
 			}
 			if ((e = scandir(de, &eb, filter_hidden, alphasort)) < 0)
 				continue;
-			for (d = 0 ; d < e; d++) {
+			for (d = 0; d < e; d++) {
 				if ((p = strrchr(eb[d]->d_name, '.')) != NULL)
 					if (strcmp(p, ".ebuild") == 0) {
 						count++;
 						fprintf(fp, "%s/%s/%s\n", category[i]->d_name, pn[c]->d_name, eb[d]->d_name);
 					}
 			}
-			while(d--) free(eb[d]);
+			while (d--) free(eb[d]);
 			free(eb);
 		}
-		while(b--) free(pn[b]);
+		while (b--) free(pn[b]);
 		free(pn);
 	}
 	fclose(fp);
-	while(a--) free(category[a]);
+	while (a--) free(category[a]);
 	free(category);
 
 	if (quiet) goto ret;
@@ -711,7 +715,6 @@ const char *initialize_flat(int cache_type)
 	if (start.tv_usec > finish.tv_usec) {
 		finish.tv_usec += 1000000;
 		finish.tv_sec--;
-        
 	}
 	frac = (finish.tv_usec - start.tv_usec);
 	secs = (finish.tv_sec - start.tv_sec);
@@ -911,30 +914,32 @@ void cache_free(portage_cache *cache)
 }
 
 char *grab_vdb_item(const char *, const char *, const char *);
-char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF) {
-        static char buf[_Q_PATH_MAX];
-        char *p;
-        FILE *fp;
+char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF)
+{
+	static char buf[_Q_PATH_MAX];
+	char *p;
+	FILE *fp;
 
 	snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb, CATEGORY, PF, item);
 	if ((fp = fopen(buf, "r")) == NULL)
-		return NULL;        
+		return NULL;
 	fgets(buf, sizeof(buf), fp);
-	if ((p = strchr(buf, '\n')) != NULL)                
+	if ((p = strchr(buf, '\n')) != NULL)
 		*p = 0;
 	fclose(fp);
 	rmspace(buf);
-        
+
 	return buf;
 }
 
 queue *get_vdb_atoms(void);
-queue *get_vdb_atoms(void) {
+queue *get_vdb_atoms(void)
+{
 	int cfd, j;
 	int dfd, i;
 
 	char buf[_Q_PATH_MAX];
-        static char savecwd[_POSIX_PATH_MAX];
+	static char savecwd[_POSIX_PATH_MAX];
 
 	struct dirent **cat;
 	struct dirent **pf;
@@ -942,7 +947,7 @@ queue *get_vdb_atoms(void) {
 	depend_atom *atom = NULL;
 	queue *cpf = NULL;
 
-        getcwd(savecwd, sizeof(savecwd));
+	getcwd(savecwd, sizeof(savecwd));
 
 	assert(chdir(savecwd) == 0);
 
@@ -957,7 +962,7 @@ queue *get_vdb_atoms(void) {
 	if ((cfd = scandir(".", &cat, filter_hidden, alphasort)) < 0)
 		goto fuckit;
 
-	for (j = 0; j < cfd ; j++) {
+	for (j = 0; j < cfd; j++) {
 		if (cat[j]->d_name[0] == '-')
 			continue;
 		if (chdir(cat[j]->d_name) != 0)
@@ -986,15 +991,14 @@ queue *get_vdb_atoms(void) {
 				snprintf(buf, sizeof(buf), "%s/%s-%s", atom->CATEGORY, atom->PN, atom->PV);
 			atom_implode(atom);
 			cpf = add_set(buf, "0", cpf);
-			
 		}
 		chdir("..");
-		while(dfd--) free(pf[dfd]);
+		while (dfd--) free(pf[dfd]);
 		free(pf);
 	}
 
 	/* cleanup */
-	while(cfd--) free(cat[cfd]);
+	while (cfd--) free(cat[cfd]);
 	free(cat);
 
 fuckit:
@@ -1002,7 +1006,8 @@ fuckit:
 	return cpf;
 }
 
-void cleanup() {
+void cleanup()
+{
 	reinitialize_as_needed();
 	free_sets(virtuals);
 	fclose(stderr);

@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.13 2006/11/08 23:27:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.14 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.13 2006/11/08 23:27:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.14 2006/11/09 00:18:05 vapier Exp $
  */
 
 
@@ -17,7 +17,7 @@
 
 /* used to queue a lot of things */
 struct queue_t {
-	char *name;   
+	char *name;
 	char *item;
 	struct queue_t *next;
 };
@@ -36,29 +36,29 @@ void free_virtuals(queue *list);
 queue *add_set(const char *vv, const char *ss, queue *q)
 {
 	queue *ll, *z;
-	char *s, *ptr;   
+	char *s, *ptr;
 	char *v, *vptr;
 
 	s = xstrdup(ss);
-	v = xstrdup(vv);   
+	v = xstrdup(vv);
 	ptr = xmalloc(strlen(ss));
 	vptr = xmalloc(strlen(vv));
-   	
-	do {      
+
+	do {
 		*ptr = 0;
-		*vptr = 0;      
+		*vptr = 0;
 		rmspace(ptr);
-		rmspace(s);      
+		rmspace(s);
 		rmspace(vptr);
 		rmspace(v);
 
 		ll = xmalloc(sizeof(queue));
 		ll->next = NULL;
 		ll->name = xmalloc(strlen(v) + 1);
-      		ll->item = xmalloc(strlen(s) + 1);
-		strcpy(ll->item, s);      
+		ll->item = xmalloc(strlen(s) + 1);
+		strcpy(ll->item, s);
 		strcpy(ll->name, v);
-      
+
 		if (q == NULL)
 			q = ll;
 		else {
@@ -76,20 +76,20 @@ queue *add_set(const char *vv, const char *ss, queue *q)
 	} while (v[0]);
 	free(s);
 	free(ptr);
-	free(v);   
+	free(v);
 	free(vptr);
 	return q;
 }
 
 /* remove a set from a cache. matches ->name and frees name,item */
 queue *del_set(char *s, queue *q, int *ok)
-{   
+{
 	queue *ll, *list, *old;
 	ll = q;
 	list = q;
-	old = q;   
+	old = q;
 	*ok = 0;
-   
+
 	while (ll != NULL) {
 		if (strcmp(ll->name, s) == 0) {
 			if (ll == list) {
@@ -98,12 +98,12 @@ queue *del_set(char *s, queue *q, int *ok)
 				free(ll->item);
 				free(ll);
 				ll = list;
-	
+
 			} else {
 				old->next = ll->next;
-				free(ll->name);	    
+				free(ll->name);
 				free(ll->item);
-				free(ll);	    
+				free(ll);
 				ll = old->next;
 			}
 			*ok = 1;
@@ -120,10 +120,10 @@ void free_sets(queue *list);
 void free_sets(queue *list)
 {
 	queue *ll, *q;
-	ll = list;   
+	ll = list;
 	while (ll != NULL) {
 		q = ll->next;
-		free(ll->name);      
+		free(ll->name);
 		free(ll->item);
 		free(ll);
 		ll = q;
@@ -149,29 +149,30 @@ void print_sets(queue *list)
 }
 
 queue *resolve_vdb_virtuals(char *vdb);
-queue *resolve_vdb_virtuals(char *vdb) {
-        DIR *dir, *dirp;
-        struct dirent *dentry_cat, *dentry_pkg;
-        char buf[BUFSIZE];
-        depend_atom *atom;
+queue *resolve_vdb_virtuals(char *vdb)
+{
+	DIR *dir, *dirp;
+	struct dirent *dentry_cat, *dentry_pkg;
+	char buf[BUFSIZE];
+	depend_atom *atom;
 
 	chdir("/");
 
-        /* now try to run through vdb and locate matches for user inputs */
-        if ((dir = opendir(vdb)) == NULL)
-                return virtuals;
+	/* now try to run through vdb and locate matches for user inputs */
+	if ((dir = opendir(vdb)) == NULL)
+		return virtuals;
 
-        /* scan all the categories */
-        while ((dentry_cat = q_vdb_get_next_dir(dir)) != NULL) {
-                snprintf(buf, sizeof(buf), "%s/%s", vdb, dentry_cat->d_name);
-                if ((dirp = opendir(buf)) == NULL)
-                        continue;
+	/* scan all the categories */
+	while ((dentry_cat = q_vdb_get_next_dir(dir)) != NULL) {
+		snprintf(buf, sizeof(buf), "%s/%s", vdb, dentry_cat->d_name);
+		if ((dirp = opendir(buf)) == NULL)
+			continue;
 
-                /* scan all the packages in this category */
-                while ((dentry_pkg = q_vdb_get_next_dir(dirp)) != NULL) {
+		/* scan all the packages in this category */
+		while ((dentry_pkg = q_vdb_get_next_dir(dirp)) != NULL) {
 			FILE *fp;
 			char *p;
-                        /* see if user wants any of these packages */
+			/* see if user wants any of these packages */
 			snprintf(buf, sizeof(buf), "%s/%s/%s/PROVIDE", vdb, dentry_cat->d_name, dentry_pkg->d_name);
 			if ((fp = fopen(buf, "r")) != NULL) {
 				fgets(buf, sizeof(buf), fp);
@@ -184,13 +185,13 @@ queue *resolve_vdb_virtuals(char *vdb) {
 				if (*buf) {
 					int ok = 0;
 					char *v, *tmp = xstrdup(buf);
-		                        snprintf(buf, sizeof(buf), "%s/%s", dentry_cat->d_name, dentry_pkg->d_name);
+					snprintf(buf, sizeof(buf), "%s/%s", dentry_cat->d_name, dentry_pkg->d_name);
 
 					atom = atom_explode(buf);
 					if (!atom) {
 						warn("could not explode '%s'", buf);
 						continue;
-                        		}
+					}
 					sprintf(buf, "%s/%s", atom->CATEGORY, atom->PN);
 					if ((v = virtual(tmp, virtuals)) != NULL) {
 						// IF_DEBUG(fprintf(stderr, "%s provided by %s (removing)\n", tmp, v));
@@ -203,13 +204,14 @@ queue *resolve_vdb_virtuals(char *vdb) {
 				}
 				fclose(fp);
 			}
-                }
-        }
+		}
+	}
 	return virtuals;
 }
 
 static queue *resolve_local_profile_virtuals();
-static queue *resolve_local_profile_virtuals() {
+static queue *resolve_local_profile_virtuals()
+{
 	char buf[BUFSIZ];
 	FILE *fp;
 	char *p;
@@ -218,9 +220,9 @@ static queue *resolve_local_profile_virtuals() {
 
 	for (i = 0; i < sizeof(paths)/sizeof(paths[0]); i++) {
 		if ((fp = fopen(paths[i], "r")) != NULL) {
-			while((fgets(buf, sizeof(buf), fp)) != NULL) {
+			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 				if (*buf != 'v') continue;
-				for (p = buf ; *p != 0; ++p) if (isspace(*p)) *p = ' ';
+				for (p = buf; *p != 0; ++p) if (isspace(*p)) *p = ' ';
 				if ((p = strchr(buf, ' ')) != NULL) {
 					int ok = 0;
 					*p = 0;
@@ -236,7 +238,8 @@ static queue *resolve_local_profile_virtuals() {
 }
 
 static queue *resolve_virtuals();
-static queue *resolve_virtuals() {
+static queue *resolve_virtuals()
+{
 	static char buf[BUFSIZ];
 	static char savecwd[_POSIX_PATH_MAX];
 	static char *p;
@@ -261,9 +264,9 @@ static queue *resolve_virtuals() {
 			return virtuals;
 	vstart:
 		if ((fp = fopen("virtuals", "r")) != NULL) {
-			while((fgets(buf, sizeof(buf), fp)) != NULL) {
+			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 				if (*buf != 'v') continue;
-				for (p = buf ; *p != 0; ++p) if (isspace(*p)) *p = ' ';
+				for (p = buf; *p != 0; ++p) if (isspace(*p)) *p = ' ';
 				if ((p = strchr(buf, ' ')) != NULL) {
 					*p = 0;
 					if (virtual(buf, virtuals) == NULL)
@@ -273,7 +276,7 @@ static queue *resolve_virtuals() {
 			fclose(fp);
 		}
 		if ((fp = fopen("parent", "r")) != NULL) {
-			while((fgets(buf, sizeof(buf), fp)) != NULL) {
+			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 				rmspace(buf);
 				if (!*buf) continue;
 				if (*buf == '#') continue;

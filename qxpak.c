@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.13 2006/04/21 03:13:25 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.14 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -48,7 +48,7 @@ static const char *qxpak_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.13 2006/04/21 03:13:25 vapier Exp $";
+static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.14 2006/11/09 00:18:05 vapier Exp $";
 #define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, lookup_applet_idx("qxpak"))
 
 
@@ -267,7 +267,7 @@ fake_data_len:
 		return;
 	}
 	in_len = st->st_size;
-	/* the xpak format can only store files whose size is a 32bit int 
+	/* the xpak format can only store files whose size is a 32bit int
 	 * so we have to make sure we don't store a big file */
 	if (in_len != st->st_size) {
 		warnf("File is too big: %lu", st->st_size);

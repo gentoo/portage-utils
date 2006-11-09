@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.27 2006/05/24 03:30:42 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.28 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *qcheck_opts_help[] = {
 	"Update chksum and mtimes for packages",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.27 2006/05/24 03:30:42 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.28 2006/11/09 00:18:05 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 
@@ -73,7 +73,7 @@ int qcheck_main(int argc, char **argv)
 			/* see if this cat/pkg is requested */
 			if (!search_all) {
 				for (i = optind; i < argc; ++i) {
-					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, 
+					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name,
 					         de->d_name);
 					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
 						break;
@@ -91,7 +91,7 @@ int qcheck_main(int argc, char **argv)
 			strncat(buf, "~", sizeof(buf));
 			num_files = num_files_ok = num_files_unknown = 0;
 			printf("%sing %s%s/%s%s ...\n",
-				(qc_update ? "Updat" : "Check"), 
+				(qc_update ? "Updat" : "Check"),
 				GREEN, dentry->d_name, de->d_name, NORM);
 			if (qc_update) {
 				if ((fpx = fopen(buf, "w")) == NULL) {

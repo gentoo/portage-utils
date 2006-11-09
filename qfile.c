@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.35 2006/08/21 00:11:54 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.36 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,11 +22,12 @@ static const char *qfile_opts_help[] = {
 	"Assume arguments are already prefixed by $ROOT",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.35 2006/08/21 00:11:54 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.36 2006/11/09 00:18:05 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
-static inline short qfile_is_prefix(const char* path, const char* prefix, int prefix_length) {
-	return !prefix_length 
+static inline short qfile_is_prefix(const char* path, const char* prefix, int prefix_length)
+{
+	return !prefix_length
 		|| (strlen(path) >= prefix_length
 			&& (path[prefix_length] == '/' || path[prefix_length] == '\0')
 			&& !strncmp(path, prefix, prefix_length));
@@ -76,8 +77,8 @@ void qfile(char *path, int argc, char* root, char* real_root, char* bn_firstchar
 
 			// used to cut the number of strcmp() calls
 			bn_firstchar = entry_basename[0];
-			
-			for(i = 0; i < argc; i++) {
+
+			for (i = 0; i < argc; i++) {
 				if (base_names[i] == NULL)
 					continue;
 				if (non_orphans != NULL && non_orphans[i])
@@ -100,11 +101,11 @@ void qfile(char *path, int argc, char* root, char* real_root, char* bn_firstchar
 						*(p + 1) = '\0';
 					else
 						*p = '\0';
-					if (dir_names[i] != NULL && 
+					if (dir_names[i] != NULL &&
 							strcmp(entry_dirname, dir_names[i]) == 0)
 						// dir_name == dirname(CONTENTS)
 						path_ok = 1;
-					else if (real_dir_names[i] != NULL && 
+					else if (real_dir_names[i] != NULL &&
 							strcmp(entry_dirname, real_dir_names[i]) == 0)
 						// real_dir_name == dirname(CONTENTS)
 						path_ok = 1;
@@ -117,19 +118,19 @@ void qfile(char *path, int argc, char* root, char* real_root, char* bn_firstchar
 						realpath(fullpath, rpath);
 						if (errno != 0) {
 							if (verbose) {
-								warn("Could not read real path of \"%s\" (from %s): %s", 
+								warn("Could not read real path of \"%s\" (from %s): %s",
 										fullpath, pkg, strerror(errno));
-								warn("We'll never know whether \"%s/%s\" was a result for your query...", 
+								warn("We'll never know whether \"%s/%s\" was a result for your query...",
 										entry_dirname, entry_basename);
 							}
 						} else if (!qfile_is_prefix(rpath, real_root, strlen(real_root))) {
 							if (verbose)
 								warn("Real path of \"%s\" is not under ROOT: %s", fullpath, rpath);
-						} else if (dir_names[i] != NULL && 
+						} else if (dir_names[i] != NULL &&
 								strcmp(rpath + strlen(real_root), dir_names[i]) == 0)
 							// dir_name == realpath(dirname(CONTENTS))
 							path_ok = 1;
-						else if (real_dir_names[i] != NULL && 
+						else if (real_dir_names[i] != NULL &&
 								strcmp(rpath + strlen(real_root), real_dir_names[i]) == 0)
 							// real_dir_name == realpath(dirname(CONTENTS))
 							path_ok = 1;
@@ -155,7 +156,7 @@ void qfile(char *path, int argc, char* root, char* real_root, char* bn_firstchar
 						printf(" (%s%s)\n", root, e->name);
 					else
 						printf(" (%s)\n", e->name);
-	
+
 					atom_implode(atom);
 				} else {
 					non_orphans[i] = 1;
@@ -266,9 +267,10 @@ int qfile_main(int argc, char **argv)
 
 		// Record basename, but if it is ".", ".." or "/"
 		strncpy(tmppath, basename(argv[i+optind]), _Q_PATH_MAX);
-		if ((strlen(tmppath) > 2) || 
-				(strncmp(tmppath, "..", strlen(tmppath))
-				 && strncmp(tmppath, "/", strlen(tmppath)))) {
+		if ((strlen(tmppath) > 2) ||
+		    (strncmp(tmppath, "..", strlen(tmppath))
+		     && strncmp(tmppath, "/", strlen(tmppath))))
+		{
 			basenames[i] = xstrdup(tmppath);
 			basenames_firstchars[i] = basenames[i][0];
 			// If there is no "/" in the argument, then it's over.
@@ -295,7 +297,7 @@ int qfile_main(int argc, char **argv)
 
 		if (basenames[i] != NULL) {
 			// Get both the dirname and its realpath.  This paths will
-			// have no trailing slash, but if it is the only char (ie., 
+			// have no trailing slash, but if it is the only char (ie.,
 			// when searching for "/foobar").
 			strncpy(tmppath, abspath, _Q_PATH_MAX);
 			strncpy(abspath, dirname(tmppath), _Q_PATH_MAX);
@@ -310,7 +312,7 @@ int qfile_main(int argc, char **argv)
 					warn("Results for query item \"%s\" may be inaccurate.", argv[i+optind]);
 				}
 				continue;
-			} 
+			}
 			if (!qfile_is_prefix(tmppath, real_root, real_root_length)) {
 				warn("Real path of \"%s\" is not under ROOT: %s", abspath, tmppath);
 				goto skip_query_item;
@@ -321,7 +323,7 @@ int qfile_main(int argc, char **argv)
 				realdirnames[i] = xstrdup(tmppath + real_root_length);
 		} else {
 			// No basename means we are looking for something like "/foo/bar/.."
-			// Dirname is meaningless here, we can only get realpath of the full 
+			// Dirname is meaningless here, we can only get realpath of the full
 			// path and then split it.
 			errno = 0;
 			realpath(abspath, tmppath);
@@ -363,7 +365,7 @@ int qfile_main(int argc, char **argv)
 	if (non_orphans != NULL) {
 		// display orphan files
 		for (i = 0; i < (argc-optind); i++) {
-			if (non_orphans[i]) 
+			if (non_orphans[i])
 				continue;
 			if (basenames[i] != NULL) {
 				found = 0; // ~inverse return code (as soon as an orphan is found, return non-zero)

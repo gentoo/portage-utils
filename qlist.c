@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.41 2006/08/19 16:10:24 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.42 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -37,19 +37,20 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.41 2006/08/19 16:10:24 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.42 2006/11/09 00:18:05 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
 
 queue *filter_dups(queue *sets);
-queue *filter_dups(queue *sets) {
+queue *filter_dups(queue *sets)
+{
 	queue *ll = NULL;
 	queue *dups = NULL;
 	queue *list = NULL;
 
-	for (list = sets ; list != NULL;  list = list->next) {
-		for ( ll = sets ; ll != NULL; ll = ll->next) {
+	for (list = sets; list != NULL;  list = list->next) {
+		for (ll = sets; ll != NULL; ll = ll->next) {
 			if ((strcmp(ll->name, list->name) == 0) && (strcmp(ll->item, list->item) != 0)) {
 				int ok = 0;
 				dups = del_set(ll->item, dups, &ok);
@@ -61,7 +62,8 @@ queue *filter_dups(queue *sets) {
 	return dups;
 }
 
-static char *grab_pkg_umap(char *CAT, char *PV) {
+static char *grab_pkg_umap(char *CAT, char *PV)
+{
 	static char umap[BUFSIZ] = "";
 	char *use = NULL;
 	char *iuse = NULL;
@@ -80,8 +82,8 @@ static char *grab_pkg_umap(char *CAT, char *PV) {
 
 		memset(umap, 0, sizeof(umap));
 		makeargv(iuse, &iuse_argc, &iuse_argv);
-		for (u = 1 ; u < use_argc; u++) {
-			for (i = 1 ; i < iuse_argc; i++) {
+		for (u = 1; u < use_argc; u++) {
+			for (i = 1; i < iuse_argc; i++) {
 				if ((strcmp(use_argv[u], iuse_argv[i])) == 0) {
 					strncat(umap, use_argv[u], sizeof(umap));
 					strncat(umap, " ", sizeof(umap));
@@ -95,7 +97,7 @@ static char *grab_pkg_umap(char *CAT, char *PV) {
 	/* filter out the dup use flags */
 	use_argc = 0; use_argv = NULL;
 	makeargv(umap, &use_argc, &use_argv);
-	for (i = 1 ; i < use_argc; i++) {
+	for (i = 1; i < use_argc; i++) {
 		int ok = 0;
 		sets = del_set(use_argv[i], sets, &ok);
 		sets = add_set(use_argv[i], use_argv[i], sets);
@@ -114,7 +116,8 @@ static char *grab_pkg_umap(char *CAT, char *PV) {
 }
 
 static char *umapstr(char display, char *cat, char *name);
-static char *umapstr(char display, char *cat, char *name) {
+static char *umapstr(char display, char *cat, char *name)
+{
 	static char buf[BUFSIZ] = "";
 	char *umap = NULL;
 
@@ -176,7 +179,7 @@ int qlist_main(int argc, char **argv)
 		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
-	for (j = 0; j < dfd ; j++) {
+	for (j = 0; j < dfd; j++) {
 		int a, x;
 		if (cat[j]->d_name[0] == '-')
 			continue;
@@ -187,7 +190,7 @@ int qlist_main(int argc, char **argv)
 		if ((a = scandir(".", &de, filter_hidden, alphasort)) < 0)
 			continue;
 
-		for (x = 0 ; x < a; x++) {
+		for (x = 0; x < a; x++) {
 			FILE *fp;
 
 			if (de[x]->d_name[0] == '.' || de[x]->d_name[0] == '-')
@@ -195,7 +198,7 @@ int qlist_main(int argc, char **argv)
 
 			/* see if this cat/pkg is requested */
 			for (i = optind; i < argc; ++i) {
-				snprintf(buf, sizeof(buf), "%s/%s", cat[j]->d_name, 
+				snprintf(buf, sizeof(buf), "%s/%s", cat[j]->d_name,
 					 de[x]->d_name);
 
 				if (exact) {
@@ -238,7 +241,7 @@ int qlist_main(int argc, char **argv)
 						slot = grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name);
 
 					/* display it */
-					printf("%s%s/%s%s%s%s%s%s%s", BOLD, cat[j]->d_name, BLUE, 
+					printf("%s%s/%s%s%s%s%s%s%s", BOLD, cat[j]->d_name, BLUE,
 					       (pkgname ? pkgname->PN : de[x]->d_name), NORM,
 						YELLOW, slot ? " ": "", slot ? slot : "", NORM);
 					puts(umapstr(show_umap, cat[j]->d_name, de[x]->d_name));
@@ -287,7 +290,7 @@ int qlist_main(int argc, char **argv)
 			}
 			fclose(fp);
 		}
-		while(a--) free(de[a]);
+		while (a--) free(de[a]);
 		free(de);
 		chdir("..");
 	}
@@ -318,7 +321,7 @@ int qlist_main(int argc, char **argv)
 		free_sets(dups);
 		free_sets(sets);
 	}
-	while(dfd--) free(cat[dfd]);
+	while (dfd--) free(cat[dfd]);
 	free(cat);
 	return EXIT_SUCCESS;
 }

@@ -54,7 +54,7 @@ static unsigned char *hash_file(const char *filename, uint8_t hash_algo)
 	if (fd != -1) {
 		static uint8_t hash_value_bin[20];
 		static unsigned char *hash_value;
-		hash_value = 
+		hash_value =
 			(hash_fd(fd, -1, hash_algo, hash_value_bin) != -2 ?
 			 hash_bin_to_hex(hash_value_bin, hash_algo == HASH_MD5 ? 16 : 20) :
 			 NULL);

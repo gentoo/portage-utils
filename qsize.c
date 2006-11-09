@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.22 2006/04/06 11:29:55 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.23 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qsize_opts_help[] = {
 	"Display size in bytes",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.22 2006/04/06 11:29:55 solar Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.23 2006/11/09 00:18:05 vapier Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
 
@@ -92,7 +92,7 @@ int qsize_main(int argc, char **argv)
 			/* see if this cat/pkg is requested */
 			if (!search_all) {
 				for (i = optind; i < argc; ++i) {
-					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, 
+					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name,
 					         de->d_name);
 					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
 						break;
@@ -128,9 +128,9 @@ int qsize_main(int argc, char **argv)
 			num_all_files += num_files;
 			num_all_nonfiles += num_nonfiles;
 			if (!summary_only) {
-				printf("%s%s/%s%s%s: %lu files, %lu non-files, ", BOLD, 
+				printf("%s%s/%s%s%s: %lu files, %lu non-files, ", BOLD,
 				       basename(dentry->d_name), BLUE, de->d_name, NORM,
-				       (unsigned long)num_files, 
+				       (unsigned long)num_files,
 				       (unsigned long)num_nonfiles);
 				if (disp_units)
 					printf("%s %s\n",

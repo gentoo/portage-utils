@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.33 2006/09/11 04:02:01 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.34 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.33 2006/09/11 04:02:01 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.34 2006/11/09 00:18:05 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -227,7 +227,7 @@ void show_emerge_history(char listflag, int argc, char **argv, const char *logfi
 			if ((p = strchr(q, ' ')) == NULL)
 				continue;
 			*p = 0;
-		} else if((listflag & QLOP_UNLIST) && !strncmp(q, ">>> unmerge success: ", 21)) {
+		} else if ((listflag & QLOP_UNLIST) && !strncmp(q, ">>> unmerge success: ", 21)) {
 			merged = 0;
 			if ((p = strchr(q, ':')) == NULL)
 				continue;

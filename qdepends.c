@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.41 2006/11/08 23:27:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.42 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.41 2006/11/08 23:27:11 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.42 2006/11/09 00:18:05 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -379,7 +379,7 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 
 			/* see if this cat/pkg is requested */
 			for (i = optind; i < argc; ++i) {
-				snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, 
+				snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name,
 				         de->d_name);
 				if (rematch(argv[i], buf, REG_EXTENDED) == 0)
 					break;

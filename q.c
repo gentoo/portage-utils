@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.32 2006/07/09 14:27:52 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.33 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *q_opts_help[] = {
 	"Reinitialize metadata cache",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.32 2006/07/09 14:27:52 solar Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.33 2006/11/09 00:18:05 vapier Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 
@@ -119,7 +119,7 @@ int q_main(int argc, char **argv)
 	if ((func = lookup_applet(argv[optind])) == NULL)
 		return 1;
 
-	/* In case of "q --option ... appletname ...", remove appletname from the 
+	/* In case of "q --option ... appletname ...", remove appletname from the
 	 * applet's args, exchange "appletname" and "--option". */
 	if (optind > 1) {
 		char* appletname = argv[optind];

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qpy.c,v 1.1 2006/05/26 01:46:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/Attic/qpy.c,v 1.2 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -21,7 +21,7 @@ static const char *qpy_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qpy_rcsid[] = "$Id: qpy.c,v 1.1 2006/05/26 01:46:16 solar Exp $";
+static const char qpy_rcsid[] = "$Id: qpy.c,v 1.2 2006/11/09 00:18:05 vapier Exp $";
 #define qpy_usage(ret) usage(ret, QPY_FLAGS, qpy_long_opts, qpy_opts_help, lookup_applet_idx("qpy"))
 
 struct portage_t {
@@ -75,16 +75,17 @@ int import_portage_settings(void)
 		return 1;
 	}
 	if (!(portage.settings = PyObject_GetAttrString(portage.interp, (char *) "settings"))) {
-		Py_DECREF(portage.interp);      
+		Py_DECREF(portage.interp);
 		fprintf(stderr, "getting settings failed");
 		return 1;
-	}   
+	}
 	return 0;
 }
 
 #if 0
 void portage_reload(void);
-void portage_reload(void) {
+void portage_reload(void)
+{
 	Py_Finalize();
 	Py_Initialize();
 	import_portage_settings();

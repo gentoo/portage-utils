@@ -75,11 +75,10 @@ const char *make_human_readable_str(unsigned long long size,
 		}
 #if 0
 		/* Sample code to omit decimal point and tenths digit. */
-		if ( /* no_tenths */ 1 ) {
-			if ( frac >= 5 ) {
+		if (1) { /* no_tenths */
+			if (frac >= 5)
 				++val;
-			}
-			f = "%Lu%*c" /* fmt_no_tenths */ ;
+			f = "%Lu%*c"; /* fmt_no_tenths */
 			frac = 1;
 		}
 #endif

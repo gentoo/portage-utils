@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.6 2006/04/21 22:15:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.7 2006/11/09 00:18:05 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -31,7 +31,7 @@ static const char *qglsa_opts_help[] = {
 	"Mark specified GLSAs as fixed",
 	COMMON_OPTS_HELP
 };
-static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.6 2006/04/21 22:15:47 vapier Exp $";
+static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.7 2006/11/09 00:18:05 vapier Exp $";
 #define qglsa_usage(ret) usage(ret, QGLSA_FLAGS, qglsa_long_opts, qglsa_opts_help, lookup_applet_idx("qglsa"))
 
 
@@ -153,7 +153,7 @@ static const char *qglsa_opts_portage[] = {
 
 static void qglsa_act_list(char *glsa)
 {
-	
+
 }
 */
 int qglsa_main(int argc, char **argv)
