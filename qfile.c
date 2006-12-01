@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.36 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.37 2006/12/01 17:37:46 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,7 +22,7 @@ static const char *qfile_opts_help[] = {
 	"Assume arguments are already prefixed by $ROOT",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.36 2006/11/09 00:18:05 vapier Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.37 2006/12/01 17:37:46 solar Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 static inline short qfile_is_prefix(const char* path, const char* prefix, int prefix_length)
@@ -111,7 +111,7 @@ void qfile(char *path, int argc, char* root, char* real_root, char* bn_firstchar
 						path_ok = 1;
 					else {
 						char rpath[_Q_PATH_MAX+1];
-						char * fullpath = entry_dirname;
+						char *fullpath = entry_dirname;
 						errno = 0;
 						if (real_root != NULL && real_root[0] != '\0')
 							xasprintf(&fullpath, "%s%s", real_root, entry_dirname);
@@ -177,16 +177,16 @@ int qfile_main(int argc, char **argv)
 	struct dirent *dentry;
 	int i, nb_of_queries;
 	char *p;
-	char ** basenames;
-	char ** dirnames;
-	char ** realdirnames;
-	char * basenames_firstchars;
-	char * pwd = NULL;
-	short * non_orphans = NULL;
+	char **basenames;
+	char **dirnames;
+	char **realdirnames;
+	char *basenames_firstchars;
+	char *pwd = NULL;
+	short *non_orphans = NULL;
 	short search_orphans = 0;
 	short assume_root_prefix = 0;
-	char * root_prefix;
-	char * real_root;
+	char *root_prefix;
+	char *real_root;
 	int real_root_length;
 	char tmppath[_Q_PATH_MAX+1];
 	char abspath[_Q_PATH_MAX+1];
