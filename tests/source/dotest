@@ -8,6 +8,7 @@ testit() {
 		cat $1
 		rm -f $1
 		ret=1
+		return
 	fi
 	rm -f $1
 	echo PASS: $1
