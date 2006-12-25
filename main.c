@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.128 2006/11/09 00:24:37 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.129 2006/12/25 16:38:37 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,8 +35,8 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*arr))
 
-// http://tinderbox.dev.gentoo.org/default-linux/arm
-// http://tinderbox.dev.gentoo.org/default-linux/hppa
+/* http://tinderbox.dev.gentoo.org/default-linux/arm */
+/* http://tinderbox.dev.gentoo.org/default-linux/hppa */
 
 #ifdef __linux__
 #undef  URL
@@ -140,7 +140,7 @@ void init_coredumps(void)
 void no_colors(void);
 void no_colors()
 {
-	// echo $(awk '{print $4,"="}' libq/colors.c  | grep ^* |cut -c 2-| grep ^[A-Z] |tr '\n' ' ') = \"\"\;
+	/* echo $(awk '{print $4,"="}' libq/colors.c  | grep ^* |cut -c 2-| grep ^[A-Z] |tr '\n' ' ') = \"\"\;  */
 	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = DKGREEN = MAGENTA = RED = YELLOW = BRYELLOW = WHITE = "";
 	setenv("NOCOLOR", "true", 1);
 }

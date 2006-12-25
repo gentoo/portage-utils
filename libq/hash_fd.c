@@ -775,7 +775,7 @@ extern int hash_fd(int src_fd, const size_t size, const uint8_t hash_algo,
 				   uint8_t * hashval)
 {
 	int result = EXIT_SUCCESS;
-//	size_t hashed_count = 0;
+/*	size_t hashed_count = 0; */
 	size_t blocksize = 0;
 	size_t remaining = size;
 	unsigned char *buffer = NULL;

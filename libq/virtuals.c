@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.14 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.15 2006/12/25 16:38:37 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.14 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.15 2006/12/25 16:38:37 solar Exp $
  */
 
 
@@ -194,11 +194,11 @@ queue *resolve_vdb_virtuals(char *vdb)
 					}
 					sprintf(buf, "%s/%s", atom->CATEGORY, atom->PN);
 					if ((v = virtual(tmp, virtuals)) != NULL) {
-						// IF_DEBUG(fprintf(stderr, "%s provided by %s (removing)\n", tmp, v));
+						/* IF_DEBUG(fprintf(stderr, "%s provided by %s (removing)\n", tmp, v)); */
 						virtuals = del_set(tmp,  virtuals, &ok);
 					}
 					virtuals = add_set(tmp, buf, virtuals);
-					// IF_DEBUG(fprintf(stderr, "%s provided by %s/%s (adding)\n", tmp, atom->CATEGORY, dentry_pkg->d_name));
+					/* IF_DEBUG(fprintf(stderr, "%s provided by %s/%s (adding)\n", tmp, atom->CATEGORY, dentry_pkg->d_name)); */
 					free(tmp);
 					atom_implode(atom);
 				}

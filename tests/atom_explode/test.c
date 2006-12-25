@@ -1,7 +1,7 @@
 /*
  * Copyright 2005 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.7 2005/10/25 00:35:34 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.8 2006/12/25 16:38:37 solar Exp $
  *
  * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 {
 	int i;
 	depend_atom *a;
-//	printf("input -> CATEGORY / [P] PN - PVR [PV] [PR_int]\n");
+	/* printf("input -> CATEGORY / [P] PN - PVR [PV] [PR_int]\n"); */
 	for (i = 1; i < argc; ++i) {
 		a = atom_explode(argv[i]);
 		boom(a,argv[i]);

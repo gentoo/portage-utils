@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.29 2006/12/11 17:11:51 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.30 2006/12/25 16:38:37 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *qcheck_opts_help[] = {
 	"Update chksum and mtimes for packages",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.29 2006/12/11 17:11:51 solar Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.30 2006/12/25 16:38:37 solar Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 
@@ -186,7 +186,7 @@ free_and_more_hash:
 					printf("\n");
 
 					/* This can only be a sym */
-					if (qc_update) 
+					if (qc_update)
 						fprintf(fpx, "sym %s -> %s %lu\n", e->name, e->sym_target, st.st_mtime);
 					
 					continue;

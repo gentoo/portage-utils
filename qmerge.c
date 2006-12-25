@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.54 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.55 2006/12/25 16:38:37 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -21,7 +21,7 @@
   --noscript                       don't execute pkg_{pre,post}{inst,rm} (if any)
 */
 
-// #define BUSYBOX "/bin/busybox"
+/* #define BUSYBOX "/bin/busybox" */
 #define BUSYBOX ""
 
 #define QMERGE_FLAGS "fFsKUpuyO5" COMMON_FLAGS
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.54 2006/11/09 00:18:05 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.55 2006/12/25 16:38:37 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -111,7 +111,7 @@ int q_unlink_q(char *path, const char *func, int line)
 
 #define unlink_q(path) q_unlink_q(path, __FUNCTION__, __LINE__)
 
-// rewrite using copyfile() utime() stat(), lstat(), read() and perms.
+/* rewrite using copyfile() utime() stat(), lstat(), read() and perms. */
 int interactive_rename(const char *src, const char *dst, struct pkg_t *pkg)
 {
 	FILE *fp;
@@ -212,7 +212,7 @@ char *best_version(const char *CATEGORY, const char *PN)
 	FILE *fp;
 	char *p;
 
-	// if defined(EBUG) this spits out incorrect versions.
+	/* if defined(EBUG) this spits out incorrect versions. */
 	snprintf(buf, sizeof(buf), "qlist -CIev %s%s%s 2>/dev/null | tr '\n' ' '",
 		(CATEGORY != NULL ? CATEGORY : ""), (CATEGORY != NULL ? "/" : ""), PN);
 
@@ -268,13 +268,13 @@ queue *resolve_rdepends(const int level, const struct pkg_t *package, queue *dep
 	IF_DEBUG(fprintf(stderr, "\n+Parent: %s/%s\n", pkg->CATEGORY, pkg->PF));
 	IF_DEBUG(fprintf(stderr, "+Depstring: %s\n", pkg->RDEPEND));
 
-	// <hack>
+	/* <hack> */
 	if (strncmp(pkg->RDEPEND, "|| ", 3) == 0)
 		strcpy(pkg->RDEPEND, "");
-	// </hack>
+	/* </hack> */
 
 	makeargv(pkg->RDEPEND, &ARGC, &ARGV);
-	// Walk the rdepends here. Merging what need be.
+	/* Walk the rdepends here. Merging what need be. */
 	for (i = 1; i < ARGC; i++) {
 		depend_atom *subatom;
 		switch (ARGV[i][0]) {
@@ -321,7 +321,7 @@ queue *resolve_rdepends(const int level, const struct pkg_t *package, queue *dep
 					snprintf(buf, sizeof(buf), "%s/%s", subpkg->CATEGORY, subpkg->PF);
 
 					p = best_version(subpkg->CATEGORY, subpkg->PF);
-					// * we dont want to remerge equal versions here */
+					/* we dont want to remerge equal versions here */
 					IF_DEBUG(fprintf(stderr, "+Installed: %s\n", p));
 					if (strlen(p) < 1)
 						if (!((strcmp(pkg->PF, subpkg->PF) == 0) && (strcmp(pkg->CATEGORY, subpkg->CATEGORY) == 0))) {
@@ -382,7 +382,7 @@ void install_mask_pwd(int iargc, char **iargv, const struct stat st)
 			if ((glob(buf, GLOB_DOOFFS|GLOB_BRACE, NULL, &globbuf)) == 0) {
 				for (g = 0; g < globbuf.gl_pathc; g++) {
 					strncpy(buf, globbuf.gl_pathv[g], sizeof(buf));
-					// qprintf("globbed: %s\n", globbuf.gl_pathv[g]);
+					/* qprintf("globbed: %s\n", globbuf.gl_pathv[g]); */
 					crossmount_rm(buf, sizeof(buf), globbuf.gl_pathv[g], st);
 				}
 				globfree(&globbuf);
@@ -440,6 +440,8 @@ char qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg)
 			snprintf(install_ver, sizeof(install_ver), "[%s%s%s] ", DKBLUE, buf, NORM);
 			atom_implode(subatom);
 		}
+		if (update_only && c != 'U')
+			return c;
 		if (((c == 'R') || (c == 'D')) && update_only && level)
 			return c;
 		if (c == 'R')
@@ -493,23 +495,24 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 	c = qprint_tree_node(level, atom, pkg);
 
-	// if (((c == 'R') || (c == 'D')) && update_only)
-	//	return;
+	/* if (((c == 'R') || (c == 'D')) && update_only)
+		return;
+	*/
 
 	if (pkg->RDEPEND[0] && follow_rdepends) {
 		IF_DEBUG(fprintf(stderr, "\n+Parent: %s/%s\n", pkg->CATEGORY, pkg->PF));
 		IF_DEBUG(fprintf(stderr, "+Depstring: %s\n", pkg->RDEPEND));
 
-		// <hack>
+		/* <hack> */
 		if (strncmp(pkg->RDEPEND, "|| ", 3) == 0) {
 			if (verbose)
 				qfprintf(stderr, "fix this rdepend hack %s\n", pkg->RDEPEND);
 			strcpy(pkg->RDEPEND, "");
 		}
-		// </hack>
+		/* </hack> */
 
 		makeargv(pkg->RDEPEND, &ARGC, &ARGV);
-		// Walk the rdepends here. Merging what need be.
+		/* Walk the rdepends here. Merging what need be. */
 		for (i = 1; i < ARGC; i++) {
 			depend_atom *subatom, *ratom;
 			switch (ARGV[i][0]) {
@@ -549,7 +552,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 							continue;
 						}
 
-						// ratom = atom_explode(resolved);
+						/* ratom = atom_explode(resolved); */
 						subpkg = grab_binpkg_info(resolved);	/* free me later */
 
 						assert(subpkg != NULL);
@@ -561,7 +564,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 						ratom = atom_explode(buf);
 
 						p = best_version(subpkg->CATEGORY, subpkg->PF);
-						// * we dont want to remerge equal versions here */
+						/* we dont want to remerge equal versions here */
 						IF_DEBUG(fprintf(stderr, "+Installed: %s\n", p));
 						if (strlen(p) < 1)
 							if (!((strcmp(pkg->PF, subpkg->PF) == 0) && (strcmp(pkg->CATEGORY, subpkg->CATEGORY) == 0)))
@@ -585,10 +588,10 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	if (chdir(port_tmpdir) != 0) errf("!!! chdir(port_tmpdir %s) %s", port_tmpdir, strerror(errno));
 
 	mkdir(pkg->PF, 0755);
-	// mkdir(pkg->PF, 0710);
+	/* mkdir(pkg->PF, 0710); */
 	if (chdir(pkg->PF) != 0) errf("!!! chdir(PF %s) %s", pkg->PF, strerror(errno));
 
-	system(BUSYBOX " rm -rf ./*"); // this line does funny things to nano's highlighting.
+	system(BUSYBOX " rm -rf ./*"); /* this line does funny things to nano's highlighting. */
 
 	/* split the tbz and xpak data */
 	snprintf(tarball, sizeof(tarball), "%s.tbz2", pkg->PF);
@@ -624,7 +627,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	/* check for an already installed pkg */
 	snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, pkg->PF);
 
-	// Unmerge the other versions */
+	/* Unmerge the other versions */
 	p = best_version(atom->CATEGORY, atom->PN);
 	if (*p) {
 		ARGC = 0; ARGV = NULL;
@@ -712,19 +715,19 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 		/* portage has code that handes fifo's but it looks unused */
 
 		if ((S_ISCHR(st.st_mode)) || \
-			(S_ISBLK(st.st_mode))); // block or character device
-		if (S_ISFIFO(st.st_mode));	// FIFO (named pipe)
-		if (S_ISSOCK(st.st_mode));	// socket? (Not in POSIX.1-1996.)
+			(S_ISBLK(st.st_mode))); /* block or character device */
+		if (S_ISFIFO(st.st_mode));	/* FIFO (named pipe) */
+		if (S_ISSOCK(st.st_mode));	/* socket? (Not in POSIX.1-1996.) */
 
-		// syntax: dir dirname
+		/* syntax: dir dirname */
 		if (S_ISDIR(st.st_mode)) {
 			mkdir(&buf[1], st.st_mode);
 			chown(&buf[1], st.st_uid, st.st_gid);
 			snprintf(line, sizeof(line), "dir %s", &buf[1]);
 		}
 
-		// syntax: obj filename hash mtime
-		if (S_ISREG(st.st_mode)) { // regular file
+		/* syntax: obj filename hash mtime */
+		if (S_ISREG(st.st_mode)) { /* regular file */
 			struct timeval tv;
 			unsigned char *hash;
 
@@ -760,12 +763,12 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 			tv.tv_sec = st.st_mtime;
 			tv.tv_usec = 0;
-			// utime(&buf[1], &tv);
+			/* utime(&buf[1], &tv); */
 		}
 
 		/* symlinks are unfinished */
-		// syntax: sym src -> dst
-		if (S_ISLNK(st.st_mode)) { // (Not in POSIX.1-1996.)
+		/* syntax: sym src -> dst */
+		if (S_ISLNK(st.st_mode)) { /* (Not in POSIX.1-1996.) */
 			/*
 			  save pwd
 			  get the dirname of the symlink from buf1
@@ -784,8 +787,8 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 			assert(strlen(path));;
 
 			snprintf(line, sizeof(line), "sym %s -> %s%s%lu", &buf[1], path, " ", st.st_mtime);
-			// snprintf(line, sizeof(line), "sym %s -> %s", &buf[1], path);
-			// we better have one byte here to play with
+			/* snprintf(line, sizeof(line), "sym %s -> %s", &buf[1], path); */
+			/* we better have one byte here to play with */
 			strcpy(tmp, &buf[1]);
 			if (tmp[0] != '/') errf("sym does not start with /");
 
@@ -794,8 +797,9 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 				errf("chdir to symbolic dirname %s: %s", tmp, strerror(errno));
 			if (lstat(path, &lst) != (-1))
 				unlink_q(&buf[1]);
-			// if (path[0] != '/')
-			//	puts("path does not start with /");
+			/* if (path[0] != '/')
+				puts("path does not start with /");
+			*/
 			if ((symlink(path, &buf[1])) != 0)
 				if (errno != EEXIST)
 					warn("symlink failed %s -> %s: %s", path, &buf[1], strerror(errno));
@@ -865,7 +869,7 @@ int pkg_unmerge(char *cat, char *pkgname)
 #endif
 		qfprintf(stderr, "%s!!!%s '%s' '%s' (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
 		qfprintf(stderr, "%s!!!%s %s/%s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
-		// qfprintf(stderr, "%s!!!%s %s %s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, pkgname);
+		/* qfprintf(stderr, "%s!!!%s %s %s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, pkgname); */
 		return 1;
 	}
 	printf("%s===%s %s%s%s/%s%s%s\n", YELLOW, NORM, WHITE, cat, NORM, CYAN, pkgname, NORM);
@@ -1049,7 +1053,7 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 		if (pretend) {
 			int level = 0;
 			if (!install) install++;
-			// qprint_tree_node(level, atom, pkg);
+			/* qprint_tree_node(level, atom, pkg); */
 			pkg_merge(level, atom, pkg);
 			continue;
 		}
@@ -1216,7 +1220,7 @@ struct pkg_t *grab_binpkg_info(const char *name)
 					if (atom->PR_int)
 						snprintf(buf, sizeof(buf), "%s/%s-%s-r%i", atom->CATEGORY, atom->PN, atom->PV, atom->PR_int);
 					ret = atom_compare_str(name, buf);
-					IF_DEBUG(fprintf(stderr, "=== atom_compare(%s, %s) = %d %s\n", name, buf, ret, booga[ret])); // buf(%s) depend(%s)\n", ret, pkg->CATEGORY, pkg->PF, name, pkg->RDEPEND);
+					IF_DEBUG(fprintf(stderr, "=== atom_compare(%s, %s) = %d %s\n", name, buf, ret, booga[ret])); /* buf(%s) depend(%s)\n", ret, pkg->CATEGORY, pkg->PF, name, pkg->RDEPEND); */
 					switch (ret) {
 						case EQUAL:
 						case NEWER:
@@ -1317,7 +1321,7 @@ char *find_binpkg(const char *name)
 							ret = atom_compare_str(buf, best_match);
 							if (ret == NEWER || ret == EQUAL)
 								strncpy(best_match, buf, sizeof(best_match));
-							// printf("[%s == %s] = %d; %s/%s\n", name, buf, ret, CATEGORY, PF);
+							/* printf("[%s == %s] = %d; %s/%s\n", name, buf, ret, CATEGORY, PF); */
 						default:
 							break;
 					}
@@ -1508,7 +1512,7 @@ int qmerge_main(int argc, char **argv)
 				ARGC = 0;
 				ARGV = NULL;
 				/* this will leak mem */
-				// follow_rdepends = 0;
+				/* follow_rdepends = 0; */
 				makeargv(ptr, &ARGC, &ARGV);
 			}
 		}
