@@ -7,7 +7,14 @@ die() {
 
 cp ../../q .
 ./q -i || die "./q -i"
-for app in $(./q -Ch | grep ' : ' | awk '{print $1}') ; do
+
+applets=$(./q -Ch | \
+	sed -n '/^Currently defined applets:/,/^Options/p' | \
+	grep ' : ' | \
+	awk '{print $1}'
+)
+
+for app in ${applets} ; do
 	[ ! -e $app ] && die "$app does not exist"
 done
 echo "PASSED"
