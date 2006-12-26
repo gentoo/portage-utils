@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.129 2006/12/25 16:38:37 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.130 2006/12/26 17:23:42 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -375,7 +375,7 @@ contents_entry *contents_parse_line(char *line)
 	 * parse quickly */
 
 	for (x = 0; x < strlen(line); x++)
-		if isspace(line[x])
+		if (isspace(line[x]))
 			line[x] = ' ';
 
 	memset(&e, 0x00, sizeof(e));
