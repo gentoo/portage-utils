@@ -58,11 +58,13 @@ void color_remap(void)
 	int i;
 	char buf[512];
 	char *p;
+	int lineno = 0;
 
 	if ((fp = fopen(COLOR_MAP, "r")) == NULL)
 		return;
 
 	while (fgets(buf, sizeof(buf), fp) != NULL) {
+		lineno++;
 		/* eat comments */
 		if ((p = strchr(buf, '#')) != NULL)
 			*p = '\0';
@@ -81,7 +83,7 @@ void color_remap(void)
 		for (i = 0; i < ARR_SIZE(color_pairs); ++i)
 			if (strcmp(buf, color_pairs[i].name) == 0) {
 				if (strncmp(p, "0x", 2) == 0)
-					warn("[%s] RGB values in color map are not supported", buf);
+					warn("[%s=%s] RGB values in color map are not supported on line %d of %s", buf, p, lineno, COLOR_MAP);
 				else
 					snprintf(color_pairs[i].value, sizeof(color_pairs[i].value), "\e[%s", p);
 			}
