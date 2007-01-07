@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.39 2007/01/07 18:30:03 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.40 2007/01/07 20:40:30 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qfile_opts_help[] = {
 	"Assume arguments are already prefixed by $ROOT",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.39 2007/01/07 18:30:03 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.40 2007/01/07 20:40:30 solar Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 static inline short qfile_is_prefix(const char* path, const char* prefix, int prefix_length)
@@ -203,8 +203,9 @@ qfile_args_t *create_qfile_args();
 qfile_args_t *create_qfile_args()
 {
 	qfile_args_t *qfile_args;
-	if ((qfile_args = malloc(sizeof(qfile_args_t))) == NULL)
-		return NULL;
+
+	qfile_args = xmalloc(sizeof(qfile_args_t));
+
 	memset(qfile_args, 0, sizeof(qfile_args_t));
 	return qfile_args;
 }
@@ -213,16 +214,13 @@ void destroy_qfile_args(qfile_args_t *);
 void destroy_qfile_args(qfile_args_t *qfile_args)
 {
 	int i;
-	
+
 	for (i = 0; i < qfile_args->length; ++i) {
-		if (qfile_args->basenames != NULL 
-				&& qfile_args->basenames[i] != NULL)
+		if (qfile_args->basenames != NULL && qfile_args->basenames[i] != NULL)
 			free(qfile_args->basenames[i]);
-		if (qfile_args->dirnames != NULL 
-				&& qfile_args->dirnames[i] != NULL)
+		if (qfile_args->dirnames != NULL && qfile_args->dirnames[i] != NULL)
 			free(qfile_args->dirnames[i]);
-		if (qfile_args->realdirnames != NULL 
-				&& qfile_args->realdirnames[i] != NULL)
+		if (qfile_args->realdirnames != NULL && qfile_args->realdirnames[i] != NULL)
 			free(qfile_args->realdirnames[i]);
 	}
 
@@ -245,11 +243,8 @@ void destroy_qfile_args(qfile_args_t *qfile_args)
 	memset(qfile_args, 0, sizeof(qfile_args_t));
 }
 
-int prepare_qfile_args(const int, const char **,
-		const short, const short, qfile_args_t *);
-int prepare_qfile_args(const int argc, const char **argv,
-		const short assume_root_prefix, const short search_orphans,
-		qfile_args_t *qfile_args)
+int prepare_qfile_args(const int, const char **, const short, const short, qfile_args_t *);
+int prepare_qfile_args(const int argc, const char **argv, const short assume_root_prefix, const short search_orphans, qfile_args_t *qfile_args)
 {
 	int i;
 	int nb_of_queries = argc;
@@ -546,8 +541,7 @@ int qfile_main(int argc, char **argv)
 
 		/* Iteration over VDB categories */
 		while (nb_of_queries && (dentry = q_vdb_get_next_dir(dir))) {
-			snprintf(path, _Q_PATH_MAX, "%s/%s/%s", 
-					qfile_args->real_root, portvdb, dentry->d_name);
+			snprintf(path, _Q_PATH_MAX, "%s/%s/%s", qfile_args->real_root, portvdb, dentry->d_name);
 			qfile(path, (assume_root_prefix ? root_prefix : NULL), qfile_args);
 		}
 
@@ -571,7 +565,7 @@ int qfile_main(int argc, char **argv)
 				qargv[i] = NULL;
 			}
 		}
-	} while(args_file != NULL && qargc == max_args);
+	} while (args_file != NULL && qargc == max_args);
 
 exit:
 
