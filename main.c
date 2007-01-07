@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.130 2006/12/26 17:23:42 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.131 2007/01/07 17:47:41 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -359,7 +359,6 @@ contents_entry *contents_parse_line(char *line)
 {
 	static contents_entry e;
 	char *p;
-	int x;
 
 	if (!line || !*line || *line == '\n')
 		return NULL;
@@ -373,10 +372,9 @@ contents_entry *contents_parse_line(char *line)
 	 * (I smell Windows near by)
 	 * Anyway we just convert that crap to a space so we can still
 	 * parse quickly */
-
-	for (x = 0; x < strlen(line); x++)
-		if (isspace(line[x]))
-			line[x] = ' ';
+	p = line;
+	while ((p = strchr(p, '\t')) != NULL)
+		*p = ' ';
 
 	memset(&e, 0x00, sizeof(e));
 	e._data = line;
