@@ -12,6 +12,7 @@ for applet in $APPLETS; do
 	sed  -i -e s/'PORTAGE-UTILS-CVS:'/${applet}/g \
 		-e s/'portage-utils-cvs:'/${applet}/g \
 		-e '/\.SH SYNOPSIS/,/\.SH/'s/' : .*\\fR$'/'\\fR'/ \
+		-e '/\.SH DESCRIPTION/,/\.SH/s|^\(Options:.*\)\\fR\(.*\)|\1\2\\fR|' \
 		-e s/'> \*'/'>@\.BR@ \*'/g ${applet}.1
 	head -n $(($(cat ${applet}.1 | wc -l)-1)) ${applet}.1 \
 		| tr '@' '\n' > ${applet}.1~ && mv ${applet}.1~ ${applet}.1

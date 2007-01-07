@@ -22,20 +22,3 @@ any package:
 	libinstalledmanually.so.2
 .fi
 .PP
-Script to find the orphan config files on your system 
-(\fBIMPORTANT:\fP this script is just a quick example.  Do not blindly delete
-the files it will list!):
-.nf\fI
-	#!/bin/bash
-	SEARCH_PATHS="$(portageq envvar CONFIG_PROTECT)"
-	SEARCH_MASK="$(portageq envvar CONFIG_PROTECT_MASK) \\
-		/etc/runlevels /etc/portage \\
-		/etc/ssl/certs /etc/ssh \\
-		/etc/bash_completion.d /etc/cups"
-	for path in ${SEARCH_MASK} ; do
-		EXCLUDE="${EXCLUDE} -not -path ${path}/*"
-	done
-	set -f
-	find ${SEARCH_PATHS} ${EXCLUDE} -print0 \\
-		| xargs -0 -n 500 qfile -o
-.fi
