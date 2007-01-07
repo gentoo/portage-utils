@@ -18,4 +18,5 @@ for applet in $APPLETS; do
 
 	sed -i -e s/'compiled on'/'@@@@@@@@@@@@@@'/ ${applet}.1
 	cat ${applet}.1 | cut -d @ -f 1 > ${applet}.1~ && mv ${applet}.1~ ${applet}.1
+	grep -v 'DO NOT MODIFY THIS FILE' <  ${applet}.1 > ${applet}.1~ && mv ${applet}.1~ ${applet}.1
 done

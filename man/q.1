@@ -7,24 +7,33 @@ q \- invoke a portage utility applet
 \fI<applet> <args>  : invoke a portage utility applet\fR
 .SH DESCRIPTION
 .SS "Currently defined applets:"
-.IP
-q <applet> <args> : virtual applet
+.TP
+q <applet> <args>
+: virtual applet
 .TP
 qatom <pkg>
 : split atom strings
-.IP
-qcache <action> <args> : search the metadata cache
-qcheck <pkgname>       : verify mtimes/digests
+.TP
+qcache <action> <args>
+: search the metadata cache
+.TP
+qcheck <pkgname>
+: verify mtimes/digests
 .TP
 qdepends <pkgname>
 : show dependency info
 .TP
 qfile <filename>
 : list all pkgs owning files
-.IP
-qglsa <action> <list> : check GLSAs against system
-qgrep <misc args>     : grep in ebuilds
-qlist <pkgname>       : list files owned by pkgname
+.TP
+qglsa <action> <list>
+: check GLSAs against system
+.TP
+qgrep <misc args>
+: grep in ebuilds
+.TP
+qlist <pkgname>
+: list files owned by pkgname
 .TP
 qlop <pkgname>
 : emerge log analyzer
@@ -79,4 +88,4 @@ Options: \fB\-[irmvqChV]\fR
 \fB\-V\fR, \fB\-\-version\fR
 * Print version and exit
 .PP
-$Id: q.1,v 1.20 2006/09/11 05:54:12 vapier Exp $
+$Id: q.1,v 1.21 2007/01/07 00:40:50 solar Exp $
