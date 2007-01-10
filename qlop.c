@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.34 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.35 2007/01/10 01:21:41 flameeyes Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -11,6 +11,15 @@
 
 #ifdef __linux__
 # include <asm/param.h>
+# define __QLOP_CURRENT__
+#endif
+
+#ifdef __FreeBSD__
+# include <kvm.h>
+# include <sys/param.h>
+# include <sys/sysctl.h>
+# include <sys/user.h>
+# include <sys/time.h>
 # define __QLOP_CURRENT__
 #endif
 
@@ -41,7 +50,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.34 2006/11/09 00:18:05 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.35 2007/01/10 01:21:41 flameeyes Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -289,7 +298,7 @@ void show_sync_history(const char *logfile)
 }
 
 void show_current_emerge(void);
-#ifdef __QLOP_CURRENT__
+#ifdef __linux__
 void show_current_emerge(void)
 {
 	DIR *proc;
@@ -362,6 +371,56 @@ void show_current_emerge(void)
 	closedir(proc);
 
 	if (start_time == 0 && verbose)
+		puts("No emerge processes located");
+}
+#elif defined(__FreeBSD__)
+void show_current_emerge(void)
+{
+	kvm_t *kd = NULL;
+	struct kinfo_proc *ip;
+	int i; int total_processes;
+	char *p, *q;
+	time_t start_date = 0;
+
+	if (! (kd = kvm_open("/dev/null", "/dev/null", "/dev/null", O_RDONLY, "kvm_open"))) {
+		warnp("Could not open kvm: %s", kvm_geterr(kd));
+		return;
+	}
+
+	ip = kvm_getprocs(kd, KERN_PROC_PROC, 0, &total_processes);
+
+	for (i = 0; i < total_processes; i++) {
+		char **proc_argv = NULL;
+		char *buf = NULL;
+
+		if (strcmp(ip[i].ki_comm, "sandbox") != 0)
+			continue;
+
+		proc_argv = kvm_getargv(kd, &(ip[i]), 0);
+
+		if (!proc_argv || (buf = xstrdup(proc_argv[0])) == NULL ||
+		    buf[0] != '[' || (p = strchr(buf, ']')) == NULL) {
+			free(buf);
+			continue;
+		}
+
+		*p = '\0';
+		p = buf+1;
+		q = p + strlen(p) + 1;
+
+		printf(
+			" %s*%s %s%s%s\n"
+			"     started: %s%s%s\n"
+			"     elapsed: ", /*%s%llu%s seconds\n",*/
+			BOLD, NORM, BLUE, p, NORM,
+			GREEN, chop_ctime(ip[i].ki_start.tv_sec), NORM);
+		print_seconds_for_earthlings(time(0) - ip[i].ki_start.tv_sec);
+		puts(NORM);
+
+		free(buf);
+	}
+
+	if (start_date == 0 && verbose)
 		puts("No emerge processes located");
 }
 #else

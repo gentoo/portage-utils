@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.50 2006/12/25 05:26:01 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.51 2007/01/10 01:21:41 flameeyes Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -20,6 +20,7 @@ CFLAGS    += -funsigned-char
 #CFLAGS   += -DEBUG -g
 #CFLAGS   += -Os -s -DOPTIMIZE_FOR_SIZE=2
 #LDFLAGS  := -pie
+LDFLAGS   += $(shell echo | $(CC) -dM -E - | grep -q ' __FreeBSD__' && echo '-lkvm')
 DESTDIR   :=
 PREFIX    := $(DESTDIR)/usr
 STRIP     := strip
