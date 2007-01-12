@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.40 2007/01/07 20:40:30 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.41 2007/01/12 22:19:01 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -16,10 +16,11 @@
 #define QFILE_FLAGS "ef:m:oRx:" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"exact",       no_argument, NULL, 'e'},
-	{"from",	a_argument,  NULL, 'f'},
-	{"max-args",	a_argument,  NULL, 'm'},
+	{"from",        a_argument,  NULL, 'f'},
+	{"max-args",    a_argument,  NULL, 'm'},
 	{"orphans",     no_argument, NULL, 'o'},
 	{"root-prefix", no_argument, NULL, 'R'},
+	{"exclude",     a_argument,  NULL, 'x'},
 	COMMON_LONG_OPTS
 };
 static const char *qfile_opts_help[] = {
@@ -28,9 +29,10 @@ static const char *qfile_opts_help[] = {
 	"Treat from file arguments by groups of <arg> (defaults to " QFILE_DEFAULT_MAX_ARGS_STR ")",
 	"List orphan files",
 	"Assume arguments are already prefixed by $ROOT",
+	"Don't look in package <arg>",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.40 2007/01/07 20:40:30 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.41 2007/01/12 22:19:01 solar Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 static inline short qfile_is_prefix(const char* path, const char* prefix, int prefix_length)
@@ -49,6 +51,8 @@ typedef struct {
 	char *bn_firstchars;
 	short *non_orphans;
 	char *real_root;
+	char *exclude_pkg;
+	char *exclude_slot;
 } qfile_args_t;
 
 void qfile(char *, const char *, qfile_args_t *);
@@ -81,6 +85,41 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 
 		snprintf(pkg, sizeof(pkg), "%s/%s", basename(path), dentry->d_name);
 		atom = NULL; /* Will be exploded once at most, as needed. */
+
+		/* If exclude_pkg is not NULL, check it.  We are looking for files
+		 * collisions, and must exclude one package.
+		 */
+		if (args->exclude_pkg != NULL) {
+			if (strncmp(args->exclude_pkg, pkg, sizeof(pkg)) == 0)
+				continue; /* skip this package (name+version match) */
+			if ((atom = atom_explode(pkg)) == NULL) {
+				warn("invalid atom %s", pkg);
+				goto dont_skip_pkg;
+			}
+			snprintf(buf, sizeof(buf), "%s/%s", basename(path), atom->PN);
+			if (strncmp(args->exclude_pkg, buf, sizeof(buf)) != 0)
+				goto dont_skip_pkg; /* current pkg name doesn't match */
+			if (args->exclude_slot == NULL) {
+				atom_implode(atom);
+				continue; /* skip this package (name match) */
+			}
+			buf[0] = '0'; buf[1] = '\0';
+			xasprintf(&p, "%s/%s/SLOT", path, dentry->d_name);
+			if ((fp = fopen(p, "r")) != NULL) {
+				free(p);
+				if (fgets(buf, sizeof(buf), fp) != NULL)
+					if ((p = strchr(buf, '\n')) != NULL)
+						*p = 0;
+				fclose(fp);
+			} else {
+				free(p);
+			}
+			if (strncmp(args->exclude_slot, buf, sizeof(buf)) == 0) {
+				atom_implode(atom);
+				continue; /* skip this package (name+slot match) */
+			}
+		}
+dont_skip_pkg: /* End of the package exclusion tests. */
 
 		xasprintf(&p, "%s/%s/CONTENTS", path, dentry->d_name);
 		if ((fp = fopen(p, "r")) == NULL) {
@@ -240,11 +279,18 @@ void destroy_qfile_args(qfile_args_t *qfile_args)
 	if (qfile_args->real_root != NULL)
 		free(qfile_args->real_root);
 
+	if (qfile_args->exclude_pkg != NULL)
+		free(qfile_args->exclude_pkg);
+	/* don't free qfile_args->exclude_slot, it's the same chunk */
+
 	memset(qfile_args, 0, sizeof(qfile_args_t));
 }
 
-int prepare_qfile_args(const int, const char **, const short, const short, qfile_args_t *);
-int prepare_qfile_args(const int argc, const char **argv, const short assume_root_prefix, const short search_orphans, qfile_args_t *qfile_args)
+int prepare_qfile_args(const int, const char **,
+		const short, const short, const char *, qfile_args_t *);
+int prepare_qfile_args(const int argc, const char **argv,
+		const short assume_root_prefix, const short search_orphans,
+		const char *exclude_pkg_arg, qfile_args_t *qfile_args)
 {
 	int i;
 	int nb_of_queries = argc;
@@ -410,6 +456,13 @@ int prepare_qfile_args(const int argc, const char **argv, const short assume_roo
 		memset(qfile_args->non_orphans, 0, argc);
 	}
 
+	if (exclude_pkg_arg != NULL) {
+		qfile_args->exclude_pkg = xstrdup(exclude_pkg_arg);
+		if ((qfile_args->exclude_slot = strchr(qfile_args->exclude_pkg, ':')) != NULL)
+			*qfile_args->exclude_slot++ = '\0';
+		/* Maybe this should be atom-exploded instead (to check syntax, etc.) */
+	}
+
 	return nb_of_queries;
 }
 
@@ -422,6 +475,7 @@ int qfile_main(int argc, char **argv)
 	short search_orphans = 0;
 	short assume_root_prefix = 0;
 	char *root_prefix = NULL;
+	char *exclude_pkg_arg = NULL;
 	qfile_args_t *qfile_args = NULL;
 	int qargc = 0;
 	char **qargv = NULL;
@@ -466,6 +520,13 @@ int qfile_main(int argc, char **argv)
 				break;
 			case 'o': search_orphans = 1; break;
 			case 'R': assume_root_prefix = 1; break;
+			case 'x':
+				if (exclude_pkg_arg != NULL) {
+					warn("--exclude can only be used once.");
+					goto exit;
+				}
+				exclude_pkg_arg = optarg;
+				break;
 		}
 	}
 	if (!exact && verbose) exact++;
@@ -501,7 +562,7 @@ int qfile_main(int argc, char **argv)
 		qargv = xcalloc(max_args, sizeof(char*));
 	}
 
-	do { /* This block lay be repeated if using --from with a big files list */
+	do { /* This block may be repeated if using --from with a big files list */
 		if (args_file != NULL) {
 			qargc = 0;
 			/* Read up to max_args files from the input file */
@@ -528,7 +589,7 @@ int qfile_main(int argc, char **argv)
 
 		/* Prepare the qfile(...) arguments structure */
 		nb_of_queries = prepare_qfile_args(qargc, (const char **) qargv,
-				assume_root_prefix, search_orphans, qfile_args);
+				assume_root_prefix, search_orphans, exclude_pkg_arg, qfile_args);
 		if (nb_of_queries < 0)
 			goto exit;
 

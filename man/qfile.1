@@ -13,7 +13,7 @@ Options: \fB\-[ef:m:oRx:vqChV]\fR
 \fB\-f\fR, \fB\-\-from\fR
 <arg>
 .BR
- * Read arguments from file <arg> ("-" for stdin)
+ * Read arguments from file <arg> ("\-" for stdin)
 .HP
 \fB\-m\fR, \fB\-\-max\-args\fR <arg>
 .BR
@@ -24,6 +24,11 @@ Options: \fB\-[ef:m:oRx:vqChV]\fR
 .TP
 \fB\-R\fR, \fB\-\-root\-prefix\fR
 * Assume arguments are already prefixed by $ROOT
+.TP
+\fB\-x\fR, \fB\-\-exclude\fR
+<arg>
+.BR
+ * Don't look in package <arg>
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
 * Make a lot of noise
@@ -40,7 +45,7 @@ Options: \fB\-[ef:m:oRx:vqChV]\fR
 \fB\-V\fR, \fB\-\-version\fR
 * Print version and exit
 .PP
-$Id: qfile.1,v 1.22 2007/01/07 20:32:41 solar Exp $
+$Id: qfile.1,v 1.23 2007/01/12 22:19:01 solar Exp $
 file written for Gentoo by <solar and vapier 
  gentoo.org>
 .SH "FINDING FILES OWNERS"
@@ -208,6 +213,52 @@ the \fB\-\-max\-args\fP option (\fB\-m\fP).  Using a greater value will eat a
 bit more memory, but may be a bit faster for really big queries.  Be careful
 though, using some stupidly high or low value can completly kill the
 performances.  In short, you probably don't want to touch this option.
+.PP
+.SH "SEARCHING FOR FILES COLLISIONS"
+.PP
+A last option of \fBqfile\fP is \fB\-\-exclude\-pkg\fP, which will makes it
+skip one particular package when doing its files owners search.  This option
+takes one argument, which can be a package name (\fBapp\-shells/bash\fP), or a
+versioned package (\fBapp\-shells/bash\-3.2_p9\-r1\fP), or a slotted package 
+(\fBapp\-shells/bash:0\fP). It is useful for finding file collisions beetween 
+packages (ie., comparing the contents of one package with the contents of all 
+the others).
+.PP
+For example, the following script will search collisions beetween all your 
+installed packages. Be careful, this will takes time:
+.nf\fI
+	#!/bin/bash
+	cd $(portageq vdb_path)
+	for pkg in *-*/*-* ; do
+		[[ -f ${pkg}/CONTENTS ]] || continue
+		collisions=$(sed -n \\
+				'/^obj\\|^sym/s:^... \\([^ ]\\+\\).*:\1:p' \\
+				${pkg}/CONTENTS \\
+			| qfile -e -x ${pkg} -f -)
+		[[ -n ${collisions} ]] \\
+			&& echo ">>> ${pkg}:" \\
+			&& echo "${collisions}"
+	done
+.fi
+.PP
+An other example is the following script, which can be used to check that a 
+binary package (.tbz2) has no conflict with any of your installed packages,
+but the one it may replace (same name and slot), if any:
+.nf\fI
+#!/bin/bash
+pkgver=$(basename "${1}")
+pkgver=${pkgver%%.tbz2}
+pn=$(qatom ${pkgver} | cut -d\\  -f2)
+tmpdir=$(mktemp -t -d) || exit 1
+tarbz2=${tmpdir}/${pkgver}.tar.bz2
+xpak=${tmpdir}/${pkgver}.xpak
+qtbz2 -s "${1}" "${tarbz2}" "${xpak}"
+categ=$(qxpak -O -x "${xpak}" CATEGORY)
+slot=$(qxpak -O -x "${xpak}" SLOT)
+tar tjf "${tarbz2}" \\
+	| sed -e 's:^\\./:/:' -e '\\:/$:d' \\
+	| qfile -e -f - -x ${categ}/${pn}:${slot}
+rm -rf "${tmpdir}"
 .PP
 .SH "ADDITIONAL CONTRIBUTORS"
 .TP

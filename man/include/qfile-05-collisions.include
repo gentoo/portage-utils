@@ -1,0 +1,46 @@
+[Searching for files collisions]
+.PP
+A last option of \fBqfile\fP is \fB\-\-exclude\-pkg\fP, which will makes it
+skip one particular package when doing its files owners search.  This option
+takes one argument, which can be a package name (\fBapp\-shells/bash\fP), or a
+versioned package (\fBapp\-shells/bash\-3.2_p9\-r1\fP), or a slotted package 
+(\fBapp\-shells/bash:0\fP). It is useful for finding file collisions beetween 
+packages (ie., comparing the contents of one package with the contents of all 
+the others).
+.PP
+For example, the following script will search collisions beetween all your 
+installed packages. Be careful, this will takes time:
+.nf\fI
+	#!/bin/bash
+	cd $(portageq vdb_path)
+	for pkg in *-*/*-* ; do
+		[[ -f ${pkg}/CONTENTS ]] || continue
+		collisions=$(sed -n \\
+				'/^obj\\|^sym/s:^... \\([^ ]\\+\\).*:\1:p' \\
+				${pkg}/CONTENTS \\
+			| qfile -e -x ${pkg} -f -)
+		[[ -n ${collisions} ]] \\
+			&& echo ">>> ${pkg}:" \\
+			&& echo "${collisions}"
+	done
+.fi
+.PP
+An other example is the following script, which can be used to check that a 
+binary package (.tbz2) has no conflict with any of your installed packages,
+but the one it may replace (same name and slot), if any:
+.nf\fI
+#!/bin/bash
+pkgver=$(basename "${1}")
+pkgver=${pkgver%%.tbz2}
+pn=$(qatom ${pkgver} | cut -d\\  -f2)
+tmpdir=$(mktemp -t -d) || exit 1
+tarbz2=${tmpdir}/${pkgver}.tar.bz2
+xpak=${tmpdir}/${pkgver}.xpak
+qtbz2 -s "${1}" "${tarbz2}" "${xpak}"
+categ=$(qxpak -O -x "${xpak}" CATEGORY)
+slot=$(qxpak -O -x "${xpak}" SLOT)
+tar tjf "${tarbz2}" \\
+	| sed -e 's:^\\./:/:' -e '\\:/$:d' \\
+	| qfile -e -f - -x ${categ}/${pn}:${slot}
+rm -rf "${tmpdir}"
+.PP
