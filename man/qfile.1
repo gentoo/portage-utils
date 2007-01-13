@@ -10,13 +10,10 @@ Options: \fB\-[ef:m:oRx:vqChV]\fR
 \fB\-e\fR, \fB\-\-exact\fR
 * Exact match
 .TP
-\fB\-f\fR, \fB\-\-from\fR
-<arg>
-.BR
- * Read arguments from file <arg> ("\-" for stdin)
+\fB\-f\fR, \fB\-\-from\fR <arg>
+ * Read arguments from file <arg> ("-" for stdin)
 .HP
 \fB\-m\fR, \fB\-\-max\-args\fR <arg>
-.BR
  * Treat from file arguments by groups of <arg> (defaults to 5000)
 .TP
 \fB\-o\fR, \fB\-\-orphans\fR
@@ -25,9 +22,7 @@ Options: \fB\-[ef:m:oRx:vqChV]\fR
 \fB\-R\fR, \fB\-\-root\-prefix\fR
 * Assume arguments are already prefixed by $ROOT
 .TP
-\fB\-x\fR, \fB\-\-exclude\fR
-<arg>
-.BR
+\fB\-x\fR, \fB\-\-exclude\fR <arg>
  * Don't look in package <arg>
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
@@ -45,7 +40,7 @@ Options: \fB\-[ef:m:oRx:vqChV]\fR
 \fB\-V\fR, \fB\-\-version\fR
 * Print version and exit
 .PP
-$Id: qfile.1,v 1.23 2007/01/12 22:19:01 solar Exp $
+$Id: qfile.1,v 1.24 2007/01/13 19:17:40 solar Exp $
 file written for Gentoo by <solar and vapier 
  gentoo.org>
 .SH "FINDING FILES OWNERS"
@@ -216,11 +211,12 @@ performances.  In short, you probably don't want to touch this option.
 .PP
 .SH "SEARCHING FOR FILES COLLISIONS"
 .PP
-A last option of \fBqfile\fP is \fB\-\-exclude\-pkg\fP, which will makes it
-skip one particular package when doing its files owners search.  This option
-takes one argument, which can be a package name (\fBapp\-shells/bash\fP), or a
-versioned package (\fBapp\-shells/bash\-3.2_p9\-r1\fP), or a slotted package 
-(\fBapp\-shells/bash:0\fP). It is useful for finding file collisions beetween 
+A last option of \fBqfile\fP is \fB\-\-exclude\fP (\fB\-x\fP), which will makes
+it skip one particular package when doing its files owners search.  This option
+takes one argument, which can be a package name (\fBbash\fP or
+\fBapp\-shells/bash\fP), or a versioned package (\fBbash\-3.2_p9\-r1\fP or
+\fBapp\-shells/bash\-3.2_p9\-r1\fP), or a slotted package (\fBbash:0\fP or 
+\fBapp\-shells/bash:0\fP). It is useful for finding file collisions beetween 
 packages (ie., comparing the contents of one package with the contents of all 
 the others).
 .PP

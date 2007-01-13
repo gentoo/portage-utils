@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.41 2007/01/12 22:19:01 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.42 2007/01/13 19:17:39 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char *qfile_opts_help[] = {
 	"Don't look in package <arg>",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.41 2007/01/12 22:19:01 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.42 2007/01/13 19:17:39 solar Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 static inline short qfile_is_prefix(const char* path, const char* prefix, int prefix_length)
@@ -91,17 +91,23 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 		 */
 		if (args->exclude_pkg != NULL) {
 			if (strncmp(args->exclude_pkg, pkg, sizeof(pkg)) == 0)
-				continue; /* skip this package (name+version match) */
-			if ((atom = atom_explode(pkg)) == NULL) {
+				goto check_pkg_slot; /* CAT/PF matches */
+			if (strcmp(args->exclude_pkg, dentry->d_name) == 0)
+				goto check_pkg_slot; /* PF matches */
+			if ((atom = atom_explode(pkg)) == NULL
+					|| atom->PN == NULL || atom->CATEGORY == NULL) {
 				warn("invalid atom %s", pkg);
 				goto dont_skip_pkg;
 			}
-			snprintf(buf, sizeof(buf), "%s/%s", basename(path), atom->PN);
-			if (strncmp(args->exclude_pkg, buf, sizeof(buf)) != 0)
-				goto dont_skip_pkg; /* current pkg name doesn't match */
+			snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
+			if (strncmp(args->exclude_pkg, buf, sizeof(buf)) != 0
+					&& strcmp(args->exclude_pkg, atom->PN) != 0)
+				goto dont_skip_pkg; /* "(CAT/)?PN" doesn't match */
+check_pkg_slot: /* Also compare slots, if any was specified */
 			if (args->exclude_slot == NULL) {
-				atom_implode(atom);
-				continue; /* skip this package (name match) */
+				if (atom != NULL)
+					atom_implode(atom);
+				continue; /* "(CAT/)?(PN|PF)" matches, and no SLOT specified */
 			}
 			buf[0] = '0'; buf[1] = '\0';
 			xasprintf(&p, "%s/%s/SLOT", path, dentry->d_name);
@@ -115,8 +121,9 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 				free(p);
 			}
 			if (strncmp(args->exclude_slot, buf, sizeof(buf)) == 0) {
-				atom_implode(atom);
-				continue; /* skip this package (name+slot match) */
+				if (atom != NULL)
+					atom_implode(atom);
+				continue; /* "(CAT/)?(PN|PF):SLOT" matches */
 			}
 		}
 dont_skip_pkg: /* End of the package exclusion tests. */

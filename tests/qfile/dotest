@@ -1,10 +1,38 @@
 #!/bin/bash
 
 QFILE='../../q file'
-if [[ $(${QFILE} -Cq /bin/bash)  != "app-shells/bash" ]]; then
-	echo "/bin/bash does not seem to be provided by app-shells/bash. Found $(${QFILE} -Cq /bin/bash)" > /dev/stderr
-	echo FAILED
-	exit 1
-fi
+
+TEST_CASES=( \
+	[1]="${QFILE} -Cq /bin/bash /bin/XXXXX" \
+	[2]="${QFILE} -Co /bin/bash /bin/XXXXX" \
+	[3]="echo -e \"/bin/bash\n/bin/XXXXX\" | ${QFILE} -Cq -f -" \
+	[4]="echo -e \"/bin/bash\n/bin/XXXXX\" | ${QFILE} -Co -f -" \
+	[5]="${QFILE} -Co -x bash /bin/bash" \
+	[6]="${QFILE} -Co -x app-shells/bash /bin/bash" \
+	[7]="${QFILE} -Co -x bash:0 /bin/bash" \
+	[8]="${QFILE} -Co -x app-shells/bash:0 /bin/bash" \
+)
+
+EXPECTED_RESULTS=( \
+	[1]="app-shells/bash" \
+	[2]="/bin/XXXXX" \
+	[3]="app-shells/bash" \
+	[4]="/bin/XXXXX" \
+	[5]="/bin/bash" \
+	[6]="/bin/bash" \
+	[7]="/bin/bash" \
+	[8]="/bin/bash" \
+)
+
+for i in `seq 1 ${#TEST_CASES[@]}` ; do
+	if [[ $(eval ${TEST_CASES[$i]}) != "${EXPECTED_RESULTS[$i]}" ]]; then
+		echo "Test #${i} failed: ${TEST_CASES[$i]}" > /dev/stderr
+		echo " - expected result was: ${EXPECTED_RESULTS[$i]}" > /dev/stderr
+		echo " - actual result was:   $(eval ${TEST_CASES[$i]})" > /dev/stderr
+		echo FAILED
+		exit 1
+	fi
+done
+
 echo PASSED
 exit 0
