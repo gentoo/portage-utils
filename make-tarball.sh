@@ -10,6 +10,12 @@ if [[ -n ${old_files} ]] ; then
 	echo "${old_files}"
 	exit 1
 fi
+find . -perm -1 -exec chmod u+rwx '{}' \;
+find . -type d -exec chmod 755 '{}' \;
+find . -name '*.c' -exec chmod 644 '{}' \;
+find . -name '*.h' -exec chmod 644 '{}' \;
+find . -name '*.1' -exec chmod 644 '{}' \;
+chmod 644 COPYING  HACKING  Makefile  README  TODO
 
 ver="$1"
 [[ "$ver" == "snap" ]] && ver=$(date -u +%Y%m%d)
