@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/README,v 1.21 2006/09/03 22:36:33 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/README,v 1.22 2007/01/13 19:27:31 solar Exp $
 
 Contact:
 	portage-utils@gentoo.org
@@ -27,8 +27,5 @@ pretty recent copy using the following command. Note: that this is not
 the official cvs server but rather a mirror so it lags about a hour or 
 so behind the real tree which is hosted on cvs.gentoo.org
 
-# Obsolete as of Apr 14 2006
-#cvs -d:pserver:anonymous@zarquon.twobit.net:/var/cvsroot -q -z9 co -R gentoo-projects/portage-utils
-
 # Will soon be replaced with.
-#cvs -d:pserver:anonymous@anoncvs.gentoo.org:/var/cvsroot -q -z9 co -R gentoo-projects/portage-utils
+cvs -d:pserver:anonymous@anoncvs.gentoo.org:/var/cvsroot -q co -R gentoo-projects/portage-utils
