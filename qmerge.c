@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.56 2007/01/23 15:10:56 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.57 2007/01/23 15:53:54 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.56 2007/01/23 15:10:56 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.57 2007/01/23 15:53:54 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -96,6 +96,23 @@ int unmerge_packages(int, char **);
 char *find_binpkg(const char *);
 
 struct pkg_t *grab_binpkg_info(const char *);
+
+
+int mkdirhier(char *dname, mode_t mode);
+int mkdirhier(char *dname, mode_t mode) {
+	char buf[BUFSIZ];
+	int i;
+	strncpy(buf, dname, sizeof(buf));
+	for (i = 0; i < strlen(buf); i++) {
+		if (buf[i] == '/') {
+			buf[i] = 0;
+			if (*buf)
+				mkdir(buf, mode);
+			buf[i] = '/';
+		}
+	}
+	return mkdir(dname, mode);
+}
 
 int q_unlink_q(char *, const char *, int);
 int q_unlink_q(char *path, const char *func, int line)
@@ -827,11 +844,8 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	if (chdir(pkg->PF) != 0) errf("!!! chdir(%s) %s", pkg->PF, strerror(errno));
 
 	snprintf(buf, sizeof(buf), "%s/var/db/pkg/%s/", portroot, pkg->CATEGORY);
-	if (access(buf, R_OK|W_OK|X_OK) != 0) {
-		char buf2[sizeof(buf) + 11] = "";
-		snprintf(buf2, sizeof(buf2), BUSYBOX " mkdir -p %s", buf);
-		system(buf2);
-	}
+	if (access(buf, R_OK|W_OK|X_OK) != 0)
+		mkdirhier(buf, 0755);
 	strncat(buf, pkg->PF, sizeof(buf));
 
 	/* FIXME */
