@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.55 2006/12/25 16:38:37 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.56 2007/01/23 15:10:56 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.55 2006/12/25 16:38:37 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.56 2007/01/23 15:10:56 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -231,14 +231,16 @@ char *best_version(const char *CATEGORY, const char *PN)
 int config_protected(const char *buf, int ARGC, char **ARGV)
 {
 	int i;
+	char dest[_Q_PATH_MAX];
+	snprintf(dest, sizeof(dest), "%s%s", portroot, buf);
 
 	for (i = 1; i < ARGC; i++)
 		if ((strncmp(ARGV[i], buf, strlen(ARGV[i]))) == 0)
-			if ((access(buf, R_OK)) == 0)
+			if ((access(dest, R_OK)) == 0)
 				return 1;
 
 	if ((strncmp("/etc", buf, 4)) == 0)
-		if ((access(buf, R_OK)) == 0)
+		if ((access(dest, R_OK)) == 0)
 			return 1;
 	if ((strcmp("/bin/sh", buf)) == 0)
 		return 1;
@@ -688,6 +690,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 		char line[BUFSIZ];
 		int protected = 0;
 		char matched = 0;
+		char dest[_Q_PATH_MAX];
 
 		if ((p = strrchr(buf, '\n')) != NULL)
 			*p = 0;
@@ -712,6 +715,8 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 		line[0] = 0;
 
+		snprintf(dest, sizeof(dest), "%s%s", portroot, &buf[1]);
+
 		/* portage has code that handes fifo's but it looks unused */
 
 		if ((S_ISCHR(st.st_mode)) || \
@@ -721,8 +726,8 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 		/* syntax: dir dirname */
 		if (S_ISDIR(st.st_mode)) {
-			mkdir(&buf[1], st.st_mode);
-			chown(&buf[1], st.st_uid, st.st_gid);
+			mkdir(dest, st.st_mode);
+			chown(dest, st.st_uid, st.st_gid);
 			snprintf(line, sizeof(line), "dir %s", &buf[1]);
 		}
 
@@ -738,28 +743,28 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 			protected = config_protected(&buf[1], ARGC, ARGV);
 			if (protected) {
-				unsigned char *target_hash = hash_file(&buf[1], HASH_MD5);
+				unsigned char *target_hash = hash_file(dest, HASH_MD5);
 				if (memcmp(target_hash, hash, 16) != 0) {
 					char newbuf[sizeof(buf)];
 					qprintf("%s***%s %s\n", BRYELLOW, NORM, &buf[1]);
 					if (verbose) {
-						snprintf(newbuf, sizeof(newbuf), "diff -u %s %s", buf, &buf[1]);
+						snprintf(newbuf, sizeof(newbuf), "diff -u %s %s", buf, dest);
 						system(newbuf);
 					}
 					continue;
 				}
 			}
-			if ((lstat(&buf[1], &lst)) != (-1)) {
+			if ((lstat(dest, &lst)) != (-1)) {
 				if (S_ISLNK(lst.st_mode)) {
-					warn("%s exists and is a symlink and we are going to overwrite it with a file", &buf[1]);
-					unlink_q(&buf[1]);
+					warn("%s exists and is a symlink and we are going to overwrite it with a file", dest);
+					unlink_q(dest);
 				}
 			}
-			if (interactive_rename(buf, &buf[1], pkg) != 0)
+			if (interactive_rename(buf, dest, pkg) != 0)
 				continue;
 
-			assert(chmod(&buf[1], st.st_mode) == 0);
-			assert(chown(&buf[1], st.st_uid, st.st_gid) == 0);
+			assert(chmod(dest, st.st_mode) == 0);
+			assert(chown(dest, st.st_uid, st.st_gid) == 0);
 
 			tv.tv_sec = st.st_mtime;
 			tv.tv_usec = 0;
@@ -782,7 +787,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 			memset(&path, 0, sizeof(path));
 
-			assert(strlen(&buf[1]));
+			assert(strlen(dest));
 			readlink(buf, path, sizeof(path));
 			assert(strlen(path));;
 
@@ -796,11 +801,11 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 			if (chdir(dirname(tmp)) != 0) /* tmp gets eatten up now by the dirname call */
 				errf("chdir to symbolic dirname %s: %s", tmp, strerror(errno));
 			if (lstat(path, &lst) != (-1))
-				unlink_q(&buf[1]);
+				unlink_q(dest);
 			/* if (path[0] != '/')
 				puts("path does not start with /");
 			*/
-			if ((symlink(path, &buf[1])) != 0)
+			if ((symlink(path, dest)) != 0)
 				if (errno != EEXIST)
 					warn("symlink failed %s -> %s: %s", path, &buf[1], strerror(errno));
 			chdir(pwd);
@@ -821,12 +826,11 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	if (chdir(port_tmpdir) != 0) errf("!!! chdir(%s) %s", port_tmpdir, strerror(errno));
 	if (chdir(pkg->PF) != 0) errf("!!! chdir(%s) %s", pkg->PF, strerror(errno));
 
-	snprintf(buf, sizeof(buf), "/var/db/pkg/%s/", pkg->CATEGORY);
+	snprintf(buf, sizeof(buf), "%s/var/db/pkg/%s/", portroot, pkg->CATEGORY);
 	if (access(buf, R_OK|W_OK|X_OK) != 0) {
-		mkdir("/var", 0755);
-		mkdir("/var/db", 0755);
-		mkdir("/var/db/pkg/", 0755);
-		mkdir(buf, 0755);
+		char buf2[sizeof(buf) + 11] = "";
+		snprintf(buf2, sizeof(buf2), BUSYBOX " mkdir -p %s", buf);
+		system(buf2);
 	}
 	strncat(buf, pkg->PF, sizeof(buf));
 
@@ -874,7 +878,7 @@ int pkg_unmerge(char *cat, char *pkgname)
 	}
 	printf("%s===%s %s%s%s/%s%s%s\n", YELLOW, NORM, WHITE, cat, NORM, CYAN, pkgname, NORM);
 
-	snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb, cat, pkgname);
+	snprintf(buf, sizeof(buf), "%s/%s/%s/%s/CONTENTS", portroot, portvdb, cat, pkgname);
 
 	if ((fp = fopen(buf, "r")) == NULL)
 		return 1;
@@ -888,51 +892,52 @@ int pkg_unmerge(char *cat, char *pkgname)
 		char zing[20];
 		int protected = 0;
 		struct stat lst;
+		char dst[_Q_PATH_MAX];
 
 		e = contents_parse_line(buf);
 		if (!e) continue;
-
+		snprintf(dst, sizeof(dst), "%s%s", portroot, e->name);
 		protected = config_protected(e->name, argc, argv);
 		snprintf(zing, sizeof(zing), "%s%s%s", protected ? YELLOW : GREEN, protected ? "***" : "<<<" , NORM);
 		/* Should we remove in order symlinks,objects,dirs ? */
 		switch (e->type) {
 			case CONTENTS_DIR:
-				if (!protected)	{ rmdir(e->name); }
-				qprintf("%s %s%s%s/\n", zing, DKBLUE, e->name, NORM);
+				if (!protected)	{ rmdir(dst); }
+				qprintf("%s %s%s%s/\n", zing, DKBLUE, dst, NORM);
 				break;
 			case CONTENTS_OBJ:
-				if (!protected)	unlink_q(e->name);
-				qprintf("%s %s\n", zing, e->name);
+				if (!protected)	unlink_q(dst);
+				qprintf("%s %s\n", zing, dst);
 				break;
 			case CONTENTS_SYM:
 				if (protected) break;
 				if (e->name[0] != '/') break;
 				if (e->sym_target[0] != '/') {
-					if (lstat(e->name, &lst) != (-1)) {
+					if (lstat(dst, &lst) != (-1)) {
 						if (S_ISLNK(lst.st_mode)) {
-							qprintf("%s %s%s -> %s%s\n", zing, CYAN, e->name, e->sym_target, NORM);
-							unlink_q(e->name);
+							qprintf("%s %s%s -> %s%s\n", zing, CYAN, dst, e->sym_target, NORM);
+							unlink_q(dst);
 							break;
 						}
 					} else {
-						warn("lstat failed for %s -> '%s': %s", e->name, e->sym_target, strerror(errno));
+						warn("lstat failed for %s -> '%s': %s", dst, e->sym_target, strerror(errno));
 					}
 					warn("!!! %s -> %s", e->name, e->sym_target);
 					break;
 				}
-				if (lstat(e->name, &lst) != (-1)) {
+				if (lstat(dst, &lst) != (-1)) {
 					if (S_ISLNK(lst.st_mode)) {
-						qprintf("%s %s%s -> %s%s\n", zing, CYAN, e->name, e->sym_target, NORM);
-						unlink_q(e->name);
+						qprintf("%s %s%s -> %s%s\n", zing, CYAN, dst, e->sym_target, NORM);
+						unlink_q(dst);
 					} else {
-						warn("%s is not a symlink", e->name);
+						warn("%s is not a symlink", dst);
 					}
 				} else {
-					warn("lstat failed for '%s' -> %s: %s", e->name, e->sym_target, strerror(errno));
+					warn("lstat failed for '%s' -> %s: %s", dst, e->sym_target, strerror(errno));
 				}
 				break;
 			default:
-				warn("%s???%s %s%s%s (%d)", RED, NORM, WHITE, e->name, NORM, e->type);
+				warn("%s???%s %s%s%s (%d)", RED, NORM, WHITE, dst, NORM, e->type);
 				break;
 		}
 	}
