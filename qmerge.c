@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.57 2007/01/23 15:53:54 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.58 2007/01/24 17:50:47 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.57 2007/01/23 15:53:54 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.58 2007/01/24 17:50:47 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -78,6 +78,13 @@ struct pkg_t {
 	size_t SIZE;
 	char USE[BUFSIZ];
 } Pkg;
+
+struct llist_char_t {
+	char *data;
+	struct llist_char_t *next;
+};
+
+typedef struct llist_char_t llist_char;
 
 int interactive_rename(const char *, const char *, struct pkg_t *);
 void fetch(const char *, const char *);
@@ -874,6 +881,7 @@ int pkg_unmerge(char *cat, char *pkgname)
 	FILE *fp;
 	int argc;
 	char **argv;
+	llist_char *dirs = NULL;
 
 	if ((strchr(pkgname, ' ') != NULL) || (strchr(cat, ' ') != NULL)) {
 #if 0
@@ -916,7 +924,13 @@ int pkg_unmerge(char *cat, char *pkgname)
 		/* Should we remove in order symlinks,objects,dirs ? */
 		switch (e->type) {
 			case CONTENTS_DIR:
-				if (!protected)	{ rmdir(dst); }
+				if (!protected) {
+					/* since the dir contains files, we remove it later */
+					llist_char *list = xmalloc(sizeof(llist_char));
+					list->data = xstrdup(dst);
+					list->next = dirs;
+					dirs = list;
+				}
 				qprintf("%s %s%s%s/\n", zing, DKBLUE, dst, NORM);
 				break;
 			case CONTENTS_OBJ:
@@ -957,6 +971,15 @@ int pkg_unmerge(char *cat, char *pkgname)
 	}
 
 	fclose(fp);
+
+	/* remove all dirs in reverse order */
+	while (dirs != NULL) {
+		llist_char *list = dirs;
+		dirs = dirs->next;
+		rmdir(list->data);
+		free(list->data);
+		free(list);
+	}
 
 	freeargv(argc, argv);
 
