@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.42 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.43 2007/01/27 21:55:42 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.42 2006/11/09 00:18:05 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.43 2007/01/27 21:55:42 solar Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -356,8 +356,9 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 	int i;
 	char *ptr;
 	char buf[_Q_PATH_MAX];
-	char depend[16384], use[8192];
+	char depend[65536], use[8192];
 	dep_node *dep_tree;
+	struct stat st;
 
 	if (chdir(portroot))
 		errp("could not chdir(%s) for ROOT", portroot);
@@ -396,11 +397,14 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 			/* >=portage-2.1_pre3 wont ensure these files always exist.
 			 * So we must verify they exist before attempting to eat_file on them.
 			 */
-			if (access(buf, R_OK) != 0)
+			if ((stat(buf, &st)) != (-1)) {
+				if (st.st_size <= 1)
+					continue;
+			} else
 				continue;
 
 			if (!eat_file(buf, depend, sizeof(depend))) {
-				warn("i'm such a fatty, could not eat_file(%s)", buf);
+				warn("i'm such a fatty, could not eat_file(%s) with %d bytes", buf, sizeof(depend));
 				continue;
 			}
 
