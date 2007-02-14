@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.20 2006/11/09 00:24:37 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.21 2007/02/14 03:36:02 tcort Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -48,7 +48,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.20 2006/11/09 00:24:37 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.21 2007/02/14 03:36:02 tcort Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -201,6 +201,9 @@ int read_keywords(char *s, int *keywords)
 			keywords[i] = minus;
 		}
 	}
+
+	if (!strlen(s))
+		return 0;
 
 	arch = strtok(s, delim);
 	keywords[decode_arch(arch)] = decode_status(arch[0]);
