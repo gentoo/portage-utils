@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.21 2007/02/14 03:36:02 tcort Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.22 2007/02/20 23:14:04 solar Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -48,7 +48,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.21 2007/02/14 03:36:02 tcort Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.22 2007/02/20 23:14:04 solar Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -463,6 +463,7 @@ int qcache_vercmp(const void *x, const void *y)
  * int qcache_file_select(const struct dirent *entry);
  *
  * Selects filenames that do not begin with '.' and are not name "metadata.xml"
+ *  or that file matches ".cpickle"
  *
  * IN:
  *  const struct dirent *entry - entry to check
@@ -472,7 +473,7 @@ int qcache_vercmp(const void *x, const void *y)
 int qcache_file_select(const struct dirent *entry);
 int qcache_file_select(const struct dirent *entry)
 {
-	return !(entry->d_name[0] == '.' || (strcmp(entry->d_name, "metadata.xml") == 0));
+	return !(entry->d_name[0] == '.' || (strcmp(entry->d_name, "metadata.xml") == 0) || (strstr(entry->d_name, ".cpickle") != 0));
 }
 
 /*
@@ -515,10 +516,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 	int i, j, k, len, num_cat, num_pkg, num_ebuild;
 	struct direct **categories, **packages, **ebuilds;
 
-	len = sizeof(char) * (strlen(QCACHE_EDB) + strlen(portdir) + 1);
-	catpath = xmalloc(len);
-	memset(catpath, 0, len);
-	snprintf(catpath, len, "%s%s", QCACHE_EDB, portdir);
+	len = asprintf(&catpath, "%s%s", QCACHE_EDB, portdir);
 
 	if (-1 == (num_cat = scandir(catpath, &categories, qcache_file_select, alphasort))) {
 		err("%s %s", catpath, strerror(errno));
@@ -530,13 +528,10 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 	/* traverse categories */
 	for (i = 0; i < num_cat; i++) {
-		len = sizeof(char) * (strlen(portdir) + strlen("/") + strlen(categories[i]->d_name) + 1);
-		pkgpath = xmalloc(len);
-		memset(pkgpath, 0, len);
-		snprintf(pkgpath, len, "%s/%s", portdir, categories[i]->d_name);
+		len = asprintf(&pkgpath, "%s/%s", portdir, categories[i]->d_name);
 
 		if (-1 == (num_pkg = scandir(pkgpath, &packages, qcache_file_select, alphasort))) {
-			warn("%s %s", catpath, strerror(errno));
+			warn("%s %s", pkgpath, strerror(errno));
 			free(categories[i]);
 			free(pkgpath);
 			continue;
