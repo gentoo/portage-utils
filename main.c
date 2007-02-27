@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.131 2007/01/07 17:47:41 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.132 2007/02/27 00:28:42 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -505,6 +505,7 @@ void initialize_portage_env(void)
 	f = 0;
 	if (readlink("/etc/make.profile", profile, sizeof(profile)) == -1)
 		strcpy(profile, "/etc/make.profile");
+	chdir("/etc");
 	do {
 		if (f == 0)
 			snprintf(portage_file, sizeof(portage_file), "%s/make.defaults", profile);
