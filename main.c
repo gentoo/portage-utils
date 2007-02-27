@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.132 2007/02/27 00:28:42 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.133 2007/02/27 23:57:22 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -95,10 +95,10 @@ static char config_protect[_Q_PATH_MAX] = "/etc/";
 char pkgdir[512] = "/usr/portage/packages/";
 char port_tmpdir[512] = "/var/tmp/portage/";
 
-char binhost[512] = PORTAGE_BINHOST;
-char features[512] = "noman noinfo nodoc";
+char binhost[1024] = PORTAGE_BINHOST;
+char features[2048] = "noman noinfo nodoc";
 char accept_license[512] = "*";
-char install_mask[1024] = "";
+char install_mask[BUFSIZ] = "";
 
 const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
@@ -433,6 +433,10 @@ char *strincr_var(const char *name, char *s, char *value, const size_t value_len
 {
 	char buf[BUFSIZ];
 	char *p;
+
+
+	if ((strlen(value) + 1 + strlen(s)) >= value_len)
+		errf("%s will exceed max length value of %d with a size of %d", name, value_len, (strlen(value) + 1 + strlen(s)));
 
 	strncat(value, " ", value_len);
 	strncat(value, s, value_len);
