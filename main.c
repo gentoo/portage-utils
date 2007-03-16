@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.134 2007/03/03 20:28:03 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.135 2007/03/16 21:31:11 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -655,7 +655,13 @@ const char *initialize_flat(int cache_type)
 	}
 
 	if ((fp = fopen(cache_file, "w")) == NULL) {
-		warnfp("opening '%s/%s' failed", portdir, cache_file);
+		if (cache_type == CACHE_EBUILD)
+			warnfp("opening '%s/%s' failed", portdir, cache_file);
+		else
+			warnfp("opening '%s/%s/%s' failed", portdir, portcachedir, cache_file);
+		if (errno == EACCES)
+			warnf("You should run this command as root: q -%c",
+					cache_type == CACHE_EBUILD ? 'r' : 'm');
 		goto ret;
 	}
 
