@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.15 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.16 2007/03/17 20:31:32 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -10,13 +10,14 @@
 
 #ifdef APPLET_qgrep
 
-#define QGREP_FLAGS "IiHce" COMMON_FLAGS
+#define QGREP_FLAGS "IiHceE" COMMON_FLAGS
 static struct option const qgrep_long_opts[] = {
 	{"invert-match",  no_argument, NULL, 'I'},
 	{"ignore-case",   no_argument, NULL, 'i'},
 	{"with-filename", no_argument, NULL, 'H'},
 	{"count",         no_argument, NULL, 'c'},
 	{"regexp",        no_argument, NULL, 'e'},
+	{"eclass",        no_argument, NULL, 'E'},
 	COMMON_LONG_OPTS
 };
 static const char *qgrep_opts_help[] = {
@@ -25,9 +26,10 @@ static const char *qgrep_opts_help[] = {
 	"Print the filename for each match",
 	"Only print a count of matching lines per FILE",
 	"Use PATTERN as a regular expression",
+	"Search in eclasses instead of ebuilds",
 	COMMON_OPTS_HELP
 };
-static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.15 2006/11/09 00:18:05 vapier Exp $";
+static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.16 2007/03/17 20:31:32 solar Exp $";
 #define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, lookup_applet_idx("qgrep"))
 
 int qgrep_main(int argc, char **argv)
@@ -35,9 +37,11 @@ int qgrep_main(int argc, char **argv)
 	int i;
 	int count = 0;
 	char *p;
-	char do_count, do_regex;
+	char do_count, do_regex, do_eclass;
 	char show_filename;
-	FILE *fp;
+	FILE *fp = NULL;
+	DIR *eclass_dir = NULL;
+	struct dirent *dentry;
 	char ebuild[_Q_PATH_MAX];
 	char buf0[BUFSIZ];
 	int reflags = REG_NOSUB;
@@ -49,7 +53,7 @@ int qgrep_main(int argc, char **argv)
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	do_count = do_regex = show_filename = 0;
+	do_count = do_regex = do_eclass = show_filename = 0;
 
 	while ((i = GETOPT_LONG(QGREP, qgrep, "")) != -1) {
 		switch (i) {
@@ -60,6 +64,7 @@ int qgrep_main(int argc, char **argv)
 			break;
 		case 'c': do_count = 1; break;
 		case 'e': do_regex = 1; break;
+		case 'E': do_eclass = 1; break;
 		case 'H': show_filename = 1; break;
 		COMMON_GETOPTS_CASES(qgrep)
 		}
@@ -67,14 +72,29 @@ int qgrep_main(int argc, char **argv)
 	if (argc == optind)
 		qgrep_usage(EXIT_FAILURE);
 
-	initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
+	if (!do_eclass) {
+		initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
+		if ((fp = fopen(CACHE_EBUILD_FILE, "r")) == NULL)
+			return 1;
+	} else {
+		if ((chdir(portdir)) != 0)
+			errp("chdir to PORTDIR '%s' failed", portdir);
+		if ((eclass_dir = opendir("eclass")) == NULL)
+			errp("opendir(\"%s/eclass\") failed", portdir);
+	}
 
-	if ((fp = fopen(CACHE_EBUILD_FILE, "r")) == NULL)
-		return 1;
-	while ((fgets(ebuild, sizeof(ebuild), fp)) != NULL) {
+	while (do_eclass
+			? ((dentry = readdir(eclass_dir))
+				&& snprintf(ebuild, sizeof(ebuild), "eclass/%s", dentry->d_name))
+			: ((fgets(ebuild, sizeof(ebuild), fp)) != NULL)) {
 		FILE *newfp;
-		if ((p = strchr(ebuild, '\n')) != NULL)
-			*p = 0;
+		if (do_eclass) {
+			if ((p = strrchr(ebuild, '.')) == NULL)
+				continue;
+			if (strcmp(p, ".eclass"))
+				continue;
+		} else if ((p = strchr(ebuild, '\n')) != NULL)
+				*p = 0;
 		if ((newfp = fopen(ebuild, "r")) != NULL) {
 			unsigned int lineno = 0;
 			count = 0;
@@ -116,7 +136,10 @@ int qgrep_main(int argc, char **argv)
 			}
 		}
 	}
-	fclose(fp);
+	if (do_eclass)
+		closedir(eclass_dir);
+	else
+		fclose(fp);
 	return EXIT_SUCCESS;
 }
 
