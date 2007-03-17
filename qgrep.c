@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.16 2007/03/17 20:31:32 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.17 2007/03/17 20:53:23 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -10,7 +10,7 @@
 
 #ifdef APPLET_qgrep
 
-#define QGREP_FLAGS "IiHceE" COMMON_FLAGS
+#define QGREP_FLAGS "IiHceEs" COMMON_FLAGS
 static struct option const qgrep_long_opts[] = {
 	{"invert-match",  no_argument, NULL, 'I'},
 	{"ignore-case",   no_argument, NULL, 'i'},
@@ -18,6 +18,7 @@ static struct option const qgrep_long_opts[] = {
 	{"count",         no_argument, NULL, 'c'},
 	{"regexp",        no_argument, NULL, 'e'},
 	{"eclass",        no_argument, NULL, 'E'},
+	{"skip-comments", no_argument, NULL, 's'},
 	COMMON_LONG_OPTS
 };
 static const char *qgrep_opts_help[] = {
@@ -27,9 +28,10 @@ static const char *qgrep_opts_help[] = {
 	"Only print a count of matching lines per FILE",
 	"Use PATTERN as a regular expression",
 	"Search in eclasses instead of ebuilds",
+	"Skip comments lines",
 	COMMON_OPTS_HELP
 };
-static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.16 2007/03/17 20:31:32 solar Exp $";
+static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.17 2007/03/17 20:53:23 solar Exp $";
 #define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, lookup_applet_idx("qgrep"))
 
 int qgrep_main(int argc, char **argv)
@@ -38,7 +40,7 @@ int qgrep_main(int argc, char **argv)
 	int count = 0;
 	char *p;
 	char do_count, do_regex, do_eclass;
-	char show_filename;
+	char show_filename, skip_comments;
 	FILE *fp = NULL;
 	DIR *eclass_dir = NULL;
 	struct dirent *dentry;
@@ -53,7 +55,7 @@ int qgrep_main(int argc, char **argv)
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	do_count = do_regex = do_eclass = show_filename = 0;
+	do_count = do_regex = do_eclass = show_filename = skip_comments = 0;
 
 	while ((i = GETOPT_LONG(QGREP, qgrep, "")) != -1) {
 		switch (i) {
@@ -66,6 +68,7 @@ int qgrep_main(int argc, char **argv)
 		case 'e': do_regex = 1; break;
 		case 'E': do_eclass = 1; break;
 		case 'H': show_filename = 1; break;
+		case 's': skip_comments = 1; break;
 		COMMON_GETOPTS_CASES(qgrep)
 		}
 	}
@@ -104,6 +107,12 @@ int qgrep_main(int argc, char **argv)
 					*p = 0;
 				if ((p = strrchr(buf0, '\r')) != NULL)
 					*p = 0;
+
+				if (skip_comments) {
+					p = buf0;
+					while (*p == ' ' || *p == '\t') p++;
+					if (*p == '#') continue;
+				}
 
 				if (!invert_match) {
 					if (do_regex == 0) {
