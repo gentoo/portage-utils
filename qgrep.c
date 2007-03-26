@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.19 2007/03/26 16:20:08 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.20 2007/03/26 21:11:50 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,8 +24,8 @@ static struct option const qgrep_long_opts[] = {
 	{"eclass",        no_argument, NULL, 'E'},
 	{"skip-comments", no_argument, NULL, 's'},
 	{"skip",           a_argument, NULL, 'S'},
-	{"before-context", a_argument, NULL, 'B'},
-	{"after-context",  a_argument, NULL, 'A'},
+	{"before", a_argument, NULL, 'B'},
+	{"after",  a_argument, NULL, 'A'},
 	COMMON_LONG_OPTS
 };
 static const char *qgrep_opts_help[] = {
@@ -45,7 +45,7 @@ static const char *qgrep_opts_help[] = {
 	"Print <arg> lines of trailing context",
 	COMMON_OPTS_HELP
 };
-static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.19 2007/03/26 16:20:08 solar Exp $";
+static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.20 2007/03/26 21:11:50 solar Exp $";
 #define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, lookup_applet_idx("qgrep"))
 
 char qgrep_name_match(const char*, const int, depend_atom**);
@@ -77,7 +77,7 @@ char qgrep_name_match(const char* name, const int argc, depend_atom** argv)
 	return 0;
 }
 
-/* Circular list of line buffers for --before-context */
+/* Circular list of line buffers for --before */
 typedef struct qgrep_buf {
 	char valid;
 	/* 1 when the line should be included in
@@ -250,24 +250,24 @@ int qgrep_main(int argc, char **argv)
 	}
 
 	if (do_list && num_lines_before) {
-		warn("%s and --before-context are incompatible options. The former wins.",
+		warn("%s and --before are incompatible options. The former wins.",
 				(invert_list ? "--invert-list" : "--list"));
 		num_lines_before = 0;
 	}
 
 	if (do_list && num_lines_after) {
-		warn("%s and --after-context are incompatible options. The former wins.",
+		warn("%s and --after are incompatible options. The former wins.",
 				(invert_list ? "--invert-list" : "--list"));
 		num_lines_after = 0;
 	}
 
 	if (do_count && num_lines_before) {
-		warn("--count and --before-context are incompatible options. The former wins.");
+		warn("--count and --before are incompatible options. The former wins.");
 		num_lines_before = 0;
 	}
 
 	if (do_count && num_lines_after) {
-		warn("--count and --after-context are incompatible options. The former wins.");
+		warn("--count and --after are incompatible options. The former wins.");
 		num_lines_after = 0;
 	}
 
@@ -313,7 +313,7 @@ int qgrep_main(int argc, char **argv)
 			errp("opendir(\"%s/eclass\") failed", portdir);
 	}
 
-	/* allocate a circular buffers list for --before-context */
+	/* allocate a circular buffers list for --before */
 	buf_list = qgrep_buf_list_alloc(num_lines_before + 1);
 
 	/* iteration is either over ebuilds or eclasses */
