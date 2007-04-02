@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.20 2007/03/26 21:11:50 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.21 2007/04/02 17:05:04 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -10,7 +10,7 @@
 
 #ifdef APPLET_qgrep
 
-#define QGREP_FLAGS "IiHNclLexEsS:B:A:" COMMON_FLAGS
+#define QGREP_FLAGS "IiHNclLexJEsS:B:A:" COMMON_FLAGS
 static struct option const qgrep_long_opts[] = {
 	{"invert-match",  no_argument, NULL, 'I'},
 	{"ignore-case",   no_argument, NULL, 'i'},
@@ -21,11 +21,12 @@ static struct option const qgrep_long_opts[] = {
 	{"invert-list",   no_argument, NULL, 'L'},
 	{"regexp",        no_argument, NULL, 'e'},
 	{"extended",      no_argument, NULL, 'x'},
+	{"installed",     no_argument, NULL, 'J'},
 	{"eclass",        no_argument, NULL, 'E'},
 	{"skip-comments", no_argument, NULL, 's'},
 	{"skip",           a_argument, NULL, 'S'},
-	{"before", a_argument, NULL, 'B'},
-	{"after",  a_argument, NULL, 'A'},
+	{"before",         a_argument, NULL, 'B'},
+	{"after",          a_argument, NULL, 'A'},
 	COMMON_LONG_OPTS
 };
 static const char *qgrep_opts_help[] = {
@@ -38,6 +39,7 @@ static const char *qgrep_opts_help[] = {
 	"Only print FILE names containing no match",
 	"Use PATTERN as a regular expression",
 	"Use PATTERN as an extended regular expression",
+	"Search in installed ebuilds instead of the tree",
 	"Search in eclasses instead of ebuilds",
 	"Skip comments lines",
 	"Skip lines matching <arg>",
@@ -45,7 +47,7 @@ static const char *qgrep_opts_help[] = {
 	"Print <arg> lines of trailing context",
 	COMMON_OPTS_HELP
 };
-static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.20 2007/03/26 21:11:50 solar Exp $";
+static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.21 2007/04/02 17:05:04 solar Exp $";
 #define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, lookup_applet_idx("qgrep"))
 
 char qgrep_name_match(const char*, const int, depend_atom**);
@@ -128,24 +130,67 @@ void qgrep_buf_list_invalidate(qgrep_buf_t *head)
 	} while (current != head);
 }
 
+/* Type for the str(case)str search functions */
+typedef char *(*QGREP_STR_FUNC) (const char *, const char *);
+
 /* Display a buffer, with an optionnal prefix. */
-void qgrep_print_line(qgrep_buf_t *, const char *, const int, const char);
+void qgrep_print_line(qgrep_buf_t *, const char *, const int, const char,
+		const regex_t*, const QGREP_STR_FUNC, const char*);
 void qgrep_print_line(qgrep_buf_t *current, const char *label,
-		const int line_number, const char zig)
+		const int line_number, const char zig, const regex_t* preg,
+		const QGREP_STR_FUNC searchfunc, const char* searchstr)
 {
+	char *p = current->buf;
+	/* Print line prefix, when in verbose mode */
 	if (label != NULL) {
 		printf("%s", label);
 		if (line_number > 0)
 			printf(":%d", line_number);
 		putchar(zig);
 	}
-	printf("%s\n", current->buf);
+	if (preg != NULL) {
+		/* Iteration over regexp matches, for color output.
+		 * First regexec is a normal one, and then loop with
+		 * REG_NOTBOL to not match "^pattern" anymore. */
+		regmatch_t match;
+		int regexec_flags = 0;
+		while ((*p != '\0') && !regexec(preg, p, 1, &match, regexec_flags)) {
+			if (match.rm_so > 0)
+				printf("%.*s", match.rm_so, p);
+			if (match.rm_eo > match.rm_so) {
+				printf("%s%.*s%s", RED, match.rm_eo - match.rm_so, p + match.rm_so, NORM);
+				p += match.rm_eo;
+			} else {
+				p += match.rm_eo;
+				putchar(*p++);
+			}
+			regexec_flags = REG_NOTBOL;
+		}
+	} else if (searchfunc != NULL && searchstr != NULL) {
+		/* Iteration over substring matches, for color output. */
+		char *q;
+		int searchlen = strlen(searchstr);
+		while (searchlen && ((q = ((searchfunc) (p, searchstr))) != NULL)) {
+			if (p < q)
+				printf("%.*s", (q - p), p);
+			printf("%s%.*s%s", RED, searchlen, q, NORM);
+			p = q + searchlen;
+		}
+	}
+	/* No color output (for context lines, or trailing portion
+	 * of matching lines). */
+	printf("%s\n", p);
+	/* Once a line has been displayed, it is not valid anymore */
 	current->valid = 0;
 }
 #define qgrep_print_context_line(buf, label, lineno) \
-	qgrep_print_line(buf, label, lineno, '-')
-#define qgrep_print_matching_line(buf, label, lineno) \
-	qgrep_print_line(buf, label, lineno, ':')
+	qgrep_print_line(buf, label, lineno, '-', NULL, NULL, NULL)
+#define qgrep_print_matching_line_nocolor(buf, label, lineno) \
+	qgrep_print_line(buf, label, lineno, ':', NULL, NULL, NULL)
+#define qgrep_print_matching_line_regcolor(buf, label, lineno, preg) \
+	qgrep_print_line(buf, label, lineno, ':', preg, NULL, NULL)
+#define qgrep_print_matching_line_strcolor(buf, label, lineno, searchfunc, searchstr) \
+	qgrep_print_line(buf, label, lineno, ':', NULL, searchfunc, searchstr)
 
 /* Display a leading context (valid lines of the buffers list, but the matching one). */
 void qgrep_print_before_context(qgrep_buf_t *, const char, const char *, const int);
@@ -162,21 +207,51 @@ void qgrep_print_before_context(qgrep_buf_t *current, const char num_lines_befor
 	}
 }
 
+/* Yield the path of one of the installed ebuilds (from VDB). */
+char* get_next_installed_ebuild(char *, DIR *, struct dirent **, DIR **);
+char* get_next_installed_ebuild(char *ebuild_path, DIR *vdb_dir, 
+		struct dirent **cat_dirent_pt, DIR **cat_dir_pt)
+{
+	struct dirent *pkg_dirent = NULL;
+	if (*cat_dirent_pt == NULL || *cat_dir_pt == NULL)
+		goto get_next_category;
+get_next_ebuild_from_category:
+	if ((pkg_dirent = readdir(*cat_dir_pt)) == NULL)
+		goto get_next_category;
+	if (pkg_dirent->d_name[0] == '.')
+		goto get_next_ebuild_from_category;
+	snprintf(ebuild_path, _Q_PATH_MAX, "%s/%s/%s.ebuild",
+			(*cat_dirent_pt)->d_name, pkg_dirent->d_name, pkg_dirent->d_name);
+	return ebuild_path;
+get_next_category:
+	if (*cat_dir_pt != NULL)
+		closedir(*cat_dir_pt);
+	*cat_dirent_pt = q_vdb_get_next_dir(vdb_dir);
+	if (*cat_dirent_pt == NULL)
+		return NULL;
+	if ((*cat_dir_pt = opendir((*cat_dirent_pt)->d_name)) == NULL)
+		goto get_next_category;
+	goto get_next_ebuild_from_category;
+}
+
+
 int qgrep_main(int argc, char **argv)
 {
 	int i;
 	int count = 0;
 	char *p;
-	char do_count, do_regex, do_eclass, do_list;
+	char do_count, do_regex, do_eclass, do_installed, do_list;
 	char show_filename, skip_comments, invert_list, show_name;
 	char per_file_output;
 	FILE *fp = NULL;
 	DIR *eclass_dir = NULL;
+	DIR *vdb_dir = NULL;
+	DIR *cat_dir = NULL;
 	struct dirent *dentry;
 	char ebuild[_Q_PATH_MAX];
 	char name[_Q_PATH_MAX];
 	char *label;
-	int reflags = REG_NOSUB;
+	int reflags = 0;
 	char invert_match = 0;
 	regex_t preg, skip_preg;
 	char *skip_pattern = NULL;
@@ -188,20 +263,19 @@ int qgrep_main(int argc, char **argv)
 	int need_separator = 0;
 	char status = 1;
 
-	typedef char *(*FUNC) (char *, char *);
-	FUNC strfunc = (FUNC) strstr;
+	QGREP_STR_FUNC strfunc = (QGREP_STR_FUNC) strstr;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	do_count = do_regex = do_eclass = do_list = 0;
+	do_count = do_regex = do_eclass = do_installed = do_list = 0;
 	show_filename = skip_comments = invert_list = show_name = 0;
 
 	while ((i = GETOPT_LONG(QGREP, qgrep, "")) != -1) {
 		switch (i) {
 		case 'I': invert_match = 1; break;
 		case 'i':
-			strfunc = (FUNC) strcasestr;
+			strfunc = (QGREP_STR_FUNC) strcasestr;
 			reflags |= REG_ICASE;
 			break;
 		case 'c': do_count = 1; break;
@@ -212,6 +286,7 @@ int qgrep_main(int argc, char **argv)
 			do_regex = 1;
 			reflags |= REG_EXTENDED;
 			break;
+		case 'J': do_installed = 1; break;
 		case 'E': do_eclass = 1; break;
 		case 'H': show_filename = 1; break;
 		case 'N': show_name = 1; break;
@@ -271,6 +346,11 @@ int qgrep_main(int argc, char **argv)
 		num_lines_after = 0;
 	}
 
+	if (do_installed && do_eclass) {
+		warn("--installed and --eclass are incompatible options. The former wins.");
+		do_eclass = 0;
+	}
+
 	/* do we report results once per file or per line ? */
 	per_file_output = do_count || (do_list && (!verbose || invert_list));
 	/* label for prefixing matching lines or listing matching files */
@@ -287,12 +367,15 @@ int qgrep_main(int argc, char **argv)
 	if (do_regex) {
 		int ret;
 		char err[256];
+		if (invert_match || *RED == '\0')
+			reflags |= REG_NOSUB;
 		if ((ret = regcomp(&preg, argv[optind], reflags))) {
 			if (regerror(ret, &preg, err, sizeof(err)))
 				err("regcomp failed: %s", err);
 			else
 				err("regcomp failed");
 		}
+		reflags |= REG_NOSUB;
 		if (skip_pattern && (ret = regcomp(&skip_preg, skip_pattern, reflags))) {
 			if (regerror(ret, &skip_preg, err, sizeof(err)))
 				err("regcomp failed for --skip pattern: %s", err);
@@ -301,16 +384,23 @@ int qgrep_main(int argc, char **argv)
 		}
 	}
 
-	/* go look either in ebuilds or eclasses */
-	if (!do_eclass) {
+	/* go look either in ebuilds or eclasses or VDB */
+	if (!do_eclass && !do_installed) {
 		initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
 		if ((fp = fopen(CACHE_EBUILD_FILE, "r")) == NULL)
 			return 1;
-	} else {
+	} else if (do_eclass) {
 		if ((chdir(portdir)) != 0)
 			errp("chdir to PORTDIR '%s' failed", portdir);
 		if ((eclass_dir = opendir("eclass")) == NULL)
 			errp("opendir(\"%s/eclass\") failed", portdir);
+	} else { /* if (do_install) */
+		if (chdir(portroot) != 0)
+			errp("could not chdir(%s) for ROOT", portroot);
+		if (chdir(portvdb) != 0)
+			errp("could not chdir(%s/%s) for ROOT/VDB", portroot, portvdb);
+		if ((vdb_dir = opendir(".")) == NULL)
+			errp("could not opendir(%s/%s) for ROOT/VDB", portroot, portvdb);
 	}
 
 	/* allocate a circular buffers list for --before */
@@ -320,7 +410,9 @@ int qgrep_main(int argc, char **argv)
 	while (do_eclass
 			? ((dentry = readdir(eclass_dir))
 				&& snprintf(ebuild, sizeof(ebuild), "eclass/%s", dentry->d_name))
-			: ((fgets(ebuild, sizeof(ebuild), fp)) != NULL)) {
+			: (do_installed
+				? (get_next_installed_ebuild(ebuild, vdb_dir, &dentry, &cat_dir) != NULL)
+				: ((fgets(ebuild, sizeof(ebuild), fp)) != NULL))) {
 		FILE *newfp;
 
 		/* filter badly named files, prepare eclass or package name, etc. */
@@ -398,7 +490,7 @@ int qgrep_main(int argc, char **argv)
 				if (skip_pattern) {
 					/* reject some other lines which match an optional pattern */
 					if (!do_regex) {
-						if (( (FUNC *) (strfunc) (buf_list->buf, skip_pattern)) != NULL)
+						if (( (QGREP_STR_FUNC *) (strfunc) (buf_list->buf, skip_pattern)) != NULL)
 							goto print_after_context;
 					} else {
 						if (regexec(&skip_preg, buf_list->buf, 0, NULL, 0) == 0)
@@ -409,7 +501,7 @@ int qgrep_main(int argc, char **argv)
 				/* four ways to match a line (with/without inversion and regexp) */
 				if (!invert_match) {
 					if (do_regex == 0) {
-						if (( (FUNC *) (strfunc) (buf_list->buf, argv[optind])) == NULL)
+						if (( (QGREP_STR_FUNC *) (strfunc) (buf_list->buf, argv[optind])) == NULL)
 							goto print_after_context;
 					} else {
 						if (regexec(&preg, buf_list->buf, 0, NULL, 0) != 0)
@@ -417,7 +509,7 @@ int qgrep_main(int argc, char **argv)
 					}
 				} else {
 					if (do_regex == 0) {
-						if (( (FUNC *) (strfunc) (buf_list->buf, argv[optind])) != NULL)
+						if (( (QGREP_STR_FUNC *) (strfunc) (buf_list->buf, argv[optind])) != NULL)
 							goto print_after_context;
 					} else {
 						if (regexec(&preg, buf_list->buf, 0, NULL, 0) == 0)
@@ -437,11 +529,19 @@ int qgrep_main(int argc, char **argv)
 				 * adjacent contextes are not separated */
 				need_separator = 0 - num_lines_before;
 				if (!do_list) {
-					/* print the leading context, and matching line */
+					/* print the leading context */
 					qgrep_print_before_context(buf_list, num_lines_before, label,
 							((verbose > 1) ? lineno : -1));
-					qgrep_print_matching_line(buf_list, label,
+					/* print matching line */
+					if (invert_match || *RED == '\0')
+						qgrep_print_matching_line_nocolor(buf_list, label,
 							((verbose > 1) ? lineno : -1));
+					else if (do_regex)
+						qgrep_print_matching_line_regcolor(buf_list, label,
+							((verbose > 1) ? lineno : -1), &preg);
+					else
+						qgrep_print_matching_line_strcolor(buf_list, label,
+							((verbose > 1) ? lineno : -1), strfunc, argv[optind]);
 				} else {
 					/* in verbose do_list mode, list the file once per match */
 					printf("%s", label);
@@ -481,7 +581,7 @@ print_after_context:
 	}
 	if (do_eclass)
 		closedir(eclass_dir);
-	else
+	else if (!do_installed)
 		fclose(fp);
 	if (do_regex)
 		regfree(&preg);
