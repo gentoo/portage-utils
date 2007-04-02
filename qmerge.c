@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.58 2007/01/24 17:50:47 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.59 2007/04/02 16:21:20 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.58 2007/01/24 17:50:47 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.59 2007/04/02 16:21:20 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -215,10 +215,12 @@ void qmerge_initialize(const char *Packages)
 	if (!binhost[0])
 		errf("PORTAGE_BINHOST= does not appear to be valid");
 
-	if ((access(pkgdir, R_OK|W_OK|X_OK)) != 0)
-		errf("Fatal errors with PKGDIR='%s'", pkgdir);
+	if (!search_pkgs && !pretend) {
+		if ((access(pkgdir, R_OK|W_OK|X_OK)) != 0)
+			errf("Wrong perms on PKGDIR='%s'", pkgdir);
 
-	mkdir(port_tmpdir, 0755);
+		mkdir(port_tmpdir, 0755);
+	}
 
 	if (chdir(port_tmpdir) != 0)
 		errf("!!! chdir(PORTAGE_TMPDIR %s) %s", port_tmpdir, strerror(errno));
