@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.22 2007/02/20 23:14:04 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.23 2007/04/06 20:50:19 solar Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -48,7 +48,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.22 2007/02/20 23:14:04 solar Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.23 2007/04/06 20:50:19 solar Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -230,8 +230,7 @@ int read_keywords(char *s, int *keywords)
  * ERR:
  *  -1 is returned if the file cannot be read.
  */
-inline unsigned int qcache_count_lines(char *filename);
-inline unsigned int qcache_count_lines(char *filename)
+static unsigned int qcache_count_lines(char *filename)
 {
 	unsigned int count, fd;
 	char c;
