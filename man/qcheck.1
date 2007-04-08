@@ -1,11 +1,14 @@
-.TH qcheck "1" "January 2007" "Gentoo Foundation" "qcheck"
+.TH qcheck "1" "April 2007" "Gentoo Foundation" "qcheck"
 .SH NAME
-qcheck \- verify file existence/mtimes/digests
+qcheck \- verify integrity of installed packages
 .SH SYNOPSIS
 .B qcheck
 \fI<pkgname>\fR
 .SH DESCRIPTION
-Options: \fB\-[auAHTvqChV]\fR
+Options: \fB\-[eauAHTvqChV]\fR
+.TP
+\fB\-e\fR, \fB\-\-exact\fR
+* Exact match (only CAT/PN or PN without PV)
 .TP
 \fB\-a\fR, \fB\-\-all\fR
 * List all packages
@@ -37,4 +40,4 @@ Options: \fB\-[auAHTvqChV]\fR
 \fB\-V\fR, \fB\-\-version\fR
 * Print version and exit
 .PP
-$Id: qcheck.1,v 1.21 2007/04/08 19:56:20 vapier Exp $
+$Id: qcheck.1,v 1.22 2007/04/08 23:14:50 solar Exp $
