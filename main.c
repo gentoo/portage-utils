@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.135 2007/03/16 21:31:11 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.136 2007/04/08 19:45:41 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -434,9 +434,8 @@ char *strincr_var(const char *name, char *s, char *value, const size_t value_len
 	char buf[BUFSIZ];
 	char *p;
 
-
 	if ((strlen(value) + 1 + strlen(s)) >= value_len)
-		errf("%s will exceed max length value of %d with a size of %d", name, value_len, (strlen(value) + 1 + strlen(s)));
+		errf("%s will exceed max length value of %zi with a size of %zi", name, value_len, (strlen(value) + 1 + strlen(s)));
 
 	strncat(value, " ", value_len);
 	strncat(value, s, value_len);

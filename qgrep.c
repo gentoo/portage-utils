@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.22 2007/04/05 18:23:30 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.23 2007/04/08 19:45:41 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -47,7 +47,7 @@ static const char *qgrep_opts_help[] = {
 	"Print <arg> lines of trailing context",
 	COMMON_OPTS_HELP
 };
-static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.22 2007/04/05 18:23:30 solar Exp $";
+static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.23 2007/04/08 19:45:41 vapier Exp $";
 #define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, lookup_applet_idx("qgrep"))
 
 char qgrep_name_match(const char*, const int, depend_atom**);
@@ -172,7 +172,7 @@ void qgrep_print_line(qgrep_buf_t *current, const char *label,
 		int searchlen = strlen(searchstr);
 		while (searchlen && ((q = ((searchfunc) (p, searchstr))) != NULL)) {
 			if (p < q)
-				printf("%.*s", (q - p), p);
+				printf("%.*s", (int)(q - p), p);
 			printf("%s%.*s%s", RED, searchlen, q, NORM);
 			p = q + searchlen;
 		}

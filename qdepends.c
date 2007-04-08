@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.43 2007/01/27 21:55:42 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.44 2007/04/08 19:45:41 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.43 2007/01/27 21:55:42 solar Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.44 2007/04/08 19:45:41 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -404,7 +404,7 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 				continue;
 
 			if (!eat_file(buf, depend, sizeof(depend))) {
-				warn("i'm such a fatty, could not eat_file(%s) with %d bytes", buf, sizeof(depend));
+				warn("i'm such a fatty, could not eat_file(%s) with %zi bytes", buf, sizeof(depend));
 				continue;
 			}
 
