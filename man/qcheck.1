@@ -1,17 +1,26 @@
 .TH qcheck "1" "January 2007" "Gentoo Foundation" "qcheck"
 .SH NAME
-qcheck \- verify mtimes/digests
+qcheck \- verify file existence/mtimes/digests
 .SH SYNOPSIS
 .B qcheck
 \fI<pkgname>\fR
 .SH DESCRIPTION
-Options: \fB\-[auvqChV]\fR
+Options: \fB\-[auAHTvqChV]\fR
 .TP
 \fB\-a\fR, \fB\-\-all\fR
 * List all packages
 .TP
 \fB\-u\fR, \fB\-\-update\fR
-* Update chksum and mtimes for packages
+* Update missing files, chksum and mtimes for packages
+.TP
+\fB\-A\fR, \fB\-\-noafk\fR
+* Ignore missing files
+.TP
+\fB\-H\fR, \fB\-\-nohash\fR
+* Ignore differing/unknown file chksums
+.TP
+\fB\-T\fR, \fB\-\-nomtime\fR
+* Ignore differing file mtimes
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
 * Make a lot of noise
@@ -28,4 +37,4 @@ Options: \fB\-[auvqChV]\fR
 \fB\-V\fR, \fB\-\-version\fR
 * Print version and exit
 .PP
-$Id: qcheck.1,v 1.20 2007/01/07 20:32:41 solar Exp $
+$Id: qcheck.1,v 1.21 2007/04/08 19:56:20 vapier Exp $

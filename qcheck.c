@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.31 2006/12/25 22:30:22 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.32 2007/04/08 19:55:45 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,18 +9,24 @@
 
 #ifdef APPLET_qcheck
 
-#define QCHECK_FLAGS "au" COMMON_FLAGS
+#define QCHECK_FLAGS "auAHT" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
 	{"all",     no_argument, NULL, 'a'},
 	{"update",  no_argument, NULL, 'u'},
+	{"noafk",   no_argument, NULL, 'A'},
+	{"nohash",  no_argument, NULL, 'H'},
+	{"nomtime", no_argument, NULL, 'T'},
 	COMMON_LONG_OPTS
 };
 static const char *qcheck_opts_help[] = {
 	"List all packages",
-	"Update chksum and mtimes for packages",
+	"Update missing files, chksum and mtimes for packages",
+	"Ignore missing files",
+	"Ignore differing/unknown file chksums",
+	"Ignore differing file mtimes",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.31 2006/12/25 22:30:22 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.32 2007/04/08 19:55:45 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 
@@ -31,8 +37,11 @@ int qcheck_main(int argc, char **argv)
 	struct dirent *dentry, *de;
 	char search_all = 0;
 	char qc_update = 0;
+	char chk_afk = 1;
+	char chk_hash = 1;
+	char chk_mtime = 1;
 	struct stat st;
-	size_t num_files, num_files_ok, num_files_unknown;
+	size_t num_files, num_files_ok, num_files_unknown, num_files_ignored = 0;
 	char buf[_Q_PATH_MAX], filename[_Q_PATH_MAX];
 	char buffer[_Q_PATH_MAX];
 
@@ -44,6 +53,9 @@ int qcheck_main(int argc, char **argv)
 		COMMON_GETOPTS_CASES(qcheck)
 		case 'a': search_all = 1; break;
 		case 'u': qc_update = 1; break;
+		case 'A': chk_afk = 0; break;
+		case 'H': chk_hash = 0; break;
+		case 'T': chk_mtime = 0; break;
 		}
 	}
 	if ((argc == optind) && !search_all)
@@ -117,7 +129,14 @@ int qcheck_main(int argc, char **argv)
 				++num_files;
 				if (lstat(e->name, &st)) {
 					/* make sure file exists */
-					printf(" %sAFK%s: %s\n", RED, NORM, e->name);
+					if (chk_afk) {
+						printf(" %sAFK%s: %s\n", RED, NORM, e->name);
+					} else {
+						--num_files;
+						++num_files_ignored;
+						if (qc_update)
+							fputs(buffer, fpx);
+					}
 					continue;
 				}
 				if (e->digest && S_ISREG(st.st_mode)) {
@@ -130,8 +149,15 @@ int qcheck_main(int argc, char **argv)
 						default: hash_algo = 0; break;
 					}
 					if (!hash_algo) {
-						printf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n", RED, NORM, e->digest, e->name);
-						++num_files_unknown;
+						if (chk_hash) {
+							printf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n", RED, NORM, e->digest, e->name);
+							++num_files_unknown;
+						} else {
+							--num_files;
+							++num_files_ignored;
+							if (qc_update)
+								fputs(buffer, fpx);
+						}
 						continue;
 					}
 					hashed_file = (char*)hash_file(e->name, hash_algo);
@@ -143,36 +169,47 @@ int qcheck_main(int argc, char **argv)
 						}
 						printf(" %sPERM %4o%s: %s\n", RED, (st.st_mode & 07777), NORM, e->name);
 						++num_files_unknown;
+						free(hashed_file);
 						continue;
 					} else if (strcmp(e->digest, hashed_file)) {
-						const char *digest_disp;
-						if (qc_update) {
-							fprintf(fpx, "obj %s %s %lu\n", e->name, hashed_file, st.st_mtime);
-							if (!verbose)
-								goto free_and_more_hash;
+						if (chk_hash) {
+							const char *digest_disp;
+							if (qc_update)
+								fprintf(fpx, "obj %s %s %lu\n", e->name, hashed_file, st.st_mtime);
+							switch (hash_algo) {
+								case HASH_MD5:  digest_disp = "MD5"; break;
+								case HASH_SHA1: digest_disp = "SHA1"; break;
+								default:        digest_disp = "UNK"; break;
+							}
+							printf(" %s%s-DIGEST%s: %s", RED, digest_disp, NORM, e->name);
+							if (verbose)
+								printf(" (recorded '%s' != actual '%s')", e->digest, hashed_file);
+							printf("\n");
+						} else {
+							--num_files;
+							++num_files_ignored;
+							if (qc_update)
+								fputs(buffer, fpx);
 						}
-						switch (hash_algo) {
-							case HASH_MD5:  digest_disp = "MD5"; break;
-							case HASH_SHA1: digest_disp = "SHA1"; break;
-							default:        digest_disp = "UNK"; break;
-						}
-						printf(" %s%s-DIGEST%s: %s", RED, digest_disp, NORM, e->name);
-						if (verbose)
-							printf(" (recorded '%s' != actual '%s')", e->digest, hashed_file);
-						printf("\n");
-free_and_more_hash:
 						free(hashed_file);
 						continue;
 					} else if (e->mtime && e->mtime != st.st_mtime) {
-						printf(" %sMTIME%s: %s", RED, NORM, e->name);
-						if (verbose)
-							printf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
-						printf("\n");
+						if (chk_mtime) {
+							printf(" %sMTIME%s: %s", RED, NORM, e->name);
+							if (verbose)
+								printf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
+							printf("\n");
 
-						/* This can only be an obj, dir and sym have no digest */
-						if (qc_update)
-							fprintf(fpx, "obj %s %s %lu\n", e->name, e->digest, st.st_mtime);
-
+							/* This can only be an obj, dir and sym have no digest */
+							if (qc_update)
+								fprintf(fpx, "obj %s %s %lu\n", e->name, e->digest, st.st_mtime);
+						} else {
+							--num_files;
+							++num_files_ignored;
+							if (qc_update)
+								fputs(buffer, fpx);
+						}
+						free(hashed_file);
 						continue;
 					} else {
 						if (qc_update)
@@ -180,15 +217,21 @@ free_and_more_hash:
 						free(hashed_file);
 					}
 				} else if (e->mtime && e->mtime != st.st_mtime) {
-					printf(" %sMTIME%s: %s", RED, NORM, e->name);
-					if (verbose)
-						printf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
-					printf("\n");
+					if (chk_mtime) {
+						printf(" %sMTIME%s: %s", RED, NORM, e->name);
+						if (verbose)
+							printf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
+						printf("\n");
 
-					/* This can only be a sym */
-					if (qc_update)
-						fprintf(fpx, "sym %s -> %s %lu\n", e->name, e->sym_target, st.st_mtime);
-
+						/* This can only be a sym */
+						if (qc_update)
+							fprintf(fpx, "sym %s -> %s %lu\n", e->name, e->sym_target, st.st_mtime);
+					} else {
+						--num_files;
+						++num_files_ignored;
+						if (qc_update)
+							fputs(buffer, fpx);
+					}
 					continue;
 				} else {
 					if (qc_update)
@@ -207,15 +250,18 @@ free_and_more_hash:
 				if (!verbose)
 					continue;
 			}
-			printf("  %2$s*%1$s %3$s%4$lu%1$s out of %3$s%5$lu%1$s file%6$s are good\n",
-			       NORM, BOLD, BLUE,
-			       (unsigned long)num_files_ok,
-			       (unsigned long)num_files,
+			printf("  %2$s*%1$s %3$s%4$zu%1$s out of %3$s%5$zu%1$s file%6$s are good",
+			       NORM, BOLD, BLUE, num_files_ok, num_files,
 			       (num_files > 1 ? "s" : ""));
 			if (num_files_unknown)
-				printf("  %2$s*%1$s Unable to digest %3$s%4$lu%1$s file%5$s\n",
-				       NORM, BOLD, BLUE, (unsigned long)num_files_unknown,
+				printf(" (Unable to digest %2$s%3$zu%1$s file%4$s)",
+				       NORM, BLUE, num_files_unknown,
 				       (num_files_unknown > 1 ? "s" : ""));
+			if (num_files_ignored)
+				printf(" (%2$s%3$zu%1$s file%4$s ignored)",
+				       NORM, BLUE, num_files_ignored,
+				       (num_files_ignored > 1 ? "s were" : " was"));
+			printf("\n");
 		}
 		closedir(dirp);
 		chdir("..");

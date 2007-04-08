@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.22 2007/03/05 03:38:06 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.23 2007/04/08 19:55:45 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -49,7 +49,7 @@ struct applet_t {
 	{"q",         q_main,         "<applet> <args>", "virtual applet"},
 	{"qatom",     qatom_main,     "<pkg>",           "split atom strings"},
 	{"qcache",    qcache_main,    "<action> <args>", "search the metadata cache"},
-	{"qcheck",    qcheck_main,    "<pkgname>",       "verify mtimes/digests"},
+	{"qcheck",    qcheck_main,    "<pkgname>",       "verify integrity of installed packages"},
 	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
 	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},
 	{"qglsa",     qglsa_main,     "<action> <list>", "check GLSAs against system"},
