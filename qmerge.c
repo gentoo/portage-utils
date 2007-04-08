@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.59 2007/04/02 16:21:20 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.60 2007/04/08 16:13:39 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.59 2007/04/02 16:21:20 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.60 2007/04/08 16:13:39 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -228,8 +228,12 @@ void qmerge_initialize(const char *Packages)
 		errf("!!! chdir(%s/portage) %s", port_tmpdir, strerror(errno));
 	if (force_download && force_download != 2)
 		unlink(Packages);
-	if ((access(Packages, R_OK) != 0) && (force_download != 2))
-			fetch("./", Packages);
+	if ((access(Packages, R_OK) != 0) && (force_download != 2)) {
+			char *tbuf = NULL;
+			asprintf(&tbuf, "%s/portage/", port_tmpdir);
+			fetch(tbuf, Packages);
+			free(tbuf);
+	}
 }
 
 char *best_version(const char *CATEGORY, const char *PN)
@@ -272,104 +276,6 @@ int config_protected(const char *buf, int ARGC, char **ARGV)
 		return 1;
 	return 0;
 }
-
-#if 0
-queue *resolve_rdepends(const int, const struct pkg_t *, queue *);
-queue *resolve_rdepends(const int level, const struct pkg_t *package, queue *depends)
-{
-	struct pkg_t *pkg = NULL;
-	char buf[1024];
-	int i;
-	int ARGC = 0;
-	char **ARGV = NULL;
-	char *p;
-
-	if (!follow_rdepends)
-		return depends;
-
-	if (!package->RDEPEND[0])
-		return depends;
-
-	pkg = xmalloc(sizeof(struct pkg_t));
-	memcpy(pkg, package, sizeof(struct pkg_t));
-
-	IF_DEBUG(fprintf(stderr, "\n+Parent: %s/%s\n", pkg->CATEGORY, pkg->PF));
-	IF_DEBUG(fprintf(stderr, "+Depstring: %s\n", pkg->RDEPEND));
-
-	/* <hack> */
-	if (strncmp(pkg->RDEPEND, "|| ", 3) == 0)
-		strcpy(pkg->RDEPEND, "");
-	/* </hack> */
-
-	makeargv(pkg->RDEPEND, &ARGC, &ARGV);
-	/* Walk the rdepends here. Merging what need be. */
-	for (i = 1; i < ARGC; i++) {
-		depend_atom *subatom;
-		switch (ARGV[i][0]) {
-			case '|':
-			case '!':
-			case '~':
-			case '<':
-			case '>':
-			case '=':
-				IF_DEBUG(qfprintf(stderr, "Unhandled depstring %s\n", ARGV[i]));
-				break;
-			default:
-				if ((subatom = atom_explode(ARGV[i])) != NULL) {
-					char *dep;
-					struct pkg_t *subpkg;
-					char *resolved = NULL;
-					dep = NULL;
-					dep = find_binpkg(ARGV[i]);
-
-					if (strncmp(ARGV[i], "virtual/", 8) == 0) {
-						if (virtuals == NULL)
-							virtuals = resolve_virtuals();
-						resolved = find_binpkg(virtual(ARGV[i], virtuals));
-						if ((resolved == NULL) || (!strlen(resolved))) warn("puke here cant find binpkg for virtual(%s %s)", ARGV[i], virtual(ARGV[i], virtuals));
-					} else
-						resolved = NULL;
-
-					if (resolved == NULL)
-						resolved = dep;
-					IF_DEBUG(fprintf(stderr, "+Atom: argv0(%s) dep(%s) resolved(%s)\n", ARGV[i], dep, resolved));
-
-					if (strlen(resolved) < 1) {
-						warn("Cant find a binpkg for %s: depstring(%s)", resolved, pkg->RDEPEND);
-						continue;
-					}
-
-					subpkg = grab_binpkg_info(resolved);	/* free me later */
-
-					assert(subpkg != NULL);
-					IF_DEBUG(fprintf(stderr, "+Subpkg: %s/%s\n", subpkg->CATEGORY, subpkg->PF));
-
-
-					/* look at installed versions now. If NULL or < merge this pkg */
-					snprintf(buf, sizeof(buf), "%s/%s", subpkg->CATEGORY, subpkg->PF);
-
-					p = best_version(subpkg->CATEGORY, subpkg->PF);
-					/* we dont want to remerge equal versions here */
-					IF_DEBUG(fprintf(stderr, "+Installed: %s\n", p));
-					if (strlen(p) < 1)
-						if (!((strcmp(pkg->PF, subpkg->PF) == 0) && (strcmp(pkg->CATEGORY, subpkg->CATEGORY) == 0))) {
-							resolve_rdepends(level+1, subpkg, depends);
-						}
-
-					atom_implode(subatom);
-					free(subpkg);
-				} else {
-					qfprintf(stderr, "Cant explode atom %s\n", ARGV[i]);
-				}
-				break;
-		}
-	}
-	freeargv(ARGC, ARGV);
-
-	free(pkg);
-	return depends;
-}
-#endif
 
 void crossmount_rm(char *, const size_t size, const char *, const struct stat);
 void crossmount_rm(char *buf, const size_t size, const char *fname, const struct stat st)
@@ -543,37 +449,41 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 		/* Walk the rdepends here. Merging what need be. */
 		for (i = 1; i < ARGC; i++) {
 			depend_atom *subatom, *ratom;
-			switch (ARGV[i][0]) {
+			char *name = ARGV[i];
+			switch (*name) {
 				case '|':
 				case '!':
-				case '~':
 				case '<':
 				case '>':
 				case '=':
 					if (verbose)
-						qfprintf(stderr, "Unhandled depstring %s\n", ARGV[i]);
+						qfprintf(stderr, "Unhandled depstring %s\n", name);
 					break;
 				default:
-					if ((subatom = atom_explode(ARGV[i])) != NULL) {
+					if (*name == '~') {
+						name = ARGV[i] + 1;
+						/* warn("newname = %s", name); */
+					}
+					if ((subatom = atom_explode(name)) != NULL) {
 						char *dep;
 						struct pkg_t *subpkg;
 						char *resolved = NULL;
 
 						dep = NULL;
-						dep = find_binpkg(ARGV[i]);
+						dep = find_binpkg(name);
 
-						if (strncmp(ARGV[i], "virtual/", 8) == 0) {
+						if (strncmp(name, "virtual/", 8) == 0) {
 							if (virtuals == NULL)
 								virtuals = resolve_virtuals();
-							resolved = find_binpkg(virtual(ARGV[i], virtuals));
-							if ((resolved == NULL) || (!strlen(resolved))) warn("we could puke here now that we cant resolve virtual(%s %s)", ARGV[i], virtual(ARGV[i], virtuals));
+							resolved = find_binpkg(virtual(name, virtuals));
+							if ((resolved == NULL) || (!strlen(resolved))) warn("we could puke here now that we cant resolve virtual(%s %s)", name, virtual(name, virtuals));
 						} else
 							resolved = NULL;
 
 						if (resolved == NULL)
 							resolved = dep;
 
-						IF_DEBUG(fprintf(stderr, "+Atom: argv0(%s) dep(%s) resolved(%s)\n", ARGV[i], dep, resolved));
+						IF_DEBUG(fprintf(stderr, "+Atom: argv0(%s) dep(%s) resolved(%s)\n", name, dep, resolved));
 
 						if (strlen(resolved) < 1) {
 							warn("Cant find a binpkg for %s: depstring(%s)", resolved, pkg->RDEPEND);
@@ -602,7 +512,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 						atom_implode(ratom);
 						free(subpkg);
 					} else {
-						qfprintf(stderr, "Cant explode atom %s\n", ARGV[i]);
+						qfprintf(stderr, "Cant explode atom %s\n", name);
 					}
 					break;
 			}
