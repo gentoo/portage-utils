@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.32 2007/04/08 19:55:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.33 2007/04/08 23:05:49 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,8 +9,9 @@
 
 #ifdef APPLET_qcheck
 
-#define QCHECK_FLAGS "auAHT" COMMON_FLAGS
+#define QCHECK_FLAGS "eauAHT" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
+	{"exact",   no_argument, NULL, 'e'},
 	{"all",     no_argument, NULL, 'a'},
 	{"update",  no_argument, NULL, 'u'},
 	{"noafk",   no_argument, NULL, 'A'},
@@ -19,6 +20,7 @@ static struct option const qcheck_long_opts[] = {
 	COMMON_LONG_OPTS
 };
 static const char *qcheck_opts_help[] = {
+	"Exact match (only CAT/PN or PN without PV)",
 	"List all packages",
 	"Update missing files, chksum and mtimes for packages",
 	"Ignore missing files",
@@ -26,7 +28,7 @@ static const char *qcheck_opts_help[] = {
 	"Ignore differing file mtimes",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.32 2007/04/08 19:55:45 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.33 2007/04/08 23:05:49 solar Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 
@@ -51,6 +53,7 @@ int qcheck_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qcheck)
+		case 'e': exact = 1; break;
 		case 'a': search_all = 1; break;
 		case 'u': qc_update = 1; break;
 		case 'A': chk_afk = 0; break;
@@ -85,19 +88,33 @@ int qcheck_main(int argc, char **argv)
 			/* see if this cat/pkg is requested */
 			if (!search_all) {
 				for (i = optind; i < argc; ++i) {
-					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name,
-					         de->d_name);
-					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
-						break;
-					if (rematch(argv[i], de->d_name, REG_EXTENDED) == 0)
-						break;
+					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, de->d_name);
+					if (!exact) {
+						if (rematch(argv[i], buf, REG_EXTENDED) == 0)
+							break;
+						if (rematch(argv[i], de->d_name, REG_EXTENDED) == 0)
+							break;
+					} else {
+						depend_atom *atom;
+						char swap[_Q_PATH_MAX];
+						if ((atom = atom_explode(buf)) == NULL) {
+							warn("invalid atom %s", buf);
+							continue;                                        
+						}
+						snprintf(swap, sizeof(swap), "%s/%s", atom->CATEGORY, atom->PN);
+						atom_implode(atom);                                        
+						if ((strcmp(argv[i], swap) == 0) || (strcmp(argv[i], buf) == 0))
+							break;
+						if ((strcmp(argv[i], strstr(swap, "/") + 1) == 0) || (strcmp(argv[i], strstr(buf, "/") + 1) == 0))
+							break;
+						}
 				}
 				if (i == argc)
 					continue;
 			}
 
-			snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb,
-			         dentry->d_name, de->d_name);
+
+			snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb, dentry->d_name, de->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;
 			strncat(buf, "~", sizeof(buf));
@@ -114,7 +131,7 @@ int qcheck_main(int argc, char **argv)
 			}
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 				contents_entry *e;
-
+				/* safe. buf and buffer are the same size.. */
 				strcpy(buffer, buf);
 				e = contents_parse_line(buf);
 				if (!e)
