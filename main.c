@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.137 2007/04/09 23:08:27 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.138 2007/04/10 21:56:44 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -733,8 +733,10 @@ const char *initialize_flat(int cache_type)
 	if (frac < 0) frac = 0;
 
 	warn("Finished %u entries in %d.%06d seconds", count, secs, frac);
+#ifdef __linux__
 	if (secs > 100)
 		warn("You should consider a faster file system such as reiserfs for PORTDIR='%s'", portdir);
+#endif
 ret:
 	return cache_file;
 }
