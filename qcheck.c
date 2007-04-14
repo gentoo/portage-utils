@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.33 2007/04/08 23:05:49 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.34 2007/04/14 02:23:25 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -28,7 +28,7 @@ static const char *qcheck_opts_help[] = {
 	"Ignore differing file mtimes",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.33 2007/04/08 23:05:49 solar Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.34 2007/04/14 02:23:25 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 
@@ -99,10 +99,10 @@ int qcheck_main(int argc, char **argv)
 						char swap[_Q_PATH_MAX];
 						if ((atom = atom_explode(buf)) == NULL) {
 							warn("invalid atom %s", buf);
-							continue;                                        
+							continue;
 						}
 						snprintf(swap, sizeof(swap), "%s/%s", atom->CATEGORY, atom->PN);
-						atom_implode(atom);                                        
+						atom_implode(atom);
 						if ((strcmp(argv[i], swap) == 0) || (strcmp(argv[i], buf) == 0))
 							break;
 						if ((strcmp(argv[i], strstr(swap, "/") + 1) == 0) || (strcmp(argv[i], strstr(buf, "/") + 1) == 0))
