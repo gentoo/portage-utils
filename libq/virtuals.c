@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.15 2006/12/25 16:38:37 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.16 2007/04/15 22:43:37 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.15 2006/12/25 16:38:37 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.16 2007/04/15 22:43:37 solar Exp $
  */
 
 
@@ -255,7 +255,6 @@ static queue *resolve_virtuals()
 
 	if ((chdir("/etc/")) == (-1))
 		return virtuals;
-
 
 	if ((readlink("make.profile", buf, sizeof(buf))) != (-1)) {
 		chdir(buf);
