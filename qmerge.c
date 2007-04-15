@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.60 2007/04/08 16:13:39 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.61 2007/04/15 21:42:20 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.60 2007/04/08 16:13:39 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.61 2007/04/15 21:42:20 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -103,7 +103,6 @@ int unmerge_packages(int, char **);
 char *find_binpkg(const char *);
 
 struct pkg_t *grab_binpkg_info(const char *);
-
 
 int mkdirhier(char *dname, mode_t mode);
 int mkdirhier(char *dname, mode_t mode) {
@@ -615,7 +614,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	rmdir("./usr/share");
 
 	if ((fp = popen(BUSYBOX" find .", "r")) == NULL)
-		errf("come on wtf!");
+		errf("come on wtf no find?");
 
 	if ((contents = fopen("../vdb/CONTENTS", "w")) == NULL)
 		errf("come on wtf?");
@@ -780,6 +779,14 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 		fclose(fp);
 	}
 	interactive_rename("vdb", buf, pkg);
+
+	/* run postinst on non embedded systems */
+	if (which("ebuild") != NULL) {
+		char *tbuf;
+		asprintf(&tbuf, "ebuild %s/%s.ebuild postinst", buf, basename(buf));
+		system(tbuf);
+		free(tbuf);
+	}
 
 	snprintf(buf, sizeof(buf), BUSYBOX " %s.tar.bz2", pkg->PF);
 	unlink_q(buf);
