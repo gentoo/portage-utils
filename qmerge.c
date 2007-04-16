@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.63 2007/04/16 00:51:36 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.64 2007/04/16 16:38:47 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.63 2007/04/16 00:51:36 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.64 2007/04/16 16:38:47 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -195,6 +195,8 @@ void fetch(const char *destdir, const char *src)
 
 void qmerge_initialize(const char *Packages)
 {
+	char *pbuf = NULL;
+
 	if (strlen(BUSYBOX))
 		if (access(BUSYBOX, X_OK) != 0)
 			err(BUSYBOX " must be installed");
@@ -225,14 +227,28 @@ void qmerge_initialize(const char *Packages)
 		errf("!!! chdir(PORTAGE_TMPDIR %s) %s", port_tmpdir, strerror(errno));
 	if (chdir("portage") != 0)
 		errf("!!! chdir(%s/portage) %s", port_tmpdir, strerror(errno));
-	if (force_download && force_download != 2)
+
+	asprintf(&pbuf, "%s.bz2", Packages);
+	if (force_download && force_download != 2) {
 		unlink(Packages);
+		unlink(pbuf);
+	}
+
 	if ((access(Packages, R_OK) != 0) && (force_download != 2)) {
 			char *tbuf = NULL;
 			asprintf(&tbuf, "%s/portage/", port_tmpdir);
-			fetch(tbuf, Packages);
+			fetch(tbuf, pbuf);
+			if ((access(pbuf, R_OK)) == 0) {
+				char *buf = NULL;
+				asprintf(&buf, "bunzip2 %s", pbuf);
+				system(buf);
+				free(buf);
+			}
+		        if ((access(Packages, R_OK) != 0))
+				fetch(tbuf, Packages);
 			free(tbuf);
 	}
+	free(pbuf);
 }
 
 char *best_version(const char *CATEGORY, const char *PN)
