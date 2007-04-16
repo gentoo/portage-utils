@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.62 2007/04/15 22:43:37 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.63 2007/04/16 00:51:36 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.62 2007/04/15 22:43:37 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.63 2007/04/16 00:51:36 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -791,8 +791,12 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 	snprintf(buf, sizeof(buf), BUSYBOX " %s.tar.bz2", pkg->PF);
 	unlink_q(buf);
-
 	chdir(port_tmpdir);
+	snprintf(buf, sizeof(buf), "rm -rf %s", pkg->PF);
+	system(buf);
+
+	snprintf(buf, sizeof(buf), "%s/%s.tbz2", pkgdir, pkg->PF);
+	unlink(buf);
 }
 
 int pkg_unmerge(char *cat, char *pkgname)
