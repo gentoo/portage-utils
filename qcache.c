@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.25 2007/04/18 17:38:56 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.26 2007/04/18 17:43:08 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -48,7 +48,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.25 2007/04/18 17:38:56 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.26 2007/04/18 17:43:08 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -271,8 +271,7 @@ char **qcache_read_lines(char *filename)
 		return NULL;
 
 	len   = sizeof(char*) * (num_lines + 1);
-	lines = xmalloc(len);
-	memset(lines, 0, len);
+	lines = xzalloc(len);
 
 	if ((fd = open(filename, O_RDONLY)) != -1) {
 		for (i = 0; i < num_lines; i++) {
@@ -283,8 +282,7 @@ char **qcache_read_lines(char *filename)
 				count++;
 			lseek(fd, (lseek(fd, 0, SEEK_CUR) - count - 1), SEEK_SET);
 
-			lines[i] = xmalloc(sizeof(char) * (count+1));
-			memset(lines[i], 0, count+1);
+			lines[i] = xzalloc(sizeof(char) * (count+1));
 
 			/* copy the line into lines[i] */
 			read(fd, lines[i], count);
@@ -549,8 +547,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 		/* traverse packages */
 		for (j = 0; j < num_pkg; j++) {
 			len = sizeof(char) * (strlen(portdir) + strlen("/") + strlen(categories[i]->d_name) + strlen("/") + strlen(packages[j]->d_name) + 1);
-			ebuildpath = xmalloc(len);
-			memset(ebuildpath, 0, len);
+			ebuildpath = xzalloc(len);
 			snprintf(ebuildpath, len, "%s/%s/%s", portdir, categories[i]->d_name, packages[j]->d_name);
 
 			if (-1 == (num_ebuild = scandir(ebuildpath, &ebuilds, qcache_ebuild_select, qcache_vercmp))) {
@@ -576,8 +573,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 			/* traverse ebuilds */
 			for (k = 0; k < num_ebuild; k++) {
 				len = sizeof(char) * (strlen(catpath) + strlen("/") + strlen(categories[i]->d_name) + strlen("/") + strlen(ebuilds[k]->d_name) + 1);
-				cachepath = xmalloc(len);
-				memset(cachepath, 0, len);
+				cachepath = xzalloc(len);
 				snprintf(cachepath, len, "%s/%s/%s", catpath, categories[i]->d_name, ebuilds[k]->d_name);
 				cachepath[len-8] = '\0'; /* remove ".ebuild" */
 
@@ -598,7 +594,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 					qcache_free_data(data.cache_data);
 				} else
-					warn("unable to read cache '%s'\n\tperhaps you need to `emerge --metadata` ?", cachepath);
+					warn("unable to read cache '%s'\n\tperhaps you need to `emerge --metadata` or `emerge --regen` ?", cachepath);
 
 				free(ebuilds[k]);
 				free(cachepath);
@@ -774,8 +770,7 @@ void qcache_stats(qcache_data *data)
 			architectures++;
 
 		len = sizeof(char) * (strlen(QCACHE_EDB) + strlen(portdir) + 1);
-		catpath = xmalloc(len);
-		memset(catpath, 0, len);
+		catpath = xzalloc(len);
 		snprintf(catpath, len, "%s%s", QCACHE_EDB, portdir);
 
 		if (-1 == (numcat = scandir(catpath, &categories, qcache_file_select, alphasort))) {
@@ -929,9 +924,8 @@ int qcache_init()
 	unsigned int len;
 
 	len      = sizeof(char) * (strlen(portdir) + strlen("/profiles/arch.list") + 1);
-	filename = xmalloc(len);
+	filename = xzalloc(len);
 
-	memset(filename, 0, len);
 	snprintf(filename, len, "%s/profiles/arch.list", portdir);
 
 	if (NULL == (archlist = qcache_read_lines(filename))) {

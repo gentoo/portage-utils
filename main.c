@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.139 2007/04/10 22:00:51 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.140 2007/04/18 17:43:08 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -281,8 +281,7 @@ static char *remove_extra_space(char *str)
 	if (str == NULL)
 		return NULL;
 	len = strlen(str);
-	buf = xmalloc(len+1);
-	memset(buf, 0, len+1);
+	buf = xzalloc(len+1);
 	for (p = str; *p != 0; ++p) {
 		if (!isspace(*p)) c = *p; else {
 			if (c == ' ') continue;
@@ -799,8 +798,7 @@ portage_cache *cache_read_file(const char *file)
 	if (fstat(fileno(f), &s) != 0)
 		goto err;
 	len = sizeof(*ret) + s.st_size + 1;
-	ret = xmalloc(len);
-	memset(ret, 0x00, len);
+	ret = xzalloc(len);
 #if 0
 {	/* This is the expected format of portage-2.0 cache code NAME=var */
 	/* at any time ferringb might decide to add new entries. CDEPEND= will be no more */
