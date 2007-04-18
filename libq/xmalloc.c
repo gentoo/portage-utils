@@ -27,20 +27,30 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-extern void *xmalloc(size_t size);
-extern void *xmalloc(size_t size)
+void *xmalloc(size_t size);
+void *xmalloc(size_t size)
 {
 	void *ptr = malloc(size);
-	if (ptr == NULL && size != 0)
+	if (ptr == NULL)
 		err("Out of memory");
 	return ptr;
 }
 
-extern void *xcalloc(size_t nmemb, size_t size);
-extern void *xcalloc(size_t nmemb, size_t size)
+void *xcalloc(size_t nmemb, size_t size);
+void *xcalloc(size_t nmemb, size_t size)
 {
 	void *ptr = calloc(nmemb, size);
 	if (ptr == NULL)
 		err("Out of memory");
+	return ptr;
+}
+
+void *xzalloc(size_t size);
+void *xzalloc(size_t size)
+{
+	void *ptr = xmalloc(size);
+	if (ptr == NULL)
+		err("Out of memory");
+	memset(ptr, 0x00, size);
 	return ptr;
 }
