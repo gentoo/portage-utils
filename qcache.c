@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.26 2007/04/18 17:43:08 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.27 2007/04/18 18:20:47 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -48,7 +48,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.26 2007/04/18 17:43:08 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.27 2007/04/18 18:20:47 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -515,7 +515,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 	len = asprintf(&catpath, "%s%s", QCACHE_EDB, portdir);
 
 	if (-1 == (num_cat = scandir(catpath, &categories, qcache_file_select, alphasort))) {
-		err("%s %s", catpath, strerror(errno));
+		errp("%s", catpath);
 		free(catpath);
 	}
 
@@ -527,7 +527,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 		len = asprintf(&pkgpath, "%s/%s", portdir, categories[i]->d_name);
 
 		if (-1 == (num_pkg = scandir(pkgpath, &packages, qcache_file_select, alphasort))) {
-			warn("%s %s", pkgpath, strerror(errno));
+			warnp("%s", pkgpath);
 			free(categories[i]);
 			free(pkgpath);
 			continue;
@@ -551,7 +551,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 			snprintf(ebuildpath, len, "%s/%s/%s", portdir, categories[i]->d_name, packages[j]->d_name);
 
 			if (-1 == (num_ebuild = scandir(ebuildpath, &ebuilds, qcache_ebuild_select, qcache_vercmp))) {
-				warn("%s %s", ebuildpath, strerror(errno));
+				warnp("%s", ebuildpath);
 				free(packages[i]);
 				free(pkgpath);
 				continue;
@@ -774,7 +774,7 @@ void qcache_stats(qcache_data *data)
 		snprintf(catpath, len, "%s%s", QCACHE_EDB, portdir);
 
 		if (-1 == (numcat = scandir(catpath, &categories, qcache_file_select, alphasort))) {
-			err("%s %s", catpath, strerror(errno));
+			errp("%s", catpath);
 			free(catpath);
 		}
 

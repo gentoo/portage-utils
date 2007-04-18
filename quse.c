@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.56 2007/02/04 21:19:37 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.57 2007/04/18 18:20:47 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,7 +35,7 @@ static const char *quse_opts_help[] = {
 	"Only show package name",
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.56 2007/02/04 21:19:37 solar Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.57 2007/04/18 18:20:47 vapier Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -397,7 +397,7 @@ int quse_main(int argc, char **argv)
 			fclose(newfp);
 		} else {
 			if (!reinitialize)
-				warnf("(cache update pending) %s : %s", ebuild, strerror(errno));
+				warnfp("(cache update pending) %s", ebuild);
 			reinitialize = 1;
 		}
 	}

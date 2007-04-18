@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.33 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.34 2007/04/18 18:20:47 vapier Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *q_opts_help[] = {
 	"Reinitialize metadata cache",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.33 2006/11/09 00:18:05 vapier Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.34 2007/04/18 18:20:47 vapier Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 
@@ -95,11 +95,11 @@ int q_main(int argc, char **argv)
 			memset(buf, 0x00, sizeof(buf));
 			printf("Installing symlinks:\n");
 			if ((readlink("/proc/self/exe", buf, sizeof(buf))) == (-1)) {
-				warnf("could not readlink '/proc/self/exe': %s", strerror(errno));
+				warnfp("could not readlink '/proc/self/exe'");
 				return 1;
 			}
 			if (chdir(dirname(buf)) != 0) {
-				warnf("could not chdir to '%s': %s", buf, strerror(errno));
+				warnfp("could not chdir to '%s'", buf);
 				return 1;
 			}
 			for (i = 1; applets[i].desc != NULL; ++i) {
