@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.28 2007/04/18 18:23:08 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.29 2007/04/18 18:47:18 solar Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -48,7 +48,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.28 2007/04/18 18:23:08 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.29 2007/04/18 18:47:18 solar Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -512,7 +512,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 	int i, j, k, len, num_cat, num_pkg, num_ebuild;
 	struct direct **categories, **packages, **ebuilds;
 
-	len = asprintf(&catpath, "%s%s", QCACHE_EDB, portdir);
+	xasprintf(&catpath, "%s%s", QCACHE_EDB, portdir);
 
 	if (-1 == (num_cat = scandir(catpath, &categories, qcache_file_select, alphasort))) {
 		errp("%s", catpath);
@@ -524,7 +524,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 	/* traverse categories */
 	for (i = 0; i < num_cat; i++) {
-		len = asprintf(&pkgpath, "%s/%s", portdir, categories[i]->d_name);
+		xasprintf(&pkgpath, "%s/%s", portdir, categories[i]->d_name);
 
 		if (-1 == (num_pkg = scandir(pkgpath, &packages, qcache_file_select, alphasort))) {
 			warnp("Found a cache dir, but unable to process %s", pkgpath);

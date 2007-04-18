@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.64 2007/04/16 16:38:47 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.65 2007/04/18 18:47:18 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.64 2007/04/16 16:38:47 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.65 2007/04/18 18:47:18 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -228,7 +228,7 @@ void qmerge_initialize(const char *Packages)
 	if (chdir("portage") != 0)
 		errf("!!! chdir(%s/portage) %s", port_tmpdir, strerror(errno));
 
-	asprintf(&pbuf, "%s.bz2", Packages);
+	xasprintf(&pbuf, "%s.bz2", Packages);
 	if (force_download && force_download != 2) {
 		unlink(Packages);
 		unlink(pbuf);
@@ -236,11 +236,11 @@ void qmerge_initialize(const char *Packages)
 
 	if ((access(Packages, R_OK) != 0) && (force_download != 2)) {
 			char *tbuf = NULL;
-			asprintf(&tbuf, "%s/portage/", port_tmpdir);
+			xasprintf(&tbuf, "%s/portage/", port_tmpdir);
 			fetch(tbuf, pbuf);
 			if ((access(pbuf, R_OK)) == 0) {
 				char *buf = NULL;
-				asprintf(&buf, "bunzip2 %s", pbuf);
+				xasprintf(&buf, "bunzip2 %s", pbuf);
 				system(buf);
 				free(buf);
 			}
@@ -800,7 +800,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	/* run postinst on non embedded systems */
 	if (which("ebuild") != NULL) {
 		char *tbuf;
-		asprintf(&tbuf, "ebuild %s/%s.ebuild postinst", buf, basename(buf));
+		xasprintf(&tbuf, "ebuild %s/%s.ebuild postinst", buf, basename(buf));
 		system(tbuf);
 		free(tbuf);
 	}
@@ -1487,7 +1487,7 @@ int qmerge_main(int argc, char **argv)
 
 				for (ll = world; ll != NULL; ll = ll->next) {
 					char *p = NULL;
-					asprintf(&p, "%s ", ll->name);
+					xasprintf(&p, "%s ", ll->name);
 					strcat(ptr, p);
 					free(p);
 				}
