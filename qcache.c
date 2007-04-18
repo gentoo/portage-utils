@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.23 2007/04/06 20:50:19 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.24 2007/04/18 17:31:19 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -48,7 +48,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.23 2007/04/06 20:50:19 solar Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.24 2007/04/18 17:31:19 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -582,12 +582,14 @@ int qcache_traverse(void (*func)(qcache_data*))
 				snprintf(cachepath, len, "%s/%s/%s", catpath, categories[i]->d_name, ebuilds[k]->d_name);
 				cachepath[len-8] = '\0'; /* remove ".ebuild" */
 
-				data.cache_data = qcache_read_cache_file(cachepath);
 				data.category = categories[i]->d_name;
 				data.package = packages[j]->d_name;
 				data.ebuild = ebuilds[k]->d_name;
 				data.cur = k + 1;
 				data.num = num_ebuild;
+				data.cache_data = qcache_read_cache_file(cachepath);
+				if (data.cache_data == NULL)
+					err("unable to read the cache data at '%s'", cachepath);
 
 				/* is this the last ebuild? */
 				if (i+1 == num_cat && j+1 == num_pkg && k+1 == num_ebuild)
