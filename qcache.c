@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.30 2007/04/23 02:02:08 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.31 2007/04/25 17:28:13 solar Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -48,7 +48,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.30 2007/04/23 02:02:08 solar Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.31 2007/04/25 17:28:13 solar Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -509,7 +509,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 {
 	qcache_data data;
 	char *catpath, *pkgpath, *ebuildpath, *cachepath;
-	int i, j, k, num_cat, num_pkg, num_ebuild;
+	int i, j, k, len, num_cat, num_pkg, num_ebuild;
 	struct direct **categories, **packages, **ebuilds;
 
 	xasprintf(&catpath, "%s%s", QCACHE_EDB, portdir);
@@ -546,7 +546,9 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 		/* traverse packages */
 		for (j = 0; j < num_pkg; j++) {
-			xasprintf(&ebuildpath, "%s/%s/%s", portdir, categories[i]->d_name, packages[j]->d_name);
+			len = sizeof(char) * (strlen(portdir) + strlen("/") + strlen(categories[i]->d_name) + strlen("/") + strlen(packages[j]->d_name) + 1);
+			ebuildpath = xzalloc(len);
+			snprintf(ebuildpath, len, "%s/%s/%s", portdir, categories[i]->d_name, packages[j]->d_name);
 
 			if (-1 == (num_ebuild = scandir(ebuildpath, &ebuilds, qcache_ebuild_select, qcache_vercmp))) {
 				warnp("%s", ebuildpath);
@@ -570,8 +572,10 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 			/* traverse ebuilds */
 			for (k = 0; k < num_ebuild; k++) {
-				xasprintf(&cachepath, "%s/%s/%s", catpath, categories[i]->d_name, ebuilds[k]->d_name);
-				cachepath[strlen(cachepath)-8] = '\0'; /* remove ".ebuild" */
+				len = sizeof(char) * (strlen(catpath) + strlen("/") + strlen(categories[i]->d_name) + strlen("/") + strlen(ebuilds[k]->d_name) + 1);
+				cachepath = xzalloc(len);
+				snprintf(cachepath, len, "%s/%s/%s", catpath, categories[i]->d_name, ebuilds[k]->d_name);
+				cachepath[len-8] = '\0'; /* remove ".ebuild" */
 
 				data.category = categories[i]->d_name;
 				data.package = packages[j]->d_name;
@@ -759,12 +763,15 @@ void qcache_stats(qcache_data *data)
 
 	if (!numpkg) {
 		struct direct **categories;
-		char *catpath = NULL;
+		char *catpath;
+		int len;
 
 		for (i = 0; archlist[i]; i++)
 			architectures++;
 
-		xasprintf(&catpath, "%s%s", QCACHE_EDB, portdir);
+		len = sizeof(char) * (strlen(QCACHE_EDB) + strlen(portdir) + 1);
+		catpath = xzalloc(len);
+		snprintf(catpath, len, "%s%s", QCACHE_EDB, portdir);
 
 		if (-1 == (numcat = scandir(catpath, &categories, qcache_file_select, alphasort))) {
 			errp("%s", catpath);
