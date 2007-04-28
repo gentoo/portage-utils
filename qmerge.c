@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.65 2007/04/18 18:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.66 2007/04/28 21:44:32 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.65 2007/04/18 18:47:18 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.66 2007/04/28 21:44:32 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -411,8 +411,11 @@ char qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg)
 	}
 	printf("[%s] ", buf);
 	for (i = 0; i < level; i++) putchar(' ');
-	printf("%s%s/%s%s %s%s%s%s%s%s\n", DKGREEN, pkg->CATEGORY, pkg->PF, NORM,
-		install_ver, strlen(pkg->USE)>0 ? "(" : "", RED, pkg->USE, NORM, strlen(pkg->USE)>0 ? ")" : "");
+	if (verbose)
+		printf("%s%s/%s%s %s%s%s%s%s%s\n", DKGREEN, pkg->CATEGORY, pkg->PF, NORM,
+			install_ver, strlen(pkg->USE) > 0 ? "(" : "", RED, pkg->USE, NORM, strlen(pkg->USE) > 0 ? ")" : "");
+	else
+		printf("%s%s/%s%s\n", DKGREEN, pkg->CATEGORY, pkg->PF, NORM);
 	return c;
 }
 
@@ -824,15 +827,6 @@ int pkg_unmerge(char *cat, char *pkgname)
 	llist_char *dirs = NULL;
 
 	if ((strchr(pkgname, ' ') != NULL) || (strchr(cat, ' ') != NULL)) {
-#if 0
-		queue *vdb = NULL;
-		free_sets(vdb);
-		vdb = NULL;
-
-		vdb = get_vdb_atoms(vdb);
-		free_sets(vdb);
-		vdb = NULL;
-#endif
 		qfprintf(stderr, "%s!!!%s '%s' '%s' (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
 		qfprintf(stderr, "%s!!!%s %s/%s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
 		/* qfprintf(stderr, "%s!!!%s %s %s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, pkgname); */
@@ -1420,6 +1414,45 @@ int parse_packages(const char *Packages, int argc, char **argv)
 	return 0;
 }
 
+queue *get_world(void);
+queue *get_world(void) {
+	FILE *fp;
+	char buf[BUFSIZ];
+	queue *world = NULL;
+	char *fname = (char *) "/var/lib/portage/world";
+
+	if ((fp = fopen(fname, "r")) == NULL) {
+		warn("fopen(\"%s\", \"r\"); = -1 (%s)", fname, strerror(errno));
+		return NULL;
+	}
+
+	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+		char *p;
+		char *slot = (char *) "0";
+
+		rmspace(buf);
+
+		if ((p = strchr(buf, ':')) != NULL) {
+			*p = 0;
+			slot = p + 1;
+		}
+		world = add_set(buf, slot, world);
+	}
+	fclose(fp);
+	return world;
+}
+
+queue *qmerge_load_set(char *, queue *);
+queue *qmerge_load_set(char *buf, queue *set) {
+	if (set != NULL)
+		return set;
+	if ((strcmp(buf, "world") == 0))
+		return get_world();
+	if ((strcmp(buf, "all") == 0))
+		return get_vdb_atoms(0);
+	return NULL;
+}
+
 int qmerge_main(int argc, char **argv)
 {
 	int i;
@@ -1465,13 +1498,17 @@ int qmerge_main(int argc, char **argv)
 
 	qmerge_initialize(Packages);
 
-	if (argc > 1) {
-		queue *world;
-		for (i = 0; i < argc; i++) {
+	if (optind < argc) {
+		queue *world = NULL;
+
+		while (optind < argc) {
 			size_t size = 0;
-			if ((strcmp(argv[i], "world") != 0))
+			i = optind;
+			optind++;
+
+			if ((world = qmerge_load_set(argv[i], world)) == NULL)
 				continue;
-			world = get_vdb_atoms();
+
 			if (world != NULL) {
 				queue *ll;
 				char *ptr;
@@ -1496,6 +1533,10 @@ int qmerge_main(int argc, char **argv)
 				/* this will leak mem */
 				/* follow_rdepends = 0; */
 				makeargv(ptr, &ARGC, &ARGV);
+
+				free(ptr);
+				free_sets(world);
+				world = NULL;
 			}
 		}
 	}
