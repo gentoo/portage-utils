@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.55 2007/04/18 17:30:37 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.56 2007/05/06 04:21:32 solar Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -56,9 +56,15 @@ debug:
 q: $(SRC) libq/*.c *.h libq/*.h
 ifeq ($(subst s,,$(MAKEFLAGS)),$(MAKEFLAGS))
 	@echo $(foreach a,$(APPLETS), : $a) :
+ifndef V
 	@echo $(CC) $(CFLAGS) $(PYFLAGS) $(LDFLAGS) main.c -o q
 endif
+endif
+ifndef V
 	@$(CC) $(WFLAGS) $(PYFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q
+else
+	$(CC) $(WFLAGS) $(PYFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q
+endif
 
 .depend: $(SRC)
 	sed -n '/^DECLARE_APPLET/s:.*(\(.*\)).*:#include "\1.c":p' applets.h > include_applets.h

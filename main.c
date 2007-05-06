@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.140 2007/04/18 17:43:08 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.141 2007/05/06 04:21:32 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -948,8 +948,8 @@ char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF)
 	return buf;
 }
 
-queue *get_vdb_atoms(void);
-queue *get_vdb_atoms(void)
+queue *get_vdb_atoms(int fullcpv);
+queue *get_vdb_atoms(int fullcpv)
 {
 	int cfd, j;
 	int dfd, i;
@@ -1001,10 +1001,15 @@ queue *get_vdb_atoms(void)
 				if (strcmp(buf, "0") != 0);
 			}
 
-			if (atom->PR_int)
-				snprintf(buf, sizeof(buf), "%s/%s-%s-r%i", atom->CATEGORY, atom->PN, atom->PV , atom->PR_int);
-			else
-				snprintf(buf, sizeof(buf), "%s/%s-%s", atom->CATEGORY, atom->PN, atom->PV);
+			if (fullcpv) {
+				if (atom->PR_int)
+					snprintf(buf, sizeof(buf), "%s/%s-%s-r%i", atom->CATEGORY, atom->PN, atom->PV , atom->PR_int);
+				else
+					snprintf(buf, sizeof(buf), "%s/%s-%s", atom->CATEGORY, atom->PN, atom->PV);
+			} else {
+				snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
+			}
+
 			atom_implode(atom);
 			cpf = add_set(buf, "0", cpf);
 		}
