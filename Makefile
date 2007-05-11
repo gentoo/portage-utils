@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.56 2007/05/06 04:21:32 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.57 2007/05/11 14:54:42 solar Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -25,6 +25,12 @@ PREFIX    := $(DESTDIR)/usr
 STRIP     := strip
 MKDIR     := mkdir -p
 CP        := cp
+
+ifndef STATIC
+LDFLAGS   += -ldl -Wl,--export-dynamic
+else
+CFLAGS    += -DSTATIC
+endif
 
 ifdef PV
 HFLAGS    += -DVERSION=\"$(PV)\"

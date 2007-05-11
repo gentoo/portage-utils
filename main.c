@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.141 2007/05/06 04:21:32 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.142 2007/05/11 14:54:42 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -25,6 +25,7 @@
 #include <libgen.h>
 #include <limits.h>
 #include <assert.h>
+#include <dlfcn.h>
 
 /* make sure our buffers are as big as they can be */
 #if PATH_MAX > _POSIX_PATH_MAX  /* _Q_PATH_MAX */
@@ -78,19 +79,20 @@ void cleanup(void);
 int lookup_applet_idx(const char *);
 
 /* variables to control runtime behavior */
-static char exact = 0;
-static int found = 0;
-static int verbose = 0;
-static int quiet = 0;
-static char pretend = 0;
-static char reinitialize = 0;
-static char reinitialize_metacache = 0;
-static char portdir[_Q_PATH_MAX] = "/usr/portage";
-static char portarch[20] = "";
-static char portvdb[] = "var/db/pkg";
-static char portcachedir[] = "metadata/cache";
-static char portroot[_Q_PATH_MAX] = "/";
-static char config_protect[_Q_PATH_MAX] = "/etc/";
+void *dlhandle = NULL;
+char exact = 0;
+int found = 0;
+int verbose = 0;
+int quiet = 0;
+char pretend = 0;
+char reinitialize = 0;
+char reinitialize_metacache = 0;
+char portdir[_Q_PATH_MAX] = "/usr/portage";
+char portarch[20] = "";
+char portvdb[] = "var/db/pkg";
+char portcachedir[] = "metadata/cache";
+char portroot[_Q_PATH_MAX] = "/";
+char config_protect[_Q_PATH_MAX] = "/etc/";
 
 char pkgdir[512] = "/usr/portage/packages/";
 char port_tmpdir[512] = "/var/tmp/portage/";
@@ -104,7 +106,6 @@ const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
 #define qfprintf(stream, fmt, args...) do { if (!quiet) fprintf(stream, _( fmt ), ## args); } while (0)
 #define qprintf(fmt, args...) qfprintf(stdout, _( fmt ), ## args)
-
 
 
 #define _q_unused_ __attribute__((__unused__))
@@ -192,7 +193,7 @@ static void usage(int status, const char *flags, struct option const opts[],
 					DKBLUE, applets[i].opts, NORM,
 					RED, NORM, _(applets[i].desc));
 	} else {
-		printf("%sUsage:%s %s%s%s %s%s%s %s:%s %s\n", GREEN, NORM,
+		printf("%sUsage:%s %s%s%s <opts> %s%s%s %s:%s %s\n", GREEN, NORM,
 			YELLOW, applets[blabber].name, NORM,
 			DKBLUE, applets[blabber].opts, NORM,
 			RED, NORM, _(applets[blabber].desc));
@@ -1032,6 +1033,10 @@ void cleanup()
 	reinitialize_as_needed();
 	free_sets(virtuals);
 	fclose(stderr);
+#ifndef STATIC
+	if (dlhandle != NULL)
+		dlclose(dlhandle);
+#endif
 }
 
 int main(int argc, char **argv)
@@ -1039,7 +1044,7 @@ int main(int argc, char **argv)
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
 
-#ifdef ENABLE_NLS
+#ifdef ENABLE_NLS	/* never tested */
 	setlocale(LC_ALL, "");
 	bindtextdomain(argv0, "/usr/share/locale");
 	textdomain(argv0);

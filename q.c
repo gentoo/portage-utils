@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.34 2007/04/18 18:20:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.35 2007/05/11 14:54:42 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,13 +20,19 @@ static const char *q_opts_help[] = {
 	"Reinitialize metadata cache",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.34 2007/04/18 18:20:47 vapier Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.35 2007/05/11 14:54:42 solar Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
+#ifndef STATIC
+APPLET lookup_dl_applet(char *applet);
+#endif
 
 APPLET lookup_applet(char *applet);
 APPLET lookup_applet(char *applet)
 {
+#ifndef STATIC
+	APPLET dlfunc;
+#endif
 	unsigned int i;
 
 	if (strlen(applet) < 1)
@@ -50,11 +56,72 @@ APPLET lookup_applet(char *applet)
 			return applets[i].func;
 		}
 	}
-
+#ifndef STATIC
+	if ((dlfunc = lookup_dl_applet(applet)) != NULL)
+		return dlfunc;
+	if (*applet == 'q')
+		if ((dlfunc = lookup_dl_applet(applet+1)) != NULL)
+			return dlfunc;	
+#endif
 	/* still nothing ?  those bastards ... */
 	warn("Unknown applet '%s'", applet);
 	return NULL;
 }
+
+#ifndef STATIC
+APPLET lookup_dl_applet(char *applet) {
+	char *ptr = NULL;
+	APPLET iptr;
+	FILE *fp;
+	char *modpath = NULL;
+	char buf[_Q_PATH_MAX];
+
+	if (dlhandle != NULL)
+		return NULL;
+
+	DBG("opening /etc/q.conf");
+
+	if ((fp = fopen("/etc/q.conf", "r")) == NULL)
+		return NULL;
+
+	while((fgets(buf, sizeof(buf), fp)) != NULL) {
+		rmspace(buf);
+		remove_extra_space(buf);
+		if ((strncmp(buf, "modpath=", 8)) == 0)
+			modpath = &buf[8];
+	}
+	fclose(fp);
+
+	if (modpath == NULL)
+		return NULL;
+
+	if (!strlen(modpath))
+		return NULL;
+
+	DBG("module path set to %s", modpath);
+
+	/* fill in the path, check that object exists and open it */
+	xasprintf(&ptr, "%s/lib%s.so", modpath, applet);
+	if ((access(ptr, X_OK)) != 0) {
+		DBG("file does not exist or we dont have perms to mmap %s", ptr);
+		free(ptr);
+		return NULL;
+	}
+	if ((dlhandle = dlopen(ptr, RTLD_LAZY)) == NULL) {
+		DBG("unable to load %s : %s", ptr, dlerror());
+		free(ptr);
+		return NULL;
+	}
+	free(ptr);
+
+	xasprintf(&ptr, "%s_main", applet);
+	DBG("symbol lookup %s", ptr);
+	iptr = (APPLET) dlsym(dlhandle, ptr);
+	free(ptr);
+
+	return iptr;
+}
+#endif
 
 int lookup_applet_idx(const char *applet)
 {
