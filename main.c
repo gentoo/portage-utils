@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.143 2007/05/12 02:19:28 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.144 2007/05/12 02:30:05 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -140,14 +140,14 @@ void usage(int status, const char *flags, struct option const opts[],
 					YELLOW, applets[i].name, NORM,
 					DKBLUE, applets[i].opts, NORM,
 					RED, NORM, _(applets[i].desc));
-	} else {
-		printf("%sUsage:%s %s%s%s <opts> %s%s%s %s:%s %s\n", GREEN, NORM,
-			YELLOW, applets[blabber].name, NORM,
-			DKBLUE, applets[blabber].opts, NORM,
-			RED, NORM, _(applets[blabber].desc));
+	} else if (blabber > 0) {
+			printf("%sUsage:%s %s%s%s <opts> %s%s%s %s:%s %s\n", GREEN, NORM,
+				YELLOW, applets[blabber].name, NORM,
+				DKBLUE, applets[blabber].opts, NORM,
+				RED, NORM, _(applets[blabber].desc));
 	}
 	if (module_name != NULL)
-		printf("\n%sLoaded module:%s\n%s%8s%s %s<args>%s\n", GREEN, NORM, YELLOW, module_name, NORM, DKBLUE, NORM);
+		printf("%sLoaded module:%s\n%s%8s%s %s<args>%s\n", GREEN, NORM, YELLOW, module_name, NORM, DKBLUE, NORM);
 
 	printf("\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
 	for (i = 0; opts[i].name; ++i) {
