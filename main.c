@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.142 2007/05/11 14:54:42 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.143 2007/05/12 02:19:28 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,45 +26,7 @@
 #include <limits.h>
 #include <assert.h>
 #include <dlfcn.h>
-
-/* make sure our buffers are as big as they can be */
-#if PATH_MAX > _POSIX_PATH_MAX  /* _Q_PATH_MAX */
-# define _Q_PATH_MAX PATH_MAX
-#else
-# define _Q_PATH_MAX _POSIX_PATH_MAX
-#endif
-
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*arr))
-
-/* http://tinderbox.dev.gentoo.org/default-linux/arm */
-/* http://tinderbox.dev.gentoo.org/default-linux/hppa */
-
-#ifdef __linux__
-#undef  URL
-#define URL "http://tinderbox.dev.gentoo.org"
-# ifdef __i386__
-#  ifdef __UCLIBC__
-#   define PORTAGE_BINHOST URL "/uclibc/i386"
-#  else
-#   ifdef __SSP__
-#    define PORTAGE_BINHOST URL "/hardened/x86"
-#   else
-#    define PORTAGE_BINHOST URL "/default-linux/x86/All"
-#   endif
-#  endif
-#  if defined(__powerpc__) && defined(__SSP__)
-#   if !defined(__UCLIBC__)
-#    define PORTAGE_BINHOST URL "/hardened/ppc"
-#   else
-#    define PORTAGE_BINHOST URL "/uclibc/ppc"
-#   endif
-#  endif
-# endif
-#endif
-
-#ifndef PORTAGE_BINHOST
-# define PORTAGE_BINHOST ""
-#endif
+#include "main.h"
 
 /* prototypes and such */
 static char eat_file(const char *file, char *buf, const size_t bufsize);
@@ -80,6 +42,7 @@ int lookup_applet_idx(const char *);
 
 /* variables to control runtime behavior */
 void *dlhandle = NULL;
+char *module_name = NULL;
 char exact = 0;
 int found = 0;
 int verbose = 0;
@@ -104,24 +67,11 @@ char install_mask[BUFSIZ] = "";
 
 const char *err_noapplet = "Sorry this applet was disabled at compile time";
 
-#define qfprintf(stream, fmt, args...) do { if (!quiet) fprintf(stream, _( fmt ), ## args); } while (0)
-#define qprintf(fmt, args...) qfprintf(stdout, _( fmt ), ## args)
-
-
-#define _q_unused_ __attribute__((__unused__))
-
-#ifndef BUFSIZE
-# define BUFSIZE 8192
-#endif
-
 /* helper functions for showing errors */
 static const char *argv0;
 
 #ifdef EBUG
 # include <sys/resource.h>
-
-# define DBG(fmt, args...) warnf(fmt , ## args)
-# define IF_DEBUG(x) x
 void init_coredumps(void);
 void init_coredumps(void)
 {
@@ -130,9 +80,6 @@ void init_coredumps(void)
 	rl.rlim_max = RLIM_INFINITY;
 	setrlimit(RLIMIT_CORE, &rl);
 }
-#else
-# define DBG(fmt, args...)
-# define IF_DEBUG(x)
 #endif
 
 /* include common library code */
@@ -174,10 +121,11 @@ void no_colors()
 	case 'C': no_colors(); break; \
 	default: applet ## _usage(EXIT_FAILURE); break;
 
-#define GETOPT_LONG(A, a, ex) \
-	getopt_long(argc, argv, ex A ## _FLAGS, a ## _long_opts, NULL)
 /* display usage and exit */
-static void usage(int status, const char *flags, struct option const opts[],
+void usage(int status, const char *flags, struct option const opts[],
+                  const char *help[], int blabber);
+
+void usage(int status, const char *flags, struct option const opts[],
                   const char *help[], int blabber)
 {
 	unsigned long i;
@@ -198,6 +146,9 @@ static void usage(int status, const char *flags, struct option const opts[],
 			DKBLUE, applets[blabber].opts, NORM,
 			RED, NORM, _(applets[blabber].desc));
 	}
+	if (module_name != NULL)
+		printf("\n%sLoaded module:%s\n%s%8s%s %s<args>%s\n", GREEN, NORM, YELLOW, module_name, NORM, DKBLUE, NORM);
+
 	printf("\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
 	for (i = 0; opts[i].name; ++i) {
 		assert(help[i] != NULL); /* this assert is a life saver when adding new applets. */
@@ -210,6 +161,7 @@ static void usage(int status, const char *flags, struct option const opts[],
 	}
 	exit(status);
 }
+
 static void version_barf(const char *Id)
 {
 #ifndef VERSION
