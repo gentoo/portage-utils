@@ -22,7 +22,7 @@ ver="$1"
 bn="$(basename $(pwd))-${ver}"
 [[ -d "${bn}" ]] && rm -r "${bn}"
 mkdir "${bn}" || exit 1
-cp -r .depend Makefile README TODO *.[ch] qsync man libq tests "${bn}/" || exit 1
+cp -r .depend Makefile README TODO *.[ch] qsync man libq tests mod "${bn}/" || exit 1
 APPLETS=$(awk -F'"' '{print $2}'  include_applets.h | cut -d . -f 1)
 for applet in ${APPLETS} ; do
 	[[ $applet != q ]] && echo $applet

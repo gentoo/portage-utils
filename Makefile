@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.57 2007/05/11 14:54:42 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.58 2007/05/12 02:40:06 solar Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -100,6 +100,8 @@ clean:
 distclean: clean testclean
 	-rm -f *~ core
 	-rm -f `find . -type l`
+	-cd mod ; $(MAKE) distclean
+
 testclean:
 	cd tests && $(MAKE) clean
 
