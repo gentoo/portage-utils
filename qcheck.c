@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.35 2007/04/18 18:20:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.36 2007/05/12 14:44:08 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -28,7 +28,7 @@ static const char *qcheck_opts_help[] = {
 	"Ignore differing file mtimes",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.35 2007/04/18 18:20:47 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.36 2007/05/12 14:44:08 solar Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 
@@ -43,7 +43,7 @@ int qcheck_main(int argc, char **argv)
 	char chk_hash = 1;
 	char chk_mtime = 1;
 	struct stat st;
-	size_t num_files, num_files_ok, num_files_unknown, num_files_ignored = 0;
+	size_t num_files, num_files_ok, num_files_unknown, num_files_ignored;
 	char buf[_Q_PATH_MAX], filename[_Q_PATH_MAX];
 	char buffer[_Q_PATH_MAX];
 
@@ -118,7 +118,7 @@ int qcheck_main(int argc, char **argv)
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;
 			strncat(buf, "~", sizeof(buf));
-			num_files = num_files_ok = num_files_unknown = 0;
+			num_files = num_files_ok = num_files_unknown = num_files_ignored = 0;
 			printf("%sing %s%s/%s%s ...\n",
 				(qc_update ? "Updat" : "Check"),
 				GREEN, dentry->d_name, de->d_name, NORM);
@@ -179,14 +179,14 @@ int qcheck_main(int argc, char **argv)
 					}
 					hashed_file = (char*)hash_file(e->name, hash_algo);
 					if (!hashed_file) {
+						++num_files_unknown;
+						free(hashed_file);
 						if (qc_update) {
 							fputs(buffer, fpx);
 							if (!verbose)
 								continue;
 						}
 						printf(" %sPERM %4o%s: %s\n", RED, (st.st_mode & 07777), NORM, e->name);
-						++num_files_unknown;
-						free(hashed_file);
 						continue;
 					} else if (strcmp(e->digest, hashed_file)) {
 						if (chk_hash) {
