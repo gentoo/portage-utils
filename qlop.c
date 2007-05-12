@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.37 2007/05/06 04:21:32 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.38 2007/05/12 03:29:19 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -48,7 +48,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.37 2007/05/06 04:21:32 solar Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.38 2007/05/12 03:29:19 solar Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -295,19 +295,116 @@ void show_sync_history(const char *logfile)
 	fclose(fp);
 }
 
-void show_current_emerge(void);
+void print_current_emerge(const char *logfile, const depend_atom *pkg);
+#if defined(__linux__) || defined(__FreeBSD__)
+void print_current_emerge(const char *logfile, const depend_atom *pkg)
+{
+	FILE *fp;
+	char buf[2][BUFSIZE];
+	char *p;
+	unsigned long count, merge_time, elapsed_time = 0;
+	time_t start_date, t[2];
+	depend_atom *atom;
+
+	start_date = t[0] = t[1] = 0UL;
+	count = merge_time = 0;
+
+	DBG("Searching for %s in %s\n", pkg->PN, logfile);
+
+	if ((fp = fopen(logfile, "r")) == NULL) {
+		warnp("Could not open logfile '%s'", logfile);
+		return;
+	}
+
+	while ((fgets(buf[0], sizeof(buf[0]), fp)) != NULL) {
+		if (strstr(buf[0], pkg->PN) == NULL)
+			continue;
+
+		if ((p = strchr(buf[0], '\n')) != NULL)
+			*p = 0;
+		if ((p = strchr(buf[0], ':')) == NULL)
+			continue;
+		*p = 0;
+		t[0] = atol(buf[0]);
+		strcpy(buf[1], p + 1);
+		rmspace(buf[1]);
+		if ((strncmp(buf[1], ">>> emerge (", 12)) == 0) {
+			char matched = 0;
+			if ((p = strchr(buf[1], ')')) == NULL)
+				continue;
+			*p = 0;
+			strcpy(buf[0], p + 1);
+			rmspace(buf[0]);
+			if ((p = strchr(buf[0], ' ')) == NULL)
+				continue;
+			*p = 0;
+			if ((atom = atom_explode(buf[0])) == NULL)
+				continue;
+
+			if (pkg->CATEGORY) {
+				if ((strcmp(pkg->CATEGORY, atom->CATEGORY) == 0) && (strcmp(pkg->PN, atom->PN) == 0))
+					matched = 1;
+			} else if (strcmp(pkg->PN, atom->PN) == 0)
+				matched = 1;
+
+			if (matched) {
+				start_date = t[0];
+				while ((fgets(buf[0], sizeof(buf[0]), fp)) != NULL) {
+					if ((p = strchr(buf[0], '\n')) != NULL)
+						*p = 0;
+					if ((p = strchr(buf[0], ':')) == NULL)
+						continue;
+					*p = 0;
+					t[1] = atol(buf[0]);
+					strcpy(buf[1], p + 1);
+					rmspace(buf[1]);
+					if (*buf[1] == '*')
+						break;
+					if ((strncmp(buf[1], "::: completed emerge (", 22)) == 0) {
+						merge_time += (t[1] - t[0]);
+						count++;
+						break;
+					}
+				}
+			}
+			atom_implode(atom);
+		}
+	}
+	fclose(fp);
+
+	elapsed_time = time(0) - start_date;
+	printf(	" %s*%s %s%s%s%s\n"
+			"     started: %s%s%s\n"
+			"     elapsed: ",
+	BOLD, NORM, BLUE, (pkg->CATEGORY ? strcat(pkg->CATEGORY, "/") : ""), pkg->P, NORM,
+	GREEN, chop_ctime(start_date), NORM);
+	print_seconds_for_earthlings(elapsed_time);
+	printf("\n     ETA:     ");
+	if (merge_time == 0)
+		printf("Unknown");
+	else if (merge_time / count < elapsed_time)
+		printf("Sometime soon");
+	else
+		print_seconds_for_earthlings(merge_time / count - elapsed_time);
+	puts("");
+}
+#else
+void print_current_emerge(const char *logfile, const depend_atom *pkg)
+{
+	errf("not supported on your crapbox OS");
+}
+#endif
+
+void show_current_emerge(const char *logfile);
 #ifdef __linux__
-void show_current_emerge(void)
+void show_current_emerge(const char *logfile)
 {
 	DIR *proc;
 	struct dirent *de;
 	pid_t pid;
-	char buf[BUFSIZE], bufstat[300];
-	char path[50];
-	char *p, *q;
-	unsigned long long start_time = 0;
-	double uptime_secs;
-	time_t start_date;
+	char buf[2][BUFSIZE], path[50];
+	char *p;
+	depend_atom *atom;
 
 	if ((proc = opendir("/proc")) == NULL) {
 		warnp("Could not open /proc");
@@ -321,64 +418,42 @@ void show_current_emerge(void)
 
 		/* portage renames the cmdline so the package name is first */
 		snprintf(path, sizeof(path), "/proc/%i/cmdline", pid);
-		if (!eat_file(path, buf, sizeof(buf)))
+		if (!eat_file(path, buf[0], sizeof(buf[0])))
 			continue;
 
-		if (buf[0] == '[' && (p = strchr(buf, ']')) != NULL && strstr(buf, "sandbox") != NULL) {
+		if (buf[0][0] == '[' && (p = strchr(buf[0], ']')) != NULL && strstr(buf[0], "sandbox") != NULL) {
+			/* try to fetch category from process env */
+			snprintf(path, sizeof(path), "/proc/%i/environ", pid);
+			if (eat_file(path, buf[1], sizeof(buf[1]))) {
+				p = buf[1];
+				while (strstr(p, "PORTAGE_BUILDDIR=") == NULL)
+					p = strchr(p, '\0')+1;
+				while (strchr(p, '/') != strrchr(p, '/'))
+					p = strchr(p, '/')+1;
+				if ((atom = atom_explode(p)) == NULL)
+					continue;
+			}
+			/* fallback to packagename if not allowed */
+			else {
 			*p = '\0';
-			p = buf+1;
-			q = p + strlen(p) + 1;
-
-			/* open the stat file to figure out how long we have been running */
-			snprintf(path, sizeof(path), "/proc/%i/stat", pid);
-			if (!eat_file(path, bufstat, sizeof(bufstat)))
-				continue;
-
-			/* ripped from procps/proc/readproc.c */
-			if ((q = strchr(bufstat, ')')) == NULL)
-				continue;
-			/* grab the start time */
-			sscanf(q + 2,
-				"%*c "
-				"%*d %*d %*d %*d %*d "
-				"%*u %*u %*u %*u %*u "
-				"%*u %*u %*u %*u "
-				"%*d %*d "
-				"%*d "
-				"%*d "
-				"%Lu ",
-				&start_time);
-			/* get uptime */
-			if (!eat_file("/proc/uptime", bufstat, sizeof(bufstat)))
-				continue;
-			sscanf(bufstat, "%lf", &uptime_secs);
-
-			/* figure out when this thing started and then show it */
-			start_date = time(0) - (uptime_secs - (start_time / HZ));
-			printf(
-				" %s*%s %s%s%s\n"
-				"     started: %s%s%s\n"
-				"     elapsed: ", /*%s%llu%s seconds\n",*/
-				BOLD, NORM, BLUE, p, NORM,
-				GREEN, chop_ctime(start_date), NORM);
-			print_seconds_for_earthlings(uptime_secs - (start_time / HZ));
-			puts(NORM);
+				if ((atom = atom_explode(buf[0]+1)) == NULL)
+					continue;
+			}
+			print_current_emerge(logfile, atom);
+			atom_implode(atom);
 		}
 	}
 
 	closedir(proc);
-
-	if (start_time == 0 && verbose)
-		puts("No emerge processes located");
 }
 #elif defined(__FreeBSD__)
-void show_current_emerge(void)
+void show_current_emerge(const char *logfile)
 {
 	kvm_t *kd = NULL;
 	struct kinfo_proc *ip;
-	int i; int total_processes;
-	char *p, *q;
-	time_t start_date = 0;
+	int i, total_processes;
+	char *p;
+	depend_atom *atom;
 
 	if (! (kd = kvm_open("/dev/null", "/dev/null", "/dev/null", O_RDONLY, "kvm_open"))) {
 		warnp("Could not open kvm: %s", kvm_geterr(kd));
@@ -403,26 +478,14 @@ void show_current_emerge(void)
 		}
 
 		*p = '\0';
-		p = buf+1;
-		q = p + strlen(p) + 1;
-
-		printf(
-			" %s*%s %s%s%s\n"
-			"     started: %s%s%s\n"
-			"     elapsed: ", /*%s%llu%s seconds\n",*/
-			BOLD, NORM, BLUE, p, NORM,
-			GREEN, chop_ctime(ip[i].ki_start.tv_sec), NORM);
-		print_seconds_for_earthlings(time(0) - ip[i].ki_start.tv_sec);
-		puts(NORM);
-
+		atom = atom_explode(buf+1);
+		print_current_emerge(logfile, atom);
+		atom_implode(atom);
 		free(buf);
 	}
-
-	if (start_date == 0 && verbose)
-		puts("No emerge processes located");
 }
 #else
-void show_current_emerge(void)
+void show_current_emerge(const char *logfile)
 {
 	errf("not supported on your crapbox OS");
 }
@@ -473,7 +536,7 @@ int qlop_main(int argc, char **argv)
 	else if (do_unlist)
 		show_emerge_history(QLOP_UNLIST, argc, argv, logfile);
 	if (do_current)
-		show_current_emerge();
+		show_current_emerge(logfile);
 	if (do_sync)
 		show_sync_history(logfile);
 
