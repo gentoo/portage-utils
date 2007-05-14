@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.37 2007/05/12 02:19:28 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.38 2007/05/14 16:25:30 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static const char *q_opts_help[] = {
 	"Reinitialize metadata cache",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.37 2007/05/12 02:19:28 solar Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.38 2007/05/14 16:25:30 solar Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 #ifndef STATIC
@@ -31,7 +31,7 @@ APPLET lookup_applet(char *applet);
 APPLET lookup_applet(char *applet)
 {
 #ifndef STATIC
-	APPLET dlfunc;
+	APPLET dl_func;
 #endif
 	unsigned int i;
 
@@ -57,11 +57,11 @@ APPLET lookup_applet(char *applet)
 		}
 	}
 #ifndef STATIC
-	if ((dlfunc = lookup_dl_applet(applet)) != NULL)
-		return dlfunc;
+	if ((dl_func = lookup_dl_applet(applet)) != NULL)
+		return dl_func;
 	if (*applet == 'q')
-		if ((dlfunc = lookup_dl_applet(applet+1)) != NULL)
-			return dlfunc;	
+		if ((dl_func = lookup_dl_applet(applet+1)) != NULL)
+			return dl_func;	
 #endif
 	/* still nothing ?  those bastards ... */
 	warn("Unknown applet '%s'", applet);
