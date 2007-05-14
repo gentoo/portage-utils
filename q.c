@@ -1,26 +1,28 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.38 2007/05/14 16:25:30 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.39 2007/05/14 16:35:46 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#define Q_FLAGS "irm" COMMON_FLAGS
+#define Q_FLAGS "irmM:" COMMON_FLAGS
 static struct option const q_long_opts[] = {
 	{"install",      no_argument, NULL, 'i'},
 	{"reinitialize", no_argument, NULL, 'r'},
 	{"metacache",    no_argument, NULL, 'm'},
+	{"modpath",       a_argument, NULL, 'M'},
 	COMMON_LONG_OPTS
 };
 static const char *q_opts_help[] = {
 	"Install symlinks for applets",
 	"Reinitialize ebuild cache",
 	"Reinitialize metadata cache",
+	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.38 2007/05/14 16:25:30 solar Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.39 2007/05/14 16:35:46 solar Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 #ifndef STATIC
@@ -73,7 +75,6 @@ APPLET lookup_dl_applet(char *applet) {
 	char *ptr = NULL;
 	APPLET iptr;
 	FILE *fp;
-	char *modpath = NULL;
 	char buf[_Q_PATH_MAX];
 
 	if (dlhandle != NULL)
@@ -81,17 +82,18 @@ APPLET lookup_dl_applet(char *applet) {
 
 	DBG("opening /etc/q.conf");
 
-	if ((fp = fopen("/etc/q.conf", "r")) == NULL)
-		return NULL;
+	if (modpath == NULL) {
+		if ((fp = fopen("/etc/q.conf", "r")) == NULL)
+			return NULL;
 
-	while((fgets(buf, sizeof(buf), fp)) != NULL) {
-		rmspace(buf);
-		remove_extra_space(buf);
-		if ((strncmp(buf, "modpath=", 8)) == 0)
-			modpath = &buf[8];
+		while((fgets(buf, sizeof(buf), fp)) != NULL) {
+			rmspace(buf);
+			remove_extra_space(buf);
+			if ((strncmp(buf, "modpath=", 8)) == 0)
+				modpath = &buf[8];
+		}
+		fclose(fp);
 	}
-	fclose(fp);
-
 	if (modpath == NULL)
 		return NULL;
 
@@ -154,6 +156,7 @@ int q_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
+		case 'M': modpath = optarg; break;
 		case 'm': reinitialize_metacache = 1; break;
 		case 'r': reinitialize = 1; break;
 		case 'i': {
