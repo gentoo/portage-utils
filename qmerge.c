@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.66 2007/04/28 21:44:32 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.67 2007/05/18 06:25:00 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.66 2007/04/28 21:44:32 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.67 2007/05/18 06:25:00 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1007,14 +1007,12 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom, int 
 void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 {
 	depend_atom *atom;
-	char buf[255], buf2[255];
+	char buf[255];
 	int i;
 
 	snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
 	if ((atom = atom_explode(buf)) == NULL)
 		errf("%s/%s is not a valid atom", pkg->CATEGORY, pkg->PF);
-
-	snprintf(buf2, sizeof(buf2), "%s/%s", pkg->CATEGORY, atom->PN);
 
 	for (i = 1; i < argc; i++) {
 
@@ -1164,6 +1162,7 @@ struct pkg_t *grab_binpkg_info(const char *name)
 	char buf[BUFSIZ];
 	char value[BUFSIZ];
 	char *p;
+	depend_atom *atom;
 
 	struct pkg_t *pkg = xmalloc(sizeof(struct pkg_t));
 	struct pkg_t *rpkg = xmalloc(sizeof(struct pkg_t));
@@ -1186,8 +1185,6 @@ struct pkg_t *grab_binpkg_info(const char *name)
 
 				snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
 				if (strstr(buf, name) != NULL) {
-					depend_atom *atom;
-
 					if (!best_match[0])
 						strncpy(best_match, buf, sizeof(best_match));
 
@@ -1238,6 +1235,16 @@ struct pkg_t *grab_binpkg_info(const char *name)
 			if ((strcmp(buf, "CATEGORY:")) == 0)
 				strncpy(pkg->CATEGORY, value, sizeof(Pkg.CATEGORY));
 
+			if ((strcmp(buf, "CPV:")) == 0) {
+				if ((atom = atom_explode(value)) != NULL) {
+					snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
+					if (atom->PR_int)
+						snprintf(buf, sizeof(buf), "%s-%s-r%i", atom->PN, atom->PV, atom->PR_int);
+					strncpy(pkg->PF, buf, sizeof(Pkg.PF));
+					strncpy(pkg->CATEGORY, atom->CATEGORY, sizeof(Pkg.CATEGORY));
+					atom_implode(atom);
+				}
+			}
 			if ((strcmp(buf, "SLOT:")) == 0)
 				strncpy(pkg->SLOT, value, sizeof(Pkg.SLOT));
 			if ((strcmp(buf, "USE:")) == 0)
@@ -1319,6 +1326,17 @@ char *find_binpkg(const char *name)
 		strncpy(value, p, sizeof(value));
 
 		if (*buf) {
+			if ((strcmp(buf, "CPV:")) == 0) {
+				depend_atom *atom;
+				if ((atom = atom_explode(value)) != NULL) {
+					snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
+					if (atom->PR_int)
+						snprintf(buf, sizeof(buf), "%s-%s-r%i", atom->PN, atom->PV, atom->PR_int);
+					strncpy(PF, buf, sizeof(PF));
+					strncpy(CATEGORY, atom->CATEGORY, sizeof(CATEGORY));
+					atom_implode(atom);
+				}
+			}
 			if ((strcmp(buf, "PF:")) == 0)
 				strncpy(PF, value, sizeof(PF));
 			if ((strcmp(buf, "CATEGORY:")) == 0)
@@ -1401,6 +1419,17 @@ int parse_packages(const char *Packages, int argc, char **argv)
 				break;
 			case 'C':
 				if ((strcmp(buf, "CATEGORY:")) == 0) strncpy(Pkg.CATEGORY, value, sizeof(Pkg.CATEGORY));
+				if ((strcmp(buf, "CPV:")) == 0) {
+					depend_atom *atom;
+					if ((atom = atom_explode(value)) != NULL) {
+						snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
+						if (atom->PR_int)
+							snprintf(buf, sizeof(buf), "%s-%s-r%i", atom->PN, atom->PV, atom->PR_int);
+						strncpy(Pkg.PF, buf, sizeof(Pkg.PF));
+						strncpy(Pkg.CATEGORY, atom->CATEGORY, sizeof(Pkg.CATEGORY));
+						atom_implode(atom);
+					}
+				}
 				break;
 			case 'D':
 				if ((strcmp(buf, "DESC:")) == 0) strncpy(Pkg.DESC, value, sizeof(Pkg.DESC));
