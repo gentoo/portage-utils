@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.68 2007/05/21 00:15:27 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.69 2007/05/21 03:27:26 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.68 2007/05/21 00:15:27 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.69 2007/05/21 03:27:26 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -204,16 +204,8 @@ void qmerge_initialize(const char *Packages)
 	if (access("/bin/sh", X_OK) != 0)
 		err("/bin/sh must be installed");
 
-	if (pkgdir[0] == '/') {
-		int len = strlen(pkgdir);
-		if (len > 5) {
-			if ((strcmp(&pkgdir[len-4], "/All")) == 0) {
-				strncat(pkgdir, "/All/../", sizeof(pkgdir));
-				warn("funky pkgdir name");
-			}
-		} else
-			errf("PKGDIR='%s' is to short to be valid", pkgdir);
-	}
+	if (pkgdir[0] != '/')
+		errf("PKGDIR='%s' does not appear to be valid", pkgdir);
 
 	if (!binhost[0])
 		errf("PORTAGE_BINHOST= does not appear to be valid");
@@ -221,7 +213,6 @@ void qmerge_initialize(const char *Packages)
 	if (!search_pkgs && !pretend) {
 		if ((access(pkgdir, R_OK|W_OK|X_OK)) != 0)
 			errf("Wrong perms on PKGDIR='%s'", pkgdir);
-
 		mkdir(port_tmpdir, 0755);
 	}
 
@@ -1069,16 +1060,9 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 
 		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
 		if (access(buf, R_OK) != 0) {
-		snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
+			snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
 			fetch(str, buf);
 		}
-
-		/* fetch the package */
-		/* verify the pkg exists now. unlink if zero bytes */
-		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
-		unlink_empty(buf);
-
-
 		/* verify the pkg exists now. unlink if zero bytes */
 		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
 		unlink_empty(buf);
