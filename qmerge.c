@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.67 2007/05/18 06:25:00 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.68 2007/05/21 00:15:27 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.67 2007/05/18 06:25:00 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.68 2007/05/21 00:15:27 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -207,8 +207,10 @@ void qmerge_initialize(const char *Packages)
 	if (pkgdir[0] == '/') {
 		int len = strlen(pkgdir);
 		if (len > 5) {
-			if ((strcmp(&pkgdir[len-4], "/All")) != 0)
-				strncat(pkgdir, "/All", sizeof(pkgdir));
+			if ((strcmp(&pkgdir[len-4], "/All")) == 0) {
+				strncat(pkgdir, "/All/../", sizeof(pkgdir));
+				warn("funky pkgdir name");
+			}
 		} else
 			errf("PKGDIR='%s' is to short to be valid", pkgdir);
 	}
@@ -552,7 +554,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 	/* split the tbz and xpak data */
 	snprintf(tarball, sizeof(tarball), "%s.tbz2", pkg->PF);
-	snprintf(buf, sizeof(buf), "%s/%s", pkgdir, tarball);
+	snprintf(buf, sizeof(buf), "%s/%s/%s", pkgdir, pkg->CATEGORY, tarball);
 	unlink(tarball);
 	symlink(buf, tarball);
 	mkdir("vdb", 0755);
@@ -965,14 +967,15 @@ int match_pkg(const char *name, struct pkg_t *pkg)
 
 int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom, int strict, int display)
 {
-	char *hash;
+	char *hash = NULL;
 	int ret = 0;
 
 	if (nomd5)
 		return ret;
 
 	if (pkg->MD5[0]) {
-		hash = (char*) hash_file(fname, HASH_MD5);
+		if ((hash = (char*) hash_file(fname, HASH_MD5)) == NULL)
+			errf("hash is NULL for %s", fname);
 		if (strcmp(hash, pkg->MD5) == 0) {
 			if (display)
 				qprintf("MD5:  [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
@@ -1007,15 +1010,20 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom, int 
 void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 {
 	depend_atom *atom;
-	char buf[255];
+	char buf[255], str[255];
 	int i;
+
+	memset(buf, 0, sizeof(buf));
+	memset(str, 0, sizeof(str));
 
 	snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
 	if ((atom = atom_explode(buf)) == NULL)
 		errf("%s/%s is not a valid atom", pkg->CATEGORY, pkg->PF);
 
-	for (i = 1; i < argc; i++) {
+	snprintf(str, sizeof(str), "%s/%s", pkgdir, pkg->CATEGORY);
+	mkdir(str, 0755);
 
+	for (i = 1; i < argc; i++) {
 		if (argv[i][0] == '-')
 			continue;
 
@@ -1033,12 +1041,13 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 		}
 
 		/* check to see if file exists and it's checksum matches */
-		snprintf(buf, sizeof(buf), "%s/%s.tbz2", pkgdir, pkg->PF);
+		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, pkg->CATEGORY, pkg->PF);
 		unlink_empty(buf);
-		if ((force_download) && (access(buf, R_OK) == 0) && ((pkg->SHA1[0]) || (pkg->MD5[0])))
+
+		if ((force_download) && (access(buf, R_OK) == 0) && ((pkg->SHA1[0]) || (pkg->MD5[0]))) {
 			if ((pkg_verify_checksums(buf, pkg, atom, 0, 0)) != 0)
 				unlink(buf);
-
+		}
 		if (access(buf, R_OK) == 0) {
 			if ((!pkg->SHA1[0]) && (!pkg->MD5[0])) {
 				warn("No checksum data for %s", buf);
@@ -1054,12 +1063,26 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 			printf("Fetching %s/%s.tbz2\n", atom->CATEGORY, pkg->PF);
 
 		/* fetch the package */
+		/* Check CATEGORY first */
+		snprintf(buf, sizeof(buf), "%s/%s.tbz2", atom->CATEGORY, pkg->PF);
+		fetch(str, buf);
+
+		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
+		if (access(buf, R_OK) != 0) {
 		snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
-		fetch(pkgdir, buf);
+			fetch(str, buf);
+		}
+
+		/* fetch the package */
+		/* verify the pkg exists now. unlink if zero bytes */
+		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
+		unlink_empty(buf);
+
 
 		/* verify the pkg exists now. unlink if zero bytes */
-		snprintf(buf, sizeof(buf), "%s/%s.tbz2", pkgdir, pkg->PF);
+		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
 		unlink_empty(buf);
+
 
 		if (access(buf, R_OK) != 0) {
 			warn("Failed to fetch %s.tbz2 from %s", pkg->PF, binhost);
@@ -1529,11 +1552,11 @@ int qmerge_main(int argc, char **argv)
 
 	if (optind < argc) {
 		queue *world = NULL;
-
-		while (optind < argc) {
+		int ind = optind;
+		while (ind < argc) {
 			size_t size = 0;
-			i = optind;
-			optind++;
+			i = ind;
+			ind++;
 
 			if ((world = qmerge_load_set(argv[i], world)) == NULL)
 				continue;
