@@ -30,7 +30,6 @@
 
 #include "busybox.h"
 
-
 #ifdef CONFIG_SHA1SUM
 /*
  ---------------------------------------------------------------------------
@@ -242,10 +241,6 @@ static void sha1_end(unsigned char hval[], struct sha1_ctx_t *ctx)
  ---------------------------------------------------------------------------
 */
 #endif	/* CONFIG_SHA1 */
-
-
-
-
 
 #ifdef CONFIG_MD5SUM
 /*
@@ -766,9 +761,6 @@ static void *md5_end(void *resbuf, struct md5_ctx_t *ctx)
 }
 #endif	/* CONFIG_MD5SUM */
 
-
-
-
 extern int hash_fd(int src_fd, const size_t size, const uint8_t hash_algo,
 				   uint8_t * hashval);
 extern int hash_fd(int src_fd, const size_t size, const uint8_t hash_algo,
@@ -788,7 +780,6 @@ extern int hash_fd(int src_fd, const size_t size, const uint8_t hash_algo,
 #ifdef CONFIG_MD5SUM
 	struct md5_ctx_t md5_cx;
 #endif
-
 
 #ifdef CONFIG_SHA1SUM
 	if (hash_algo == HASH_SHA1) {

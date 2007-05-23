@@ -18,7 +18,6 @@ static const char *YELLOW = _MAKE_COLOR("33", "01");
 static const char *BRYELLOW = _MAKE_COLOR("01", "33");
 static const char *WHITE = _MAKE_COLOR("01", "38");
 
-
 static const char *COLOR_MAP = "/etc/portage/color.map";
 
 #ifndef ARR_SIZE
@@ -31,7 +30,6 @@ typedef struct {
 	const char *name;
 	char value[16];
 } cpairtype;
-
 
 static cpairtype color_pairs[] = {
 	{"blue",      COLOR("34", "01") },

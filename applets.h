@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.23 2007/04/08 19:55:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.24 2007/05/23 13:47:31 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -63,7 +63,6 @@ struct applet_t {
 	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
 	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
 	{"qxpak",     qxpak_main,     "<misc args>",     "manipulate xpak archives"},
-
 
 	/* aliases for equery capatability */
 	{"belongs",   qfile_main,     NULL, NULL},

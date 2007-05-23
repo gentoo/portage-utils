@@ -27,7 +27,6 @@
 
 #include "busybox.h"
 
-
 #define FLAG_SILENT	1
 #define FLAG_CHECK	2
 #define FLAG_WARN	4

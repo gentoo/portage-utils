@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/mod/Attic/py.c,v 1.1 2007/05/12 02:33:34 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/mod/Attic/py.c,v 1.2 2007/05/23 13:47:31 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -27,7 +27,7 @@ static const char *qpy_opts_help[] = {
 	"environment variables"
 };
 
-static const char qpy_rcsid[] = "$Id: py.c,v 1.1 2007/05/12 02:33:34 solar Exp $";
+static const char qpy_rcsid[] = "$Id: py.c,v 1.2 2007/05/23 13:47:31 solar Exp $";
 
 #define qpy_usage(ret) usage(ret, QPY_FLAGS, qpy_long_opts, qpy_opts_help, -1)
 
@@ -35,7 +35,6 @@ struct portage_t {
 	PyObject *interp;
 	PyObject *settings;
 } portage;
-
 
 /* the (hopefully) right way: create and access python/portage objects from c */
 char *portage_setting(char *envvar);

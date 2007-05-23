@@ -98,5 +98,14 @@ find ../.. '(' -name '*.c' -o -name '*.h' ')' -print0 | xargs -0 \
 testit src.style
 
 
+for x in $(find ../.. '(' -name '*.c' -o -name '*.h' ')' ); do
+	python space.py $x > $x~
+	if [[ $(md5sum $x | awk '{print $1}') != $(md5sum $x~ | awk '{print $1}') ]]; then
+		diff -u $x $x~
+		#cp $x~ $x
+	fi
+	rm $x~
+done > src.space
+testit src.space
 
 exit ${ret}

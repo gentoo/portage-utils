@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.1 2007/05/12 02:19:28 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.2 2007/05/23 13:47:31 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -50,7 +50,6 @@
 
 #define qfprintf(stream, fmt, args...) do { if (!quiet) fprintf(stream, _( fmt ), ## args); } while (0)
 #define qprintf(fmt, args...) qfprintf(stdout, _( fmt ), ## args)
-
 
 #define _q_unused_ __attribute__((__unused__))
 

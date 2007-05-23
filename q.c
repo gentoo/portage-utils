@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.41 2007/05/23 03:22:31 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.42 2007/05/23 13:47:31 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,7 +22,7 @@ static const char *q_opts_help[] = {
 	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.41 2007/05/23 03:22:31 solar Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.42 2007/05/23 13:47:31 solar Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 #ifndef STATIC
@@ -86,7 +86,7 @@ APPLET lookup_dl_applet(char *applet) {
 		if ((fp = fopen("/etc/q.conf", "r")) == NULL)
 			return NULL;
 
-		while((fgets(buf, sizeof(buf), fp)) != NULL) {
+		while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 			rmspace(buf);
 			remove_extra_space(buf);
 			if ((strncmp(buf, "modpath=", 8)) == 0)
