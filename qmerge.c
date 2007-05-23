@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.69 2007/05/21 03:27:26 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.70 2007/05/23 03:22:31 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.69 2007/05/21 03:27:26 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.70 2007/05/23 03:22:31 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -334,7 +334,6 @@ void install_mask_pwd(int iargc, char **iargv, const struct stat st)
 		crossmount_rm(buf, sizeof(buf), iargv[i], st);
 	}
 }
-
 
 char *atom2str(depend_atom *atom, char *buf, size_t size);
 char *atom2str(depend_atom *atom, char *buf, size_t size)
@@ -1066,7 +1065,6 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 		/* verify the pkg exists now. unlink if zero bytes */
 		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
 		unlink_empty(buf);
-
 
 		if (access(buf, R_OK) != 0) {
 			warn("Failed to fetch %s.tbz2 from %s", pkg->PF, binhost);

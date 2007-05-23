@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.44 2007/04/08 19:45:41 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.45 2007/05/23 03:22:31 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,11 +30,10 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.44 2007/04/08 19:45:41 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.45 2007/05/23 03:22:31 solar Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
-
 
 /* structures / types / etc ... */
 typedef enum {
@@ -59,7 +58,6 @@ struct _dep_node {
 };
 typedef struct _dep_node dep_node;
 
-
 /* prototypes */
 #define dep_dump_tree(r) _dep_dump_tree(r,0)
 void _dep_dump_tree(dep_node *root, int space);
@@ -74,7 +72,6 @@ void _dep_burn_node(dep_node *node);
 int qdepends_main_vdb(const char *depend_file, int argc, char **argv);
 int qdepends_vdb_deep(const char *depend_file, const char *query);
 
-
 #ifdef EBUG
 void print_word(char *ptr, int num);
 void print_word(char *ptr, int num)
@@ -84,7 +81,6 @@ void print_word(char *ptr, int num)
 	printf("\n");
 }
 #endif
-
 
 dep_node *_dep_grow_node(dep_type type, char *info, size_t info_len)
 {
@@ -345,8 +341,6 @@ char *dep_flatten_tree(dep_node *root)
 	flat[pos-1] = '\0';
 	return flat;
 }
-
-
 
 int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 {

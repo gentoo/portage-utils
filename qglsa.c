@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.7 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.8 2007/05/23 03:22:31 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -10,7 +10,6 @@
 #ifdef APPLET_qglsa
 
 #define QGLSA_DB "/var/cache/edb/glsa"
-
 
 #define QGLSA_FLAGS "ldtpfi" COMMON_FLAGS
 static struct option const qglsa_long_opts[] = {
@@ -31,9 +30,8 @@ static const char *qglsa_opts_help[] = {
 	"Mark specified GLSAs as fixed",
 	COMMON_OPTS_HELP
 };
-static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.7 2006/11/09 00:18:05 vapier Exp $";
+static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.8 2007/05/23 03:22:31 solar Exp $";
 #define qglsa_usage(ret) usage(ret, QGLSA_FLAGS, qglsa_long_opts, qglsa_opts_help, lookup_applet_idx("qglsa"))
-
 
 static char *qglsa_load_list(void);
 static char *qglsa_load_list(void)

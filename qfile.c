@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.43 2007/04/06 20:50:19 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.44 2007/05/23 03:22:31 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char *qfile_opts_help[] = {
 	"Don't look in package <arg>",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.43 2007/04/06 20:50:19 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.44 2007/05/23 03:22:31 solar Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -159,7 +159,6 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 				if (bn_firstchar != bn_firstchars[i]
 						|| strcmp(entry_basename, base_names[i]))
 					continue;
-
 
 				if (!path_ok) {
 					/* check the full filepath ... */

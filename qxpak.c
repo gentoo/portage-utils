@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.14 2006/11/09 00:18:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.15 2007/05/23 03:22:31 solar Exp $
  *
  * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,8 +29,6 @@
 #define XPAK_END_MSG         "XPAKSTOP"
 #define XPAK_END_MSG_LEN     8
 
-
-
 #define QXPAK_FLAGS "lxcd:O" COMMON_FLAGS
 static struct option const qxpak_long_opts[] = {
 	{"list",      no_argument, NULL, 'l'},
@@ -48,10 +46,8 @@ static const char *qxpak_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.14 2006/11/09 00:18:05 vapier Exp $";
+static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.15 2007/05/23 03:22:31 solar Exp $";
 #define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, lookup_applet_idx("qxpak"))
-
-
 
 typedef struct {
 	FILE *fp;
@@ -62,8 +58,6 @@ typedef struct {
 
 static char *xpak_chdir = NULL;
 static char xpak_stdout = 0;
-
-
 
 void _xpak_walk_index(_xpak_archive *x, int argc, char **argv, void (*func)(char*,int,int,int,char*));
 void _xpak_walk_index(_xpak_archive *x, int argc, char **argv, void (*func)(char*,int,int,int,char*))
@@ -350,8 +344,6 @@ void xpak_create(const char *file, int argc, char **argv)
 	fclose(fdata);
 	fclose(fout);
 }
-
-
 
 int qxpak_main(int argc, char **argv)
 {
