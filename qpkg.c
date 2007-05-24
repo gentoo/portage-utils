@@ -1,10 +1,10 @@
 /*
- * Copyright 2005-2006 Gentoo Foundation
+ * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.22 2007/05/23 03:22:31 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.23 2007/05/24 14:47:18 solar Exp $
  *
- * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qpkg
@@ -20,7 +20,7 @@ static const char *qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.22 2007/05/23 03:22:31 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.23 2007/05/24 14:47:18 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;

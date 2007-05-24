@@ -1,10 +1,10 @@
 /*
- * Copyright 2005-2006 Gentoo Foundation
+ * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.15 2007/05/23 03:22:31 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.16 2007/05/24 14:47:18 solar Exp $
  *
- * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qxpak
@@ -46,7 +46,7 @@ static const char *qxpak_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.15 2007/05/23 03:22:31 solar Exp $";
+static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.16 2007/05/24 14:47:18 solar Exp $";
 #define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, lookup_applet_idx("qxpak"))
 
 typedef struct {

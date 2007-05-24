@@ -1,10 +1,10 @@
 /*
- * Copyright 2005-2006 Gentoo Foundation
+ * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.40 2007/05/23 03:22:31 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.41 2007/05/24 14:47:18 solar Exp $
  *
- * Copyright 2005-2006 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2006 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qlop
@@ -46,7 +46,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.40 2007/05/23 03:22:31 solar Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.41 2007/05/24 14:47:18 solar Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
