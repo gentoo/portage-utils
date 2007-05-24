@@ -1,6 +1,6 @@
 # Copyright 2005-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.59 2007/05/14 16:25:30 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.60 2007/05/24 14:34:17 cardoe Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -19,7 +19,7 @@ CFLAGS    ?= -O2 -g -pipe
 #CFLAGS   += -DEBUG -g
 #CFLAGS   += -Os -DOPTIMIZE_FOR_SIZE=2 -falign-functions=2 -falign-jumps=2 -falign-labels=2 -falign-loops=2
 #LDFLAGS  := -pie
-LDFLAGS   += $(shell echo | $(CC) -dM -E - | grep -q ' __FreeBSD__' && echo '-lkvm')
+LIBADD    += $(shell echo | $(CC) -dM -E - | grep -q ' __FreeBSD__' && echo '-lkvm')
 DESTDIR   :=
 PREFIX    := $(DESTDIR)/usr
 STRIP     := strip
@@ -27,7 +27,8 @@ MKDIR     := mkdir -p
 CP        := cp
 
 ifndef STATIC
-LDFLAGS   += -Wl,--export-dynamic $(shell echo | $(CC) -dM -E - | grep -q ' __linux__' && echo '-ldl')
+LDFLAGS   += -Wl,--export-dynamic
+LIBADD    += $(shell echo | $(CC) -dM -E - | grep -q ' __linux__' && echo '-ldl')
 else
 CFLAGS    += -DSTATIC
 endif
@@ -63,13 +64,13 @@ q: $(SRC) libq/*.c *.h libq/*.h
 ifeq ($(subst s,,$(MAKEFLAGS)),$(MAKEFLAGS))
 	@echo $(foreach a,$(APPLETS), : $a) :
 ifndef V
-	@echo $(CC) $(CFLAGS) $(PYFLAGS) $(LDFLAGS) main.c -o q
+	@echo $(CC) $(CFLAGS) $(PYFLAGS) $(LDFLAGS) main.c -o q $(LIBADD)
 endif
 endif
 ifndef V
-	@$(CC) $(WFLAGS) $(PYFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q
+	@$(CC) $(WFLAGS) $(PYFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q $(LIBADD)
 else
-	$(CC) $(WFLAGS) $(PYFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q
+	$(CC) $(WFLAGS) $(PYFLAGS) $(LDFLAGS) $(CFLAGS) $(HFLAGS) main.c -o q $(LIBADD)
 endif
 
 .depend: $(SRC)
