@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.34 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.35 2007/05/25 18:36:15 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -28,7 +28,7 @@ static const char *qsearch_opts_help[] = {
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.34 2007/05/24 14:47:18 solar Exp $";
+static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.35 2007/05/25 18:36:15 solar Exp $";
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
 
 int qsearch_main(int argc, char **argv)
@@ -70,13 +70,29 @@ int qsearch_main(int argc, char **argv)
 			qsearch_usage(EXIT_FAILURE);
 		search_me = argv[optind];
 	}
-
+#ifdef TESTING
+	/* FIXME: hardcoded */
+	if ((search_cache == CACHE_EBUILD) && (access("/usr/portage/.qsearch.x", R_OK) == 0)) {
+		if ((fp = fopen("/usr/portage/.qsearch.x", "r")) != NULL) {
+			search_len = strlen(search_me);
+			while (fgets(buf, sizeof(buf), fp) != NULL) {
+				if (strlen(buf) <= search_len)
+					continue;
+				/* add regexp, color highlighting and basename checks */
+				if (strncmp(buf, search_me, search_len) == 0) {
+					fputs(buf, stdout);
+				}
+			}
+			fclose(fp);
+			return 0;
+		}
+	}
+#endif
 	last[0] = 0;
 	fp = fopen(initialize_flat(search_cache), "r");
 	if (!fp)
 		return 1;
 
-	/* moved these outside of the loop for better asm generation */
 	search_len = strlen(search_vars[idx]);
 
 	while (fgets(ebuild, sizeof(ebuild), fp) != NULL) {

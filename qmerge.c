@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.71 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.72 2007/05/25 18:36:15 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.71 2007/05/24 14:47:18 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.72 2007/05/25 18:36:15 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1000,6 +1000,7 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom, int 
 void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 {
 	depend_atom *atom;
+	char savecwd[_POSIX_PATH_MAX];
 	char buf[255], str[255];
 	int i;
 
@@ -1062,6 +1063,7 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 			snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
 			fetch(str, buf);
 		}
+
 		/* verify the pkg exists now. unlink if zero bytes */
 		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
 		unlink_empty(buf);
@@ -1071,6 +1073,15 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 			fflush(stderr);
 			continue;
 		}
+		getcwd(savecwd, sizeof(savecwd));
+		assert(chdir(pkgdir) == 0);
+		if (chdir("All/") == 0) {
+			snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
+			snprintf(str, sizeof(str), "../%s/%s.tbz2", atom->CATEGORY, pkg->PF);
+			unlink(buf);
+			symlink(str, buf);
+		}
+		chdir(savecwd);
 
 		if ((pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1)) == 0) {
 			pkg_merge(0, atom, pkg);
