@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.43 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.44 2007/05/25 19:19:40 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,7 +22,7 @@ static const char *q_opts_help[] = {
 	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.43 2007/05/24 14:47:18 solar Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.44 2007/05/25 19:19:40 solar Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 #ifndef STATIC
@@ -164,9 +164,14 @@ int q_main(int argc, char **argv)
 			/* always bzero a buffer before using readlink() */
 			memset(buf, 0x00, sizeof(buf));
 			printf("Installing symlinks:\n");
+			/* solaris: /proc/self/object/a.out bsd: /proc/self/exe or /proc/curproc/file with linuxfs/procfs respectively */
 			if ((readlink("/proc/self/exe", buf, sizeof(buf))) == (-1)) {
-				warnfp("could not readlink '/proc/self/exe'");
-				return 1;
+				char *ptr = which("q");
+				if (ptr == NULL) {
+					warnfp("haha no symlink love for you");
+					return 1;
+				}
+				strncpy(buf, ptr, sizeof(buf));
 			}
 			if (chdir(dirname(buf)) != 0) {
 				warnfp("could not chdir to '%s'", buf);
