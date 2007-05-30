@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.146 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.147 2007/05/30 23:17:24 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -99,7 +99,6 @@ void no_colors()
 
 /* Common usage for all applets */
 #define COMMON_FLAGS "vqChV"
-#define a_argument required_argument
 #define COMMON_LONG_OPTS \
 	{"verbose",   no_argument, NULL, 'v'}, \
 	{"quiet",     no_argument, NULL, 'q'}, \

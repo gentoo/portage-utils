@@ -16,7 +16,7 @@ libpy.so: Python.h py.c
 libhello.so: hello.c
 	$(CC) $(SHARED_CFLAGS) $(CFLAGS) hello.c $(LDFLAGS) -o $@
 
-check test:
+check test: all
 
 clean:
 	rm -f *.so
