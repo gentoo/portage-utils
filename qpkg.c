@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.24 2007/06/01 00:10:07 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.25 2007/06/01 17:30:13 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,7 +22,7 @@ static const char *qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.24 2007/06/01 00:10:07 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.25 2007/06/01 17:30:13 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
@@ -36,7 +36,7 @@ int qpkg_clean(char *);
 const char *qpkg_get_bindir(void);
 int qpkg_make(depend_atom *);
 
-
+/* checks to make sure this is a .tbz2 file. used by scandir() */
 int filter_tbz2(const struct dirent *dentry)
 {
         if (dentry->d_name[0] == '.')
@@ -46,6 +46,7 @@ int filter_tbz2(const struct dirent *dentry)
 	return !strcmp(".tbz2", dentry->d_name + strlen(dentry->d_name) - 5);
 }
 
+/* process a single dir for cleaning. dir can be a $PKGDIR, $PKGDIR/All/, $PKGDIR/$CAT */
 uint64_t qpkg_clean_dir(char *dirp, queue *vdb)
 {
 	queue *ll;
@@ -86,13 +87,14 @@ uint64_t qpkg_clean_dir(char *dirp, queue *vdb)
 		}
 	}
 
-	while(count--)
+	while (count--)
 		free(fnames[count]);
 	free(fnames);
 
 	return num_all_bytes;
 }
 
+/* figure out what dirs we want to process for cleaning and display results. */
 int qpkg_clean(char *dirp)
 {
 	int i, count;
@@ -111,11 +113,11 @@ int qpkg_clean(char *dirp)
 
 	num_all_bytes = qpkg_clean_dir(dirp, vdb);
 
-	for (i = 0 ; i < count; i++) {
+	for (i=0;i < count; i++) {
 		snprintf(buf, sizeof(buf), "%s/%s", dirp, dnames[i]->d_name);
 		num_all_bytes += qpkg_clean_dir(buf, vdb);
 	}
-	while(count--)
+	while (count--)
 		free(dnames[count]);
 	free(dnames);
 
