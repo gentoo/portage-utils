@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.23 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.24 2007/06/01 00:10:07 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,25 +9,127 @@
 
 #ifdef APPLET_qpkg
 
-#define QPKG_FLAGS "pP:" COMMON_FLAGS
+#define QPKG_FLAGS "cpP:" COMMON_FLAGS
 static struct option const qpkg_long_opts[] = {
+	{"clean",    no_argument, NULL, 'c'},
 	{"pretend",  no_argument, NULL, 'p'},
 	{"pkgdir",    a_argument, NULL, 'P'},
 	COMMON_LONG_OPTS
 };
 static const char *qpkg_opts_help[] = {
+	"clean pkgdir of unused binary files",
 	"pretend only",
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.23 2007/05/24 14:47:18 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.24 2007/06/01 00:10:07 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
 
 static char *qpkg_bindir = NULL;
 
+/* global functions */
+int filter_tbz2(const struct dirent *);
+uint64_t qpkg_clean_dir(char *, queue *);
+int qpkg_clean(char *);
 const char *qpkg_get_bindir(void);
+int qpkg_make(depend_atom *);
+
+
+int filter_tbz2(const struct dirent *dentry)
+{
+        if (dentry->d_name[0] == '.')
+                return 0;
+	if (strlen(dentry->d_name) < 6)
+		return 0;
+	return !strcmp(".tbz2", dentry->d_name + strlen(dentry->d_name) - 5);
+}
+
+uint64_t qpkg_clean_dir(char *dirp, queue *vdb)
+{
+	queue *ll;
+	struct dirent **fnames;
+	int i, count;
+	char buf[_Q_PATH_MAX];
+	struct stat st;
+	uint64_t num_all_bytes = 0;
+	size_t disp_units = 0;
+
+	if (dirp == NULL)
+		return 0;
+	if (chdir(dirp) != 0)
+		return 0;
+	if ((count = scandir(".", &fnames, filter_tbz2, alphasort)) < 0)
+		return 0;
+
+	for (i = 0; i < count; i++) {
+		int del = 1;
+		fnames[i]->d_name[strlen(fnames[i]->d_name)-5] = 0;
+		for (ll = vdb; ll != NULL; ll = ll->next)
+			if (strcmp(fnames[i]->d_name, basename(ll->name)) == 0)
+				del = 0;
+		if (!del)
+			continue;
+		snprintf(buf, sizeof(buf), "%s.tbz2", fnames[i]->d_name);
+		if ((lstat(buf, &st)) != (-1)) {
+			if (S_ISREG(st.st_mode)) {
+				disp_units = KILOBYTE;
+				if ((st.st_size / KILOBYTE) > 1000)
+					disp_units = MEGABYTE;
+				num_all_bytes += st.st_size;
+				qprintf(" %s[%s%s %3s %s %s%s]%s %s%s/%s%s\n", DKBLUE, NORM, GREEN, make_human_readable_str(st.st_size, 1, disp_units),
+					disp_units == MEGABYTE ? "M" : "K", NORM, DKBLUE, NORM, CYAN, basename(dirp), fnames[i]->d_name, NORM);
+			}
+			if (!pretend)
+				unlink(buf);
+		}
+	}
+
+	while(count--)
+		free(fnames[count]);
+	free(fnames);
+
+	return num_all_bytes;
+}
+
+int qpkg_clean(char *dirp)
+{
+	int i, count;
+	char buf[_Q_PATH_MAX];
+	size_t disp_units = 0;
+	uint64_t num_all_bytes;
+	struct dirent **dnames;
+	queue *vdb;
+
+	vdb = get_vdb_atoms(1);
+
+	if (chdir(dirp) != 0)
+		return 1;
+	if ((count = scandir(".", &dnames, filter_hidden, alphasort)) < 0)
+		return 1;
+
+	num_all_bytes = qpkg_clean_dir(dirp, vdb);
+
+	for (i = 0 ; i < count; i++) {
+		snprintf(buf, sizeof(buf), "%s/%s", dirp, dnames[i]->d_name);
+		num_all_bytes += qpkg_clean_dir(buf, vdb);
+	}
+	while(count--)
+		free(dnames[count]);
+	free(dnames);
+
+	free_sets(vdb);
+
+	disp_units = KILOBYTE;
+	if ((num_all_bytes / KILOBYTE) > 1000)
+		disp_units = MEGABYTE;
+	qprintf(" %s*%s Total space that would be freed in packages directory: %s%s %c%s\n", GREEN, NORM, RED,
+		make_human_readable_str(num_all_bytes, 1, disp_units), disp_units == MEGABYTE ? 'M' : 'K', NORM);
+
+	return 0;
+}
+
 const char *qpkg_get_bindir(void)
 {
 	if (qpkg_bindir != NULL)
@@ -41,7 +143,6 @@ const char *qpkg_get_bindir(void)
 	return qpkg_bindir;
 }
 
-int qpkg_make(depend_atom *atom);
 int qpkg_make(depend_atom *atom)
 {
 	FILE *fp, *out;
@@ -130,12 +231,13 @@ int qpkg_main(int argc, char **argv)
 	const char *bindir;
 	depend_atom *atom;
 	int restrict_chmod = 0;
-
+	int qclean = 0;
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
 	while ((i = GETOPT_LONG(QPKG, qpkg, "")) != -1) {
 		switch (i) {
+		case 'c': qclean = 1; break;
 		case 'p': pretend = 1; break;
 		case 'P':
 			restrict_chmod = 1;
@@ -146,6 +248,9 @@ int qpkg_main(int argc, char **argv)
 		COMMON_GETOPTS_CASES(qpkg)
 		}
 	}
+	if (qclean)
+		return qpkg_clean(qpkg_bindir == NULL ? pkgdir : qpkg_bindir);
+
 	if (argc == optind)
 		qpkg_usage(EXIT_FAILURE);
 

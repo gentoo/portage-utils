@@ -5,7 +5,10 @@ qpkg \- manipulate Gentoo binpkgs
 .B qpkg
 \fI<opts> <misc args>\fR
 .SH DESCRIPTION
-Options: \fB\-[pP:vqChV]\fR
+Options: \fB\-[cpP:vqChV]\fR
+.TP
+\fB\-c\fR, \fB\-\-clean\fR
+* clean pkgdir of unused binary files
 .TP
 \fB\-p\fR, \fB\-\-pretend\fR
 * pretend only
@@ -30,4 +33,4 @@ Options: \fB\-[pP:vqChV]\fR
 \fB\-V\fR, \fB\-\-version\fR
 * Print version and exit
 .PP
-$Id: qpkg.1,v 1.18 2007/05/11 08:25:06 solar Exp $
+$Id: qpkg.1,v 1.19 2007/06/01 00:10:07 solar Exp $

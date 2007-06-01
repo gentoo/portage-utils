@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.72 2007/05/25 18:36:15 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.73 2007/06/01 00:10:07 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.72 2007/05/25 18:36:15 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.73 2007/06/01 00:10:07 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -964,8 +964,9 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom, int 
 		return ret;
 
 	if (pkg->MD5[0]) {
-		if ((hash = (char*) hash_file(fname, HASH_MD5)) == NULL)
-			errf("hash is NULL for %s", fname);
+		if ((hash = (char*) hash_file(fname, HASH_MD5)) == NULL) {
+			errf("hash is NULL for %s %s", fname, get_current_dir_name());
+		}
 		if (strcmp(hash, pkg->MD5) == 0) {
 			if (display)
 				qprintf("MD5:  [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
