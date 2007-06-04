@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.75 2007/06/03 19:17:39 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.76 2007/06/04 16:53:53 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.75 2007/06/03 19:17:39 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.76 2007/06/04 16:53:53 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -952,7 +952,7 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom, int 
 
 	if (pkg->MD5[0]) {
 		if ((hash = (char*) hash_file(fname, HASH_MD5)) == NULL) {
-			errf("hash is NULL for %s %s", fname, get_current_dir_name());
+			errf("hash is NULL for %s", fname);
 		}
 		if (strcmp(hash, pkg->MD5) == 0) {
 			if (display)
