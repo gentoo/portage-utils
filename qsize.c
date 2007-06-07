@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.26 2007/06/07 18:27:00 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.27 2007/06/07 19:47:48 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char *qsize_opts_help[] = {
 	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.26 2007/06/07 18:27:00 solar Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.27 2007/06/07 19:47:48 solar Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
 int qsize_main(int argc, char **argv)
@@ -43,14 +43,13 @@ int qsize_main(int argc, char **argv)
 	char search_all = 0;
 	struct stat st;
 	char fs_size = 0, summary = 0, summary_only = 0;
-	size_t num_all_files, num_all_nonfiles;
-	size_t num_files, num_nonfiles;
+	size_t num_all_files, num_all_nonfiles, num_all_ignored;
+	size_t num_files, num_nonfiles, num_ignored;
 	uint64_t num_all_bytes, num_bytes;
 	size_t disp_units = 0;
 	const char *str_disp_units = NULL;
 	char buf[_Q_PATH_MAX];
-	char *ignore_regexp = NULL;
-	int ignored = 0;
+	queue *ignore_regexp = NULL;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -65,7 +64,7 @@ int qsize_main(int argc, char **argv)
 		case 'm': disp_units = MEGABYTE; str_disp_units = "MB"; break;
 		case 'k': disp_units = KILOBYTE; str_disp_units = "KB"; break;
 		case 'b': disp_units = 1; str_disp_units = "bytes"; break;
-		case 'i': ignore_regexp = optarg; break;
+		case 'i': ignore_regexp = add_set(optarg, optarg, ignore_regexp); break;
 		}
 	}
 	if ((argc == optind) && !search_all)
@@ -77,7 +76,7 @@ int qsize_main(int argc, char **argv)
 	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
-	num_all_bytes = num_all_files = num_all_nonfiles = 0;
+	num_all_bytes = num_all_files = num_all_nonfiles = num_all_ignored = 0;
 
 	/* open /var/db/pkg */
 	while ((dentry = q_vdb_get_next_dir(dir))) {
@@ -112,20 +111,24 @@ int qsize_main(int argc, char **argv)
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;
 
-			num_files = num_nonfiles = num_bytes = 0;
+			num_ignored = num_files = num_nonfiles = num_bytes = 0;
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 				contents_entry *e;
+				queue *ll;
+				int ok = 0;
 
 				e = contents_parse_line(buf);
 				if (!e)
 					continue;
 
-				if (ignore_regexp != NULL) {
-					if (rematch(ignore_regexp, e->name, REG_EXTENDED) == 0) {
-						ignored += 1;
-						continue;
+				for (ll = ignore_regexp; ll != NULL; ll = ll->next) {
+					if (rematch(ll->name, e->name, REG_EXTENDED) == 0) {
+						num_ignored += 1;
+						ok = 1;
 					}
 				}
+				if (ok)
+					continue;
 
 				if (e->type == CONTENTS_OBJ || e->type == CONTENTS_SYM) {
 					++num_files;
@@ -138,11 +141,15 @@ int qsize_main(int argc, char **argv)
 			num_all_bytes += num_bytes;
 			num_all_files += num_files;
 			num_all_nonfiles += num_nonfiles;
+			num_all_ignored += num_ignored;
+
 			if (!summary_only) {
 				printf("%s%s/%s%s%s: %lu files, %lu non-files, ", BOLD,
 				       basename(dentry->d_name), BLUE, de->d_name, NORM,
 				       (unsigned long)num_files,
 				       (unsigned long)num_nonfiles);
+				if (num_ignored)
+					printf("%lu names-ignored, ", num_ignored);
 				if (disp_units)
 					printf("%s %s\n",
 					       make_human_readable_str(num_bytes, 1, disp_units),
@@ -161,8 +168,8 @@ int qsize_main(int argc, char **argv)
 		printf(" %sTotals%s: %lu files, %lu non-files, ", BOLD, NORM,
 		       (unsigned long)num_all_files,
 		       (unsigned long)num_all_nonfiles);
-		if (ignored)
-			printf("%d names ignored, ", ignored);
+		if (num_all_ignored)
+			printf("%lu names-ignored, ", num_all_ignored);
 		if (disp_units)
 			printf("%s %s\n",
 			       make_human_readable_str(num_all_bytes, 1, disp_units),
@@ -172,7 +179,7 @@ int qsize_main(int argc, char **argv)
 			       (unsigned long)(num_all_bytes / MEGABYTE),
 			       (unsigned long)(((num_all_bytes%MEGABYTE)*1000)/MEGABYTE));
 	}
-
+	free_sets(ignore_regexp);
 	return EXIT_SUCCESS;
 }
 
