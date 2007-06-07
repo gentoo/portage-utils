@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.25 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.26 2007/06/07 18:27:00 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,7 +9,7 @@
 
 #ifdef APPLET_qsize
 
-#define QSIZE_FLAGS "fasSmkb" COMMON_FLAGS
+#define QSIZE_FLAGS "fasSmkbi:" COMMON_FLAGS
 static struct option const qsize_long_opts[] = {
 	{"filesystem", no_argument, NULL, 'f'},
 	{"all",        no_argument, NULL, 'a'},
@@ -18,6 +18,7 @@ static struct option const qsize_long_opts[] = {
 	{"megabytes",  no_argument, NULL, 'm'},
 	{"kilobytes",  no_argument, NULL, 'k'},
 	{"bytes",      no_argument, NULL, 'b'},
+	{"ignore",      a_argument, NULL, 'i'},
 	COMMON_LONG_OPTS
 };
 static const char *qsize_opts_help[] = {
@@ -28,9 +29,10 @@ static const char *qsize_opts_help[] = {
 	"Display size in megabytes",
 	"Display size in kilobytes",
 	"Display size in bytes",
+	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.25 2007/05/24 14:47:18 solar Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.26 2007/06/07 18:27:00 solar Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
 int qsize_main(int argc, char **argv)
@@ -47,6 +49,8 @@ int qsize_main(int argc, char **argv)
 	size_t disp_units = 0;
 	const char *str_disp_units = NULL;
 	char buf[_Q_PATH_MAX];
+	char *ignore_regexp = NULL;
+	int ignored = 0;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -61,6 +65,7 @@ int qsize_main(int argc, char **argv)
 		case 'm': disp_units = MEGABYTE; str_disp_units = "MB"; break;
 		case 'k': disp_units = KILOBYTE; str_disp_units = "KB"; break;
 		case 'b': disp_units = 1; str_disp_units = "bytes"; break;
+		case 'i': ignore_regexp = optarg; break;
 		}
 	}
 	if ((argc == optind) && !search_all)
@@ -76,6 +81,7 @@ int qsize_main(int argc, char **argv)
 
 	/* open /var/db/pkg */
 	while ((dentry = q_vdb_get_next_dir(dir))) {
+
 		if (chdir(dentry->d_name) != 0)
 			continue;
 		if ((dirp = opendir(".")) == NULL)
@@ -114,6 +120,13 @@ int qsize_main(int argc, char **argv)
 				if (!e)
 					continue;
 
+				if (ignore_regexp != NULL) {
+					if (rematch(ignore_regexp, e->name, REG_EXTENDED) == 0) {
+						ignored += 1;
+						continue;
+					}
+				}
+
 				if (e->type == CONTENTS_OBJ || e->type == CONTENTS_SYM) {
 					++num_files;
 					if (!lstat(e->name, &st))
@@ -148,6 +161,8 @@ int qsize_main(int argc, char **argv)
 		printf(" %sTotals%s: %lu files, %lu non-files, ", BOLD, NORM,
 		       (unsigned long)num_all_files,
 		       (unsigned long)num_all_nonfiles);
+		if (ignored)
+			printf("%d names ignored, ", ignored);
 		if (disp_units)
 			printf("%s %s\n",
 			       make_human_readable_str(num_all_bytes, 1, disp_units),
