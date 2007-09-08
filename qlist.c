@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.46 2007/09/08 06:31:48 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.47 2007/09/08 06:46:16 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,7 +39,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.46 2007/09/08 06:31:48 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.47 2007/09/08 06:46:16 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
@@ -319,7 +319,7 @@ int qlist_main(int argc, char **argv)
 					slot = (char *) grab_vdb_item("SLOT", (const char *) atom->CATEGORY, (const char *) atom->P);
 				printf("%s%s/%s%s%s%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
 					(verbose ? atom->P : atom->PN), NORM,
-					YELLOW, slot ? " " : "", slot ? slot : "", NORM);
+					YELLOW, slot ? slot_separator : "", slot ? slot : "", NORM);
 				puts(umapstr(show_umap, atom->CATEGORY, atom->P));
 			}
 			atom_implode(atom);
