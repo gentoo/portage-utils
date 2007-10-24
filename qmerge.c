@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.76 2007/06/04 16:53:53 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.77 2007/10/24 16:50:31 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -23,6 +23,8 @@
 
 /* #define BUSYBOX "/bin/busybox" */
 #define BUSYBOX ""
+
+int old_repo = 0;
 
 #define QMERGE_FLAGS "fFsKUpuyO5" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
@@ -53,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.76 2007/06/04 16:53:53 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.77 2007/10/24 16:50:31 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -238,7 +240,7 @@ char *best_version(const char *CATEGORY, const char *PN)
 	char *p;
 
 	/* if defined(EBUG) this spits out incorrect versions. */
-	snprintf(buf, sizeof(buf), "qlist -CIev %s%s%s 2>/dev/null | tr '\n' ' '",
+	snprintf(buf, sizeof(buf), "qlist -CIev '%s%s%s' 2>/dev/null | tr '\n' ' '",
 		(CATEGORY != NULL ? CATEGORY : ""), (CATEGORY != NULL ? "/" : ""), PN);
 
 	if ((fp = popen(buf, "r")) == NULL)
@@ -361,10 +363,7 @@ char qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg)
 				case OLDER: c = 'D'; break;
 				default: c = '?'; break;
 			}
-			if (subatom->PR_int)
-				snprintf(buf, sizeof(buf), "%s-r%i", subatom->PV, subatom->PR_int);
-			else
-				snprintf(buf, sizeof(buf), "%s", subatom->PV);
+			strncpy(buf, subatom->P, sizeof(buf));
 			snprintf(install_ver, sizeof(install_ver), "[%s%s%s] ", DKBLUE, buf, NORM);
 			atom_implode(subatom);
 		}
@@ -586,7 +585,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 						if (strcmp(pkg->SLOT, slot) != 0)
 							u = 0;
 					}
-					if (u) pkg_unmerge(atom->CATEGORY, basename(pf));
+					if (u) pkg_unmerge(atom->CATEGORY, basename(pf)); /* We need to really set this unmerge pending after we look at contents of the new pkg */
 					break;
 				default:
 					warn("no idea how we reached here.");
@@ -765,7 +764,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 		mkdirhier(buf, 0755);
 	strncat(buf, pkg->PF, sizeof(buf));
 
-	/* FIXME */
+	/* FIXME */ /* move unmerging to around here ? */
 	/* not perfect when a version is already installed */
 	if (access(buf, X_OK) == 0) {
 		char buf2[sizeof(buf)] = "";
@@ -1043,13 +1042,15 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 
 		/* fetch the package */
 		/* Check CATEGORY first */
-		snprintf(buf, sizeof(buf), "%s/%s.tbz2", atom->CATEGORY, pkg->PF);
-		fetch(str, buf);
-
+		if (!old_repo) {
+			snprintf(buf, sizeof(buf), "%s/%s.tbz2", atom->CATEGORY, pkg->PF);
+			fetch(str, buf);
+		}
 		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
 		if (access(buf, R_OK) != 0) {
 			snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
 			fetch(str, buf);
+			old_repo = 1;
 		}
 
 		/* verify the pkg exists now. unlink if zero bytes */
@@ -1455,6 +1456,7 @@ queue *get_world(void) {
 	queue *world = NULL;
 	char *fname = (char *) "/var/lib/portage/world";
 
+	/* FIXME: Add ROOT= checks here */
 	if ((fp = fopen(fname, "r")) == NULL) {
 		warn("fopen(\"%s\", \"r\"); = -1 (%s)", fname, strerror(errno));
 		return NULL;
