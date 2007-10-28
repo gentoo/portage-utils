@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.147 2007/05/30 23:17:24 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.148 2007/10/28 21:22:17 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -685,7 +685,7 @@ const char *initialize_flat(int cache_type)
 	if (frac < 0) frac = 0;
 
 	warn("Finished %u entries in %d.%06d seconds", count, secs, frac);
-	if (secs > 100)
+	if (secs > 120)
 #ifdef __linux__
 		warn("You should consider a faster file system such as reiserfs for PORTDIR='%s'", portdir);
 #else
@@ -908,6 +908,7 @@ queue *get_vdb_atoms(int fullcpv)
 	int dfd, i;
 
 	char buf[_Q_PATH_MAX];
+	char slot[_Q_PATH_MAX];
 	static char savecwd[_POSIX_PATH_MAX];
 
 	struct dirent **cat;
@@ -947,11 +948,14 @@ queue *get_vdb_atoms(int fullcpv)
 			if ((atom = atom_explode(buf)) == NULL)
 				continue;
 
+			slot[0] = '0';
+			slot[1] = 0;
 			strncat(buf, "/SLOT", sizeof(buf));
 			if (access(buf, R_OK) == 0) {
 				eat_file(buf, buf, sizeof(buf));
 				rmspace(buf);
-				if (strcmp(buf, "0") != 0);
+				if (strcmp(buf, "0") != 0)
+					strncpy(slot, buf, sizeof(slot));
 			}
 
 			if (fullcpv) {
@@ -962,9 +966,8 @@ queue *get_vdb_atoms(int fullcpv)
 			} else {
 				snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
 			}
-
 			atom_implode(atom);
-			cpf = add_set(buf, "0", cpf);
+			cpf = add_set(buf, slot, cpf);
 		}
 		chdir("..");
 		while (dfd--) free(pf[dfd]);
