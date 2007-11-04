@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.27 2007/06/07 19:47:48 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.28 2007/11/04 09:03:42 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char *qsize_opts_help[] = {
 	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.27 2007/06/07 19:47:48 solar Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.28 2007/11/04 09:03:42 solar Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
 int qsize_main(int argc, char **argv)
@@ -149,7 +149,7 @@ int qsize_main(int argc, char **argv)
 				       (unsigned long)num_files,
 				       (unsigned long)num_nonfiles);
 				if (num_ignored)
-					printf("%lu names-ignored, ", num_ignored);
+					printf("%lu names-ignored, ", (unsigned long)num_ignored);
 				if (disp_units)
 					printf("%s %s\n",
 					       make_human_readable_str(num_bytes, 1, disp_units),
@@ -169,7 +169,7 @@ int qsize_main(int argc, char **argv)
 		       (unsigned long)num_all_files,
 		       (unsigned long)num_all_nonfiles);
 		if (num_all_ignored)
-			printf("%lu names-ignored, ", num_all_ignored);
+			printf("%lu names-ignored, ", (unsigned long)num_all_ignored);
 		if (disp_units)
 			printf("%s %s\n",
 			       make_human_readable_str(num_all_bytes, 1, disp_units),
