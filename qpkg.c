@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.25 2007/06/01 17:30:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.26 2007/11/04 09:51:58 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,25 +9,28 @@
 
 #ifdef APPLET_qpkg
 
-#define QPKG_FLAGS "cpP:" COMMON_FLAGS
+#define QPKG_FLAGS "cEpP:" COMMON_FLAGS
 static struct option const qpkg_long_opts[] = {
 	{"clean",    no_argument, NULL, 'c'},
+	{"eclean",   no_argument, NULL, 'E'},
 	{"pretend",  no_argument, NULL, 'p'},
 	{"pkgdir",    a_argument, NULL, 'P'},
 	COMMON_LONG_OPTS
 };
 static const char *qpkg_opts_help[] = {
 	"clean pkgdir of unused binary files",
+	"clean pkgdir of files not in the tree anymore (slow)",
 	"pretend only",
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.25 2007/06/01 17:30:13 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.26 2007/11/04 09:51:58 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
 
 static char *qpkg_bindir = NULL;
+static int eclean = 0;
 
 /* global functions */
 int filter_tbz2(const struct dirent *);
@@ -67,9 +70,14 @@ uint64_t qpkg_clean_dir(char *dirp, queue *vdb)
 	for (i = 0; i < count; i++) {
 		int del = 1;
 		fnames[i]->d_name[strlen(fnames[i]->d_name)-5] = 0;
-		for (ll = vdb; ll != NULL; ll = ll->next)
-			if (strcmp(fnames[i]->d_name, basename(ll->name)) == 0)
-				del = 0;
+		for (ll = vdb; ll != NULL; ll = ll->next) {
+			if (1) {
+				if (strcmp(fnames[i]->d_name, basename(ll->name)) == 0) {
+					del = 0;
+					break;
+				}
+			}
+		}
 		if (!del)
 			continue;
 		snprintf(buf, sizeof(buf), "%s.tbz2", fnames[i]->d_name);
@@ -97,6 +105,7 @@ uint64_t qpkg_clean_dir(char *dirp, queue *vdb)
 /* figure out what dirs we want to process for cleaning and display results. */
 int qpkg_clean(char *dirp)
 {
+	FILE *fp;
 	int i, count;
 	char buf[_Q_PATH_MAX];
 	size_t disp_units = 0;
@@ -106,14 +115,56 @@ int qpkg_clean(char *dirp)
 
 	vdb = get_vdb_atoms(1);
 
-	if (chdir(dirp) != 0)
+	if (chdir(dirp) != 0) {
+		free_sets(vdb);
 		return 1;
-	if ((count = scandir(".", &dnames, filter_hidden, alphasort)) < 0)
+	}
+	if ((count = scandir(".", &dnames, filter_hidden, alphasort)) < 0) {
+		free_sets(vdb);
 		return 1;
+	}
+
+	if (eclean) {
+		char fname[_Q_PATH_MAX] = "";
+		char *ecache;
+
+		/* CACHE_EBUILD_FILE is a macro so don't put it in the .bss */
+		ecache = (char *) CACHE_EBUILD_FILE;
+
+		if (ecache) {
+			if (*ecache != '/')
+				snprintf(fname, sizeof(fname), "%s/%s", portdir, ecache);
+			else
+				strncpy(fname, ecache, sizeof(fname));
+		}
+		if ((fp = fopen(fname, "r")) != NULL) {
+			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+				char *name, *p;
+				if ((p = strrchr(buf, '.')) == NULL)
+					continue;
+				*p = 0;
+				if ((p = strrchr(buf, '/')) == NULL)
+					continue;
+				*p = 0;
+				name = p + 1;
+				if ((p = strrchr(buf, '/')) == NULL)
+					continue;
+				*p = 0;
+				/* these strcat() are safe. the name is extracted from buf already. */
+				strcat(buf, "/");
+				strcat(buf, name);
+
+				/* num_all_bytes will be off when pretend and eclean are enabled together */
+				/* vdb = del_set(buf, vdb, &i); */
+				vdb = add_set(buf, "0", vdb);
+			}
+			fclose(fp);
+		}
+	}
 
 	num_all_bytes = qpkg_clean_dir(dirp, vdb);
 
-	for (i=0;i < count; i++) {
+	for (i = 0; i < count; i++) {
 		snprintf(buf, sizeof(buf), "%s/%s", dirp, dnames[i]->d_name);
 		num_all_bytes += qpkg_clean_dir(buf, vdb);
 	}
@@ -175,19 +226,27 @@ int qpkg_make(depend_atom *atom)
 	if ((out = fopen(filelist, "w")) == NULL)
 		return -4;
 
-	printf(" %s-%s %s/%s: ", GREEN, NORM, atom->CATEGORY, atom->P);
-	fflush(stdout);
-
 	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 		contents_entry *e;
 		e = contents_parse_line(buf);
 		if (!e || e->type == CONTENTS_DIR)
 			continue;
 		fprintf(out, "%s\n", e->name+1); /* dont output leading / */
+		if (e->type == CONTENTS_OBJ && verbose) {
+			char *hash = NULL;
+			if ((hash = (char*) hash_file(e->name, HASH_MD5)) != NULL) {
+				if (strcmp(e->digest, hash) != 0)
+					warn("MD5: mismatch expected %s got %s for %s", e->digest, hash, e->name);
+				free(hash);
+			}
+		}
 	}
 
 	fclose(out);
 	fclose(fp);
+
+	printf(" %s-%s %s/%s: ", GREEN, NORM, atom->CATEGORY, atom->P);
+	fflush(stdout);
 
 	snprintf(tbz2, sizeof(tbz2), "%s/bin.tar.bz2", tmpdir);
 	snprintf(buf, sizeof(buf), "tar jcf '%s' --files-from='%s' --no-recursion &> /dev/null", tbz2, filelist);
@@ -239,6 +298,7 @@ int qpkg_main(int argc, char **argv)
 
 	while ((i = GETOPT_LONG(QPKG, qpkg, "")) != -1) {
 		switch (i) {
+		case 'E': eclean = qclean = 1; break;
 		case 'c': qclean = 1; break;
 		case 'p': pretend = 1; break;
 		case 'P':
@@ -339,7 +399,7 @@ retry_mkdir:
 	if (s && !pretend)
 		printf(" %s*%s %i package%s could not be matched :/\n", RED, NORM, (int)s, (s > 1 ? "s" : ""));
 	if (pkgs_made)
-		printf(" %s*%s Packages can be found in %s\n", GREEN, NORM, bindir);
+		qprintf(" %s*%s Packages can be found in %s\n", GREEN, NORM, bindir);
 
 	return (pkgs_made ? EXIT_SUCCESS : EXIT_FAILURE);
 }
