@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.149 2007/11/24 08:11:49 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.150 2007/11/24 08:53:35 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -248,7 +248,6 @@ static char *remove_extra_space(char *str)
 	free(buf);
 	return str;
 }
-
 
 static char *pkg_name(const char *const_name);
 static char *pkg_name(const char *const_name) {
@@ -497,7 +496,7 @@ void initialize_portage_env(void)
 				rmspace(buf);
 				if (*buf == '#' || *buf == '\0')
 					continue;
-				for (i=0; i<ARR_SIZE(vars_to_read); ++i) {
+				for (i=0; i < ARR_SIZE(vars_to_read); ++i) {
 					if (buf[vars_to_read[i].name_len] != '=' && buf[vars_to_read[i].name_len] != ' ')
 						continue;
 					if (strncmp(buf, vars_to_read[i].name, vars_to_read[i].name_len))
@@ -546,7 +545,7 @@ void initialize_portage_env(void)
 	} while (1);
 
 	/* finally, check the env */
-	for (i=0; i<ARR_SIZE(vars_to_read); ++i) {
+	for (i=0; i < ARR_SIZE(vars_to_read); ++i) {
 		s = getenv(vars_to_read[i].name);
 		if (s != NULL) {
 			switch (vars_to_read[i].type) {
@@ -1034,7 +1033,7 @@ int main(int argc, char **argv)
 			if ((S_ISFIFO(st.st_mode)) == 0)
 				no_colors();
 #endif
-	if (getenv("TERM") == NULL)
+	if ((getenv("TERM") == NULL) || ((strcmp(getenv("TERM"), "dumb")) == 0))
 		no_colors();
 
 	initialize_portage_env();

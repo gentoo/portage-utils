@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.9 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.10 2007/11/24 08:53:35 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qglsa_opts_help[] = {
 	"Mark specified GLSAs as fixed",
 	COMMON_OPTS_HELP
 };
-static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.9 2007/05/24 14:47:18 solar Exp $";
+static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.10 2007/11/24 08:53:35 solar Exp $";
 #define qglsa_usage(ret) usage(ret, QGLSA_FLAGS, qglsa_long_opts, qglsa_opts_help, lookup_applet_idx("qglsa"))
 
 static char *qglsa_load_list(void);
@@ -73,7 +73,7 @@ static void qglsa_decode_entities(char *xml_buf, size_t len)
 	if (strchr(xml_buf, '&') == NULL)
 		return;
 
-	for (i=0; i<ARRAY_SIZE(encoded); ++i) {
+	for (i=0; i < ARRAY_SIZE(encoded); ++i) {
 		/* for now, we assume that strlen(decoded) is always 1 ... if
 		 * this changes, we have to update the 'p++' accordingly */
 		while ((p=strstr(xml_buf, encoded[i])) != NULL) {

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.58 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.59 2007/11/24 08:53:35 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,7 +35,7 @@ static const char *quse_opts_help[] = {
 	"Only show package name",
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.58 2007/05/24 14:47:18 solar Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.59 2007/11/24 08:53:35 solar Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -156,7 +156,7 @@ skip_file:
 		}
 	}
 
-	for (f=0; f<NUM_SEARCH_FILES; ++f)
+	for (f=0; f < NUM_SEARCH_FILES; ++f)
 		if (fp[f] != NULL)
 			fclose(fp[f]);
 
