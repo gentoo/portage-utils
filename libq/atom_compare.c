@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-006 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.3 2007/05/24 14:47:19 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.4 2007/11/24 08:11:49 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -27,6 +27,10 @@ enum { ERROR=0, NOT_EQUAL, EQUAL, NEWER, OLDER };
 int atom_compare(const depend_atom * const a1, const depend_atom * const a2);
 int atom_compare(const depend_atom * const a1, const depend_atom * const a2)
 {
+	/* check slot */
+	if (a1->SLOT && a2->SLOT)
+		if (strcmp(a1->SLOT, a2->SLOT))
+			return NOT_EQUAL;
 	/* check category */
 	if (a1->CATEGORY && a2->CATEGORY) {
 		if (strcmp(a1->CATEGORY, a2->CATEGORY))

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.47 2007/09/08 06:46:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.48 2007/11/24 08:11:49 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,7 +39,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.47 2007/09/08 06:46:16 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.48 2007/11/24 08:11:49 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
@@ -197,15 +197,19 @@ int qlist_main(int argc, char **argv)
 
 		for (x = 0; x < a; x++) {
 			FILE *fp;
+			static char *slotted_item, *slot;
 
 			if (de[x]->d_name[0] == '.' || de[x]->d_name[0] == '-')
 				continue;
 
+			slot = slotted_item = NULL;
+
 			/* see if this cat/pkg is requested */
 			for (i = optind; i < argc; ++i) {
+				char *name = pkg_name(argv[i]);
 				snprintf(buf, sizeof(buf), "%s/%s", cat[j]->d_name,
 					 de[x]->d_name);
-
+				printf("buf=%s:%s\n", buf,grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name));
 				if (exact) {
 					if ((atom = atom_explode(buf)) == NULL) {
 						warn("invalid atom %s", buf);
@@ -214,20 +218,27 @@ int qlist_main(int argc, char **argv)
 					snprintf(swap, sizeof(swap), "%s/%s",
 						 atom->CATEGORY, atom->PN);
 					atom_implode(atom);
-					if ((strcmp(argv[i], swap) == 0) || (strcmp(argv[i], buf) == 0))
+					if ((strcmp(name, swap) == 0) || (strcmp(name, buf) == 0))
 						break;
-					if ((strcmp(argv[i], strstr(swap, "/") + 1) == 0) || (strcmp(argv[i], strstr(buf, "/") + 1) == 0))
+					if ((strcmp(name, strstr(swap, "/") + 1) == 0) || (strcmp(name, strstr(buf, "/") + 1) == 0))
 						break;
 				} else {
-					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
+					if (rematch(name, buf, REG_EXTENDED) == 0)
 						break;
-					if (rematch(argv[i], de[x]->d_name, REG_EXTENDED) == 0)
+					if (rematch(name, de[x]->d_name, REG_EXTENDED) == 0)
 						break;
 				}
 			}
 			if ((i == argc) && (argc != optind))
 				continue;
 
+			if (i < argc) {
+				if ((slotted_item = slot_name(argv[i])) != NULL) {
+					slot = grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name);
+					if (strcmp(slotted_item, slot) != 0)
+						continue;
+				}
+			}
 			if (just_pkgname) {
 				if (dups_only) {
 					pkgname = atom_explode(de[x]->d_name);
@@ -239,7 +250,6 @@ int qlist_main(int argc, char **argv)
 				}
 				pkgname = (verbose ? NULL : atom_explode(de[x]->d_name));
 				if ((qlist_all + just_pkgname) < 2) {
-					static char *slot = NULL;
 
 					slot = NULL;
 

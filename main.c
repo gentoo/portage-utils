@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.148 2007/10/28 21:22:17 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.149 2007/11/24 08:11:49 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -247,6 +247,29 @@ static char *remove_extra_space(char *str)
 	strcpy(str, buf);
 	free(buf);
 	return str;
+}
+
+
+static char *pkg_name(const char *const_name);
+static char *pkg_name(const char *const_name) {
+	static char name[_POSIX_PATH_MAX];
+	char *ptr;
+	if (!const_name)
+		return NULL;
+	strncpy(name, const_name, sizeof(name));
+	if ((ptr = strrchr(name, ':')) != NULL)
+		*ptr = 0;
+	return name;
+}
+
+static char *slot_name(const char *name);
+static char *slot_name(const char *name) {
+	char *ptr;
+	if (!name)
+		return NULL;
+	if ((ptr = strrchr(name, ':')) != NULL)
+		return ptr+1;
+	return NULL;
 }
 
 void freeargv(int, char **);
@@ -996,6 +1019,7 @@ void cleanup()
 
 int main(int argc, char **argv)
 {
+	struct stat st;
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
 
@@ -1004,10 +1028,11 @@ int main(int argc, char **argv)
 	bindtextdomain(argv0, "/usr/share/locale");
 	textdomain(argv0);
 #endif
-
-#if 0
-	if (ttyname(1) == NULL)
-		no_colors();
+#if 1
+	if (fstat(fileno(stdout), &st) != (-1))
+		if (!isatty(fileno(stdout)))
+			if ((S_ISFIFO(st.st_mode)) == 0)
+				no_colors();
 #endif
 	if (getenv("TERM") == NULL)
 		no_colors();
