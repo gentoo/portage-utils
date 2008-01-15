@@ -1,6 +1,6 @@
-# Copyright 2005-2006 Gentoo Foundation
+# Copyright 2005-2008 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.60 2007/05/24 14:34:17 cardoe Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.61 2008/01/15 08:02:57 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -11,11 +11,11 @@ WFLAGS    := -Wall -Wunused -Wimplicit -Wshadow -Wformat=2 \
              -Wmissing-declarations -Wno-missing-prototypes -Wwrite-strings \
              -Wbad-function-cast -Wnested-externs -Wcomment -Winline \
              -Wchar-subscripts -Wcast-align -Wno-format-nonliteral \
-             $(call check_gcc, -Wdeclaration-after-statement) \
              $(call check-gcc, -Wsequence-point) \
              $(call check-gcc, -Wextra)
 
 CFLAGS    ?= -O2 -g -pipe
+CFLAGS    += -std=gnu99
 #CFLAGS   += -DEBUG -g
 #CFLAGS   += -Os -DOPTIMIZE_FOR_SIZE=2 -falign-functions=2 -falign-jumps=2 -falign-labels=2 -falign-loops=2
 #LDFLAGS  := -pie
