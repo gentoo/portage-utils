@@ -1,10 +1,10 @@
 /*
- * Copyright 2005-2007 Gentoo Foundation
+ * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.150 2007/11/24 08:53:35 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.151 2008/01/15 08:03:35 vapier Exp $
  *
- * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #define _GNU_SOURCE
@@ -303,7 +303,7 @@ void makeargv(char *string, int *argc, char ***argv)
 
 		if (*argc == curc) {
 			curc *= 2;
-			(*argv) = (char **) realloc(*argv, sizeof(char **) * curc);
+			(*argv) = xrealloc(*argv, sizeof(char **) * curc);
 		}
 		(*argv)[*argc] = xstrdup(str);
 		(*argc)++;

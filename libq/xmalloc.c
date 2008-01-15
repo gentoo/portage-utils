@@ -54,3 +54,12 @@ void *xzalloc(size_t size)
 	memset(ptr, 0x00, size);
 	return ptr;
 }
+
+void *xrealloc(void *optr, size_t size);
+void *xrealloc(void *optr, size_t size)
+{
+	void *ptr = realloc(optr, size);
+	if (ptr == NULL)
+		err("Out of memory");
+	return ptr;
+}
