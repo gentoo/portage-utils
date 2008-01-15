@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.20 2008/01/15 03:03:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.21 2008/01/15 03:32:20 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,22 +29,13 @@ static depend_atom *_atom_cache = NULL;
 static size_t _atom_cache_len = 0;
 #endif
 
-depend_atom *atom_explode(const char *const_atom);
-depend_atom *atom_explode(const char *const_atom)
+depend_atom *atom_explode(const char *atom);
+depend_atom *atom_explode(const char *atom)
 {
 	depend_atom *ret;
-	char *ptr, *ptr_tmp, *slot;
+	char *ptr, *ptr_tmp;
 	size_t len, slen;
 	int i;
-	char atom[_POSIX_PATH_MAX];
-	slot = NULL;
-
-	strncpy(atom, const_atom, sizeof(atom));
-
-	if ((ptr = strrchr(atom, ':')) != NULL) {
-		*ptr = 0;
-		xasprintf(&slot, "%s", ptr + 1);
-	}
 
 	/* we allocate mem for atom struct and two strings (strlen(atom)).
 	 * the first string is for CAT/PN/PV while the second is for PVR.
@@ -69,7 +60,13 @@ depend_atom *atom_explode(const char *const_atom)
 	ret->CATEGORY = ret->PVR + slen + 1 + 1;
 	ret->suffix = VER_NORM;
 	memcpy(ret->CATEGORY, atom, slen);
-	ret->SLOT = slot;
+
+	/* chip off the trailing [:SLOT] as needed */
+	ret->SLOT = strrchr(ret->CATEGORY, ':');
+	if (ret->SLOT) {
+		*ret->SLOT = '\0';
+		ret->SLOT++;
+	}
 
 	/* break up the CATEOGRY and PVR */
 	if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL) {
@@ -191,7 +188,6 @@ void atom_implode(depend_atom *atom)
 	if (!atom)
 		errf("Atom is empty !");
 #ifndef _USE_CACHE
-	free(atom->SLOT);
 	free(atom);
 #endif
 }
