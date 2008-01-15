@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.19 2007/11/24 08:11:49 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.20 2008/01/15 03:03:11 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ depend_atom *atom_explode(const char *const_atom)
 	if (len <= _atom_cache_len) {
 		ret = _atom_cache;
 	} else {
-		if (_atom_cache) free(_atom_cache);
+		free(_atom_cache);
 		_atom_cache = ret = xmalloc(len);
 		_atom_cache_len = len;
 	}
@@ -191,8 +191,7 @@ void atom_implode(depend_atom *atom)
 	if (!atom)
 		errf("Atom is empty !");
 #ifndef _USE_CACHE
-	if (atom->SLOT != NULL)
-		free(atom->SLOT);
+	free(atom->SLOT);
 	free(atom);
 #endif
 }
