@@ -1,10 +1,10 @@
 /*
- * Copyright 2005-2007 Gentoo Foundation
+ * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qatom.c,v 1.6 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qatom.c,v 1.7 2008/01/15 08:06:09 vapier Exp $
  *
- * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qatom
@@ -19,7 +19,7 @@ static const char *qatom_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qatom_rcsid[] = "$Id: qatom.c,v 1.6 2007/05/24 14:47:18 solar Exp $";
+static const char qatom_rcsid[] = "$Id: qatom.c,v 1.7 2008/01/15 08:06:09 vapier Exp $";
 #define qatom_usage(ret) usage(ret, QATOM_FLAGS, qatom_long_opts, qatom_opts_help, lookup_applet_idx("qatom"))
 
 int qatom_main(int argc, char **argv)
@@ -58,6 +58,8 @@ int qatom_main(int argc, char **argv)
 			printf("%s %s %s", atom->CATEGORY, atom->PN, atom->PV);
 			if (verbose || atom->PR_int)
 				printf(" r%i", atom->PR_int);
+			if (atom->SLOT)
+				printf(" :%s", atom->SLOT);
 			if (verbose > 1)
 				printf(" %c", (atom->letter ? : '-'));
 			putchar('\n');

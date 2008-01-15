@@ -1,10 +1,10 @@
 /*
- * Copyright 2005-006 Gentoo Foundation
+ * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.4 2007/11/24 08:11:49 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.5 2008/01/15 08:06:09 vapier Exp $
  *
- * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 /*
@@ -31,6 +31,7 @@ int atom_compare(const depend_atom * const a1, const depend_atom * const a2)
 	if (a1->SLOT && a2->SLOT)
 		if (strcmp(a1->SLOT, a2->SLOT))
 			return NOT_EQUAL;
+
 	/* check category */
 	if (a1->CATEGORY && a2->CATEGORY) {
 		if (strcmp(a1->CATEGORY, a2->CATEGORY))
@@ -84,24 +85,28 @@ int atom_compare(const depend_atom * const a1, const depend_atom * const a2)
 			return OLDER;
 		else if (a1->letter > a2->letter)
 			return NEWER;
-		/* compare suffixes 1.0z[_alpha]1 */
-		n1 = a1->suffix;
-		n2 = a2->suffix;
-		if (n1 < n2)
-			return OLDER;
-		else if (n1 > n2)
-			return NEWER;
-		/* compare suffix number (assume only integers) 1.0z_alpha[1] */
-		if (n1 != VER_NORM) {
-			s1 = strchr(a1->PV, '_') + strlen(atom_suffixes_str[n1]);
-			s2 = strchr(a2->PV, '_') + strlen(atom_suffixes_str[n2]);
-			n1 = (*s1 ? atol(s1) : 0);
-			n2 = (*s2 ? atol(s2) : 0);
-			if (n1 < n2)
-				return OLDER;
-			else if (n1 > n2)
-				return NEWER;
+		/* find differing suffixes 1.0z[_alpha1] */
+		unsigned int sidx = 0;
+		while (a1->suffixes[sidx].suffix == a2->suffixes[sidx].suffix) {
+			if (a1->suffixes[sidx].suffix == VER_NORM ||
+			    a2->suffixes[sidx].suffix == VER_NORM)
+				break;
+
+			if (a1->suffixes[sidx].sint != a2->suffixes[sidx].sint)
+				break;
+
+			++sidx;
 		}
+		/* compare suffixes 1.0z[_alpha]1 */
+		if (a1->suffixes[sidx].suffix < a2->suffixes[sidx].suffix)
+			return OLDER;
+		else if (a1->suffixes[sidx].suffix > a2->suffixes[sidx].suffix)
+			return NEWER;
+		/* compare suffix number 1.0z_alpha[1] */
+		if (a1->suffixes[sidx].sint < a2->suffixes[sidx].sint)
+			return OLDER;
+		else if (a1->suffixes[sidx].sint > a2->suffixes[sidx].sint)
+			return NEWER;
 		/* fall through to -r# check below */
 	} else if (a1->PV || a2->PV)
 		return NOT_EQUAL;

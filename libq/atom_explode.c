@@ -1,25 +1,27 @@
 /*
- * Copyright 2005-2007 Gentoo Foundation
+ * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.21 2008/01/15 03:32:20 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.22 2008/01/15 08:06:09 vapier Exp $
  *
- * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
- */
-
-/*
- * TODO: maybe handle incomplete atoms better ?  1.6.8_p9 -> 1.6.8 becomes the PN
+ * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 typedef enum { VER_ALPHA=0, VER_BETA, VER_PRE, VER_RC, VER_NORM, VER_P } atom_suffixes;
-const char * const atom_suffixes_str[] = { "_alpha", "_beta", "_pre", "_rc", "_/*bogus*/", "_p", NULL };
+const char * const atom_suffixes_str[] = { "_alpha", "_beta", "_pre", "_rc", "_/*bogus*/", "_p" };
 
 typedef struct {
+	atom_suffixes suffix;
+	unsigned int sint;
+} atom_suffix;
+
+typedef struct {
+	/* XXX: we don't provide PF ... */
 	char *CATEGORY;
 	char *PN;
-	int PR_int;
+	unsigned int PR_int;
 	char letter;
-	atom_suffixes suffix;
+	atom_suffix *suffixes;
 	char *PV, *PVR;
 	char *P, *SLOT;
 } depend_atom;
@@ -39,144 +41,126 @@ depend_atom *atom_explode(const char *atom)
 
 	/* we allocate mem for atom struct and two strings (strlen(atom)).
 	 * the first string is for CAT/PN/PV while the second is for PVR.
-	 * PVR needs an extra byte for the 'r' which is injected. */
+	 * PVR needs 3 extra bytes for possible implicit '-r0'. */
 	slen = strlen(atom);
-	len = sizeof(*ret) + slen * sizeof(*atom) * 3 + 3 + 1;
+	len = sizeof(*ret) + (slen + 1) * sizeof(*atom) * 3 + 3;
 #ifdef _USE_CACHE
 	if (len <= _atom_cache_len) {
 		ret = _atom_cache;
+		memset(ret, 0x00, len);
 	} else {
 		free(_atom_cache);
-		_atom_cache = ret = xmalloc(len);
+		_atom_cache = ret = xzalloc(len);
 		_atom_cache_len = len;
 	}
 #else
-	ret = xmalloc(len);
+	ret = xzalloc(len);
 #endif
-	memset(ret, 0x00, len);
 	ptr = (char*)ret;
 	ret->P = ptr + sizeof(*ret);
 	ret->PVR = ret->P + slen + 1;
-	ret->CATEGORY = ret->PVR + slen + 1 + 1;
-	ret->suffix = VER_NORM;
-	memcpy(ret->CATEGORY, atom, slen);
+	ret->CATEGORY = ret->PVR + slen + 1 + 3;
+	strcpy(ret->CATEGORY, atom);
+
+	/* eat file name crap */
+	if ((ptr = strstr(ret->CATEGORY, ".ebuild")) != NULL)
+		*ptr = '\0';
 
 	/* chip off the trailing [:SLOT] as needed */
-	ret->SLOT = strrchr(ret->CATEGORY, ':');
-	if (ret->SLOT) {
-		*ret->SLOT = '\0';
-		ret->SLOT++;
+	if ((ptr = strrchr(ret->CATEGORY, ':')) != NULL) {
+		ret->SLOT = ptr + 1;
+		*ptr = '\0';
 	}
 
 	/* break up the CATEOGRY and PVR */
 	if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL) {
-		ret->PN = ptr+1;
+		ret->PN = ptr + 1;
 		*ptr = '\0';
 		/* eat extra crap in case it exists */
 		if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL)
-			ret->CATEGORY = ptr+1;
+			ret->CATEGORY = ptr + 1;
 	} else {
 		ret->PN = ret->CATEGORY;
 		ret->CATEGORY = NULL;
 	}
-
-	/* eat file name crap */
-	if ((ptr = strstr(ret->PN, ".ebuild")) != NULL)
-		*ptr = '\0';
+	strcpy(ret->PVR, ret->PN);
 
 	/* find -r# */
 	ptr = ret->PN + strlen(ret->PN) - 1;
 	while (*ptr && ptr > ret->PN) {
 		if (!isdigit(*ptr)) {
 			if (ptr[0] == 'r' && ptr[-1] == '-') {
-				ret->PR_int = atoi(ptr+1);
+				ret->PR_int = atoi(ptr + 1);
 				ptr[-1] = '\0';
-			}
+			} else
+				strcat(ret->PVR, "-r0");
 			break;
 		}
 		--ptr;
 	}
+	strcpy(ret->P, ret->PN);
 
-	/* search for the special suffixes */
-	i = -1;
-	if (strchr(ret->PN, '_') == NULL)
-		goto no_suffix_opt;
-	for (i = 0; i >= 0 && atom_suffixes_str[i]; ++i) {
-		ptr_tmp = ret->PN;
-
-retry_suffix:
-		if ((ptr = strstr(ptr_tmp, atom_suffixes_str[i])) == NULL)
-			continue;
-
-		/* check this is a real suffix and not _p hitting mod_perl.
-		 * we need to scan the whole suffix to handle crap like
-		 * sys-auth/pam_p11-0.1.2 */
-		len = strlen(ptr);
-		slen = strlen(atom_suffixes_str[i]);
-		if (slen > len) continue;
-		while (slen < len) {
-			if (ptr[slen] && !isdigit(ptr[slen]) && ptr[slen]!='-') {
-				/* ok, it was a fake out ... lets skip this
-				 * fake and try to match the suffix again
-				 */
-				ptr_tmp = ptr + 1;
-				goto retry_suffix;
-			}
-			++slen;
-		}
-
-		ret->suffix = i;
-
-eat_version:
-		/* allow for 1 optional suffix letter */
-		if (ptr[-1] >= 'a' && ptr[-1] <= 'z') {
-			ptr_tmp = ptr--;
-			while (--ptr > ret->PN)
-				if (*ptr != '.' && !isdigit(*ptr))
-					break;
-			if (*ptr != '-') {
-				ptr = ptr_tmp;
-			}
-		}
-
-		/* eat the trailing version number [-.0-9]+ */
-		ptr_tmp = ptr;
-		while (--ptr > ret->PN)
-			if (*ptr == '-') {
-				ptr_tmp = ptr;
+	/* break out all the suffixes */
+	int sidx = 0;
+	ret->suffixes = xrealloc(ret->suffixes, sizeof(atom_suffix) * (sidx + 1));
+	ret->suffixes[sidx].sint = 0;
+	ret->suffixes[sidx].suffix = VER_NORM;
+	while ((ptr = strrchr(ret->PN, '_')) != NULL) {
+		for (i = 0; i < ARRAY_SIZE(atom_suffixes_str); ++i) {
+			if (strncmp(ptr, atom_suffixes_str[i], strlen(atom_suffixes_str[i])))
 				continue;
-			} else if (*ptr != '-' && *ptr != '.' && !isdigit(*ptr))
-				break;
-		if (*ptr_tmp) {
-			ret->PV = ptr_tmp+1;
-			ret->PV[-1] = '\0';
-			goto found_pv;
-		} else {
-			/* atom has no version */
-			ret->PV = ret->PVR = NULL;
-			return ret;
+
+			/* check this is a real suffix and not _p hitting mod_perl */
+			char *tmp_ptr = ptr;
+			tmp_ptr += strlen(atom_suffixes_str[i]);
+			ret->suffixes[sidx].sint = atoi(tmp_ptr);
+			while (isdigit(*tmp_ptr))
+				++tmp_ptr;
+			if (*tmp_ptr)
+				goto no_more_suffixes;
+			ret->suffixes[sidx].suffix = i;
+
+			++sidx;
+			*ptr = '\0';
+
+			ret->suffixes = xrealloc(ret->suffixes, sizeof(atom_suffix) * (sidx + 1));
+			ret->suffixes[sidx].sint = 0;
+			ret->suffixes[sidx].suffix = VER_NORM;
+			break;
 		}
-		break;
+		if (*ptr)
+			break;
+	}
+ no_more_suffixes:
+	--sidx;
+	for (i = 0; i < sidx; ++i, --sidx) {
+		atom_suffix t = ret->suffixes[sidx];
+		ret->suffixes[sidx] = ret->suffixes[i];
+		ret->suffixes[i] = t;
 	}
 
-	if (i <= -3)
-		errf("Hrm, seem to have hit an infinite loop with %s", atom);
+	/* allow for 1 optional suffix letter */
+	ptr = ret->PN + strlen(ret->PN);
+	if (ptr[-1] >= 'a' && ptr[-1] <= 'z') {
+		ret->letter = ptr[-1];
+		--ptr;
+	}
 
-	i = -1;
-	if (ret->PV) {
-found_pv:
-		ptr = (ret->suffix == VER_NORM ? (ret->PV + strlen(ret->PV)) : strrchr(ret->PV, '_'));
-		if (ptr--) {
-			if (*ptr >= 'a' && *ptr <= 'z')
-				ret->letter = *ptr;
-		}
-		sprintf(ret->PVR, "%s-r%i", ret->PV, ret->PR_int);
-		sprintf(ret->P, "%s-%s", ret->PN, (ret->PR_int ? ret->PVR : ret->PV));
+	/* eat the trailing version number [-.0-9]+ */
+	ptr_tmp = ptr;
+	while (--ptr > ret->PN)
+		if (*ptr == '-') {
+			ptr_tmp = ptr;
+			continue;
+		} else if (*ptr != '-' && *ptr != '.' && !isdigit(*ptr))
+			break;
+	if (*ptr_tmp) {
+		ret->PV = ret->P + (ptr_tmp - ret->PN) + 1;
+		*ptr_tmp = '\0';
 	} else {
-no_suffix_opt:
-		--i;
-		ptr = ret->PN + strlen(ret->PN);
-		goto eat_version;
+		/* atom has no version */
+		ret->PV = ret->PVR = NULL;
+		ret->letter = 0;
 	}
 
 	return ret;
@@ -187,6 +171,7 @@ void atom_implode(depend_atom *atom)
 {
 	if (!atom)
 		errf("Atom is empty !");
+	free(atom->suffixes);
 #ifndef _USE_CACHE
 	free(atom);
 #endif

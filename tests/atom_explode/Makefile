@@ -1,3 +1,5 @@
+CFLAGS += -Wall
+
 all: q
 
 q: test.c
@@ -8,3 +10,5 @@ test check: q
 
 clean:
 	rm -f me py q
+
+.PHONY: all test check clean

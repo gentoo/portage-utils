@@ -1,10 +1,10 @@
 /*
- * Copyright 2005 Gentoo Foundation
+ * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.8 2006/12/25 16:38:37 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.9 2008/01/15 08:06:11 vapier Exp $
  *
- * Copyright 2005 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #define _GNU_SOURCE
@@ -31,14 +31,20 @@
 	warnf(fmt, ## args); \
 	exit(EXIT_FAILURE); \
 	} while (0)
+#define err(...) errf(__VA_ARGS__)
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*arr))
 
 #include "../../libq/xmalloc.c"
 #include "../../libq/atom_explode.c"
 
-#define boom(a,s) \
-	printf("%s -> %s / [%s] %s - %s [%s] [r%i]\n", \
-	       s, (a->CATEGORY?:"null"), a->P, a->PN, \
-	       a->PVR, a->PV, a->PR_int)
+static inline void boom(depend_atom *a, char *s)
+{
+	printf("%s -> %s / [%s] %s - %s [%s] [r%i]\n",
+	       s, (a->CATEGORY?:"null"), a->P, a->PN,
+	       a->PVR, a->PV, a->PR_int);
+}
+
 int main(int argc, char *argv[])
 {
 	int i;
