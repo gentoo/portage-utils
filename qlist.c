@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.48 2007/11/24 08:11:49 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.49 2008/01/16 16:24:49 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,7 +39,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.48 2007/11/24 08:11:49 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.49 2008/01/16 16:24:49 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
@@ -209,7 +209,7 @@ int qlist_main(int argc, char **argv)
 				char *name = pkg_name(argv[i]);
 				snprintf(buf, sizeof(buf), "%s/%s", cat[j]->d_name,
 					 de[x]->d_name);
-				printf("buf=%s:%s\n", buf,grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name));
+				/* printf("buf=%s:%s\n", buf,grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name)); */
 				if (exact) {
 					if ((atom = atom_explode(buf)) == NULL) {
 						warn("invalid atom %s", buf);

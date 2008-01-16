@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.152 2008/01/16 07:09:06 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.153 2008/01/16 16:24:49 solar Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -1011,10 +1011,6 @@ void cleanup()
 	reinitialize_as_needed();
 	free_sets(virtuals);
 	fclose(stderr);
-#ifndef STATIC
-	if (dlhandle != NULL)
-		dlclose(dlhandle);
-#endif
 }
 
 int main(int argc, char **argv)

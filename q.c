@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.44 2007/05/25 19:19:40 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.45 2008/01/16 16:24:49 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,19 +22,12 @@ static const char *q_opts_help[] = {
 	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.44 2007/05/25 19:19:40 solar Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.45 2008/01/16 16:24:49 solar Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
-
-#ifndef STATIC
-APPLET lookup_dl_applet(char *applet);
-#endif
 
 APPLET lookup_applet(char *applet);
 APPLET lookup_applet(char *applet)
 {
-#ifndef STATIC
-	APPLET dl_func;
-#endif
 	unsigned int i;
 
 	if (strlen(applet) < 1)
@@ -58,72 +51,10 @@ APPLET lookup_applet(char *applet)
 			return applets[i].func;
 		}
 	}
-#ifndef STATIC
-	if ((dl_func = lookup_dl_applet(applet)) != NULL)
-		return dl_func;
-	if (*applet == 'q')
-		if ((dl_func = lookup_dl_applet(applet+1)) != NULL)
-			return dl_func;
-#endif
 	/* still nothing ?  those bastards ... */
 	warn("Unknown applet '%s'", applet);
 	return NULL;
 }
-
-#ifndef STATIC
-APPLET lookup_dl_applet(char *applet) {
-	char *ptr = NULL;
-	APPLET iptr;
-	FILE *fp;
-	char buf[_Q_PATH_MAX];
-
-	if (dlhandle != NULL)
-		return NULL;
-
-	/* modpath can be passed in as a global option */
-	if (modpath == NULL) {
-		DBG("opening /etc/q.conf");
-		if ((fp = fopen("/etc/q.conf", "r")) == NULL)
-			return NULL;
-
-		while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-			rmspace(buf);
-			remove_extra_space(buf);
-			if ((strncmp(buf, "modpath=", 8)) == 0)
-				modpath = &buf[8];
-		}
-		fclose(fp);
-	}
-	if (modpath == NULL)
-		return NULL;
-
-	if (!strlen(modpath))
-		return NULL;
-
-	DBG("module path set to %s", modpath);
-
-	/* fill in the path, check that object exists and open it */
-	xasprintf(&ptr, "%s/lib%s.so", modpath, applet);
-	if ((access(ptr, X_OK)) != 0) {
-		DBG("file does not exist or we dont have perms to mmap %s", ptr);
-		free(ptr);
-		return NULL;
-	}
-	if ((dlhandle = dlopen(ptr, RTLD_LAZY | RTLD_GLOBAL)) == NULL) {
-		DBG("unable to load %s : %s", ptr, dlerror());
-		free(ptr);
-		return NULL;
-	}
-	free(ptr);
-
-	xasprintf(&ptr, "%s_main", applet);
-	DBG("symbol lookup %s", ptr);
-	iptr = (APPLET) dlsym(dlhandle, ptr);
-	free(ptr);
-	module_name = applet;
-	return iptr;
-}
-#endif
 
 int lookup_applet_idx(const char *applet)
 {

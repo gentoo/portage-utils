@@ -1,6 +1,6 @@
 # Copyright 2005-2008 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.61 2008/01/15 08:02:57 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.62 2008/01/16 16:24:49 solar Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -25,13 +25,6 @@ PREFIX    := $(DESTDIR)/usr
 STRIP     := strip
 MKDIR     := mkdir -p
 CP        := cp
-
-ifndef STATIC
-LDFLAGS   += -Wl,--export-dynamic
-LIBADD    += $(shell echo | $(CC) -dM -E - | grep -q ' __linux__' && echo '-ldl')
-else
-CFLAGS    += -DSTATIC
-endif
 
 ifdef PV
 HFLAGS    += -DVERSION=\"$(PV)\"
@@ -101,7 +94,6 @@ clean:
 distclean: clean testclean
 	-rm -f *~ core
 	-rm -f `find . -type l`
-	-cd mod ; $(MAKE) distclean
 
 testclean:
 	cd tests && $(MAKE) clean
