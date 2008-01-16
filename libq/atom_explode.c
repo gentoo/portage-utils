@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.22 2008/01/15 08:06:09 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.23 2008/01/16 07:09:07 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,7 +35,7 @@ depend_atom *atom_explode(const char *atom);
 depend_atom *atom_explode(const char *atom)
 {
 	depend_atom *ret;
-	char *ptr, *ptr_tmp;
+	char *ptr;
 	size_t len, slen;
 	int i;
 
@@ -147,16 +147,18 @@ depend_atom *atom_explode(const char *atom)
 	}
 
 	/* eat the trailing version number [-.0-9]+ */
-	ptr_tmp = ptr;
+	bool has_pv = false;
 	while (--ptr > ret->PN)
 		if (*ptr == '-') {
-			ptr_tmp = ptr;
-			continue;
-		} else if (*ptr != '-' && *ptr != '.' && !isdigit(*ptr))
+			if (has_pv)
+				*ptr = '\0';
 			break;
-	if (*ptr_tmp) {
-		ret->PV = ret->P + (ptr_tmp - ret->PN) + 1;
-		*ptr_tmp = '\0';
+		} else if (*ptr != '.' && !isdigit(*ptr))
+			break;
+		else
+			has_pv = true;
+	if (has_pv) {
+		ret->PV = ret->P + (ptr - ret->PN) + 1;
 	} else {
 		/* atom has no version */
 		ret->PV = ret->PVR = NULL;
