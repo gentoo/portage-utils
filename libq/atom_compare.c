@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.5 2008/01/15 08:06:09 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.6 2008/01/17 06:35:08 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -49,7 +49,7 @@ int atom_compare(const depend_atom * const a1, const depend_atom * const a2)
 	/* check version */
 	if (a1->PV && a2->PV) {
 		char *s1, *s2;
-		unsigned int n1, n2;
+		uint64_t n1, n2;
 		/* first we compare the version [1.0]z_alpha1 */
 		s1 = a1->PV;
 		s2 = a2->PV;
@@ -65,8 +65,8 @@ int atom_compare(const depend_atom * const a1, const depend_atom * const a2)
 				else if (*s2 == '0' && isdigit(*s1))
 					return NEWER;
 			}
-			n1 = (s1 ? atol(s1) : 0);
-			n2 = (s2 ? atol(s2) : 0);
+			n1 = (s1 ? atoll(s1) : 0);
+			n2 = (s2 ? atoll(s2) : 0);
 			if (n1 < n2)
 				return OLDER;
 			else if (n1 > n2)
@@ -86,7 +86,7 @@ int atom_compare(const depend_atom * const a1, const depend_atom * const a2)
 		else if (a1->letter > a2->letter)
 			return NEWER;
 		/* find differing suffixes 1.0z[_alpha1] */
-		unsigned int sidx = 0;
+		size_t sidx = 0;
 		while (a1->suffixes[sidx].suffix == a2->suffixes[sidx].suffix) {
 			if (a1->suffixes[sidx].suffix == VER_NORM ||
 			    a2->suffixes[sidx].suffix == VER_NORM)

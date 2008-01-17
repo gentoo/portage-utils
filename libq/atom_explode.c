@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.23 2008/01/16 07:09:07 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.24 2008/01/17 06:35:08 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -12,7 +12,7 @@ const char * const atom_suffixes_str[] = { "_alpha", "_beta", "_pre", "_rc", "_/
 
 typedef struct {
 	atom_suffixes suffix;
-	unsigned int sint;
+	uint64_t sint;
 } atom_suffix;
 
 typedef struct {
@@ -101,7 +101,7 @@ depend_atom *atom_explode(const char *atom)
 	strcpy(ret->P, ret->PN);
 
 	/* break out all the suffixes */
-	int sidx = 0;
+	size_t sidx = 0;
 	ret->suffixes = xrealloc(ret->suffixes, sizeof(atom_suffix) * (sidx + 1));
 	ret->suffixes[sidx].sint = 0;
 	ret->suffixes[sidx].suffix = VER_NORM;
@@ -113,7 +113,7 @@ depend_atom *atom_explode(const char *atom)
 			/* check this is a real suffix and not _p hitting mod_perl */
 			char *tmp_ptr = ptr;
 			tmp_ptr += strlen(atom_suffixes_str[i]);
-			ret->suffixes[sidx].sint = atoi(tmp_ptr);
+			ret->suffixes[sidx].sint = atoll(tmp_ptr);
 			while (isdigit(*tmp_ptr))
 				++tmp_ptr;
 			if (*tmp_ptr)

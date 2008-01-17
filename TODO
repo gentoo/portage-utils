@@ -11,3 +11,9 @@
 
 - qmerge: dep resolver needs spanktastic love.
 - qmerge: needs safe deleting.
+
+- atoms:
+	- only 32bit values are supported for revision (-r#)
+	- only 64bit values are supported in any individual version component
+		foo-(1234)_alpha(56789)
+	- these limits should not be an issue for all practical purposes
