@@ -6,6 +6,7 @@ test check: static portage
 
 static: static.tests ../../q
 	../../q atom -c `cat static.tests` > static
+	#q atom -c `cat static.tests` > static
 
 portage: static.tests atom-compare.py
 	./atom-compare.py `cat static.tests` > portage

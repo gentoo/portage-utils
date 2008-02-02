@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.24 2008/01/17 06:35:08 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.25 2008/02/02 08:53:53 solar Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -36,8 +36,7 @@ depend_atom *atom_explode(const char *atom)
 {
 	depend_atom *ret;
 	char *ptr;
-	size_t len, slen;
-	int i;
+	size_t len, slen, idx, sidx;
 
 	/* we allocate mem for atom struct and two strings (strlen(atom)).
 	 * the first string is for CAT/PN/PV while the second is for PVR.
@@ -101,24 +100,24 @@ depend_atom *atom_explode(const char *atom)
 	strcpy(ret->P, ret->PN);
 
 	/* break out all the suffixes */
-	size_t sidx = 0;
+	sidx = 0;
 	ret->suffixes = xrealloc(ret->suffixes, sizeof(atom_suffix) * (sidx + 1));
 	ret->suffixes[sidx].sint = 0;
 	ret->suffixes[sidx].suffix = VER_NORM;
 	while ((ptr = strrchr(ret->PN, '_')) != NULL) {
-		for (i = 0; i < ARRAY_SIZE(atom_suffixes_str); ++i) {
-			if (strncmp(ptr, atom_suffixes_str[i], strlen(atom_suffixes_str[i])))
+		for (idx = 0; idx < ARRAY_SIZE(atom_suffixes_str); ++idx) {
+			if (strncmp(ptr, atom_suffixes_str[idx], strlen(atom_suffixes_str[idx])))
 				continue;
 
 			/* check this is a real suffix and not _p hitting mod_perl */
 			char *tmp_ptr = ptr;
-			tmp_ptr += strlen(atom_suffixes_str[i]);
+			tmp_ptr += strlen(atom_suffixes_str[idx]);
 			ret->suffixes[sidx].sint = atoll(tmp_ptr);
 			while (isdigit(*tmp_ptr))
 				++tmp_ptr;
 			if (*tmp_ptr)
 				goto no_more_suffixes;
-			ret->suffixes[sidx].suffix = i;
+			ret->suffixes[sidx].suffix = idx;
 
 			++sidx;
 			*ptr = '\0';
@@ -132,11 +131,12 @@ depend_atom *atom_explode(const char *atom)
 			break;
 	}
  no_more_suffixes:
-	--sidx;
-	for (i = 0; i < sidx; ++i, --sidx) {
+	if (sidx)
+		--sidx;
+	for (idx = 0; idx < sidx; ++idx, --sidx) {
 		atom_suffix t = ret->suffixes[sidx];
-		ret->suffixes[sidx] = ret->suffixes[i];
-		ret->suffixes[i] = t;
+		ret->suffixes[sidx] = ret->suffixes[idx];
+		ret->suffixes[idx] = t;
 	}
 
 	/* allow for 1 optional suffix letter */
