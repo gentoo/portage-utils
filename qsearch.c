@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.35 2007/05/25 18:36:15 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.36 2008/03/14 21:54:39 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,10 +9,11 @@
 
 #ifdef APPLET_qsearch
 
-#define QSEARCH_FLAGS "acsSNH" COMMON_FLAGS
+#define QSEARCH_FLAGS "acesSNH" COMMON_FLAGS
 static struct option const qsearch_long_opts[] = {
 	{"all",       no_argument, NULL, 'a'},
 	{"cache",     no_argument, NULL, 'c'},
+	{"ebuilds",   no_argument, NULL, 'e'},
 	{"search",    no_argument, NULL, 's'},
 	{"desc",       a_argument, NULL, 'S'},
 	{"name-only", no_argument, NULL, 'N'},
@@ -21,14 +22,15 @@ static struct option const qsearch_long_opts[] = {
 };
 static const char *qsearch_opts_help[] = {
 	"List the descriptions of every package in the cache",
-	"Use the portage cache",
+	"Use the portage cache (default)",
+	"Use the portage ebuild tree",
 	"Regex search package basenames",
 	"Regex search package descriptions",
 	"Only show package name",
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.35 2007/05/25 18:36:15 solar Exp $";
+static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.36 2008/03/14 21:54:39 solar Exp $";
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
 
 int qsearch_main(int argc, char **argv)
@@ -42,7 +44,7 @@ int qsearch_main(int argc, char **argv)
 	char *p, *q, *str;
 	char *search_me = NULL;
 	char show_homepage = 0, show_name_only = 0;
-	char search_desc = 0, search_all = 0, search_name = 1, search_cache = CACHE_EBUILD;
+	char search_desc = 0, search_all = 0, search_name = 1, search_cache = CACHE_METADATA;
 	const char *search_vars[] = { "DESCRIPTION=", "HOMEPAGE=" };
 	size_t search_len;
 	int i, idx=0;
@@ -55,6 +57,7 @@ int qsearch_main(int argc, char **argv)
 		COMMON_GETOPTS_CASES(qsearch)
 		case 'a': search_all = 1; break;
 		case 'c': search_cache = CACHE_METADATA; break;
+		case 'e': search_cache = CACHE_EBUILD; break;
 		case 's': search_desc = 0; search_name = 1; break;
 		case 'S': search_desc = 1; search_name = 0; break;
 		case 'N': show_name_only = 1; break;
