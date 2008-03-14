@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.46 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.47 2008/03/14 23:24:47 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.46 2007/05/24 14:47:18 solar Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.47 2008/03/14 23:24:47 solar Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -504,7 +504,10 @@ int qdepends_vdb_deep(const char *depend_file, const char *query)
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/USE", portroot, portvdb,
 			         dentry->d_name, de->d_name);
-			assert(eat_file(buf, use, sizeof(use)) == 1);
+
+			if (eat_file(buf, use, sizeof(use)) == 1)
+				use[0] = ' ';
+
 			for (ptr = use; *ptr; ++ptr)
 				if (*ptr == '\n' || *ptr == '\t')
 					*ptr = ' ';
