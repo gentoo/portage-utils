@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.38 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.39 2008/03/15 16:28:06 grobian Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -28,7 +28,7 @@ static const char *qcheck_opts_help[] = {
 	"Ignore differing file mtimes",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.38 2007/05/24 14:47:18 solar Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.39 2008/03/15 16:28:06 grobian Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 int qcheck_main(int argc, char **argv)
@@ -184,7 +184,7 @@ int qcheck_main(int argc, char **argv)
 							if (!verbose)
 								continue;
 						}
-						printf(" %sPERM %4o%s: %s\n", RED, (st.st_mode & 07777), NORM, e->name);
+						printf(" %sPERM %4o%s: %s\n", RED, (unsigned int)(st.st_mode & 07777), NORM, e->name);
 						continue;
 					} else if (strcmp(e->digest, hashed_file)) {
 						if (chk_hash) {

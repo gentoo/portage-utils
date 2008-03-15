@@ -18,6 +18,7 @@
 #include "human_readable.c"
 #include "rmspace.c"
 #include "which.c"
+#include "compat.c"
 
 /* custom libs */
 #include "atom_explode.c"

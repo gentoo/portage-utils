@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.32 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.33 2008/03/15 16:28:06 grobian Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/dir.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -48,7 +47,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.32 2007/05/24 14:47:18 solar Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.33 2008/03/15 16:28:06 grobian Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -510,7 +509,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 	qcache_data data;
 	char *catpath, *pkgpath, *ebuildpath, *cachepath;
 	int i, j, k, len, num_cat, num_pkg, num_ebuild;
-	struct direct **categories, **packages, **ebuilds;
+	struct dirent **categories, **packages, **ebuilds;
 
 	xasprintf(&catpath, "%s%s", QCACHE_EDB, portdir);
 
@@ -762,7 +761,7 @@ void qcache_stats(qcache_data *data)
 	int i;
 
 	if (!numpkg) {
-		struct direct **categories;
+		struct dirent **categories;
 		char *catpath;
 		int len;
 
