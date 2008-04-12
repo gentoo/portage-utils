@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.78 2008/03/14 21:54:39 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.79 2008/04/12 17:25:59 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.78 2008/03/14 21:54:39 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.79 2008/04/12 17:25:59 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1459,9 +1459,13 @@ queue *get_world(void) {
 	FILE *fp;
 	char buf[BUFSIZ];
 	queue *world = NULL;
-	char *fname = (char *) "/var/lib/portage/world";
+	char fname[_Q_PATH_MAX];
 
-	/* FIXME: Add ROOT= checks here */
+	if (portroot)
+		snprintf(fname, sizeof(fname), "%s/var/lib/portage/world", portroot);
+	else
+		strncpy(fname,  "/var/lib/portage/world", sizeof(fname));
+
 	if ((fp = fopen(fname, "r")) == NULL) {
 		warn("fopen(\"%s\", \"r\"); = -1 (%s)", fname, strerror(errno));
 		return NULL;

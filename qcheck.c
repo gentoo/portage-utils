@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.39 2008/03/15 16:28:06 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.40 2008/04/12 17:25:59 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,7 +9,7 @@
 
 #ifdef APPLET_qcheck
 
-#define QCHECK_FLAGS "eauAHT" COMMON_FLAGS
+#define QCHECK_FLAGS "eauAHTB" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
 	{"exact",   no_argument, NULL, 'e'},
 	{"all",     no_argument, NULL, 'a'},
@@ -17,6 +17,7 @@ static struct option const qcheck_long_opts[] = {
 	{"noafk",   no_argument, NULL, 'A'},
 	{"nohash",  no_argument, NULL, 'H'},
 	{"nomtime", no_argument, NULL, 'T'},
+	{"badonly", no_argument, NULL, 'B'},
 	COMMON_LONG_OPTS
 };
 static const char *qcheck_opts_help[] = {
@@ -26,10 +27,14 @@ static const char *qcheck_opts_help[] = {
 	"Ignore missing files",
 	"Ignore differing/unknown file chksums",
 	"Ignore differing file mtimes",
+	"Only print pkgs containing bad files excluding /etc.",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.39 2008/03/15 16:28:06 grobian Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.40 2008/04/12 17:25:59 solar Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
+
+short bad_only = 0;
+#define qcprintf(fmt, args...) if (!bad_only) printf( _( fmt ), ## args)
 
 int qcheck_main(int argc, char **argv)
 {
@@ -58,6 +63,7 @@ int qcheck_main(int argc, char **argv)
 		case 'A': chk_afk = 0; break;
 		case 'H': chk_hash = 0; break;
 		case 'T': chk_mtime = 0; break;
+		case 'B': bad_only = 1; break;
 		}
 	}
 	if ((argc == optind) && !search_all)
@@ -81,7 +87,6 @@ int qcheck_main(int argc, char **argv)
 			FILE *fp, *fpx;
 			if (*de->d_name == '.')
 				continue;
-
 			fp = fpx = NULL;
 
 			/* see if this cat/pkg is requested */
@@ -117,7 +122,7 @@ int qcheck_main(int argc, char **argv)
 				continue;
 			strncat(buf, "~", sizeof(buf));
 			num_files = num_files_ok = num_files_unknown = num_files_ignored = 0;
-			printf("%sing %s%s/%s%s ...\n",
+			qcprintf("%sing %s%s/%s%s ...\n",
 				(qc_update ? "Updat" : "Check"),
 				GREEN, dentry->d_name, de->d_name, NORM);
 			if (qc_update) {
@@ -134,7 +139,9 @@ int qcheck_main(int argc, char **argv)
 				e = contents_parse_line(buf);
 				if (!e)
 					continue;
-
+				if (bad_only && strncmp(e->name, "/etc", 4) == 0) {
+					continue;
+				}
 				if (strcmp(portroot, "/") != 0) {
 					snprintf(filename, sizeof(filename), "%s%s", portroot, e->name);
 					e->name = filename;
@@ -145,7 +152,7 @@ int qcheck_main(int argc, char **argv)
 				if (lstat(e->name, &st)) {
 					/* make sure file exists */
 					if (chk_afk) {
-						printf(" %sAFK%s: %s\n", RED, NORM, e->name);
+						qcprintf(" %sAFK%s: %s\n", RED, NORM, e->name);
 					} else {
 						--num_files;
 						++num_files_ignored;
@@ -165,7 +172,7 @@ int qcheck_main(int argc, char **argv)
 					}
 					if (!hash_algo) {
 						if (chk_hash) {
-							printf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n", RED, NORM, e->digest, e->name);
+							qcprintf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n", RED, NORM, e->digest, e->name);
 							++num_files_unknown;
 						} else {
 							--num_files;
@@ -184,7 +191,7 @@ int qcheck_main(int argc, char **argv)
 							if (!verbose)
 								continue;
 						}
-						printf(" %sPERM %4o%s: %s\n", RED, (unsigned int)(st.st_mode & 07777), NORM, e->name);
+						qcprintf(" %sPERM %4o%s: %s\n", RED, (unsigned int)(st.st_mode & 07777), NORM, e->name);
 						continue;
 					} else if (strcmp(e->digest, hashed_file)) {
 						if (chk_hash) {
@@ -196,10 +203,10 @@ int qcheck_main(int argc, char **argv)
 								case HASH_SHA1: digest_disp = "SHA1"; break;
 								default:        digest_disp = "UNK"; break;
 							}
-							printf(" %s%s-DIGEST%s: %s", RED, digest_disp, NORM, e->name);
+							qcprintf(" %s%s-DIGEST%s: %s", RED, digest_disp, NORM, e->name);
 							if (verbose)
-								printf(" (recorded '%s' != actual '%s')", e->digest, hashed_file);
-							printf("\n");
+								qcprintf(" (recorded '%s' != actual '%s')", e->digest, hashed_file);
+							qcprintf("\n");
 						} else {
 							--num_files;
 							++num_files_ignored;
@@ -210,10 +217,10 @@ int qcheck_main(int argc, char **argv)
 						continue;
 					} else if (e->mtime && e->mtime != st.st_mtime) {
 						if (chk_mtime) {
-							printf(" %sMTIME%s: %s", RED, NORM, e->name);
+							qcprintf(" %sMTIME%s: %s", RED, NORM, e->name);
 							if (verbose)
-								printf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
-							printf("\n");
+								qcprintf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
+							qcprintf("\n");
 
 							/* This can only be an obj, dir and sym have no digest */
 							if (qc_update)
@@ -233,10 +240,10 @@ int qcheck_main(int argc, char **argv)
 					}
 				} else if (e->mtime && e->mtime != st.st_mtime) {
 					if (chk_mtime) {
-						printf(" %sMTIME%s: %s", RED, NORM, e->name);
+						qcprintf(" %sMTIME%s: %s", RED, NORM, e->name);
 						if (verbose)
-							printf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
-						printf("\n");
+							qcprintf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
+						qcprintf("\n");
 
 						/* This can only be a sym */
 						if (qc_update)
@@ -265,18 +272,32 @@ int qcheck_main(int argc, char **argv)
 				if (!verbose)
 					continue;
 			}
-			printf("  %2$s*%1$s %3$s%4$zu%1$s out of %3$s%5$zu%1$s file%6$s are good",
+			if (bad_only && num_files_ok != num_files) {
+				if (verbose)
+					printf("%s/%s\n", dentry->d_name, de->d_name);
+				else {
+					depend_atom *atom = NULL;
+					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name, de->d_name);
+					if ((atom = atom_explode(buf)) != NULL) {
+						printf("%s/%s\n", dentry->d_name, atom->PN);
+						atom_implode(atom);
+					} else  {
+						printf("%s/%s\n", dentry->d_name, de->d_name);
+					}
+				}
+			}
+			qcprintf("  %2$s*%1$s %3$s%4$zu%1$s out of %3$s%5$zu%1$s file%6$s are good",
 			       NORM, BOLD, BLUE, num_files_ok, num_files,
 			       (num_files > 1 ? "s" : ""));
 			if (num_files_unknown)
-				printf(" (Unable to digest %2$s%3$zu%1$s file%4$s)",
+				qcprintf(" (Unable to digest %2$s%3$zu%1$s file%4$s)",
 				       NORM, BLUE, num_files_unknown,
 				       (num_files_unknown > 1 ? "s" : ""));
 			if (num_files_ignored)
-				printf(" (%2$s%3$zu%1$s file%4$s ignored)",
+				qcprintf(" (%2$s%3$zu%1$s file%4$s ignored)",
 				       NORM, BLUE, num_files_ignored,
 				       (num_files_ignored > 1 ? "s were" : " was"));
-			printf("\n");
+			qcprintf("\n");
 		}
 		closedir(dirp);
 		chdir("..");

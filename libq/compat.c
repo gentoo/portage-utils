@@ -30,8 +30,6 @@ static char* strcasestr(const char *big, const char *little) {
 		*strp = xstrdup(str); \
 	} while (0)
 
-
 #else /* __sun__ */
 # include <sys/dir.h>
 #endif
-

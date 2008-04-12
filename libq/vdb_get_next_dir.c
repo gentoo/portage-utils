@@ -21,7 +21,7 @@ next_entry:
 	len = strlen(ret->d_name);
 	for (i = 0; i < len; i++) {
 		if (!isalnum(ret->d_name[i])) { /* [A-Za-z0-9+_.-] */
-			switch(ret->d_name[i]) {
+			switch (ret->d_name[i]) {
 				case '+':
 				case '_':
 				case '.':
