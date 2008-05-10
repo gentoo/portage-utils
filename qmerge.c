@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.79 2008/04/12 17:25:59 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.80 2008/05/10 20:21:12 flameeyes Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.79 2008/04/12 17:25:59 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.80 2008/05/10 20:21:12 flameeyes Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1461,7 +1461,7 @@ queue *get_world(void) {
 	queue *world = NULL;
 	char fname[_Q_PATH_MAX];
 
-	if (portroot)
+	if (*portroot && strcmp(portroot, "/") != 0)
 		snprintf(fname, sizeof(fname), "%s/var/lib/portage/world", portroot);
 	else
 		strncpy(fname,  "/var/lib/portage/world", sizeof(fname));
