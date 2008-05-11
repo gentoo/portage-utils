@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.154 2008/03/15 16:28:06 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.155 2008/05/11 17:25:00 solar Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -449,6 +449,7 @@ void initialize_portage_env(void)
 {
 	char nocolor = 0;
 	int i, f;
+	ssize_t profilelen;
 	struct stat st;
 	FILE *fp;
 	char buf[BUFSIZE], *s, *p;
@@ -481,10 +482,14 @@ void initialize_portage_env(void)
 			strncat(portroot, "/", sizeof(portroot));
 
 	f = 0;
-	if (readlink("/etc/make.profile", profile, sizeof(profile)) == -1)
+	profilelen = readlink("/etc/make.profile", profile, sizeof(profile));
+	if (profilelen == -1)
 		strcpy(profile, "/etc/make.profile");
+	else
+		profile[profilelen]='\0';
+
 	if (profile[0] != '/') {
-		memmove(profile+5, profile, strlen(profile));
+		memmove(profile+5, profile, strnlen(profile, (size_t)profilelen)+1);
 		memcpy(profile, "/etc/", 5);
 	}
 	do {
@@ -709,11 +714,7 @@ const char *initialize_flat(int cache_type)
 
 	warn("Finished %u entries in %d.%06d seconds", count, secs, frac);
 	if (secs > 120)
-#ifdef __linux__
-		warn("You should consider a faster file system such as reiserfs for PORTDIR='%s'", portdir);
-#else
 		warn("You should consider using the noatime mount option for PORTDIR='%s' if it's not already enabled", portdir);
-#endif
 ret:
 	return cache_file;
 }
