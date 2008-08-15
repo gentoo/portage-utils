@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.36 2008/03/14 21:54:39 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.37 2008/08/15 01:56:01 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qsearch_opts_help[] = {
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.36 2008/03/14 21:54:39 solar Exp $";
+static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.37 2008/08/15 01:56:01 solar Exp $";
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
 
 int qsearch_main(int argc, char **argv)
@@ -111,7 +111,7 @@ int qsearch_main(int argc, char **argv)
 			if ((pcache = cache_read_file(ebuild)) != NULL) {
 				if ((strcmp(pcache->atom->PN, last)) != 0) {
 					strncpy(last, pcache->atom->PN, sizeof(last));
-					if ((rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE)) == 0)
+					if (((rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE)) == 0) || (search_all))
 						printf("%s%s/%s%s%s %s\n", BOLD, pcache->atom->CATEGORY, BLUE,
 						       pcache->atom->PN, NORM,
 						       (show_name_only ? "" :
