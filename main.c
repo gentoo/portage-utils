@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.156 2008/09/13 18:58:28 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.157 2008/09/26 16:42:01 solar Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -756,6 +756,7 @@ typedef struct {
 	char *PDEPEND;
 	char *PROVIDE;       /* line 14 */
 	char *EAPI;
+	char *PROPERTIES;
 	depend_atom *atom;
 } portage_cache;
 
@@ -857,6 +858,7 @@ portage_cache *cache_read_file(const char *file)
 	next_line(CDEPEND, PDEPEND)
 	next_line(PDEPEND, PROVIDE)
 	next_line(PROVIDE, EAPI)
+	next_line(EAPI, PROPERTIES)
 #undef next_line
 	ptr = strchr(ptr+1, '\n');
 	*ptr = '\0';
@@ -891,6 +893,7 @@ void cache_dump(portage_cache *cache)
 	printf("PDEPEND    : %s\n", cache->PDEPEND);
 	printf("PROVIDE    : %s\n", cache->PROVIDE);
 	printf("EAPI       : %s\n", cache->EAPI);
+	printf("PROPERTIES : %s\n", cache->PROPERTIES);
 	if (!cache->atom) return;
 	printf("CATEGORY   : %s\n", cache->atom->CATEGORY);
 	printf("PN         : %s\n", cache->atom->PN);
