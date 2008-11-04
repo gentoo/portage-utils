@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.49 2008/01/16 16:24:49 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.50 2008/11/04 07:23:22 pva Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,7 +39,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.49 2008/01/16 16:24:49 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.50 2008/11/04 07:23:22 pva Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
@@ -223,6 +223,10 @@ int qlist_main(int argc, char **argv)
 					if ((strcmp(name, strstr(swap, "/") + 1) == 0) || (strcmp(name, strstr(buf, "/") + 1) == 0))
 						break;
 				} else {
+					if (charmatch(name, buf) == 0)
+						break;
+					if (charmatch(name, de[x]->d_name) == 0)
+						break;
 					if (rematch(name, buf, REG_EXTENDED) == 0)
 						break;
 					if (rematch(name, de[x]->d_name, REG_EXTENDED) == 0)

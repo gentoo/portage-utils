@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.157 2008/09/26 16:42:01 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.158 2008/11/04 07:23:22 pva Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -31,6 +31,7 @@
 
 /* prototypes and such */
 static char eat_file(const char *file, char *buf, const size_t bufsize);
+int charmatch(const char *str1, const char *str2);
 int rematch(const char *, const char *, int);
 static char *rmspace(char *);
 
@@ -200,6 +201,24 @@ static char eat_file(const char *file, char *buf, const size_t bufsize)
 close_and_ret:
 	fclose(f);
 	return ret;
+}
+
+/* if all chars in str1 coincide with the begining of the str2 return 0 */
+int charmatch(const char *str1, const char *str2)
+{
+	if ((str1 == NULL) || (str2 == NULL))
+		return EXIT_FAILURE;
+
+	while (*str1 != 0) {
+		/* if str2==0 but str1!=0 we'll return and so it's
+		 * impossible to touch match++ address here */
+		if (*str1 != *str2)
+			return 1;
+		str1++;
+		str2++;
+	}
+
+	return 0;
 }
 
 int rematch(const char *re, const char *match, int cflags)
