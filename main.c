@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.158 2008/11/04 07:23:22 pva Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.159 2008/12/07 03:43:07 solar Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -588,6 +588,10 @@ void initialize_portage_env(void)
 			}
 		}
 	}
+	if ((p = strchr(portroot, '/')) != NULL)
+		if (strlen(p) != 1)
+			strncat(portroot, "/", sizeof(portroot));
+
 	if (getenv("PORTAGE_QUIET") != NULL)
 		quiet = 1;
 
