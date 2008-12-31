@@ -38,6 +38,7 @@ find ../.. \
 		-e '\<algorithic\>' \
 		-e '\<deamon\>' \
 		-e '\<derefernce\>' \
+		-e '\<lenght\>' \
 		| sed -e "s:^\.\./\.\./::g" > src.typos
 testit src.typos
 
