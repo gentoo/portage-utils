@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.41 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.42 2009/03/15 09:57:30 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,7 +46,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.41 2007/05/24 14:47:18 solar Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.42 2009/03/15 09:57:30 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -295,6 +295,27 @@ void show_sync_history(const char *logfile)
 
 void show_current_emerge(void);
 #ifdef __linux__
+#include <elf.h>
+static unsigned long hz = 0;
+static void init_hz(void)
+{
+#ifdef HZ
+	hz = HZ;
+#endif
+	/* kernel pushes elf notes onto stack */
+	unsigned long *elf_note = (unsigned long *)environ;
+	while (!*elf_note++)
+		continue;
+	while (elf_note[0]) {
+		if (elf_note[0] == AT_CLKTCK) {
+			hz = elf_note[1];
+			break;
+		}
+		elf_note += 2;
+	}
+	if (!hz)
+		hz = 100;
+}
 void show_current_emerge(void)
 {
 	DIR *proc;
@@ -311,6 +332,9 @@ void show_current_emerge(void)
 		warnp("Could not open /proc");
 		return;
 	}
+
+	if (!hz)
+		init_hz();
 
 	while ((de = readdir(proc)) != NULL) {
 
@@ -352,14 +376,14 @@ void show_current_emerge(void)
 			sscanf(bufstat, "%lf", &uptime_secs);
 
 			/* figure out when this thing started and then show it */
-			start_date = time(0) - (uptime_secs - (start_time / HZ));
+			start_date = time(0) - (uptime_secs - (start_time / hz));
 			printf(
 				" %s*%s %s%s%s\n"
 				"     started: %s%s%s\n"
 				"     elapsed: ", /*%s%llu%s seconds\n",*/
 				BOLD, NORM, BLUE, p, NORM,
 				GREEN, chop_ctime(start_date), NORM);
-			print_seconds_for_earthlings(uptime_secs - (start_time / HZ));
+			print_seconds_for_earthlings(uptime_secs - (start_time / hz));
 			puts(NORM);
 		}
 	}
