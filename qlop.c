@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.42 2009/03/15 09:57:30 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.43 2009/03/15 10:10:18 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,7 +46,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.42 2009/03/15 09:57:30 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.43 2009/03/15 10:10:18 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -83,6 +83,7 @@ unsigned long show_merge_times(char *package, const char *logfile, int average, 
 	FILE *fp;
 	char cat[126], buf[2][BUFSIZ];
 	char *pkg, *p;
+	char ep[BUFSIZ];
 	unsigned long count, merge_time;
 	time_t t[2];
 	depend_atom *atom;
@@ -120,6 +121,8 @@ unsigned long show_merge_times(char *package, const char *logfile, int average, 
 		strcpy(buf[1], p + 1);
 		rmspace(buf[1]);
 		if ((strncmp(buf[1], ">>> emerge (", 12)) == 0) {
+			snprintf(ep, BUFSIZ, "completed %s", &buf[1][4]);
+
 			char matched = 0;
 			if ((p = strchr(buf[1], ')')) == NULL)
 				continue;
@@ -148,9 +151,7 @@ unsigned long show_merge_times(char *package, const char *logfile, int average, 
 					t[1] = atol(buf[0]);
 					strcpy(buf[1], p + 1);
 					rmspace(buf[1]);
-					if (*buf[1] == '*')
-						break;
-					if ((strncmp(buf[1], "::: completed emerge (", 22)) == 0) {
+					if ((strncmp(&buf[1][4], ep, BUFSIZ)) == 0) {
 						if (!average) {
 							strcpy(buf[1], "");
 							if (verbose) {
