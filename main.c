@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.159 2008/12/07 03:43:07 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.160 2009/03/15 10:03:42 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ char reinitialize = 0;
 char reinitialize_metacache = 0;
 char portdir[_Q_PATH_MAX] = "/usr/portage";
 char portarch[20] = "";
-char portvdb[] = "var/db/pkg";
+char portvdb[_Q_PATH_MAX] = "var/db/pkg";
 char portcachedir[] = "metadata/cache";
 char portroot[_Q_PATH_MAX] = "/";
 char config_protect[_Q_PATH_MAX] = "/etc/";
@@ -495,6 +495,12 @@ void initialize_portage_env(void)
 		{"PKGDIR",            6, _Q_STR,  pkgdir,         sizeof(pkgdir)},
 		{"ROOT",              4, _Q_STR,  portroot,       sizeof(portroot)}
 	};
+
+	s = getenv("Q_VDB");	/* #257251 */
+	if (s) {
+		strncpy(portvdb, s, sizeof(portvdb));
+		portvdb[sizeof(portvdb) - 1] = '\0';
+	}
 
 	if ((p = strchr(portroot, '/')) != NULL)
 		if (strlen(p) != 1)
