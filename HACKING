@@ -22,7 +22,7 @@ little applets.
 	* print a package.use
 	qlist -UCq | grep ' ' > package.use
 
-	* find orphan files not owned by and package in /lib and /usr/lib
+	* find orphan files not owned by any package in /lib and /usr/lib
 	qfile -o {,/usr}/lib/*
 	
 	# get PORTDIR
