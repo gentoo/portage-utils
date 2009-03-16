@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.50 2008/11/04 07:23:22 pva Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.51 2009/03/16 01:42:36 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,7 +39,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.50 2008/11/04 07:23:22 pva Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.51 2009/03/16 01:42:36 solar Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
@@ -78,11 +78,11 @@ static char *grab_pkg_umap(char *CAT, char *PV)
 	if ((use = grab_vdb_item("USE", CAT, PV)) == NULL)
 		return NULL;
 
+	memset(umap, 0, sizeof(umap)); /* reset the buffer */
+
 	/* grab_vdb is a static function so save it to memory right away */
 	makeargv(use, &use_argc, &use_argv);
 	if ((iuse = grab_vdb_item("IUSE", CAT, PV)) != NULL) {
-
-		memset(umap, 0, sizeof(umap));
 		makeargv(iuse, &iuse_argc, &iuse_argv);
 		for (u = 1; u < use_argc; u++) {
 			for (i = 1; i < iuse_argc; i++) {
