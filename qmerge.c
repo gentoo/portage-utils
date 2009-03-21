@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.80 2008/05/10 20:21:12 flameeyes Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.81 2009/03/21 06:37:10 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.80 2008/05/10 20:21:12 flameeyes Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.81 2009/03/21 06:37:10 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -84,6 +84,7 @@ struct pkg_t {
 	char SLOT[64];
 	size_t SIZE;
 	char USE[BUFSIZ];
+	char REPO[64];
 } Pkg;
 
 struct llist_char_t {
@@ -1120,6 +1121,9 @@ void print_Pkg(int full, struct pkg_t *pkg)
 		printf(" %sRdepend%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->RDEPEND);
 	if (pkg->USE[0])
 		printf(" %sUse%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->USE);
+	if (pkg->REPO[0])
+		if (strcmp(pkg->REPO, "gentoo") != 0)
+			printf(" %sRepo%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->REPO);
 
 	snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
 	atom = atom_explode(buf);
@@ -1245,6 +1249,8 @@ struct pkg_t *grab_binpkg_info(const char *name)
 				strncpy(pkg->PF, value, sizeof(Pkg.PF));
 			if ((strcmp(buf, "CATEGORY:")) == 0)
 				strncpy(pkg->CATEGORY, value, sizeof(Pkg.CATEGORY));
+			if ((strcmp(buf, "REPO:")) == 0)
+				strncpy(pkg->REPO, value, sizeof(Pkg.REPO));
 
 			if ((strcmp(buf, "CPV:")) == 0) {
 				if ((atom = atom_explode(value)) != NULL) {
@@ -1423,6 +1429,7 @@ int parse_packages(const char *Packages, int argc, char **argv)
 				if ((strcmp(buf, "MD5:")) == 0) strncpy(Pkg.MD5, value, sizeof(Pkg.MD5));
 				break;
 			case 'R':
+				if ((strcmp(buf, "REPO:")) == 0) strncpy(Pkg.REPO, value, sizeof(Pkg.REPO));
 				if ((strcmp(buf, "RDEPEND:")) == 0) strncpy(Pkg.RDEPEND, value, sizeof(Pkg.RDEPEND));
 				break;
 			case 'L':
