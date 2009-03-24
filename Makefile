@@ -1,6 +1,6 @@
 # Copyright 2005-2008 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.63 2008/04/12 17:25:59 solar Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.64 2009/03/24 20:53:24 grobian Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -21,10 +21,13 @@ CFLAGS    += -std=gnu99
 #LDFLAGS  := -pie
 LIBADD    += $(shell echo | $(CC) -dM -E - | grep -q ' __FreeBSD__' && echo '-lkvm')
 DESTDIR   :=
-PREFIX    := $(DESTDIR)/usr
+EPREFIX   := 
+PREFIX    := $(DESTDIR)$(EPREFIX)/usr
 STRIP     := strip
 MKDIR     := mkdir -p
 CP        := cp
+
+HFLAGS    += -DEPREFIX=\"$(EPREFIX)\"
 
 ifdef PV
 HFLAGS    += -DVERSION=\"$(PV)\"
@@ -51,7 +54,7 @@ all: q
 
 debug:
 	$(MAKE) CFLAGS="$(CFLAGS) -DEBUG -g3 -ggdb -fno-pie" clean symlinks
-	@-/usr/bin/scanelf -o /dev/null -BXxz permsx q
+	@-$(EPREFIX)/usr/bin/scanelf -o /dev/null -BXxz permsx q
 
 q: $(SRC) libq/*.c *.h libq/*.h
 ifeq ($(subst s,,$(MAKEFLAGS)),$(MAKEFLAGS))

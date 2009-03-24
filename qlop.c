@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.44 2009/03/24 18:52:09 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.45 2009/03/24 20:53:24 grobian Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -27,7 +27,7 @@
 # include <sys/sysctl.h>
 #endif
 
-#define QLOP_DEFAULT_LOGFILE "/var/log/emerge.log"
+#define QLOP_DEFAULT_LOGFILE EPREFIX "/var/log/emerge.log"
 
 #define QLOP_FLAGS "gtHluscf:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
@@ -52,7 +52,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.44 2009/03/24 18:52:09 grobian Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.45 2009/03/24 20:53:24 grobian Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -554,7 +554,7 @@ void show_current_emerge(void)
 #else
 void show_current_emerge(void)
 {
-	errf("not supported on your crapbox OS");
+	errf("not supported on your OS");
 }
 #endif
 

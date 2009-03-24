@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.161 2009/03/24 18:53:33 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.162 2009/03/24 20:53:24 grobian Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -56,15 +56,15 @@ int quiet = 0;
 char pretend = 0;
 char reinitialize = 0;
 char reinitialize_metacache = 0;
-char portdir[_Q_PATH_MAX] = "/usr/portage";
-char portarch[20] = "";
+char portdir[_Q_PATH_MAX] = EPREFIX "/usr/portage";
+char portarch[20] = ""; 
 char portvdb[_Q_PATH_MAX] = "var/db/pkg";
 char portcachedir[] = "metadata/cache";
 char portroot[_Q_PATH_MAX] = "/";
-char config_protect[_Q_PATH_MAX] = "/etc/";
+char config_protect[_Q_PATH_MAX] = EPREFIX "/etc/";
 
-char pkgdir[512] = "/usr/portage/packages/";
-char port_tmpdir[512] = "/var/tmp/portage/";
+char pkgdir[512] = EPREFIX "/usr/portage/packages/";
+char port_tmpdir[512] = EPREFIX "/var/tmp/portage/";
 
 char binhost[1024] = PORTAGE_BINHOST;
 char features[2048] = "noman noinfo nodoc";
@@ -475,9 +475,10 @@ void initialize_portage_env(void)
 	struct stat st;
 	FILE *fp;
 	char buf[BUFSIZE], *s, *p;
+	char *e = EPREFIX;
 
 	char profile[_Q_PATH_MAX], portage_file[_Q_PATH_MAX];
-	const char *files[] = {portage_file, "/etc/make.globals", "/etc/make.conf"};
+	const char *files[] = {portage_file, EPREFIX "/etc/make.globals", EPREFIX "/etc/make.conf"};
 	typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR } var_types;
 	struct {
 		const char *name;
@@ -503,6 +504,10 @@ void initialize_portage_env(void)
 	if (s) {
 		strncpy(portvdb, s, sizeof(portvdb));
 		portvdb[sizeof(portvdb) - 1] = '\0';
+	} else if ((i = strlen(e)) > 1) {
+		memmove(portvdb + i, portvdb, strlen(portvdb));
+		memcpy(portvdb, e + 1, i - 1);
+		portvdb[i - 1] = '/';
 	}
 
 	if ((p = strchr(portroot, '/')) != NULL)
@@ -510,15 +515,15 @@ void initialize_portage_env(void)
 			strncat(portroot, "/", sizeof(portroot));
 
 	f = 0;
-	profilelen = readlink("/etc/make.profile", profile, sizeof(profile) - 1);
+	profilelen = readlink(EPREFIX "/etc/make.profile", profile, sizeof(profile) - 1);
 	if (profilelen == -1)
-		strcpy(profile, "/etc/make.profile");
+		strcpy(profile, EPREFIX "/etc/make.profile");
 	else
 		profile[profilelen]='\0';
 
 	if (profile[0] != '/') {
-		memmove(profile+5, profile, strlen(profile)+1);
-		memcpy(profile, "/etc/", 5);
+		memmove(profile+5+strlen(EPREFIX), profile, strlen(profile)+1);
+		memcpy(profile, EPREFIX "/etc/", strlen(EPREFIX) + 5);
 	}
 	do {
 		if (f == 0)
@@ -1057,7 +1062,7 @@ int main(int argc, char **argv)
 
 #ifdef ENABLE_NLS	/* never tested */
 	setlocale(LC_ALL, "");
-	bindtextdomain(argv0, "/usr/share/locale");
+	bindtextdomain(argv0, EPREFIX "/usr/share/locale");
 	textdomain(argv0);
 #endif
 #if 1
