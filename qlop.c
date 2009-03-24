@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.43 2009/03/15 10:10:18 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.44 2009/03/24 18:52:09 grobian Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -19,6 +19,12 @@
 # include <sys/sysctl.h>
 # include <sys/user.h>
 # include <sys/time.h>
+#endif
+
+#ifdef __MACH__
+# include <stdlib.h>
+# include <sys/types.h>
+# include <sys/sysctl.h>
 #endif
 
 #define QLOP_DEFAULT_LOGFILE "/var/log/emerge.log"
@@ -46,7 +52,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.43 2009/03/15 10:10:18 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.44 2009/03/24 18:52:09 grobian Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -440,6 +446,107 @@ void show_current_emerge(void)
 
 		free(buf);
 	}
+
+	if (start_date == 0 && verbose)
+		puts("No emerge processes located");
+}
+#elif defined(__MACH__)
+void show_current_emerge(void)
+{
+	int mib[3];
+	size_t size = 0;
+	struct kinfo_proc *ip, *raip;
+	int ret, total_processes, i;
+	char *p, *q;
+	time_t start_date = 0;
+	char args[512];
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_ALL; /* could restrict to _UID (effective uid) */
+
+	/* probe once to get the current size; estimate only, but OS tries
+	 * to round up if it can predict a sudden growth, so optimise below
+	 * for the optimistic case */
+	ret = sysctl(mib, 3, NULL, &size, NULL, 0);
+	ip = malloc(sizeof(struct kinfo_proc) * size);
+	if (ip == NULL) {
+		warnp("Could not allocate %d bytes for process information",
+				sizeof(struct kinfo_proc) * size);
+		return;
+	}
+	while (1) {
+		ret = sysctl(mib, 3, ip, &size, NULL, 0);
+		if (ret >= 0 && errno == ENOMEM) {
+			size += size / 10; /* may be a bit overdone... */
+			raip = realloc(ip, sizeof(struct kinfo_proc) * size);
+			if (raip == NULL) {
+				free(ip);
+				warnp("Could not extend allocated block to %d bytes for process information",
+						sizeof(struct kinfo_proc) * size);
+				return;
+			}
+			ip = raip;
+		} else if (ret < 0) {
+			free(ip);
+			warnp("Could not retrieve process information");
+			return;
+		} else {
+			break;
+		}
+	}
+
+	total_processes = size / sizeof(struct kinfo_proc);
+
+	/* initialise mib for argv retrieval calls */
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROCARGS;
+
+	for (i = 0; i < total_processes; i++) {
+		char *buf = NULL;
+		size_t argssize = sizeof(args);
+
+		if (strcmp(ip[i].kp_proc.p_comm, "sandbox") != 0)
+			continue;
+
+		mib[2] = ip[i].kp_proc.p_pid;
+		if (sysctl(mib, 3, args, &argssize, NULL, 0) != 0) {
+			free(ip);
+			return;
+		}
+
+		/* this is magic to get back up in the stack where the arguments
+		 * start */
+		for (buf = args; buf < &args[argssize]; buf++)
+			if (*buf == '\0')
+				break;
+		if (buf == &args[argssize]) {
+			free(ip);
+			continue;
+		}
+		if ((buf = xstrdup(buf)) == NULL ||
+		    buf[0] != '[' || (p = strchr(buf, ']')) == NULL) {
+			free(buf);
+			continue;
+		}
+
+		*p = '\0';
+		p = buf+1;
+		q = p + strlen(p) + 1;
+
+		printf(
+			" %s*%s %s%s%s\n"
+			"     started: %s%s%s\n"
+			"     elapsed: ", /*%s%llu%s seconds\n",*/
+			BOLD, NORM, BLUE, p, NORM,
+			GREEN, chop_ctime(ip[i].kp_proc.p_starttime.tv_sec), NORM);
+		print_seconds_for_earthlings(time(0) - ip[i].kp_proc.p_starttime.tv_sec);
+		puts(NORM);
+
+		free(buf);
+	}
+
+	free(ip);
 
 	if (start_date == 0 && verbose)
 		puts("No emerge processes located");
