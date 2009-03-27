@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.11 2008/01/17 06:35:08 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/atom_explode/test.c,v 1.12 2009/03/27 20:42:25 grobian Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <string.h>
