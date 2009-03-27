@@ -9,7 +9,7 @@
 #define S_BLKSIZE DK_DEVID_BLKSIZE
 
 /* strcasestr is a GNU extention */
-static char* strcasestr(const char *big, const char *little) {
+char* strcasestr(const char *big, const char *little) {
 	char* b = alloca((strlen(big) + 1) * sizeof(char));
 	char* l = alloca((strlen(little) + 1) * sizeof(char));
 	char* off;
