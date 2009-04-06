@@ -1,6 +1,6 @@
 # Copyright 2005-2008 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.64 2009/03/24 20:53:24 grobian Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.65 2009/04/06 01:54:19 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -104,7 +104,7 @@ testclean:
 install: all
 	-$(MKDIR) $(PREFIX)/bin/
 	$(CP) q $(PREFIX)/bin/
-	if [[ ! -d CVS ]] ; then \
+	if [ ! -d CVS ] ; then \
 		$(MKDIR) $(PREFIX)/share/man/man1/ ; \
 		for mpage in $(wildcard man/*.1) ; do \
 			[ -e $$mpage ] \
@@ -117,7 +117,7 @@ install: all
 	fi
 	(cd $(PREFIX)/bin/ ; \
 		for applet in $(APPLETS); do \
-			[[ ! -e $$applet ]] && ln -s q $${applet} ; \
+			[ ! -e "$$applet" ] && ln -s q $${applet} ; \
 		done \
 	)
 
