@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.81 2009/03/21 06:37:10 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.82 2009/04/17 14:44:55 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.81 2009/03/21 06:37:10 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.82 2009/04/17 14:44:55 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -922,6 +922,7 @@ int match_pkg(const char *name, struct pkg_t *pkg)
 	depend_atom *atom;
 	char buf[255], buf2[255];
 	int match = 0;
+	char *ptr;
 
 	snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
 	if ((atom = atom_explode(buf)) == NULL)
@@ -942,6 +943,19 @@ int match_pkg(const char *name, struct pkg_t *pkg)
 	if ((strcmp(name, atom->PN)) == 0)
 		match = 4;
 
+	if (match)
+		goto match_done;
+
+	if ((ptr = strchr(name, ':')) != NULL) {
+		depend_atom *subatom = atom_explode(name);
+		if (subatom == NULL)
+			goto match_done;
+		if (strcmp(atom->PN, subatom->PN) == 0)
+			match = 1;
+		atom_implode(subatom);
+	}
+
+match_done:
 	atom_implode(atom);
 
 	return match;
