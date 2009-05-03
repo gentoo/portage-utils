@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.82 2009/04/17 14:44:55 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.83 2009/05/03 17:19:13 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.82 2009/04/17 14:44:55 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.83 2009/05/03 17:19:13 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -98,10 +98,11 @@ int interactive_rename(const char *, const char *, struct pkg_t *);
 void fetch(const char *, const char *);
 void qmerge_initialize(const char *);
 char *best_version(const char *, const char  *);
+void pkg_fetch(int, depend_atom *, struct pkg_t *);
 void pkg_merge(int, depend_atom *, struct pkg_t *);
 int pkg_unmerge(char *, char *);
 int unlink_empty(char *);
-void pkg_fetch(int, char **, struct pkg_t *);
+void pkg_process(int, char **, struct pkg_t *);
 void print_Pkg(int, struct pkg_t *);
 int parse_packages(const char *, int, char **);
 int config_protected(const char *, int, char **);
@@ -509,7 +510,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 						IF_DEBUG(fprintf(stderr, "+Installed: %s\n", p));
 						if (strlen(p) < 1)
 							if (!((strcmp(pkg->PF, subpkg->PF) == 0) && (strcmp(pkg->CATEGORY, subpkg->CATEGORY) == 0)))
-								pkg_merge(level+1, ratom, subpkg);
+								pkg_fetch(level+1, ratom, subpkg);
 
 						atom_implode(subatom);
 						atom_implode(ratom);
@@ -1004,22 +1005,17 @@ int pkg_verify_checksums(char *fname, struct pkg_t *pkg, depend_atom *atom, int 
 	return ret;
 }
 
-void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
+void pkg_process(int argc, char **argv, struct pkg_t *pkg)
 {
 	depend_atom *atom;
-	char savecwd[_POSIX_PATH_MAX];
-	char buf[255], str[255];
+	char buf[255];
 	int i;
 
 	memset(buf, 0, sizeof(buf));
-	memset(str, 0, sizeof(str));
 
 	snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
 	if ((atom = atom_explode(buf)) == NULL)
 		errf("%s/%s is not a valid atom", pkg->CATEGORY, pkg->PF);
-
-	snprintf(str, sizeof(str), "%s/%s", pkgdir, pkg->CATEGORY);
-	mkdir(str, 0755);
 
 	for (i = 1; i < argc; i++) {
 		if (argv[i][0] == '-')
@@ -1029,78 +1025,92 @@ void pkg_fetch(int argc, char **argv, struct pkg_t *pkg)
 		if (match_pkg(argv[i], pkg) < 1)
 			continue;
 
-		/* qmerge -pv patch */
-		if (pretend) {
-			int level = 0;
-			if (!install) install++;
-			/* qprint_tree_node(level, atom, pkg); */
-			pkg_merge(level, atom, pkg);
-			continue;
-		}
-
-		/* check to see if file exists and it's checksum matches */
-		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, pkg->CATEGORY, pkg->PF);
-		unlink_empty(buf);
-
-		if ((force_download) && (access(buf, R_OK) == 0) && ((pkg->SHA1[0]) || (pkg->MD5[0]))) {
-			if ((pkg_verify_checksums(buf, pkg, atom, 0, 0)) != 0)
-				unlink(buf);
-		}
-		if (access(buf, R_OK) == 0) {
-			if ((!pkg->SHA1[0]) && (!pkg->MD5[0])) {
-				warn("No checksum data for %s", buf);
-				continue;
-			} else {
-				if ((pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1)) == 0) {
-					pkg_merge(0, atom, pkg);
-					continue;
-				}
-			}
-		}
-		if (verbose)
-			printf("Fetching %s/%s.tbz2\n", atom->CATEGORY, pkg->PF);
-
-		/* fetch the package */
-		/* Check CATEGORY first */
-		if (!old_repo) {
-			snprintf(buf, sizeof(buf), "%s/%s.tbz2", atom->CATEGORY, pkg->PF);
-			fetch(str, buf);
-		}
-		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
-		if (access(buf, R_OK) != 0) {
-			snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
-			fetch(str, buf);
-			old_repo = 1;
-		}
-
-		/* verify the pkg exists now. unlink if zero bytes */
-		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
-		unlink_empty(buf);
-
-		if (access(buf, R_OK) != 0) {
-			warn("Failed to fetch %s.tbz2 from %s", pkg->PF, binhost);
-			fflush(stderr);
-			continue;
-		}
-		getcwd(savecwd, sizeof(savecwd));
-		assert(chdir(pkgdir) == 0);
-		if (chdir("All/") == 0) {
-			snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
-			snprintf(str, sizeof(str), "../%s/%s.tbz2", atom->CATEGORY, pkg->PF);
-			unlink(buf);
-			symlink(str, buf);
-		}
-		chdir(savecwd);
-
-		snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
-		if ((pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1)) == 0) {
-			pkg_merge(0, atom, pkg);
-			continue;
-		}
+		pkg_fetch(0, atom, pkg);
 	}
 	/* free the atom */
 	atom_implode(atom);
 }
+
+void pkg_fetch(int level, depend_atom *atom, struct pkg_t *pkg)
+{
+	char savecwd[_POSIX_PATH_MAX];
+	char buf[255], str[255];
+	memset(str, 0, sizeof(str));
+
+	/* qmerge -pv patch */
+	if (pretend) {
+		if (!install) install++;
+		/* qprint_tree_node(level, atom, pkg); */
+		pkg_merge(level, atom, pkg);
+		return;
+	}
+
+	/* check to see if file exists and it's checksum matches */
+	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, pkg->CATEGORY, pkg->PF);
+	unlink_empty(buf);
+
+	snprintf(str, sizeof(str), "%s/%s", pkgdir, pkg->CATEGORY);
+	mkdir(str, 0755);
+
+	if ((force_download) && (access(buf, R_OK) == 0) && ((pkg->SHA1[0]) || (pkg->MD5[0]))) {
+		if ((pkg_verify_checksums(buf, pkg, atom, 0, 0)) != 0)
+			unlink(buf);
+	}
+	if (access(buf, R_OK) == 0) {
+		if ((!pkg->SHA1[0]) && (!pkg->MD5[0])) {
+			warn("No checksum data for %s", buf);
+			return;
+		} else {
+			if ((pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1)) == 0) {
+				pkg_merge(0, atom, pkg);
+				return;
+			}
+		}
+	}
+	if (verbose)
+		printf("Fetching %s/%s.tbz2\n", atom->CATEGORY, pkg->PF);
+
+	/* fetch the package */
+	/* Check CATEGORY first */
+	if (!old_repo) {
+		snprintf(buf, sizeof(buf), "%s/%s.tbz2", atom->CATEGORY, pkg->PF);
+		fetch(str, buf);
+	}
+	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
+	if (access(buf, R_OK) != 0) {
+		snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
+		fetch(str, buf);
+		old_repo = 1;
+	}
+
+	/* verify the pkg exists now. unlink if zero bytes */
+	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
+	unlink_empty(buf);
+
+	if (access(buf, R_OK) != 0) {
+		warn("Failed to fetch %s.tbz2 from %s", pkg->PF, binhost);
+		fflush(stderr);
+		return;
+	}
+	getcwd(savecwd, sizeof(savecwd));
+	assert(chdir(pkgdir) == 0);
+	if (chdir("All/") == 0) {
+		snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
+		snprintf(str, sizeof(str), "../%s/%s.tbz2", atom->CATEGORY, pkg->PF);
+		unlink(buf);
+		symlink(str, buf);
+	}
+	chdir(savecwd);
+
+	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
+	if ((pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1)) == 0) {
+		pkg_merge(0, atom, pkg);
+		return;
+	}
+}
+
+
+
 
 void print_Pkg(int full, struct pkg_t *pkg)
 {
@@ -1407,8 +1417,7 @@ int parse_packages(const char *Packages, int argc, char **argv)
 						print_Pkg(verbose, pkg);
 					}
 				} else {
-					/* this name is misleading */
-					pkg_fetch(argc, argv, pkg);
+					pkg_process(argc, argv, pkg);
 				}
 				free(pkg);
 			}
