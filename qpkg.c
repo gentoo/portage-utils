@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.26 2007/11/04 09:51:58 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.27 2009/08/23 06:06:49 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,7 @@ static const char *qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.26 2007/11/04 09:51:58 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.27 2009/08/23 06:06:49 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
@@ -206,11 +206,11 @@ int qpkg_make(depend_atom *atom)
 	struct stat st;
 
 	if (pretend) {
-		printf(" %s-%s %s/%s:\n", GREEN, NORM, atom->CATEGORY, atom->P);
+		printf(" %s-%s %s/%s:\n", GREEN, NORM, atom->CATEGORY, atom_to_pvr(atom));
 		return 0;
 	}
 
-	snprintf(buf, sizeof(buf), "%s/%s/%s/CONTENTS", portvdb, atom->CATEGORY, atom->P);
+	snprintf(buf, sizeof(buf), "%s/%s/%s/CONTENTS", portvdb, atom->CATEGORY, atom_to_pvr(atom));
 	if ((fp = fopen(buf, "r")) == NULL)
 		return -1;
 
@@ -245,7 +245,7 @@ int qpkg_make(depend_atom *atom)
 	fclose(out);
 	fclose(fp);
 
-	printf(" %s-%s %s/%s: ", GREEN, NORM, atom->CATEGORY, atom->P);
+	printf(" %s-%s %s/%s: ", GREEN, NORM, atom->CATEGORY, atom_to_pvr(atom));
 	fflush(stdout);
 
 	snprintf(tbz2, sizeof(tbz2), "%s/bin.tar.bz2", tmpdir);
@@ -255,7 +255,7 @@ int qpkg_make(depend_atom *atom)
 	pclose(fp);
 
 	snprintf(xpak, sizeof(xpak), "%s/inf.xpak", tmpdir);
-	snprintf(buf, sizeof(buf), "%s/%s/%s", portvdb, atom->CATEGORY, atom->P);
+	snprintf(buf, sizeof(buf), "%s/%s/%s", portvdb, atom->CATEGORY, atom_to_pvr(atom));
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
 	xpak_create(xpak, 1, xpak_argv);
@@ -267,7 +267,7 @@ int qpkg_make(depend_atom *atom)
 	unlink(xpak);
 	unlink(tbz2);
 
-	snprintf(tbz2, sizeof(tbz2), "%s/%s.tbz2", qpkg_get_bindir(), atom->P);
+	snprintf(tbz2, sizeof(tbz2), "%s/%s.tbz2", qpkg_get_bindir(), atom_to_pvr(atom));
 	if (rename(buf, tbz2)) {
 		warnp("could not move '%s' to '%s'", buf, tbz2);
 		return 1;

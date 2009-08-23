@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.162 2009/03/24 20:53:24 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.163 2009/08/23 06:07:07 solar Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -944,6 +944,11 @@ void cache_free(portage_cache *cache)
 		errf("Cache is empty !");
 	atom_implode(cache->atom);
 	free(cache);
+}
+
+char *atom_to_pvr(depend_atom *atom);
+char *atom_to_pvr(depend_atom *atom) {
+	return (atom->PR_int == 0 ? atom->P : atom->PVR );
 }
 
 char *grab_vdb_item(const char *, const char *, const char *);
