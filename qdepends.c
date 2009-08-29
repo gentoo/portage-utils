@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.47 2008/03/14 23:24:47 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.48 2009/08/29 19:43:14 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.47 2008/03/14 23:24:47 solar Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.48 2009/08/29 19:43:14 solar Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -293,10 +293,11 @@ void dep_prune_use(dep_node *root, char *use)
 {
 	if (root->neighbor) dep_prune_use(root->neighbor, use);
 	if (root->type == DEP_USE) {
-		char useflag[40+3]; /* use flags shouldnt be longer than 40 ... */
+		char *useflag = NULL;
 		int notfound, invert = (root->info[0] == '!' ? 1 : 0);
-		sprintf(useflag, " %s ", root->info+invert);
+		xasprintf(&useflag, " %s ", root->info+invert);
 		notfound = (strstr(use, useflag) == NULL ? 1 : 0);
+		free(useflag);
 		if (notfound ^ invert) {
 			root->type = DEP_NULL;
 			return;
