@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.163 2009/08/23 06:07:07 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.164 2009/09/08 03:05:40 solar Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -57,7 +57,7 @@ char pretend = 0;
 char reinitialize = 0;
 char reinitialize_metacache = 0;
 char portdir[_Q_PATH_MAX] = EPREFIX "/usr/portage";
-char portarch[20] = ""; 
+char portarch[20] = "";
 char portvdb[_Q_PATH_MAX] = "var/db/pkg";
 char portcachedir[] = "metadata/cache";
 char portroot[_Q_PATH_MAX] = "/";
@@ -475,7 +475,7 @@ void initialize_portage_env(void)
 	struct stat st;
 	FILE *fp;
 	char buf[BUFSIZE], *s, *p;
-	char *e = EPREFIX;
+	char *e = (char *) EPREFIX;
 
 	char profile[_Q_PATH_MAX], portage_file[_Q_PATH_MAX];
 	const char *files[] = {portage_file, EPREFIX "/etc/make.globals", EPREFIX "/etc/make.conf"};

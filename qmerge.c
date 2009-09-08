@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.83 2009/05/03 17:19:13 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.84 2009/09/08 03:05:40 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.83 2009/05/03 17:19:13 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.84 2009/09/08 03:05:40 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1108,9 +1108,6 @@ void pkg_fetch(int level, depend_atom *atom, struct pkg_t *pkg)
 		return;
 	}
 }
-
-
-
 
 void print_Pkg(int full, struct pkg_t *pkg)
 {
