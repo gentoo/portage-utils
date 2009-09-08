@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.164 2009/09/08 03:05:40 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.165 2009/09/08 16:49:56 grobian Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,7 +29,6 @@
 #include <libgen.h>
 #include <limits.h>
 #include <assert.h>
-#include <dlfcn.h>
 #include "main.h"
 
 /* prototypes and such */
@@ -46,7 +45,6 @@ void cleanup(void);
 int lookup_applet_idx(const char *);
 
 /* variables to control runtime behavior */
-void *dlhandle = NULL;
 char *module_name = NULL;
 char *modpath = NULL;
 char exact = 0;
