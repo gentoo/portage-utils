@@ -30,6 +30,8 @@ char* strcasestr(const char *big, const char *little) {
 		*strp = xstrdup(str); \
 	} while (0)
 
+#elif defined(__hpux__) || defined(__MINT__)
+	/* must not include both dir.h and dirent.h on hpux11..11 & FreeMiNT */
 #else /* __sun__ */
 # include <sys/dir.h>
 #endif
