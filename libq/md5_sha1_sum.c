@@ -20,7 +20,9 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
+#ifndef __INTERIX
 #include <inttypes.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
