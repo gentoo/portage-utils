@@ -35,3 +35,20 @@ char* strcasestr(const char *big, const char *little) {
 #else /* __sun__ */
 # include <sys/dir.h>
 #endif
+
+/* AIX */
+#ifdef _AIX
+# include <sys/stat.h>
+# define S_BLKSIZE DEV_BSIZE
+#endif
+
+/* Windows Interix */
+#ifdef __INTERIX
+# define S_BLKSIZE S_BLOCK_SIZE
+#endif
+
+/* HP-UX */
+#ifdef __hpux
+# define S_BLKSIZE st.st_blksize
+#endif
+

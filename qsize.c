@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.31 2009/09/08 17:21:50 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.32 2009/09/26 21:02:01 grobian Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,21 +32,8 @@ static const char *qsize_opts_help[] = {
 	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.31 2009/09/08 17:21:50 grobian Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.32 2009/09/26 21:02:01 grobian Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
-
-#ifdef _AIX
-# include <sys/stat.h>
-# define S_BLKSIZE DEV_BSIZE
-#endif
-
-#ifdef __INTERIX
-# define S_BLKSIZE S_BLOCK_SIZE
-#endif
-
-#ifdef __hpux
-# define S_BLKSIZE st.st_blksize
-#endif
 
 int qsize_main(int argc, char **argv)
 {
