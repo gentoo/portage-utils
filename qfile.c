@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.45 2007/05/24 14:47:18 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.46 2009/10/18 17:28:30 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -13,7 +13,7 @@
 #define QFILE_DEFAULT_MAX_ARGS 5000
 #define QFILE_DEFAULT_MAX_ARGS_STR "5000"
 
-#define QFILE_FLAGS "ef:m:oRx:" COMMON_FLAGS
+#define QFILE_FLAGS "ef:m:oRx:S" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"exact",       no_argument, NULL, 'e'},
 	{"from",        a_argument,  NULL, 'f'},
@@ -21,6 +21,7 @@ static struct option const qfile_long_opts[] = {
 	{"orphans",     no_argument, NULL, 'o'},
 	{"root-prefix", no_argument, NULL, 'R'},
 	{"exclude",     a_argument,  NULL, 'x'},
+	{"slots",       no_argument, NULL, 'S'},
 	COMMON_LONG_OPTS
 };
 static const char *qfile_opts_help[] = {
@@ -30,9 +31,10 @@ static const char *qfile_opts_help[] = {
 	"List orphan files",
 	"Assume arguments are already prefixed by $ROOT",
 	"Don't look in package <arg>",
+	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.45 2007/05/24 14:47:18 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.46 2009/10/18 17:28:30 solar Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -52,6 +54,8 @@ typedef struct {
 	char *exclude_pkg;
 	char *exclude_slot;
 } qfile_args_t;
+
+char slotted = 0;
 
 void qfile(char *, const char *, qfile_args_t *);
 void qfile(char *path, const char *root, qfile_args_t *args)
@@ -213,13 +217,26 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 					continue;
 
 				if (non_orphans == NULL) {
+					char pkgslot[126];
+
 					if (atom == NULL && (atom = atom_explode(pkg)) == NULL) {
 						warn("invalid atom %s", pkg);
 						continue;
 					}
-
-					printf("%s%s/%s%s%s", BOLD, atom->CATEGORY, BLUE,
-						(exact ? dentry->d_name : atom->PN), NORM);
+					if (slotted) {
+						FILE *pkgfp = NULL;
+						strcpy(pkgslot, "");
+						xasprintf(&p, "%s/%s/SLOT", path, dentry->d_name);
+						if ((pkgfp = fopen(p, "r")) != NULL) {
+							fgets(pkgslot, sizeof(pkgslot), pkgfp);
+							rmspace(pkgslot);
+							fclose(pkgfp);
+						}
+						free(p);
+					}
+					printf("%s%s/%s%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
+						(exact ? dentry->d_name : atom->PN),
+						(slotted ? ":" : ""), (slotted ? pkgslot : ""), NORM);
 					if (quiet)
 						puts("");
 					else if (root != NULL)
@@ -494,6 +511,7 @@ int qfile_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QFILE, qfile, "")) != -1) {
 		switch (i) {
 			COMMON_GETOPTS_CASES(qfile)
+			case 'S': slotted = 1; break;
 			case 'e': exact = 1; break;
 			case 'f':
 				if (args_file != NULL) {
