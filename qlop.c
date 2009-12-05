@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.45 2009/03/24 20:53:24 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.46 2009/12/05 10:01:07 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -52,7 +52,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.45 2009/03/24 20:53:24 grobian Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.46 2009/12/05 10:01:07 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -469,7 +469,7 @@ void show_current_emerge(void)
 	 * to round up if it can predict a sudden growth, so optimise below
 	 * for the optimistic case */
 	ret = sysctl(mib, 3, NULL, &size, NULL, 0);
-	ip = malloc(sizeof(struct kinfo_proc) * size);
+	ip = xmalloc(sizeof(*ip) * size);
 	if (ip == NULL) {
 		warnp("Could not allocate %d bytes for process information",
 				sizeof(struct kinfo_proc) * size);
