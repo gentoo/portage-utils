@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.46 2009/12/05 10:01:07 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.47 2009/12/26 22:33:47 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -52,7 +52,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.46 2009/12/05 10:01:07 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.47 2009/12/26 22:33:47 solar Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -323,6 +323,16 @@ static void init_hz(void)
 	if (!hz)
 		hz = 100;
 }
+
+static char *root_readlink(const int pid) {
+	static char path[_Q_PATH_MAX];
+	char buf[_Q_PATH_MAX];
+	memset(&path, 0, sizeof(path));
+	snprintf(buf, sizeof(buf), "/proc/%d/root", pid);
+	readlink(buf, path, sizeof(path));
+	return (char *) path;
+}
+
 void show_current_emerge(void)
 {
 	DIR *proc;
@@ -392,6 +402,9 @@ void show_current_emerge(void)
 				GREEN, chop_ctime(start_date), NORM);
 			print_seconds_for_earthlings(uptime_secs - (start_time / hz));
 			puts(NORM);
+			p = NULL;
+			if ((p = root_readlink(pid)) != NULL)
+				printf("     root:    %s%s%s\n", GREEN, p, NORM);
 		}
 	}
 
