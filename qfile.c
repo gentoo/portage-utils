@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.47 2010/01/13 18:17:23 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.48 2010/01/13 18:31:53 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char *qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.47 2010/01/13 18:17:23 vapier Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.48 2010/01/13 18:31:53 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -229,7 +229,8 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 						strcpy(pkgslot, "");
 						xasprintf(&p, "%s/%s/SLOT", path, dentry->d_name);
 						if ((pkgfp = fopen(p, "r")) != NULL) {
-							fgets(pkgslot, sizeof(pkgslot), pkgfp);
+							if (fgets(pkgslot, sizeof(pkgslot), pkgfp) == NULL)
+								pkgslot[0] = '\0';
 							rmspace(pkgslot);
 							fclose(pkgfp);
 						}

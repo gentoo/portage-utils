@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.20 2010/01/13 18:17:26 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.21 2010/01/13 18:31:54 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.20 2010/01/13 18:17:26 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.21 2010/01/13 18:31:54 vapier Exp $
  */
 
 #include <stdio.h>
@@ -174,7 +174,8 @@ queue *resolve_vdb_virtuals(char *vdb)
 			/* see if user wants any of these packages */
 			snprintf(buf, sizeof(buf), "%s/%s/%s/PROVIDE", vdb, dentry_cat->d_name, dentry_pkg->d_name);
 			if ((fp = fopen(buf, "r")) != NULL) {
-				fgets(buf, sizeof(buf), fp);
+				if (fgets(buf, sizeof(buf), fp) == NULL)
+					buf[0] = '\0';
 
 				if ((p = strrchr(buf, '\n')) != NULL)
 					*p = 0;

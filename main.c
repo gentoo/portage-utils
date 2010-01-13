@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.168 2010/01/13 18:23:48 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.169 2010/01/13 18:31:53 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -906,7 +906,8 @@ char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF)
 	snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb, CATEGORY, PF, item);
 	if ((fp = fopen(buf, "r")) == NULL)
 		return NULL;
-	fgets(buf, sizeof(buf), fp);
+	if (fgets(buf, sizeof(buf), fp) == NULL)
+		buf[0] = '\0';
 	if ((p = strchr(buf, '\n')) != NULL)
 		*p = 0;
 	fclose(fp);
