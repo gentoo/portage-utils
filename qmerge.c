@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.90 2010/01/13 19:11:02 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.91 2010/01/13 19:15:16 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.90 2010/01/13 19:11:02 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.91 2010/01/13 19:15:16 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -197,7 +197,7 @@ void fetch(const char *destdir, const char *src)
 		snprintf(buf, sizeof(buf), "%s " BUSYBOX " wget %s -P %s %s/%s", (force_download || install) ? "" : pretend ? "echo " : "",
 			(quiet ? "-q" : ""), destdir, binhost, src);
 	}
-	system(buf);
+	xsystem(buf);
 	fflush(stdout);
 	fflush(stderr);
 }
@@ -294,7 +294,7 @@ void crossmount_rm(char *buf, const size_t size, const char *fname, const struct
 	}
 	qprintf("%s<<<%s %s\n", YELLOW, NORM, buf);
 	snprintf(buf, size, BUSYBOX " rm -rf ./%s", fname);
-	system(buf);
+	xsystem(buf);
 }
 
 void install_mask_pwd(int argc, char **argv, const struct stat st);
@@ -531,7 +531,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	/* mkdir(pkg->PF, 0710); */
 	xchdir(pkg->PF);
 
-	system(BUSYBOX " rm -rf ./*"); /* this line does funny things to nano's highlighting. */
+	xsystem(BUSYBOX " rm -rf ./*"); /* this line does funny things to nano's highlighting. */
 
 	/* split the tbz and xpak data */
 	snprintf(tarball, sizeof(tarball), "%s.tbz2", pkg->PF);
@@ -558,11 +558,11 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	/* list and extract vdb files from the xpak */
 	snprintf(buf, sizeof(buf), "qxpak -d %s/%s/vdb -x %s.xpak `qxpak -l %s.xpak`",
 		port_tmpdir, pkg->PF, pkg->PF, pkg->PF);
-	system(buf);
+	xsystem(buf);
 
 	/* extrct the binary package data */
 	snprintf(buf, sizeof(buf), BUSYBOX " tar -jx%sf %s.tar.bz2 -C image/", ((verbose > 1) ? "v" : ""), pkg->PF);
-	system(buf);
+	xsystem(buf);
 	fflush(stdout);
 
 	/* check for an already installed pkg */
@@ -610,9 +610,9 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	makeargv(install_mask, &iargc, &iargv);
 	install_mask_pwd(iargc, iargv, st);
 
-	if ((strstr(features, "noinfo")) != NULL) if (access("./usr/share/info", R_OK) == 0) system(BUSYBOX " rm -rf ./usr/share/info");
-	if ((strstr(features, "noman"))  != NULL) if (access("./usr/share/man",  R_OK) == 0) system(BUSYBOX " rm -rf ./usr/share/man");
-	if ((strstr(features, "nodoc"))  != NULL) if (access("./usr/share/doc",  R_OK) == 0) system(BUSYBOX " rm -rf ./usr/share/doc");
+	if ((strstr(features, "noinfo")) != NULL) if (access("./usr/share/info", R_OK) == 0) xsystem(BUSYBOX " rm -rf ./usr/share/info");
+	if ((strstr(features, "noman"))  != NULL) if (access("./usr/share/man",  R_OK) == 0) xsystem(BUSYBOX " rm -rf ./usr/share/man");
+	if ((strstr(features, "nodoc"))  != NULL) if (access("./usr/share/doc",  R_OK) == 0) xsystem(BUSYBOX " rm -rf ./usr/share/doc");
 
 	/* we dont care about the return code */
 	rmdir("./usr/share");
@@ -688,7 +688,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 					qprintf("%s***%s %s\n", BRYELLOW, NORM, &buf[1]);
 					if (verbose) {
 						snprintf(newbuf, sizeof(newbuf), "diff -u %s %s", buf, dest);
-						system(newbuf);
+						xsystem(newbuf);
 					}
 					continue;
 				}
@@ -775,7 +775,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 		char buf2[sizeof(buf)] = "";
 		/* we need to compare CONTENTS in it and remove any file not provided by our CONTENTS */
 		snprintf(buf2, sizeof(buf2), BUSYBOX " rm -rf %s", buf);
-		system(buf2);
+		xsystem(buf2);
 	}
 	if ((fp = fopen("vdb/COUNTER", "w")) != NULL) {
 		fputs("0", fp);
@@ -787,7 +787,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	if (which("ebuild") != NULL) {
 		char *tbuf;
 		xasprintf(&tbuf, "ebuild %s/%s.ebuild postinst", buf, basename(buf));
-		system(tbuf);
+		xsystem(tbuf);
 		free(tbuf);
 	}
 
@@ -795,7 +795,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	unlink_q(buf);
 	xchdir(port_tmpdir);
 	snprintf(buf, sizeof(buf), "rm -rf %s", pkg->PF);
-	system(buf);
+	xsystem(buf);
 
 	snprintf(buf, sizeof(buf), "%s/%s.tbz2", pkgdir, pkg->PF);
 	unlink(buf);
@@ -902,7 +902,7 @@ int pkg_unmerge(char *cat, char *pkgname)
 
 	if (!pretend) {
 		snprintf(buf, sizeof(buf), BUSYBOX " rm -rf %s/%s/%s/%s", portroot, portvdb, cat, pkgname);
-		system(buf);
+		xsystem(buf);
 	}
 	return 1;
 }
