@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.40 2008/04/12 17:25:59 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.41 2010/01/13 18:07:14 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qcheck_opts_help[] = {
 	"Only print pkgs containing bad files excluding /etc.",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.40 2008/04/12 17:25:59 solar Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.41 2010/01/13 18:07:14 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 short bad_only = 0;
@@ -120,7 +120,7 @@ int qcheck_main(int argc, char **argv)
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb, dentry->d_name, de->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;
-			strncat(buf, "~", sizeof(buf));
+			strncat(buf, "~", sizeof(buf)-strlen(buf)-1);
 			num_files = num_files_ok = num_files_unknown = num_files_ignored = 0;
 			qcprintf("%sing %s%s/%s%s ...\n",
 				(qc_update ? "Updat" : "Check"),
@@ -267,7 +267,7 @@ int qcheck_main(int argc, char **argv)
 				snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb,
 					dentry->d_name, de->d_name);
 				strcpy(buffer, buf);
-				strncat(buffer, "~", sizeof(buffer));
+				strncat(buffer, "~", sizeof(buffer)-strlen(buf)-1);
 				rename(buffer, buf);
 				if (!verbose)
 					continue;

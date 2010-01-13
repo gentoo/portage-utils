@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.52 2009/04/17 15:01:20 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.53 2010/01/13 18:07:14 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,7 +39,7 @@ static const char *qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.52 2009/04/17 15:01:20 solar Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.53 2010/01/13 18:07:14 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
@@ -89,8 +89,8 @@ static char *grab_pkg_umap(char *CAT, char *PV)
 		for (u = 1; u < use_argc; u++) {
 			for (i = 1; i < iuse_argc; i++) {
 				if ((strcmp(use_argv[u], iuse_argv[i])) == 0) {
-					strncat(umap, use_argv[u], sizeof(umap));
-					strncat(umap, " ", sizeof(umap));
+					strncat(umap, use_argv[u], sizeof(umap)-strlen(umap)-1);
+					strncat(umap, " ", sizeof(umap)-strlen(umap)-1);
 				}
 			}
 		}
@@ -109,8 +109,8 @@ static char *grab_pkg_umap(char *CAT, char *PV)
 	memset(umap, 0, sizeof(umap)); /* reset the buffer */
 	strcpy(umap, "");
 	for (ll = sets; ll != NULL; ll = ll->next) {
-		strncat(umap, ll->name, sizeof(umap));
-		strncat(umap, " ", sizeof(umap));
+		strncat(umap, ll->name, sizeof(umap)-strlen(umap)-1);
+		strncat(umap, " ", sizeof(umap)-strlen(umap)-1);
 	}
 	freeargv(use_argc, use_argv);
 	free_sets(sets);

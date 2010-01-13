@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.86 2010/01/13 14:02:34 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.87 2010/01/13 18:07:14 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.86 2010/01/13 14:02:34 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.87 2010/01/13 18:07:14 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -773,7 +773,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	snprintf(buf, sizeof(buf), "%s/var/db/pkg/%s/", portroot, pkg->CATEGORY);
 	if (access(buf, R_OK|W_OK|X_OK) != 0)
 		mkdirhier(buf, 0755);
-	strncat(buf, pkg->PF, sizeof(buf));
+	strncat(buf, pkg->PF, sizeof(buf)-strlen(buf)-1);
 
 	/* FIXME */ /* move unmerging to around here ? */
 	/* not perfect when a version is already installed */
