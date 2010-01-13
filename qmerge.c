@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.85 2010/01/13 06:14:40 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.86 2010/01/13 14:02:34 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.85 2010/01/13 06:14:40 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.86 2010/01/13 14:02:34 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -224,9 +224,9 @@ void qmerge_initialize(const char *Packages)
 	}
 
 	if (chdir(port_tmpdir) != 0)
-		errf("!!! chdir(PORTAGE_TMPDIR %s) %s", port_tmpdir, strerror(errno));
+		errfp("!!! chdir(PORTAGE_TMPDIR %s)", port_tmpdir);
 	if (chdir("portage") != 0)
-		errf("!!! chdir(%s/portage) %s", port_tmpdir, strerror(errno));
+		errfp("!!! chdir(%s/portage)", port_tmpdir);
 
 	if (force_download && force_download != 2)
 		unlink(Packages);
@@ -527,11 +527,13 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	if (pretend)
 		return;
 
-	if (chdir(port_tmpdir) != 0) errf("!!! chdir(port_tmpdir %s) %s", port_tmpdir, strerror(errno));
+	if (chdir(port_tmpdir) != 0)
+		errfp("!!! chdir(port_tmpdir %s)", port_tmpdir);
 
 	mkdir(pkg->PF, 0755);
 	/* mkdir(pkg->PF, 0710); */
-	if (chdir(pkg->PF) != 0) errf("!!! chdir(PF %s) %s", pkg->PF, strerror(errno));
+	if (chdir(pkg->PF) != 0)
+		errfp("!!! chdir(PF %s)", pkg->PF);
 
 	system(BUSYBOX " rm -rf ./*"); /* this line does funny things to nano's highlighting. */
 
@@ -739,7 +741,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 			getcwd(pwd, sizeof(pwd));
 			if (chdir(dirname(tmp)) != 0) /* tmp gets eatten up now by the dirname call */
-				errf("chdir to symbolic dirname %s: %s", tmp, strerror(errno));
+				errfp("chdir to symbolic dirname %s", tmp);
 			if (lstat(path, &lst) != (-1))
 				unlink_q(dest);
 			/* if (path[0] != '/')
@@ -747,7 +749,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 			*/
 			if ((symlink(path, dest)) != 0)
 				if (errno != EEXIST)
-					warn("symlink failed %s -> %s: %s", path, &buf[1], strerror(errno));
+					warnp("symlink failed %s -> %s", path, &buf[1]);
 			chdir(pwd);
 		}
 		/* Save the line to the contents file */
@@ -763,8 +765,10 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	fclose(contents);
 	pclose(fp);
 
-	if (chdir(port_tmpdir) != 0) errf("!!! chdir(%s) %s", port_tmpdir, strerror(errno));
-	if (chdir(pkg->PF) != 0) errf("!!! chdir(%s) %s", pkg->PF, strerror(errno));
+	if (chdir(port_tmpdir) != 0)
+		errfp("!!! chdir(%s)", port_tmpdir);
+	if (chdir(pkg->PF) != 0)
+		errfp("!!! chdir(%s)", pkg->PF);
 
 	snprintf(buf, sizeof(buf), "%s/var/db/pkg/%s/", portroot, pkg->CATEGORY);
 	if (access(buf, R_OK|W_OK|X_OK) != 0)
@@ -867,7 +871,7 @@ int pkg_unmerge(char *cat, char *pkgname)
 							break;
 						}
 					} else {
-						warn("lstat failed for %s -> '%s': %s", dst, e->sym_target, strerror(errno));
+						warnp("lstat failed for %s -> '%s'", dst, e->sym_target);
 					}
 					warn("!!! %s -> %s", e->name, e->sym_target);
 					break;
@@ -880,7 +884,7 @@ int pkg_unmerge(char *cat, char *pkgname)
 						warn("%s is not a symlink", dst);
 					}
 				} else {
-					warn("lstat failed for '%s' -> %s: %s", dst, e->sym_target, strerror(errno));
+					warnp("lstat failed for '%s' -> %s", dst, e->sym_target);
 				}
 				break;
 			default:
@@ -1212,7 +1216,7 @@ struct pkg_t *grab_binpkg_info(const char *name)
 	snprintf(buf, sizeof(buf), "%s/portage/Packages", port_tmpdir);
 
 	if ((fp = fopen(buf, "r")) == NULL)
-		err("Unable to open package file %s: %s", buf, strerror(errno));
+		errp("Unable to open package file %s", buf);
 
 	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 		if (*buf == '\n') {
@@ -1318,7 +1322,7 @@ char *find_binpkg(const char *name)
 	snprintf(buf, sizeof(buf), "%s/portage/Packages", port_tmpdir);
 
 	if ((fp = fopen(buf, "r")) == NULL)
-		err("Unable to open package file %s: %s", buf, strerror(errno));
+		errp("Unable to open package file %s", buf);
 
 	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 		if (*buf == '\n') {
@@ -1395,7 +1399,7 @@ int parse_packages(const char *Packages, int argc, char **argv)
 	long lineno = 0;
 
 	if ((fp = fopen(Packages, "r")) == NULL)
-		err("Unable to open package file %s: %s", Packages, strerror(errno));
+		errp("Unable to open package file %s", Packages);
 
 	memset(&Pkg, 0, sizeof(Pkg));
 
@@ -1494,7 +1498,7 @@ queue *get_world(void) {
 		strncpy(fname,  "/var/lib/portage/world", sizeof(fname));
 
 	if ((fp = fopen(fname, "r")) == NULL) {
-		warn("fopen(\"%s\", \"r\"); = -1 (%s)", fname, strerror(errno));
+		warnp("fopen(\"%s\", \"r\"); = -1", fname);
 		return NULL;
 	}
 
