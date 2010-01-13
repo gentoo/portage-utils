@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.48 2010/01/13 18:31:53 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.49 2010/01/13 19:01:34 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char *qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.48 2010/01/13 18:31:53 vapier Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.49 2010/01/13 19:01:34 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -188,11 +188,9 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 					else {
 						char rpath[_Q_PATH_MAX+1];
 						char *fullpath = entry_dirname;
-						errno = 0;
 						if (real_root != NULL && real_root[0] != '\0')
 							xasprintf(&fullpath, "%s%s", real_root, entry_dirname);
-						realpath(fullpath, rpath);
-						if (errno != 0) {
+						if (realpath(fullpath, rpath) == NULL) {
 							if (verbose) {
 								warnp("Could not read real path of \"%s\" (from %s)", fullpath, pkg);
 								warn("We'll never know whether \"%s/%s\" was a result for your query...",
@@ -345,9 +343,7 @@ int prepare_qfile_args(const int argc, const char **argv,
 		warn("Could not get absolute path for ROOT (\"%s\"), because of missing or not absolute $PWD", tmppath);
 		return -1;
 	}
-	errno = 0;
-	realpath(tmppath, abspath);
-	if (errno != 0) {
+	if (realpath(tmppath, abspath) == NULL) {
 		free(pwd);
 		warnp("Could not read real path of ROOT (\"%s\")", tmppath);
 		return -1;
@@ -413,9 +409,7 @@ int prepare_qfile_args(const int argc, const char **argv,
 			if (abspath[real_root_length] == '\0')
 				strncat(abspath, "/", 1);
 			dirnames[i] = xstrdup(abspath + real_root_length);
-			errno = 0;
-			realpath(abspath, tmppath);
-			if (errno != 0) {
+			if (realpath(abspath, tmppath) == NULL) {
 				if (verbose) {
 					warnp("Could not read real path of \"%s\"", abspath);
 					warn("Results for query item \"%s\" may be inaccurate.", argv[i]);
@@ -435,9 +429,7 @@ int prepare_qfile_args(const int argc, const char **argv,
 			 * Dirname is meaningless here, we can only get realpath of the full
 			 * path and then split it.
 			 */
-			errno = 0;
-			realpath(abspath, tmppath);
-			if (errno != 0) {
+			if (realpath(abspath, tmppath) == NULL) {
 				warnp("Could not read real path of \"%s\"", abspath);
 				goto skip_query_item;
 			}
