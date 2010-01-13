@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.165 2009/09/08 16:49:56 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.166 2010/01/13 06:12:38 solar Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -812,59 +812,6 @@ portage_cache *cache_read_file(const char *file)
 		goto err;
 	len = sizeof(*ret) + s.st_size + 1;
 	ret = xzalloc(len);
-#if 0
-{	/* This is the expected format of portage-2.0 cache code NAME=var */
-	/* at any time ferringb might decide to add new entries. CDEPEND= will be no more */
-	char buf[BUFSIZ];
-	while ((fgets(buf, sizeof(buf), f)) != NULL) {
-		if ((ptr = strrchr(buf, '\n')) != NULL)
-			*ptr = 0;
-
-		if ((strncmp(buf, "DEPEND=", 7)) == 0)
-			ret->DEPEND = xstrdup(buf + 7);
-
-		if ((strncmp(buf, "DESCRIPTION=", 12)) == 0)
-			ret->DESCRIPTION = xstrdup(buf + 12);
-#if 0
-		if ((strncmp(buf, "EAPI=", 5)) == 0)
-			warnf("EAPI=%s", buf + 5);
-#endif
-		if ((strncmp(buf, "HOMEPAGE=", 9)) == 0)
-			ret->HOMEPAGE = xstrdup(buf + 9);
-
-		if ((strncmp(buf, "INHERITED=", 10)) == 0)
-			ret->INHERITED = xstrdup(buf + 10);
-
-		if ((strncmp(buf, "IUSE=", 4)) == 0)
-			ret->IUSE = xstrdup(buf + 4);
-
-		if ((strncmp(buf, "KEYWORDS=", 9)) == 0)
-			ret->KEYWORDS = xstrdup(buf + 9);
-
-		if ((strncmp(buf, "LICENSE=", 8)) == 0)
-			ret->LICENSE = xstrdup(buf + 8);
-
-		if ((strncmp(buf, "PDEPEND=", 8)) == 0)
-			ret->PDEPEND = xstrdup(buf + 8);
-
-		if ((strncmp(buf, "PROVIDE=", 8)) == 0)
-			ret->PROVIDE = xstrdup(buf + 8);
-
-		if ((strncmp(buf, "RDEPEND=", 8)) == 0)
-			ret->RDEPEND = xstrdup(buf + 8);
-
-		if ((strncmp(buf, "RESTRICT=", 9)) == 0)
-			ret->RESTRICT = xstrdup(buf + 9);
-
-		if ((strncmp(buf, "SLOT=", 5)) == 0)
-			ret->SLOT = xstrdup(buf + 5);
-
-		if ((strncmp(buf, "SRC_URI=", 8)) == 0)
-			ret->SRC_URI = xstrdup(buf + 8);
-	}
-	rewind(f);
-}
-#endif
 	ptr = (char*)ret;
 	ret->_data = ptr + sizeof(*ret);
 	if ((off_t)fread(ret->_data, 1, s.st_size, f) != s.st_size)
