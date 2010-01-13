@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.167 2010/01/13 18:17:23 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.168 2010/01/13 18:23:48 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -118,7 +118,7 @@ void no_colors()
 	NULL
 #define COMMON_GETOPTS_CASES(applet) \
 	case 'v': ++verbose; break; \
-	case 'q': ++quiet; freopen("/dev/null", "w", stderr); break; \
+	case 'q': ++quiet; stderr = freopen("/dev/null", "w", stderr); break; \
 	case 'V': version_barf( applet ## _rcsid ); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': no_colors(); break; \
