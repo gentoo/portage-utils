@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.45 2008/01/16 16:24:49 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.46 2010/01/13 19:11:02 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,7 +22,7 @@ static const char *q_opts_help[] = {
 	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.45 2008/01/16 16:24:49 solar Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.46 2010/01/13 19:11:02 vapier Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 APPLET lookup_applet(char *applet);
@@ -96,7 +96,7 @@ int q_main(int argc, char **argv)
 			memset(buf, 0x00, sizeof(buf));
 			printf("Installing symlinks:\n");
 			/* solaris: /proc/self/object/a.out bsd: /proc/self/exe or /proc/curproc/file with linuxfs/procfs respectively */
-			if ((readlink("/proc/self/exe", buf, sizeof(buf))) == (-1)) {
+			if (readlink("/proc/self/exe", buf, sizeof(buf) - 1) == -1) {
 				char *ptr = which("q");
 				if (ptr == NULL) {
 					warnfp("haha no symlink love for you");
@@ -109,10 +109,8 @@ int q_main(int argc, char **argv)
 				return 1;
 			}
 			for (i = 1; applets[i].desc != NULL; ++i) {
-				printf(" %s ...", applets[i].name);
-				errno = 0;
-				symlink("q", applets[i].name);
-				printf("\t[%s]\n", strerror(errno));
+				printf(" %s ...\t[%s]\n", applets[i].name,
+					symlink("q", applets[i].name) ? strerror(errno) : "OK");
 			}
 			return 0;
 		}

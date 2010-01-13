@@ -22,6 +22,7 @@
 
 #include "xchdir.c"
 #include "xgetcwd.c"
+#include "xreadlink.c"
 
 /* custom libs */
 #include "atom_explode.c"

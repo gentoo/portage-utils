@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.89 2010/01/13 18:48:00 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.90 2010/01/13 19:11:02 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.89 2010/01/13 18:48:00 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.90 2010/01/13 19:11:02 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -537,7 +537,8 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	snprintf(tarball, sizeof(tarball), "%s.tbz2", pkg->PF);
 	snprintf(buf, sizeof(buf), "%s/%s/%s", pkgdir, pkg->CATEGORY, tarball);
 	unlink(tarball);
-	symlink(buf, tarball);
+	if (symlink(buf, tarball))
+		errp("symlink(%s, %s) failed", buf, tarball);
 	mkdir("vdb", 0755);
 	mkdir("image", 0755);
 
@@ -726,7 +727,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 			memset(&path, 0, sizeof(path));
 
 			assert(strlen(dest));
-			readlink(buf, path, sizeof(path));
+			xreadlink(buf, path, sizeof(path) - 1);
 			assert(strlen(path));;
 
 			snprintf(line, sizeof(line), "sym %s -> %s%s%lu", &buf[1], path, " ", st.st_mtime);
@@ -742,7 +743,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 			/* if (path[0] != '/')
 				puts("path does not start with /");
 			*/
-			if ((symlink(path, dest)) != 0)
+			if (symlink(path, dest))
 				if (errno != EEXIST)
 					warnp("symlink failed %s -> %s", path, &buf[1]);
 			xchdir(pwd);
@@ -1095,7 +1096,8 @@ void pkg_fetch(int level, depend_atom *atom, struct pkg_t *pkg)
 		snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
 		snprintf(str, sizeof(str), "../%s/%s.tbz2", atom->CATEGORY, pkg->PF);
 		unlink(buf);
-		symlink(str, buf);
+		if (symlink(str, buf))
+			errp("symlink(%s, %s) failed", str, buf);
 	}
 	xchdir(savecwd);
 

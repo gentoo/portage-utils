@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.49 2010/01/05 03:00:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.50 2010/01/13 19:11:02 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -52,7 +52,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.49 2010/01/05 03:00:11 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.50 2010/01/13 19:11:02 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -324,12 +324,13 @@ static void init_hz(void)
 		hz = 100;
 }
 
-static char *root_readlink(const int pid) {
+static char *root_readlink(const int pid)
+{
 	static char path[_Q_PATH_MAX];
 	char buf[_Q_PATH_MAX];
 	memset(&path, 0, sizeof(path));
 	snprintf(buf, sizeof(buf), "/proc/%d/root", pid);
-	readlink(buf, path, sizeof(path));
+	xreadlink(buf, path, sizeof(path) - 1);
 	return (char *) path;
 }
 
