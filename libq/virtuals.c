@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.21 2010/01/13 18:31:54 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.22 2010/01/13 18:48:01 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.21 2010/01/13 18:31:54 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.22 2010/01/13 18:48:01 vapier Exp $
  */
 
 #include <stdio.h>
@@ -247,7 +247,7 @@ static queue *resolve_virtuals()
 
 	memset(buf, 0, sizeof(buf));
 
-	getcwd(savecwd, sizeof(savecwd));
+	xgetcwd(savecwd, sizeof(savecwd));
 
 	free_sets(virtuals);
 	virtuals = resolve_local_profile_virtuals();
@@ -258,7 +258,7 @@ static queue *resolve_virtuals()
 
 	if (readlink("make.profile", buf, sizeof(buf)) != -1) {
 		xchdir(buf);
-		getcwd(buf, sizeof(buf));
+		xgetcwd(buf, sizeof(buf));
 		if (access(buf, R_OK) != 0)
 			return virtuals;
 	vstart:

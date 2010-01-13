@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.169 2010/01/13 18:31:53 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.170 2010/01/13 18:48:00 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -932,7 +932,7 @@ queue *get_vdb_atoms(int fullcpv)
 	depend_atom *atom = NULL;
 	queue *cpf = NULL;
 
-	getcwd(savecwd, sizeof(savecwd));
+	xgetcwd(savecwd, sizeof(savecwd));
 
 	xchdir(savecwd);
 

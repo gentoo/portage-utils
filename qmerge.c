@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.88 2010/01/13 18:17:23 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.89 2010/01/13 18:48:00 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.88 2010/01/13 18:17:23 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.89 2010/01/13 18:48:00 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -735,7 +735,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 			strcpy(tmp, &buf[1]);
 			if (tmp[0] != '/') errf("sym does not start with /");
 
-			getcwd(pwd, sizeof(pwd));
+			xgetcwd(pwd, sizeof(pwd));
 			xchdir(dirname(tmp)); /* tmp gets eatten up now by the dirname call */
 			if (lstat(path, &lst) != (-1))
 				unlink_q(dest);
@@ -1089,7 +1089,7 @@ void pkg_fetch(int level, depend_atom *atom, struct pkg_t *pkg)
 		fflush(stderr);
 		return;
 	}
-	getcwd(savecwd, sizeof(savecwd));
+	xgetcwd(savecwd, sizeof(savecwd));
 	xchdir(pkgdir);
 	if (chdir("All/") == 0) {
 		snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
