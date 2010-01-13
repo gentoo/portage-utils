@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.33 2008/03/15 16:28:06 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.34 2010/01/13 13:56:42 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -47,7 +47,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.33 2008/03/15 16:28:06 grobian Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.34 2010/01/13 13:56:42 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -440,10 +440,10 @@ void qcache_free_data(portage_cache *cache)
  *   1 (OLDER)
  *   0 (SAME)
  */
-int qcache_vercmp(const void *x, const void *y);
-int qcache_vercmp(const void *x, const void *y)
+int qcache_vercmp(const struct dirent **x, const struct dirent **y);
+int qcache_vercmp(const struct dirent **x, const struct dirent **y)
 {
-	switch (atom_compare_str((*((const struct dirent **)x))->d_name, (*((const struct dirent **)y))->d_name)) {
+	switch (atom_compare_str((*x)->d_name, (*y)->d_name)) {
 		case NEWER: return -1;
 		case OLDER: return  1;
 		default:    return  0;
