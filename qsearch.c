@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.37 2008/08/15 01:56:01 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.38 2010/01/13 03:52:40 solar Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qsearch_opts_help[] = {
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.37 2008/08/15 01:56:01 solar Exp $";
+static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.38 2010/01/13 03:52:40 solar Exp $";
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
 
 int qsearch_main(int argc, char **argv)
@@ -44,7 +44,7 @@ int qsearch_main(int argc, char **argv)
 	char *p, *q, *str;
 	char *search_me = NULL;
 	char show_homepage = 0, show_name_only = 0;
-	char search_desc = 0, search_all = 0, search_name = 1, search_cache = CACHE_METADATA;
+	char search_desc = 0, search_all = 0, search_name = 1, search_cache = CACHE_EBUILD;
 	const char *search_vars[] = { "DESCRIPTION=", "HOMEPAGE=" };
 	size_t search_len;
 	int i, idx=0;
