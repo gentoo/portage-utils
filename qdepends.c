@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.48 2009/08/29 19:43:14 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.49 2010/01/13 18:17:23 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.48 2009/08/29 19:43:14 solar Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.49 2010/01/13 18:17:23 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -355,10 +355,9 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 	dep_node *dep_tree;
 	struct stat st;
 
-	if (chdir(portroot))
-		errp("could not chdir(%s) for ROOT", portroot);
-
-	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
+	xchdir(portroot);
+	xchdir(portvdb);
+	if ((dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
@@ -451,7 +450,7 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv)
 			dep_burn_tree(dep_tree);
 		}
 		closedir(dirp);
-		chdir("..");
+		xchdir("..");
 	}
 
 	return EXIT_SUCCESS;
@@ -467,10 +466,9 @@ int qdepends_vdb_deep(const char *depend_file, const char *query)
 	char depend[16384], use[8192];
 	dep_node *dep_tree;
 
-	if (chdir(portroot))
-		errp("could not chdir(%s) for ROOT", portroot);
-
-	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
+	xchdir(portroot);
+	xchdir(portvdb);
+	if ((dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
@@ -539,7 +537,7 @@ int qdepends_vdb_deep(const char *depend_file, const char *query)
 			dep_burn_tree(dep_tree);
 		}
 		closedir(dirp);
-		chdir("..");
+		xchdir("..");
 	}
 
 	return EXIT_SUCCESS;

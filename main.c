@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.166 2010/01/13 06:12:38 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.167 2010/01/13 18:17:23 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -758,7 +758,7 @@ ret:
 
 void reinitialize_ebuild_flat(void)
 {
-	if ((chdir(portdir)) != 0) {
+	if (chdir(portdir) != 0) {
 		warnp("chdir to PORTDIR '%s' failed", portdir);
 		return;
 	}
@@ -933,7 +933,7 @@ queue *get_vdb_atoms(int fullcpv)
 
 	getcwd(savecwd, sizeof(savecwd));
 
-	assert(chdir(savecwd) == 0);
+	xchdir(savecwd);
 
 	if (chdir(portroot) != 0)
 		goto fuckit;
@@ -952,7 +952,7 @@ queue *get_vdb_atoms(int fullcpv)
 		if (chdir(cat[j]->d_name) != 0)
 			continue;
 		if ((dfd = scandir(".", &pf, filter_hidden, alphasort)) < 0) {
-			chdir("..");
+			xchdir("..");
 			continue;
 		}
 		for (i = 0; i < dfd; i++) {
@@ -983,7 +983,7 @@ queue *get_vdb_atoms(int fullcpv)
 			atom_implode(atom);
 			cpf = add_set(buf, slot, cpf);
 		}
-		chdir("..");
+		xchdir("..");
 		while (dfd--) free(pf[dfd]);
 		free(pf);
 	}
@@ -993,7 +993,7 @@ queue *get_vdb_atoms(int fullcpv)
 	free(cat);
 
 fuckit:
-	assert(chdir(savecwd) == 0);
+	xchdir(savecwd);
 	return cpf;
 }
 

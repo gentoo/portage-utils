@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.46 2009/10/18 17:28:30 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.47 2010/01/13 18:17:23 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char *qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.46 2009/10/18 17:28:30 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.47 2010/01/13 18:17:23 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -78,7 +78,8 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 	char *bn_firstchars = args->bn_firstchars;
 	short *non_orphans = args->non_orphans;
 
-	if (chdir(path) != 0 || (dir = opendir(".")) == NULL)
+	xchdir(path);
+	if ((dir = opendir(".")) == NULL)
 		return;
 
 	while ((dentry = readdir(dir))) {
@@ -558,15 +559,8 @@ int qfile_main(int argc, char **argv)
 	if ((args_file == NULL) && (max_args != QFILE_DEFAULT_MAX_ARGS))
 		warn("--max-args is only used when reading arguments from a file (with -f)");
 
-	if (chdir(portroot)) {
-		warnp("could not chdir(%s) for ROOT", portroot);
-		goto exit;
-	}
-
-	if (chdir(portvdb) != 0) {
-		warnp("could not chdir(ROOT/%s) for installed packages database", portvdb);
-		goto exit;
-	}
+	xchdir(portroot);
+	xchdir(portvdb);
 
 	/* Get a copy of $ROOT, with no trailing slash
 	 * (this one is just for qfile(...) output)
@@ -615,10 +609,10 @@ int qfile_main(int argc, char **argv)
 		if (nb_of_queries < 0)
 			goto exit;
 
-		if (chdir(portroot)
-				|| chdir(portvdb) != 0
-				|| (dir = opendir(".")) == NULL) {
-			warnp("could not chdir(ROOT/%s) for installed packages database", portvdb);
+		xchdir(portroot);
+		xchdir(portvdb);
+		if ((dir = opendir(".")) == NULL) {
+			warnp("could not read(ROOT/%s) for installed packages database", portvdb);
 			goto exit;
 		}
 

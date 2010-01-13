@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.19 2007/05/24 14:47:19 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.20 2010/01/13 18:17:26 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.19 2007/05/24 14:47:19 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.20 2010/01/13 18:17:26 vapier Exp $
  */
 
 #include <stdio.h>
@@ -155,7 +155,7 @@ queue *resolve_vdb_virtuals(char *vdb)
 	char buf[BUFSIZE];
 	depend_atom *atom;
 
-	chdir("/");
+	xchdir("/");
 
 	/* now try to run through vdb and locate matches for user inputs */
 	if ((dir = opendir(vdb)) == NULL)
@@ -252,11 +252,11 @@ static queue *resolve_virtuals()
 	virtuals = resolve_local_profile_virtuals();
 	virtuals = resolve_vdb_virtuals(portvdb);
 
-	if ((chdir("/etc/")) == (-1))
+	if (chdir("/etc/") == -1)
 		return virtuals;
 
-	if ((readlink("make.profile", buf, sizeof(buf))) != (-1)) {
-		chdir(buf);
+	if (readlink("make.profile", buf, sizeof(buf)) != -1) {
+		xchdir(buf);
 		getcwd(buf, sizeof(buf));
 		if (access(buf, R_OK) != 0)
 			return virtuals;
@@ -280,16 +280,16 @@ static queue *resolve_virtuals()
 				if (*buf == '#') continue;
 				if (isspace(*buf)) continue;
 				fclose(fp);
-				if ((chdir(buf)) == (-1)) {
+				if (chdir(buf) == -1) {
 					fclose(fp);
-					chdir(savecwd);
-					return virtuals;
+					goto done;
 				}
 				goto vstart;
 			}
 			fclose(fp);
 		}
 	}
-	chdir(savecwd);
+ done:
+	xchdir(savecwd);
 	return virtuals;
 }

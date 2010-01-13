@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.32 2009/09/26 21:02:01 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.33 2010/01/13 18:17:23 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char *qsize_opts_help[] = {
 	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.32 2009/09/26 21:02:01 grobian Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.33 2010/01/13 18:17:23 vapier Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
 int qsize_main(int argc, char **argv)
@@ -70,10 +70,9 @@ int qsize_main(int argc, char **argv)
 	if ((argc == optind) && !search_all)
 		qsize_usage(EXIT_FAILURE);
 
-	if (chdir(portroot))
-		errp("could not chdir(%s) for ROOT", portroot);
-
-	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
+	xchdir(portroot);
+	xchdir(portvdb);
+	if ((dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
 	num_all_bytes = num_all_files = num_all_nonfiles = num_all_ignored = 0;
@@ -161,7 +160,7 @@ int qsize_main(int argc, char **argv)
 			}
 		}
 		closedir(dirp);
-		chdir("..");
+		xchdir("..");
 	}
 
 	if (summary) {

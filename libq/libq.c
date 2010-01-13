@@ -20,6 +20,8 @@
 #include "which.c"
 #include "compat.c"
 
+#include "xchdir.c"
+
 /* custom libs */
 #include "atom_explode.c"
 #include "atom_compare.c"

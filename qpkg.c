@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.27 2009/08/23 06:06:49 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.28 2010/01/13 18:17:23 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,7 @@ static const char *qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.27 2009/08/23 06:06:49 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.28 2010/01/13 18:17:23 vapier Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
@@ -316,8 +316,7 @@ int qpkg_main(int argc, char **argv)
 	if (argc == optind)
 		qpkg_usage(EXIT_FAILURE);
 
-	if (chdir(portroot))
-		errp("could not chdir(%s) for ROOT", portroot);
+	xchdir(portroot);
 
 	/* setup temp dirs */
 	i = 0;

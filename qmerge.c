@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.87 2010/01/13 18:07:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.88 2010/01/13 18:17:23 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.87 2010/01/13 18:07:14 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.88 2010/01/13 18:17:23 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -223,10 +223,8 @@ void qmerge_initialize(const char *Packages)
 		mkdir(port_tmpdir, 0755);
 	}
 
-	if (chdir(port_tmpdir) != 0)
-		errfp("!!! chdir(PORTAGE_TMPDIR %s)", port_tmpdir);
-	if (chdir("portage") != 0)
-		errfp("!!! chdir(%s/portage)", port_tmpdir);
+	xchdir(port_tmpdir);
+	xchdir("portage");
 
 	if (force_download && force_download != 2)
 		unlink(Packages);
@@ -527,13 +525,11 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	if (pretend)
 		return;
 
-	if (chdir(port_tmpdir) != 0)
-		errfp("!!! chdir(port_tmpdir %s)", port_tmpdir);
+	xchdir(port_tmpdir);
 
 	mkdir(pkg->PF, 0755);
 	/* mkdir(pkg->PF, 0710); */
-	if (chdir(pkg->PF) != 0)
-		errfp("!!! chdir(PF %s)", pkg->PF);
+	xchdir(pkg->PF);
 
 	system(BUSYBOX " rm -rf ./*"); /* this line does funny things to nano's highlighting. */
 
@@ -605,7 +601,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 		freeargv(ARGC, ARGV);
 		ARGC = 0; ARGV = NULL;
 	}
-	assert(chdir("image") == 0);
+	xchdir("image");
 
 	if (stat("./", &st) == (-1))
 		err("Cant stat pwd");
@@ -740,8 +736,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 			if (tmp[0] != '/') errf("sym does not start with /");
 
 			getcwd(pwd, sizeof(pwd));
-			if (chdir(dirname(tmp)) != 0) /* tmp gets eatten up now by the dirname call */
-				errfp("chdir to symbolic dirname %s", tmp);
+			xchdir(dirname(tmp)); /* tmp gets eatten up now by the dirname call */
 			if (lstat(path, &lst) != (-1))
 				unlink_q(dest);
 			/* if (path[0] != '/')
@@ -750,7 +745,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 			if ((symlink(path, dest)) != 0)
 				if (errno != EEXIST)
 					warnp("symlink failed %s -> %s", path, &buf[1]);
-			chdir(pwd);
+			xchdir(pwd);
 		}
 		/* Save the line to the contents file */
 		if (*line) fprintf(contents, "%s\n", line);
@@ -765,10 +760,8 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	fclose(contents);
 	pclose(fp);
 
-	if (chdir(port_tmpdir) != 0)
-		errfp("!!! chdir(%s)", port_tmpdir);
-	if (chdir(pkg->PF) != 0)
-		errfp("!!! chdir(%s)", pkg->PF);
+	xchdir(port_tmpdir);
+	xchdir(pkg->PF);
 
 	snprintf(buf, sizeof(buf), "%s/var/db/pkg/%s/", portroot, pkg->CATEGORY);
 	if (access(buf, R_OK|W_OK|X_OK) != 0)
@@ -799,7 +792,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 	snprintf(buf, sizeof(buf), BUSYBOX " %s.tar.bz2", pkg->PF);
 	unlink_q(buf);
-	chdir(port_tmpdir);
+	xchdir(port_tmpdir);
 	snprintf(buf, sizeof(buf), "rm -rf %s", pkg->PF);
 	system(buf);
 
@@ -1097,14 +1090,14 @@ void pkg_fetch(int level, depend_atom *atom, struct pkg_t *pkg)
 		return;
 	}
 	getcwd(savecwd, sizeof(savecwd));
-	assert(chdir(pkgdir) == 0);
+	xchdir(pkgdir);
 	if (chdir("All/") == 0) {
 		snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
 		snprintf(str, sizeof(str), "../%s/%s.tbz2", atom->CATEGORY, pkg->PF);
 		unlink(buf);
 		symlink(str, buf);
 	}
-	chdir(savecwd);
+	xchdir(savecwd);
 
 	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
 	if ((pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1)) == 0) {

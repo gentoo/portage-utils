@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.41 2010/01/13 18:07:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.42 2010/01/13 18:17:23 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qcheck_opts_help[] = {
 	"Only print pkgs containing bad files excluding /etc.",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.41 2010/01/13 18:07:14 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.42 2010/01/13 18:17:23 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 short bad_only = 0;
@@ -69,10 +69,9 @@ int qcheck_main(int argc, char **argv)
 	if ((argc == optind) && !search_all)
 		qcheck_usage(EXIT_FAILURE);
 
-	if (chdir(portroot))
-		errp("could not chdir(%s) for ROOT", portroot);
-
-	if (chdir(portvdb) != 0 || (dir = opendir(".")) == NULL)
+	xchdir(portroot);
+	xchdir(portvdb);
+	if ((dir = opendir(".")) == NULL)
 		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
@@ -300,7 +299,7 @@ int qcheck_main(int argc, char **argv)
 			qcprintf("\n");
 		}
 		closedir(dirp);
-		chdir("..");
+		xchdir("..");
 	}
 
 	return EXIT_SUCCESS;

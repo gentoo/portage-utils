@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.10 2007/11/24 08:53:35 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.11 2010/01/13 18:17:23 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char *qglsa_opts_help[] = {
 	"Mark specified GLSAs as fixed",
 	COMMON_OPTS_HELP
 };
-static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.10 2007/11/24 08:53:35 solar Exp $";
+static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.11 2010/01/13 18:17:23 vapier Exp $";
 #define qglsa_usage(ret) usage(ret, QGLSA_FLAGS, qglsa_long_opts, qglsa_opts_help, lookup_applet_idx("qglsa"))
 
 static char *qglsa_load_list(void);
@@ -200,10 +200,8 @@ int qglsa_main(int argc, char **argv)
 	}
 	glsa_fixed_list = qglsa_load_list();
 
-	if (chdir(portdir) != 0)
-		errp("could not chdir to portdir %s", portdir);
-	if (chdir("./metadata/glsa") != 0)
-		errp("could not chdir to glsa dir");
+	xchdir(portdir);
+	xchdir("./metadata/glsa");
 
 	switch (action) {
 	/*case GLSA_FIX:*/
