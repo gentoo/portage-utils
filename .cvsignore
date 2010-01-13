@@ -5,3 +5,7 @@ q
 *.diff
 portage-utils-*
 contrib
+
+core
+.gdb_history
+.gdbinit
