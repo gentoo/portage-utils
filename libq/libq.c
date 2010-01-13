@@ -20,6 +20,7 @@
 #include "which.c"
 #include "compat.c"
 
+#include "safe_io.c"
 #include "xchdir.c"
 #include "xgetcwd.c"
 #include "xreadlink.c"
