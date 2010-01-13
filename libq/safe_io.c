@@ -3,7 +3,7 @@
  *
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/safe_io.c,v 1.1 2010/01/13 19:29:40 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/safe_io.c,v 1.2 2010/01/13 19:37:39 vapier Exp $
  */
 
 #include <stdio.h>
@@ -26,7 +26,7 @@ size_t safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 		nmemb -= this_ret;
 		ret += this_ret;
 		ptr += (this_ret * size);
-	} while (ret != nmemb);
+	} while (nmemb);
 
 	return ret;
 }
