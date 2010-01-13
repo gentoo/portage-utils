@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.91 2010/01/13 19:15:16 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.92 2010/01/13 19:16:22 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.91 2010/01/13 19:15:16 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.92 2010/01/13 19:16:22 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -666,7 +666,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 		/* syntax: dir dirname */
 		if (S_ISDIR(st.st_mode)) {
 			mkdir(dest, st.st_mode);
-			chown(dest, st.st_uid, st.st_gid);
+			assert(chown(dest, st.st_uid, st.st_gid) == 0);
 			snprintf(line, sizeof(line), "dir %s", &buf[1]);
 		}
 
