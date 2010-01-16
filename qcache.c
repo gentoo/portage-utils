@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.34 2010/01/13 13:56:42 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.35 2010/01/16 21:34:36 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -47,7 +47,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.34 2010/01/13 13:56:42 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.35 2010/01/16 21:34:36 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -284,8 +284,8 @@ char **qcache_read_lines(char *filename)
 			lines[i] = xzalloc(sizeof(char) * (count+1));
 
 			/* copy the line into lines[i] */
-			read(fd, lines[i], count);
-			read(fd, &c, 1);	/* skip '\n' */
+			assert(read(fd, lines[i], count) == count);
+			assert(read(fd, &c, 1) == 1);	/* skip '\n' */
 		}
 
 		close(fd);
