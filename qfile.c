@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.50 2010/01/16 21:31:57 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.51 2010/01/16 23:45:02 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char *qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.50 2010/01/16 21:31:57 vapier Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.51 2010/01/16 23:45:02 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -57,6 +57,10 @@ typedef struct {
 
 char slotted = 0;
 
+/*
+ * We assume the people calling us have chdir(/var/db/pkg) and so
+ * we use relative paths throughout here.
+ */
 void qfile(char *, const char *, qfile_args_t *);
 void qfile(char *path, const char *root, qfile_args_t *args)
 {
@@ -64,11 +68,10 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 	DIR *dir;
 	struct dirent *dentry;
 	char *entry_basename;
-	char *entry_dirname;
 	char *p;
 	char buf[1024];
-	char pkg[126];
-	depend_atom *atom;
+	char pkg[150];
+	depend_atom *atom = NULL;
 	int i, path_ok;
 	char bn_firstchar;
 	char *real_root = args->real_root;
@@ -82,14 +85,25 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 		warnp("opendir(%s) failed", path);
 		return;
 	}
-	xchdir(path);
 
 	while ((dentry = readdir(dir))) {
 		if (dentry->d_name[0] == '.')
 			continue;
 
-		snprintf(pkg, sizeof(pkg), "%s/%s", basename(path), dentry->d_name);
-		atom = NULL; /* Will be exploded once at most, as needed. */
+		/* We reuse pkg for reading files in the subdir */
+		p = basename(path);
+		i = snprintf(pkg, sizeof(pkg), "%s/%s", p, dentry->d_name);
+		if (i + 20 >= sizeof(pkg)) {
+			warn("skipping long pkg name: %s/%s", p, dentry->d_name);
+			continue;
+		}
+		p = pkg + i;
+
+		/* Will be exploded once at most, as needed. */
+		if (atom) {
+			atom_implode(atom);
+			atom = NULL;
+		}
 
 		/* If exclude_pkg is not NULL, check it.  We are looking for files
 		 * collisions, and must exclude one package.
@@ -109,38 +123,23 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 					&& strcmp(args->exclude_pkg, atom->PN) != 0)
 				goto dont_skip_pkg; /* "(CAT/)?PN" doesn't match */
 check_pkg_slot: /* Also compare slots, if any was specified */
-			if (args->exclude_slot == NULL) {
-				if (atom != NULL)
-					atom_implode(atom);
+			if (args->exclude_slot == NULL)
 				continue; /* "(CAT/)?(PN|PF)" matches, and no SLOT specified */
-			}
 			buf[0] = '0'; buf[1] = '\0';
-			xasprintf(&p, "%s/%s/SLOT", path, dentry->d_name);
-			if ((fp = fopen(p, "r")) != NULL) {
-				free(p);
-				if (fgets(buf, sizeof(buf), fp) != NULL)
-					if ((p = strchr(buf, '\n')) != NULL)
-						*p = 0;
-				fclose(fp);
-			} else {
-				free(p);
-			}
-			if (strncmp(args->exclude_slot, buf, sizeof(buf)) == 0) {
-				if (atom != NULL)
-					atom_implode(atom);
+			strcpy(p, "/SLOT");
+			eat_file(pkg, buf, sizeof(buf));
+			rmspace(buf);
+			*p = '\0';
+			if (strncmp(args->exclude_slot, buf, sizeof(buf)) == 0)
 				continue; /* "(CAT/)?(PN|PF):SLOT" matches */
-			}
 		}
 dont_skip_pkg: /* End of the package exclusion tests. */
 
-		xasprintf(&p, "%s/%s/CONTENTS", path, dentry->d_name);
-		if ((fp = fopen(p, "r")) == NULL) {
-			free(p);
-			if (atom != NULL)
-				atom_implode(atom);
+		strcpy(p, "/CONTENTS");
+		fp = fopen(pkg, "r");
+		*p = '\0';
+		if (fp == NULL)
 			continue;
-		}
-		free(p);
 
 		while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 			contents_entry *e;
@@ -148,10 +147,9 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 			if (!e)
 				continue;
 
-			/* much faster than using basename(), since no need to strdup */
-			if ((entry_basename = strrchr(e->name, '/')) == NULL)
+			/* assume sane basename() -- doesnt modify argument */
+			if ((entry_basename = basename(e->name)) == NULL)
 				continue;
-			entry_basename++;
 
 			/* used to cut the number of strcmp() calls */
 			bn_firstchar = entry_basename[0];
@@ -169,50 +167,53 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 
 				if (!path_ok) {
 					/* check the full filepath ... */
-					entry_dirname = xstrdup(e->name);
-					if ((p = strrchr(entry_dirname, '/')) == NULL) {
-						free(entry_dirname);
-						continue;
-					}
-					if (p == entry_dirname)
-						/* (e->name == "/foo") ==> dirname == "/" */
-						*(p + 1) = '\0';
-					else
-						*p = '\0';
-					if (dir_names[i] != NULL &&
-							strcmp(entry_dirname, dir_names[i]) == 0)
+					size_t dirname_len = (entry_basename - e->name - 1);
+					/* basename(/usr)     = usr, dirname(/usr)     = /
+					 * basename(/usr/bin) = bin, dirname(/usr/bin) = /usr
+					 */
+					if (dirname_len == 0)
+						dirname_len = 1;
+
+					if (dir_names[i] &&
+					    strncmp(e->name, dir_names[i], dirname_len) == 0 &&
+					    dir_names[i][dirname_len] == '\0')
 						/* dir_name == dirname(CONTENTS) */
 						path_ok = 1;
-					else if (real_dir_names[i] != NULL &&
-							strcmp(entry_dirname, real_dir_names[i]) == 0)
+
+					else if (real_dir_names[i] &&
+					         strncmp(e->name, real_dir_names[i], dirname_len) == 0 &&
+					         real_dir_names[i][dirname_len] == '\0')
 						/* real_dir_name == dirname(CONTENTS) */
 						path_ok = 1;
-					else {
-						char rpath[_Q_PATH_MAX+1];
-						char *fullpath = entry_dirname;
-						if (real_root != NULL && real_root[0] != '\0')
-							xasprintf(&fullpath, "%s%s", real_root, entry_dirname);
+
+					else if (real_root[0]) {
+						char rpath[_Q_PATH_MAX + 1], *_rpath;
+						char *fullpath;
+						size_t real_root_len = strlen(real_root);
+
+						xasprintf(&fullpath, "%s%s", real_root, e->name);
+						fullpath[real_root_len + dirname_len] = '\0';
+						_rpath = rpath + real_root_len;
 						if (realpath(fullpath, rpath) == NULL) {
 							if (verbose) {
 								warnp("Could not read real path of \"%s\" (from %s)", fullpath, pkg);
-								warn("We'll never know whether \"%s/%s\" was a result for your query...",
-										entry_dirname, entry_basename);
+								warn("We'll never know whether \"%s\" was a result for your query...",
+										e->name);
 							}
-						} else if (!qfile_is_prefix(rpath, real_root, strlen(real_root))) {
+						} else if (!qfile_is_prefix(rpath, real_root, real_root_len)) {
 							if (verbose)
 								warn("Real path of \"%s\" is not under ROOT: %s", fullpath, rpath);
-						} else if (dir_names[i] != NULL &&
-								strcmp(rpath + strlen(real_root), dir_names[i]) == 0)
+						} else if (dir_names[i] &&
+						           strcmp(_rpath, dir_names[i]) == 0) {
 							/* dir_name == realpath(dirname(CONTENTS)) */
 							path_ok = 1;
-						else if (real_dir_names[i] != NULL &&
-								strcmp(rpath + strlen(real_root), real_dir_names[i]) == 0)
+						} else if (real_dir_names[i] &&
+						           strcmp(_rpath, real_dir_names[i]) == 0) {
 							/* real_dir_name == realpath(dirname(CONTENTS)) */
 							path_ok = 1;
-						if (fullpath != entry_dirname)
-							free(fullpath);
+						}
+						free(fullpath);
 					}
-					free(entry_dirname);
 				}
 				if (!path_ok)
 					continue;
@@ -225,26 +226,20 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 						continue;
 					}
 					if (slotted) {
-						FILE *pkgfp = NULL;
-						strcpy(pkgslot, "");
-						xasprintf(&p, "%s/%s/SLOT", path, dentry->d_name);
-						if ((pkgfp = fopen(p, "r")) != NULL) {
-							if (fgets(pkgslot, sizeof(pkgslot), pkgfp) == NULL)
-								pkgslot[0] = '\0';
-							rmspace(pkgslot);
-							fclose(pkgfp);
-						}
-						free(p);
-					}
-					printf("%s%s/%s%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
+						strcpy(p, "/SLOT");
+						eat_file(pkg, pkgslot+1, sizeof(pkgslot)-1);
+						rmspace(pkgslot+1);
+						*pkgslot = ':';
+						*p = '\0';
+					} else
+						*pkgslot = '\0';
+					printf("%s%s/%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
 						(exact ? dentry->d_name : atom->PN),
-						(slotted ? ":" : ""), (slotted ? pkgslot : ""), NORM);
+						pkgslot, NORM);
 					if (quiet)
 						puts("");
-					else if (root != NULL)
-						printf(" (%s%s)\n", root, e->name);
 					else
-						printf(" (%s)\n", e->name);
+						printf(" (%s%s)\n", root ? : "", e->name);
 
 				} else {
 					non_orphans[i] = 1;
@@ -253,8 +248,6 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 			}
 		}
 		fclose(fp);
-		if (atom != NULL)
-			atom_implode(atom);
 	}
 	closedir(dir);
 
@@ -604,8 +597,6 @@ int qfile_main(int argc, char **argv)
 		if (nb_of_queries < 0)
 			goto exit;
 
-		xchdir(portroot);
-		xchdir(portvdb);
 		if ((dir = opendir(".")) == NULL) {
 			warnp("could not read(ROOT/%s) for installed packages database", portvdb);
 			goto exit;

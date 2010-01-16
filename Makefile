@@ -1,6 +1,6 @@
 # Copyright 2005-2008 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.65 2009/04/06 01:54:19 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.66 2010/01/16 23:45:02 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -53,7 +53,7 @@ all: q
 	@true
 
 debug:
-	$(MAKE) CFLAGS="$(CFLAGS) -DEBUG -g3 -ggdb -fno-pie" clean symlinks
+	$(MAKE) CFLAGS="$(CFLAGS) -O0 -DEBUG -g3 -ggdb -fno-pie" clean symlinks
 	@-$(EPREFIX)/usr/bin/scanelf -o /dev/null -BXxz permsx q
 
 q: $(SRC) libq/*.c *.h libq/*.h

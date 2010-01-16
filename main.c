@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.170 2010/01/13 18:48:00 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.171 2010/01/16 23:45:02 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -178,29 +178,29 @@ static void version_barf(const char *Id)
 
 static char eat_file(const char *file, char *buf, const size_t bufsize)
 {
-	FILE *f;
+	int fd;
 	struct stat s;
 	char ret = 0;
 
-	if ((f = fopen(file, "r")) == NULL)
+	if ((fd = open(file, O_RDONLY)) == -1)
 		return ret;
 
-	memset(buf, 0x00, bufsize);
-	if (fstat(fileno(f), &s) != 0)
+	buf[0] = '\0';
+	if (fstat(fd, &s) != 0)
 		goto close_and_ret;
 	if (s.st_size) {
 		if (bufsize < (size_t)s.st_size)
 			goto close_and_ret;
-		if (fread(buf, 1, s.st_size, f) != (size_t)s.st_size)
+		if (read(fd, buf, s.st_size) != (ssize_t)s.st_size)
 			goto close_and_ret;
 	} else {
-		if (fread(buf, 1, bufsize, f) == 0)
+		if (read(fd, buf, bufsize) == 0)
 			goto close_and_ret;
 	}
 
 	ret = 1;
 close_and_ret:
-	fclose(f);
+	close(fd);
 	return ret;
 }
 
