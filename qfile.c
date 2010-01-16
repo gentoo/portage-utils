@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2007 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.49 2010/01/13 19:01:34 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.50 2010/01/16 21:31:57 vapier Exp $
  *
  * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char *qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.49 2010/01/13 19:01:34 vapier Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.50 2010/01/16 21:31:57 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -78,9 +78,11 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 	char *bn_firstchars = args->bn_firstchars;
 	short *non_orphans = args->non_orphans;
 
-	xchdir(path);
-	if ((dir = opendir(".")) == NULL)
+	if ((dir = opendir(path)) == NULL) {
+		warnp("opendir(%s) failed", path);
 		return;
+	}
+	xchdir(path);
 
 	while ((dentry = readdir(dir))) {
 		if (dentry->d_name[0] == '.')
