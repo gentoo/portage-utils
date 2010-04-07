@@ -1,10 +1,10 @@
 /*
- * Copyright 2005-2007 Gentoo Foundation
+ * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.46 2010/01/13 19:11:02 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.47 2010/04/07 05:58:16 solar Exp $
  *
- * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #define Q_FLAGS "irmM:" COMMON_FLAGS
@@ -22,7 +22,7 @@ static const char *q_opts_help[] = {
 	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.46 2010/01/13 19:11:02 vapier Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.47 2010/04/07 05:58:16 solar Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 APPLET lookup_applet(char *applet);

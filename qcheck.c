@@ -1,10 +1,10 @@
 /*
- * Copyright 2005-2007 Gentoo Foundation
+ * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.42 2010/01/13 18:17:23 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.43 2010/04/07 05:58:16 solar Exp $
  *
- * Copyright 2005-2007 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2007 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qcheck
@@ -30,7 +30,7 @@ static const char *qcheck_opts_help[] = {
 	"Only print pkgs containing bad files excluding /etc.",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.42 2010/01/13 18:17:23 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.43 2010/04/07 05:58:16 solar Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 short bad_only = 0;
