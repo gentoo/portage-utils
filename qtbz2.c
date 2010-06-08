@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.15 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.16 2010/06/08 05:31:09 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -44,7 +44,7 @@ static const char *qtbz2_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.15 2010/04/07 05:58:16 solar Exp $";
+static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.16 2010/06/08 05:31:09 vapier Exp $";
 #define qtbz2_usage(ret) usage(ret, QTBZ2_FLAGS, qtbz2_long_opts, qtbz2_opts_help, lookup_applet_idx("qtbz2"))
 
 static char tbz2_stdout = 0;
@@ -138,7 +138,7 @@ void _tbz2_write_file(FILE *src, const char *dst, size_t len)
 	if (tbz2_stdout)
 		out = stdout;
 	else if ((out = fopen(dst, "w")) == NULL)
-		return;
+		errp("cannot write to '%s'", dst);
 
 	do {
 		this_write = fread(buffer, 1, _TBZ2_MIN(len, sizeof(buffer)), src);
