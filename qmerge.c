@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.94 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.95 2010/06/08 04:52:42 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.94 2010/04/07 05:58:16 solar Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.95 2010/06/08 04:52:42 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -402,16 +402,20 @@ char qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg)
 	return c;
 }
 
-int has_postinst(char *vdbroot);
-int has_postinst(char *vdbroot) {
+static int has_postinst(char *vdbroot)
+{
 	FILE *fp;
+	int ret;
 	char buf[1024];
 	snprintf(buf, sizeof(buf), "%s/%s", vdbroot, "DEFINED_PHASES");
 	if ((fp = fopen(buf,  "r")) == NULL)
 		return 1;
-	fgets(buf, sizeof(buf), fp);
+	if (fgets(buf, sizeof(buf), fp))
+		ret = (strstr(buf, "postinst") == NULL) ? 0 : 2;
+	else
+		ret = 0;
 	fclose(fp);
-	return ((strstr(buf, "postinst") == NULL) ? 0 : 2);
+	return ret;
 }
 
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
