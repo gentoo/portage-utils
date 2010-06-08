@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.43 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.44 2010/06/08 05:24:14 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,32 +9,48 @@
 
 #ifdef APPLET_qcheck
 
-#define QCHECK_FLAGS "eauAHTB" COMMON_FLAGS
+#define QCHECK_FLAGS "aes:uABHT" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
-	{"exact",   no_argument, NULL, 'e'},
 	{"all",     no_argument, NULL, 'a'},
+	{"exact",   no_argument, NULL, 'e'},
+	{"skip",     a_argument, NULL, 's'},
 	{"update",  no_argument, NULL, 'u'},
 	{"noafk",   no_argument, NULL, 'A'},
+	{"badonly", no_argument, NULL, 'B'},
 	{"nohash",  no_argument, NULL, 'H'},
 	{"nomtime", no_argument, NULL, 'T'},
-	{"badonly", no_argument, NULL, 'B'},
 	COMMON_LONG_OPTS
 };
 static const char *qcheck_opts_help[] = {
-	"Exact match (only CAT/PN or PN without PV)",
 	"List all packages",
+	"Exact match (only CAT/PN or PN without PV)",
+	"Ignore files matching the regular expression <arg>",
 	"Update missing files, chksum and mtimes for packages",
 	"Ignore missing files",
+	"Only print pkgs containing bad files",
 	"Ignore differing/unknown file chksums",
 	"Ignore differing file mtimes",
-	"Only print pkgs containing bad files excluding /etc.",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.43 2010/04/07 05:58:16 solar Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.44 2010/06/08 05:24:14 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 short bad_only = 0;
 #define qcprintf(fmt, args...) if (!bad_only) printf( _( fmt ), ## args)
+
+static void qcheck_cleanup(regex_t **regex_head, const size_t regex_count)
+{
+	size_t i;
+
+	if (regex_head == NULL)
+		return;
+
+	for (i = 0; i < regex_count; ++i) {
+		regfree(regex_head[i]);
+		free(regex_head[i]);
+	}
+	free(regex_head);
+}
 
 int qcheck_main(int argc, char **argv)
 {
@@ -50,6 +66,8 @@ int qcheck_main(int argc, char **argv)
 	size_t num_files, num_files_ok, num_files_unknown, num_files_ignored;
 	char buf[_Q_PATH_MAX], filename[_Q_PATH_MAX];
 	char buffer[_Q_PATH_MAX];
+	regex_t **regex_head = NULL;
+	size_t regex_count = 0;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -57,13 +75,26 @@ int qcheck_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qcheck)
-		case 'e': exact = 1; break;
 		case 'a': search_all = 1; break;
+		case 'e': exact = 1; break;
+		case 's': {
+				int regex_val;
+				regex_head = xrealloc(regex_head, (regex_count + 1) * sizeof(*regex_head));
+				regex_head[regex_count] = xmalloc(sizeof(*regex_head[0]));
+				regex_val = regcomp(regex_head[regex_count], optarg, REG_EXTENDED|REG_NOSUB);
+				if (regex_val != 0) {
+					char errbuf[256];
+					regerror(regex_val, regex_head[regex_count], errbuf, sizeof(errbuf));
+					err("Invalid regexp: %s -- %s\n", optarg, errbuf);
+				}
+				++regex_count;
+			}
+			break;
 		case 'u': qc_update = 1; break;
 		case 'A': chk_afk = 0; break;
+		case 'B': bad_only = 1; break;
 		case 'H': chk_hash = 0; break;
 		case 'T': chk_mtime = 0; break;
-		case 'B': bad_only = 1; break;
 		}
 	}
 	if ((argc == optind) && !search_all)
@@ -138,9 +169,6 @@ int qcheck_main(int argc, char **argv)
 				e = contents_parse_line(buf);
 				if (!e)
 					continue;
-				if (bad_only && strncmp(e->name, "/etc", 4) == 0) {
-					continue;
-				}
 				if (strcmp(portroot, "/") != 0) {
 					snprintf(filename, sizeof(filename), "%s%s", portroot, e->name);
 					e->name = filename;
@@ -148,6 +176,17 @@ int qcheck_main(int argc, char **argv)
 
 				/* run our little checks */
 				++num_files;
+				if (regex_count) {
+					size_t j;
+					for (j = 0; j < regex_count; ++j)
+						if (!regexec(regex_head[j], e->name, 0, NULL, 0))
+							break;
+					if (j < regex_count) {
+						--num_files;
+						++num_files_ignored;
+						continue;
+					}
+				}
 				if (lstat(e->name, &st)) {
 					/* make sure file exists */
 					if (chk_afk) {
@@ -302,6 +341,7 @@ int qcheck_main(int argc, char **argv)
 		xchdir("..");
 	}
 
+	qcheck_cleanup(regex_head, regex_count);
 	return EXIT_SUCCESS;
 }
 
