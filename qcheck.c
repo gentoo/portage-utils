@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.44 2010/06/08 05:24:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.45 2010/06/08 05:38:17 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char *qcheck_opts_help[] = {
 	"Ignore differing file mtimes",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.44 2010/06/08 05:24:14 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.45 2010/06/08 05:38:17 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 short bad_only = 0;
@@ -55,7 +55,7 @@ static void qcheck_cleanup(regex_t **regex_head, const size_t regex_count)
 int qcheck_main(int argc, char **argv)
 {
 	DIR *dir, *dirp;
-	int i;
+	int i, ret;
 	struct dirent *dentry, *de;
 	char search_all = 0;
 	char qc_update = 0;
@@ -103,7 +103,9 @@ int qcheck_main(int argc, char **argv)
 	xchdir(portroot);
 	xchdir(portvdb);
 	if ((dir = opendir(".")) == NULL)
-		return EXIT_FAILURE;
+		errp("unable to read '.' !?");
+
+	ret = EXIT_SUCCESS;
 
 	/* open /var/db/pkg */
 	while ((dentry = q_vdb_get_next_dir(dir))) {
@@ -336,13 +338,16 @@ int qcheck_main(int argc, char **argv)
 				       NORM, BLUE, num_files_ignored,
 				       (num_files_ignored > 1 ? "s were" : " was"));
 			qcprintf("\n");
+
+			if (num_files_ok != num_files)
+				ret = EXIT_FAILURE;
 		}
 		closedir(dirp);
 		xchdir("..");
 	}
 
 	qcheck_cleanup(regex_head, regex_count);
-	return EXIT_SUCCESS;
+	return ret;
 }
 
 #else
