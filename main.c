@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.173 2010/01/17 00:25:35 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.174 2010/06/08 04:54:42 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -197,7 +197,7 @@ static char eat_file(const char *file, char *buf, const size_t bufsize)
 	} else {
 		if (read(fd, buf, bufsize) == 0)
 			goto close_and_ret;
-		buf[bufsize] = '\0';
+		buf[bufsize - 1] = '\0';
 	}
 
 	ret = 1;
