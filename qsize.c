@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.34 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.35 2010/07/04 20:04:06 flameeyes Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char *qsize_opts_help[] = {
 	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.34 2010/04/07 05:58:16 solar Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.35 2010/07/04 20:04:06 flameeyes Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
 int qsize_main(int argc, char **argv)
@@ -49,6 +49,7 @@ int qsize_main(int argc, char **argv)
 	size_t disp_units = 0;
 	const char *str_disp_units = NULL;
 	char buf[_Q_PATH_MAX];
+	char filename[_Q_PATH_MAX], *filename_root;
 	queue *ignore_regexp = NULL;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -76,6 +77,9 @@ int qsize_main(int argc, char **argv)
 		return EXIT_FAILURE;
 
 	num_all_bytes = num_all_files = num_all_nonfiles = num_all_ignored = 0;
+
+	strcpy(filename, portroot);
+	filename_root = filename + strlen(filename);
 
 	/* open /var/db/pkg */
 	while ((dentry = q_vdb_get_next_dir(dir))) {
@@ -130,8 +134,9 @@ int qsize_main(int argc, char **argv)
 					continue;
 
 				if (e->type == CONTENTS_OBJ || e->type == CONTENTS_SYM) {
+					strcpy(filename_root, e->name);
 					++num_files;
-					if (!lstat(e->name, &st))
+					if (!lstat(filename, &st))
 						num_bytes += (fs_size ? st.st_blocks * S_BLKSIZE : st.st_size);
 				} else
 					++num_nonfiles;
