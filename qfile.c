@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.52 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.53 2010/07/19 00:25:13 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char *qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.52 2010/04/07 05:58:16 solar Exp $";
+static char qfile_rcsid[] = "$Id: qfile.c,v 1.53 2010/07/19 00:25:13 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -67,7 +67,7 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 	FILE *fp;
 	DIR *dir;
 	struct dirent *dentry;
-	char *entry_basename;
+	const char *base;
 	char *p;
 	char buf[1024];
 	char pkg[150];
@@ -91,10 +91,10 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 			continue;
 
 		/* We reuse pkg for reading files in the subdir */
-		p = basename(path);
-		i = snprintf(pkg, sizeof(pkg), "%s/%s", p, dentry->d_name);
+		base = basename(path);
+		i = snprintf(pkg, sizeof(pkg), "%s/%s", base, dentry->d_name);
 		if (i + 20 >= sizeof(pkg)) {
-			warn("skipping long pkg name: %s/%s", p, dentry->d_name);
+			warn("skipping long pkg name: %s/%s", base, dentry->d_name);
 			continue;
 		}
 		p = pkg + i;
@@ -148,11 +148,11 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 				continue;
 
 			/* assume sane basename() -- doesnt modify argument */
-			if ((entry_basename = basename(e->name)) == NULL)
+			if ((base = basename(e->name)) == NULL)
 				continue;
 
 			/* used to cut the number of strcmp() calls */
-			bn_firstchar = entry_basename[0];
+			bn_firstchar = base[0];
 
 			for (i = 0; i < args->length; i++) {
 				if (base_names[i] == NULL)
@@ -162,12 +162,12 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 				path_ok = (dir_names[i] == NULL && real_dir_names[i] == NULL);
 
 				if (bn_firstchar != bn_firstchars[i]
-						|| strcmp(entry_basename, base_names[i]))
+						|| strcmp(base, base_names[i]))
 					continue;
 
 				if (!path_ok) {
 					/* check the full filepath ... */
-					size_t dirname_len = (entry_basename - e->name - 1);
+					size_t dirname_len = (base - e->name - 1);
 					/* basename(/usr)     = usr, dirname(/usr)     = /
 					 * basename(/usr/bin) = bin, dirname(/usr/bin) = /usr
 					 */

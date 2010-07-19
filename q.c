@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.47 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.48 2010/07/19 00:25:13 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,11 +22,10 @@ static const char *q_opts_help[] = {
 	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.47 2010/04/07 05:58:16 solar Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.48 2010/07/19 00:25:13 vapier Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
-APPLET lookup_applet(char *applet);
-APPLET lookup_applet(char *applet)
+static APPLET lookup_applet(const char *applet)
 {
 	unsigned int i;
 
@@ -68,7 +67,7 @@ int lookup_applet_idx(const char *applet)
 int q_main(int argc, char **argv)
 {
 	int i;
-	char *p;
+	const char *p;
 	APPLET func;
 
 	if (argc == 0)

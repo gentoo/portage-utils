@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.95 2010/06/08 04:52:42 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.96 2010/07/19 00:25:13 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char *qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.95 2010/06/08 04:52:42 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.96 2010/07/19 00:25:13 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -100,7 +100,7 @@ void qmerge_initialize(const char *);
 char *best_version(const char *, const char  *);
 void pkg_fetch(int, depend_atom *, struct pkg_t *);
 void pkg_merge(int, depend_atom *, struct pkg_t *);
-int pkg_unmerge(char *, char *);
+int pkg_unmerge(const char *, const char *);
 int unlink_empty(char *);
 void pkg_process(int, char **, struct pkg_t *);
 void print_Pkg(int, struct pkg_t *);
@@ -607,7 +607,9 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 						if (strcmp(pkg->SLOT, slot) != 0)
 							u = 0;
 					}
-					if (u) pkg_unmerge(atom->CATEGORY, basename(pf)); /* We need to really set this unmerge pending after we look at contents of the new pkg */
+					/* We need to really set this unmerge pending after we look at contents of the new pkg */
+					if (u)
+						pkg_unmerge(atom->CATEGORY, basename(pf));
 					break;
 				default:
 					warn("no idea how we reached here.");
@@ -817,7 +819,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	unlink(buf);
 }
 
-int pkg_unmerge(char *cat, char *pkgname)
+int pkg_unmerge(const char *cat, const char *pkgname)
 {
 	char buf[BUFSIZ];
 	FILE *fp;

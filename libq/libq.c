@@ -29,6 +29,7 @@
 /* custom libs */
 #include "atom_explode.c"
 #include "atom_compare.c"
+#include "basename.c"
 
 #ifndef _LIB_Q
 # include "vdb_get_next_dir.c"
