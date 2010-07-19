@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.53 2010/07/09 22:21:07 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.54 2010/07/19 00:29:58 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -52,7 +52,7 @@ static const char *qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.53 2010/07/09 22:21:07 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.54 2010/07/19 00:29:58 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -88,11 +88,12 @@ unsigned long show_merge_times(char *package, const char *logfile, int average, 
 {
 	FILE *fp;
 	char cat[126], buf[2][BUFSIZ];
-	char *pkg, *p;
+	char *pkg, *p, *q;
 	char ep[BUFSIZ];
 	unsigned long count, merge_time;
 	time_t t[2];
 	depend_atom *atom;
+	unsigned int parallel_emerge;
 
 	t[0] = t[1] = 0UL;
 	count = merge_time = 0;
@@ -148,6 +149,7 @@ unsigned long show_merge_times(char *package, const char *logfile, int average, 
 				matched = 1;
 
 			if (matched) {
+				parallel_emerge = 0;
 				while ((fgets(buf[0], sizeof(buf[0]), fp)) != NULL) {
 					if ((p = strchr(buf[0], '\n')) != NULL)
 						*p = 0;
@@ -157,7 +159,44 @@ unsigned long show_merge_times(char *package, const char *logfile, int average, 
 					t[1] = atol(buf[0]);
 					strcpy(buf[1], p + 1);
 					rmspace(buf[1]);
-					if ((strncmp(&buf[1][4], ep, BUFSIZ)) == 0) {
+
+					if (strncmp(buf[1], "Started emerge on:", 18) == 0) {
+						/* a parallel emerge was launched */
+						parallel_emerge++;
+						continue;
+					}
+
+					if (strncmp(buf[1], "*** terminating.", 16) == 0) {
+						if (parallel_emerge > 0) {
+							/* a parallel emerge has finished */
+							parallel_emerge--;
+							continue;
+						} else
+							/* the main emerge was stopped */
+							break;
+					}
+
+					/*
+					 * pay attention to malformed log files (when the end of an emerge process
+					 * is not indicated by the line '*** terminating'). We assume than the log is
+					 * malformed when we find a parallel emerge process which is trying to
+					 * emerge the same package
+					 */
+					if (strncmp(buf[1], ">>> emerge (", 12) == 0 && parallel_emerge > 0) {
+						p = strchr(buf[1], ')');
+						q = strchr(ep, ')');
+						if (!p || !q)
+							continue;
+
+						if (!strcmp(p, q)) {
+							parallel_emerge--;
+							/* update the main emerge reference data */
+							snprintf(ep, BUFSIZ, "completed %s", &buf[1][4]);
+							continue;
+						}
+					}
+
+					if (strncmp(&buf[1][4], ep, BUFSIZ) == 0) {
 						if (!average) {
 							strcpy(buf[1], "");
 							if (verbose) {
