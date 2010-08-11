@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.60 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.61 2010/08/11 17:19:39 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,7 +35,7 @@ static const char *quse_opts_help[] = {
 	"Only show package name",
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.60 2010/04/07 05:58:16 solar Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.61 2010/08/11 17:19:39 vapier Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -162,7 +162,11 @@ skip_file:
 
 	/* now scan the desc dir */
 	snprintf(buf, sizeof(buf), "%s/profiles/desc/", portdir);
-	d = opendir(buf);
+	if ((d = opendir(buf)) == NULL) {
+		warnp("skipping profiles/desc/");
+		return 0;
+	}
+
 	while ((de = readdir(d)) != NULL) {
 		if (strcmp(de->d_name+strlen(de->d_name)-5, ".desc"))
 			continue;
