@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.175 2010/12/04 11:15:56 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.176 2010/12/04 12:20:43 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -425,8 +425,7 @@ contents_entry *contents_parse_line(char *line)
 	return &e;
 }
 
-char *strincr_var(const char *, char *, char *, const size_t);
-char *strincr_var(const char *name, char *s, char *value, const size_t value_len)
+static char *strincr_var(const char *name, const char *s, char *value, const size_t value_len)
 {
 	char buf[BUFSIZ];
 	char *p;
@@ -464,34 +463,122 @@ char *strincr_var(const char *name, char *s, char *value, const size_t value_len
 	remove_extra_space(value);
 	/* we should sort here */
 
-	return (char *) value;
+	return value;
+}
+
+typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR } var_types;
+typedef struct {
+	const char *name;
+	const size_t name_len;
+	const var_types type;
+	char *value;
+	const size_t value_len;
+} env_vars;
+
+static void set_portage_env_var(const env_vars var, const char *value)
+{
+	switch (var.type) {
+	case _Q_BOOL: *var.value = 1; break;
+	case _Q_STR: strncpy(var.value, value, var.value_len); break;
+	case _Q_ISTR: strincr_var(var.name, value, var.value, var.value_len); break;
+	}
+}
+
+/* Helper to read a portage env file (e.g. make.conf) */
+static void read_portage_env_file(const char *file, const env_vars vars[])
+{
+	size_t i;
+	FILE *fp;
+	char buf[BUFSIZE], *s, *p;
+
+	IF_DEBUG(fprintf(stderr, "profile %s\n", file));
+
+	fp = fopen(file, "r");
+	if (fp == NULL)
+		return;
+
+	while (fgets(buf, sizeof(buf), fp) != NULL) {
+		rmspace(buf);
+		if (*buf == '#' || *buf == '\0')
+			continue;
+
+		/* Handle "source" keyword */
+		if (!strncmp(buf, "source ", 7))
+			read_portage_env_file(buf + 7, vars);
+
+		/* look for our desired variables and grab their value */
+		for (i = 0; vars[i].name; ++i) {
+			if (buf[vars[i].name_len] != '=' && buf[vars[i].name_len] != ' ')
+				continue;
+			if (strncmp(buf, vars[i].name, vars[i].name_len))
+				continue;
+
+			/* make sure we handle spaces between the varname, the =, and the value:
+			 * VAR=val   VAR = val   VAR="val"
+			 */
+			s = buf + vars[i].name_len;
+			if ((p = strchr(s, '=')) != NULL)
+				s = p + 1;
+			while (isspace(*s))
+				++s;
+			if (*s == '"' || *s == '\'') {
+				++s;
+				s[strlen(s)-1] = '\0';
+			}
+
+			set_portage_env_var(vars[i], s);
+		}
+	}
+
+	fclose(fp);
+}
+
+/* Helper to recursively read stacked make.defaults in profiles */
+static void read_portage_profile(const char *profile, const env_vars vars[])
+{
+	size_t profile_len, sub_len;
+	char profile_file[_Q_PATH_MAX], *sub_file;
+	char buf[BUFSIZE], *s;
+
+	/* initialize the base profile path */
+	profile_len = strlen(profile);
+	if (profile_len > sizeof(profile_file) - 20)
+		return;
+	strncpy(profile_file, profile, sizeof(profile_file));
+	profile_file[profile_len] = '/';
+	sub_file = profile_file + profile_len + 1;
+	sub_len = sizeof(profile_file) - profile_len - 1;
+
+	/* first consume the profile's make.defaults */
+	strncpy(sub_file, "make.defaults", sub_len);
+	read_portage_env_file(profile_file, vars);
+
+	/* now walk all the parents */
+	strncpy(sub_file, "parent", sub_len);
+	if (eat_file(profile_file, buf, sizeof(buf)) == 0)
+		return;
+	rmspace(buf);
+
+	s = strtok(buf, "\n");
+	while (s) {
+		strncpy(sub_file, s, sub_len);
+		read_portage_profile(profile_file, vars);
+		s = strtok(NULL, "\n");
+	}
 }
 
 void initialize_portage_env(void)
 {
-	char nocolor = 0;
-	int i, f;
-	ssize_t profilelen;
-	struct stat st;
-	FILE *fp;
-	char buf[BUFSIZE], *s, *p;
-	char *e = (char *) EPREFIX;
+	size_t i;
+	char *s;
 
-	char profile[_Q_PATH_MAX], portage_file[_Q_PATH_MAX];
-	const char *files[] = {
-		portage_file,
+	static const char * const files[] = {
 		EPREFIX "/etc/make.globals",
 		EPREFIX "/etc/make.conf",
 		EPREFIX "/etc/portage/make.conf",
 	};
-	typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR } var_types;
-	struct {
-		const char *name;
-		const size_t name_len;
-		const var_types type;
-		char *value;
-		const size_t value_len;
-	} vars_to_read[] = {
+	char nocolor = 0;
+	const env_vars vars_to_read[] = {
 		{"ACCEPT_LICENSE",   14, _Q_STR,  accept_license, sizeof(accept_license)},
 		{"INSTALL_MASK",     12, _Q_ISTR, install_mask,   sizeof(install_mask)},
 		{"ARCH",              4, _Q_STR,  portarch,       sizeof(portarch)},
@@ -502,102 +589,36 @@ void initialize_portage_env(void)
 		{"PORTAGE_BINHOST",  15, _Q_STR,  binhost,        sizeof(binhost)},
 		{"PORTAGE_TMPDIR",   14, _Q_STR,  port_tmpdir,    sizeof(port_tmpdir)},
 		{"PKGDIR",            6, _Q_STR,  pkgdir,         sizeof(pkgdir)},
-		{"ROOT",              4, _Q_STR,  portroot,       sizeof(portroot)}
+		{"ROOT",              4, _Q_STR,  portroot,       sizeof(portroot)},
+		{ },
 	};
 
 	s = getenv("Q_VDB");	/* #257251 */
 	if (s) {
 		strncpy(portvdb, s, sizeof(portvdb));
 		portvdb[sizeof(portvdb) - 1] = '\0';
-	} else if ((i = strlen(e)) > 1) {
+	} else if ((i = strlen(EPREFIX)) > 1) {
 		memmove(portvdb + i, portvdb, strlen(portvdb));
-		memcpy(portvdb, e + 1, i - 1);
+		memcpy(portvdb, EPREFIX + 1, i - 1);
 		portvdb[i - 1] = '/';
 	}
 
-	if ((p = strchr(portroot, '/')) != NULL)
-		if (strlen(p) != 1)
+	if ((s = strchr(portroot, '/')) != NULL)
+		if (strlen(s) != 1)
 			strncat(portroot, "/", sizeof(portroot));
 
-	f = 0;
-	profilelen = readlink(EPREFIX "/etc/make.profile", profile, sizeof(profile) - 1);
-	if (profilelen == -1)
-		strcpy(profile, EPREFIX "/etc/make.profile");
-	else
-		profile[profilelen]='\0';
+	/* walk all the stacked profiles */
+	read_portage_profile(EPREFIX "/etc/make.profile", vars_to_read);
 
-	if (profile[0] != '/') {
-		memmove(profile+5+strlen(EPREFIX), profile, strlen(profile)+1);
-		memcpy(profile, EPREFIX "/etc/", strlen(EPREFIX) + 5);
-	}
-	do {
-		if (f == 0)
-			snprintf(portage_file, sizeof(portage_file), "%s/make.defaults", profile);
-		IF_DEBUG(fprintf(stderr, "profile %s\n", files[f]));
-
-		if ((fp=fopen(files[f], "r")) != NULL) {
-			while (fgets(buf, sizeof(buf), fp) != NULL) {
-				rmspace(buf);
-				if (*buf == '#' || *buf == '\0')
-					continue;
-				for (i=0; i < ARR_SIZE(vars_to_read); ++i) {
-					if (buf[vars_to_read[i].name_len] != '=' && buf[vars_to_read[i].name_len] != ' ')
-						continue;
-					if (strncmp(buf, vars_to_read[i].name, vars_to_read[i].name_len))
-						continue;
-
-					/* make sure we handle spaces between the varname, the =, and the value:
-					 * VAR=val   VAR = val   VAR="val"
-					 */
-					s = buf + vars_to_read[i].name_len;
-					if ((p = strchr(s, '=')) != NULL)
-						s = p + 1;
-					while (isspace(*s))
-						++s;
-					if (*s == '"' || *s == '\'') {
-						++s;
-						s[strlen(s)-1] = '\0';
-					}
-
-					switch (vars_to_read[i].type) {
-					case _Q_BOOL: *vars_to_read[i].value = 1; break;
-					case _Q_STR: strncpy(vars_to_read[i].value, s, vars_to_read[i].value_len); break;
-					case _Q_ISTR: strincr_var(vars_to_read[i].name, s, vars_to_read[i].value, vars_to_read[i].value_len); break;
-					}
-				}
-			}
-			fclose(fp);
-		}
-
-		if (f > 0) {
-			if (++f < ARR_SIZE(files))
-				continue;
-			else
-				break;
-		}
-
-		/* everything below here is to figure out what the next parent is */
-		snprintf(portage_file, sizeof(portage_file), "%s/parent", profile);
-		if (stat(portage_file, &st) == 0) {
-			eat_file(portage_file, buf, sizeof(buf));
-			rmspace(buf);
-			portage_file[strlen(portage_file)-7] = '\0';
-			snprintf(profile, sizeof(profile), "%s/%s", portage_file, buf);
-		} else {
-			f = 1;
-		}
-	} while (1);
+	/* now read all the config files */
+	for (i = 0; i < ARR_SIZE(files); ++i)
+		read_portage_env_file(files[i], vars_to_read);
 
 	/* finally, check the env */
-	for (i=0; i < ARR_SIZE(vars_to_read); ++i) {
+	for (i = 0; vars_to_read[i].name; ++i) {
 		s = getenv(vars_to_read[i].name);
-		if (s != NULL) {
-			switch (vars_to_read[i].type) {
-			case _Q_BOOL: *vars_to_read[i].value = 1; break;
-			case _Q_STR: strncpy(vars_to_read[i].value, s, vars_to_read[i].value_len); break;
-			case _Q_ISTR: strincr_var(vars_to_read[i].name, s, vars_to_read[i].value, vars_to_read[i].value_len); break;
-			}
-		}
+		if (s != NULL)
+			set_portage_env_var(vars_to_read[i], s);
 		if (getenv("DEBUG") IF_DEBUG(|| 1)) {
 			fprintf(stderr, "%s = ", vars_to_read[i].name);
 			switch (vars_to_read[i].type) {
@@ -607,8 +628,8 @@ void initialize_portage_env(void)
 			}
 		}
 	}
-	if ((p = strchr(portroot, '/')) != NULL)
-		if (strlen(p) != 1)
+	if ((s = strchr(portroot, '/')) != NULL)
+		if (strlen(s) != 1)
 			strncat(portroot, "/", sizeof(portroot));
 
 	if (getenv("PORTAGE_QUIET") != NULL)
