@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.176 2010/12/04 12:20:43 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.177 2010/12/04 12:37:28 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -522,8 +522,26 @@ static void read_portage_env_file(const char *file, const env_vars vars[])
 			while (isspace(*s))
 				++s;
 			if (*s == '"' || *s == '\'') {
-				++s;
-				s[strlen(s)-1] = '\0';
+				size_t l = strlen(s);
+				if (*s != s[l - 1]) {
+					/* If the last char is not a quote, then we span lines */
+					char *q = s + l + 1, *qq = NULL;
+					q[-1] = ' ';
+					while (fgets(q, sizeof(buf) - (s - buf), fp) != NULL) {
+						l = strlen(q);
+						qq = strchr(q, *s);
+						if (qq) {
+							*qq = '\0';
+							break;
+						}
+					}
+					if (!qq)
+						warn("%s: %s: quote mismatch", file, vars[i].name);
+					++s;
+				} else {
+					s[l - 1] = '\0';
+					++s;
+				}
 			}
 
 			set_portage_env_var(vars[i], s);
