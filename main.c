@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.174 2010/06/08 04:54:42 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.175 2010/12/04 11:15:56 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -478,7 +478,12 @@ void initialize_portage_env(void)
 	char *e = (char *) EPREFIX;
 
 	char profile[_Q_PATH_MAX], portage_file[_Q_PATH_MAX];
-	const char *files[] = {portage_file, EPREFIX "/etc/make.globals", EPREFIX "/etc/make.conf"};
+	const char *files[] = {
+		portage_file,
+		EPREFIX "/etc/make.globals",
+		EPREFIX "/etc/make.conf",
+		EPREFIX "/etc/portage/make.conf",
+	};
 	typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR } var_types;
 	struct {
 		const char *name;
