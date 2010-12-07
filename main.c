@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.177 2010/12/04 12:37:28 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.178 2010/12/07 01:13:04 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -592,6 +592,7 @@ void initialize_portage_env(void)
 
 	static const char * const files[] = {
 		EPREFIX "/etc/make.globals",
+		EPREFIX "/usr/share/portage/config/make.globals",
 		EPREFIX "/etc/make.conf",
 		EPREFIX "/etc/portage/make.conf",
 	};
@@ -627,6 +628,7 @@ void initialize_portage_env(void)
 
 	/* walk all the stacked profiles */
 	read_portage_profile(EPREFIX "/etc/make.profile", vars_to_read);
+	read_portage_profile(EPREFIX "/etc/portage/make.profile", vars_to_read);
 
 	/* now read all the config files */
 	for (i = 0; i < ARR_SIZE(files); ++i)
