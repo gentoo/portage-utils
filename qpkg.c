@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.29 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.30 2011/01/11 03:13:48 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,7 @@ static const char *qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.29 2010/04/07 05:58:16 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.30 2011/01/11 03:13:48 vapier Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
@@ -249,7 +249,7 @@ int qpkg_make(depend_atom *atom)
 	fflush(stdout);
 
 	snprintf(tbz2, sizeof(tbz2), "%s/bin.tar.bz2", tmpdir);
-	snprintf(buf, sizeof(buf), "tar jcf '%s' --files-from='%s' --no-recursion &> /dev/null", tbz2, filelist);
+	snprintf(buf, sizeof(buf), "tar jcf '%s' --files-from='%s' --no-recursion >/dev/null 2>&1", tbz2, filelist);
 	if ((fp = popen(buf, "r")) == NULL)
 		return 2;
 	pclose(fp);
