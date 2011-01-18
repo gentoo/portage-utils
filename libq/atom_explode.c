@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.25 2008/02/02 08:53:53 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.26 2011/01/18 03:12:19 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -150,13 +150,11 @@ depend_atom *atom_explode(const char *atom)
 	bool has_pv = false;
 	while (--ptr > ret->PN)
 		if (*ptr == '-') {
-			if (has_pv)
-				*ptr = '\0';
+			has_pv = true;
+			*ptr = '\0';
 			break;
 		} else if (*ptr != '.' && !isdigit(*ptr))
 			break;
-		else
-			has_pv = true;
 	if (has_pv) {
 		ret->PV = ret->P + (ptr - ret->PN) + 1;
 	} else {
