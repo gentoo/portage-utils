@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.61 2010/08/11 17:19:39 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.62 2011/02/13 09:55:06 grobian Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,7 +35,7 @@ static const char *quse_opts_help[] = {
 	"Only show package name",
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.61 2010/08/11 17:19:39 vapier Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.62 2011/02/13 09:55:06 grobian Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -349,7 +349,6 @@ int quse_main(int argc, char **argv)
 						}
 					} else {
 						remove_extra_space(buf0);
-						assert(buf0 != NULL);
 						strcpy(buf1, &buf0[search_len+1]);
 
 						for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
