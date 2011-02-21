@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.32 2011/02/21 07:33:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.33 2011/02/21 07:38:15 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,7 @@ static const char * const qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.32 2011/02/21 07:33:21 vapier Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.33 2011/02/21 07:38:15 vapier Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
@@ -217,7 +217,10 @@ int qpkg_make(depend_atom *atom)
 		return 0;
 	}
 
-	snprintf(buf, sizeof(buf), "%s/%s/%s/CONTENTS", portvdb, atom->CATEGORY, atom_to_pvr(atom));
+	buflen = _Q_PATH_MAX;
+	buf = xmalloc(buflen);
+
+	snprintf(buf, buflen, "%s/%s/%s/CONTENTS", portvdb, atom->CATEGORY, atom_to_pvr(atom));
 	if ((fp = fopen(buf, "r")) == NULL)
 		return -1;
 
@@ -233,8 +236,6 @@ int qpkg_make(depend_atom *atom)
 	if ((out = fopen(filelist, "w")) == NULL)
 		return -4;
 
-	buflen = _Q_PATH_MAX;
-	buf = xmalloc(buflen);
 	while (getline(&buf, &buflen, fp) != -1) {
 		contents_entry *e;
 		e = contents_parse_line(buf);
