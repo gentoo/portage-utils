@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.179 2010/12/19 13:15:31 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.180 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -57,7 +57,7 @@ char reinitialize_metacache = 0;
 char portdir[_Q_PATH_MAX] = EPREFIX "/usr/portage";
 char portarch[20] = "";
 char portvdb[_Q_PATH_MAX] = "var/db/pkg";
-char portcachedir[] = "metadata/cache";
+const char portcachedir[] = "metadata/cache";
 char portroot[_Q_PATH_MAX] = "/";
 char config_protect[_Q_PATH_MAX] = EPREFIX "/etc/";
 
@@ -69,7 +69,7 @@ char features[2048] = "noman noinfo nodoc";
 char accept_license[512] = "*";
 char install_mask[BUFSIZ] = "";
 
-const char *err_noapplet = "Sorry this applet was disabled at compile time";
+const char err_noapplet[] = "Sorry this applet was disabled at compile time";
 
 /* helper functions for showing errors */
 static const char *argv0;
@@ -125,11 +125,8 @@ void no_colors()
 	default: applet ## _usage(EXIT_FAILURE); break;
 
 /* display usage and exit */
-void usage(int status, const char *flags, struct option const opts[],
-                  const char *help[], int blabber);
-
-void usage(int status, const char *flags, struct option const opts[],
-                  const char *help[], int blabber)
+static void usage(int status, const char *flags, struct option const opts[],
+                  const char * const help[], int blabber)
 {
 	unsigned long i;
 	if (blabber == 0) {

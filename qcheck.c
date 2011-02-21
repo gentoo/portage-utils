@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.45 2010/06/08 05:38:17 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.46 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -21,7 +21,7 @@ static struct option const qcheck_long_opts[] = {
 	{"nomtime", no_argument, NULL, 'T'},
 	COMMON_LONG_OPTS
 };
-static const char *qcheck_opts_help[] = {
+static const char * const qcheck_opts_help[] = {
 	"List all packages",
 	"Exact match (only CAT/PN or PN without PV)",
 	"Ignore files matching the regular expression <arg>",
@@ -32,7 +32,7 @@ static const char *qcheck_opts_help[] = {
 	"Ignore differing file mtimes",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.45 2010/06/08 05:38:17 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.46 2011/02/21 01:33:47 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 short bad_only = 0;

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.37 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.38 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -35,7 +35,7 @@ static struct option const qcache_long_opts[] = {
 	COMMON_LONG_OPTS
 };
 
-static const char *qcache_opts_help[] = {
+static const char * const qcache_opts_help[] = {
 	"match pkgname",
 	"match catname",
 	"list packages that can be marked stable on a given arch",
@@ -47,7 +47,7 @@ static const char *qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.37 2010/04/07 05:58:16 solar Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.38 2011/02/21 01:33:47 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -76,7 +76,7 @@ typedef struct {
 
 static char **archlist; /* Read from PORTDIR/profiles/arch.list in qcache_init() */
 static unsigned int archlist_count;
-char status[3] = {'-', '~', '+'};
+const char status[3] = {'-', '~', '+'};
 int qcache_skip, qcache_test_arch, qcache_last = 0;
 char *qcache_matchpkg = NULL, *qcache_matchcat = NULL;
 

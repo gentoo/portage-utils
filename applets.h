@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.26 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.27 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,7 +39,7 @@ DECLARE_APPLET(qglsa) /* disable */
 		err("Sorry, this applet has been disabled"); \
 	}
 
-struct applet_t {
+static const struct applet_t {
 	const char *name;
 	APPLET func;
 	const char *opts;

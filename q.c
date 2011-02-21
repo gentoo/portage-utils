@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.48 2010/07/19 00:25:13 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.49 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -15,14 +15,14 @@ static struct option const q_long_opts[] = {
 	{"modpath",       a_argument, NULL, 'M'},
 	COMMON_LONG_OPTS
 };
-static const char *q_opts_help[] = {
+static const char * const q_opts_help[] = {
 	"Install symlinks for applets",
 	"Reinitialize ebuild cache",
 	"Reinitialize metadata cache",
 	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.48 2010/07/19 00:25:13 vapier Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.49 2011/02/21 01:33:47 vapier Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 static APPLET lookup_applet(const char *applet)

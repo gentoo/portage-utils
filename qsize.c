@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.35 2010/07/04 20:04:06 flameeyes Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.36 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -21,7 +21,7 @@ static struct option const qsize_long_opts[] = {
 	{"ignore",      a_argument, NULL, 'i'},
 	COMMON_LONG_OPTS
 };
-static const char *qsize_opts_help[] = {
+static const char * const qsize_opts_help[] = {
 	"Show size used on disk",
 	"Size all installed packages",
 	"Include a summary",
@@ -32,7 +32,7 @@ static const char *qsize_opts_help[] = {
 	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.35 2010/07/04 20:04:06 flameeyes Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.36 2011/02/21 01:33:47 vapier Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
 int qsize_main(int argc, char **argv)

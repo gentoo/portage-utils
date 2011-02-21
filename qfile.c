@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.53 2010/07/19 00:25:13 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.54 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,7 @@ static struct option const qfile_long_opts[] = {
 	{"slots",       no_argument, NULL, 'S'},
 	COMMON_LONG_OPTS
 };
-static const char *qfile_opts_help[] = {
+static const char * const qfile_opts_help[] = {
 	"Exact match",
 	"Read arguments from file <arg> (\"-\" for stdin)",
 	"Treat from file arguments by groups of <arg> (defaults to " QFILE_DEFAULT_MAX_ARGS_STR ")",
@@ -34,7 +34,7 @@ static const char *qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static char qfile_rcsid[] = "$Id: qfile.c,v 1.53 2010/07/19 00:25:13 vapier Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.54 2011/02/21 01:33:47 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \

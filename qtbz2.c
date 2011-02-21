@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.16 2010/06/08 05:31:09 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.17 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -36,7 +36,7 @@ static struct option const qtbz2_long_opts[] = {
 	{"stdout",    no_argument, NULL, 'O'},
 	COMMON_LONG_OPTS
 };
-static const char *qtbz2_opts_help[] = {
+static const char * const qtbz2_opts_help[] = {
 	"Join tar.bz2 + xpak into a tbz2",
 	"Split a tbz2 into a tar.bz2 + xpak",
 	"Just split the tar.bz2",
@@ -44,7 +44,7 @@ static const char *qtbz2_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.16 2010/06/08 05:31:09 vapier Exp $";
+static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.17 2011/02/21 01:33:47 vapier Exp $";
 #define qtbz2_usage(ret) usage(ret, QTBZ2_FLAGS, qtbz2_long_opts, qtbz2_opts_help, lookup_applet_idx("qtbz2"))
 
 static char tbz2_stdout = 0;

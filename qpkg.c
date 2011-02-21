@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.30 2011/01/11 03:13:48 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.31 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -17,14 +17,14 @@ static struct option const qpkg_long_opts[] = {
 	{"pkgdir",    a_argument, NULL, 'P'},
 	COMMON_LONG_OPTS
 };
-static const char *qpkg_opts_help[] = {
+static const char * const qpkg_opts_help[] = {
 	"clean pkgdir of unused binary files",
 	"clean pkgdir of files not in the tree anymore (slow)",
 	"pretend only",
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.30 2011/01/11 03:13:48 vapier Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.31 2011/02/21 01:33:47 vapier Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;

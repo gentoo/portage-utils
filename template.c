@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/template.c,v 1.14 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/template.c,v 1.15 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -13,11 +13,11 @@
 static struct option const qtemp_long_opts[] = {
 	COMMON_LONG_OPTS
 };
-static const char *qtemp_opts_help[] = {
+static const char * const qtemp_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qtemp_rcsid[] = "$Id: template.c,v 1.14 2010/04/07 05:58:16 solar Exp $";
+static const char qtemp_rcsid[] = "$Id: template.c,v 1.15 2011/02/21 01:33:47 vapier Exp $";
 #define qtemp_usage(ret) usage(ret, QTEMP_FLAGS, qtemp_long_opts, qtemp_opts_help, lookup_applet_idx("qtemp"))
 
 int qtemp_main(int argc, char **argv)

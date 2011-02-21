@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.20 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.21 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -38,7 +38,7 @@ static struct option const qxpak_long_opts[] = {
 	{"stdout",    no_argument, NULL, 'O'},
 	COMMON_LONG_OPTS
 };
-static const char *qxpak_opts_help[] = {
+static const char * const qxpak_opts_help[] = {
 	"List the contents of an archive",
 	"Extract the contents of an archive",
 	"Create an archive of a directory/files",
@@ -46,7 +46,7 @@ static const char *qxpak_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.20 2010/04/07 05:58:16 solar Exp $";
+static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.21 2011/02/21 01:33:47 vapier Exp $";
 #define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, lookup_applet_idx("qxpak"))
 
 typedef struct {

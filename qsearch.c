@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.39 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.40 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static struct option const qsearch_long_opts[] = {
 	{"homepage",  no_argument, NULL, 'H'},
 	COMMON_LONG_OPTS
 };
-static const char *qsearch_opts_help[] = {
+static const char * const qsearch_opts_help[] = {
 	"List the descriptions of every package in the cache",
 	"Use the portage cache (default)",
 	"Use the portage ebuild tree",
@@ -30,7 +30,7 @@ static const char *qsearch_opts_help[] = {
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.39 2010/04/07 05:58:16 solar Exp $";
+static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.40 2011/02/21 01:33:47 vapier Exp $";
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
 
 int qsearch_main(int argc, char **argv)

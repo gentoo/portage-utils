@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qatom.c,v 1.7 2008/01/15 08:06:09 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qatom.c,v 1.8 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -14,12 +14,12 @@ static struct option const qatom_long_opts[] = {
 	{"compare",   no_argument, NULL, 'c'},
 	COMMON_LONG_OPTS
 };
-static const char *qatom_opts_help[] = {
+static const char * const qatom_opts_help[] = {
 	"Compare two atoms",
 	COMMON_OPTS_HELP
 };
 
-static const char qatom_rcsid[] = "$Id: qatom.c,v 1.7 2008/01/15 08:06:09 vapier Exp $";
+static const char qatom_rcsid[] = "$Id: qatom.c,v 1.8 2011/02/21 01:33:47 vapier Exp $";
 #define qatom_usage(ret) usage(ret, QATOM_FLAGS, qatom_long_opts, qatom_opts_help, lookup_applet_idx("qatom"))
 
 int qatom_main(int argc, char **argv)

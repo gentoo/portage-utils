@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.12 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.13 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -21,7 +21,7 @@ static struct option const qglsa_long_opts[] = {
 	{"inject",    no_argument, NULL, 'i'},
 	COMMON_LONG_OPTS
 };
-static const char *qglsa_opts_help[] = {
+static const char * const qglsa_opts_help[] = {
 	"List GLSAs",
 	"Dump info about GLSAs",
 	"Test if system is affected by GLSAs",
@@ -30,7 +30,7 @@ static const char *qglsa_opts_help[] = {
 	"Mark specified GLSAs as fixed",
 	COMMON_OPTS_HELP
 };
-static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.12 2010/04/07 05:58:16 solar Exp $";
+static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.13 2011/02/21 01:33:47 vapier Exp $";
 #define qglsa_usage(ret) usage(ret, QGLSA_FLAGS, qglsa_long_opts, qglsa_opts_help, lookup_applet_idx("qglsa"))
 
 static char *qglsa_load_list(void);
@@ -142,10 +142,10 @@ static char *qglsa_get_xml_tag(const char *xml_buf, const char *tag)
 }
 
 /*
-static const char *qglsa_opts_glsa[] = {
+static const char * const qglsa_opts_glsa[] = {
 	"le", "lt", "eq", "gt", "ge", "rge", "rle", "rgt", "rlt", NULL
 };
-static const char *qglsa_opts_portage[] = {
+static const char * const qglsa_opts_portage[] = {
 	"<=",  "<",  "=",  ">", ">=", ">=~", "<=~", " >~", " <~", NULL
 };
 

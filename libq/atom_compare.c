@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.6 2008/01/17 06:35:08 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.7 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -17,7 +17,7 @@ typedef struct {
 } depend_atom;
 */
 
-const char *booga[] = {"!!!", "!=", "==", ">", "<"};
+const char * const booga[] = {"!!!", "!=", "==", ">", "<"};
 enum { ERROR=0, NOT_EQUAL, EQUAL, NEWER, OLDER };
 /* a1 <return value> a2
  * foo-1 <EQUAL> foo-1

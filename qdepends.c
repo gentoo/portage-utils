@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.50 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.51 2011/02/21 01:33:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -20,7 +20,7 @@ static struct option const qdepends_long_opts[] = {
 	{"all",       no_argument, NULL, 'a'},
 	COMMON_LONG_OPTS
 };
-static const char *qdepends_opts_help[] = {
+static const char * const qdepends_opts_help[] = {
 	"Show DEPEND info (default)",
 	"Show RDEPEND info",
 	"Show PDEPEND info",
@@ -30,7 +30,7 @@ static const char *qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.50 2010/04/07 05:58:16 solar Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.51 2011/02/21 01:33:47 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -44,7 +44,7 @@ typedef enum {
 	DEP_GROUP = 4
 } dep_type;
 #ifdef EBUG
-static const char *_dep_names[] = { "NULL", "NORM", "USE", "OR", "GROUP" };
+static const char * const _dep_names[] = { "NULL", "NORM", "USE", "OR", "GROUP" };
 #endif
 
 struct _dep_node {
