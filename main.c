@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.182 2011/02/21 07:33:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.183 2011/02/21 21:52:55 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -54,20 +54,20 @@ int quiet = 0;
 char pretend = 0;
 char reinitialize = 0;
 char reinitialize_metacache = 0;
-char portdir[_Q_PATH_MAX] = EPREFIX "/usr/portage";
-char portarch[20] = "";
-char portvdb[_Q_PATH_MAX] = "var/db/pkg";
+static char *portdir;
+static char *portarch;
+static char *portvdb;
 const char portcachedir[] = "metadata/cache";
-char portroot[_Q_PATH_MAX] = "/";
-char config_protect[_Q_PATH_MAX] = EPREFIX "/etc/";
+static char *portroot;
+static char *config_protect, *config_protect_mask;
 
-char pkgdir[512] = EPREFIX "/usr/portage/packages/";
-char port_tmpdir[512] = EPREFIX "/var/tmp/portage/";
+static char *pkgdir;
+static char *port_tmpdir;
 
-char binhost[1024] = PORTAGE_BINHOST;
-char features[2048] = "noman noinfo nodoc";
-char accept_license[512] = "*";
-char install_mask[BUFSIZ] = "";
+static char *binhost;
+static char *features;
+static char *accept_license;
+static char *install_mask;
 
 const char err_noapplet[] = "Sorry this applet was disabled at compile time";
 
@@ -336,12 +336,9 @@ static char *slot_name(const char *name) {
 void freeargv(int, char **);
 void freeargv(int argc, char **argv)
 {
-	int i;
-	if (argc > 0) {
-		for (i = 0; i < argc; i++)
-			free(argv[i]);
-		free(argv);
-	}
+	while (argc--)
+		free(argv[argc]);
+	free(argv);
 }
 
 void makeargv(char *string, int *argc, char ***argv);
@@ -464,19 +461,20 @@ contents_entry *contents_parse_line(char *line)
 	return &e;
 }
 
-static char *strincr_var(const char *name, const char *s, char *value, const size_t value_len)
+static void strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 {
-	char buf[BUFSIZ];
-	char *p;
+	size_t len;
+	char *buf, *p, *nv;
 
-	if ((strlen(value) + 1 + strlen(s)) >= value_len)
-		errf("%s will exceed max length value of %zi with a size of %zi", name, value_len, (strlen(value) + 1 + strlen(s)));
+	len = strlen(s);
+	*value = xrealloc(*value, *value_len + len + 2);
+	nv = &(*value)[*value_len];
+	if (*value_len)
+		*nv++ = ' ';
+	memcpy(nv, s, len + 1);
 
-	strncat(value, " ", value_len);
-	strncat(value, s, value_len);
-
-	while ((p = strstr(value, "-*")) != NULL)
-		memset(value, ' ', (strlen(value)-strlen(p))+2);
+	while ((p = strstr(nv, "-*")) != NULL)
+		memset(*value, ' ', p - *value);
 
 	/* This function is mainly used by the startup code for parsing
 		make.conf and stacking variables remove.
@@ -489,20 +487,23 @@ static char *strincr_var(const char *name, const char *s, char *value, const siz
 		wont work:
 			FEATURES="${OTHERVAR} foo"
 			FEATURES="-nls nls -nls"
+			FEATURES="nls nls nls"
 	*/
 
-	snprintf(buf, sizeof(buf), "${%s}", name);
-	if ((p = strstr(value, buf)) != NULL)
-		memset(p, ' ', strlen(name)+3);
+	len = strlen(name);
+	buf = alloca(len + 3 + 1);
 
-	snprintf(buf, sizeof(buf), "$%s", name);
-	if ((p = strstr(value, buf)) != NULL)
-		memset(p, ' ', strlen(name)+1);
+	sprintf(buf, "${%s}", name);
+	if ((p = strstr(nv, buf)) != NULL)
+		memset(p, ' ', len + 3);
 
-	remove_extra_space(value);
+	sprintf(buf, "$%s", name);
+	if ((p = strstr(nv, buf)) != NULL)
+		memset(p, ' ', len + 1);
+
+	remove_extra_space(*value);
+	*value_len = strlen(*value);
 	/* we should sort here */
-
-	return value;
 }
 
 typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR } var_types;
@@ -510,21 +511,32 @@ typedef struct {
 	const char *name;
 	const size_t name_len;
 	const var_types type;
-	char *value;
-	const size_t value_len;
+	union {
+		char **s;
+		bool *b;
+	} value;
+	size_t value_len;
+	const char *default_value;
 } env_vars;
 
-static void set_portage_env_var(const env_vars var, const char *value)
+static void set_portage_env_var(env_vars *var, const char *value)
 {
-	switch (var.type) {
-	case _Q_BOOL: *var.value = 1; break;
-	case _Q_STR: strncpy(var.value, value, var.value_len); break;
-	case _Q_ISTR: strincr_var(var.name, value, var.value, var.value_len); break;
+	switch (var->type) {
+	case _Q_BOOL:
+		*var->value.b = 1;
+		break;
+	case _Q_STR:
+		free(*var->value.s);
+		*var->value.s = xstrdup(value);
+		break;
+	case _Q_ISTR:
+		strincr_var(var->name, value, var->value.s, &var->value_len);
+		break;
 	}
 }
 
 /* Helper to read a portage env file (e.g. make.conf) */
-static void read_portage_env_file(const char *file, const env_vars vars[])
+static void read_portage_env_file(const char *file, env_vars vars[])
 {
 	size_t i, buflen, line;
 	FILE *fp;
@@ -586,7 +598,7 @@ static void read_portage_env_file(const char *file, const env_vars vars[])
 				}
 			}
 
-			set_portage_env_var(vars[i], s);
+			set_portage_env_var(&vars[i], s);
 		}
 	}
 
@@ -595,7 +607,7 @@ static void read_portage_env_file(const char *file, const env_vars vars[])
 }
 
 /* Helper to recursively read stacked make.defaults in profiles */
-static void read_portage_profile(const char *profile, const env_vars vars[])
+static void read_portage_profile(const char *profile, env_vars vars[])
 {
 	size_t profile_len, sub_len;
 	char profile_file[_Q_PATH_MAX], *sub_file;
@@ -639,31 +651,43 @@ void initialize_portage_env(void)
 		EPREFIX "/etc/make.conf",
 		EPREFIX "/etc/portage/make.conf",
 	};
-	char nocolor = 0;
-	const env_vars vars_to_read[] = {
-		{"ACCEPT_LICENSE",   14, _Q_STR,  accept_license, sizeof(accept_license)},
-		{"INSTALL_MASK",     12, _Q_ISTR, install_mask,   sizeof(install_mask)},
-		{"ARCH",              4, _Q_STR,  portarch,       sizeof(portarch)},
-		{"CONFIG_PROTECT",   14, _Q_STR,  config_protect, sizeof(config_protect)},
-		{"NOCOLOR",           7, _Q_BOOL, &nocolor,       1},
-		{"FEATURES",          8, _Q_ISTR, features,       sizeof(features)},
-		{"PORTDIR",           7, _Q_STR,  portdir,        sizeof(portdir)},
-		{"PORTAGE_BINHOST",  15, _Q_STR,  binhost,        sizeof(binhost)},
-		{"PORTAGE_TMPDIR",   14, _Q_STR,  port_tmpdir,    sizeof(port_tmpdir)},
-		{"PKGDIR",            6, _Q_STR,  pkgdir,         sizeof(pkgdir)},
-		{"ROOT",              4, _Q_STR,  portroot,       sizeof(portroot)},
-		{ },
+	bool nocolor = 0;
+
+	env_vars vars_to_read[] = {
+#define _Q_EV(t, V, set, lset, d) \
+	{ \
+		.name = #V, \
+		.name_len = strlen(#V), \
+		.type = _Q_##t, \
+		set, \
+		lset, \
+		.default_value = d, \
+	},
+#define _Q_EVS(t, V, v, d) _Q_EV(t, V, .value.s = &v, .value_len = strlen(d), d)
+#define _Q_EVB(t, V, v, d) _Q_EV(t, V, .value.b = &v, .value_len = 0, d)
+
+		_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      "")
+		_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        "")
+		_Q_EVS(STR,  ARCH,                portarch,            "")
+		_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      EPREFIX "/etc")
+		_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
+		_Q_EVB(BOOL, NOCOLOR,             nocolor,             0)
+		_Q_EVS(ISTR, FEATURES,            features,            "noman noinfo nodoc")
+		_Q_EVS(STR,  PORTDIR,             portdir,             EPREFIX "/usr/portage")
+		_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             DEFAULT_PORTAGE_BINHOST)
+		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         EPREFIX "/var/tmp/portage/")
+		_Q_EVS(STR,  PKGDIR,              pkgdir,              EPREFIX "/usr/portage/packages/")
+		_Q_EVS(STR,  ROOT,                portroot,            "/")
+		_Q_EVS(STR,  Q_VDB,               portvdb,             EPREFIX "/var/db/pkg")
+		{ }
+
+#undef _Q_EV
 	};
 
-	s = getenv("Q_VDB");	/* #257251 */
-	if (s) {
-		strncpy(portvdb, s, sizeof(portvdb));
-		portvdb[sizeof(portvdb) - 1] = '\0';
-	} else if ((i = strlen(EPREFIX)) > 1) {
-		memmove(portvdb + i, portvdb, strlen(portvdb));
-		memcpy(portvdb, EPREFIX + 1, i - 1);
-		portvdb[i - 1] = '/';
-	}
+	/* initialize all the strings with their default value */
+	for (i = 0; vars_to_read[i].name; ++i)
+		if (vars_to_read[i].type != _Q_BOOL)
+			*vars_to_read[i].value.s = xstrdup(vars_to_read[i].default_value);
 
 	if ((s = strchr(portroot, '/')) != NULL)
 		if (strlen(s) != 1)
@@ -681,16 +705,17 @@ void initialize_portage_env(void)
 	for (i = 0; vars_to_read[i].name; ++i) {
 		s = getenv(vars_to_read[i].name);
 		if (s != NULL)
-			set_portage_env_var(vars_to_read[i], s);
+			set_portage_env_var(&vars_to_read[i], s);
 		if (getenv("DEBUG") IF_DEBUG(|| 1)) {
 			fprintf(stderr, "%s = ", vars_to_read[i].name);
 			switch (vars_to_read[i].type) {
-			case _Q_BOOL: fprintf(stderr, "%i\n", *vars_to_read[i].value); break;
+			case _Q_BOOL: fprintf(stderr, "%i\n", *vars_to_read[i].value.b); break;
 			case _Q_STR:
-			case _Q_ISTR: fprintf(stderr, "%s\n", vars_to_read[i].value); break;
+			case _Q_ISTR: fprintf(stderr, "%s\n", *vars_to_read[i].value.s); break;
 			}
 		}
 	}
+
 	if ((s = strchr(portroot, '/')) != NULL)
 		if (strlen(s) != 1)
 			strncat(portroot, "/", sizeof(portroot));

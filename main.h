@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.6 2011/02/21 07:33:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.7 2011/02/21 21:52:55 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,26 +24,26 @@
 #define URL "http://tinderbox.dev.gentoo.org"
 # ifdef __i386__
 #  ifdef __UCLIBC__
-#   define PORTAGE_BINHOST URL "/uclibc/i386"
+#   define DEFAULT_PORTAGE_BINHOST URL "/uclibc/i386"
 #  else
 #   ifdef __SSP__
-#    define PORTAGE_BINHOST URL "/hardened/x86"
+#    define DEFAULT_PORTAGE_BINHOST URL "/hardened/x86"
 #   else
-#    define PORTAGE_BINHOST URL "/default-linux/x86/All"
+#    define DEFAULT_PORTAGE_BINHOST URL "/default-linux/x86/All"
 #   endif
 #  endif
 #  if defined(__powerpc__) && defined(__SSP__)
 #   if !defined(__UCLIBC__)
-#    define PORTAGE_BINHOST URL "/hardened/ppc"
+#    define DEFAULT_PORTAGE_BINHOST URL "/hardened/ppc"
 #   else
-#    define PORTAGE_BINHOST URL "/uclibc/ppc"
+#    define DEFAULT_PORTAGE_BINHOST URL "/uclibc/ppc"
 #   endif
 #  endif
 # endif
 #endif
 
-#ifndef PORTAGE_BINHOST
-# define PORTAGE_BINHOST ""
+#ifndef DEFAULT_PORTAGE_BINHOST
+# define DEFAULT_PORTAGE_BINHOST ""
 #endif
 
 #define qfprintf(stream, fmt, args...) do { if (!quiet) fprintf(stream, _( fmt ), ## args); } while (0)
