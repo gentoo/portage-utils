@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.97 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.98 2011/02/21 01:52:46 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.97 2011/02/21 01:33:47 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.98 2011/02/21 01:52:46 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -113,8 +113,8 @@ char *find_binpkg(const char *);
 
 struct pkg_t *grab_binpkg_info(const char *);
 
-int mkdirhier(char *dname, mode_t mode);
-int mkdirhier(char *dname, mode_t mode) {
+static int mkdirhier(char *dname, mode_t mode)
+{
 	char buf[BUFSIZ];
 	int i;
 	strncpy(buf, dname, sizeof(buf));
@@ -157,7 +157,7 @@ int interactive_rename(const char *src, const char *dst, struct pkg_t *pkg)
 		snprintf(buf, sizeof(buf), "qfile -Cqev %s 2>/dev/null", dst);
 		if ((fp = popen(buf, "r")) != NULL) {
 			buf[0] = '\0';
-			if ((fgets(buf, sizeof(buf), fp)) != NULL)
+			if (fgets(buf, sizeof(buf), fp) != NULL)
 				if ((p = strchr(buf, '\n')) != NULL) {
 					*p = 0;
 					p = xstrdup(buf);
@@ -218,7 +218,7 @@ void qmerge_initialize(const char *Packages)
 		errf("PORTAGE_BINHOST= does not appear to be valid");
 
 	if (!search_pkgs && !pretend) {
-		if ((access(pkgdir, R_OK|W_OK|X_OK)) != 0)
+		if (access(pkgdir, R_OK|W_OK|X_OK) != 0)
 			errf("Wrong perms on PKGDIR='%s'", pkgdir);
 		mkdir(port_tmpdir, 0755);
 	}
@@ -230,11 +230,11 @@ void qmerge_initialize(const char *Packages)
 		unlink(Packages);
 
 	if ((access(Packages, R_OK) != 0) && (force_download != 2)) {
-			char *tbuf = NULL;
-			xasprintf(&tbuf, "%s/portage/", port_tmpdir);
-		        if ((access(Packages, R_OK) != 0))
-				fetch(tbuf, Packages);
-			free(tbuf);
+		char *tbuf = NULL;
+		xasprintf(&tbuf, "%s/portage/", port_tmpdir);
+		if (access(Packages, R_OK) != 0)
+			fetch(tbuf, Packages);
+		free(tbuf);
 	}
 }
 
@@ -252,7 +252,7 @@ char *best_version(const char *CATEGORY, const char *PN)
 		return NULL;
 
 	buf[0] = '\0';
-	if ((fgets(buf, sizeof(buf), fp)) != NULL)
+	if (fgets(buf, sizeof(buf), fp) != NULL)
 		if ((p = strchr(buf, '\n')) != NULL)
 			*p = 0;
 	pclose(fp);
@@ -267,14 +267,14 @@ int config_protected(const char *buf, int ARGC, char **ARGV)
 	snprintf(dest, sizeof(dest), "%s%s", portroot, buf);
 
 	for (i = 1; i < ARGC; i++)
-		if ((strncmp(ARGV[i], buf, strlen(ARGV[i]))) == 0)
+		if (strncmp(ARGV[i], buf, strlen(ARGV[i])) == 0)
 			if ((access(dest, R_OK)) == 0)
 				return 1;
 
-	if ((strncmp("/etc", buf, 4)) == 0)
-		if ((access(dest, R_OK)) == 0)
+	if (strncmp("/etc", buf, 4) == 0)
+		if (access(dest, R_OK) == 0)
 			return 1;
-	if ((strcmp("/bin/sh", buf)) == 0)
+	if (strcmp("/bin/sh", buf) == 0)
 		return 1;
 	return 0;
 }
@@ -315,7 +315,7 @@ void install_mask_pwd(int iargc, char **iargv, const struct stat st)
 			glob_t globbuf;
 
 			globbuf.gl_offs = 0;
-			if ((glob(buf, GLOB_DOOFFS|GLOB_BRACE, NULL, &globbuf)) == 0) {
+			if (glob(buf, GLOB_DOOFFS|GLOB_BRACE, NULL, &globbuf) == 0) {
 				for (g = 0; g < globbuf.gl_pathc; g++) {
 					strncpy(buf, globbuf.gl_pathv[g], sizeof(buf));
 					/* qprintf("globbed: %s\n", globbuf.gl_pathv[g]); */
@@ -374,11 +374,11 @@ char qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg)
 		}
 		if (update_only && c != 'U')
 			return c;
-		if (((c == 'R') || (c == 'D')) && update_only && level)
+		if ((c == 'R' || c == 'D') && update_only && level)
 			return c;
 		if (c == 'R')
 			snprintf(buf, sizeof(buf), "%s%c%s", YELLOW, c, NORM);
-		if ((c == 'U') || (c == 'D'))
+		if (c == 'U' || c == 'D')
 			snprintf(buf, sizeof(buf), "%s%c%s", BLUE, c, NORM);
 #if 0
 		if (level) {
@@ -393,7 +393,8 @@ char qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg)
 #endif
 	}
 	printf("[%s] ", buf);
-	for (i = 0; i < level; i++) putchar(' ');
+	for (i = 0; i < level; ++i)
+		putchar(' ');
 	if (verbose)
 		printf("%s%s/%s%s %s%s%s%s%s%s\n", DKGREEN, pkg->CATEGORY, pkg->PF, NORM,
 			install_ver, strlen(pkg->USE) > 0 ? "(" : "", RED, pkg->USE, NORM, strlen(pkg->USE) > 0 ? ")" : "");
@@ -493,7 +494,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 							if (virtuals == NULL)
 								virtuals = resolve_virtuals();
 							resolved = find_binpkg(virtual(name, virtuals));
-							if ((resolved == NULL) || (!strlen(resolved)))
+							if (resolved == NULL || !strlen(resolved))
 								resolved = find_binpkg(name);
 						} else
 							resolved = NULL;
@@ -643,7 +644,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 	makeargv(config_protect, &ARGC, &ARGV);
 
-	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		char line[BUFSIZ];
 		int protected = 0;
 		char matched = 0;
@@ -655,7 +656,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 		if (buf[0] != '.')
 			continue;
 
-		if (((strcmp(buf, ".")) == 0) || ((strcmp(buf, "..")) == 0))
+		if ((strcmp(buf, ".") == 0) || (strcmp(buf, "..") == 0))
 			continue;
 
 		for (i = 1; i < iargc; i++) {
@@ -676,8 +677,8 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 		/* portage has code that handes fifo's but it looks unused */
 
-		if ((S_ISCHR(st.st_mode)) || \
-			(S_ISBLK(st.st_mode))); /* block or character device */
+		if (S_ISCHR(st.st_mode) ||
+			S_ISBLK(st.st_mode)); /* block or character device */
 		if (S_ISFIFO(st.st_mode));	/* FIFO (named pipe) */
 		if (S_ISSOCK(st.st_mode));	/* socket? (Not in POSIX.1-1996.) */
 
@@ -711,7 +712,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 					continue;
 				}
 			}
-			if ((lstat(dest, &lst)) != (-1)) {
+			if (lstat(dest, &lst) != -1) {
 				if (S_ISLNK(lst.st_mode)) {
 					warn("%s exists and is a symlink and we are going to overwrite it with a file", dest);
 					unlink_q(dest);
@@ -844,7 +845,7 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 	argv = NULL;
 	makeargv(config_protect, &argc, &argv);
 
-	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		contents_entry *e;
 		char zing[20];
 		int protected = 0;
@@ -928,10 +929,10 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 int unlink_empty(char *buf)
 {
 	struct stat st;
-	if ((stat(buf, &st)) != (-1))
+	if (stat(buf, &st) != -1)
 		if (st.st_size == 0)
 			return unlink(buf);
-	return (-1);
+	return -1;
 }
 
 int match_pkg(const char *name, struct pkg_t *pkg)
@@ -946,18 +947,18 @@ int match_pkg(const char *name, struct pkg_t *pkg)
 		errf("%s/%s is not a valid atom", pkg->CATEGORY, pkg->PF);
 
 	/* verify this is the requested package */
-	if ((strcmp(name, buf)) == 0)
+	if (strcmp(name, buf) == 0)
 		match = 1;
 
-	if ((strcmp(name, pkg->PF)) == 0)
+	if (strcmp(name, pkg->PF) == 0)
 		match = 2;
 
 	snprintf(buf2, sizeof(buf2), "%s/%s", pkg->CATEGORY, atom->PN);
 
-	if ((strcmp(name, buf2)) == 0)
+	if (strcmp(name, buf2) == 0)
 		match = 3;
 
-	if ((strcmp(name, atom->PN)) == 0)
+	if (strcmp(name, atom->PN) == 0)
 		match = 4;
 
 	if (match)
@@ -1068,16 +1069,16 @@ void pkg_fetch(int level, depend_atom *atom, struct pkg_t *pkg)
 	snprintf(str, sizeof(str), "%s/%s", pkgdir, pkg->CATEGORY);
 	mkdir(str, 0755);
 
-	if ((force_download) && (access(buf, R_OK) == 0) && ((pkg->SHA1[0]) || (pkg->MD5[0]))) {
-		if ((pkg_verify_checksums(buf, pkg, atom, 0, 0)) != 0)
+	if (force_download && (access(buf, R_OK) == 0) && (pkg->SHA1[0] || pkg->MD5[0])) {
+		if (pkg_verify_checksums(buf, pkg, atom, 0, 0) != 0)
 			unlink(buf);
 	}
 	if (access(buf, R_OK) == 0) {
-		if ((!pkg->SHA1[0]) && (!pkg->MD5[0])) {
+		if (!pkg->SHA1[0] && !pkg->MD5[0]) {
 			warn("No checksum data for %s", buf);
 			return;
 		} else {
-			if ((pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1)) == 0) {
+			if (pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1) == 0) {
 				pkg_merge(0, atom, pkg);
 				return;
 			}
@@ -1120,7 +1121,7 @@ void pkg_fetch(int level, depend_atom *atom, struct pkg_t *pkg)
 	xchdir(savecwd);
 
 	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
-	if ((pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1)) == 0) {
+	if (pkg_verify_checksums(buf, pkg, atom, qmerge_strict, 1) == 0) {
 		pkg_merge(0, atom, pkg);
 		return;
 	}
@@ -1231,7 +1232,7 @@ struct pkg_t *grab_binpkg_info(const char *name)
 	if ((fp = fopen(buf, "r")) == NULL)
 		errp("Unable to open package file %s", buf);
 
-	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		if (*buf == '\n') {
 			if (pkg->PF[0] && pkg->CATEGORY[0]) {
 				int ret;
@@ -1281,16 +1282,16 @@ struct pkg_t *grab_binpkg_info(const char *name)
 
 		if (*buf) {
 			/* we dont need all the info */
-			if ((strcmp(buf, "RDEPEND:")) == 0)
+			if (strcmp(buf, "RDEPEND:") == 0)
 				strncpy(pkg->RDEPEND, value, sizeof(Pkg.RDEPEND));
-			if ((strcmp(buf, "PF:")) == 0)
+			if (strcmp(buf, "PF:") == 0)
 				strncpy(pkg->PF, value, sizeof(Pkg.PF));
-			if ((strcmp(buf, "CATEGORY:")) == 0)
+			if (strcmp(buf, "CATEGORY:") == 0)
 				strncpy(pkg->CATEGORY, value, sizeof(Pkg.CATEGORY));
-			if ((strcmp(buf, "REPO:")) == 0)
+			if (strcmp(buf, "REPO:") == 0)
 				strncpy(pkg->REPO, value, sizeof(Pkg.REPO));
 
-			if ((strcmp(buf, "CPV:")) == 0) {
+			if (strcmp(buf, "CPV:") == 0) {
 				if ((atom = atom_explode(value)) != NULL) {
 					snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
 					if (atom->PR_int)
@@ -1300,15 +1301,15 @@ struct pkg_t *grab_binpkg_info(const char *name)
 					atom_implode(atom);
 				}
 			}
-			if ((strcmp(buf, "SLOT:")) == 0)
+			if (strcmp(buf, "SLOT:") == 0)
 				strncpy(pkg->SLOT, value, sizeof(Pkg.SLOT));
-			if ((strcmp(buf, "USE:")) == 0)
+			if (strcmp(buf, "USE:") == 0)
 				strncpy(pkg->USE, value, sizeof(Pkg.USE));
 
 			/* checksums. We must have 1 or the other unless --*/
-			if ((strcmp(buf, "MD5:")) == 0)
+			if (strcmp(buf, "MD5:") == 0)
 				strncpy(pkg->MD5, value, sizeof(Pkg.MD5));
-			if ((strcmp(buf, "SHA1:")) == 0)
+			if (strcmp(buf, "SHA1:") == 0)
 				strncpy(pkg->SHA1, value, sizeof(Pkg.SHA1));
 		}
 	}
@@ -1337,7 +1338,7 @@ char *find_binpkg(const char *name)
 	if ((fp = fopen(buf, "r")) == NULL)
 		errp("Unable to open package file %s", buf);
 
-	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		if (*buf == '\n') {
 			if (PF[0] && CATEGORY[0]) {
 				int ret;
@@ -1381,7 +1382,7 @@ char *find_binpkg(const char *name)
 		strncpy(value, p, sizeof(value));
 
 		if (*buf) {
-			if ((strcmp(buf, "CPV:")) == 0) {
+			if (strcmp(buf, "CPV:") == 0) {
 				depend_atom *atom;
 				if ((atom = atom_explode(value)) != NULL) {
 					snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
@@ -1392,9 +1393,9 @@ char *find_binpkg(const char *name)
 					atom_implode(atom);
 				}
 			}
-			if ((strcmp(buf, "PF:")) == 0)
+			if (strcmp(buf, "PF:") == 0)
 				strncpy(PF, value, sizeof(PF));
-			if ((strcmp(buf, "CATEGORY:")) == 0)
+			if (strcmp(buf, "CATEGORY:") == 0)
 				strncpy(CATEGORY, value, sizeof(CATEGORY));
 		}
 	}
@@ -1416,7 +1417,7 @@ int parse_packages(const char *Packages, int argc, char **argv)
 
 	memset(&Pkg, 0, sizeof(Pkg));
 
-	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		lineno++;
 		if (*buf == '\n') {
 			if ((strlen(Pkg.PF) > 0) && (strlen(Pkg.CATEGORY) > 0)) {
@@ -1452,29 +1453,29 @@ int parse_packages(const char *Packages, int argc, char **argv)
 
 		switch (*buf) {
 			case 'U':
-				if ((strcmp(buf, "USE:")) == 0) strncpy(Pkg.USE, value, sizeof(Pkg.USE));
+				if (strcmp(buf, "USE:") == 0) strncpy(Pkg.USE, value, sizeof(Pkg.USE));
 				break;
 			case 'P':
-				if ((strcmp(buf, "PF:")) == 0) strncpy(Pkg.PF, value, sizeof(Pkg.PF));
+				if (strcmp(buf, "PF:") == 0) strncpy(Pkg.PF, value, sizeof(Pkg.PF));
 				break;
 			case 'S':
-				if ((strcmp(buf, "SIZE:")) == 0) Pkg.SIZE = atol(value);
-				if ((strcmp(buf, "SLOT:")) == 0) strncpy(Pkg.SLOT, value, sizeof(Pkg.SLOT));
-				if ((strcmp(buf, "SHA1:")) == 0) strncpy(Pkg.SHA1, value, sizeof(Pkg.SHA1));
+				if (strcmp(buf, "SIZE:") == 0) Pkg.SIZE = atol(value);
+				if (strcmp(buf, "SLOT:") == 0) strncpy(Pkg.SLOT, value, sizeof(Pkg.SLOT));
+				if (strcmp(buf, "SHA1:") == 0) strncpy(Pkg.SHA1, value, sizeof(Pkg.SHA1));
 				break;
 			case 'M':
-				if ((strcmp(buf, "MD5:")) == 0) strncpy(Pkg.MD5, value, sizeof(Pkg.MD5));
+				if (strcmp(buf, "MD5:") == 0) strncpy(Pkg.MD5, value, sizeof(Pkg.MD5));
 				break;
 			case 'R':
-				if ((strcmp(buf, "REPO:")) == 0) strncpy(Pkg.REPO, value, sizeof(Pkg.REPO));
-				if ((strcmp(buf, "RDEPEND:")) == 0) strncpy(Pkg.RDEPEND, value, sizeof(Pkg.RDEPEND));
+				if (strcmp(buf, "REPO:") == 0) strncpy(Pkg.REPO, value, sizeof(Pkg.REPO));
+				if (strcmp(buf, "RDEPEND:") == 0) strncpy(Pkg.RDEPEND, value, sizeof(Pkg.RDEPEND));
 				break;
 			case 'L':
-				if ((strcmp(buf, "LICENSE:")) == 0) strncpy(Pkg.LICENSE, value, sizeof(Pkg.LICENSE));
+				if (strcmp(buf, "LICENSE:") == 0) strncpy(Pkg.LICENSE, value, sizeof(Pkg.LICENSE));
 				break;
 			case 'C':
-				if ((strcmp(buf, "CATEGORY:")) == 0) strncpy(Pkg.CATEGORY, value, sizeof(Pkg.CATEGORY));
-				if ((strcmp(buf, "CPV:")) == 0) {
+				if (strcmp(buf, "CATEGORY:") == 0) strncpy(Pkg.CATEGORY, value, sizeof(Pkg.CATEGORY));
+				if (strcmp(buf, "CPV:") == 0) {
 					depend_atom *atom;
 					if ((atom = atom_explode(value)) != NULL) {
 						snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
@@ -1487,7 +1488,7 @@ int parse_packages(const char *Packages, int argc, char **argv)
 				}
 				break;
 			case 'D':
-				if ((strcmp(buf, "DESC:")) == 0) strncpy(Pkg.DESC, value, sizeof(Pkg.DESC));
+				if (strcmp(buf, "DESC:") == 0) strncpy(Pkg.DESC, value, sizeof(Pkg.DESC));
 				break;
 			default:
 				break;
@@ -1499,7 +1500,8 @@ int parse_packages(const char *Packages, int argc, char **argv)
 }
 
 queue *get_world(void);
-queue *get_world(void) {
+queue *get_world(void)
+{
 	FILE *fp;
 	char buf[BUFSIZ];
 	queue *world = NULL;
@@ -1515,7 +1517,7 @@ queue *get_world(void) {
 		return NULL;
 	}
 
-	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		char *p;
 		char *slot = (char *) "0";
 
@@ -1532,12 +1534,13 @@ queue *get_world(void) {
 }
 
 queue *qmerge_load_set(char *, queue *);
-queue *qmerge_load_set(char *buf, queue *set) {
+queue *qmerge_load_set(char *buf, queue *set)
+{
 	if (set != NULL)
 		return set;
-	if ((strcmp(buf, "world") == 0))
+	if (strcmp(buf, "world") == 0)
 		return get_world();
-	if ((strcmp(buf, "all") == 0))
+	if (strcmp(buf, "all") == 0)
 		return get_vdb_atoms(0);
 	return NULL;
 }
@@ -1545,7 +1548,7 @@ queue *qmerge_load_set(char *buf, queue *set) {
 int qmerge_main(int argc, char **argv)
 {
 	int i;
-	const char *Packages = "Packages";
+	const char Packages[] = "Packages";
 	int ARGC = argc;
 	char **ARGV = argv;
 
