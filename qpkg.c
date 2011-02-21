@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.31 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.32 2011/02/21 07:33:21 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,7 @@ static const char * const qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.31 2011/02/21 01:33:47 vapier Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.32 2011/02/21 07:33:21 vapier Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
@@ -107,7 +107,6 @@ int qpkg_clean(char *dirp)
 {
 	FILE *fp;
 	int i, count;
-	char buf[_Q_PATH_MAX];
 	size_t disp_units = 0;
 	uint64_t num_all_bytes;
 	struct dirent **dnames;
@@ -126,10 +125,10 @@ int qpkg_clean(char *dirp)
 
 	if (eclean) {
 		char fname[_Q_PATH_MAX] = "";
-		char *ecache;
+		const char *ecache;
 
 		/* CACHE_EBUILD_FILE is a macro so don't put it in the .bss */
-		ecache = (char *) CACHE_EBUILD_FILE;
+		ecache = CACHE_EBUILD_FILE;
 
 		if (ecache) {
 			if (*ecache != '/')
@@ -138,7 +137,11 @@ int qpkg_clean(char *dirp)
 				strncpy(fname, ecache, sizeof(fname));
 		}
 		if ((fp = fopen(fname, "r")) != NULL) {
-			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+			size_t buflen;
+			char *buf;
+
+			buf = NULL;
+			while (getline(&buf, &buflen, fp) != -1) {
 				char *name, *p;
 				if ((p = strrchr(buf, '.')) == NULL)
 					continue;
@@ -158,6 +161,8 @@ int qpkg_clean(char *dirp)
 				/* vdb = del_set(buf, vdb, &i); */
 				vdb = add_set(buf, "0", vdb);
 			}
+
+			free(buf);
 			fclose(fp);
 		}
 	}
@@ -165,6 +170,7 @@ int qpkg_clean(char *dirp)
 	num_all_bytes = qpkg_clean_dir(dirp, vdb);
 
 	for (i = 0; i < count; i++) {
+		char buf[_Q_PATH_MAX];
 		snprintf(buf, sizeof(buf), "%s/%s", dirp, dnames[i]->d_name);
 		num_all_bytes += qpkg_clean_dir(buf, vdb);
 	}
@@ -200,7 +206,8 @@ int qpkg_make(depend_atom *atom)
 {
 	FILE *fp, *out;
 	char tmpdir[BUFSIZE], filelist[BUFSIZE], xpak[BUFSIZE], tbz2[BUFSIZE];
-	char buf[BUFSIZE];
+	size_t buflen;
+	char *buf;
 	int i;
 	char *xpak_argv[2];
 	struct stat st;
@@ -226,15 +233,17 @@ int qpkg_make(depend_atom *atom)
 	if ((out = fopen(filelist, "w")) == NULL)
 		return -4;
 
-	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+	buflen = _Q_PATH_MAX;
+	buf = xmalloc(buflen);
+	while (getline(&buf, &buflen, fp) != -1) {
 		contents_entry *e;
 		e = contents_parse_line(buf);
 		if (!e || e->type == CONTENTS_DIR)
 			continue;
 		fprintf(out, "%s\n", e->name+1); /* dont output leading / */
 		if (e->type == CONTENTS_OBJ && verbose) {
-			char *hash = NULL;
-			if ((hash = (char*) hash_file(e->name, HASH_MD5)) != NULL) {
+			char *hash = (char *)hash_file(e->name, HASH_MD5);
+			if (hash != NULL) {
 				if (strcmp(e->digest, hash) != 0)
 					warn("MD5: mismatch expected %s got %s for %s", e->digest, hash, e->name);
 				free(hash);
@@ -249,18 +258,18 @@ int qpkg_make(depend_atom *atom)
 	fflush(stdout);
 
 	snprintf(tbz2, sizeof(tbz2), "%s/bin.tar.bz2", tmpdir);
-	snprintf(buf, sizeof(buf), "tar jcf '%s' --files-from='%s' --no-recursion >/dev/null 2>&1", tbz2, filelist);
+	snprintf(buf, buflen, "tar jcf '%s' --files-from='%s' --no-recursion >/dev/null 2>&1", tbz2, filelist);
 	if ((fp = popen(buf, "r")) == NULL)
 		return 2;
 	pclose(fp);
 
 	snprintf(xpak, sizeof(xpak), "%s/inf.xpak", tmpdir);
-	snprintf(buf, sizeof(buf), "%s/%s/%s", portvdb, atom->CATEGORY, atom_to_pvr(atom));
+	snprintf(buf, buflen, "%s/%s/%s", portvdb, atom->CATEGORY, atom_to_pvr(atom));
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
 	xpak_create(xpak, 1, xpak_argv);
 
-	snprintf(buf, sizeof(buf), "%s/binpkg.tbz2", tmpdir);
+	snprintf(buf, buflen, "%s/binpkg.tbz2", tmpdir);
 	tbz2_compose(tbz2, xpak, buf);
 
 	unlink(filelist);

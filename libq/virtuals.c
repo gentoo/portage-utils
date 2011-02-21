@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.23 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.24 2011/02/21 07:33:22 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.23 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.24 2011/02/21 07:33:22 vapier Exp $
  */
 
 #include <stdio.h>
@@ -152,7 +152,7 @@ queue *resolve_vdb_virtuals(char *vdb)
 {
 	DIR *dir, *dirp;
 	struct dirent *dentry_cat, *dentry_pkg;
-	char buf[BUFSIZE];
+	char buf[_Q_PATH_MAX];
 	depend_atom *atom;
 
 	xchdir("/");
@@ -169,83 +169,83 @@ queue *resolve_vdb_virtuals(char *vdb)
 
 		/* scan all the packages in this category */
 		while ((dentry_pkg = q_vdb_get_next_dir(dirp)) != NULL) {
-			FILE *fp;
 			char *p;
 			/* see if user wants any of these packages */
 			snprintf(buf, sizeof(buf), "%s/%s/%s/PROVIDE", vdb, dentry_cat->d_name, dentry_pkg->d_name);
-			if ((fp = fopen(buf, "r")) != NULL) {
-				if (fgets(buf, sizeof(buf), fp) == NULL)
-					buf[0] = '\0';
 
-				if ((p = strrchr(buf, '\n')) != NULL)
-					*p = 0;
+			if (!eat_file(buf, buf, sizeof(buf)))
+				continue;
 
-				rmspace(buf);
+			if ((p = strrchr(buf, '\n')) != NULL)
+				*p = 0;
 
-				if (*buf) {
-					int ok = 0;
-					char *v, *tmp = xstrdup(buf);
-					snprintf(buf, sizeof(buf), "%s/%s", dentry_cat->d_name, dentry_pkg->d_name);
+			rmspace(buf);
 
-					atom = atom_explode(buf);
-					if (!atom) {
-						warn("could not explode '%s'", buf);
-						continue;
-					}
-					sprintf(buf, "%s/%s", atom->CATEGORY, atom->PN);
-					if ((v = virtual(tmp, virtuals)) != NULL) {
-						/* IF_DEBUG(fprintf(stderr, "%s provided by %s (removing)\n", tmp, v)); */
-						virtuals = del_set(tmp,  virtuals, &ok);
-					}
-					virtuals = add_set(tmp, buf, virtuals);
-					/* IF_DEBUG(fprintf(stderr, "%s provided by %s/%s (adding)\n", tmp, atom->CATEGORY, dentry_pkg->d_name)); */
-					free(tmp);
-					atom_implode(atom);
+			if (*buf) {
+				int ok = 0;
+				char *v, *tmp = xstrdup(buf);
+				snprintf(buf, sizeof(buf), "%s/%s", dentry_cat->d_name, dentry_pkg->d_name);
+
+				atom = atom_explode(buf);
+				if (!atom) {
+					warn("could not explode '%s'", buf);
+					continue;
 				}
-				fclose(fp);
+				sprintf(buf, "%s/%s", atom->CATEGORY, atom->PN);
+				if ((v = virtual(tmp, virtuals)) != NULL) {
+					/* IF_DEBUG(fprintf(stderr, "%s provided by %s (removing)\n", tmp, v)); */
+					virtuals = del_set(tmp,  virtuals, &ok);
+				}
+				virtuals = add_set(tmp, buf, virtuals);
+				/* IF_DEBUG(fprintf(stderr, "%s provided by %s/%s (adding)\n", tmp, atom->CATEGORY, dentry_pkg->d_name)); */
+				free(tmp);
+				atom_implode(atom);
 			}
 		}
 	}
+
 	return virtuals;
 }
 
-static queue *resolve_local_profile_virtuals();
-static queue *resolve_local_profile_virtuals()
+static queue *resolve_local_profile_virtuals(void)
 {
-	char buf[BUFSIZ];
+	static size_t buflen;
+	static char *buf = NULL;
 	FILE *fp;
 	char *p;
-	char *paths[] = { (char *) "/etc/portage/profile/virtuals", (char *) "/etc/portage/virtuals" };
+	static const char * const paths[] = { "/etc/portage/profile/virtuals", "/etc/portage/virtuals" };
 	size_t i;
 
-	for (i = 0; i < sizeof(paths)/sizeof(paths[0]); i++) {
-		if ((fp = fopen(paths[i], "r")) != NULL) {
-			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-				if (*buf != 'v') continue;
-				for (p = buf; *p != 0; ++p) if (isspace(*p)) *p = ' ';
-				if ((p = strchr(buf, ' ')) != NULL) {
-					int ok = 0;
-					*p = 0;
-					virtuals = del_set(buf, virtuals, &ok);
-					virtuals = add_set(buf, rmspace(++p), virtuals);
-					ok = 0;
-				}
+	for (i = 0; i < ARRAY_SIZE(paths); ++i) {
+		fp = fopen(paths[i], "r");
+		if (!fp)
+			continue;
+
+		while (getline(&buf, &buflen, fp) != -1) {
+			if (*buf != 'v')
+				continue;
+			rmspace(buf);
+			if ((p = strchr(buf, ' ')) != NULL) {
+				int ok = 0;
+				*p = 0;
+				virtuals = del_set(buf, virtuals, &ok);
+				virtuals = add_set(buf, rmspace(++p), virtuals);
+				ok = 0;
 			}
-			fclose(fp);
 		}
+
+		fclose(fp);
 	}
+
 	return virtuals;
 }
 
-static queue *resolve_virtuals();
-static queue *resolve_virtuals()
+static queue *resolve_virtuals(void)
 {
-	static char buf[BUFSIZ];
-	static char savecwd[_POSIX_PATH_MAX];
+	static char buf[_Q_PATH_MAX];
+	static char savecwd[_Q_PATH_MAX];
 	static char *p;
 	FILE *fp;
-
-	memset(buf, 0, sizeof(buf));
 
 	xgetcwd(savecwd, sizeof(savecwd));
 
@@ -265,7 +265,7 @@ static queue *resolve_virtuals()
 		if ((fp = fopen("virtuals", "r")) != NULL) {
 			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
 				if (*buf != 'v') continue;
-				for (p = buf; *p != 0; ++p) if (isspace(*p)) *p = ' ';
+				rmspace(buf);
 				if ((p = strchr(buf, ' ')) != NULL) {
 					*p = 0;
 					if (virtual(buf, virtuals) == NULL)

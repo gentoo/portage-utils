@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.63 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.64 2011/02/21 07:33:21 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,7 +35,7 @@ static const char * const quse_opts_help[] = {
 	"Only show package name",
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.63 2011/02/21 01:33:47 vapier Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.64 2011/02/21 07:33:21 vapier Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(int ind, int argc, char **argv);
@@ -83,8 +83,9 @@ static void print_highlighted_use_flags(char *string, int ind, int argc, char **
 
 int quse_describe_flag(int ind, int argc, char **argv)
 {
-#define NUM_SEARCH_FILES ARR_SIZE(search_files)
-	char buf[BUFSIZE], *p;
+#define NUM_SEARCH_FILES ARRAY_SIZE(search_files)
+	size_t buflen;
+	char *buf, *p;
 	int i, f;
 	size_t s;
 	const char *search_files[] = { "use.desc", "use.local.desc", "arch.list", "lang.desc" };
@@ -92,8 +93,11 @@ int quse_describe_flag(int ind, int argc, char **argv)
 	DIR *d;
 	struct dirent *de;
 
+	buflen = _Q_PATH_MAX;
+	buf = xmalloc(buflen);
+
 	for (i = 0; i < NUM_SEARCH_FILES; ++i) {
-		snprintf(buf, sizeof(buf), "%s/profiles/%s", portdir, search_files[i]);
+		snprintf(buf, buflen, "%s/profiles/%s", portdir, search_files[i]);
 		if ((fp[i] = fopen(buf, "r")) == NULL)
 			if ((strcmp(search_files[i], "lang.desc")) != 0)
 				warnp("skipping %s", search_files[i]);
@@ -106,7 +110,7 @@ int quse_describe_flag(int ind, int argc, char **argv)
 			if (fp[f] == NULL)
 				continue;
 
-			while (fgets(buf, sizeof(buf), fp[f]) != NULL) {
+			while (getline(&buf, &buflen, fp[f]) != -1) {
 				if (buf[0] == '#' || buf[0] == '\n')
 					continue;
 
@@ -161,23 +165,23 @@ skip_file:
 			fclose(fp[f]);
 
 	/* now scan the desc dir */
-	snprintf(buf, sizeof(buf), "%s/profiles/desc/", portdir);
+	snprintf(buf, buflen, "%s/profiles/desc/", portdir);
 	if ((d = opendir(buf)) == NULL) {
 		warnp("skipping profiles/desc/");
-		return 0;
+		goto done;
 	}
 
 	while ((de = readdir(d)) != NULL) {
 		if (strcmp(de->d_name+strlen(de->d_name)-5, ".desc"))
 			continue;
 
-		snprintf(buf, sizeof(buf), "%s/profiles/desc/%s", portdir, de->d_name);
+		snprintf(buf, buflen, "%s/profiles/desc/%s", portdir, de->d_name);
 		if ((fp[0]=fopen(buf, "r")) == NULL) {
 			warn("Could not open '%s' for reading; skipping", de->d_name);
 			continue;
 		}
 
-		while (fgets(buf, sizeof(buf), fp[0]) != NULL) {
+		while (getline(&buf, &buflen, fp[0]) != -1) {
 			if (buf[0] == '#' || buf[0] == '\n')
 				continue;
 
@@ -205,6 +209,8 @@ invalid_line:
 	}
 	closedir(d);
 
+ done:
+	free(buf);
 	return 0;
 }
 
@@ -217,7 +223,8 @@ int quse_main(int argc, char **argv)
 	char buf1[_Q_PATH_MAX];
 	char buf2[_Q_PATH_MAX];
 
-	char ebuild[_Q_PATH_MAX];
+	size_t ebuildlen;
+	char *ebuild;
 
 	const char *search_var = NULL;
 	const char *search_vars[] = { "IUSE=", "KEYWORDS=", "LICENSE=", search_var };
@@ -254,7 +261,8 @@ int quse_main(int argc, char **argv)
 
 	if ((fp = fopen(CACHE_EBUILD_FILE, "r")) == NULL)
 		return 1;
-	while ((fgets(ebuild, sizeof(ebuild), fp)) != NULL) {
+	ebuild = NULL;
+	while (getline(&ebuild, &ebuildlen, fp) != -1) {
 		FILE *newfp;
 		if ((p = strchr(ebuild, '\n')) != NULL)
 			*p = 0;
@@ -303,7 +311,6 @@ int quse_main(int argc, char **argv)
 
 				multiline:
 					*p = ' ';
-					memset(buf1, 0, sizeof(buf1));
 
 					if ((fgets(buf1, sizeof(buf1), newfp)) == NULL)
 						continue;

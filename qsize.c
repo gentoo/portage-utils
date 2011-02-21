@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.36 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.37 2011/02/21 07:33:21 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char * const qsize_opts_help[] = {
 	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.36 2011/02/21 01:33:47 vapier Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.37 2011/02/21 07:33:21 vapier Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
 int qsize_main(int argc, char **argv)
@@ -48,7 +48,8 @@ int qsize_main(int argc, char **argv)
 	uint64_t num_all_bytes, num_bytes;
 	size_t disp_units = 0;
 	const char *str_disp_units = NULL;
-	char buf[_Q_PATH_MAX];
+	size_t buflen;
+	char *buf;
 	char filename[_Q_PATH_MAX], *filename_root;
 	queue *ignore_regexp = NULL;
 
@@ -80,13 +81,13 @@ int qsize_main(int argc, char **argv)
 
 	strcpy(filename, portroot);
 	filename_root = filename + strlen(filename);
+	buflen = _Q_PATH_MAX;
+	buf = xmalloc(buflen);
 
 	/* open /var/db/pkg */
 	while ((dentry = q_vdb_get_next_dir(dir))) {
 
-		if (chdir(dentry->d_name) != 0)
-			continue;
-		if ((dirp = opendir(".")) == NULL)
+		if ((dirp = opendir(dentry->d_name)) == NULL)
 			continue;
 
 		/* open the cateogry */
@@ -98,7 +99,7 @@ int qsize_main(int argc, char **argv)
 			/* see if this cat/pkg is requested */
 			if (!search_all) {
 				for (i = optind; i < argc; ++i) {
-					snprintf(buf, sizeof(buf), "%s/%s", dentry->d_name,
+					snprintf(buf, buflen, "%s/%s", dentry->d_name,
 					         de->d_name);
 					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
 						break;
@@ -109,13 +110,13 @@ int qsize_main(int argc, char **argv)
 					continue;
 			}
 
-			snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb,
+			snprintf(buf, buflen, "%s%s/%s/%s/CONTENTS", portroot, portvdb,
 			         dentry->d_name, de->d_name);
 			if ((fp = fopen(buf, "r")) == NULL)
 				continue;
 
 			num_ignored = num_files = num_nonfiles = num_bytes = 0;
-			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+			while (getline(&buf, &buflen, fp) != -1) {
 				contents_entry *e;
 				queue *ll;
 				int ok = 0;
@@ -165,7 +166,6 @@ int qsize_main(int argc, char **argv)
 			}
 		}
 		closedir(dirp);
-		xchdir("..");
 	}
 
 	if (summary) {

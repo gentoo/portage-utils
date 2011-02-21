@@ -20,10 +20,6 @@ static const char *WHITE = _MAKE_COLOR("01", "38");
 
 static const char *COLOR_MAP = "/etc/portage/color.map";
 
-#ifndef ARR_SIZE
-# define ARR_SIZE(arr) (sizeof(arr) / sizeof(*arr))
-#endif
-
 #define COLOR _MAKE_COLOR
 
 typedef struct {
@@ -54,14 +50,16 @@ void color_remap(void)
 {
 	FILE *fp;
 	int i;
-	char buf[512];
+	size_t buflen;
+	char *buf;
 	char *p;
 	int lineno = 0;
 
 	if ((fp = fopen(COLOR_MAP, "r")) == NULL)
 		return;
 
-	while (fgets(buf, sizeof(buf), fp) != NULL) {
+	buf = NULL;
+	while (getline(&buf, &buflen, fp) != -1) {
 		lineno++;
 		/* eat comments */
 		if ((p = strchr(buf, '#')) != NULL)
@@ -78,7 +76,7 @@ void color_remap(void)
 
 		p = strchr(buf, '=');
 		*p++ = 0; /* split the pair */
-		for (i = 0; i < ARR_SIZE(color_pairs); ++i)
+		for (i = 0; i < ARRAY_SIZE(color_pairs); ++i)
 			if (strcmp(buf, color_pairs[i].name) == 0) {
 				if (strncmp(p, "0x", 2) == 0)
 					warn("[%s=%s] RGB values in color map are not supported on line %d of %s", buf, p, lineno, COLOR_MAP);
@@ -86,9 +84,11 @@ void color_remap(void)
 					snprintf(color_pairs[i].value, sizeof(color_pairs[i].value), "\e[%s", p);
 			}
 	}
+
+	free(buf);
 	fclose(fp);
 
-	for (i = 0; i < ARR_SIZE(color_pairs); ++i) {
+	for (i = 0; i < ARRAY_SIZE(color_pairs); ++i) {
 		/* unmapped: MAGENTA YELLOW */
 		if (strcmp(color_pairs[i].name, "white") == 0)
 			WHITE = color_pairs[i].value;

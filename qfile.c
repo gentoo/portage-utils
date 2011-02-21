@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.54 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.55 2011/02/21 07:33:21 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.54 2011/02/21 01:33:47 vapier Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.55 2011/02/21 07:33:21 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -68,8 +68,8 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 	DIR *dir;
 	struct dirent *dentry;
 	const char *base;
-	char *p;
-	char buf[1024];
+	size_t buflen;
+	char *p, *buf;
 	char pkg[150];
 	depend_atom *atom = NULL;
 	int i, path_ok;
@@ -85,6 +85,9 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 		warnp("opendir(%s) failed", path);
 		return;
 	}
+
+	buflen = _Q_PATH_MAX;
+	buf = xmalloc(buflen);
 
 	while ((dentry = readdir(dir))) {
 		if (dentry->d_name[0] == '.')
@@ -118,8 +121,8 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 				warn("invalid atom %s", pkg);
 				goto dont_skip_pkg;
 			}
-			snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
-			if (strncmp(args->exclude_pkg, buf, sizeof(buf)) != 0
+			snprintf(buf, buflen, "%s/%s", atom->CATEGORY, atom->PN);
+			if (strncmp(args->exclude_pkg, buf, buflen) != 0
 					&& strcmp(args->exclude_pkg, atom->PN) != 0)
 				goto dont_skip_pkg; /* "(CAT/)?PN" doesn't match */
 check_pkg_slot: /* Also compare slots, if any was specified */
@@ -127,10 +130,10 @@ check_pkg_slot: /* Also compare slots, if any was specified */
 				continue; /* "(CAT/)?(PN|PF)" matches, and no SLOT specified */
 			buf[0] = '0'; buf[1] = '\0';
 			strcpy(p, "/SLOT");
-			eat_file(pkg, buf, sizeof(buf));
+			eat_file(pkg, buf, buflen);
 			rmspace(buf);
 			*p = '\0';
-			if (strncmp(args->exclude_slot, buf, sizeof(buf)) == 0)
+			if (strncmp(args->exclude_slot, buf, buflen) == 0)
 				continue; /* "(CAT/)?(PN|PF):SLOT" matches */
 		}
 dont_skip_pkg: /* End of the package exclusion tests. */
@@ -141,7 +144,7 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 		if (fp == NULL)
 			continue;
 
-		while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+		while (getline(&buf, &buflen, fp) != -1) {
 			contents_entry *e;
 			e = contents_parse_line(buf);
 			if (!e)
@@ -251,6 +254,7 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 	}
 	closedir(dir);
 
+	free(buf);
 	return;
 }
 
@@ -492,7 +496,8 @@ int qfile_main(int argc, char **argv)
 	short done = 0;
 	FILE *args_file = NULL;
 	int max_args = QFILE_DEFAULT_MAX_ARGS;
-	char path[_Q_PATH_MAX];
+	size_t buflen;
+	char *buf = NULL;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -568,15 +573,17 @@ int qfile_main(int argc, char **argv)
 
 	do { /* This block may be repeated if using --from with a big files list */
 		if (args_file != NULL) {
-			qargc = 0;
 			/* Read up to max_args files from the input file */
-			while ((fgets(path, _Q_PATH_MAX, args_file)) != NULL) {
-				if ((p = strchr(path, '\n')) != NULL)
+			qargc = 0;
+			while (getline(&buf, &buflen, args_file) != -1) {
+				if ((p = strchr(buf, '\n')) != NULL)
 					*p = '\0';
-				if (path == p) continue;
-				qargv[qargc] = xstrdup(path);
+				if (buf == p)
+					continue;
+				qargv[qargc] = xstrdup(buf);
 				qargc++;
-				if (qargc >= max_args) break;
+				if (qargc >= max_args)
+					break;
 			}
 		}
 
@@ -604,8 +611,10 @@ int qfile_main(int argc, char **argv)
 
 		/* Iteration over VDB categories */
 		while (nb_of_queries && (dentry = q_vdb_get_next_dir(dir))) {
-			snprintf(path, _Q_PATH_MAX, "%s/%s/%s", qfile_args->real_root, portvdb, dentry->d_name);
+			char *path;
+			xasprintf(&path, "%s/%s/%s", qfile_args->real_root, portvdb, dentry->d_name);
 			qfile(path, (assume_root_prefix ? root_prefix : NULL), qfile_args);
+			free(path);
 		}
 
 		if (qfile_args->non_orphans != NULL) {

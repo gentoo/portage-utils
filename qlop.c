@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.55 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.56 2011/02/21 07:33:21 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -52,7 +52,7 @@ static const char * const qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.55 2011/02/21 01:33:47 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.56 2011/02/21 07:33:21 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -241,7 +241,8 @@ void show_emerge_history(char listflag, int argc, char **argv, const char *logfi
 void show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
 {
 	FILE *fp;
-	char buf[BUFSIZ], merged;
+	size_t buflen;
+	char *buf, merged;
 	char *p, *q;
 	int i;
 	time_t t;
@@ -251,7 +252,8 @@ void show_emerge_history(char listflag, int argc, char **argv, const char *logfi
 		return;
 	}
 
-	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+	buf = NULL;
+	while (getline(&buf, &buflen, fp) != -1) {
 		if (strlen(buf) < 30)
 			continue;
 
@@ -298,6 +300,8 @@ void show_emerge_history(char listflag, int argc, char **argv, const char *logfi
 			atom_implode(atom);
 		}
 	}
+
+	free(buf);
 	fclose(fp);
 }
 
@@ -305,8 +309,8 @@ void show_sync_history(const char *logfile);
 void show_sync_history(const char *logfile)
 {
 	FILE *fp;
-	char buf[BUFSIZ];
-	char *p, *q;
+	size_t buflen;
+	char *buf, *p, *q;
 	time_t t;
 
 	if ((fp = fopen(logfile, "r")) == NULL) {
@@ -314,7 +318,8 @@ void show_sync_history(const char *logfile)
 		return;
 	}
 
-	while ((fgets(buf, sizeof(buf), fp)) != NULL) {
+	buf = NULL;
+	while (getline(&buf, &buflen, fp) != -1) {
 		if (strlen(buf) < 35)
 			continue;
 		if (strncmp(buf+12, "=== Sync completed with", 23) != 0)
@@ -335,6 +340,8 @@ void show_sync_history(const char *logfile)
 
 		printf("%s >>> %s%s%s\n", chop_ctime(t), GREEN, q, NORM);
 	}
+
+	free(buf);
 	fclose(fp);
 }
 

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.38 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.39 2011/02/21 07:33:21 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -47,7 +47,7 @@ static const char * const qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.38 2011/02/21 01:33:47 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.39 2011/02/21 07:33:21 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -329,10 +329,10 @@ portage_cache *qcache_read_cache_file(const char *filename);
 portage_cache *qcache_read_cache_file(const char *filename)
 {
 	struct stat s;
-	char *ptr, buf[BUFSIZE];
+	char *ptr, *buf;
 	FILE *f;
 	portage_cache *ret = NULL;
-	size_t len;
+	size_t len, buflen;
 
 	if ((f = fopen(filename, "r")) == NULL)
 		goto err;
@@ -345,7 +345,7 @@ portage_cache *qcache_read_cache_file(const char *filename)
 	len = sizeof(*ret) + s.st_size + 1;
 	ret = xzalloc(len);
 
-	while ((fgets(buf, sizeof(buf), f)) != NULL) {
+	while (getline(&buf, &buflen, f) != -1) {
 		if ((ptr = strrchr(buf, '\n')) != NULL)
 			*ptr = 0;
 
@@ -389,6 +389,7 @@ portage_cache *qcache_read_cache_file(const char *filename)
 			ret->SRC_URI = xstrdup(buf + 8);
 	}
 
+	free(buf);
 	ret->atom = atom_explode(filename);
 	fclose(f);
 

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.5 2010/04/07 05:58:16 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.6 2011/02/21 07:33:21 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -15,8 +15,6 @@
 #else
 # define _Q_PATH_MAX _POSIX_PATH_MAX
 #endif
-
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*arr))
 
 /* http://tinderbox.dev.gentoo.org/default-linux/arm */
 /* http://tinderbox.dev.gentoo.org/default-linux/hppa */
