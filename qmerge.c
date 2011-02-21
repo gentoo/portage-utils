@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.98 2011/02/21 01:52:46 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.99 2011/02/21 06:20:24 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.98 2011/02/21 01:52:46 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.99 2011/02/21 06:20:24 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -834,7 +834,10 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 		/* qfprintf(stderr, "%s!!!%s %s %s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, pkgname); */
 		return 1;
 	}
-	printf("%s===%s %s%s%s/%s%s%s\n", YELLOW, NORM, WHITE, cat, NORM, CYAN, pkgname, NORM);
+	printf("%s<<<%s %s%s%s/%s%s%s\n", YELLOW, NORM, WHITE, cat, NORM, CYAN, pkgname, NORM);
+
+	if (pretend == 100)
+		return 0;
 
 	snprintf(buf, sizeof(buf), "%s/%s/%s/%s/CONTENTS", portroot, portvdb, cat, pkgname);
 
@@ -1547,7 +1550,7 @@ queue *qmerge_load_set(char *buf, queue *set)
 
 int qmerge_main(int argc, char **argv)
 {
-	int i;
+	int i, ret;
 	const char Packages[] = "Packages";
 	int ARGC = argc;
 	char **ARGV = argv;
@@ -1582,8 +1585,30 @@ int qmerge_main(int argc, char **argv)
 			warn("Using these options are likely to break your system at this point. export QMERGE=1; if you think you know what your doing.");
 		}
 	}
-	if (uninstall)
+
+	if (uninstall) {
+		if (interactive) {
+			int save_pretend = pretend;
+			int save_verbose = verbose;
+			int save_quiet = quiet;
+
+			pretend = 100;
+			verbose = 0;
+			quiet = 1;
+			ret = unmerge_packages(argc, argv);
+			if (ret || save_pretend)
+				return ret;
+
+			if (!prompt("OK to unmerge these packages"))
+				return 0;
+
+			pretend = save_pretend;
+			verbose = save_verbose;
+			quiet = save_quiet;
+		}
+
 		return unmerge_packages(argc, argv);
+	}
 
 	ARGC = argc;
 	ARGV = argv;

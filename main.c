@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.180 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.181 2011/02/21 06:20:24 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -201,6 +201,20 @@ static char eat_file(const char *file, char *buf, const size_t bufsize)
 close_and_ret:
 	close(fd);
 	return ret;
+}
+
+static bool prompt(const char *p)
+{
+	printf("%s? [Y/n] ", p);
+	fflush(stdout);
+	switch (getc(stdin)) {
+	case '\n':
+	case 'y':
+	case 'Y':
+		return true;
+	default:
+		return false;
+	}
 }
 
 /* if all chars in str1 coincide with the begining of the str2 return 0 */
