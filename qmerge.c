@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.99 2011/02/21 06:20:24 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.100 2011/02/21 22:02:59 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.99 2011/02/21 06:20:24 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.100 2011/02/21 22:02:59 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -105,7 +105,6 @@ int unlink_empty(char *);
 void pkg_process(int, char **, struct pkg_t *);
 void print_Pkg(int, struct pkg_t *);
 int parse_packages(const char *, int, char **);
-int config_protected(const char *, int, char **);
 int match_pkg(const char *, struct pkg_t *);
 int pkg_verify_checksums(char *, struct pkg_t *, depend_atom *, int strict, int display);
 int unmerge_packages(int, char **);
@@ -129,8 +128,7 @@ static int mkdirhier(char *dname, mode_t mode)
 	return mkdir(dname, mode);
 }
 
-int q_unlink_q(char *, const char *, int);
-int q_unlink_q(char *path, const char *func, int line)
+static int q_unlink_q(char *path, const char *func, int line)
 {
 	if ((strcmp(path, "/bin/sh") == 0) || (strcmp(path, BUSYBOX) == 0)) {
 		warn("Oh hell no: unlink(%s) from %s line %d", path, func, line);
@@ -153,7 +151,7 @@ int interactive_rename(const char *src, const char *dst, struct pkg_t *pkg)
 	struct stat st;
 	char check_interactive = interactive;
 
-	if (check_interactive && (stat(dst, &st) != (-1))) {
+	if (check_interactive && (stat(dst, &st) != -1)) {
 		snprintf(buf, sizeof(buf), "qfile -Cqev %s 2>/dev/null", dst);
 		if ((fp = popen(buf, "r")) != NULL) {
 			buf[0] = '\0';
@@ -260,22 +258,29 @@ char *best_version(const char *CATEGORY, const char *PN)
 	return (char *) buf;
 }
 
-int config_protected(const char *buf, int ARGC, char **ARGV)
+static int
+config_protected(const char *buf, int cp_argc, char **cp_argv,
+                 int cpm_argc, char **cpm_argv)
 {
 	int i;
 	char dest[_Q_PATH_MAX];
 	snprintf(dest, sizeof(dest), "%s%s", portroot, buf);
 
-	for (i = 1; i < ARGC; i++)
-		if (strncmp(ARGV[i], buf, strlen(ARGV[i])) == 0)
-			if ((access(dest, R_OK)) == 0)
+	/* Check CONFIG_PROTECT_MASK */
+	for (i = 1; i < cpm_argc; ++i)
+		if (strncmp(cpm_argv[i], buf, strlen(cpm_argv[i])) == 0)
+			return 0;
+
+	/* Check CONFIG_PROTECT */
+	for (i = 1; i < cp_argc; ++i)
+		if (strncmp(cp_argv[i], buf, strlen(cp_argv[i])) == 0)
+			if (access(dest, R_OK) == 0)
 				return 1;
 
-	if (strncmp("/etc", buf, 4) == 0)
-		if (access(dest, R_OK) == 0)
-			return 1;
+	/* this would probably be bad */
 	if (strcmp("/bin/sh", buf) == 0)
 		return 1;
+
 	return 0;
 }
 
@@ -286,7 +291,7 @@ void crossmount_rm(char *buf, const size_t size, const char *fname, const struct
 
 	assert(pretend == 0);
 
-	if (lstat(buf, &lst) == (-1))
+	if (lstat(buf, &lst) == -1)
 		return;
 	if (lst.st_dev != st.st_dev) {
 		warn("skipping crossmount install masking: %s", buf);
@@ -623,7 +628,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	}
 	xchdir("image");
 
-	if (stat("./", &st) == (-1))
+	if (stat("./", &st) == -1)
 		err("Cant stat pwd");
 
 	makeargv(install_mask, &iargc, &iargv);
@@ -699,7 +704,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 			snprintf(line, sizeof(line), "obj %s %s %lu", &buf[1], hash, st.st_mtime);
 			/* /etc /usr/kde/2/share/config /usr/kde/3/share/config	/var/qmail/control */
 
-			protected = config_protected(&buf[1], ARGC, ARGV);
+			protected = config_protected(&buf[1], ARGC, ARGV, 0, NULL);
 			if (protected) {
 				unsigned char *target_hash = hash_file(dest, HASH_MD5);
 				if (memcmp(target_hash, hash, 16) != 0) {
@@ -757,7 +762,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 			xgetcwd(pwd, sizeof(pwd));
 			xchdir(dirname(tmp)); /* tmp gets eatten up now by the dirname call */
-			if (lstat(path, &lst) != (-1))
+			if (lstat(path, &lst) != -1)
 				unlink_q(dest);
 			/* if (path[0] != '/')
 				puts("path does not start with /");
@@ -822,11 +827,18 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 
 int pkg_unmerge(const char *cat, const char *pkgname)
 {
-	char buf[BUFSIZ];
+	size_t buflen;
+	char *buf, *vdb_path;
 	FILE *fp;
-	int argc;
-	char **argv;
+	int ret, fd, vdb_fd;
+	int cp_argc, cpm_argc;
+	char **cp_argv, **cpm_argv;
 	llist_char *dirs = NULL;
+
+	ret = 1;
+	buf = NULL;
+	vdb_path = NULL;
+	vdb_fd = fd = -1;
 
 	if ((strchr(pkgname, ' ') != NULL) || (strchr(cat, ' ') != NULL)) {
 		qfprintf(stderr, "%s!!!%s '%s' '%s' (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
@@ -839,16 +851,44 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 	if (pretend == 100)
 		return 0;
 
-	snprintf(buf, sizeof(buf), "%s/%s/%s/%s/CONTENTS", portroot, portvdb, cat, pkgname);
+	/* Get a handle on the vdb path which we'll use everywhere else */
+	xasprintf(&vdb_path, "%s/%s/%s/%s/", portroot, portvdb, cat, pkgname);
+	vdb_fd = open(vdb_path, O_RDONLY | O_CLOEXEC);
+	if (vdb_fd == -1) {
+		warnp("unable to read %s", vdb_path);
+		goto done;
+	}
 
-	if ((fp = fopen(buf, "r")) == NULL)
-		return 1;
+	/* First execute the pkg_prerm step */
+	if (!pretend) {
+		qprintf(">>> pkg_prerm\n");
+		xchdir(vdb_path);
+		xsystembash(
+			"bzip2 -dc environment.bz2 > environment && "
+			"pkg_prerm() { :; } && "
+			". ./environment && "
+			"pkg_prerm"
+		);
+	}
 
-	argc = 0;
-	argv = NULL;
-	makeargv(config_protect, &argc, &argv);
+	/* Now start removing all the installed files */
+	fd = openat(vdb_fd, "CONTENTS", O_RDONLY | O_CLOEXEC);
+	if (fd == -1) {
+		warnp("unable to read %s", "CONTENTS");
+		goto done;
+	}
+	fp = fdopen(fd, "r");
+	if (fp == NULL)
+		goto done;
 
-	while (fgets(buf, sizeof(buf), fp) != NULL) {
+	/* XXX: be nice to pull this out of the current func
+	 *      so we don't keep reparsing the same env var
+	 *      when unmerging multiple packages.
+	 */
+	makeargv(config_protect, &cp_argc, &cp_argv);
+	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
+
+	while (getline(&buf, &buflen, fp) != -1) {
 		contents_entry *e;
 		char zing[20];
 		int protected = 0;
@@ -858,8 +898,9 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 		e = contents_parse_line(buf);
 		if (!e) continue;
 		snprintf(dst, sizeof(dst), "%s%s", portroot, e->name);
-		protected = config_protected(e->name, argc, argv);
+		protected = config_protected(e->name, cp_argc, cp_argv, cpm_argc, cpm_argv);
 		snprintf(zing, sizeof(zing), "%s%s%s", protected ? YELLOW : GREEN, protected ? "***" : "<<<" , NORM);
+
 		/* Should we remove in order symlinks,objects,dirs ? */
 		switch (e->type) {
 			case CONTENTS_DIR:
@@ -870,17 +911,19 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 					list->next = dirs;
 					dirs = list;
 				}
-				qprintf("%s %s%s%s/\n", zing, DKBLUE, dst, NORM);
 				break;
 			case CONTENTS_OBJ:
-				if (!protected)	unlink_q(dst);
+				if (!protected)
+					unlink_q(dst);
 				qprintf("%s %s\n", zing, dst);
 				break;
 			case CONTENTS_SYM:
-				if (protected) break;
-				if (e->name[0] != '/') break;
+				if (protected)
+					break;
+				if (e->name[0] != '/')
+					break;
 				if (e->sym_target[0] != '/') {
-					if (lstat(dst, &lst) != (-1)) {
+					if (lstat(dst, &lst) != -1) {
 						if (S_ISLNK(lst.st_mode)) {
 							qprintf("%s %s%s -> %s%s\n", zing, CYAN, dst, e->sym_target, NORM);
 							unlink_q(dst);
@@ -892,7 +935,7 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 					warn("!!! %s -> %s", e->name, e->sym_target);
 					break;
 				}
-				if (lstat(dst, &lst) != (-1)) {
+				if (lstat(dst, &lst) != -1) {
 					if (S_ISLNK(lst.st_mode)) {
 						qprintf("%s %s%s -> %s%s\n", zing, CYAN, dst, e->sym_target, NORM);
 						unlink_q(dst);
@@ -910,23 +953,68 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 	}
 
 	fclose(fp);
+	fd = -1;
 
-	/* remove all dirs in reverse order */
+	/* Then remove all dirs in reverse order */
 	while (dirs != NULL) {
 		llist_char *list = dirs;
-		dirs = dirs->next;
-		rmdir(list->data);
+		char *dir = list->data;
+		int rm;
+
+		rm = pretend ? -1 : rmdir(dir);
+		qprintf("%s%s%s %s%s%s/\n", rm ? YELLOW : GREEN, rm ? "---" : "<<<",
+			NORM, DKBLUE, dir, NORM);
+
 		free(list->data);
 		free(list);
+		dirs = dirs->next;
 	}
 
-	freeargv(argc, argv);
+	freeargv(cp_argc, cp_argv);
+	freeargv(cpm_argc, cpm_argv);
+
+	/* Then execute the pkg_postrm step */
+	if (!pretend) {
+		qprintf(">>> pkg_postrm\n");
+		xsystembash(
+			/* "bzip2 -dc environment.bz2 > environment && " */
+			"pkg_postrm() { :; } && "
+			". ./environment && "
+			"pkg_postrm"
+		);
+	}
 
 	if (!pretend) {
-		snprintf(buf, sizeof(buf), BUSYBOX " rm -rf %s/%s/%s/%s", portroot, portvdb, cat, pkgname);
-		xsystem(buf);
+		/* Finally delete the vdb entry */
+		DIR *dir;
+		struct dirent *de;
+
+		dir = fdopendir(vdb_fd);
+		if (!dir)
+			goto done;
+
+		while ((de = readdir(dir)) != NULL)
+			unlinkat(vdb_fd, de->d_name, 0);
+
+		closedir(dir);
+		vdb_fd = -1;
+
+		rmdir(vdb_path);
+
+		/* XXX: Really only needed because we shell out to qlist and such ... */
+		xchdir("/");
 	}
-	return 1;
+
+	ret = 0;
+ done:
+	if (fd != -1)
+		close(fd);
+	if (vdb_fd != -1)
+		close(vdb_fd);
+	free(buf);
+	free(vdb_path);
+
+	return ret;
 }
 
 int unlink_empty(char *buf)
