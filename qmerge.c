@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.100 2011/02/21 22:02:59 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.101 2011/02/22 06:10:16 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.100 2011/02/21 22:02:59 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.101 2011/02/22 06:10:16 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -423,6 +423,20 @@ static int has_postinst(char *vdbroot)
 	fclose(fp);
 	return ret;
 }
+
+#define pkg_run_func(func, setup) \
+	do { \
+		qprintf(">>> %s\n", func); \
+		xsystembash( \
+			"debug-print() { :; }; " \
+			"debug-print-function() { :; }; " \
+			"debug-print-section() { :; }; " \
+			func "() { :; }; " \
+			setup \
+			". ./environment && " \
+			func \
+		); \
+	} while (0)
 
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
 void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
@@ -861,14 +875,8 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 
 	/* First execute the pkg_prerm step */
 	if (!pretend) {
-		qprintf(">>> pkg_prerm\n");
 		xchdir(vdb_path);
-		xsystembash(
-			"bzip2 -dc environment.bz2 > environment && "
-			"pkg_prerm() { :; } && "
-			". ./environment && "
-			"pkg_prerm"
-		);
+		pkg_run_func("pkg_prerm", "bzip2 -dc environment.bz2 > environment && ");
 	}
 
 	/* Now start removing all the installed files */
@@ -974,15 +982,8 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 	freeargv(cpm_argc, cpm_argv);
 
 	/* Then execute the pkg_postrm step */
-	if (!pretend) {
-		qprintf(">>> pkg_postrm\n");
-		xsystembash(
-			/* "bzip2 -dc environment.bz2 > environment && " */
-			"pkg_postrm() { :; } && "
-			". ./environment && "
-			"pkg_postrm"
-		);
-	}
+	if (!pretend)
+		pkg_run_func("pkg_postrm", "");
 
 	if (!pretend) {
 		/* Finally delete the vdb entry */
