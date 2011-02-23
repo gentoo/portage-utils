@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.101 2011/02/22 06:10:16 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.102 2011/02/23 08:59:45 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.101 2011/02/22 06:10:16 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.102 2011/02/23 08:59:45 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -111,22 +111,6 @@ int unmerge_packages(int, char **);
 char *find_binpkg(const char *);
 
 struct pkg_t *grab_binpkg_info(const char *);
-
-static int mkdirhier(char *dname, mode_t mode)
-{
-	char buf[BUFSIZ];
-	int i;
-	strncpy(buf, dname, sizeof(buf));
-	for (i = 0; i < strlen(buf); i++) {
-		if (buf[i] == '/') {
-			buf[i] = 0;
-			if (*buf)
-				mkdir(buf, mode);
-			buf[i] = '/';
-		}
-	}
-	return mkdir(dname, mode);
-}
 
 static int q_unlink_q(char *path, const char *func, int line)
 {
@@ -284,22 +268,20 @@ config_protected(const char *buf, int cp_argc, char **cp_argv,
 	return 0;
 }
 
-void crossmount_rm(char *, const size_t size, const char *, const struct stat);
-void crossmount_rm(char *buf, const size_t size, const char *fname, const struct stat st)
+static void crossmount_rm(const char *fname, const struct stat st)
 {
 	struct stat lst;
 
 	assert(pretend == 0);
 
-	if (lstat(buf, &lst) == -1)
+	if (lstat(fname, &lst) == -1)
 		return;
 	if (lst.st_dev != st.st_dev) {
-		warn("skipping crossmount install masking: %s", buf);
+		warn("skipping crossmount install masking: %s", fname);
 		return;
 	}
-	qprintf("%s<<<%s %s\n", YELLOW, NORM, buf);
-	snprintf(buf, size, BUSYBOX " rm -rf ./%s", fname);
-	xsystem(buf);
+	qprintf("%s<<<%s %s\n", YELLOW, NORM, fname);
+	rm_rf(fname);
 }
 
 void install_mask_pwd(int argc, char **argv, const struct stat st);
@@ -324,13 +306,13 @@ void install_mask_pwd(int iargc, char **iargv, const struct stat st)
 				for (g = 0; g < globbuf.gl_pathc; g++) {
 					strncpy(buf, globbuf.gl_pathv[g], sizeof(buf));
 					/* qprintf("globbed: %s\n", globbuf.gl_pathv[g]); */
-					crossmount_rm(buf, sizeof(buf), globbuf.gl_pathv[g], st);
+					crossmount_rm(globbuf.gl_pathv[g], st);
 				}
 				globfree(&globbuf);
 			}
 			continue;
 		}
-		crossmount_rm(buf, sizeof(buf), iargv[i], st);
+		crossmount_rm(iargv[i], st);
 	}
 }
 
@@ -408,41 +390,41 @@ char qprint_tree_node(int level, depend_atom *atom, struct pkg_t *pkg)
 	return c;
 }
 
-static int has_postinst(char *vdbroot)
+static void pkg_run_func(const char *vdb_path, const char *phases, const char *func)
 {
-	FILE *fp;
-	int ret;
-	char buf[1024];
-	snprintf(buf, sizeof(buf), "%s/%s", vdbroot, "DEFINED_PHASES");
-	if ((fp = fopen(buf,  "r")) == NULL)
-		return 1;
-	if (fgets(buf, sizeof(buf), fp))
-		ret = (strstr(buf, "postinst") == NULL) ? 0 : 2;
-	else
-		ret = 0;
-	fclose(fp);
-	return ret;
-}
+	char *script;
 
-#define pkg_run_func(func, setup) \
-	do { \
-		qprintf(">>> %s\n", func); \
-		xsystembash( \
-			"debug-print() { :; }; " \
-			"debug-print-function() { :; }; " \
-			"debug-print-section() { :; }; " \
-			func "() { :; }; " \
-			setup \
-			". ./environment && " \
-			func \
-		); \
-	} while (0)
+	/* This assumes no func is a substring of another func.
+	 * Today, that assumption is valid for all funcs ...
+	 * The phases are the func with the "pkg_" chopped off. */
+	if (strstr(phases, func + 4) == NULL)
+		return;
+
+	qprintf(">>> %s\n", func);
+
+	xasprintf(&script,
+		/* Provide funcs required by the PMS */
+		"debug-print() { :; }\n"
+		"debug-print-function() { :; }\n"
+		"debug-print-section() { :; }\n"
+		"use() { useq \"$@\"; }\n"
+		"useq() { hasq $1 $USE; }\n"
+		"has() { hasq \"$@\"; }\n"
+		"hasq() { local h=$1; shift; case \" $* \" in *\" $h \"*) return 0;; *) return 1;; esac; }\n"
+		/* Unpack the env if need be */
+		"[ -e '%1$s/environment' ] || { bzip2 -dc '%1$s/environment.bz2' > '%1$s/environment' || exit 1; }\n"
+		/* Load the env and run the func */
+		". %1$s/environment && %2$s",
+		vdb_path, func);
+	xsystembash(script);
+	free(script);
+}
 
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
 void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 {
 	FILE *fp, *contents;
-	char buf[1024];
+	char buf[1024], phases[128];
 	char tarball[255];
 	char *p;
 	int i;
@@ -567,7 +549,8 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	/* mkdir(pkg->PF, 0710); */
 	xchdir(pkg->PF);
 
-	xsystem(BUSYBOX " rm -rf ./*"); /* this line does funny things to nano's highlighting. */
+	/* Doesn't actually remove $PWD, just everything under it */
+	rm_rf(".");
 
 	/* split the tbz and xpak data */
 	snprintf(tarball, sizeof(tarball), "%s.tbz2", pkg->PF);
@@ -640,7 +623,11 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 		freeargv(ARGC, ARGV);
 		ARGC = 0; ARGV = NULL;
 	}
+
 	xchdir("image");
+
+	eat_file("../vdb/DEFINED_PHASES", phases, sizeof(phases));
+	pkg_run_func("../vdb", phases, "pkg_preinst");
 
 	if (stat("./", &st) == -1)
 		err("Cant stat pwd");
@@ -648,9 +635,9 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	makeargv(install_mask, &iargc, &iargv);
 	install_mask_pwd(iargc, iargv, st);
 
-	if ((strstr(features, "noinfo")) != NULL) if (access("./usr/share/info", R_OK) == 0) xsystem(BUSYBOX " rm -rf ./usr/share/info");
-	if ((strstr(features, "noman"))  != NULL) if (access("./usr/share/man",  R_OK) == 0) xsystem(BUSYBOX " rm -rf ./usr/share/man");
-	if ((strstr(features, "nodoc"))  != NULL) if (access("./usr/share/doc",  R_OK) == 0) xsystem(BUSYBOX " rm -rf ./usr/share/doc");
+	if (strstr(features, "noinfo")) rm_rf("./usr/share/info");
+	if (strstr(features, "noman" )) rm_rf("./usr/share/man");
+	if (strstr(features, "nodoc" )) rm_rf("./usr/share/doc");
 
 	/* we dont care about the return code */
 	rmdir("./usr/share");
@@ -802,38 +789,31 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	xchdir(port_tmpdir);
 	xchdir(pkg->PF);
 
+	/* run postinst */
+	pkg_run_func("./vdb", phases, "pkg_postinst");
+
 	snprintf(buf, sizeof(buf), "%s/var/db/pkg/%s/", portroot, pkg->CATEGORY);
 	if (access(buf, R_OK|W_OK|X_OK) != 0)
-		mkdirhier(buf, 0755);
+		mkdir_p(buf, 0755);
 	strncat(buf, pkg->PF, sizeof(buf)-strlen(buf)-1);
 
 	/* FIXME */ /* move unmerging to around here ? */
 	/* not perfect when a version is already installed */
 	if (access(buf, X_OK) == 0) {
-		char buf2[sizeof(buf)] = "";
 		/* we need to compare CONTENTS in it and remove any file not provided by our CONTENTS */
-		snprintf(buf2, sizeof(buf2), BUSYBOX " rm -rf %s", buf);
-		xsystem(buf2);
+		rm_rf(buf);
 	}
 	if ((fp = fopen("vdb/COUNTER", "w")) != NULL) {
 		fputs("0", fp);
 		fclose(fp);
 	}
+	/* move the local vdb copy to the final place */
 	interactive_rename("vdb", buf, pkg);
-
-	/* run postinst on non embedded systems */
-	if ((which("ebuild") != NULL) && has_postinst(buf)) {
-		char *tbuf;
-		xasprintf(&tbuf, "ebuild %s/%s.ebuild postinst", buf, basename(buf));
-		xsystem(tbuf);
-		free(tbuf);
-	}
 
 	snprintf(buf, sizeof(buf), BUSYBOX " %s.tar.bz2", pkg->PF);
 	unlink_q(buf);
 	xchdir(port_tmpdir);
-	snprintf(buf, sizeof(buf), "rm -rf %s", pkg->PF);
-	xsystem(buf);
+	rm_rf(pkg->PF);
 
 	snprintf(buf, sizeof(buf), "%s/%s.tbz2", pkgdir, pkg->PF);
 	unlink(buf);
@@ -842,7 +822,7 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 int pkg_unmerge(const char *cat, const char *pkgname)
 {
 	size_t buflen;
-	char *buf, *vdb_path;
+	char *buf, *vdb_path, phases[128];
 	FILE *fp;
 	int ret, fd, vdb_fd;
 	int cp_argc, cpm_argc;
@@ -875,8 +855,8 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 
 	/* First execute the pkg_prerm step */
 	if (!pretend) {
-		xchdir(vdb_path);
-		pkg_run_func("pkg_prerm", "bzip2 -dc environment.bz2 > environment && ");
+		eat_file_at(vdb_fd, "DEFINED_PHASES", phases, sizeof(phases));
+		pkg_run_func(vdb_path, phases, "pkg_prerm");
 	}
 
 	/* Now start removing all the installed files */
@@ -981,29 +961,22 @@ int pkg_unmerge(const char *cat, const char *pkgname)
 	freeargv(cp_argc, cp_argv);
 	freeargv(cpm_argc, cpm_argv);
 
-	/* Then execute the pkg_postrm step */
-	if (!pretend)
-		pkg_run_func("pkg_postrm", "");
-
 	if (!pretend) {
+		char *dir;
+
+		/* Then execute the pkg_postrm step */
+		pkg_run_func(vdb_path, phases, "pkg_postrm");
+
 		/* Finally delete the vdb entry */
-		DIR *dir;
-		struct dirent *de;
+		rm_rf(vdb_path);
 
-		dir = fdopendir(vdb_fd);
-		if (!dir)
-			goto done;
-
-		while ((de = readdir(dir)) != NULL)
-			unlinkat(vdb_fd, de->d_name, 0);
-
-		closedir(dir);
-		vdb_fd = -1;
-
+		/* And prune any empty vdb dirs */
+		dir = strrchr(vdb_path, '/');
+		*dir = '\0';
 		rmdir(vdb_path);
-
-		/* XXX: Really only needed because we shell out to qlist and such ... */
-		xchdir("/");
+		dir = strrchr(vdb_path, '/');
+		*dir = '\0';
+		rmdir(vdb_path);
 	}
 
 	ret = 0;

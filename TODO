@@ -11,6 +11,7 @@
 
 - qmerge: dep resolver needs spanktastic love.
 - qmerge: needs safe deleting.
+- qmerge: handle compressed Packages file
 
 - atoms:
 	- only 32bit values are supported for revision (-r#)

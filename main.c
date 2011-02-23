@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.183 2011/02/21 21:52:55 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.184 2011/02/23 08:59:45 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -173,34 +173,45 @@ static void version_barf(const char *Id)
 	exit(EXIT_SUCCESS);
 }
 
-static char eat_file(const char *file, char *buf, const size_t bufsize)
+static char eat_file_fd(int fd, char *buf, const size_t bufsize)
 {
-	int fd;
 	struct stat s;
-	char ret = 0;
-
-	if ((fd = open(file, O_RDONLY)) == -1)
-		return ret;
 
 	buf[0] = '\0';
 	if (fstat(fd, &s) != 0)
-		goto close_and_ret;
+		return 0;
 	if (s.st_size) {
 		if (bufsize < (size_t)s.st_size)
-			goto close_and_ret;
+			return 0;
 		if (read(fd, buf, s.st_size) != (ssize_t)s.st_size)
-			goto close_and_ret;
+			return 0;
 		buf[s.st_size] = '\0';
 	} else {
 		if (read(fd, buf, bufsize) == 0)
-			goto close_and_ret;
+			return 0;
 		buf[bufsize - 1] = '\0';
 	}
 
-	ret = 1;
-close_and_ret:
+	return 1;
+}
+
+static char eat_file_at(int dfd, const char *file, char *buf, const size_t bufsize)
+{
+	int fd;
+	char ret;
+
+	if ((fd = openat(dfd, file, O_RDONLY)) == -1)
+		return 0;
+
+	ret = eat_file_fd(fd, buf, bufsize);
+
 	close(fd);
 	return ret;
+}
+
+static char eat_file(const char *file, char *buf, const size_t bufsize)
+{
+	return eat_file_at(AT_FDCWD, file, buf, bufsize);
 }
 
 #if !(_POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700)

@@ -1,0 +1,79 @@
+/* Emulate `mkdir -p -m MODE PATH` */
+static int mkdir_p(const char *path, mode_t mode)
+{
+	char *_p, *p, *s;
+
+	_p = p = xstrdup(path);
+
+	while (1) {
+		/* Skip duplicate slashes */
+		while (*p == '/')
+			++p;
+
+		/* Find the next path element */
+		s = strchr(p, '/');
+		if (!s)
+			break;
+
+		/* Make it */
+		*s = '\0';
+		mkdir(_p, mode);
+		*s = '/';
+
+		p = s;
+	}
+
+	free(_p);
+
+	return 0;
+}
+
+/* Emulate `rm -rf PATH` */
+static int _rm_rf_subdir(int dfd, const char *path)
+{
+	int subdfd;
+	DIR *dir;
+	struct dirent *de;
+
+	subdfd = openat(dfd, path, O_RDONLY|O_CLOEXEC|O_NOFOLLOW);
+	if (subdfd < 0)
+		return -1;
+
+	dir = fdopendir(subdfd);
+	if (!dir) {
+		close(subdfd);
+		return -1;
+	}
+
+	while ((de = readdir(dir)) != NULL) {
+		if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
+			continue;
+		if (unlinkat(subdfd, de->d_name, 0) == -1) {
+			if (errno != EISDIR)
+				errp("could not unlink %s", de->d_name);
+			_rm_rf_subdir(subdfd, de->d_name);
+			unlinkat(subdfd, de->d_name, AT_REMOVEDIR);
+		}
+	}
+
+	/* this also does close(subdfd); */
+	closedir(dir);
+
+	return 0;
+}
+
+static int rm_rf(const char *path)
+{
+	_rm_rf_subdir(AT_FDCWD, path);
+
+	if (rmdir(path) == 0)
+		return 0;
+
+	/* if path is a symlink, unlink it */
+	if (unlink(path) == 0)
+		return 0;
+
+	/* XXX: we don't handle:
+	 *      trailing slashes: `rm -rf a/b/c/` -> need to change to a/b/c */
+	return -1;
+}

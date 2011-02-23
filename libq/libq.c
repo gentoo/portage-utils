@@ -23,6 +23,7 @@
 #include "safe_io.c"
 #include "xchdir.c"
 #include "xgetcwd.c"
+#include "xmkdir.c"
 #include "xreadlink.c"
 #include "xsystem.c"
 
