@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.184 2011/02/23 08:59:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.185 2011/02/23 22:58:51 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -344,16 +344,14 @@ static char *slot_name(const char *name) {
 	return NULL;
 }
 
-void freeargv(int, char **);
-void freeargv(int argc, char **argv)
+static void freeargv(int argc, char **argv)
 {
 	while (argc--)
 		free(argv[argc]);
 	free(argv);
 }
 
-void makeargv(char *string, int *argc, char ***argv);
-void makeargv(char *string, int *argc, char ***argv)
+static void makeargv(const char *string, int *argc, char ***argv)
 {
 	int curc = 2;
 	char *q, *p, *str;

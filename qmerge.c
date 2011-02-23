@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.102 2011/02/23 08:59:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.103 2011/02/23 22:58:51 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.102 2011/02/23 08:59:45 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.103 2011/02/23 22:58:51 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -420,6 +420,254 @@ static void pkg_run_func(const char *vdb_path, const char *phases, const char *f
 	free(script);
 }
 
+/* Copy one tree (the single package) to another tree (ROOT) */
+static int merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
+                         FILE *contents, char **cpathp, int iargc, char **iargv,
+                         int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
+{
+	int i, ret, subfd_src, subfd_dst;
+	DIR *dir;
+	struct dirent *de;
+	struct stat st;
+	char *cpath;
+	size_t clen, nlen, mnlen;
+
+	ret = -1;
+
+	/* Get handles to these subdirs */
+	subfd_src = openat(fd_src, src, O_RDONLY|O_CLOEXEC);
+	if (subfd_src < 0)
+		return ret;
+	subfd_dst = openat(fd_dst, dst, O_RDONLY|O_CLOEXEC);
+	if (subfd_dst < 0) {
+		close(subfd_src);
+		return ret;
+	}
+
+	dir = fdopendir(subfd_src);
+	if (!dir)
+		goto done;
+
+	cpath = *cpathp;
+	clen = strlen(cpath);
+	cpath[clen] = '/';
+	nlen = mnlen = 0;
+
+	while ((de = readdir(dir)) != NULL) {
+		const char *name = de->d_name;
+
+		if (!strcmp(name, ".") || !strcmp(name, ".."))
+			continue;
+
+		/* Build up the full path for this entry */
+		nlen = strlen(name);
+		if (mnlen < nlen) {
+			cpath = *cpathp = realloc(*cpathp, nlen + clen + 2);
+			mnlen = nlen;
+		}
+		strcpy(cpath + clen + 1, name);
+
+		/* Check INSTALL_MASK */
+		for (i = 1; i < iargc; ++i) {
+			if (fnmatch(iargv[i], cpath, 0) == 0) {
+				unlinkat(subfd_src, name, 0);
+				unlinkat(subfd_dst, name, 0);
+				continue;
+			}
+		}
+
+		/* Find out what the source path is */
+		if (fstatat(subfd_src, name, &st, AT_SYMLINK_NOFOLLOW)) {
+			warnp("could not read %s", cpath);
+			continue;
+		}
+
+		/* Migrate a directory */
+		if (S_ISDIR(st.st_mode)) {
+			if (mkdirat(subfd_dst, name, st.st_mode)) {
+				if (errno != EEXIST) {
+					warnp("could not read %s", cpath);
+					continue;
+				}
+
+				/* XXX: update times of dir ? */
+			}
+
+			/* syntax: dir dirname */
+			fprintf(contents, "dir %s\n", cpath);
+			qprintf("%s>>>%s %s%s%s/\n", GREEN, NORM, DKBLUE, cpath, NORM);
+
+			/* Copy all of these contents */
+			merge_tree_at(subfd_src, name, subfd_dst, name, contents, cpathp,
+				iargc, iargv, cp_argc, cp_argv, cpm_argc, cpm_argv);
+		}
+
+		/* Migrate a file */
+		else if (S_ISREG(st.st_mode)) {
+			struct timespec times[2];
+			int fd_srcf, fd_dstf;
+			unsigned char *hash;
+			const char *tmpname, *dname;
+
+			/* syntax: obj filename hash mtime */
+			hash = hash_file_at(subfd_src, name, HASH_MD5);
+			fprintf(contents, "obj %s %s %lu\n", cpath, hash, (unsigned long)st.st_mtime);
+
+			/* Check CONFIG_PROTECT */
+			if (config_protected(cpath, cp_argc, cp_argv, cpm_argc, cpm_argv)) {
+				/* ._cfg####_ */
+				char *num;
+				dname = num = alloca(nlen + 10 + 1);
+				*num++ = '.';
+				*num++ = '_';
+				*num++ = 'c';
+				*num++ = 'f';
+				*num++ = 'g';
+				strcpy(num + 5, name);
+				for (i = 0; i < 10000; ++i) {
+					sprintf(num, "%04i", i);
+					num[4] = '_';
+					if (faccessat(subfd_dst, dname, F_OK, AT_SYMLINK_NOFOLLOW))
+						break;
+				}
+				qprintf("%s>>>%s %s (%s)\n", GREEN, NORM, cpath, dname);
+			} else {
+				dname = name;
+				qprintf("%s>>>%s %s\n", GREEN, NORM, cpath);
+			}
+
+			/* First try fast path -- src/dst are same device */
+			if (renameat(subfd_src, dname, subfd_dst, name))
+				;
+
+			/* Fall back to slow path -- manual read/write */
+			fd_srcf = openat(subfd_src, name, O_RDONLY|O_CLOEXEC);
+			if (fd_srcf < 0) {
+				warnp("could not read %s", cpath);
+				continue;
+			}
+
+			/* Do not write the file in place ...
+			 * will fail with files that are in use.
+			 * XXX: Should we make this random ?
+			 */
+			tmpname = ".qmerge.update";
+			fd_dstf = openat(subfd_dst, tmpname, O_WRONLY|O_CLOEXEC|O_CREAT|O_TRUNC, st.st_mode);
+			if (fd_dstf < 0) {
+				warnp("could not write %s", cpath);
+				close(fd_srcf);
+				continue;
+			}
+
+			/* Make sure owner/mode is sane before we write out data */
+			if (fchown(fd_dstf, st.st_uid, st.st_gid)) {
+				warnp("could not set ownership %s", cpath);
+				continue;
+			}
+			if (fchmod(fd_dstf, st.st_mode)) {
+				warnp("could not set permission %s", cpath);
+				continue;
+			}
+
+			/* Do the actual data copy */
+			if (copy_file_fd(fd_srcf, fd_dstf)) {
+				warnp("could not write %s", cpath);
+				if (ftruncate(fd_dstf, 0))
+					/* don't care */;
+				close(fd_srcf);
+				close(fd_dstf);
+				continue;
+			}
+
+			/* Preserve the file times */
+			times[0] = st.st_mtim;
+			times[1] = st.st_mtim;
+			futimens(fd_dstf, times);
+
+			close(fd_srcf);
+			close(fd_dstf);
+
+			/* Move the new tmp dst file to the right place */
+			if (renameat(subfd_dst, tmpname, subfd_dst, dname)) {
+				warnp("could not rename %s to %s", tmpname, cpath);
+				continue;
+			}
+		}
+
+		/* Migrate a symlink */
+		else if (S_ISLNK(st.st_mode)) {
+			size_t len = st.st_size;
+			char *sym = alloca(len + 1);
+
+			/* Find out what we're pointing to */
+			if (readlinkat(subfd_src, name, sym, len) == -1) {
+				warnp("could not read link %s", cpath);
+				continue;
+			}
+			sym[len] = '\0';
+
+			/* syntax: sym src -> dst mtime */
+			fprintf(contents, "sym %s -> %s %lu\n", cpath, sym, (unsigned long)st.st_mtime);
+			qprintf("%s>>>%s %s%s -> %s%s\n", GREEN, NORM, CYAN, cpath, sym, NORM);
+
+			/* Make it in the dest tree */
+			if (symlinkat(sym, subfd_dst, name)) {
+				/* If the symlink exists, unlink it and try again */
+				if (errno != EEXIST ||
+				    unlinkat(subfd_dst, name, 0) ||
+				    symlinkat(sym, subfd_dst, name)) {
+					warnp("could not create link %s to %s", cpath, sym);
+					continue;
+				}
+			}
+
+			struct timespec times[2];
+			times[0] = st.st_mtim;
+			times[1] = st.st_mtim;
+			utimensat(subfd_dst, name, times, AT_SYMLINK_NOFOLLOW);
+		}
+
+		/* WTF is this !? */
+		else {
+			warnp("unknown file type %s", cpath);
+			continue;
+		}
+	}
+
+ done:
+	close(subfd_src);
+	close(subfd_dst);
+
+	return ret;
+}
+
+/* Copy one tree (the single package) to another tree (ROOT) */
+static int merge_tree(const char *src, const char *dst, FILE *contents,
+                      int iargc, char **iargv)
+{
+	int ret;
+	int cp_argc, cpm_argc;
+	char **cp_argv, **cpm_argv;
+	char *cpath;
+
+	/* XXX: be nice to pull this out of the current func
+	 *      so we don't keep reparsing the same env var
+	 *      when unmerging multiple packages.
+	 */
+	makeargv(config_protect, &cp_argc, &cp_argv);
+	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
+
+	cpath = xstrdup("");
+	ret = merge_tree_at(AT_FDCWD, src, AT_FDCWD, dst, contents, &cpath,
+		iargc, iargv, cp_argc, cp_argv, cpm_argc, cpm_argv);
+	free(cpath);
+
+	freeargv(cp_argc, cp_argv);
+	freeargv(cpm_argc, cpm_argv);
+
+	return ret;
+}
+
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
 void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 {
@@ -428,18 +676,17 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	char tarball[255];
 	char *p;
 	int i;
-	char **ARGV = NULL;
-	int ARGC = 0;
+	char **ARGV;
+	int ARGC;
 	const char *saved_argv0 = argv0;
 	int ret, saved_optind = optind;
-	struct stat st, lst;
+	struct stat st;
 	char c;
-	char **iargv = NULL;
-	int iargc = 0;
+	char **iargv;
+	int iargc;
 
-	if (!install) return;
-	if (!pkg) return;
-	if (!atom) return;
+	if (!install || !pkg || !atom)
+		return;
 
 	if (!pkg->PF[0] || !pkg->CATEGORY) {
 		if (verbose) warn("CPF is really NULL at level %d", level);
@@ -538,7 +785,6 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 			}
 		}
 		freeargv(ARGC, ARGV);
-		ARGC = 0; ARGV = NULL;
 	}
 	if (pretend)
 		return;
@@ -552,6 +798,9 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	/* Doesn't actually remove $PWD, just everything under it */
 	rm_rf(".");
 
+	/* XXX: maybe some day we should have this step operate on the
+	 *      tarball directly rather than unpacking it first. */
+
 	/* split the tbz and xpak data */
 	snprintf(tarball, sizeof(tarball), "%s.tbz2", pkg->PF);
 	snprintf(buf, sizeof(buf), "%s/%s/%s", pkgdir, pkg->CATEGORY, tarball);
@@ -562,17 +811,17 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	mkdir("image", 0755);
 
 	/* unpack the tarball using our internal qxpak */
-	ARGV = xmalloc(sizeof(char *));
-	ARGV[0] = (char *) "qtbz2";
-	ARGV[1] = (char *) "-s";
+	ARGC = 3;
+	ARGV = xmalloc(sizeof(*ARGV) * ARGC);
+	ARGV[0] = (char *)"qtbz2";
+	ARGV[1] = (char *)"-s";
 	ARGV[2] = tarball;
 	argv0 = ARGV[0];
 	optind = 0;
-	assert((ret = qtbz2_main(3, ARGV)) == 0);
+	assert(qtbz2_main(ARGC, ARGV) == 0);
 	argv0 = saved_argv0;
 	optind = saved_optind;
 	free(ARGV);
-	ARGV = NULL;
 
 	/* list and extract vdb files from the xpak */
 	snprintf(buf, sizeof(buf), "qxpak -d %s/%s/vdb -x %s.xpak `qxpak -l %s.xpak`",
@@ -590,7 +839,6 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	/* Unmerge the other versions */
 	p = best_version(atom->CATEGORY, atom->PN);
 	if (*p) {
-		ARGC = 0; ARGV = NULL;
 		makeargv(p, &ARGC, &ARGV);
 		for (i = 1; i < ARGC; i++) {
 			char pf[126];
@@ -621,7 +869,6 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 			qprintf("%s+++%s %s %s %s\n", GREEN, NORM, buf, booga[ret], ARGV[i]);
 		}
 		freeargv(ARGC, ARGV);
-		ARGC = 0; ARGV = NULL;
 	}
 
 	xchdir("image");
@@ -629,9 +876,10 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	eat_file("../vdb/DEFINED_PHASES", phases, sizeof(phases));
 	pkg_run_func("../vdb", phases, "pkg_preinst");
 
-	if (stat("./", &st) == -1)
+	if (stat(".", &st) == -1)
 		err("Cant stat pwd");
 
+	/* Initialize INSTALL_MASK and common stuff */
 	makeargv(install_mask, &iargc, &iargv);
 	install_mask_pwd(iargc, iargv, st);
 
@@ -642,149 +890,14 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	/* we dont care about the return code */
 	rmdir("./usr/share");
 
-	if ((fp = popen(BUSYBOX" find .", "r")) == NULL)
-		errf("come on wtf no find?");
-
 	if ((contents = fopen("../vdb/CONTENTS", "w")) == NULL)
 		errf("come on wtf?");
 
-	makeargv(config_protect, &ARGC, &ARGV);
-
-	while (fgets(buf, sizeof(buf), fp) != NULL) {
-		char line[BUFSIZ];
-		int protected = 0;
-		char matched = 0;
-		char dest[_Q_PATH_MAX];
-
-		if ((p = strrchr(buf, '\n')) != NULL)
-			*p = 0;
-
-		if (buf[0] != '.')
-			continue;
-
-		if ((strcmp(buf, ".") == 0) || (strcmp(buf, "..") == 0))
-			continue;
-
-		for (i = 1; i < iargc; i++) {
-			int fn;
-			if ((fn = fnmatch(iargv[i], buf, 0)) == 0)
-				matched = 1;
-		}
-		if (matched) {
-			unlink(buf);
-			continue;
-		}
-		/* use lstats for symlinks */
-		lstat(buf, &st);
-
-		line[0] = 0;
-
-		snprintf(dest, sizeof(dest), "%s%s", portroot, &buf[1]);
-
-		/* portage has code that handes fifo's but it looks unused */
-
-		if (S_ISCHR(st.st_mode) ||
-			S_ISBLK(st.st_mode)); /* block or character device */
-		if (S_ISFIFO(st.st_mode));	/* FIFO (named pipe) */
-		if (S_ISSOCK(st.st_mode));	/* socket? (Not in POSIX.1-1996.) */
-
-		/* syntax: dir dirname */
-		if (S_ISDIR(st.st_mode)) {
-			mkdir(dest, st.st_mode);
-			assert(chown(dest, st.st_uid, st.st_gid) == 0);
-			snprintf(line, sizeof(line), "dir %s", &buf[1]);
-		}
-
-		/* syntax: obj filename hash mtime */
-		if (S_ISREG(st.st_mode)) { /* regular file */
-			struct timeval tv;
-			unsigned char *hash;
-
-			hash = hash_file(buf, HASH_MD5);
-
-			snprintf(line, sizeof(line), "obj %s %s %lu", &buf[1], hash, st.st_mtime);
-			/* /etc /usr/kde/2/share/config /usr/kde/3/share/config	/var/qmail/control */
-
-			protected = config_protected(&buf[1], ARGC, ARGV, 0, NULL);
-			if (protected) {
-				unsigned char *target_hash = hash_file(dest, HASH_MD5);
-				if (memcmp(target_hash, hash, 16) != 0) {
-					char newbuf[sizeof(buf)];
-					qprintf("%s***%s %s\n", BRYELLOW, NORM, &buf[1]);
-					if (verbose) {
-						snprintf(newbuf, sizeof(newbuf), "diff -u %s %s", buf, dest);
-						xsystem(newbuf);
-					}
-					continue;
-				}
-			}
-			if (lstat(dest, &lst) != -1) {
-				if (S_ISLNK(lst.st_mode)) {
-					warn("%s exists and is a symlink and we are going to overwrite it with a file", dest);
-					unlink_q(dest);
-				}
-			}
-			if (interactive_rename(buf, dest, pkg) != 0)
-				continue;
-
-			assert(chmod(dest, st.st_mode) == 0);
-			assert(chown(dest, st.st_uid, st.st_gid) == 0);
-
-			tv.tv_sec = st.st_mtime;
-			tv.tv_usec = 0;
-			/* utime(&buf[1], &tv); */
-		}
-
-		/* symlinks are unfinished */
-		/* syntax: sym src -> dst */
-		if (S_ISLNK(st.st_mode)) { /* (Not in POSIX.1-1996.) */
-			/*
-			  save pwd
-			  get the dirname of the symlink from buf1
-			  chdir to it's dirname unless it's a dir itself
-			  symlink src dest
-			  report any errors along the way
-			*/
-			char path[sizeof(buf)];
-			char pwd[sizeof(buf)];
-			char tmp[sizeof(buf)];
-
-			memset(&path, 0, sizeof(path));
-
-			assert(strlen(dest));
-			xreadlink(buf, path, sizeof(path) - 1);
-			assert(strlen(path));;
-
-			snprintf(line, sizeof(line), "sym %s -> %s%s%lu", &buf[1], path, " ", st.st_mtime);
-			/* snprintf(line, sizeof(line), "sym %s -> %s", &buf[1], path); */
-			/* we better have one byte here to play with */
-			strcpy(tmp, &buf[1]);
-			if (tmp[0] != '/') errf("sym does not start with /");
-
-			xgetcwd(pwd, sizeof(pwd));
-			xchdir(dirname(tmp)); /* tmp gets eatten up now by the dirname call */
-			if (lstat(path, &lst) != -1)
-				unlink_q(dest);
-			/* if (path[0] != '/')
-				puts("path does not start with /");
-			*/
-			if (symlink(path, dest))
-				if (errno != EEXIST)
-					warnp("symlink failed %s -> %s", path, &buf[1]);
-			xchdir(pwd);
-		}
-		/* Save the line to the contents file */
-		if (*line) fprintf(contents, "%s\n", line);
-	}
-
-	freeargv(ARGC, ARGV);	/* config_protect */
-	freeargv(iargc, iargv);	/* install_mask */
-
-	iargv = 0;
-	iargv = NULL;
+	merge_tree(".", portroot, contents, iargc, iargv);
 
 	fclose(contents);
-	pclose(fp);
+
+	freeargv(iargc, iargv);
 
 	xchdir(port_tmpdir);
 	xchdir(pkg->PF);
@@ -792,17 +905,17 @@ void pkg_merge(int level, depend_atom *atom, struct pkg_t *pkg)
 	/* run postinst */
 	pkg_run_func("./vdb", phases, "pkg_postinst");
 
+	/* FIXME */ /* move unmerging to around here ? */
+	/* not perfect when a version is already installed */
 	snprintf(buf, sizeof(buf), "%s/var/db/pkg/%s/", portroot, pkg->CATEGORY);
 	if (access(buf, R_OK|W_OK|X_OK) != 0)
 		mkdir_p(buf, 0755);
 	strncat(buf, pkg->PF, sizeof(buf)-strlen(buf)-1);
-
-	/* FIXME */ /* move unmerging to around here ? */
-	/* not perfect when a version is already installed */
 	if (access(buf, X_OK) == 0) {
 		/* we need to compare CONTENTS in it and remove any file not provided by our CONTENTS */
 		rm_rf(buf);
 	}
+
 	if ((fp = fopen("vdb/COUNTER", "w")) != NULL) {
 		fputs("0", fp);
 		fclose(fp);

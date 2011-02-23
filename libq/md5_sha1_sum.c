@@ -48,10 +48,10 @@ static unsigned char *hash_bin_to_hex(unsigned char *hash_value,
 	return (hex_value);
 }
 
-static unsigned char *hash_file(const char *filename, uint8_t hash_algo)
+static unsigned char *hash_file_at(int dfd, const char *filename, uint8_t hash_algo)
 {
 	int fd;
-	fd = open(filename, O_RDONLY);
+	fd = openat(dfd, filename, O_RDONLY);
 	if (fd != -1) {
 		static uint8_t hash_value_bin[20];
 		static unsigned char *hash_value;
@@ -63,4 +63,9 @@ static unsigned char *hash_file(const char *filename, uint8_t hash_algo)
 		return hash_value;
 	}
 	return NULL;
+}
+
+static unsigned char *hash_file(const char *filename, uint8_t hash_algo)
+{
+	return hash_file_at(AT_FDCWD, filename, hash_algo);
 }
