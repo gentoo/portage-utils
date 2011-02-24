@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.24 2011/02/21 07:33:22 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.25 2011/02/24 01:29:27 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.24 2011/02/21 07:33:22 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.25 2011/02/24 01:29:27 vapier Exp $
  */
 
 #include <stdio.h>
@@ -31,10 +31,25 @@ queue *add_set(const char *vv, const char *ss, queue *q);
 
 /* void free_virtuals(queue *list); */
 
+static queue *append_set(queue *q, queue *ll)
+{
+	queue *z;
+
+	if (!q)
+		return ll;
+
+	z = q;
+	while (z->next)
+		z = z->next;
+	z->next = ll;
+
+	return q;
+}
+
 /* add a set to a cache */
 queue *add_set(const char *vv, const char *ss, queue *q)
 {
-	queue *ll, *z;
+	queue *ll;
 	char *s, *ptr;
 	char *v, *vptr;
 
@@ -58,14 +73,7 @@ queue *add_set(const char *vv, const char *ss, queue *q)
 		strcpy(ll->item, s);
 		strcpy(ll->name, v);
 
-		if (q == NULL)
-			q = ll;
-		else {
-			z = q;
-			while (z->next != NULL)
-				z = z->next;
-			z->next = ll;
-		}
+		q = append_set(q, ll);
 
 		*v = 0;
 		strcpy(v, vptr);
