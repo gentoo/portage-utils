@@ -9,9 +9,13 @@
 
 - standardize/unify/clean up misc handling of colors
 
-- qmerge: dep resolver needs spanktastic love.
-- qmerge: needs safe deleting.
-- qmerge: handle compressed Packages file
+- qmerge
+	- dep resolver needs spanktastic love.
+	- needs safe deleting (merge in place rather than unmerge;merge)
+	- handle compressed Packages file (talk to zmedico)
+	- gpg sign the packages file (before compression)
+	- binary vdb (sqlite) ... talk to zmedico
+	- remote vdb
 
 - atoms:
 	- only 32bit values are supported for revision (-r#)
