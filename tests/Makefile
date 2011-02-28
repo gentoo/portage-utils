@@ -1,4 +1,4 @@
-TESTS = reinitialize atom_compare atom_explode qfile quse install source
+TESTS = reinitialize atom_compare atom_explode qfile qtbz2 quse qxpak install source
 
 all: check
 

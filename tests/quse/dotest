@@ -1,4 +1,35 @@
-#!/bin/sh
+#!/bin/bash
+
+set -e
+
+export PORTDIR=$PWD/portdir
+
+rm -rf tmp
+mkdir tmp
+cd tmp
+
+d=${PORTDIR}/profiles
+entries() {
+	sed -e 's:#.*::' -e '/^$/d' "$1"
+}
+
+# check arch.list
+all=$(entries "$d/arch.list")
+for x in ${all} ; do
+	quse -CD $x > x
+	echo " arch:$x: $x architecture" > good
+	cat good >> all.good
+	cmp x good
+done
+quse -CD ${all} > x
+cmp x all.good
+rm x good all.good
+
+# check use.desc
+all=$(entries "$d/use.desc" | awk '{print $1}')
+for x in ${all} ; do
+	quse -CD
+done
 
 ###### faster test needed.########
 exit 0

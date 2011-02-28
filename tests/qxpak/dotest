@@ -1,0 +1,54 @@
+#!/bin/bash
+
+set -e
+
+rm -rf tmp
+mkdir tmp
+cd tmp
+
+files="a b c d e f"
+for l in ${files} ; do
+	echo $l > $l
+done
+
+# check basic creation
+qxpak -c xpak ${files}
+qxpak -l -v xpak > list
+diff -u list ../list01.good
+
+# check single extraction
+for l in ${files} ; do
+	mv $l $l.good
+	qxpak -x xpak $l
+	diff -u $l $l.good
+done
+
+# check multiple extraction
+rm ${files}
+qxpak -x xpak ${files}
+for l in ${files} ; do
+	diff -u $l $l.good
+done
+
+# check unpacking to diff dir
+mkdir new
+qxpak -d new -x xpak ${files}
+for l in ${files} ; do
+	diff -u $l new/$l
+done
+
+# check creating from diff dir
+rm -f ${files} ?.good
+qxpak -c xpak -d new ${files}
+qxpak -l -v xpak > list
+diff -u list ../list01.good
+qxpak -d . -x xpak ${files}
+
+# check creation with clobbered output
+# check creation with file order
+qxpak -c xpak `echo ${files} | tr ' ' '\n' | tac`
+qxpak -l -v xpak > list
+diff -u list ../list02.good
+
+cd ..
+rm -rf tmp
