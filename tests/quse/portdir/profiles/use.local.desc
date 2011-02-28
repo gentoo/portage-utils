@@ -1,0 +1,16 @@
+# * generated automatically using egencache *
+
+app-accessibility/brltty:api - build brltty's application program interface
+app-admin/collectd:collectd_plugins_swap - Build the swap input plugin (amount of memory currently written to swap)
+app-editors/tea:enchant - Enable spell checking using enchant
+dev-db/mysql-connector-c++:gcov - Build coverage support
+dev-lang/php:xmlwriter - Enable XMLWriter support
+kde-base/kttsd:flite - Build a plugin for app-accessibility/flite
+media-video/ffmpeg:dirac - Enable Dirac video support (an advanced royalty-free video compression format) via the reference library: dirac.
+net-misc/asterisk-moh-opsound:wav - Install the sounds files for the wav codec.
+sys-devel/gcc:objc++ - Build support for the Objective C++ language
+sys-devel/llvm:llvm-gcc - Build LLVM with sys-devel/llvm-gcc
+sys-freebsd/boot0:tftp - Enable PXE/TFTP boot support.
+sys-fs/aufs2:kernel-patch - Patch the current kernel for aufs2 support
+x11-libs/qt-gui:glib - Enable dev-libs/glib eventloop support
+xfce-extra/xfce4-playercontrol-plugin:audacious - Enable Audacious support

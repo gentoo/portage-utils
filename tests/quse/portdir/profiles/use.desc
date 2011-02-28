@@ -1,0 +1,16 @@
+
+# Keep them sorted
+
+3dfx - Enable support for Voodoo chipsets, also called as 3DFX and TDFX
+Xaw3d - Adds support for the 3d athena widget set
+adabas - Adds support for the Adabas database engine
+cdinstall - Copies files from the CD rather than asking the user to copy them, mostly used with games
+evo - Adds support for mail-client/evolution
+libnotify - Enable desktop notification support
+lm_sensors - Adds linux lm_sensors (hardware sensors) support
+nas - Adds support for network audio sound
+oci8-instant-client - Use dev-db/oracle-instantclient-basic as Oracle provider instead of requiring a full Oracle server install
+prefix - Defines if a Gentoo Prefix offset installation is used
+sqlite3 - Adds support for sqlite3 - embedded sql database
+wmf - Adds support for the Windows Metafile vector image format
+zlib - Adds support for zlib (de)compression

@@ -14,22 +14,64 @@ entries() {
 }
 
 # check arch.list
-all=$(entries "$d/arch.list")
+f="$d/arch.list"
+all=$(entries "$f")
 for x in ${all} ; do
 	quse -CD $x > x
 	echo " arch:$x: $x architecture" > good
 	cat good >> all.good
-	cmp x good
+	diff -u x good
 done
 quse -CD ${all} > x
-cmp x all.good
+diff -u x all.good
 rm x good all.good
 
 # check use.desc
-all=$(entries "$d/use.desc" | awk '{print $1}')
+f="$d/use.desc"
+all=$(entries "$f" | awk '{print $1}')
 for x in ${all} ; do
-	quse -CD
+	quse -CD $x > x
+	sed -n -e "/^$x - /{s|^[^ ]* - | global:$x: |;p}" "$f" > good
+	cat good >> all.good
+	diff -u x good
 done
+quse -CD ${all} > x
+diff -u x all.good
+rm x good all.good
+
+# check use.local.desc
+f="$d/use.local.desc"
+all=$(entries "$f" | awk '{print $1}' | cut -f2 -d:)
+for x in ${all} ; do
+	quse -CD $x > x
+	sed -n -e "/^[^:]*:$x - /{s|^\([^:]*\):[^ ]* - | local:$x:\1: |;p}" "$f" > good
+	cat good >> all.good
+	diff -u x good
+done
+quse -CD ${all} > x
+diff -u x all.good
+rm x good all.good
+
+# check desc subdir
+f="$d/desc/elibc.desc"
+all=$(entries "$f" | awk '{print $1}')
+for x in ${all} ; do
+	quse -CD $x > x
+	sed -n -e "/^$x - /{s|^[^ ]* - | ${f##*/}:$x: |;p}" "$f" > good
+	cat good >> all.good
+	diff -u x good
+done
+quse -CD ${all} > x
+diff -u x all.good
+rm x good all.good
+
+# check cross file matches
+quse -CD abc > x
+diff -u ../list01.good x
+rm x
+
+cd ..
+rmdir tmp
 
 ###### faster test needed.########
 exit 0
