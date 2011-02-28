@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.33 2011/02/21 07:38:15 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.34 2011/02/28 18:21:42 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,7 @@ static const char * const qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.33 2011/02/21 07:38:15 vapier Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.34 2011/02/28 18:21:42 vapier Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
@@ -268,10 +268,10 @@ int qpkg_make(depend_atom *atom)
 	snprintf(buf, buflen, "%s/%s/%s", portvdb, atom->CATEGORY, atom_to_pvr(atom));
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
-	xpak_create(xpak, 1, xpak_argv);
+	xpak_create(AT_FDCWD, xpak, 1, xpak_argv);
 
 	snprintf(buf, buflen, "%s/binpkg.tbz2", tmpdir);
-	tbz2_compose(tbz2, xpak, buf);
+	tbz2_compose(AT_FDCWD, tbz2, xpak, buf);
 
 	unlink(filelist);
 	unlink(xpak);

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.21 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.22 2011/02/28 18:21:42 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,21 +46,22 @@ static const char * const qxpak_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.21 2011/02/21 01:33:47 vapier Exp $";
+static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.22 2011/02/28 18:21:42 vapier Exp $";
 #define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, lookup_applet_idx("qxpak"))
 
 typedef struct {
+	int dir_fd;
 	FILE *fp;
 	int index_len;
 	int data_len;
 	char *index, *data;
 } _xpak_archive;
 
-static char *xpak_chdir = NULL;
-static char xpak_stdout = 0;
+static char xpak_stdout;
 
-void _xpak_walk_index(_xpak_archive *x, int argc, char **argv, void (*func)(char*,int,int,int,char*));
-void _xpak_walk_index(_xpak_archive *x, int argc, char **argv, void (*func)(char*,int,int,int,char*))
+typedef void (*xpak_callback_t)(int,char*,int,int,int,char*);
+
+static void _xpak_walk_index(_xpak_archive *x, int argc, char **argv, xpak_callback_t func)
 {
 	int i, pathname_len, data_offset, data_len;
 	char *p, pathname[100];
@@ -88,7 +89,7 @@ void _xpak_walk_index(_xpak_archive *x, int argc, char **argv, void (*func)(char
 			if (i == argc)
 				continue;
 		}
-		(*func)(pathname, pathname_len, data_offset, data_len, x->data);
+		(*func)(x->dir_fd, pathname, pathname_len, data_offset, data_len, x->data);
 	}
 
 	if (argc)
@@ -97,8 +98,7 @@ void _xpak_walk_index(_xpak_archive *x, int argc, char **argv, void (*func)(char
 				warn("Could not locate '%s' in archive", argv[i]);
 }
 
-_xpak_archive *_xpak_open(const char *file);
-_xpak_archive *_xpak_open(const char *file)
+static _xpak_archive *_xpak_open(const char *file)
 {
 	static _xpak_archive ret;
 	char buf[XPAK_START_LEN];
@@ -126,10 +126,6 @@ _xpak_archive *_xpak_open(const char *file)
 		goto close_and_ret;
 	}
 
-	/* clean up before returning */
-	if (xpak_chdir)
-		xchdir(xpak_chdir);
-
 	return &ret;
 
 close_and_ret:
@@ -138,14 +134,14 @@ close_and_ret:
 	return NULL;
 }
 
-void _xpak_close(_xpak_archive *x);
-void _xpak_close(_xpak_archive *x)
+static void _xpak_close(_xpak_archive *x)
 {
 	fclose(x->fp);
 }
 
-void _xpak_list_callback(char *pathname, _q_unused_ int pathname_len, int data_offset, int data_len, _q_unused_ char *data);
-void _xpak_list_callback(char *pathname, _q_unused_ int pathname_len, int data_offset, int data_len, _q_unused_ char *data)
+static void
+_xpak_list_callback(int dir_fd, char *pathname, _q_unused_ int pathname_len,
+                    int data_offset, int data_len, _q_unused_ char *data)
 {
 	if (!verbose)
 		puts(pathname);
@@ -155,52 +151,65 @@ void _xpak_list_callback(char *pathname, _q_unused_ int pathname_len, int data_o
 		printf("%s: %i byte%c @ offset byte %i\n",
 			pathname, data_len, (data_len>1?'s':' '), data_offset);
 }
-void xpak_list(const char *file, int argc, char **argv);
-void xpak_list(const char *file, int argc, char **argv)
+static int
+xpak_list(int dir_fd, const char *file, int argc, char **argv)
 {
 	_xpak_archive *x;
 	char buf[BUFSIZE];
 
 	x = _xpak_open(file);
-	if (!x) return;
+	if (!x)
+		return 1;
 
+	x->dir_fd = dir_fd;
 	x->index = buf;
 	assert((size_t)x->index_len < sizeof(buf));
 	assert(fread(x->index, 1, x->index_len, x->fp) == (size_t)x->index_len);
 	_xpak_walk_index(x, argc, argv, &_xpak_list_callback);
 
 	_xpak_close(x);
+
+	return 0;
 }
 
-void _xpak_extract_callback(char *pathname, _q_unused_ int pathname_len, int data_offset, int data_len, char *data);
-void _xpak_extract_callback(char *pathname, _q_unused_ int pathname_len, int data_offset, int data_len, char *data)
+static void
+_xpak_extract_callback(int dir_fd, char *pathname, _q_unused_ int pathname_len,
+                       int data_offset, int data_len, char *data)
 {
 	FILE *out;
+
 	if (verbose == 1)
 		puts(pathname);
 	else if (verbose > 1)
 		printf("%s: %i byte%c\n", pathname, data_len, (data_len>1?'s':' '));
-	if (xpak_stdout)
+
+	if (!xpak_stdout) {
+		int fd = openat(dir_fd, pathname, O_WRONLY|O_CLOEXEC|O_CREAT|O_TRUNC, 0644);
+		if (fd < 0)
+			return;
+		out = fdopen(fd, "w");
+		if (!out)
+			return;
+	} else
 		out = stdout;
-	else if ((out = fopen(pathname, "w")) == NULL)
-		return;
-	fwrite(data+data_offset, 1, data_len, out);
+
+	fwrite(data + data_offset, 1, data_len, out);
+
 	if (!xpak_stdout)
 		fclose(out);
 }
-void xpak_extract(const char *file, int argc, char **argv);
-void xpak_extract(const char *file, int argc, char **argv)
+static int
+xpak_extract(int dir_fd, const char *file, int argc, char **argv)
 {
 	_xpak_archive *x;
 	char buf[BUFSIZE], ext[BUFSIZE*32];
 	size_t in;
 
-	if (argc == 0)
-		err("Extract usage: <xpak output> <files/dirs to extract>");
-
 	x = _xpak_open(file);
-	if (!x) return;
+	if (!x)
+		return 1;
 
+	x->dir_fd = dir_fd;
 	x->index = buf;
 
 	assert((size_t)x->index_len < sizeof(buf));
@@ -220,15 +229,18 @@ void xpak_extract(const char *file, int argc, char **argv)
 
 	if (x->data != ext)
 		free(x->data);
+
+	return 0;
 }
 
-void _xpak_add_file(const char *filename, struct stat *st, FILE *findex, int *index_len, FILE *fdata, int *data_len);
-void _xpak_add_file(const char *filename, struct stat *st, FILE *findex, int *index_len, FILE *fdata, int *data_len)
+static void
+_xpak_add_file(int dir_fd, const char *filename, struct stat *st, FILE *findex,
+               int *index_len, FILE *fdata, int *data_len)
 {
 	FILE *fin;
 	unsigned char *p;
 	const char *basefile;
-	int in_len;
+	int fd, in_len;
 
 	if ((basefile = strrchr(filename, '/')) == NULL) {
 		basefile = filename;
@@ -255,12 +267,19 @@ void _xpak_add_file(const char *filename, struct stat *st, FILE *findex, int *in
 	*index_len += 4 + in_len + 4 + 4;
 
 	/* now open the file, get (data_len), and append the file to the data file */
-	if ((fin = fopen(filename, "r")) == NULL) {
-		warnp("Could not open '%s' for reading", filename);
-fake_data_len:
+	fd = openat(dir_fd, filename, O_RDONLY|O_CLOEXEC);
+	if (fd < 0) {
+ open_fail:
+		warnp("could not open for reading: %s", filename);
+ fake_data_len:
 		p = tbz2_encode_int(0);
 		fwrite(p, 1, 4, findex);
 		return;
+	}
+	fin = fdopen(fd, "r");
+	if (!fin) {
+		close(fd);
+		goto open_fail;
 	}
 	in_len = st->st_size;
 	/* the xpak format can only store files whose size is a 32bit int
@@ -277,8 +296,8 @@ fake_data_len:
 
 	*data_len += in_len;
 }
-void xpak_create(const char *file, int argc, char **argv);
-void xpak_create(const char *file, int argc, char **argv)
+static int
+xpak_create(int dir_fd, const char *file, int argc, char **argv)
 {
 	FILE *findex, *fdata, *fout;
 	struct dirent **dir;
@@ -294,35 +313,42 @@ void xpak_create(const char *file, int argc, char **argv)
 	if (strlen(file) >= sizeof(path)-6)
 		err("Pathname is too long: %s", file);
 
-	if ((fout = fopen(file, "w")) == NULL)
-		return;
+	if ((fout = fopen(file, "w")) == NULL) {
+		warnp("could not open output: %s", file);
+		return 1;
+	}
 	strcpy(path, file); strcat(path, ".index");
 	if ((findex = fopen(path, "w+")) == NULL) {
+		warnp("could not open output: %s", path);
 		fclose(fout);
-		return;
+		return 1;
 	}
 	strcpy(path, file); strcat(path, ".dat");
 	if ((fdata = fopen(path, "w+")) == NULL) {
+		warnp("could not open output: %s", path);
 		fclose(fout);
 		fclose(findex);
-		return;
+		return 1;
 	}
 
 	index_len = data_len = 0;
 	for (i = 0; i < argc; ++i) {
-		stat(argv[i], &st);
+		if (fstatat(dir_fd, argv[i], &st, 0)) {
+			warnp("fstatat(%s) failed", argv[i]);
+			continue;
+		}
 		if (S_ISDIR(st.st_mode)) {
 			if ((numfiles = scandir(argv[i], &dir, filter_hidden, alphasort)) < 0)
 				warn("Directory '%s' is empty; skipping", argv[i]);
 			for (fidx = 0; fidx < numfiles; ++fidx) {
 				snprintf(path, sizeof(path), "%s/%s", argv[i], dir[fidx]->d_name);
 				stat(path, &st);
-				_xpak_add_file(path, &st, findex, &index_len, fdata, &data_len);
+				_xpak_add_file(dir_fd, path, &st, findex, &index_len, fdata, &data_len);
 			}
 			while (numfiles--) free(dir[numfiles]);
 			free(dir);
 		} else if (S_ISREG(st.st_mode)) {
-			_xpak_add_file(argv[i], &st, findex, &index_len, fdata, &data_len);
+			_xpak_add_file(dir_fd, argv[i], &st, findex, &index_len, fdata, &data_len);
 		} else
 			warn("Skipping non file/directory '%s'", argv[i]);
 	}
@@ -345,17 +371,22 @@ void xpak_create(const char *file, int argc, char **argv)
 	fclose(findex);
 	fclose(fdata);
 	fclose(fout);
+
+	return 0;
 }
 
 int qxpak_main(int argc, char **argv)
 {
 	enum { XPAK_ACT_NONE, XPAK_ACT_LIST, XPAK_ACT_EXTRACT, XPAK_ACT_CREATE };
-	int i;
+	int i, ret, dir_fd;
 	char *xpak;
 	char action = XPAK_ACT_NONE;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
+
+	dir_fd = AT_FDCWD;
+	xpak_stdout = 0;
 
 	while ((i = GETOPT_LONG(QXPAK, qxpak, "")) != -1) {
 		switch (i) {
@@ -365,8 +396,9 @@ int qxpak_main(int argc, char **argv)
 		case 'c': action = XPAK_ACT_CREATE; break;
 		case 'O': xpak_stdout = 1; break;
 		case 'd':
-			if (xpak_chdir) err("Only use -d once");
-			xpak_chdir = xstrdup(optarg);
+			if (dir_fd != AT_FDCWD)
+				err("Only use -d once");
+			dir_fd = open(optarg, O_RDONLY|O_CLOEXEC);
 			break;
 		}
 	}
@@ -378,14 +410,16 @@ int qxpak_main(int argc, char **argv)
 	argv += optind;
 
 	switch (action) {
-	case XPAK_ACT_LIST:    xpak_list(xpak, argc, argv); break;
-	case XPAK_ACT_EXTRACT: xpak_extract(xpak, argc, argv); break;
-	case XPAK_ACT_CREATE:  xpak_create(xpak, argc, argv); break;
+	case XPAK_ACT_LIST:    ret = xpak_list(dir_fd, xpak, argc, argv); break;
+	case XPAK_ACT_EXTRACT: ret = xpak_extract(dir_fd, xpak, argc, argv); break;
+	case XPAK_ACT_CREATE:  ret = xpak_create(dir_fd, xpak, argc, argv); break;
+	default: ret = EXIT_FAILURE;
 	}
 
-	if (xpak_chdir) free(xpak_chdir);
+	if (dir_fd != AT_FDCWD)
+		close(dir_fd);
 
-	return EXIT_SUCCESS;
+	return ret;
 }
 
 #else

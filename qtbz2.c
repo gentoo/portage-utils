@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.17 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.18 2011/02/28 18:21:42 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -27,8 +27,9 @@
 #define TBZ2_END_MSG_LEN  4
 #define TBZ2_END_LEN      (4 + TBZ2_END_MSG_LEN)
 
-#define QTBZ2_FLAGS "jstxO" COMMON_FLAGS
+#define QTBZ2_FLAGS "d:jstxO" COMMON_FLAGS
 static struct option const qtbz2_long_opts[] = {
+	{"dir",        a_argument, NULL, 'd'},
 	{"join",      no_argument, NULL, 'j'},
 	{"split",     no_argument, NULL, 's'},
 	{"tarbz2",    no_argument, NULL, 't'},
@@ -37,6 +38,7 @@ static struct option const qtbz2_long_opts[] = {
 	COMMON_LONG_OPTS
 };
 static const char * const qtbz2_opts_help[] = {
+	"Change to specified directory",
 	"Join tar.bz2 + xpak into a tbz2",
 	"Split a tbz2 into a tar.bz2 + xpak",
 	"Just split the tar.bz2",
@@ -44,7 +46,7 @@ static const char * const qtbz2_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.17 2011/02/21 01:33:47 vapier Exp $";
+static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.18 2011/02/28 18:21:42 vapier Exp $";
 #define qtbz2_usage(ret) usage(ret, QTBZ2_FLAGS, qtbz2_long_opts, qtbz2_opts_help, lookup_applet_idx("qtbz2"))
 
 static char tbz2_stdout = 0;
@@ -83,28 +85,52 @@ void _tbz2_copy_file(FILE *src, FILE *dst)
 	}
 }
 
-char tbz2_compose(const char *tarbz2, const char *xpak, const char *tbz2);
-char tbz2_compose(const char *tarbz2, const char *xpak, const char *tbz2)
+static int
+tbz2_compose(int dir_fd, const char *tarbz2, const char *xpak, const char *tbz2)
 {
 	FILE *out, *in_tarbz2, *in_xpak;
 	struct stat st;
-	char ret = 1;
+	int ret = 1, fd;
+
+	if (verbose)
+		printf("input xpak: %s\ninput tar.bz2: %s\noutput tbz2: %s\n",
+			xpak, tarbz2, tbz2);
 
 	/* open tbz2 output */
 	if ((out = fopen(tbz2, "w")) == NULL)
 		return ret;
 	/* open tar.bz2 input */
-	if ((in_tarbz2 = fopen(tarbz2, "r")) == NULL) {
+	fd = openat(dir_fd, tarbz2, O_RDONLY|O_CLOEXEC);
+	if (fd < 0) {
 		fclose(out);
 		return ret;
 	}
+	in_tarbz2 = fdopen(fd, "r");
+	if (in_tarbz2 == NULL) {
+		fclose(out);
+		close(fd);
+		return ret;
+	}
 	/* open xpak input */
-	if ((in_xpak = fopen(xpak, "r")) == NULL) {
+	fd = openat(dir_fd, xpak, O_RDONLY|O_CLOEXEC);
+	if (fd < 0) {
 		fclose(out);
 		fclose(in_tarbz2);
 		return ret;
 	}
-	fstat(fileno(in_xpak), &st);
+	in_xpak = fdopen(fd, "r");
+	if (in_xpak == NULL) {
+		fclose(out);
+		fclose(in_tarbz2);
+		close(fd);
+		return ret;
+	}
+	if (fstat(fd, &st)) {
+		fclose(out);
+		fclose(in_tarbz2);
+		fclose(in_xpak);
+		return ret;
+	}
 
 	/* save [tarball] */
 	_tbz2_copy_file(in_tarbz2, out);
@@ -123,8 +149,8 @@ char tbz2_compose(const char *tarbz2, const char *xpak, const char *tbz2)
 }
 
 #define _TBZ2_MIN(a,b) (a < b ? : b)
-void _tbz2_write_file(FILE *src, const char *dst, size_t len);
-void _tbz2_write_file(FILE *src, const char *dst, size_t len)
+static void
+_tbz2_write_file(FILE *src, int dir_fd, const char *dst, size_t len)
 {
 	unsigned char buffer[BUFSIZE*32];
 	size_t this_write;
@@ -135,10 +161,17 @@ void _tbz2_write_file(FILE *src, const char *dst, size_t len)
 		return;
 	}
 
-	if (tbz2_stdout)
+	if (!tbz2_stdout) {
+		int fd;
+
+		out = NULL;
+		fd = openat(dir_fd, dst, O_WRONLY|O_CLOEXEC|O_CREAT|O_TRUNC, 0644);
+		if (fd >= 0)
+			out = fdopen(fd, "w");
+		if (out == NULL)
+			errp("cannot write to '%s'", dst);
+	} else
 		out = stdout;
-	else if ((out = fopen(dst, "w")) == NULL)
-		errp("cannot write to '%s'", dst);
 
 	do {
 		this_write = fread(buffer, 1, _TBZ2_MIN(len, sizeof(buffer)), src);
@@ -150,19 +183,25 @@ void _tbz2_write_file(FILE *src, const char *dst, size_t len)
 		fclose(out);
 }
 
-char tbz2_decompose(const char *tbz2, const char *tarbz2, const char *xpak);
-char tbz2_decompose(const char *tbz2, const char *tarbz2, const char *xpak)
+static int
+tbz2_decompose(int dir_fd, const char *tbz2, const char *tarbz2, const char *xpak)
 {
 	FILE *in;
 	unsigned char tbz2_tail[TBZ2_END_LEN];
 	long xpak_size, tarbz2_size;
 	struct stat st;
-	char ret = 1;
+	int ret = 1;
 
 	/* open tbz2 input */
-	if ((in = fopen(tbz2, "r")) == NULL)
+	in = fopen(tbz2, "r");
+	if (in == NULL)
 		return ret;
-	fstat(fileno(in), &st);
+	if (fstat(fileno(in), &st))
+		goto close_in_and_ret;
+
+	if (verbose)
+		printf("input tbz2: %s (%s)\n", tbz2, make_human_readable_str(st.st_size, 1, 0));
+
 	/* verify the tail signature */
 	if (fseek(in, -TBZ2_END_LEN, SEEK_END) != 0)
 		goto close_in_and_ret;
@@ -181,60 +220,71 @@ char tbz2_decompose(const char *tbz2, const char *tarbz2, const char *xpak)
 	/* reset to the start of the tbz2 */
 	rewind(in);
 	/* dump the tar.bz2 */
-	_tbz2_write_file(in, tarbz2, tarbz2_size);
+	if (verbose)
+		printf("output tar.bz2: %s (%s)\n", tarbz2, make_human_readable_str(tarbz2_size, 1, 0));
+	_tbz2_write_file(in, dir_fd, tarbz2, tarbz2_size);
 	/* dump the xpak */
-	_tbz2_write_file(in, xpak, xpak_size);
+	if (verbose)
+		printf("output xpak: %s (%s)\n", xpak, make_human_readable_str(xpak_size, 1, 0));
+	_tbz2_write_file(in, dir_fd, xpak, xpak_size);
 
 	ret = 0;
-close_in_and_ret:
+ close_in_and_ret:
 	fclose(in);
 	return ret;
 }
 
 int qtbz2_main(int argc, char **argv)
 {
-	int i;
-	char action = 0, split_xpak = 1, split_tarbz2 = 1;
+	enum { TBZ2_ACT_NONE, TBZ2_ACT_JOIN, TBZ2_ACT_SPLIT };
+	int i, dir_fd;
+	char action, split_xpak = 1, split_tarbz2 = 1;
 	char *heap_tbz2, *heap_xpak, *heap_tarbz2;
 	char *tbz2, *xpak, *tarbz2;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
+	action = TBZ2_ACT_NONE;
+	dir_fd = AT_FDCWD;
+
 	while ((i = GETOPT_LONG(QTBZ2, qtbz2, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qtbz2)
-		case 'j': action = 1; break;
-		case 's': action = 2; break;
+		case 'j': action = TBZ2_ACT_JOIN; break;
+		case 's': action = TBZ2_ACT_SPLIT; break;
 		case 't': split_xpak = 0; break;
 		case 'x': split_tarbz2 = 0; break;
 		case 'O': tbz2_stdout = 1; break;
+		case 'd':
+			if (dir_fd != AT_FDCWD)
+				err("Only use -d once");
+			dir_fd = open(optarg, O_RDONLY|O_CLOEXEC);
+			break;
 		}
 	}
 	if (optind == argc) {
 		switch (action) {
-		case 1: join_usage:
-			err("Join usage: <input tar.bz2> <input xpak> [<output tbz2>]");
-		case 2: split_usage:
-			err("Split usage  <input tbz2> [<output tar.bz2> <output xpak>]");
-		default: qtbz2_usage(EXIT_FAILURE);
+		case TBZ2_ACT_JOIN:  err("Join usage: <input tar.bz2> <input xpak> [<output tbz2>]");
+		case TBZ2_ACT_SPLIT: err("Split usage: <input tbz2> [<output tar.bz2> <output xpak>]");
+		default:             qtbz2_usage(EXIT_FAILURE);
 		}
 	}
 
 	heap_tbz2 = heap_xpak = heap_tarbz2 = NULL;
 	tbz2 = xpak = tarbz2 = NULL;
 
-	if (action == 0) {
+	if (action == TBZ2_ACT_NONE) {
 		if (strstr(argv[optind], ".tar.bz2") != NULL)
-			action = 1;
+			action = TBZ2_ACT_JOIN;
 		else if (strstr(argv[optind], ".tbz2") != NULL)
-			action = 2;
+			action = TBZ2_ACT_SPLIT;
 		else
 			qtbz2_usage(EXIT_FAILURE);
 	}
 
 	/* tbz2tool join .tar.bz2 .xpak .tbz2 */
-	if (action == 1) {
+	if (action == TBZ2_ACT_JOIN) {
 		/* grab the params if the user gave them */
 		tarbz2 = argv[optind++];
 		if (optind < argc) {
@@ -243,20 +293,27 @@ int qtbz2_main(int argc, char **argv)
 				tbz2 = argv[optind];
 		}
 		/* otherwise guess what they should be */
-		if (!xpak) {
-			i = strlen(tarbz2);
-			if (i <= 5) goto join_usage;
-			xpak = heap_xpak = xstrdup(tarbz2);
-			strcpy(xpak+i-7, "xpak");
-		}
-		if (!tbz2) {
-			i = strlen(tarbz2);
-			if (i <= 5) goto join_usage;
-			tbz2 = heap_tbz2 = xstrdup(tarbz2);
-			strcpy(tbz2+i-6, "bz2");
+		if (!xpak || !tbz2) {
+			const char *s = basename(tarbz2);
+			size_t len = strlen(s);
+
+			/* autostrip the tarball extension */
+			if (len >= 8 && !strcmp(s + len - 8, ".tar.bz2"))
+				len -= 8;
+
+			if (!xpak) {
+				xpak = heap_xpak = xmalloc(len + 5 + 1);
+				memcpy(xpak, s, len);
+				strcpy(xpak + len, ".xpak");
+			}
+			if (!tbz2) {
+				tbz2 = heap_tbz2 = xmalloc(len + 5 + 1);
+				memcpy(tbz2, s, len);
+				strcpy(tbz2 + len, ".tbz2");
+			}
 		}
 
-		if (tbz2_compose(tarbz2, xpak, tbz2))
+		if (tbz2_compose(dir_fd, tarbz2, xpak, tbz2))
 			warn("Could not compose '%s' and '%s'", tarbz2, xpak);
 
 	/* tbz2tool split .tbz2 .tar.bz2 .xpak */
@@ -269,29 +326,36 @@ int qtbz2_main(int argc, char **argv)
 				xpak = argv[optind];
 		}
 		/* otherwise guess what they should be */
-		if (!tarbz2 && split_tarbz2) {
-			i = strlen(tbz2);
-			if (i <= 5) goto split_usage;
-			tarbz2 = heap_tarbz2 = xmalloc(i + 4);
-			strcpy(tarbz2, tbz2);
-			strcpy(tarbz2+i-3, "ar.bz2");
-		} else if (!split_tarbz2)
-			tarbz2 = NULL;
-		if (!xpak && split_xpak) {
-			i = strlen(tbz2);
-			if (i <= 5) goto split_usage;
-			xpak = heap_xpak = xstrdup(tbz2);
-			strcpy(xpak+i-4, "xpak");
-		} else if (!split_xpak)
-			xpak = NULL;
+		if ((!tarbz2 && split_tarbz2) || (!xpak && split_xpak)) {
+			const char *s = basename(tbz2);
+			size_t len = strlen(s);
 
-		if (tbz2_decompose(tbz2, tarbz2, xpak))
+			/* autostrip the package extension */
+			if (len >= 5 && !strcmp(s + len - 5, ".tbz2"))
+				len -= 5;
+
+			if (!tarbz2 && split_tarbz2) {
+				tarbz2 = heap_tarbz2 = xmalloc(len + 8 + 1);
+				memcpy(tarbz2, s, len);
+				strcpy(tarbz2 + len, ".tar.bz2");
+			} else if (!split_tarbz2)
+				tarbz2 = NULL;
+
+			if (!xpak && split_xpak) {
+				xpak = heap_xpak = xmalloc(len + 5 + 1);
+				memcpy(xpak, s, len);
+				strcpy(xpak + len, ".xpak");
+			} else if (!split_xpak)
+				xpak = NULL;
+		}
+
+		if (tbz2_decompose(dir_fd, tbz2, tarbz2, xpak))
 			warn("Could not decompose '%s'", tbz2);
 	}
 
-	if (heap_tbz2) free(heap_tbz2);
-	if (heap_xpak) free(heap_xpak);
-	if (heap_tarbz2) free(heap_tarbz2);
+	free(heap_tbz2);
+	free(heap_xpak);
+	free(heap_tarbz2);
 
 	return EXIT_SUCCESS;
 }
