@@ -9,13 +9,20 @@
 
 - standardize/unify/clean up misc handling of colors
 
+- speed up queue structure ... append walks the whole list
+
 - qmerge
 	- dep resolver needs spanktastic love.
 	- needs safe deleting (merge in place rather than unmerge;merge)
+	- multiple binary repos (talk to zmedico)
 	- handle compressed Packages file (talk to zmedico)
+	- handle binary Packages file (talk to zmedico)
 	- gpg sign the packages file (before compression)
 	- binary vdb (sqlite) ... talk to zmedico
 	- remote vdb
+	- don't bother emitting any "DIR" entries to CONTENTS ?
+		- auto rmdir any empty dirs
+	- check order of pkg_{pre,post}{inst,rm} during install, unmerge, and upgrade
 
 - atoms:
 	- only 32bit values are supported for revision (-r#)
