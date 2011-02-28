@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.49 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.50 2011/02/28 18:15:32 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,7 +22,7 @@ static const char * const q_opts_help[] = {
 	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.49 2011/02/21 01:33:47 vapier Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.50 2011/02/28 18:15:32 vapier Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 static APPLET lookup_applet(const char *applet)
@@ -133,4 +133,44 @@ int q_main(int argc, char **argv)
 	optind = 0; /* reset so the applets can call getopt */
 
 	return (func)(argc - 1, ++argv);
+}
+
+static int run_applet_l(const char *arg, ...)
+{
+	int (*applet)(int, char **);
+	va_list ap;
+	int ret, optind_saved, argc;
+	char **argv;
+	const char *argv0_saved;
+
+	optind_saved = optind;
+	argv0_saved = argv0;
+
+	applet = lookup_applet(arg);
+	if (!applet)
+		return -1;
+
+	/* This doesn't NULL terminate argv, but you should be using argc */
+	va_start(ap, arg);
+	argc = 0;
+	argv = NULL;
+	while (arg) {
+		argv = xrealloc(argv, sizeof(*argv) * ++argc);
+		argv[argc - 1] = xstrdup(arg);
+		arg = va_arg(ap, const char *);
+	}
+	va_end(ap);
+
+	optind = 0;
+	argv0 = argv[0];
+	ret = applet(argc, argv);
+
+	while (argc--)
+		free(argv[argc]);
+	free(argv);
+
+	optind = optind_saved;
+	argv0 = argv0_saved;
+
+	return ret;
 }
