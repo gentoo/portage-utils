@@ -12,7 +12,7 @@ mkdir tmp
 cd tmp
 
 # simple install check
-qlist -IC > list
+qlist -IC | grep -v CVS > list
 diff -u list ../list01.good
 
 # simple files list
