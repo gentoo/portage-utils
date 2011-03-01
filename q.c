@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.50 2011/02/28 18:15:32 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.51 2011/03/01 04:20:19 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,7 +22,7 @@ static const char * const q_opts_help[] = {
 	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.50 2011/02/28 18:15:32 vapier Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.51 2011/03/01 04:20:19 vapier Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 static APPLET lookup_applet(const char *applet)
@@ -66,7 +66,7 @@ int lookup_applet_idx(const char *applet)
 
 int q_main(int argc, char **argv)
 {
-	int i;
+	int i, install;
 	const char *p;
 	APPLET func;
 
@@ -83,38 +83,58 @@ int q_main(int argc, char **argv)
 	if (argc == 1)
 		q_usage(EXIT_FAILURE);
 
+	install = 0;
+
 	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
 		case 'M': modpath = optarg; break;
 		case 'm': reinitialize_metacache = 1; break;
 		case 'r': reinitialize = 1; break;
-		case 'i': {
-			char buf[_Q_PATH_MAX];
-			/* always bzero a buffer before using readlink() */
-			memset(buf, 0x00, sizeof(buf));
-			printf("Installing symlinks:\n");
-			/* solaris: /proc/self/object/a.out bsd: /proc/self/exe or /proc/curproc/file with linuxfs/procfs respectively */
-			if (readlink("/proc/self/exe", buf, sizeof(buf) - 1) == -1) {
-				char *ptr = which("q");
-				if (ptr == NULL) {
-					warnfp("haha no symlink love for you");
-					return 1;
-				}
-				strncpy(buf, ptr, sizeof(buf));
-			}
-			if (chdir(dirname(buf)) != 0) {
-				warnfp("could not chdir to '%s'", buf);
-				return 1;
-			}
-			for (i = 1; applets[i].desc != NULL; ++i) {
-				printf(" %s ...\t[%s]\n", applets[i].name,
-					symlink("q", applets[i].name) ? strerror(errno) : "OK");
-			}
-			return 0;
-		}
+		case 'i': install = 1; break;
 		}
 	}
+
+	if (install) {
+		char buf[_Q_PATH_MAX];
+		ssize_t rret;
+		int fd, ret;
+
+		if (!quiet)
+			printf("Installing symlinks:\n");
+
+		rret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+		if (rret == -1) {
+			char *ptr = which("q");
+			if (ptr == NULL) {
+				warnfp("haha no symlink love for you");
+				return 1;
+			}
+			strncpy(buf, ptr, sizeof(buf));
+			buf[sizeof(buf) - 1] = '\0';
+		} else
+			buf[rret] = '\0';
+
+		fd = open(dirname(buf), O_RDONLY|O_CLOEXEC);
+		if (fd < 0) {
+			warnfp("chdir(%s) failed", buf);
+			return 1;
+		}
+
+		ret = 0;
+		for (i = 1; applets[i].desc; ++i) {
+			int r = symlinkat(buf, fd, applets[i].name);
+			if (!quiet)
+				printf(" %s ...\t[%s]\n", applets[i].name, r ? strerror(errno) : "OK");
+			if (r && errno != EEXIST)
+				ret = 1;
+		}
+
+		close(fd);
+
+		return ret;
+	}
+
 	if (reinitialize || reinitialize_metacache)
 		return 0;
 	if (argc == optind)
