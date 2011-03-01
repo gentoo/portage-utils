@@ -1,0 +1,86 @@
+dir /usr
+dir /usr/bin
+sym /usr/bin/minfo -> mtools 1287601301
+sym /usr/bin/mpartition -> mtools 1287601301
+sym /usr/bin/mrd -> mtools 1287601301
+sym /usr/bin/mdir -> mtools 1287601301
+obj /usr/bin/tgz 69d1895cc03b650c9cccdd69570a55b8 1287601290
+sym /usr/bin/mtoolstest -> mtools 1287601301
+sym /usr/bin/mdel -> mtools 1287601301
+sym /usr/bin/mbadblocks -> mtools 1287601301
+obj /usr/bin/floppyd_installtest 6fac36ad5bf4fba76b1a3c16882fd777 1287601294
+sym /usr/bin/mdeltree -> mtools 1287601301
+sym /usr/bin/mtype -> mtools 1287601301
+sym /usr/bin/mcat -> mtools 1287601301
+obj /usr/bin/mtools 7fe1a882a0b87e1ab6048c8e897eb9dd 1287601295
+obj /usr/bin/floppyd da13ed77a4f820e14087cce2bdc4cd19 1287601295
+obj /usr/bin/amuFormat.sh 9c346b74e5bde5276962faa054e5aefd 1287601290
+sym /usr/bin/mformat -> mtools 1287601302
+sym /usr/bin/mclasserase -> mtools 1287601302
+obj /usr/bin/mxtar c9ce0c3d59d79b6c8c7ce3880f20aa5c 1287601290
+sym /usr/bin/mshowfat -> mtools 1287601302
+sym /usr/bin/mcopy -> mtools 1287601302
+sym /usr/bin/mmd -> mtools 1287601302
+sym /usr/bin/mmount -> mtools 1287601302
+sym /usr/bin/mren -> mtools 1287601302
+sym /usr/bin/mdu -> mtools 1287601302
+obj /usr/bin/mcomp 9df80f54905392edc1537c0cc7f843a6 1287601290
+obj /usr/bin/mkmanifest b327dbd94cc8e6b2c80bc0b261c9e337 1287601295
+obj /usr/bin/mcheck 542a0885bd127405cbbf7ceddf68db5b 1287601290
+sym /usr/bin/mmove -> mtools 1287601302
+sym /usr/bin/mzip -> mtools 1287601302
+sym /usr/bin/mattrib -> mtools 1287601302
+obj /usr/bin/uz a4badae05c49b4e3c37ae3e1d131f2c8 1287601290
+sym /usr/bin/lz -> uz 1287601302
+sym /usr/bin/mcd -> mtools 1287601302
+sym /usr/bin/mlabel -> mtools 1287601302
+dir /usr/share
+dir /usr/share/man
+dir /usr/share/man/man1
+obj /usr/share/man/man1/mbadblocks.1.lzma 7e05101c6101fe48b1e2e080167dcf4a 1287601289
+obj /usr/share/man/man1/mlabel.1.lzma 7dc8df79c5fb6d19660d14506ce8cd71 1287601289
+obj /usr/share/man/man1/mtools.1.lzma d030e01ee471d8380db477e371618a6f 1287601289
+obj /usr/share/man/man1/mmove.1.lzma 7515759b2f48f22b80e4d31d8072ba2f 1287601289
+obj /usr/share/man/man1/mcd.1.lzma b554cab6583dd17ddc2f0ba07774ae65 1287601289
+obj /usr/share/man/man1/mtoolstest.1.lzma 9d914414c6c3d9be6c1c68d90c728367 1287601289
+obj /usr/share/man/man1/minfo.1.lzma f31c4756559e1f60046b108ae9f5b75c 1287601289
+obj /usr/share/man/man1/mdir.1.lzma 09c925452115d23cb224d0631dc17ae1 1287601289
+obj /usr/share/man/man1/mzip.1.lzma 04a22e3bb0f2f1dca011dc4aa4da2e70 1287601289
+obj /usr/share/man/man1/mcopy.1.lzma a01f8c37d2389adae65751e7da37b35c 1287601289
+obj /usr/share/man/man1/mdu.1.lzma 0bdfc7a88f33c7e4cc075e077e75fe19 1287601289
+obj /usr/share/man/man1/floppyd.1.lzma 15f1ec090a458803af7776a016043a8c 1287601288
+obj /usr/share/man/man1/mattrib.1.lzma 507345e82dec46c9798d4f6e0e2a5ede 1287601289
+obj /usr/share/man/man1/mdeltree.1.lzma 710cee7891963fd93f57cb80289bc5dc 1287601289
+obj /usr/share/man/man1/mdel.1.lzma 8475191252f327cde184ae660f5c9f16 1287601289
+obj /usr/share/man/man1/mshowfat.1.lzma 31911bb06f9488de02844e7178b309ed 1287601289
+obj /usr/share/man/man1/mcat.1.lzma 2c1f3ff359fc80bde525d243409ee4af 1287601289
+obj /usr/share/man/man1/mrd.1.lzma 924b1971e1264f2db9104c1cec72de3d 1287601289
+obj /usr/share/man/man1/floppyd_installtest.1.lzma 99fd1b4246a20c3550c01289e54cd99e 1287601289
+obj /usr/share/man/man1/mtype.1.lzma 70882c17349aa1bf3f8185a8b9521fdd 1287601289
+obj /usr/share/man/man1/mren.1.lzma c7e3cd6ac93ab5ad984362e9925b48db 1287601289
+obj /usr/share/man/man1/mkmanifest.1.lzma 4f71b140577e198c32f7de4e90589390 1287601289
+obj /usr/share/man/man1/mformat.1.lzma c2ca359ba05820cd2f33f9777997935e 1287601289
+obj /usr/share/man/man1/mclasserase.1.lzma cfc302dfcd9d332d6c936be25b2cdff6 1287601289
+obj /usr/share/man/man1/mpartition.1.lzma 1168c2e944609acbc25f832023668e4b 1287601289
+obj /usr/share/man/man1/mmd.1.lzma 41bdb8abe527ea115d97a4fd7d0d263e 1287601289
+obj /usr/share/man/man1/mmount.1.lzma 0d23b66224f3ccdaa0cd0e8c3992b831 1287601289
+dir /usr/share/man/man5
+obj /usr/share/man/man5/mtools.5.lzma 72db89687ff06b25e880c1c134e8d3d0 1287601289
+dir /usr/share/doc
+dir /usr/share/doc/mtools-4.0.13
+obj /usr/share/doc/mtools-4.0.13/README.lzma 44ebe07d9a77a190ae8bb7c35ae71537 1287601291
+obj /usr/share/doc/mtools-4.0.13/Release.notes.lzma e8807e6b7150cdad68c4e0827a574eb2 1287601291
+obj /usr/share/doc/mtools-4.0.13/README.BEBOX.lzma bb3b4cbef501ceb9067aa2fae5d4199f 1287601291
+dir /usr/share/info
+obj /usr/share/info/mtools.info.lzma 9345d1f8afbf9a6b0a88311be6d02310 1287601291
+dir /usr/lib
+dir /usr/lib/debug
+dir /usr/lib/debug/usr
+dir /usr/lib/debug/usr/bin
+obj /usr/lib/debug/usr/bin/mkmanifest.debug b20c4fe8d0c6c02a1b31fe397f7047e8 1287601295
+obj /usr/lib/debug/usr/bin/mtools.debug 3c4fdb98d19ca6b0bbc0c67da3b036c3 1287601295
+obj /usr/lib/debug/usr/bin/floppyd.debug 1abc7cc4a3d69c79e252b8dc926f31cf 1287601295
+obj /usr/lib/debug/usr/bin/floppyd_installtest.debug 52a22f6b44acbc247ff99671d67420b2 1287601294
+dir /etc
+dir /etc/mtools
+obj /etc/mtools/mtools.conf b5e0b9b02a8976c7474cc7f59a1a4d1b 1287601291

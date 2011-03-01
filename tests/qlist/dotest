@@ -1,0 +1,41 @@
+#!/bin/bash
+
+. ../init.sh
+
+set -e
+
+export ROOT=$PWD/root
+export Q_VDB=/
+
+rm -rf tmp
+mkdir tmp
+cd tmp
+
+# simple install check
+qlist -IC > list
+diff -u list ../list01.good
+
+# simple files list
+qlist -C cpio > list
+diff -u list ../list02.good
+
+# symlink verbose list
+qlist -C mtools -e -v > list
+diff -u list ../list03.good
+
+# dir test
+qlist -C mtools -d > list
+diff -u list ../list04.good
+
+# obj test
+qlist -C mtools -o > list
+diff -u list ../list05.good
+
+# sym test
+qlist -C mtools -s > list
+diff -u list ../list06.good
+
+cd ..
+rm -rf tmp
+
+pass

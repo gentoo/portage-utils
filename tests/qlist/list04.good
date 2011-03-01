@@ -1,0 +1,15 @@
+/usr/
+/usr/bin/
+/usr/share/
+/usr/share/man/
+/usr/share/man/man1/
+/usr/share/man/man5/
+/usr/share/doc/
+/usr/share/doc/mtools-4.0.13/
+/usr/share/info/
+/usr/lib/
+/usr/lib/debug/
+/usr/lib/debug/usr/
+/usr/lib/debug/usr/bin/
+/etc/
+/etc/mtools/
