@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.55 2011/02/21 07:33:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.56 2011/03/01 06:11:54 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.55 2011/02/21 07:33:21 vapier Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.56 2011/03/01 06:11:54 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -488,7 +488,7 @@ int qfile_main(int argc, char **argv)
 	char *p;
 	short search_orphans = 0;
 	short assume_root_prefix = 0;
-	char *root_prefix = NULL;
+	char *root_prefix;
 	char *exclude_pkg_arg = NULL;
 	qfile_args_t *qfile_args = NULL;
 	int qargc = 0;
@@ -497,7 +497,7 @@ int qfile_main(int argc, char **argv)
 	FILE *args_file = NULL;
 	int max_args = QFILE_DEFAULT_MAX_ARGS;
 	size_t buflen;
-	char *buf = NULL;
+	char *buf;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -552,8 +552,10 @@ int qfile_main(int argc, char **argv)
 	if ((args_file == NULL) && (max_args != QFILE_DEFAULT_MAX_ARGS))
 		warn("--max-args is only used when reading arguments from a file (with -f)");
 
-	xchdir(portroot);
-	xchdir(portvdb);
+	xasprintf(&buf, "%s/%s", portroot, portvdb);
+	xchdir(buf);
+	free(buf);
+	buf = NULL;
 
 	/* Get a copy of $ROOT, with no trailing slash
 	 * (this one is just for qfile(...) output)
@@ -655,8 +657,7 @@ exit:
 		free(qfile_args);
 	}
 
-	if (root_prefix != NULL)
-		free(root_prefix);
+	free(root_prefix);
 
 	return (found ? EXIT_SUCCESS : EXIT_FAILURE);
 }
