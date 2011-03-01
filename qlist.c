@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.59 2011/02/21 07:33:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.60 2011/03/01 05:01:30 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.59 2011/02/21 07:33:21 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.60 2011/03/01 05:01:30 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
@@ -183,25 +183,26 @@ int qlist_main(int argc, char **argv)
 	if ((argc == optind) && (!just_pkgname))
 		qlist_usage(EXIT_FAILURE);
 
-	xchdir(portroot);
-	xchdir(portvdb);
-
-	if ((dfd = scandir(".", &cat, filter_hidden, alphasort)) < 0)
-		return EXIT_FAILURE;
-
 	buflen = _Q_PATH_MAX;
 	buf = xmalloc(buflen);
+
+	snprintf(buf, buflen, "%s/%s", portroot, portvdb);
+	if ((dfd = scandir(buf, &cat, filter_hidden, alphasort)) < 0) {
+		free(buf);
+		return EXIT_FAILURE;
+	}
 
 	/* open /var/db/pkg */
 	for (j = 0; j < dfd; j++) {
 		int a, x;
+
+		/* skip the "-MERGE-" stuff */
 		if (cat[j]->d_name[0] == '-')
-			continue;
-		if (chdir(cat[j]->d_name) != 0)
 			continue;
 
 		/* open the cateogry */
-		if ((a = scandir(".", &de, filter_hidden, alphasort)) < 0)
+		snprintf(buf, buflen, "%s/%s/%s", portroot, portvdb, cat[j]->d_name);
+		if ((a = scandir(buf, &de, filter_hidden, alphasort)) < 0)
 			continue;
 
 		for (x = 0; x < a; x++) {
@@ -321,7 +322,6 @@ int qlist_main(int argc, char **argv)
 		}
 		while (a--) free(de[a]);
 		free(de);
-		xchdir("..");
 	}
 
 	if (dups_only) {
@@ -350,8 +350,10 @@ int qlist_main(int argc, char **argv)
 		free_sets(dups);
 		free_sets(sets);
 	}
+
 	while (dfd--) free(cat[dfd]);
 	free(cat);
+
 	return EXIT_SUCCESS;
 }
 
