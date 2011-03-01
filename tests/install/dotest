@@ -1,11 +1,8 @@
 #!/bin/bash
 
-die() {
-	echo "FAILED: $*"
-	exit 1
-}
+. ../init.sh
 
-cp ../../q .
+ln -f `which q`
 ./q -i || die "./q -i"
 
 applets=$(./q -Ch | \
@@ -17,5 +14,6 @@ applets=$(./q -Ch | \
 for app in ${applets} ; do
 	[ ! -e $app ] && die "$app does not exist"
 done
-echo "PASSED"
-exit 0
+rm ${applets}
+
+pass

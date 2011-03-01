@@ -1,7 +1,5 @@
 #!/bin/bash
 
-if ../../q -Cr ; then
-	echo PASSED
-else
-	echo FAILED
-fi
+. ../init.sh
+
+q -Cr && pass || fail

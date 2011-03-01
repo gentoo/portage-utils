@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. ../init.sh
+
 set -e
 
 export PORTDIR=$PWD/portdir
@@ -74,7 +76,7 @@ cd ..
 rmdir tmp
 
 ###### faster test needed.########
-exit 0
+pass
 ##################################
 type -p mksquashfs || exit 0
 

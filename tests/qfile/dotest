@@ -1,16 +1,16 @@
 #!/bin/bash
 
-QFILE='../../q file'
+. ../init.sh
 
 TEST_CASES=( \
-	[1]="${QFILE} -Cq /bin/bash /bin/XXXXX" \
-	[2]="${QFILE} -Co /bin/bash /bin/XXXXX" \
-	[3]="echo -e \"/bin/bash\n/bin/XXXXX\" | ${QFILE} -Cq -f -" \
-	[4]="echo -e \"/bin/bash\n/bin/XXXXX\" | ${QFILE} -Co -f -" \
-	[5]="${QFILE} -Co -x bash /bin/bash" \
-	[6]="${QFILE} -Co -x app-shells/bash /bin/bash" \
-	[7]="${QFILE} -Co -x bash:0 /bin/bash" \
-	[8]="${QFILE} -Co -x app-shells/bash:0 /bin/bash" \
+	[1]="q file -Cq /bin/bash /bin/XXXXX" \
+	[2]="q file -Co /bin/bash /bin/XXXXX" \
+	[3]="echo -e \"/bin/bash\n/bin/XXXXX\" | q file -Cq -f -" \
+	[4]="echo -e \"/bin/bash\n/bin/XXXXX\" | q file -Co -f -" \
+	[5]="q file -Co -x bash /bin/bash" \
+	[6]="q file -Co -x app-shells/bash /bin/bash" \
+	[7]="q file -Co -x bash:0 /bin/bash" \
+	[8]="q file -Co -x app-shells/bash:0 /bin/bash" \
 )
 
 EXPECTED_RESULTS=( \

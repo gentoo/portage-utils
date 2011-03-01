@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. ../init.sh
+
 set -e
 
 rm -rf tmp
@@ -52,3 +54,5 @@ diff -u list ../list02.good
 
 cd ..
 rm -rf tmp
+
+pass

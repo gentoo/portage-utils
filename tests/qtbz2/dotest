@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. ../init.sh
+
 set -e
 
 rm -rf tmp
@@ -77,3 +79,5 @@ rmdir new
 
 cd ..
 rm -rf tmp
+
+pass

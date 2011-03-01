@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. ../init.sh
+
 d=$PWD
 [[ $PORTDIR == "" ]] && PORTDIR=$(portageq envvar PORTDIR)
 cd ${PORTDIR}/metadata/cache || { echo SKIPPED; exit 0 ; }
