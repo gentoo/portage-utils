@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.186 2011/02/28 18:16:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.187 2011/03/02 02:40:19 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -688,7 +688,10 @@ void initialize_portage_env(void)
 		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         EPREFIX "/var/tmp/portage/")
 		_Q_EVS(STR,  PKGDIR,              pkgdir,              EPREFIX "/usr/portage/packages/")
 		_Q_EVS(STR,  ROOT,                portroot,            "/")
-		_Q_EVS(STR,  Q_VDB,               portvdb,             EPREFIX "/var/db/pkg")
+		/* XXX: This needs to not have a leading slash since some of the q
+		 *      utils use chdir(root) && chdir(portvdb).  Once those are
+		 *      fixed, we can add a proper leading slash here. */
+		_Q_EVS(STR,  Q_VDB,               portvdb,             EPREFIX "var/db/pkg")
 		{ }
 
 #undef _Q_EV
@@ -1022,21 +1025,12 @@ char *atom_to_pvr(depend_atom *atom) {
 	return (atom->PR_int == 0 ? atom->P : atom->PVR );
 }
 
-char *grab_vdb_item(const char *, const char *, const char *);
-char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF)
+static char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF)
 {
 	static char buf[_Q_PATH_MAX];
-	char *p;
-	FILE *fp;
 
 	snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb, CATEGORY, PF, item);
-	if ((fp = fopen(buf, "r")) == NULL)
-		return NULL;
-	if (fgets(buf, sizeof(buf), fp) == NULL)
-		buf[0] = '\0';
-	if ((p = strchr(buf, '\n')) != NULL)
-		*p = 0;
-	fclose(fp);
+	eat_file(buf, buf, sizeof(buf));
 	rmspace(buf);
 
 	return buf;
