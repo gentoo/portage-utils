@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.189 2011/03/02 07:55:57 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.190 2011/03/02 08:10:39 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -542,7 +542,7 @@ _q_static void set_portage_env_var(env_vars *var, const char *value)
 		break;
 	case _Q_STR:
 		free(*var->value.s);
-		*var->value.s = xstrdup(value);
+		*var->value.s = xstrdup_len(value, &var->value_len);
 		break;
 	case _Q_ISTR:
 		strincr_var(var->name, value, var->value.s, &var->value_len);
@@ -678,6 +678,7 @@ void initialize_portage_env(void)
 	};
 	bool nocolor = 0;
 
+	env_vars *var;
 	env_vars vars_to_read[] = {
 #define _Q_EV(t, V, set, lset, d) \
 	{ \
@@ -691,6 +692,7 @@ void initialize_portage_env(void)
 #define _Q_EVS(t, V, v, d) _Q_EV(t, V, .value.s = &v, .value_len = strlen(d), d)
 #define _Q_EVB(t, V, v, d) _Q_EV(t, V, .value.b = &v, .value_len = 0, d)
 
+		_Q_EVS(STR,  ROOT,                portroot,            "/")
 		_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      "")
 		_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        "")
 		_Q_EVS(STR,  ARCH,                portarch,            "")
@@ -702,7 +704,6 @@ void initialize_portage_env(void)
 		_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             DEFAULT_PORTAGE_BINHOST)
 		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         EPREFIX "/var/tmp/portage/")
 		_Q_EVS(STR,  PKGDIR,              pkgdir,              EPREFIX "/usr/portage/packages/")
-		_Q_EVS(STR,  ROOT,                portroot,            "/")
 		/* XXX: This needs to not have a leading slash since some of the q
 		 *      utils use chdir(root) && chdir(portvdb).  Once those are
 		 *      fixed, we can add a proper leading slash here. */
@@ -713,9 +714,11 @@ void initialize_portage_env(void)
 	};
 
 	/* initialize all the strings with their default value */
-	for (i = 0; vars_to_read[i].name; ++i)
-		if (vars_to_read[i].type != _Q_BOOL)
-			*vars_to_read[i].value.s = xstrdup(vars_to_read[i].default_value);
+	for (i = 0; vars_to_read[i].name; ++i) {
+		var = &vars_to_read[i];
+		if (var->type != _Q_BOOL)
+			*var->value.s = xstrdup(var->default_value);
+	}
 
 	/* walk all the stacked profiles */
 	read_portage_profile(EPREFIX "/etc/make.profile", vars_to_read);
@@ -727,17 +730,26 @@ void initialize_portage_env(void)
 
 	/* finally, check the env */
 	for (i = 0; vars_to_read[i].name; ++i) {
-		s = getenv(vars_to_read[i].name);
+		var = &vars_to_read[i];
+		s = getenv(var->name);
 		if (s != NULL)
-			set_portage_env_var(&vars_to_read[i], s);
+			set_portage_env_var(var, s);
 		if (getenv("DEBUG") IF_DEBUG(|| 1)) {
-			fprintf(stderr, "%s = ", vars_to_read[i].name);
+			fprintf(stderr, "%s = ", var->name);
 			switch (vars_to_read[i].type) {
-			case _Q_BOOL: fprintf(stderr, "%i\n", *vars_to_read[i].value.b); break;
+			case _Q_BOOL: fprintf(stderr, "%i\n", *var->value.b); break;
 			case _Q_STR:
-			case _Q_ISTR: fprintf(stderr, "%s\n", *vars_to_read[i].value.s); break;
+			case _Q_ISTR: fprintf(stderr, "%s\n", *var->value.s); break;
 			}
 		}
+	}
+
+	/* Make sure ROOT always ends in a slash */
+	var = &vars_to_read[0];
+	if ((*var->value.s)[var->value_len - 1] != '/') {
+		portroot = xrealloc(portroot, var->value_len + 2);
+		portroot[var->value_len] = '/';
+		portroot[var->value_len + 1] = '\0';
 	}
 
 	if (getenv("PORTAGE_QUIET") != NULL)
