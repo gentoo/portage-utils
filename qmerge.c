@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.106 2011/03/02 09:16:22 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.107 2011/03/02 09:22:14 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.106 2011/03/02 09:16:22 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.107 2011/03/02 09:22:14 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -100,29 +100,6 @@ _q_static void pkg_merge(int, const depend_atom *, const struct pkg_t *);
 _q_static int pkg_unmerge(const char *, const char *, queue *);
 _q_static struct pkg_t *grab_binpkg_info(const char *);
 _q_static char *find_binpkg(const char *);
-
-_q_static int q_unlink_q(const char *path, const char *func, int line)
-{
-	int ret;
-	char *d;
-
-	if (pretend)
-		return 0;
-
-	ret = unlink(path);
-	if (ret)
-		return ret;
-
-	d = strrchr(path, '/');
-	if (d) {
-		*d = '\0';
-		rmdir_r(path);
-	}
-
-	return ret;
-}
-
-#define unlink_q(path) q_unlink_q(path, __FUNCTION__, __LINE__)
 
 _q_static void fetch(const char *destdir, const char *src)
 {
@@ -1167,8 +1144,6 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 	freeargv(cpm_argc, cpm_argv);
 
 	if (!pretend) {
-		char *dir;
-
 		/* Then execute the pkg_postrm step */
 		pkg_run_func(vdb_path, phases, "pkg_postrm");
 
