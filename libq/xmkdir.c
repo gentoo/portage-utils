@@ -37,7 +37,7 @@ static int mkdir_p(const char *path, mode_t mode)
 }
 
 /* Emulate `rm -rf PATH` */
-static int _rm_rf_subdir(int dfd, const char *path)
+_q_static int rm_rf_at(int dfd, const char *path)
 {
 	int subdfd;
 	DIR *dir;
@@ -59,7 +59,7 @@ static int _rm_rf_subdir(int dfd, const char *path)
 		if (unlinkat(subdfd, de->d_name, 0) == -1) {
 			if (errno != EISDIR)
 				errp("could not unlink %s", de->d_name);
-			_rm_rf_subdir(subdfd, de->d_name);
+			rm_rf_at(subdfd, de->d_name);
 			unlinkat(subdfd, de->d_name, AT_REMOVEDIR);
 		}
 	}
@@ -70,9 +70,9 @@ static int _rm_rf_subdir(int dfd, const char *path)
 	return 0;
 }
 
-static int rm_rf(const char *path)
+_q_static int rm_rf(const char *path)
 {
-	_rm_rf_subdir(AT_FDCWD, path);
+	rm_rf_at(AT_FDCWD, path);
 
 	if (rmdir(path) == 0)
 		return 0;
@@ -86,7 +86,7 @@ static int rm_rf(const char *path)
 	return -1;
 }
 
-static int rmdir_r(const char *path)
+_q_static int rmdir_r_at(int dfd, const char *path)
 {
 	size_t len;
 	char *p, *e;
@@ -95,7 +95,7 @@ static int rmdir_r(const char *path)
 	e = p + len;
 
 	while (e != p) {
-		if (rmdir(p) && errno == ENOTEMPTY)
+		if (unlinkat(dfd, p, AT_REMOVEDIR) && errno == ENOTEMPTY)
 			break;
 		while (*e != '/' && e > p)
 			--e;
@@ -105,4 +105,9 @@ static int rmdir_r(const char *path)
 	free(p);
 
 	return 0;
+}
+
+_q_static int rmdir_r(const char *path)
+{
+	return rmdir_r_at(AT_FDCWD, path);
 }
