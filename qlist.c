@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.61 2011/03/01 05:17:13 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.62 2011/03/02 08:13:46 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.61 2011/03/01 05:17:13 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.62 2011/03/02 08:13:46 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 extern char *grab_vdb_item(const char *, const char *, const char *);
@@ -270,11 +270,11 @@ int qlist_main(int argc, char **argv)
 						slot = grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name);
 
 					/* display it */
-					printf("%s%s/%s%s%s%s%s%s%s%s%s", BOLD, cat[j]->d_name, BLUE,
-					       (!columns ? (pkgname ? pkgname->PN : de[x]->d_name) : pkgname->PN),
+					printf("%s%s/%s%s%s%s%s%s%s%s%s%s\n", BOLD, cat[j]->d_name, BLUE,
+						(!columns ? (pkgname ? pkgname->PN : de[x]->d_name) : pkgname->PN),
 						(columns ? " " : ""), (columns ? pkgname->PV : ""),
-						NORM, YELLOW, slot ? slot_separator : "", slot ? slot : "", NORM);
-					puts(umapstr(show_umap, cat[j]->d_name, de[x]->d_name));
+						NORM, YELLOW, slot ? slot_separator : "", slot ? slot : "", NORM,
+						umapstr(show_umap, cat[j]->d_name, de[x]->d_name));
 				}
 				if (pkgname)
 					atom_implode(pkgname);
