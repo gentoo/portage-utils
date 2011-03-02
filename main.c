@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.188 2011/03/02 05:31:46 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.189 2011/03/02 07:55:57 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -204,8 +204,10 @@ static char eat_file_at(int dfd, const char *file, char *buf, const size_t bufsi
 	int fd;
 	char ret;
 
-	if ((fd = openat(dfd, file, O_RDONLY)) == -1)
+	if ((fd = openat(dfd, file, O_RDONLY)) == -1) {
+		buf[0] = '\0';
 		return 0;
+	}
 
 	ret = eat_file_fd(fd, buf, bufsize);
 
