@@ -23,6 +23,7 @@
 	- don't bother emitting any "DIR" entries to CONTENTS ?
 		- auto rmdir any empty dirs
 	- check order of pkg_{pre,post}{inst,rm} during install, unmerge, and upgrade
+	- env is not saved/restored between pkg_{pre,post}inst (see portage and REPO_LAYOUT_CONF_WARN)
 
 - atoms:
 	- only 32bit values are supported for revision (-r#)
