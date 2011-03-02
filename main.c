@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.187 2011/03/02 02:40:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.188 2011/03/02 05:31:46 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -10,6 +10,9 @@
 #define _GNU_SOURCE
 #ifdef _AIX
 #define _LINUX_SOURCE_COMPAT
+#endif
+#ifndef _q_static
+# define _q_static static
 #endif
 
 #include <stdarg.h>
@@ -529,7 +532,7 @@ typedef struct {
 	const char *default_value;
 } env_vars;
 
-static void set_portage_env_var(env_vars *var, const char *value)
+_q_static void set_portage_env_var(env_vars *var, const char *value)
 {
 	switch (var->type) {
 	case _Q_BOOL:
@@ -546,7 +549,7 @@ static void set_portage_env_var(env_vars *var, const char *value)
 }
 
 /* Helper to read a portage env file (e.g. make.conf) */
-static void read_portage_env_file(const char *file, env_vars vars[])
+_q_static void read_portage_env_file(const char *file, env_vars vars[])
 {
 	size_t i, buflen, line;
 	FILE *fp;
@@ -586,22 +589,32 @@ static void read_portage_env_file(const char *file, env_vars vars[])
 			while (isspace(*s))
 				++s;
 			if (*s == '"' || *s == '\'') {
+				char q = *s;
 				size_t l = strlen(s);
-				if (*s != s[l - 1]) {
+
+				if (q != s[l - 1]) {
 					/* If the last char is not a quote, then we span lines */
-					char *q = s + l + 1, *qq = NULL;
-					q[-1] = ' ';
-					while (fgets(q, buflen - (s - buf), fp) != NULL) {
-						l = strlen(q);
-						qq = strchr(q, *s);
+					size_t abuflen;
+					char *abuf, *qq;
+
+					qq = abuf = NULL;
+					while (getline(&abuf, &abuflen, fp) != -1) {
+						buf = xrealloc(buf, buflen + abuflen);
+						strcat(buf, abuf);
+						buflen += abuflen;
+
+						qq = strchr(abuf, q);
 						if (qq) {
 							*qq = '\0';
 							break;
 						}
 					}
+					free(abuf);
+
 					if (!qq)
 						warn("%s:%zu: %s: quote mismatch", file, line, vars[i].name);
-					++s;
+
+					s = buf + vars[i].name_len + 1;
 				} else {
 					s[l - 1] = '\0';
 					++s;
@@ -702,10 +715,6 @@ void initialize_portage_env(void)
 		if (vars_to_read[i].type != _Q_BOOL)
 			*vars_to_read[i].value.s = xstrdup(vars_to_read[i].default_value);
 
-	if ((s = strchr(portroot, '/')) != NULL)
-		if (strlen(s) != 1)
-			strncat(portroot, "/", sizeof(portroot));
-
 	/* walk all the stacked profiles */
 	read_portage_profile(EPREFIX "/etc/make.profile", vars_to_read);
 	read_portage_profile(EPREFIX "/etc/portage/make.profile", vars_to_read);
@@ -728,10 +737,6 @@ void initialize_portage_env(void)
 			}
 		}
 	}
-
-	if ((s = strchr(portroot, '/')) != NULL)
-		if (strlen(s) != 1)
-			strncat(portroot, "/", sizeof(portroot));
 
 	if (getenv("PORTAGE_QUIET") != NULL)
 		quiet = 1;
