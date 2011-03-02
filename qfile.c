@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.56 2011/03/01 06:11:54 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.57 2011/03/02 02:41:08 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.56 2011/03/01 06:11:54 vapier Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.57 2011/03/02 02:41:08 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -488,7 +488,7 @@ int qfile_main(int argc, char **argv)
 	char *p;
 	short search_orphans = 0;
 	short assume_root_prefix = 0;
-	char *root_prefix;
+	char *root_prefix = NULL;
 	char *exclude_pkg_arg = NULL;
 	qfile_args_t *qfile_args = NULL;
 	int qargc = 0;
