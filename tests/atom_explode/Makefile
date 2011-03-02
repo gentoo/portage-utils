@@ -1,20 +1,20 @@
 CFLAGS += -Wall
 
-all: q
+all: e
 
-q: test.c
-	$(CC) $(CFLAGS) test.c -o q
+e: test.c
+	$(CC) $(CFLAGS) test.c -o e
 
 test check: dotest basic
 
-basic: q
-	./q < basic.tests > basic
+basic: e
+	./e < basic.tests > basic
 	diff -u basic.good basic
 
-dotest: q
+dotest: e
 	./dotest
 
 clean:
-	rm -f me py q
+	rm -f me py e
 
 .PHONY: all basic dotest test check clean

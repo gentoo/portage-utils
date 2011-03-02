@@ -9,13 +9,13 @@ cd ${PORTDIR}/metadata/cache || { echo SKIPPED; exit 0 ; }
 if [[ $1 == -v ]] ; then
 	find . -mindepth 2 -type f -printf '%P\n%f\n' | while read line ; do
 		echo "TESTING $line: "
-		"$d"/q "${line}"
+		"$d"/e "${line}"
 	done
 	exit 0
 fi
 
 echo -n "atom_explode():"
-time find . -mindepth 2 -type f -printf '%P\n%f\n' | "$d"/q > "$d"/me || exit $?
+time find . -mindepth 2 -type f -printf '%P\n%f\n' | "$d"/e > "$d"/me || exit $?
 echo
 
 echo -n "portage:"
