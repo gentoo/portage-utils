@@ -85,3 +85,24 @@ static int rm_rf(const char *path)
 	 *      trailing slashes: `rm -rf a/b/c/` -> need to change to a/b/c */
 	return -1;
 }
+
+static int rmdir_r(const char *path)
+{
+	size_t len;
+	char *p, *e;
+
+	p = xstrdup_len(path, &len);
+	e = p + len;
+
+	while (e != p) {
+		if (rmdir(p) && errno == ENOTEMPTY)
+			break;
+		while (*e != '/' && e > p)
+			--e;
+		*e = '\0';
+	}
+
+	free(p);
+
+	return 0;
+}
