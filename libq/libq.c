@@ -34,6 +34,7 @@
 #include "basename.c"
 
 #ifndef _LIB_Q
+# include "profile.c"
 # include "vdb_get_next_dir.c"
 # include "virtuals.c"
 #endif

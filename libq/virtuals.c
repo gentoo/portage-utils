@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.25 2011/02/24 01:29:27 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.26 2011/03/02 07:03:31 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.25 2011/02/24 01:29:27 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.26 2011/03/02 07:03:31 vapier Exp $
  */
 
 #include <stdio.h>
@@ -81,10 +81,12 @@ queue *add_set(const char *vv, const char *ss, queue *q)
 		strcpy(s, ptr);
 
 	} while (v[0]);
+
 	free(s);
 	free(ptr);
 	free(v);
 	free(vptr);
+
 	return q;
 }
 
@@ -248,57 +250,28 @@ static queue *resolve_local_profile_virtuals(void)
 	return virtuals;
 }
 
-static queue *resolve_virtuals(void)
+_q_static void *
+resolve_virtuals_line(void *data, char *buf, FILE *fp)
 {
-	static char buf[_Q_PATH_MAX];
-	static char savecwd[_Q_PATH_MAX];
-	static char *p;
-	FILE *fp;
+	char *p;
 
-	xgetcwd(savecwd, sizeof(savecwd));
+	if (*buf != 'v')
+		return data;
 
+	rmspace(buf);
+	if ((p = strchr(buf, ' ')) != NULL) {
+		*p = 0;
+		if (virtual(buf, virtuals) == NULL)
+			virtuals = add_set(buf, rmspace(++p), virtuals);
+	}
+
+	return data;
+}
+
+_q_static queue *resolve_virtuals(void)
+{
 	free_sets(virtuals);
 	virtuals = resolve_local_profile_virtuals();
 	virtuals = resolve_vdb_virtuals(portvdb);
-
-	if (chdir("/etc/") == -1)
-		return virtuals;
-
-	if (readlink("make.profile", buf, sizeof(buf)) != -1) {
-		xchdir(buf);
-		xgetcwd(buf, sizeof(buf));
-		if (access(buf, R_OK) != 0)
-			return virtuals;
-	vstart:
-		if ((fp = fopen("virtuals", "r")) != NULL) {
-			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-				if (*buf != 'v') continue;
-				rmspace(buf);
-				if ((p = strchr(buf, ' ')) != NULL) {
-					*p = 0;
-					if (virtual(buf, virtuals) == NULL)
-						virtuals = add_set(buf, rmspace(++p), virtuals);
-				}
-			}
-			fclose(fp);
-		}
-		if ((fp = fopen("parent", "r")) != NULL) {
-			while ((fgets(buf, sizeof(buf), fp)) != NULL) {
-				rmspace(buf);
-				if (!*buf) continue;
-				if (*buf == '#') continue;
-				if (isspace(*buf)) continue;
-				fclose(fp);
-				if (chdir(buf) == -1) {
-					fclose(fp);
-					goto done;
-				}
-				goto vstart;
-			}
-			fclose(fp);
-		}
-	}
- done:
-	xchdir(savecwd);
-	return virtuals;
+	return q_profile_walk("virtuals", resolve_virtuals_line, virtuals);
 }
