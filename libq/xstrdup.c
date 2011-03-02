@@ -27,8 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-extern char *xstrdup(const char *s);
-extern char *xstrdup(const char *s)
+static char *xstrdup(const char *s)
 {
 	char *t;
 
@@ -40,4 +39,15 @@ extern char *xstrdup(const char *s)
 		err("Out of memory");
 
 	return t;
+}
+
+static char *xstrdup_len(const char *s, size_t *len)
+{
+	char *ret;
+
+	*len = strlen(s);
+	ret = xmalloc(*len + 1);
+	memcpy(ret, s, *len + 1);
+
+	return ret;
 }
