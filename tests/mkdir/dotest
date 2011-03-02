@@ -1,0 +1,65 @@
+#!/bin/bash
+
+. ../init.sh
+
+set -e
+
+_m=${PWD}/m
+mktmpdir
+
+# check mkdir
+m="${_m} m"
+for d in a a/ a/b a/b/ a/b/c a/b/c/ ; do
+	$m ${d}
+
+	rmdir ${d}
+	d=${d%/}
+	while [[ ${d} == */* ]] ; do
+		d=${d%/*}
+		rmdir ${d}
+	done
+done
+
+for d in a a/ a/b a/b/ a/b/c a/b/c/ ; do
+	mkdir -p ${d}
+	$m ${d}
+
+	rmdir ${d}
+	d=${d%/}
+	while [[ ${d} == */* ]] ; do
+		d=${d%/*}
+		rmdir ${d}
+	done
+done
+
+# check rm_rf
+m="${_m} rm"
+
+mkdir -p a/b/c/d
+$m a/b/
+rmdir a
+
+mkdir -p a/b/c/d
+$m a/b
+rmdir a
+
+mkdir -p a/b/c/d
+cd a
+$m . || : # ignore EBUSY failure
+cd ..
+rmdir a
+
+mkdir -p a/b/c/d
+ln -s . a/b/d
+ln -s c a/b/cc
+ln -s .. a/b/dd
+ln -s x a/b/x
+touch a/b/f
+ln -s ../f a/b/c/f
+$m a
+[ ! -e a ]
+
+cd ..
+rmdir tmp
+
+pass
