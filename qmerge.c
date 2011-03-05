@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.107 2011/03/02 09:22:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.108 2011/03/05 19:28:21 solar Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.107 2011/03/02 09:22:14 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.108 2011/03/05 19:28:21 solar Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -290,7 +290,7 @@ _q_static void crossmount_rm(const char *fname, const struct stat st)
 	rm_rf(fname);
 }
 
-void install_mask_pwd(int argc, char **argv, const struct stat st);
+void install_mask_pwd(int iargc, char **iargv, const struct stat st);
 void install_mask_pwd(int iargc, char **iargv, const struct stat st)
 {
 	char buf[1024];
