@@ -6,6 +6,9 @@ done
 PATH=$d:$PATH
 unset d
 
+# clean any random vars from the host system
+unset ROOT PORTAGE_CONFIGROOT PORTAGE_QUIET
+
 q -i -q
 
 fail() {
