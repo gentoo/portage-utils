@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.191 2011/03/17 03:04:03 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.192 2011/03/17 03:19:50 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,10 +34,6 @@
 #include <limits.h>
 #include <assert.h>
 #include "main.h"
-
-#ifndef EPREFIX
-# define EPREFIX "/"
-#endif
 
 /* prototypes and such */
 static char eat_file(const char *file, char *buf, const size_t bufsize);
