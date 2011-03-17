@@ -51,4 +51,3 @@ char* strcasestr(const char *big, const char *little) {
 #ifdef __hpux
 # define S_BLKSIZE st.st_blksize
 #endif
-

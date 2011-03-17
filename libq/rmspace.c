@@ -14,4 +14,3 @@ static char *rmspace(char *s)
 		memmove(s, p, strlen(p)+1);
 	return s;
 }
-
