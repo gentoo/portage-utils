@@ -4,14 +4,15 @@ rm -f q
 
 . ../init.sh
 
-ln -f `which q` || die "ln -f q"
-./q -i || die "./q -i"
-
-applets=$(./q -Ch | \
+applets=$(q -Ch | \
 	sed -n '/^Currently defined applets:/,/^Options/p' | \
 	grep ' : ' | \
 	awk '{print $1}'
 )
+rm -f ${applets}
+
+ln -f `which q` || die "ln -f q"
+./q -i || die "./q -i"
 
 for app in ${applets} ; do
 	[ ! -e $app ] && die "$app does not exist"
