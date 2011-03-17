@@ -15,6 +15,6 @@ dotest: e
 	./dotest
 
 clean:
-	rm -f me py e
+	rm -f me py e q
 
 .PHONY: all basic dotest test check clean
