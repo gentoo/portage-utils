@@ -68,7 +68,10 @@ diff -u x all.good
 rm x good all.good
 
 # check cross file matches
-quse -CD abc > x
+# sort because quse order depends on the readdir order
+# which depends on the fs itself.  quse doesnt do sorting
+# because in general, who cares.  faster this way.
+quse -CD abc | LC_ALL=C sort > x
 diff -u ../list01.good x
 rm x
 
