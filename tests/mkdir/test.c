@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/mkdir/test.c,v 1.1 2011/03/02 01:19:27 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/mkdir/test.c,v 1.2 2011/03/17 01:57:27 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,6 +34,7 @@
 	} while (0)
 #define err(...) errf(__VA_ARGS__)
 #define errp(...) errf(__VA_ARGS__)
+#define _q_static static
 
 #include "../../libq/xmalloc.c"
 #include "../../libq/xstrdup.c"
