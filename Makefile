@@ -1,6 +1,6 @@
 # Copyright 2005-2008 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.66 2010/01/16 23:45:02 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.67 2011/03/17 03:17:18 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -80,17 +80,11 @@ check: symlinks
 dist:
 	./make-tarball.sh $(PV)
 distcheck: dist
-	set -e; \
-	dir=`mktemp distcheck.XXXXXX`; \
-	rm -f $$dir; \
-	mkdir $$dir; \
-	cd $$dir; \
-	tar jxf ../portage-utils-$(PV).tar.bz2; \
-	cd portage-utils-$(PV); \
-	$(MAKE); \
-	$(MAKE) check; \
-	cd ../..; \
-	rm -rf $$dir
+	rm -rf portage-utils-$(PV)
+	tar xf portage-utils-$(PV).tar.xz
+	$(MAKE) -C portage-utils-$(PV)
+	$(MAKE) -C portage-utils-$(PV) check
+	rm -rf portage-utils-$(PV)
 
 clean:
 	-rm -f q

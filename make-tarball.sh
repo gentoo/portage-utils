@@ -22,8 +22,8 @@ cd ..
 
 echo "Generating tarball ..."
 find "${p}" -type d -name CVS -prune -print0 | xargs -0 rm -rf
-tar jcf "${p}".tar.bz2 "${p}"
+tar cf - "${p}" | xz > "${p}".tar.xz
 rm -r "${p}"
-du -b "${p}".tar.bz2
+du -b "${p}".tar.*
 
 exit 0
