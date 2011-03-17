@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.51 2011/03/01 04:20:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.52 2011/03/17 03:32:51 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,7 +22,7 @@ static const char * const q_opts_help[] = {
 	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.51 2011/03/01 04:20:19 vapier Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.52 2011/03/17 03:32:51 vapier Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 static APPLET lookup_applet(const char *applet)
@@ -97,6 +97,7 @@ int q_main(int argc, char **argv)
 
 	if (install) {
 		char buf[_Q_PATH_MAX];
+		const char *prog;
 		ssize_t rret;
 		int fd, ret;
 
@@ -115,6 +116,7 @@ int q_main(int argc, char **argv)
 		} else
 			buf[rret] = '\0';
 
+		prog = basename(buf);
 		fd = open(dirname(buf), O_RDONLY|O_CLOEXEC);
 		if (fd < 0) {
 			warnfp("chdir(%s) failed", buf);
@@ -123,7 +125,7 @@ int q_main(int argc, char **argv)
 
 		ret = 0;
 		for (i = 1; applets[i].desc; ++i) {
-			int r = symlinkat(buf, fd, applets[i].name);
+			int r = symlinkat(prog, fd, applets[i].name);
 			if (!quiet)
 				printf(" %s ...\t[%s]\n", applets[i].name, r ? strerror(errno) : "OK");
 			if (r && errno != EEXIST)
