@@ -12,7 +12,7 @@ def doit(a):
 	PR_int = cpv[3]
 	P = PN + "-" + PV
 	PVR = P + "-" + cpv[3]
-	print a+" -> "+CATEGORY+" / ["+P+"] "+PN+" - "+PVR+" ["+PV+"] ["+PR_int+"]"
+	print(a+" -> "+CATEGORY+" / ["+P+"] "+PN+" - "+PVR+" ["+PV+"] ["+PR_int+"]")
 
 for a in sys.argv[1:]:
 	doit(a)
