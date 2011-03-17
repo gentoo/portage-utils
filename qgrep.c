@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.28 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.29 2011/03/17 03:01:19 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -47,7 +47,7 @@ static const char * const qgrep_opts_help[] = {
 	"Print <arg> lines of trailing context",
 	COMMON_OPTS_HELP
 };
-static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.28 2011/02/21 01:33:47 vapier Exp $";
+static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.29 2011/03/17 03:01:19 vapier Exp $";
 #define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, lookup_applet_idx("qgrep"))
 
 char qgrep_name_match(const char*, const int, depend_atom**);
@@ -392,8 +392,9 @@ int qgrep_main(int argc, char **argv)
 		if ((eclass_dir = opendir("eclass")) == NULL)
 			errp("opendir(\"%s/eclass\") failed", portdir);
 	} else { /* if (do_install) */
-		xchdir(portroot);
-		xchdir(portvdb);
+		char buf[_Q_PATH_MAX];
+		snprintf(buf, sizeof(buf), "%s/%s", portroot, portvdb);
+		xchdir(buf);
 		if ((vdb_dir = opendir(".")) == NULL)
 			errp("could not opendir(%s/%s) for ROOT/VDB", portroot, portvdb);
 	}

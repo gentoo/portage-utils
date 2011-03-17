@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.46 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.47 2011/03/17 03:01:19 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char * const qcheck_opts_help[] = {
 	"Ignore differing file mtimes",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.46 2011/02/21 01:33:47 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.47 2011/03/17 03:01:19 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 short bad_only = 0;
@@ -100,8 +100,8 @@ int qcheck_main(int argc, char **argv)
 	if ((argc == optind) && !search_all)
 		qcheck_usage(EXIT_FAILURE);
 
-	xchdir(portroot);
-	xchdir(portvdb);
+	snprintf(buf, sizeof(buf), "%s/%s", portroot, portvdb);
+	xchdir(buf);
 	if ((dir = opendir(".")) == NULL)
 		errp("unable to read '.' !?");
 

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.37 2011/02/21 07:33:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.38 2011/03/17 03:01:19 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char * const qsize_opts_help[] = {
 	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.37 2011/02/21 07:33:21 vapier Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.38 2011/03/17 03:01:19 vapier Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
 int qsize_main(int argc, char **argv)
@@ -72,17 +72,17 @@ int qsize_main(int argc, char **argv)
 	if ((argc == optind) && !search_all)
 		qsize_usage(EXIT_FAILURE);
 
-	xchdir(portroot);
-	xchdir(portvdb);
-	if ((dir = opendir(".")) == NULL)
-		return EXIT_FAILURE;
-
 	num_all_bytes = num_all_files = num_all_nonfiles = num_all_ignored = 0;
 
 	strcpy(filename, portroot);
 	filename_root = filename + strlen(filename);
 	buflen = _Q_PATH_MAX;
 	buf = xmalloc(buflen);
+
+	snprintf(buf, buflen, "%s/%s", portroot, portvdb);
+	xchdir(buf);
+	if ((dir = opendir(".")) == NULL)
+		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
 	while ((dentry = q_vdb_get_next_dir(dir))) {
