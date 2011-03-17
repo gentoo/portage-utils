@@ -17,5 +17,5 @@ while i < len(sys.argv):
 	except:
 		rel = "!="
 		pass
-	print atom1+" "+rel+" "+atom2
+	print("%s %s %s" % (atom1, rel, atom2))
 	i += 2
