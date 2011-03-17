@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.190 2011/03/02 08:10:39 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.191 2011/03/17 03:04:03 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,6 +34,10 @@
 #include <limits.h>
 #include <assert.h>
 #include "main.h"
+
+#ifndef EPREFIX
+# define EPREFIX "/"
+#endif
 
 /* prototypes and such */
 static char eat_file(const char *file, char *buf, const size_t bufsize);
@@ -632,27 +636,31 @@ _q_static void read_portage_env_file(const char *file, env_vars vars[])
 }
 
 /* Helper to recursively read stacked make.defaults in profiles */
-static void read_portage_profile(const char *profile, env_vars vars[])
+static void read_portage_profile(const char *configroot, const char *profile, env_vars vars[])
 {
-	size_t profile_len, sub_len;
-	char profile_file[_Q_PATH_MAX], *sub_file;
+	size_t configroot_len, profile_len, sub_len;
+	char *profile_file, *sub_file;
 	char buf[BUFSIZE], *s;
 
 	/* initialize the base profile path */
+	if (!configroot)
+		configroot = "";
+	configroot_len = strlen(configroot);
 	profile_len = strlen(profile);
-	if (profile_len > sizeof(profile_file) - 20)
-		return;
-	strncpy(profile_file, profile, sizeof(profile_file));
-	profile_file[profile_len] = '/';
-	sub_file = profile_file + profile_len + 1;
-	sub_len = sizeof(profile_file) - profile_len - 1;
+	sub_len = 1024;	/* should be big enough for longest line in "parent" */
+	profile_file = xmalloc(configroot_len + profile_len + sub_len + 2);
+
+	memcpy(profile_file, configroot, configroot_len);
+	memcpy(profile_file + configroot_len, profile, profile_len);
+	sub_file = profile_file + configroot_len + profile_len + 1;
+	sub_file[-1] = '/';
 
 	/* first consume the profile's make.defaults */
-	strncpy(sub_file, "make.defaults", sub_len);
+	strcpy(sub_file, "make.defaults");
 	read_portage_env_file(profile_file, vars);
 
 	/* now walk all the parents */
-	strncpy(sub_file, "parent", sub_len);
+	strcpy(sub_file, "parent");
 	if (eat_file(profile_file, buf, sizeof(buf)) == 0)
 		return;
 	rmspace(buf);
@@ -660,21 +668,23 @@ static void read_portage_profile(const char *profile, env_vars vars[])
 	s = strtok(buf, "\n");
 	while (s) {
 		strncpy(sub_file, s, sub_len);
-		read_portage_profile(profile_file, vars);
+		read_portage_profile(NULL, profile_file, vars);
 		s = strtok(NULL, "\n");
 	}
+
+	free(profile_file);
 }
 
 void initialize_portage_env(void)
 {
 	size_t i;
-	char *s;
+	const char *s;
 
 	static const char * const files[] = {
-		EPREFIX "/etc/make.globals",
-		EPREFIX "/usr/share/portage/config/make.globals",
-		EPREFIX "/etc/make.conf",
-		EPREFIX "/etc/portage/make.conf",
+		EPREFIX "etc/make.globals",
+		EPREFIX "usr/share/portage/config/make.globals",
+		EPREFIX "etc/make.conf",
+		EPREFIX "etc/portage/make.conf",
 	};
 	bool nocolor = 0;
 
@@ -696,17 +706,14 @@ void initialize_portage_env(void)
 		_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      "")
 		_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        "")
 		_Q_EVS(STR,  ARCH,                portarch,            "")
-		_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      EPREFIX "/etc")
+		_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      EPREFIX "etc")
 		_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
 		_Q_EVB(BOOL, NOCOLOR,             nocolor,             0)
 		_Q_EVS(ISTR, FEATURES,            features,            "noman noinfo nodoc")
-		_Q_EVS(STR,  PORTDIR,             portdir,             EPREFIX "/usr/portage")
+		_Q_EVS(STR,  PORTDIR,             portdir,             EPREFIX "usr/portage")
 		_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             DEFAULT_PORTAGE_BINHOST)
-		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         EPREFIX "/var/tmp/portage/")
-		_Q_EVS(STR,  PKGDIR,              pkgdir,              EPREFIX "/usr/portage/packages/")
-		/* XXX: This needs to not have a leading slash since some of the q
-		 *      utils use chdir(root) && chdir(portvdb).  Once those are
-		 *      fixed, we can add a proper leading slash here. */
+		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         EPREFIX "var/tmp/portage/")
+		_Q_EVS(STR,  PKGDIR,              pkgdir,              EPREFIX "usr/portage/packages/")
 		_Q_EVS(STR,  Q_VDB,               portvdb,             EPREFIX "var/db/pkg")
 		{ }
 
@@ -721,8 +728,11 @@ void initialize_portage_env(void)
 	}
 
 	/* walk all the stacked profiles */
-	read_portage_profile(EPREFIX "/etc/make.profile", vars_to_read);
-	read_portage_profile(EPREFIX "/etc/portage/make.profile", vars_to_read);
+	s = getenv("PORTAGE_CONFIGROOT");
+	if (!s)
+		s = "/";
+	read_portage_profile(s, EPREFIX "etc/make.profile", vars_to_read);
+	read_portage_profile(s, EPREFIX "etc/portage/make.profile", vars_to_read);
 
 	/* now read all the config files */
 	for (i = 0; i < ARRAY_SIZE(files); ++i)
@@ -1152,7 +1162,7 @@ int main(int argc, char **argv)
 
 #ifdef ENABLE_NLS	/* never tested */
 	setlocale(LC_ALL, "");
-	bindtextdomain(argv0, EPREFIX "/usr/share/locale");
+	bindtextdomain(argv0, EPREFIX "usr/share/locale");
 	textdomain(argv0);
 #endif
 #if 1
