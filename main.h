@@ -1,13 +1,15 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.7 2011/02/21 21:52:55 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.8 2011/03/30 05:33:19 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#define _GNU_SOURCE
+#ifndef _q_static
+# define _q_static static
+#endif
 
 /* make sure our buffers are as big as they can be */
 #if PATH_MAX > _POSIX_PATH_MAX  /* _Q_PATH_MAX */

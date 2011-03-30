@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.192 2011/03/17 03:19:50 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.193 2011/03/30 05:33:19 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -10,9 +10,6 @@
 #define _GNU_SOURCE
 #ifdef _AIX
 #define _LINUX_SOURCE_COMPAT
-#endif
-#ifndef _q_static
-# define _q_static static
 #endif
 
 #include <stdarg.h>
