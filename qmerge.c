@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.109 2011/03/17 02:02:39 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.110 2011/10/02 22:09:47 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -55,7 +55,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.109 2011/03/17 02:02:39 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.110 2011/10/02 22:09:47 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -716,8 +716,8 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	char **ARGV;
 	int ARGC;
 	struct stat st;
-	char c;
 	char **iargv;
+	char c;
 	int iargc;
 
 	if (!install || !pkg || !atom)
@@ -730,9 +730,9 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	c = qprint_tree_node(level, atom, pkg);
 
-	/* if (((c == 'R') || (c == 'D')) && update_only)
-		return;
-	*/
+	if (0)
+		if (((c == 'R') || (c == 'D')) && update_only)
+			return;
 
 	if (pkg->RDEPEND[0] && follow_rdepends) {
 		const char *rdepend;
