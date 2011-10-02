@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.8 2011/03/30 05:33:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.9 2011/10/02 21:52:29 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -67,5 +67,12 @@
 
 #define GETOPT_LONG(A, a, ex) \
 	getopt_long(argc, argv, ex A ## _FLAGS, a ## _long_opts, NULL)
+
+#ifndef MIN
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#endif
+#ifndef MAX
+#define MAX(x, y) ((x) < (y) ? (y) : (x))
+#endif
 
 #define a_argument required_argument
