@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.57 2011/03/02 02:41:08 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.58 2011/10/02 22:08:49 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.57 2011/03/02 02:41:08 vapier Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.58 2011/10/02 22:08:49 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -493,7 +493,6 @@ int qfile_main(int argc, char **argv)
 	qfile_args_t *qfile_args = NULL;
 	int qargc = 0;
 	char **qargv = NULL;
-	short done = 0;
 	FILE *args_file = NULL;
 	int max_args = QFILE_DEFAULT_MAX_ARGS;
 	size_t buflen;
@@ -568,7 +567,6 @@ int qfile_main(int argc, char **argv)
 	if (args_file == NULL) {
 		qargc = argc - optind;
 		qargv = argv + optind;
-		done = 1;
 	} else {
 		qargv = xcalloc(max_args, sizeof(char*));
 	}
