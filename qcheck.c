@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.48 2011/10/03 00:24:22 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.49 2011/10/03 01:25:54 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qcheck_opts_help[] = {
 	"Undo prelink when calculating checksums",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.48 2011/10/03 00:24:22 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.49 2011/10/03 01:25:54 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 short bad_only = 0;
@@ -81,15 +81,9 @@ int qcheck_main(int argc, char **argv)
 		case 'a': search_all = 1; break;
 		case 'e': exact = 1; break;
 		case 's': {
-				int regex_val;
 				regex_head = xrealloc(regex_head, (regex_count + 1) * sizeof(*regex_head));
 				regex_head[regex_count] = xmalloc(sizeof(*regex_head[0]));
-				regex_val = regcomp(regex_head[regex_count], optarg, REG_EXTENDED|REG_NOSUB);
-				if (regex_val != 0) {
-					char errbuf[256];
-					regerror(regex_val, regex_head[regex_count], errbuf, sizeof(errbuf));
-					err("Invalid regexp: %s -- %s\n", optarg, errbuf);
-				}
+				xregcomp(regex_head[regex_count], optarg, REG_EXTENDED|REG_NOSUB);
 				++regex_count;
 			}
 			break;

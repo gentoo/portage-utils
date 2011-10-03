@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.194 2011/10/02 22:08:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.195 2011/10/03 01:25:54 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -285,14 +285,8 @@ int rematch(const char *re, const char *match, int cflags)
 	if ((match == NULL) || (re == NULL))
 		return EXIT_FAILURE;
 
-	if ((ret = regcomp(&preg, re, cflags))) {
-		char err[256];
-		if (regerror(ret, &preg, err, sizeof(err)))
-			warnf("regcomp failed: %s", err);
-		else
-			warnf("regcomp failed");
+	if (wregcomp(&preg, re, cflags))
 		return EXIT_FAILURE;
-	}
 	ret = regexec(&preg, match, 0, NULL, 0);
 	regfree(&preg);
 

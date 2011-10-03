@@ -26,6 +26,7 @@
 #include "xgetcwd.c"
 #include "xmkdir.c"
 #include "xreadlink.c"
+#include "xregex.c"
 #include "xsystem.c"
 
 /* custom libs */
