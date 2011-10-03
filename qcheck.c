@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.50 2011/10/03 03:18:10 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.51 2011/10/03 16:18:25 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,30 +34,16 @@ static const char * const qcheck_opts_help[] = {
 	"Undo prelink when calculating checksums",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.50 2011/10/03 03:18:10 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.51 2011/10/03 16:18:25 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 static bool bad_only = false;
 #define qcprintf(fmt, args...) if (!bad_only) printf(_(fmt), ## args)
 
-static void qcheck_cleanup(regex_t **regex_head, const size_t regex_count)
-{
-	size_t i;
-
-	if (regex_head == NULL)
-		return;
-
-	for (i = 0; i < regex_count; ++i) {
-		regfree(regex_head[i]);
-		free(regex_head[i]);
-	}
-	free(regex_head);
-}
-
 static int qcheck_process_contents(int portroot_fd, int pkg_fd,
-	const char *catname, const char *pkgname, regex_t **regex_head,
-	size_t regex_count, bool qc_update, bool chk_afk,
-	bool chk_hash, bool chk_mtime, bool undo_prelink)
+	const char *catname, const char *pkgname, array_t *regex_arr,
+	bool qc_update, bool chk_afk, bool chk_hash, bool chk_mtime,
+	bool undo_prelink)
 {
 	int fd;
 	FILE *fp, *fpx;
@@ -104,12 +90,13 @@ static int qcheck_process_contents(int portroot_fd, int pkg_fd,
 
 		/* run our little checks */
 		++num_files;
-		if (regex_count) {
-			size_t j;
-			for (j = 0; j < regex_count; ++j)
-				if (!regexec(regex_head[j], e->name, 0, NULL, 0))
+		if (array_cnt(regex_arr)) {
+			size_t n;
+			regex_t *regex;
+			array_for_each(regex_arr, n, regex)
+				if (!regexec(regex, e->name, 0, NULL, 0))
 					break;
-			if (j < regex_count) {
+			if (n < array_cnt(regex_arr)) {
 				--num_files;
 				++num_files_ignored;
 				continue;
@@ -290,8 +277,7 @@ int qcheck_main(int argc, char **argv)
 	bool chk_hash = true;
 	bool chk_mtime = true;
 	bool undo_prelink = false;
-	regex_t **regex_head = NULL;
-	size_t regex_count = 0;
+	DECLARE_ARRAY(regex_arr);
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -302,12 +288,11 @@ int qcheck_main(int argc, char **argv)
 		case 'a': search_all = true; break;
 		case 'e': exact = 1; break;
 		case 's': {
-				regex_head = xrealloc(regex_head, (regex_count + 1) * sizeof(*regex_head));
-				regex_head[regex_count] = xmalloc(sizeof(*regex_head[0]));
-				xregcomp(regex_head[regex_count], optarg, REG_EXTENDED|REG_NOSUB);
-				++regex_count;
-			}
+			regex_t regex;
+			xregcomp(&regex, optarg, REG_EXTENDED|REG_NOSUB);
+			xarraypush(regex_arr, &regex, sizeof(regex));
 			break;
+		}
 		case 'u': qc_update = true; break;
 		case 'A': chk_afk = false; break;
 		case 'B': bad_only = true; break;
@@ -379,14 +364,14 @@ int qcheck_main(int argc, char **argv)
 				continue;
 
 			ret = qcheck_process_contents(portroot_fd, pkg_fd,
-				dentry->d_name, de->d_name, regex_head, regex_count,
+				dentry->d_name, de->d_name, regex_arr,
 				qc_update, chk_afk, chk_hash, chk_mtime, undo_prelink);
 			close(pkg_fd);
 		}
 		closedir(dirp);
 	}
 
-	qcheck_cleanup(regex_head, regex_count);
+	xarrayfree(regex_arr);
 	close(portroot_fd);
 	return ret;
 }

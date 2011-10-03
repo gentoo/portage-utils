@@ -28,6 +28,7 @@
 #include "xreadlink.c"
 #include "xregex.c"
 #include "xsystem.c"
+#include "xarray.c"
 
 /* custom libs */
 #include "atom_explode.c"

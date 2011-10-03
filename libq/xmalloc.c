@@ -27,8 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-void *xmalloc(size_t size);
-void *xmalloc(size_t size)
+static void *xmalloc(size_t size)
 {
 	void *ptr = malloc(size);
 	if (ptr == NULL)
@@ -36,8 +35,7 @@ void *xmalloc(size_t size)
 	return ptr;
 }
 
-void *xcalloc(size_t nmemb, size_t size);
-void *xcalloc(size_t nmemb, size_t size)
+static void *xcalloc(size_t nmemb, size_t size)
 {
 	void *ptr = calloc(nmemb, size);
 	if (ptr == NULL)
@@ -45,8 +43,7 @@ void *xcalloc(size_t nmemb, size_t size)
 	return ptr;
 }
 
-void *xzalloc(size_t size);
-void *xzalloc(size_t size)
+static void *xzalloc(size_t size)
 {
 	void *ptr = xmalloc(size);
 	if (ptr == NULL)
@@ -55,11 +52,17 @@ void *xzalloc(size_t size)
 	return ptr;
 }
 
-void *xrealloc(void *optr, size_t size);
-void *xrealloc(void *optr, size_t size)
+static void *xrealloc(void *optr, size_t size)
 {
 	void *ptr = realloc(optr, size);
 	if (ptr == NULL)
 		err("Out of memory");
 	return ptr;
+}
+
+static void *xmemdup(const void *src, size_t n)
+{
+	void *ret = xmalloc(n);
+	memcpy(ret, src, n);
+	return ret;
 }
