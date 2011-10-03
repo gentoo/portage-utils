@@ -1,7 +1,7 @@
 /*
  * Copyright 2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/prelink.c,v 1.1 2011/10/03 00:24:22 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/prelink.c,v 1.2 2011/10/03 03:43:31 vapier Exp $
  */
 
 static const char prelink_bin[] = "prelink";
@@ -60,10 +60,11 @@ static bool prelink_available(void)
 
 #ifdef __linux__
 #include <elf.h>
-static bool is_elf(int fd, const char *filename)
+static bool is_prelink_elf(int fd, const char *filename)
 {
-	char header[SELFMAG];
+	unsigned char header[EI_NIDENT + 2];
 	ssize_t len;
+	uint16_t e_type;
 
 	len = read(fd, &header, sizeof(header));
 	if (len == -1) {
@@ -75,10 +76,32 @@ static bool is_elf(int fd, const char *filename)
 	if (len < sizeof(header))
 		return false;
 
-	return memcmp(header, ELFMAG, sizeof(header)) == 0 ? true : false;
+	if (memcmp(header, ELFMAG, SELFMAG))
+		return false;
+
+	/* prelink only likes certain types of ELFs */
+	switch (header[EI_DATA]) {
+	case ELFDATA2LSB:
+		e_type = header[EI_NIDENT] | (header[EI_NIDENT + 1] << 8);
+		break;
+	case ELFDATA2MSB:
+		e_type = header[EI_NIDENT + 1] | (header[EI_NIDENT] << 8);
+		break;
+	default:
+		return false;
+	}
+	switch (e_type) {
+	case ET_EXEC:
+	case ET_DYN:
+		return true;
+	default:
+		return false;
+	}
+
+	/* XXX: should we also check OS's/arches that prelink supports ? */
 }
 #else
-static bool is_elf(int fd, const char *filename)
+static bool is_prelink_elf(int fd, const char *filename)
 {
 	return false;
 }
@@ -93,7 +116,7 @@ static int _hash_cb_prelink(int fd, const char *filename, const char * const arg
 {
 	int pipefd[2];
 
-	if (!is_elf(fd, filename))
+	if (!is_prelink_elf(fd, filename))
 		return fd;
 
 	if (pipe(pipefd))
