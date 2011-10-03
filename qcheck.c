@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.47 2011/03/17 03:01:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.48 2011/10/03 00:24:22 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,7 +9,7 @@
 
 #ifdef APPLET_qcheck
 
-#define QCHECK_FLAGS "aes:uABHT" COMMON_FLAGS
+#define QCHECK_FLAGS "aes:uABHTp" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
 	{"all",     no_argument, NULL, 'a'},
 	{"exact",   no_argument, NULL, 'e'},
@@ -19,6 +19,7 @@ static struct option const qcheck_long_opts[] = {
 	{"badonly", no_argument, NULL, 'B'},
 	{"nohash",  no_argument, NULL, 'H'},
 	{"nomtime", no_argument, NULL, 'T'},
+	{"prelink", no_argument, NULL, 'p'},
 	COMMON_LONG_OPTS
 };
 static const char * const qcheck_opts_help[] = {
@@ -30,9 +31,10 @@ static const char * const qcheck_opts_help[] = {
 	"Only print pkgs containing bad files",
 	"Ignore differing/unknown file chksums",
 	"Ignore differing file mtimes",
+	"Undo prelink when calculating checksums",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.47 2011/03/17 03:01:19 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.48 2011/10/03 00:24:22 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 short bad_only = 0;
@@ -62,6 +64,7 @@ int qcheck_main(int argc, char **argv)
 	char chk_afk = 1;
 	char chk_hash = 1;
 	char chk_mtime = 1;
+	bool undo_prelink = false;
 	struct stat st;
 	size_t num_files, num_files_ok, num_files_unknown, num_files_ignored;
 	char buf[_Q_PATH_MAX], filename[_Q_PATH_MAX];
@@ -95,6 +98,7 @@ int qcheck_main(int argc, char **argv)
 		case 'B': bad_only = 1; break;
 		case 'H': chk_hash = 0; break;
 		case 'T': chk_mtime = 0; break;
+		case 'p': undo_prelink = prelink_available(); break;
 		}
 	}
 	if ((argc == optind) && !search_all)
@@ -150,7 +154,7 @@ int qcheck_main(int argc, char **argv)
 			}
 
 			snprintf(buf, sizeof(buf), "%s%s/%s/%s/CONTENTS", portroot, portvdb, dentry->d_name, de->d_name);
-			if ((fp = fopen(buf, "r")) == NULL)
+			if ((fp = fopen(buf, "re")) == NULL)
 				continue;
 			strncat(buf, "~", sizeof(buf)-strlen(buf)-1);
 			num_files = num_files_ok = num_files_unknown = num_files_ignored = 0;
@@ -158,7 +162,7 @@ int qcheck_main(int argc, char **argv)
 				(qc_update ? "Updat" : "Check"),
 				GREEN, dentry->d_name, de->d_name, NORM);
 			if (qc_update) {
-				if ((fpx = fopen(buf, "w")) == NULL) {
+				if ((fpx = fopen(buf, "we")) == NULL) {
 					fclose(fp);
 					warnp("unable to fopen(%s, w)", buf);
 					continue;
@@ -205,6 +209,7 @@ int qcheck_main(int argc, char **argv)
 					/* validate digest (handles MD5 / SHA1) */
 					uint8_t hash_algo;
 					char *hashed_file;
+					hash_cb_t hash_cb = undo_prelink ? hash_cb_prelink_undo : hash_cb_default;
 					switch (strlen(e->digest)) {
 						case 32: hash_algo = HASH_MD5; break;
 						case 40: hash_algo = HASH_SHA1; break;
@@ -222,7 +227,7 @@ int qcheck_main(int argc, char **argv)
 						}
 						continue;
 					}
-					hashed_file = (char*)hash_file(e->name, hash_algo);
+					hashed_file = (char*)hash_file_cb(e->name, hash_algo, hash_cb);
 					if (!hashed_file) {
 						++num_files_unknown;
 						free(hashed_file);

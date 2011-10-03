@@ -32,6 +32,7 @@
 #include "atom_explode.c"
 #include "atom_compare.c"
 #include "basename.c"
+#include "prelink.c"
 
 #ifndef _LIB_Q
 # include "profile.c"

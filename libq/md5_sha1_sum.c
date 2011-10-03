@@ -29,9 +29,10 @@
 
 #include "busybox.h"
 
-#define FLAG_SILENT	1
-#define FLAG_CHECK	2
-#define FLAG_WARN	4
+/* pass in a fd and get back a fd; filename is for display only */
+typedef int (*hash_cb_t) (int, const char *);
+
+static int hash_cb_default(int fd, const char *filename) { return fd; }
 
 /* This might be useful elsewhere */
 static unsigned char *hash_bin_to_hex(unsigned char *hash_value,
@@ -48,24 +49,35 @@ static unsigned char *hash_bin_to_hex(unsigned char *hash_value,
 	return (hex_value);
 }
 
-static unsigned char *hash_file_at(int dfd, const char *filename, uint8_t hash_algo)
+static unsigned char *hash_file_at_cb(int dfd, const char *filename, uint8_t hash_algo, hash_cb_t cb)
 {
 	int fd;
-	fd = openat(dfd, filename, O_RDONLY);
+	fd = openat(dfd, filename, O_RDONLY|O_CLOEXEC);
 	if (fd != -1) {
 		static uint8_t hash_value_bin[20];
 		static unsigned char *hash_value;
-		hash_value =
-			(hash_fd(fd, -1, hash_algo, hash_value_bin) != -2 ?
-			 hash_bin_to_hex(hash_value_bin, hash_algo == HASH_MD5 ? 16 : 20) :
-			 NULL);
+		fd = cb(fd, filename);
+		if (hash_fd(fd, -1, hash_algo, hash_value_bin) != -2)
+			hash_value = hash_bin_to_hex(hash_value_bin, hash_algo == HASH_MD5 ? 16 : 20);
+		else
+			hash_value = NULL;
 		close(fd);
 		return hash_value;
 	}
 	return NULL;
 }
 
+static unsigned char *hash_file_at(int dfd, const char *filename, uint8_t hash_algo)
+{
+	return hash_file_at_cb(dfd, filename, hash_algo, hash_cb_default);
+}
+
+static unsigned char *hash_file_cb(const char *filename, uint8_t hash_algo, hash_cb_t cb)
+{
+	return hash_file_at_cb(AT_FDCWD, filename, hash_algo, cb);
+}
+
 static unsigned char *hash_file(const char *filename, uint8_t hash_algo)
 {
-	return hash_file_at(AT_FDCWD, filename, hash_algo);
+	return hash_file_cb(filename, hash_algo, hash_cb_default);
 }
