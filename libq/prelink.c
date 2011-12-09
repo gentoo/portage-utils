@@ -1,8 +1,10 @@
 /*
  * Copyright 2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/prelink.c,v 1.2 2011/10/03 03:43:31 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/prelink.c,v 1.3 2011/12/09 16:52:15 vapier Exp $
  */
+
+#include <signal.h>
 
 static const char prelink_bin[] = "prelink";
 
