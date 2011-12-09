@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.195 2011/10/03 01:25:54 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.196 2011/12/09 16:50:29 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -216,34 +216,6 @@ static char eat_file(const char *file, char *buf, const size_t bufsize)
 {
 	return eat_file_at(AT_FDCWD, file, buf, bufsize);
 }
-
-#if !(_POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700)
-static ssize_t getline(char **line, size_t *len, FILE *fp)
-{
-	char *s;
-	size_t off;
-
-	if (!*line) {
-		*len = BUFSIZE;
-		*line = xmalloc(*len);
-	}
-
-	off = 0;
-	while (1) {
-		s = fgets(*line + off, *len - off, fp);
-		if (s == NULL)
-			return -1;
-
-		s = strchr(s, '\n');
-		if (s)
-			break;
-
-		off = *len;
-		*len += BUFSIZE;
-		*line = xrealloc(*line, *len);
-	}
-}
-#endif
 
 static bool prompt(const char *p)
 {
