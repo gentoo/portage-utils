@@ -1,6 +1,6 @@
 # Copyright 2005-2008 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.70 2011/12/11 05:49:22 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.71 2011/12/11 21:38:41 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -48,20 +48,6 @@ HFLAGS    += $(foreach a,$(APPLETS),-DAPPLET_$a)
 
 all: q
 	@true
-
-EXTRA_DIST = \
-	$(SRC) \
-	qglsa.c \
-	$(wildcard libq/*.c *.h libq/*.h) \
-	$(shell find tests -type f '!' -ipath '*/CVS/*')
-autotools-update:
-	sed -i \
-		-e '/^APPLETS =/s:=.*:= $(APPLETS):' \
-		-e '/^EXTRA_DIST =/s:=.*:= $(EXTRA_DIST):' \
-		-e '/^dist_man_MANS =/s:=.*:= $(wildcard man/*.1):' \
-		Makefile.am
-autotools: autotools-update
-	./autogen.sh --from=make
 
 debug:
 	$(MAKE) CFLAGS="$(CFLAGS) -O0 -DEBUG -g3 -ggdb -fno-pie" clean symlinks
@@ -135,3 +121,26 @@ symlinks: all
 -include .depend
 
 .PHONY: all autotools check clean debug dist distclean install man symlinks testclean
+
+#
+# All logic related to autotools is below here
+#
+GEN_MARK_START = \# @@@ GEN START @@@ \#
+GEN_MARK_END   = \# @@@ GEN START @@@ \#
+EXTRA_DIST = \
+	$(SRC) \
+	qglsa.c \
+	$(wildcard libq/*.c *.h libq/*.h) \
+	$(shell find tests -type f '!' -ipath '*/CVS/*')
+MAKE_MULTI_LINES = $(patsubst %,\\\\\n\t%,$(sort $(1)))
+autotools-update:
+	sed -i '/^$(GEN_MARK_START)$$/,/^$(GEN_MARK_END)$$/d' Makefile.am
+	printf '%s\ndist_man_MANS += %b\nAPPLETS += %b\nEXTRA_DIST += %b\n%s\n' \
+		"$(GEN_MARK_START)" \
+		"$(call MAKE_MULTI_LINES,$(wildcard man/*.1))" \
+		"$(call MAKE_MULTI_LINES,$(APPLETS))" \
+		"$(call MAKE_MULTI_LINES,$(EXTRA_DIST))" \
+		"$(GEN_MARK_END)" \
+		>> Makefile.am
+autotools: autotools-update
+	./autogen.sh --from=make

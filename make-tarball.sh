@@ -20,7 +20,7 @@ cd "${p}"
 cvs -Q up
 sed -i "/^AC_INIT/s:cvs:${ver}:" configure.ac
 sed -i "1iPV := ${ver}" Makefile
-make autotools
+LC_ALL=C ${MAKE:-make} autotools
 rm -rf autom4te.cache
 cd ..
 
