@@ -5,7 +5,9 @@ v() { echo "$@"; "$@"; }
 m4dir="autotools/m4"
 
 v rm -rf autotools
-v ${MAKE:-make} autotools-update
+if [[ $1 != "--from=make" ]] ; then
+	v ${MAKE:-make} autotools-update
+fi
 
 # reload the gnulib code if possible
 PATH=/usr/local/src/gnu/gnulib:${PATH}
