@@ -1,6 +1,6 @@
 # Copyright 2005-2008 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.68 2011/03/17 03:19:50 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.69 2011/12/11 05:46:11 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -21,16 +21,10 @@ CFLAGS    += -std=gnu99
 #LDFLAGS  := -pie
 LIBADD    += $(shell echo | $(CC) -dM -E - | grep -q ' __FreeBSD__' && echo '-lkvm')
 DESTDIR   :=
-EPREFIX   :=
-PREFIX    := $(DESTDIR)$(EPREFIX)/usr
+PREFIX    := $(DESTDIR)/usr
 STRIP     := strip
 MKDIR     := mkdir -p
 CP        := cp
-
-ifeq ($(EPREFIX),)
-EPREFIX   := /
-endif
-HFLAGS    += -DEPREFIX=\"$(EPREFIX)\"
 
 ifdef PV
 HFLAGS    += -DVERSION=\"$(PV)\"
@@ -55,9 +49,23 @@ HFLAGS    += $(foreach a,$(APPLETS),-DAPPLET_$a)
 all: q
 	@true
 
+EXTRA_DIST = \
+	$(SRC) \
+	qglsa.c \
+	$(wildcard libq/*.c *.h libq/*.h) \
+	$(shell find tests -type f '!' -ipath '*/CVS/*')
+autotools-update:
+	sed -i \
+		-e '/^APPLETS =/s:=.*:= $(APPLETS):' \
+		-e '/^EXTRA_DIST =/s:=.*:= $(EXTRA_DIST):' \
+		-e '/^dist_man_MANS =/s:=.*:= $(wildcard man/*.1):' \
+		Makefile.am
+autotools: autotools-update
+	./autogen.sh
+
 debug:
 	$(MAKE) CFLAGS="$(CFLAGS) -O0 -DEBUG -g3 -ggdb -fno-pie" clean symlinks
-	@-$(EPREFIX)/usr/bin/scanelf -o /dev/null -BXxz permsx q
+	@-scanelf -o /dev/null -BXxz permsx q
 
 q: $(SRC) libq/*.c *.h libq/*.h
 ifeq ($(subst s,,$(MAKEFLAGS)),$(MAKEFLAGS))
@@ -126,4 +134,4 @@ symlinks: all
 
 -include .depend
 
-.PHONY: all check clean debug dist distclean install man symlinks testclean
+.PHONY: all autotools check clean debug dist distclean install man symlinks testclean

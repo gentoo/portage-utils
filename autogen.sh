@@ -1,20 +1,42 @@
 #!/bin/bash -e
 
+v() { echo "$@"; "$@"; }
+
 m4dir="autotools/m4"
 
-# avoid ugly warnings due to mismatch between local libtool and
-# whatever updated version is on the host
-find ${m4dir}/*.m4 '!' -name 'ax_*.m4' -delete 2>/dev/null || :
+v rm -rf autotools
+v ${MAKE:-make} autotools-update
+
+# reload the gnulib code if possible
+PATH=/usr/local/src/gnu/gnulib:${PATH}
+mods="
+	faccessat
+	fstatat
+	futimens
+	getline
+	mkdirat
+	openat
+	readlinkat
+	renameat
+	strncat
+	symlinkat
+	unlinkat
+	utimensat
+"
+v gnulib-tool \
+	--source-base=autotools/gnulib --m4-base=autotools/m4 \
+	--import \
+	${mods}
 
 # not everyone has sys-devel/autoconf-archive installed
 for macro in $(grep -o '\<AX[A-Z_]*\>' configure.ac | sort -u) ; do
 	if m4=$(grep -rl "\[${macro}\]" /usr/share/aclocal/) ; then
-		cp -v $m4 m4/
+		v cp $m4 ${m4dir}/
 	fi
 done
 
 export AUTOMAKE="automake --foreign"
-autoreconf -i -f
+v autoreconf -i -f
 
 if [[ -x ./test.sh ]] ; then
 	exec ./test.sh "$@"

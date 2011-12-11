@@ -18,7 +18,10 @@ echo "Checking out clean cvs sources ..."
 cp -a CVS "${p}"/
 cd "${p}"
 cvs -Q up
-./autogen.sh
+sed -i "/^AC_INIT/s:cvs:${ver}:" configure.ac
+sed -i "1iPV := ${ver}" Makefile
+make autotools
+rm -rf autom4te.cache
 cd ..
 
 echo "Generating tarball ..."
