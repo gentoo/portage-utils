@@ -18,6 +18,7 @@ echo "Checking out clean cvs sources ..."
 cp -a CVS "${p}"/
 cd "${p}"
 cvs -Q up
+./autogen.sh
 cd ..
 
 echo "Generating tarball ..."

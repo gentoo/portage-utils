@@ -1,10 +1,22 @@
 .cvsignore
 q
 *bz2
+*~
 *.patch
+*.orig
+*.rej
 *.diff
 portage-utils-*
 contrib
+
+aclocal.m4
+autom4te.cache
+build
+config.h
+config.h.in
+configure
+autotools
+Makefile.in
 
 core
 .gdb_history

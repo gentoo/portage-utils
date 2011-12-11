@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.10 2011/12/09 16:55:49 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.11 2011/12/11 03:36:50 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -80,4 +80,8 @@
 /* Easy enough to glue to older versions */
 #ifndef O_CLOEXEC
 # define O_CLOEXEC 0
+#endif
+
+#ifndef EPREFIX
+#define EPREFIX ""
 #endif
