@@ -22,8 +22,10 @@ mods="
 	progname
 	readlinkat
 	renameat
+	stat-time
 	strncat
 	symlinkat
+	sys_stat
 	unlinkat
 	utimensat
 "
