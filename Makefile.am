@@ -4,7 +4,9 @@ SUBDIRS = autotools/gnulib
 
 bin_PROGRAMS = q
 q_SOURCES = main.c
-q_CPPFLAGS = -I$(top_builddir)/autotools/gnulib -I$(top_srcdir)/autotools/gnulib $(foreach a,$(APPLETS),-DAPPLET_$a)
+q_CPPFLAGS = \
+	-I$(top_builddir)/autotools/gnulib \
+	-I$(top_srcdir)/autotools/gnulib
 q_LDADD = \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
 	$(LIB_CLOCK_GETTIME) \
@@ -16,12 +18,42 @@ install-exec-hook:
 		[ ! -e "$$applet" ] && ln -s q $${applet} ; \
 	done
 
+TMAKE = \
+	$(MAKE) -C $(abs_top_srcdir)/tests \
+		AUTOTOOLS=true \
+		abs_top_builddir="$(abs_top_builddir)" \
+		abs_top_srcdir="$(abs_top_srcdir)"
+check-hook:
+	$(TMAKE) check
+clean-local:
+	$(TMAKE) clean
+	-rmdir tests/*/ tests/
+	rm -f $(APPLETS)
+check: check-hook
+
 # Start off with base values which we append below
 dist_man_MANS =
 APPLETS =
 EXTRA_DIST = autotools/m4/gnulib-cache.m4
 
 # @@@ GEN START @@@ #
+q_CPPFLAGS += \
+	-DAPPLET_q \
+	-DAPPLET_qatom \
+	-DAPPLET_qcache \
+	-DAPPLET_qcheck \
+	-DAPPLET_qdepends \
+	-DAPPLET_qfile \
+	-DAPPLET_qgrep \
+	-DAPPLET_qlist \
+	-DAPPLET_qlop \
+	-DAPPLET_qmerge \
+	-DAPPLET_qpkg \
+	-DAPPLET_qsearch \
+	-DAPPLET_qsize \
+	-DAPPLET_qtbz2 \
+	-DAPPLET_quse \
+	-DAPPLET_qxpak
 dist_man_MANS += \
 	man/q.1 \
 	man/qatom.1 \
@@ -161,5 +193,6 @@ EXTRA_DIST += \
 	tests/reinitialize/dotest \
 	tests/source/Makefile \
 	tests/source/dotest \
-	tests/source/space
+	tests/source/space \
+	tests/subdir.mk
 # @@@ GEN START @@@ #

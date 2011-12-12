@@ -11,7 +11,9 @@ applets=$(q -Ch | \
 )
 rm -f ${applets}
 
-ln -f `which q` || die "ln -f q"
+if ! ln -f `which q` ; then
+	skip "could not 'ln -f'"
+fi
 ./q -i || die "./q -i"
 
 for app in ${applets} ; do

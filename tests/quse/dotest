@@ -4,11 +4,9 @@
 
 set -e
 
-export PORTDIR=$PWD/portdir
+export PORTDIR=${as}/portdir
 
-rm -rf tmp
-mkdir tmp
-cd tmp
+mktmpdir
 
 d=${PORTDIR}/profiles
 entries() {
@@ -72,11 +70,10 @@ rm x good all.good
 # which depends on the fs itself.  quse doesnt do sorting
 # because in general, who cares.  faster this way.
 quse -CD abc | LC_ALL=C sort > x
-diff -u ../list01.good x
+diff -u ${as}/list01.good x
 rm x
 
-cd ..
-rmdir tmp
+trimtmpdir
 
 ###### faster test needed.########
 pass

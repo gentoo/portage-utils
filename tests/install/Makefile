@@ -1,7 +1,12 @@
+thisdir = install
+include ../subdir.mk
+
 all: check
 
 test check:
-	./dotest
+	$(s)/dotest
 
 clean:
-	rm -f q `find . -type l`
+	rm -f $(b)/q `find $(b) -type l`
+
+.PHONY: all check clean test

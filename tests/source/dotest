@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. ../init.sh
+
 ret=0
 
 testit() {
@@ -15,21 +17,37 @@ testit() {
 }
 
 prune=(
-	'(' -type d -a
+	'('
 		'('
-			-name CVS -o
-			-name tests -o
-			-name autotools -o
-			-name autom4te.cache -o
-			-name '*~'
+		'('
+			-type d -a
+			'('
+				-name CVS -o
+				-name tests -o
+				-name autotools -o
+				-name autom4te.cache -o
+				-name .deps
+			')'
 		')'
-	-prune ')'
+		-o
+		'('
+			-type f -a
+			'('
+				-name '*~' -o
+				-name config.h -o
+				-name config.log -o
+				-name config.status
+			')'
+		')'
+		')'
+		-prune
+	')'
 )
 all_files=(
 	"${prune[@]}" -o -type f
 )
 src_files=(
-	"${prune[@]}" -o -type f '(' -name '*.[ch]' -a '!' -name 'config.h' ')'
+	"${prune[@]}" -o -type f -name '*.[ch]'
 )
 
 
@@ -37,7 +55,7 @@ src_files=(
 #
 # check for misc common typos
 #
-find ../.. "${all_files[@]}" -print0 | xargs -0 \
+find ${ats} "${all_files[@]}" -print0 | xargs -0 \
 	grep -n -I \
 		-e '\<compatability\>' \
 		-e '\<compatable\>' \
@@ -64,7 +82,7 @@ testit src.typos
 #
 # don't allow obsolete functions
 #
-find ../.. "${src_files[@]}" -print0 | xargs -0 \
+find ${ats} "${src_files[@]}" -print0 | xargs -0 \
 	grep -n -E -e '\<(bcmp|bcopy|bzero|getwd|index|mktemp|rindex|utimes)\>[[:space:]]*\(' \
 	| sed -e "s:^\.\./\.\./::g" > src.obsolete.funcs
 testit src.obsolete.funcs
@@ -74,7 +92,7 @@ testit src.obsolete.funcs
 #
 # make sure people use our constants
 #
-find ../.. "${src_files[@]}" -print0 | xargs -0 \
+find ${ats} "${src_files[@]}" -print0 | xargs -0 \
 	grep -n -E -e '\<PATH_MAX\>' | grep -v _Q_PATH_MAX \
 	| sed -e "s:^\.\./\.\./::g" > src.bad.constants
 testit src.bad.constants
@@ -84,7 +102,7 @@ testit src.bad.constants
 #
 # don't allow obsolete headers
 #
-find ../.. "${src_files[@]}" -print0 | xargs -0 \
+find ${ats} "${src_files[@]}" -print0 | xargs -0 \
 	grep -n -E -e '\<(malloc|memory|sys/(errno|fcntl|signal|stropts|termios|unistd))\.h\>' \
 	| sed -e "s:^\.\./\.\./::g" > src.obsolete.headers
 testit src.obsolete.headers
@@ -94,7 +112,7 @@ testit src.obsolete.headers
 #
 # make sure people use the x* helper funcs
 #
-find ../.. "${src_files[@]}" -print0 | xargs -0 \
+find ${ats} "${src_files[@]}" -print0 | xargs -0 \
 	grep -n -E -e '\<(malloc|strdup)[[:space:]]*\(' \
 	| grep -v libq/x \
 	| sed -e "s:^\.\./\.\./::g" > src.use.xfuncs
@@ -104,7 +122,7 @@ testit src.use.xfuncs
 #
 # check for style
 #
-find ../.. "${src_files[@]}" -print0 | xargs -0 \
+find ${ats} "${src_files[@]}" -print0 | xargs -0 \
 	grep -n -E \
 		-e '\<(for|if|switch|while)\(' \
 		-e '\<(for|if|switch|while) \( ' \
@@ -119,8 +137,10 @@ testit src.style
 #
 # Auto clean up the space issues
 #
-for x in $(find ../.. "${src_files[@]}" -print); do
-	./space "$x" > "$x~"
+for x in $(find ${ats} "${src_files[@]}" -print); do
+	# skip paths we don't have write access to
+	touch "$x~" 2>/dev/null || continue
+	${s}/space "$x" > "$x~"
 	if ! diff -u "$x" "$x~" ; then
 		echo "New file: $x~"
 	else

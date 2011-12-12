@@ -4,9 +4,7 @@
 
 set -e
 
-rm -rf tmp
-mkdir tmp
-cd tmp
+mktmpdir
 
 files="a b c d e f"
 for l in ${files} ; do
@@ -77,7 +75,6 @@ cmp {.,new}/x.xpak
 rm new/x.{xpak,tar.bz2}
 rmdir new
 
-cd ..
-rm -rf tmp
+cleantmpdir
 
 pass

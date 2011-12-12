@@ -4,7 +4,7 @@
 
 set -e
 
-_m=${PWD}/m
+_m=${ab}/m
 mktmpdir
 
 # check mkdir
@@ -59,7 +59,6 @@ ln -s ../f a/b/c/f
 $m a
 [ ! -e a ]
 
-cd ..
-rmdir tmp
+cleantmpdir
 
 pass

@@ -1,7 +1,12 @@
+thisdir = quse
+include ../subdir.mk
+
 all: check
 
 test check:
-	./dotest
+	$(s)/dotest
 
 clean:
-	rm -f PORTDIR-* *.squashfs
+	rm -f $(b)/PORTDIR-* $(b)/*.squashfs
+
+.PHONY: all check clean test

@@ -2,30 +2,30 @@
 
 . ../init.sh
 
-d=$PWD
 [[ $PORTDIR == "" ]] && PORTDIR=$(portageq envvar PORTDIR)
-cd ${PORTDIR}/metadata/cache || { echo SKIPPED; exit 0 ; }
+pushd ${PORTDIR}/metadata/cache >/dev/null || { echo SKIPPED; exit 0 ; }
 
 if [[ $1 == -v ]] ; then
 	find . -mindepth 2 -type f -printf '%P\n%f\n' | while read line ; do
 		echo "TESTING $line: "
-		"$d"/e "${line}"
+		"$b"/e "${line}"
 	done
 	exit 0
 fi
 
 # split the disk i/o out so both tests are CPU bound only
 files=$(find . -mindepth 2 -type f -printf '%P\n%f\n')
+popd >/dev/null
 
 echo -n "atom_explode():"
-time echo "${files}" | "$d"/e > "$d"/me || exit $?
+time echo "${files}" | "$b"/e > "$b"/me || exit $?
 echo
 
 echo -n "portage:"
-time echo "${files}" | "$d"/atom-explode.py > "$d"/py || exit $?
+time echo "${files}" | "$s"/atom-explode.py > "$b"/py || exit $?
 echo
 
-if diff -U 0 "$d"/me "$d"/py ; then
+if diff -U 0 "$b"/me "$b"/py ; then
 	echo "PASSED"
 else
 	echo "FAIL ! :("

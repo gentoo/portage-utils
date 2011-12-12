@@ -4,9 +4,7 @@
 
 set -e
 
-rm -rf tmp
-mkdir tmp
-cd tmp
+mktmpdir
 
 files="a b c d e f"
 for l in ${files} ; do
@@ -16,7 +14,7 @@ done
 # check basic creation
 qxpak -c xpak ${files}
 qxpak -l -v xpak > list
-diff -u list ../list01.good
+diff -u list ${as}/list01.good
 
 # check single extraction
 for l in ${files} ; do
@@ -43,16 +41,15 @@ done
 rm -f ${files} ?.good
 qxpak -c xpak -d new ${files}
 qxpak -l -v xpak > list
-diff -u list ../list01.good
+diff -u list ${as}/list01.good
 qxpak -d . -x xpak ${files}
 
 # check creation with clobbered output
 # check creation with file order
 qxpak -c xpak `echo ${files} | tr ' ' '\n' | tac`
 qxpak -l -v xpak > list
-diff -u list ../list02.good
+diff -u list ${as}/list02.good
 
-cd ..
-rm -rf tmp
+cleantmpdir
 
 pass

@@ -1,20 +1,24 @@
+thisdir = atom_explode
+include ../subdir.mk
+
 CFLAGS += -Wall
 
-all: e
+all: $(b)/e
 
-e: test.c
-	$(CC) $(CFLAGS) test.c -o e
+$(b)/e: $(s)/test.c
+	mkdir -p $(b)
+	$(CC) $(CFLAGS) $< -o $@
 
 test check: dotest basic
 
-basic: e
-	./e < basic.tests > basic
-	diff -u basic.good basic
+basic: $(b)/e
+	$(b)/e < $(s)/basic.tests > $(b)/basic
+	diff -u $(s)/basic.good $(b)/basic
 
-dotest: e
-	./dotest
+dotest: $(b)/e
+	$(s)/dotest
 
 clean:
-	rm -f me py e q
+	rm -f $(b)/me $(b)/py $(b)/e $(b)/q $(b)/basic
 
 .PHONY: all basic dotest test check clean

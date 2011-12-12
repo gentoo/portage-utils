@@ -1,15 +1,22 @@
+thisdir = atom_compare
+include ../subdir.mk
+
 all: test
 
 test check: static portage
-	diff -u static.good static
-	diff -u static.good portage
+	diff -u $(s)/static.good $(b)/static
+	diff -u $(s)/static.good $(b)/portage
 
-static: static.tests ../../q
-	../../q atom -c `cat static.tests` > static
+static: $(s)/static.tests $(atb)/q
+	mkdir -p $(b)
+	$(atb)/q atom -c `cat $<` > $(b)/static
 	#q atom -c `cat static.tests` > static
 
-portage: static.tests atom-compare.py
-	./atom-compare.py `cat static.tests` > portage
+portage: $(s)/static.tests $(s)/atom-compare.py
+	mkdir -p $(b)
+	./atom-compare.py `cat $<` > $(b)/portage
 
 clean:
-	rm -f static portage
+	rm -f $(b)/static $(b)/portage
+
+.PHONY: all check clean test
