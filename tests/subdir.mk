@@ -1,0 +1,18 @@
+abs_top_builddir ?= ../..
+abs_top_srcdir ?= ../..
+
+ifdef AUTOTOOLS
+this_subdir = tests/$(thisdir)
+builddir = $(abs_top_builddir)/$(this_subdir)
+srcdir = $(abs_top_srcdir)/$(this_subdir)
+else
+builddir = .
+srcdir = .
+endif
+
+b = $(builddir)
+s = $(srcdir)
+atb = $(abs_top_builddir)
+ats = $(abs_top_srcdir)
+
+export b s atb ats
