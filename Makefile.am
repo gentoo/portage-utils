@@ -5,6 +5,7 @@ AM_CPPFLAGS = -I$(top_builddir)/autotools/gnulib -I$(top_srcdir)/autotools/gnuli
 
 bin_PROGRAMS = q
 q_SOURCES = main.c
+q_CPPFLAGS = $(foreach a,$(APPLETS),-DAPPLET_$a)
 q_LDADD = \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
 	$(LIB_CLOCK_GETTIME) \
