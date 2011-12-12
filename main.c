@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.197 2011/12/12 21:22:08 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.198 2011/12/12 21:29:22 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,9 +30,6 @@
 #include <libgen.h>
 #include <limits.h>
 #include <assert.h>
-
-/* re-assignable stdout, see main.h */
-FILE *pu_stdout = stdout;
 
 #include "main.h"
 
