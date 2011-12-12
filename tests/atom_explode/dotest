@@ -14,12 +14,15 @@ if [[ $1 == -v ]] ; then
 	exit 0
 fi
 
+# split the disk i/o out so both tests are CPU bound only
+files=$(find . -mindepth 2 -type f -printf '%P\n%f\n')
+
 echo -n "atom_explode():"
-time find . -mindepth 2 -type f -printf '%P\n%f\n' | "$d"/e > "$d"/me || exit $?
+time echo "${files}" | "$d"/e > "$d"/me || exit $?
 echo
 
 echo -n "portage:"
-time find . -mindepth 2 -type f -printf '%P\n%f\n' | "$d"/atom-explode.py > "$d"/py || exit $?
+time echo "${files}" | "$d"/atom-explode.py > "$d"/py || exit $?
 echo
 
 if diff -U 0 "$d"/me "$d"/py ; then
