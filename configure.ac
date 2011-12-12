@@ -14,6 +14,11 @@ gl_EARLY
 gl_INIT
 
 AC_ARG_WITH([eprefix], [AS_HELP_STRING([--with-eprefix], [path for Gentoo/Prefix project])])
+# ensure eprefix ends with a slash, since the code base expects that
+case "$with_eprefix" in
+	*/) with_eprefix="$with_eprefix" ;;
+	*)  with_eprefix="${with_eprefix}/" ;;
+esac
 AC_DEFINE_UNQUOTED([EPREFIX], ["$with_eprefix"], [path for Gentoo/Prefix project])
 
 AX_CFLAGS_WARN_ALL
