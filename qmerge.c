@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.110 2011/10/02 22:09:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.111 2011/12/12 20:47:00 grobian Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -11,6 +11,16 @@
 
 #include <fnmatch.h>
 #include <glob.h>
+#include <sys/stat.h>
+/* This is a GNUlib hack, because GNUlib doesn't provide st_mtim members
+ * of struct stat, but instead provides wrappers to retrieve the time
+ * fields (stat-time module). We just define a macro in case people are
+ * building without autoconf. */
+#ifdef _GL_SYS_STAT_H
+# include "stat-time.h"
+#else
+# define get_stat_mtime(X) ((X)->st_mtim)
+#endif
 
 #ifndef GLOB_BRACE
 # define GLOB_BRACE     (1 << 10)	/* Expand "{a,b}" to "a" "b".  */
@@ -55,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.110 2011/10/02 22:09:47 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.111 2011/12/12 20:47:00 grobian Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -612,8 +622,8 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			}
 
 			/* Preserve the file times */
-			times[0] = st.st_mtim;
-			times[1] = st.st_mtim;
+			times[0] = get_stat_mtime(&st);
+			times[1] = get_stat_mtime(&st);
 			futimens(fd_dstf, times);
 
 			close(fd_srcf);
@@ -655,8 +665,8 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			}
 
 			struct timespec times[2];
-			times[0] = st.st_mtim;
-			times[1] = st.st_mtim;
+			times[0] = get_stat_mtime(&st);
+			times[1] = get_stat_mtime(&st);
 			utimensat(subfd_dst, name, times, AT_SYMLINK_NOFOLLOW);
 		}
 
