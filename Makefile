@@ -1,6 +1,6 @@
 # Copyright 2005-2008 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.72 2011/12/12 21:04:23 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.73 2011/12/12 21:16:23 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -88,7 +88,8 @@ distcheck: dist
 	rm -rf portage-utils-$(PV)
 
 clean:
-	-rm -f q
+	-rm -f q $(APPLETS)
+	$(MAKE) -C tests clean
 distclean: clean testclean
 	-rm -f *~ core .#*
 	-rm -f `find . -type l`
@@ -137,11 +138,10 @@ EXTRA_DIST = \
 	$(wildcard libq/*.c *.h libq/*.h) \
 	$(shell find tests -type f '!' -ipath '*/CVS/*')
 MAKE_MULTI_LINES = $(patsubst %,\\\\\n\t%,$(sort $(1)))
-autotools-update:
-	$(MAKE) -C tests clean
-	$(MAKE) _autotools-update
 # 2nd level of indirection here is so the $(find) doesn't pick up
 # files in EXTRA_DIST that get cleaned up ...
+autotools-update: clean
+	$(MAKE) _autotools-update
 _autotools-update:
 	sed -i '/^$(GEN_MARK_START)$$/,/^$(GEN_MARK_END)$$/d' Makefile.am
 	printf '%s\nq_CPPFLAGS += %b\ndist_man_MANS += %b\nAPPLETS += %b\nEXTRA_DIST += %b\n%s\n' \

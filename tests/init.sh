@@ -11,6 +11,7 @@ setup_path
 # matches tests/subdir.mk
 setup_env() {
 	local a=${0%/*}
+	[[ ${a} == "." ]] && a=${PWD}
 	a=${a##*/}
 
 	: ${b:=.}

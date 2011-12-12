@@ -1,5 +1,5 @@
-abs_top_builddir ?= ../..
-abs_top_srcdir ?= ../..
+abs_top_builddir ?= $(PWD)/../..
+abs_top_srcdir ?= $(PWD)/../..
 
 ifdef AUTOTOOLS
 this_subdir = tests/$(thisdir)
