@@ -13,11 +13,13 @@ fi
 PATH=/usr/local/src/gnu/gnulib:${PATH}
 mods="
 	faccessat
+	fdopendir
 	fstatat
 	futimens
 	getline
 	mkdirat
 	openat
+	progname
 	readlinkat
 	renameat
 	strncat
