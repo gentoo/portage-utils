@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.52 2011/12/18 01:17:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.53 2011/12/18 07:58:40 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qcheck_opts_help[] = {
 	"Undo prelink when calculating checksums",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.52 2011/12/18 01:17:14 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.53 2011/12/18 07:58:40 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 #define qcprintf(fmt, args...) if (!state->bad_only) printf(_(fmt), ## args)
@@ -50,6 +50,7 @@ struct qcheck_opt_state {
 	bool chk_hash;
 	bool chk_mtime;
 	bool undo_prelink;
+	bool exact;
 };
 
 static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
@@ -290,7 +291,7 @@ _q_static int qcheck_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		for (i = optind; i < state->argc; ++i) {
 			free(buf);
 			xasprintf(&buf, "%s/%s", catname, pkgname);
-			if (!exact) {
+			if (!state->exact) {
 				if (rematch(state->argv[i], buf, REG_EXTENDED) == 0)
 					break;
 				if (rematch(state->argv[i], pkgname, REG_EXTENDED) == 0)
@@ -336,6 +337,7 @@ int qcheck_main(int argc, char **argv)
 		.chk_hash = true,
 		.chk_mtime = true,
 		.undo_prelink = false,
+		.exact = false,
 	};
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -345,7 +347,7 @@ int qcheck_main(int argc, char **argv)
 		switch (i) {
 		COMMON_GETOPTS_CASES(qcheck)
 		case 'a': state.search_all = true; break;
-		case 'e': exact = 1; break;
+		case 'e': state.exact = true; break;
 		case 's': {
 			regex_t regex;
 			xregcomp(&regex, optarg, REG_EXTENDED|REG_NOSUB);

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.58 2011/10/02 22:08:49 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.59 2011/12/18 08:01:03 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.58 2011/10/02 22:08:49 vapier Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.59 2011/12/18 08:01:03 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -55,7 +55,8 @@ typedef struct {
 	char *exclude_slot;
 } qfile_args_t;
 
-char slotted = 0;
+bool qfile_slotted = false;
+bool qfile_exact = false;
 
 /*
  * We assume the people calling us have chdir(/var/db/pkg) and so
@@ -228,7 +229,7 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 						warn("invalid atom %s", pkg);
 						continue;
 					}
-					if (slotted) {
+					if (qfile_slotted) {
 						strcpy(p, "/SLOT");
 						eat_file(pkg, pkgslot+1, sizeof(pkgslot)-1);
 						rmspace(pkgslot+1);
@@ -237,7 +238,7 @@ dont_skip_pkg: /* End of the package exclusion tests. */
 					} else
 						*pkgslot = '\0';
 					printf("%s%s/%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
-						(exact ? dentry->d_name : atom->PN),
+						(qfile_exact ? dentry->d_name : atom->PN),
 						pkgslot, NORM);
 					if (quiet)
 						puts("");
@@ -504,8 +505,8 @@ int qfile_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QFILE, qfile, "")) != -1) {
 		switch (i) {
 			COMMON_GETOPTS_CASES(qfile)
-			case 'S': slotted = 1; break;
-			case 'e': exact = 1; break;
+			case 'S': qfile_slotted = true; break;
+			case 'e': qfile_exact = true; break;
 			case 'f':
 				if (args_file != NULL) {
 					warn("Don't use -f twice!");
@@ -544,7 +545,7 @@ int qfile_main(int argc, char **argv)
 				break;
 		}
 	}
-	if (!exact && verbose) exact++;
+	if (!qfile_exact && verbose) qfile_exact = true;
 	if ((argc == optind) && (args_file == NULL))
 		qfile_usage(EXIT_FAILURE);
 
