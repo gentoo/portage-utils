@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.53 2011/12/18 07:58:40 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.54 2011/12/18 20:21:15 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qcheck_opts_help[] = {
 	"Undo prelink when calculating checksums",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.53 2011/12/18 07:58:40 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.54 2011/12/18 20:21:15 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 #define qcprintf(fmt, args...) if (!state->bad_only) printf(_(fmt), ## args)
@@ -365,7 +365,7 @@ int qcheck_main(int argc, char **argv)
 	if ((argc == optind) && !state.search_all)
 		qcheck_usage(EXIT_FAILURE);
 
-	ret = q_vdb_foreach_pkg(qcheck_cb, &state);
+	ret = q_vdb_foreach_pkg(qcheck_cb, &state, NULL);
 	xarrayfree(regex_arr);
 	return ret;
 }

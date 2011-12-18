@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.2 2011/12/18 06:31:29 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.3 2011/12/18 20:21:15 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -244,8 +244,9 @@ _q_static void q_vdb_close_pkg(q_vdb_pkg_ctx *pkg_ctx)
  */
 
 typedef int (q_vdb_pkg_cb)(q_vdb_pkg_ctx *, void *priv);
+typedef int (q_vdb_cat_filter)(q_vdb_cat_ctx *, void *priv);
 
-_q_static int q_vdb_foreach_pkg(q_vdb_pkg_cb callback, void *priv)
+_q_static int q_vdb_foreach_pkg(q_vdb_pkg_cb callback, void *priv, q_vdb_cat_filter filter)
 {
 	q_vdb_ctx *ctx;
 	q_vdb_cat_ctx *cat_ctx;
@@ -257,11 +258,14 @@ _q_static int q_vdb_foreach_pkg(q_vdb_pkg_cb callback, void *priv)
 		return EXIT_FAILURE;
 
 	ret = 0;
-	while ((cat_ctx = q_vdb_next_cat(ctx)))
+	while ((cat_ctx = q_vdb_next_cat(ctx))) {
+		if (filter && !filter(cat_ctx, priv))
+			continue;
 		while ((pkg_ctx = q_vdb_next_pkg(cat_ctx))) {
 			ret |= callback(pkg_ctx, priv);
 			q_vdb_close_pkg(pkg_ctx);
 		}
+	}
 
 	return ret;
 }
