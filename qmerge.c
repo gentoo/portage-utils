@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.111 2011/12/12 20:47:00 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.112 2011/12/18 20:23:34 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.111 2011/12/12 20:47:00 grobian Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.112 2011/12/18 20:23:34 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -198,64 +198,41 @@ _q_static void qmerge_initialize(void)
 	}
 }
 
-_q_static char *best_version(const char *CATEGORY, const char *PN)
+struct qmerge_bv_state {
+	const char *catname;
+	const char *pkgname;
+	char buf[4096];
+	char *retbuf;
+};
+
+_q_static int qmerge_filter_cat(q_vdb_cat_ctx *cat_ctx, void *priv)
 {
-	/* XXX: The qlist code should be refactored to avoid this fork and I/O */
-	static char buf[4096];
-	ssize_t rret;
-	int status, pipefd[2];
-	pid_t p;
-	FILE *fp;
+	struct qmerge_bv_state *state = priv;
+	return strcmp(cat_ctx->name, state->catname) == 0;
+}
 
-	buf[0] = '\0';
-	if (pipe(pipefd))
-		return buf;
+_q_static int qmerge_best_version_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+{
+	struct qmerge_bv_state *state = priv;
+	if (qlist_match(pkg_ctx, state->buf, true))
+		strcpy(state->retbuf, state->buf);
+	return 0;
+}
 
-	snprintf(buf, sizeof(buf), "%s%s%s", (CATEGORY != NULL ? CATEGORY : ""),
-		(CATEGORY != NULL ? "/" : ""), PN);
+_q_static char *best_version(const char *catname, const char *pkgname)
+{
+	static char retbuf[4096];
+	struct qmerge_bv_state state = {
+		.catname = catname,
+		.pkgname = pkgname,
+		.retbuf = retbuf,
+	};
 
-	fflush(stdout);
+	snprintf(state.buf, sizeof(state.buf), "%s/%s", catname, pkgname);
+	retbuf[0] = '\0';
+	q_vdb_foreach_pkg(qmerge_best_version_cb, &state, qmerge_filter_cat);
 
-	switch ((p = fork())) {
-	/* Stupid -Cv screws up global state */
-	case 0: {
-		fclose(stdout);
-		close(pipefd[0]);
-		if (dup2(pipefd[1], STDOUT_FILENO) != STDOUT_FILENO)
-			exit(1);
-		stdout = fdopen(pipefd[1], "w");
-		if (!stdout)
-			exit(1);
-		run_applet_l("qlist", "-CIev", buf, NULL);
-		exit(0);
-	}
-	default:
-		close(pipefd[1]);
-		waitpid(p, &status, 0);
-	}
-
-	fp = fdopen(pipefd[0], "r");
-	if (!fp) {
-		close(pipefd[0]);
-		return buf;
-	}
-
-	rret = fread(buf, 1, sizeof(buf), fp);
-	if (rret > 0) {
-		char *s;
-
-		buf[rret] = '\0';
-
-		s = buf;
-		while ((s = strchr(s, '\n')) != NULL)
-			*s = ' ';
-		rmspace(buf);
-	}
-
-	/* takes care of close(pipefd[0]) */
-	fclose(fp);
-
-	return buf;
+	return retbuf;
 }
 
 _q_static int

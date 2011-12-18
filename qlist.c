@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.65 2011/12/18 07:27:37 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.66 2011/12/18 20:23:34 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.65 2011/12/18 07:27:37 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.66 2011/12/18 20:23:34 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 queue *filter_dups(queue *sets);
@@ -151,6 +151,47 @@ static const char *umapstr(char display, const char *cat, const char *name)
 	return buf;
 }
 
+_q_static bool qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, bool exact)
+{
+	const char *catname = pkg_ctx->cat_ctx->name;
+	const char *pkgname = pkg_ctx->name;
+	char buf[_Q_PATH_MAX];
+	char swap[_Q_PATH_MAX];
+	depend_atom *atom;
+
+	snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
+	/* printf("buf=%s:%s\n", buf,grab_vdb_item("SLOT", catname, pkgname)); */
+	if (exact) {
+		if (strcmp(name, buf) == 0)
+			return true;
+		if (strcmp(name, strstr(buf, "/") + 1) == 0)
+			return true;
+
+		if ((atom = atom_explode(buf)) == NULL) {
+			warn("invalid atom %s", buf);
+			return false;
+		}
+		snprintf(swap, sizeof(swap), "%s/%s",
+			 atom->CATEGORY, atom->PN);
+		atom_implode(atom);
+		if (strcmp(name, swap) == 0)
+			return true;
+		if (strcmp(name, strstr(swap, "/") + 1) == 0)
+			return true;
+	} else {
+		if (charmatch(name, buf) == 0)
+			return true;
+		if (charmatch(name, pkgname) == 0)
+			return true;
+		if (rematch(name, buf, REG_EXTENDED) == 0)
+			return true;
+		if (rematch(name, pkgname, REG_EXTENDED) == 0)
+			return true;
+	}
+
+	return false;
+}
+
 struct qlist_opt_state {
 	int argc;
 	char **argv;
@@ -186,30 +227,8 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	/* see if this cat/pkg is requested */
 	for (i = optind; i < state->argc; ++i) {
 		char *name = pkg_name(state->argv[i]);
-		snprintf(state->buf, state->buflen, "%s/%s", catname, pkgname);
-		/* printf("buf=%s:%s\n", buf,grab_vdb_item("SLOT", catname, pkgname)); */
-		if (state->exact) {
-			if ((atom = atom_explode(state->buf)) == NULL) {
-				warn("invalid atom %s", state->buf);
-				continue;
-			}
-			snprintf(swap, sizeof(swap), "%s/%s",
-				 atom->CATEGORY, atom->PN);
-			atom_implode(atom);
-			if ((strcmp(name, swap) == 0) || (strcmp(name, state->buf) == 0))
-				break;
-			if ((strcmp(name, strstr(swap, "/") + 1) == 0) || (strcmp(name, strstr(state->buf, "/") + 1) == 0))
-				break;
-		} else {
-			if (charmatch(name, state->buf) == 0)
-				break;
-			if (charmatch(name, pkgname) == 0)
-				break;
-			if (rematch(name, state->buf, REG_EXTENDED) == 0)
-				break;
-			if (rematch(name, pkgname, REG_EXTENDED) == 0)
-				break;
-		}
+		if (qlist_match(pkg_ctx, name, state->exact))
+			break;
 	}
 	if ((i == state->argc) && (state->argc != optind))
 		return 0;
