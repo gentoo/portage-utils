@@ -1,3 +1,5 @@
+. /etc/init.d/functions.sh 2>/dev/null || :
+
 setup_path() {
 	local d=$PWD
 	while [[ $d != "/" ]] ; do
@@ -29,18 +31,18 @@ unset ROOT PORTAGE_CONFIGROOT PORTAGE_QUIET
 q -i -q
 
 fail() {
-	echo "FAILED: $*"
+	echo "${BAD}FAILED:${NORMAL} $*"
 	exit 1
 }
 die() { fail "$@" ; }
 
 skip() {
-	echo "SKIPPED: $*"
+	echo "${WARN}SKIPPED:${NORMAL} $*"
 	exit 0
 }
 
 pass() {
-	echo "PASSED"
+	echo "${GOOD}PASSED:${NORMAL} ${PWD##*/}"
 	exit 0
 }
 

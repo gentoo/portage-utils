@@ -29,10 +29,8 @@ for i in `seq 1 ${#TEST_CASES[@]}` ; do
 		echo "Test #${i} failed: ${TEST_CASES[$i]}" > /dev/stderr
 		echo " - expected result was: ${EXPECTED_RESULTS[$i]}" > /dev/stderr
 		echo " - actual result was:   $(eval ${TEST_CASES[$i]})" > /dev/stderr
-		echo FAILED
-		exit 1
+		fail
 	fi
 done
 
-echo PASSED
-exit 0
+pass

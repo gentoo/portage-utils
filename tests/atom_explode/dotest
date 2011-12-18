@@ -17,16 +17,16 @@ fi
 files=$(find . -mindepth 2 -type f -printf '%P\n%f\n')
 popd >/dev/null
 
-echo -n "atom_explode():"
+printf "atom_explode():"
 time echo "${files}" | "$b"/e > "$b"/me || exit $?
 echo
 
-echo -n "portage:"
+printf "portage:"
 time echo "${files}" | "$s"/atom-explode.py > "$b"/py || exit $?
 echo
 
 if diff -U 0 "$b"/me "$b"/py ; then
-	echo "PASSED"
+	pass
 else
-	echo "FAIL ! :("
+	fail
 fi
