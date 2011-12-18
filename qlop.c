@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.56 2011/02/21 07:33:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.57 2011/12/18 01:31:11 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -27,7 +27,7 @@
 # include <sys/sysctl.h>
 #endif
 
-#define QLOP_DEFAULT_LOGFILE EPREFIX "/var/log/emerge.log"
+#define QLOP_DEFAULT_LOGFILE EPREFIX "var/log/emerge.log"
 
 #define QLOP_FLAGS "gtHluscf:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
@@ -52,7 +52,7 @@ static const char * const qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.56 2011/02/21 07:33:21 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.57 2011/12/18 01:31:11 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
