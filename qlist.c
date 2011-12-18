@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.62 2011/03/02 08:13:46 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.63 2011/12/18 01:17:14 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,10 +41,8 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.62 2011/03/02 08:13:46 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.63 2011/12/18 01:17:14 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
-
-extern char *grab_vdb_item(const char *, const char *, const char *);
 
 queue *filter_dups(queue *sets);
 queue *filter_dups(queue *sets)
@@ -64,6 +62,21 @@ queue *filter_dups(queue *sets)
 		}
 	}
 	return dups;
+}
+
+_q_static char *q_vdb_pkg_eat(q_vdb_pkg_ctx *pkg_ctx, const char *item)
+{
+	static char buf[_Q_PATH_MAX];
+	int fd;
+
+	fd = q_vdb_pkg_openat(pkg_ctx, item, O_RDONLY);
+	if (fd == -1)
+		return NULL;
+
+	eat_file_at(fd, item, buf, sizeof(buf));
+	rmspace(buf);
+
+	return buf;
 }
 
 static char *grab_pkg_umap(char *CAT, char *PV)
@@ -140,7 +153,10 @@ static const char *umapstr(char display, char *cat, char *name)
 
 int qlist_main(int argc, char **argv)
 {
-	int i, j, dfd;
+	q_vdb_ctx *ctx;
+	q_vdb_cat_ctx *cat_ctx;
+	q_vdb_pkg_ctx *pkg_ctx;
+	int i, j, dfd, ret;
 	char qlist_all = 0, just_pkgname = 0, dups_only = 0;
 	char show_dir, show_obj, show_sym, show_slots, show_umap;
 	struct dirent **de, **cat;
@@ -185,31 +201,39 @@ int qlist_main(int argc, char **argv)
 
 	buflen = _Q_PATH_MAX;
 	buf = xmalloc(buflen);
+	ret = EXIT_FAILURE;
 
-	snprintf(buf, buflen, "%s/%s", portroot, portvdb);
-	if ((dfd = scandir(buf, &cat, filter_hidden, alphasort)) < 0) {
-		free(buf);
+	ctx = q_vdb_open();
+	if (!ctx)
 		return EXIT_FAILURE;
-	}
+
+	if ((dfd = scandirat(ctx->vdb_fd, ".", &cat, q_vdb_filter_cat, alphasort)) < 0)
+		goto done;
 
 	/* open /var/db/pkg */
 	for (j = 0; j < dfd; j++) {
 		int a, x;
 
-		/* skip the "-MERGE-" stuff */
-		if (cat[j]->d_name[0] == '-')
+		/* open the cateogry */
+		cat_ctx = q_vdb_open_cat(ctx, cat[j]->d_name);
+		if (!cat_ctx)
 			continue;
 
-		/* open the cateogry */
-		snprintf(buf, buflen, "%s/%s/%s", portroot, portvdb, cat[j]->d_name);
-		if ((a = scandir(buf, &de, filter_hidden, alphasort)) < 0)
+		a = scandirat(ctx->vdb_fd, cat[j]->d_name, &de, filter_hidden, alphasort);
+		if (a < 0) {
+			q_vdb_close_cat(cat_ctx);
 			continue;
+		}
 
 		for (x = 0; x < a; x++) {
 			FILE *fp;
 			static char *slotted_item, *slot;
 
 			if (de[x]->d_name[0] == '-')
+				continue;
+
+			pkg_ctx = q_vdb_open_pkg(cat_ctx, de[x]->d_name);
+			if (!pkg_ctx)
 				continue;
 
 			slot = slotted_item = NULL;
@@ -243,13 +267,13 @@ int qlist_main(int argc, char **argv)
 				}
 			}
 			if ((i == argc) && (argc != optind))
-				continue;
+				goto next_cat;
 
 			if (i < argc) {
 				if ((slotted_item = slot_name(argv[i])) != NULL) {
-					slot = grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name);
+					slot = q_vdb_pkg_eat(pkg_ctx, "SLOT");
 					if (strcmp(slotted_item, slot) != 0)
-						continue;
+						goto next_cat;
 				}
 			}
 			if (just_pkgname) {
@@ -259,7 +283,7 @@ int qlist_main(int argc, char **argv)
 					snprintf(swap, sizeof(swap), "%s/%s", cat[j]->d_name, pkgname->PN);
 					sets = add_set(swap, buf, sets);
 					atom_implode(pkgname);
-					continue;
+					goto next_cat;
 				}
 				pkgname = (verbose ? NULL : atom_explode(de[x]->d_name));
 				if ((qlist_all + just_pkgname) < 2) {
@@ -267,7 +291,7 @@ int qlist_main(int argc, char **argv)
 					slot = NULL;
 
 					if (show_slots)
-						slot = grab_vdb_item("SLOT", cat[j]->d_name, de[x]->d_name);
+						slot = q_vdb_pkg_eat(pkg_ctx, "SLOT");
 
 					/* display it */
 					printf("%s%s/%s%s%s%s%s%s%s%s%s%s\n", BOLD, cat[j]->d_name, BLUE,
@@ -280,17 +304,15 @@ int qlist_main(int argc, char **argv)
 					atom_implode(pkgname);
 
 				if (qlist_all == 0)
-					continue;
+					goto next_cat;
 			}
-
-			snprintf(buf, buflen, "%s%s/%s/%s/CONTENTS", portroot, portvdb,
-			         cat[j]->d_name, de[x]->d_name);
 
 			if (verbose > 1)
 				printf("%s%s/%s%s%s\n%sCONTENTS%s:\n", BOLD, cat[j]->d_name, BLUE, de[x]->d_name, NORM, DKBLUE, NORM);
 
-			if ((fp = fopen(buf, "r")) == NULL)
-				continue;
+			fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
+			if (fp == NULL)
+				goto next_cat;
 
 			while (getline(&buf, &buflen, fp) != -1) {
 				contents_entry *e;
@@ -319,7 +341,12 @@ int qlist_main(int argc, char **argv)
 				}
 			}
 			fclose(fp);
+
+ next_cat:
+			q_vdb_close_pkg(pkg_ctx);
 		}
+
+		q_vdb_close_cat(cat_ctx);
 		while (a--) free(de[a]);
 		free(de);
 	}
@@ -339,7 +366,7 @@ int qlist_main(int argc, char **argv)
 			if (ok)	{
 				char *slot = NULL;
 				if (show_slots)
-					slot = (char *) grab_vdb_item("SLOT", (const char *) atom->CATEGORY, (const char *) atom->P);
+					slot = grab_vdb_item("SLOT", atom->CATEGORY, atom->P);
 				printf("%s%s/%s%s%s%s%s%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
 					(!columns ? (verbose ? atom->P : atom->PN) : atom->PN), (columns ? " " : ""), (columns ? atom->PV : ""),
 					NORM, YELLOW, slot ? slot_separator : "", slot ? slot : "", NORM);
@@ -354,7 +381,10 @@ int qlist_main(int argc, char **argv)
 	while (dfd--) free(cat[dfd]);
 	free(cat);
 
-	return EXIT_SUCCESS;
+	ret = EXIT_SUCCESS;
+ done:
+	q_vdb_close(ctx);
+	return ret;
 }
 
 #else

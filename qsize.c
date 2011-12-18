@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.38 2011/03/17 03:01:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsize.c,v 1.39 2011/12/18 01:17:14 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,14 +32,15 @@ static const char * const qsize_opts_help[] = {
 	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
-static const char qsize_rcsid[] = "$Id: qsize.c,v 1.38 2011/03/17 03:01:19 vapier Exp $";
+static const char qsize_rcsid[] = "$Id: qsize.c,v 1.39 2011/12/18 01:17:14 vapier Exp $";
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
 int qsize_main(int argc, char **argv)
 {
-	DIR *dir, *dirp;
+	q_vdb_ctx *ctx;
+	q_vdb_cat_ctx *cat_ctx;
+	q_vdb_pkg_ctx *pkg_ctx;
 	int i;
-	struct dirent *dentry, *de;
 	char search_all = 0;
 	struct stat st;
 	char fs_size = 0, summary = 0, summary_only = 0;
@@ -79,41 +80,32 @@ int qsize_main(int argc, char **argv)
 	buflen = _Q_PATH_MAX;
 	buf = xmalloc(buflen);
 
-	snprintf(buf, buflen, "%s/%s", portroot, portvdb);
-	xchdir(buf);
-	if ((dir = opendir(".")) == NULL)
+	ctx = q_vdb_open();
+	if (!ctx)
 		return EXIT_FAILURE;
 
 	/* open /var/db/pkg */
-	while ((dentry = q_vdb_get_next_dir(dir))) {
-
-		if ((dirp = opendir(dentry->d_name)) == NULL)
-			continue;
-
+	while ((cat_ctx = q_vdb_next_cat(ctx))) {
 		/* open the cateogry */
-		while ((de = readdir(dirp)) != NULL) {
+		const char *catname = cat_ctx->name;
+		while ((pkg_ctx = q_vdb_next_pkg(cat_ctx))) {
+			const char *pkgname = pkg_ctx->name;
 			FILE *fp;
-			if (*de->d_name == '.')
-				continue;
-
 			/* see if this cat/pkg is requested */
 			if (!search_all) {
 				for (i = optind; i < argc; ++i) {
-					snprintf(buf, buflen, "%s/%s", dentry->d_name,
-					         de->d_name);
+					snprintf(buf, buflen, "%s/%s", catname, pkgname);
 					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
 						break;
-					if (rematch(argv[i], de->d_name, REG_EXTENDED) == 0)
+					if (rematch(argv[i], pkgname, REG_EXTENDED) == 0)
 						break;
 				}
 				if (i == argc)
-					continue;
+					goto next_pkg;
 			}
 
-			snprintf(buf, buflen, "%s%s/%s/%s/CONTENTS", portroot, portvdb,
-			         dentry->d_name, de->d_name);
-			if ((fp = fopen(buf, "r")) == NULL)
-				continue;
+			if ((fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
+				goto next_pkg;
 
 			num_ignored = num_files = num_nonfiles = num_bytes = 0;
 			while (getline(&buf, &buflen, fp) != -1) {
@@ -150,7 +142,7 @@ int qsize_main(int argc, char **argv)
 
 			if (!summary_only) {
 				printf("%s%s/%s%s%s: %lu files, %lu non-files, ", BOLD,
-				       basename(dentry->d_name), BLUE, de->d_name, NORM,
+				       catname, BLUE, pkgname, NORM,
 				       (unsigned long)num_files,
 				       (unsigned long)num_nonfiles);
 				if (num_ignored)
@@ -164,8 +156,10 @@ int qsize_main(int argc, char **argv)
 					       (unsigned long)(num_bytes / KILOBYTE),
 					       (unsigned long)(((num_bytes%KILOBYTE)*1000)/KILOBYTE));
 			}
+
+ next_pkg:
+			q_vdb_close_pkg(pkg_ctx);
 		}
-		closedir(dirp);
 	}
 
 	if (summary) {

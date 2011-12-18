@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.199 2011/12/12 21:42:23 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.200 2011/12/18 01:17:14 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -776,7 +776,7 @@ const char *initialize_flat(int cache_type)
 		goto ret;
 	}
 
-	if ((stat(cache_file, &st)) != (-1))
+	if (stat(cache_file, &st) != -1)
 		if (st.st_size == 0)
 			unlink(cache_file);
 
@@ -1028,15 +1028,15 @@ static char *grab_vdb_item(const char *item, const char *CATEGORY, const char *P
 	return buf;
 }
 
-queue *get_vdb_atoms(int fullcpv);
-queue *get_vdb_atoms(int fullcpv)
+_q_static queue *get_vdb_atoms(int fullcpv)
 {
+	q_vdb_ctx *ctx;
+
 	int cfd, j;
 	int dfd, i;
 
 	char buf[_Q_PATH_MAX];
 	char slot[_Q_PATH_MAX];
-	static char savecwd[_POSIX_PATH_MAX];
 
 	struct dirent **cat;
 	struct dirent **pf;
@@ -1044,30 +1044,17 @@ queue *get_vdb_atoms(int fullcpv)
 	depend_atom *atom = NULL;
 	queue *cpf = NULL;
 
-	xgetcwd(savecwd, sizeof(savecwd));
+	ctx = q_vdb_open();
+	if (!ctx)
+		return NULL;
 
-	xchdir(savecwd);
-
-	if (chdir(portroot) != 0)
-		goto fuckit;
-
-	if (chdir(portvdb) != 0)
-		goto fuckit;
-
-	memset(buf, 0, sizeof(buf));
 	/* scan the cat first */
-	if ((cfd = scandir(".", &cat, filter_hidden, alphasort)) < 0)
+	if ((cfd = scandirat(ctx->vdb_fd, ".", &cat, q_vdb_filter_cat, alphasort)) < 0)
 		goto fuckit;
 
 	for (j = 0; j < cfd; j++) {
-		if (cat[j]->d_name[0] == '-')
+		if ((dfd = scandirat(ctx->vdb_fd, cat[j]->d_name, &pf, filter_hidden, alphasort)) < 0)
 			continue;
-		if (chdir(cat[j]->d_name) != 0)
-			continue;
-		if ((dfd = scandir(".", &pf, filter_hidden, alphasort)) < 0) {
-			xchdir("..");
-			continue;
-		}
 		for (i = 0; i < dfd; i++) {
 			if (pf[i]->d_name[0] == '-')
 				continue;
@@ -1078,16 +1065,12 @@ queue *get_vdb_atoms(int fullcpv)
 			slot[0] = '0';
 			slot[1] = 0;
 			strncat(buf, "/SLOT", sizeof(buf));
-			if (access(buf, R_OK) == 0) {
-				eat_file(buf, buf, sizeof(buf));
-				rmspace(buf);
-				if (strcmp(buf, "0") != 0)
-					strncpy(slot, buf, sizeof(slot));
-			}
+			eat_file_at(ctx->vdb_fd, buf, buf, sizeof(buf));
+			rmspace(buf);
 
 			if (fullcpv) {
 				if (atom->PR_int)
-					snprintf(buf, sizeof(buf), "%s/%s-%s-r%i", atom->CATEGORY, atom->PN, atom->PV , atom->PR_int);
+					snprintf(buf, sizeof(buf), "%s/%s-%s-r%i", atom->CATEGORY, atom->PN, atom->PV, atom->PR_int);
 				else
 					snprintf(buf, sizeof(buf), "%s/%s-%s", atom->CATEGORY, atom->PN, atom->PV);
 			} else {
@@ -1096,7 +1079,6 @@ queue *get_vdb_atoms(int fullcpv)
 			atom_implode(atom);
 			cpf = add_set(buf, slot, cpf);
 		}
-		xchdir("..");
 		while (dfd--) free(pf[dfd]);
 		free(pf);
 	}
@@ -1105,12 +1087,12 @@ queue *get_vdb_atoms(int fullcpv)
 	while (cfd--) free(cat[cfd]);
 	free(cat);
 
-fuckit:
-	xchdir(savecwd);
+ fuckit:
+	q_vdb_close(ctx);
 	return cpf;
 }
 
-void cleanup()
+void cleanup(void)
 {
 	reinitialize_as_needed();
 	free_sets(virtuals);
@@ -1129,12 +1111,12 @@ int main(int argc, char **argv)
 	textdomain(argv0);
 #endif
 #if 1
-	if (fstat(fileno(stdout), &st) != (-1))
+	if (fstat(fileno(stdout), &st) != -1)
 		if (!isatty(fileno(stdout)))
 			if ((S_ISFIFO(st.st_mode)) == 0)
 				no_colors();
 #endif
-	if ((getenv("TERM") == NULL) || ((strcmp(getenv("TERM"), "dumb")) == 0))
+	if ((getenv("TERM") == NULL) || (strcmp(getenv("TERM"), "dumb") == 0))
 		no_colors();
 
 	initialize_portage_env();

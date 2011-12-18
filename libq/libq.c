@@ -34,10 +34,12 @@
 #include "atom_explode.c"
 #include "atom_compare.c"
 #include "basename.c"
+#include "scandirat.c"
 #include "prelink.c"
 
 #ifndef _LIB_Q
 # include "profile.c"
+# include "vdb.c"
 # include "vdb_get_next_dir.c"
 # include "virtuals.c"
 #endif

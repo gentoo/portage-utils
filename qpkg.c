@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.34 2011/02/28 18:21:42 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.35 2011/12/18 01:17:14 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,7 @@ static const char * const qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.34 2011/02/28 18:21:42 vapier Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.35 2011/12/18 01:17:14 vapier Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
@@ -293,10 +293,11 @@ int qpkg_make(depend_atom *atom)
 
 int qpkg_main(int argc, char **argv)
 {
+	q_vdb_ctx *ctx;
+	q_vdb_cat_ctx *cat_ctx;
+	q_vdb_pkg_ctx *pkg_ctx;
 	size_t s, pkgs_made;
 	int i;
-	DIR *dir, *dirp;
-	struct dirent *dentry_cat, *dentry_pkg;
 	struct stat st;
 	char buf[BUFSIZE];
 	const char *bindir;
@@ -374,24 +375,23 @@ retry_mkdir:
 	}
 
 	/* now try to run through vdb and locate matches for user inputs */
-	if ((dir = opendir(portvdb)) == NULL)
+	ctx = q_vdb_open();
+	if (!ctx)
 		return EXIT_FAILURE;
 
 	/* scan all the categories */
-	while ((dentry_cat = q_vdb_get_next_dir(dir)) != NULL) {
-		snprintf(buf, sizeof(buf), "%s/%s", portvdb, dentry_cat->d_name);
-		if ((dirp = opendir(buf)) == NULL)
-			continue;
-
+	while ((cat_ctx = q_vdb_next_cat(ctx))) {
 		/* scan all the packages in this category */
-		while ((dentry_pkg = q_vdb_get_next_dir(dirp)) != NULL) {
+		const char *catname = cat_ctx->name;
+		while ((pkg_ctx = q_vdb_next_pkg(cat_ctx))) {
+			const char *pkgname = pkg_ctx->name;
 
 			/* see if user wants any of these packages */
-			snprintf(buf, sizeof(buf), "%s/%s", dentry_cat->d_name, dentry_pkg->d_name);
+			snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
 			atom = atom_explode(buf);
 			if (!atom) {
 				warn("could not explode '%s'", buf);
-				continue;
+				goto next_pkg;
 			}
 			snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
 			for (i = optind; i < argc; ++i) {
@@ -401,6 +401,9 @@ retry_mkdir:
 					if (!qpkg_make(atom)) ++pkgs_made;
 			}
 			atom_implode(atom);
+
+ next_pkg:
+			q_vdb_close_pkg(pkg_ctx);
 		}
 	}
 

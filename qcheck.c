@@ -1,10 +1,10 @@
 /*
- * Copyright 2005-2010 Gentoo Foundation
+ * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.51 2011/10/03 16:18:25 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.52 2011/12/18 01:17:14 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qcheck
@@ -34,19 +34,30 @@ static const char * const qcheck_opts_help[] = {
 	"Undo prelink when calculating checksums",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.51 2011/10/03 16:18:25 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.52 2011/12/18 01:17:14 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
-static bool bad_only = false;
-#define qcprintf(fmt, args...) if (!bad_only) printf(_(fmt), ## args)
+#define qcprintf(fmt, args...) if (!state->bad_only) printf(_(fmt), ## args)
 
-static int qcheck_process_contents(int portroot_fd, int pkg_fd,
-	const char *catname, const char *pkgname, array_t *regex_arr,
-	bool qc_update, bool chk_afk, bool chk_hash, bool chk_mtime,
-	bool undo_prelink)
+struct qcheck_opt_state {
+	int argc;
+	char **argv;
+	array_t *regex_arr;
+	bool bad_only;
+	bool search_all;
+	bool qc_update;
+	bool chk_afk;
+	bool chk_hash;
+	bool chk_mtime;
+	bool undo_prelink;
+};
+
+static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 {
 	int fd;
 	FILE *fp, *fpx;
+	const char *catname = pkg_ctx->cat_ctx->name;
+	const char *pkgname = pkg_ctx->name;
 	size_t num_files, num_files_ok, num_files_unknown, num_files_ignored;
 	char *buffer, *line;
 	size_t linelen;
@@ -54,7 +65,7 @@ static int qcheck_process_contents(int portroot_fd, int pkg_fd,
 
 	fpx = NULL;
 
-	fd = openat(pkg_fd, "CONTENTS", O_RDONLY|O_CLOEXEC);
+	fd = q_vdb_pkg_openat(pkg_ctx, "CONTENTS", O_RDONLY);
 	if (fd == -1)
 		return EXIT_SUCCESS;
 	if (fstat(fd, &cst)) {
@@ -68,11 +79,11 @@ static int qcheck_process_contents(int portroot_fd, int pkg_fd,
 
 	num_files = num_files_ok = num_files_unknown = num_files_ignored = 0;
 	qcprintf("%sing %s%s/%s%s ...\n",
-		(qc_update ? "Updat" : "Check"),
+		(state->qc_update ? "Updat" : "Check"),
 		GREEN, catname, pkgname, NORM);
-	if (qc_update) {
-		fd = openat(pkg_fd, "CONTENTS~", O_RDWR|O_CLOEXEC|O_CREAT|O_TRUNC, 0644);
-		if (fd == -1 || (fpx = fdopen(fd, "w")) == NULL) {
+	if (state->qc_update) {
+		fpx = q_vdb_pkg_fopenat_rw(pkg_ctx, "CONTENTS~");
+		if (fpx == NULL) {
 			fclose(fp);
 			warnp("unable to fopen(%s/%s, w)", pkgname, "CONTENTS~");
 			return EXIT_FAILURE;
@@ -90,26 +101,26 @@ static int qcheck_process_contents(int portroot_fd, int pkg_fd,
 
 		/* run our little checks */
 		++num_files;
-		if (array_cnt(regex_arr)) {
+		if (array_cnt(state->regex_arr)) {
 			size_t n;
 			regex_t *regex;
-			array_for_each(regex_arr, n, regex)
+			array_for_each(state->regex_arr, n, regex)
 				if (!regexec(regex, e->name, 0, NULL, 0))
 					break;
-			if (n < array_cnt(regex_arr)) {
+			if (n < array_cnt(state->regex_arr)) {
 				--num_files;
 				++num_files_ignored;
 				continue;
 			}
 		}
-		if (fstatat(portroot_fd, e->name + 1, &st, AT_SYMLINK_NOFOLLOW)) {
+		if (fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd, e->name + 1, &st, AT_SYMLINK_NOFOLLOW)) {
 			/* make sure file exists */
-			if (chk_afk) {
+			if (state->chk_afk) {
 				qcprintf(" %sAFK%s: %s\n", RED, NORM, e->name);
 			} else {
 				--num_files;
 				++num_files_ignored;
-				if (qc_update)
+				if (state->qc_update)
 					fputs(buffer, fpx);
 			}
 			continue;
@@ -118,20 +129,20 @@ static int qcheck_process_contents(int portroot_fd, int pkg_fd,
 			/* validate digest (handles MD5 / SHA1) */
 			uint8_t hash_algo;
 			char *hashed_file;
-			hash_cb_t hash_cb = undo_prelink ? hash_cb_prelink_undo : hash_cb_default;
+			hash_cb_t hash_cb = state->undo_prelink ? hash_cb_prelink_undo : hash_cb_default;
 			switch (strlen(e->digest)) {
 				case 32: hash_algo = HASH_MD5; break;
 				case 40: hash_algo = HASH_SHA1; break;
 				default: hash_algo = 0; break;
 			}
 			if (!hash_algo) {
-				if (chk_hash) {
+				if (state->chk_hash) {
 					qcprintf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n", RED, NORM, e->digest, e->name);
 					++num_files_unknown;
 				} else {
 					--num_files;
 					++num_files_ignored;
-					if (qc_update)
+					if (state->qc_update)
 						fputs(buffer, fpx);
 				}
 				continue;
@@ -140,7 +151,7 @@ static int qcheck_process_contents(int portroot_fd, int pkg_fd,
 			if (!hashed_file) {
 				++num_files_unknown;
 				free(hashed_file);
-				if (qc_update) {
+				if (state->qc_update) {
 					fputs(buffer, fpx);
 					if (!verbose)
 						continue;
@@ -148,9 +159,9 @@ static int qcheck_process_contents(int portroot_fd, int pkg_fd,
 				qcprintf(" %sPERM %4o%s: %s\n", RED, (unsigned int)(st.st_mode & 07777), NORM, e->name);
 				continue;
 			} else if (strcmp(e->digest, hashed_file)) {
-				if (chk_hash) {
+				if (state->chk_hash) {
 					const char *digest_disp;
-					if (qc_update)
+					if (state->qc_update)
 						fprintf(fpx, "obj %s %s %lu\n", e->name, hashed_file, st.st_mtime);
 					switch (hash_algo) {
 						case HASH_MD5:  digest_disp = "MD5"; break;
@@ -164,53 +175,53 @@ static int qcheck_process_contents(int portroot_fd, int pkg_fd,
 				} else {
 					--num_files;
 					++num_files_ignored;
-					if (qc_update)
+					if (state->qc_update)
 						fputs(buffer, fpx);
 				}
 				free(hashed_file);
 				continue;
 			} else if (e->mtime && e->mtime != st.st_mtime) {
-				if (chk_mtime) {
+				if (state->chk_mtime) {
 					qcprintf(" %sMTIME%s: %s", RED, NORM, e->name);
 					if (verbose)
 						qcprintf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
 					qcprintf("\n");
 
 					/* This can only be an obj, dir and sym have no digest */
-					if (qc_update)
+					if (state->qc_update)
 						fprintf(fpx, "obj %s %s %lu\n", e->name, e->digest, st.st_mtime);
 				} else {
 					--num_files;
 					++num_files_ignored;
-					if (qc_update)
+					if (state->qc_update)
 						fputs(buffer, fpx);
 				}
 				free(hashed_file);
 				continue;
 			} else {
-				if (qc_update)
+				if (state->qc_update)
 					fputs(buffer, fpx);
 				free(hashed_file);
 			}
 		} else if (e->mtime && e->mtime != st.st_mtime) {
-			if (chk_mtime) {
+			if (state->chk_mtime) {
 				qcprintf(" %sMTIME%s: %s", RED, NORM, e->name);
 				if (verbose)
 					qcprintf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
 				qcprintf("\n");
 
 				/* This can only be a sym */
-				if (qc_update)
+				if (state->qc_update)
 					fprintf(fpx, "sym %s -> %s %lu\n", e->name, e->sym_target, st.st_mtime);
 			} else {
 				--num_files;
 				++num_files_ignored;
-				if (qc_update)
+				if (state->qc_update)
 					fputs(buffer, fpx);
 			}
 			continue;
 		} else {
-			if (qc_update)
+			if (state->qc_update)
 				fputs(buffer, fpx);
 		}
 		++num_files_ok;
@@ -219,18 +230,18 @@ static int qcheck_process_contents(int portroot_fd, int pkg_fd,
 	free(buffer);
 	fclose(fp);
 
-	if (qc_update) {
+	if (state->qc_update) {
 		if (fchown(fd, cst.st_uid, cst.st_gid))
 			/* meh */;
 		if (fchmod(fd, cst.st_mode))
 			/* meh */;
 		fclose(fpx);
-		if (renameat(pkg_fd, "CONTENTS~", pkg_fd, "CONTENTS"))
-			unlinkat(pkg_fd, "CONTENTS~", 0);
+		if (renameat(pkg_ctx->fd, "CONTENTS~", pkg_ctx->fd, "CONTENTS"))
+			unlinkat(pkg_ctx->fd, "CONTENTS~", 0);
 		if (!verbose)
 			return EXIT_SUCCESS;
 	}
-	if (bad_only && num_files_ok != num_files) {
+	if (state->bad_only && num_files_ok != num_files) {
 		if (verbose)
 			printf("%s/%s\n", catname, pkgname);
 		else {
@@ -265,19 +276,67 @@ static int qcheck_process_contents(int portroot_fd, int pkg_fd,
 		return EXIT_SUCCESS;
 }
 
+_q_static int qcheck_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+{
+	struct qcheck_opt_state *state = priv;
+	const char *catname = pkg_ctx->cat_ctx->name;
+	const char *pkgname = pkg_ctx->name;
+
+	/* see if this cat/pkg is requested */
+	if (!state->search_all) {
+		char *buf = NULL;
+		int i;
+
+		for (i = optind; i < state->argc; ++i) {
+			free(buf);
+			xasprintf(&buf, "%s/%s", catname, pkgname);
+			if (!exact) {
+				if (rematch(state->argv[i], buf, REG_EXTENDED) == 0)
+					break;
+				if (rematch(state->argv[i], pkgname, REG_EXTENDED) == 0)
+					break;
+			} else {
+				depend_atom *atom;
+				char swap[_Q_PATH_MAX];
+				if ((atom = atom_explode(buf)) == NULL) {
+					warn("invalid atom %s", buf);
+					continue;
+				}
+				snprintf(swap, sizeof(swap), "%s/%s", atom->CATEGORY, atom->PN);
+				atom_implode(atom);
+				if (strcmp(state->argv[i], swap) == 0 ||
+				    strcmp(state->argv[i], buf) == 0)
+					break;
+				if (strcmp(state->argv[i], strstr(swap, "/") + 1) == 0 ||
+				    strcmp(state->argv[i], strstr(buf, "/") + 1) == 0)
+					break;
+			}
+		}
+		free(buf);
+
+		if (i == state->argc)
+			return 0;
+	}
+
+	return qcheck_process_contents(pkg_ctx, priv);
+}
+
 int qcheck_main(int argc, char **argv)
 {
-	DIR *dir, *dirp;
 	int i, ret;
-	int portroot_fd, vdb_fd, cat_fd, pkg_fd;
-	struct dirent *dentry, *de;
-	bool search_all = 0;
-	bool qc_update = false;
-	bool chk_afk = true;
-	bool chk_hash = true;
-	bool chk_mtime = true;
-	bool undo_prelink = false;
 	DECLARE_ARRAY(regex_arr);
+	struct qcheck_opt_state state = {
+		.argc = argc,
+		.argv = argv,
+		.regex_arr = regex_arr,
+		.bad_only = false,
+		.search_all = false,
+		.qc_update = false,
+		.chk_afk = true,
+		.chk_hash = true,
+		.chk_mtime = true,
+		.undo_prelink = false,
+	};
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -285,7 +344,7 @@ int qcheck_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qcheck)
-		case 'a': search_all = true; break;
+		case 'a': state.search_all = true; break;
 		case 'e': exact = 1; break;
 		case 's': {
 			regex_t regex;
@@ -293,86 +352,19 @@ int qcheck_main(int argc, char **argv)
 			xarraypush(regex_arr, &regex, sizeof(regex));
 			break;
 		}
-		case 'u': qc_update = true; break;
-		case 'A': chk_afk = false; break;
-		case 'B': bad_only = true; break;
-		case 'H': chk_hash = false; break;
-		case 'T': chk_mtime = false; break;
-		case 'p': undo_prelink = prelink_available(); break;
+		case 'u': state.qc_update = true; break;
+		case 'A': state.chk_afk = false; break;
+		case 'B': state.bad_only = true; break;
+		case 'H': state.chk_hash = false; break;
+		case 'T': state.chk_mtime = false; break;
+		case 'p': state.undo_prelink = prelink_available(); break;
 		}
 	}
-	if ((argc == optind) && !search_all)
+	if ((argc == optind) && !state.search_all)
 		qcheck_usage(EXIT_FAILURE);
 
-	portroot_fd = open(portroot, O_RDONLY|O_CLOEXEC);
-	if (portroot_fd == -1)
-		errp("unable to read %s !?", portroot);
-	vdb_fd = openat(portroot_fd, portvdb + 1, O_RDONLY|O_CLOEXEC);
-	if (vdb_fd == -1 || (dir = fdopendir(vdb_fd)) == NULL)
-		errp("unable to read %s !?", portvdb);
-
-	ret = EXIT_SUCCESS;
-
-	/* open /var/db/pkg */
-	while ((dentry = q_vdb_get_next_dir(dir))) {
-		cat_fd = openat(vdb_fd, dentry->d_name, O_RDONLY|O_CLOEXEC);
-		if (cat_fd == -1)
-			continue;
-		if ((dirp = fdopendir(cat_fd)) == NULL) {
-			close(cat_fd);
-			continue;
-		}
-
-		/* open the cateogry */
-		while ((de = readdir(dirp)) != NULL) {
-			if (*de->d_name == '.')
-				continue;
-
-			/* see if this cat/pkg is requested */
-			if (!search_all) {
-				char *buf = NULL;
-				for (i = optind; i < argc; ++i) {
-					free(buf);
-					xasprintf(&buf, "%s/%s", dentry->d_name, de->d_name);
-					if (!exact) {
-						if (rematch(argv[i], buf, REG_EXTENDED) == 0)
-							break;
-						if (rematch(argv[i], de->d_name, REG_EXTENDED) == 0)
-							break;
-					} else {
-						depend_atom *atom;
-						char swap[_Q_PATH_MAX];
-						if ((atom = atom_explode(buf)) == NULL) {
-							warn("invalid atom %s", buf);
-							continue;
-						}
-						snprintf(swap, sizeof(swap), "%s/%s", atom->CATEGORY, atom->PN);
-						atom_implode(atom);
-						if ((strcmp(argv[i], swap) == 0) || (strcmp(argv[i], buf) == 0))
-							break;
-						if ((strcmp(argv[i], strstr(swap, "/") + 1) == 0) || (strcmp(argv[i], strstr(buf, "/") + 1) == 0))
-							break;
-					}
-				}
-				free(buf);
-				if (i == argc)
-					continue;
-			}
-
-			pkg_fd = openat(cat_fd, de->d_name, O_RDONLY|O_CLOEXEC);
-			if (pkg_fd == -1)
-				continue;
-
-			ret = qcheck_process_contents(portroot_fd, pkg_fd,
-				dentry->d_name, de->d_name, regex_arr,
-				qc_update, chk_afk, chk_hash, chk_mtime, undo_prelink);
-			close(pkg_fd);
-		}
-		closedir(dirp);
-	}
-
+	ret = q_vdb_foreach_pkg(qcheck_cb, &state);
 	xarrayfree(regex_arr);
-	close(portroot_fd);
 	return ret;
 }
 
