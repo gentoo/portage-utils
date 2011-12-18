@@ -1,4 +1,4 @@
-typedef void *(q_profile_callback_t)(void *, char *, FILE *);
+typedef void *(q_profile_callback_t)(void *, char *);
 
 _q_static void *
 q_profile_walk_at(int dir_fd, const char *dir, const char *file,
@@ -28,7 +28,7 @@ q_profile_walk_at(int dir_fd, const char *dir, const char *file,
 	/* hand feed the file to the callback */
 	buf = NULL;
 	while (getline(&buf, &buflen, fp) != -1)
-		data = callback(data, buf, fp);
+		data = callback(data, buf);
 	free(buf);
 
 	/* does close(fd) for us */

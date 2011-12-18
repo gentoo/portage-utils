@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.26 2011/03/02 07:03:31 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.27 2011/12/18 20:41:54 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.26 2011/03/02 07:03:31 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.27 2011/12/18 20:41:54 vapier Exp $
  */
 
 #include <stdio.h>
@@ -251,7 +251,7 @@ static queue *resolve_local_profile_virtuals(void)
 }
 
 _q_static void *
-resolve_virtuals_line(void *data, char *buf, FILE *fp)
+resolve_virtuals_line(void *data, char *buf)
 {
 	char *p;
 
