@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.1 2011/12/18 01:17:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.2 2011/12/18 06:31:29 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -166,6 +166,14 @@ typedef struct {
 	q_vdb_cat_ctx *cat_ctx;
 } q_vdb_pkg_ctx;
 
+_q_static int q_vdb_filter_pkg(const struct dirent *de)
+{
+	if (de->d_name[0] == '.' || de->d_name[0] == '-')
+		return 0;
+
+	return 1;
+}
+
 _q_static q_vdb_pkg_ctx *q_vdb_open_pkg(q_vdb_cat_ctx *cat_ctx, const char *name)
 {
 	q_vdb_pkg_ctx *pkg_ctx;
@@ -194,7 +202,7 @@ _q_static q_vdb_pkg_ctx *q_vdb_next_pkg(q_vdb_cat_ctx *cat_ctx)
 		return NULL;
 	}
 
-	if (*de->d_name == '.')
+	if (q_vdb_filter_pkg(de) == 0)
 		goto next_pkg;
 
 	pkg_ctx = q_vdb_open_pkg(cat_ctx, de->d_name);
@@ -232,10 +240,11 @@ _q_static void q_vdb_close_pkg(q_vdb_pkg_ctx *pkg_ctx)
 }
 
 /*
- * G
+ * Global helpers
  */
 
 typedef int (q_vdb_pkg_cb)(q_vdb_pkg_ctx *, void *priv);
+
 _q_static int q_vdb_foreach_pkg(q_vdb_pkg_cb callback, void *priv)
 {
 	q_vdb_ctx *ctx;
@@ -254,5 +263,47 @@ _q_static int q_vdb_foreach_pkg(q_vdb_pkg_cb callback, void *priv)
 			q_vdb_close_pkg(pkg_ctx);
 		}
 
+	return ret;
+}
+
+_q_static int q_vdb_foreach_pkg_sorted(q_vdb_pkg_cb callback, void *priv)
+{
+	q_vdb_ctx *ctx;
+	q_vdb_cat_ctx *cat_ctx;
+	q_vdb_pkg_ctx *pkg_ctx;
+	int ret = 0;
+	int c, p, cat_cnt, pkg_cnt;
+	struct dirent **cat_de, **pkg_de;
+
+	ctx = q_vdb_open();
+	if (!ctx)
+		return EXIT_FAILURE;
+
+	cat_cnt = scandirat(ctx->vdb_fd, ".", &cat_de, q_vdb_filter_cat, alphasort);
+	for (c = 0; c < cat_cnt; ++c) {
+		cat_ctx = q_vdb_open_cat(ctx, cat_de[c]->d_name);
+		if (!cat_ctx)
+			continue;
+
+		pkg_cnt = scandirat(ctx->vdb_fd, cat_de[c]->d_name, &pkg_de, q_vdb_filter_pkg, alphasort);
+		for (p = 0; p < pkg_cnt; ++p) {
+			if (pkg_de[p]->d_name[0] == '-')
+				continue;
+
+			pkg_ctx = q_vdb_open_pkg(cat_ctx, pkg_de[p]->d_name);
+			if (!pkg_ctx)
+				continue;
+
+			ret |= callback(pkg_ctx, priv);
+
+			q_vdb_close_pkg(pkg_ctx);
+		}
+		scandir_free(pkg_de, pkg_cnt);
+
+		q_vdb_close_cat(cat_ctx);
+	}
+	scandir_free(cat_de, cat_cnt);
+
+	q_vdb_close(ctx);
 	return ret;
 }

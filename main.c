@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.201 2011/12/18 03:04:07 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.202 2011/12/18 06:31:29 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -882,7 +882,7 @@ const char *initialize_flat(int cache_type)
 
 	gettimeofday(&start, NULL);
 
-	if ((a = scandir(".", &category, filter_hidden, alphasort)) < 0)
+	if ((a = scandir(".", &category, q_vdb_filter_cat, alphasort)) < 0)
 		goto ret;
 
 	for (i = 0; i < a; i++) {
@@ -893,7 +893,7 @@ const char *initialize_flat(int cache_type)
 			if ((strncmp(category[i]->d_name, "virtual", 7)) != 0)
 				continue;
 
-		if ((b = scandir(category[i]->d_name, &pn, filter_hidden, alphasort)) < 0)
+		if ((b = scandir(category[i]->d_name, &pn, q_vdb_filter_pkg, alphasort)) < 0)
 			continue;
 		for (c = 0; c < b; c++) {
 			char de[_Q_PATH_MAX];
@@ -926,12 +926,10 @@ const char *initialize_flat(int cache_type)
 			while (d--) free(eb[d]);
 			free(eb);
 		}
-		while (b--) free(pn[b]);
-		free(pn);
+		scandir_free(pn, b);
 	}
 	fclose(fp);
-	while (a--) free(category[a]);
-	free(category);
+	scandir_free(category, a);
 
 	if (quiet) goto ret;
 
@@ -1130,11 +1128,9 @@ _q_static queue *get_vdb_atoms(int fullcpv)
 		goto fuckit;
 
 	for (j = 0; j < cfd; j++) {
-		if ((dfd = scandirat(ctx->vdb_fd, cat[j]->d_name, &pf, filter_hidden, alphasort)) < 0)
+		if ((dfd = scandirat(ctx->vdb_fd, cat[j]->d_name, &pf, q_vdb_filter_pkg, alphasort)) < 0)
 			continue;
 		for (i = 0; i < dfd; i++) {
-			if (pf[i]->d_name[0] == '-')
-				continue;
 			snprintf(buf, sizeof(buf), "%s/%s", cat[j]->d_name, pf[i]->d_name);
 			if ((atom = atom_explode(buf)) == NULL)
 				continue;
@@ -1156,13 +1152,9 @@ _q_static queue *get_vdb_atoms(int fullcpv)
 			atom_implode(atom);
 			cpf = add_set(buf, slot, cpf);
 		}
-		while (dfd--) free(pf[dfd]);
-		free(pf);
+		scandir_free(pf, dfd);
 	}
-
-	/* cleanup */
-	while (cfd--) free(cat[cfd]);
-	free(cat);
+	scandir_free(cat, cfd);
 
  fuckit:
 	q_vdb_close(ctx);

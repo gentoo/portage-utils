@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.63 2011/12/18 01:17:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.64 2011/12/18 06:31:29 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.63 2011/12/18 01:17:14 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.64 2011/12/18 06:31:29 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 queue *filter_dups(queue *sets);
@@ -219,7 +219,7 @@ int qlist_main(int argc, char **argv)
 		if (!cat_ctx)
 			continue;
 
-		a = scandirat(ctx->vdb_fd, cat[j]->d_name, &de, filter_hidden, alphasort);
+		a = scandirat(ctx->vdb_fd, cat[j]->d_name, &de, q_vdb_filter_pkg, alphasort);
 		if (a < 0) {
 			q_vdb_close_cat(cat_ctx);
 			continue;
@@ -347,8 +347,7 @@ int qlist_main(int argc, char **argv)
 		}
 
 		q_vdb_close_cat(cat_ctx);
-		while (a--) free(de[a]);
-		free(de);
+		scandir_free(de, a);
 	}
 
 	if (dups_only) {
@@ -378,8 +377,7 @@ int qlist_main(int argc, char **argv)
 		free_sets(sets);
 	}
 
-	while (dfd--) free(cat[dfd]);
-	free(cat);
+	scandir_free(cat, dfd);
 
 	ret = EXIT_SUCCESS;
  done:

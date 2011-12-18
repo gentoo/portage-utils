@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.35 2011/12/18 01:17:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.36 2011/12/18 06:31:29 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,7 @@ static const char * const qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.35 2011/12/18 01:17:14 vapier Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.36 2011/12/18 06:31:29 vapier Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
@@ -95,9 +95,7 @@ uint64_t qpkg_clean_dir(char *dirp, queue *vdb)
 		}
 	}
 
-	while (count--)
-		free(fnames[count]);
-	free(fnames);
+	scandir_free(fnames, count);
 
 	return num_all_bytes;
 }
@@ -174,9 +172,7 @@ int qpkg_clean(char *dirp)
 		snprintf(buf, sizeof(buf), "%s/%s", dirp, dnames[i]->d_name);
 		num_all_bytes += qpkg_clean_dir(buf, vdb);
 	}
-	while (count--)
-		free(dnames[count]);
-	free(dnames);
+	scandir_free(dnames, count);
 
 	free_sets(vdb);
 
