@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.200 2011/12/18 01:17:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.201 2011/12/18 03:04:07 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -64,6 +64,7 @@ static char *portarch;
 static char *portvdb;
 const char portcachedir[] = "metadata/cache";
 static char *portroot;
+static char *eprefix;
 static char *config_protect, *config_protect_mask;
 
 static char *pkgdir;
@@ -501,6 +502,17 @@ typedef struct {
 	const char *default_value;
 } env_vars;
 
+_q_static env_vars *get_portage_env_var(env_vars *vars, const char *name)
+{
+	size_t i;
+
+	for (i = 0; vars[i].name; ++i)
+		if (!strcmp(vars[i].name, name))
+			return &vars[i];
+
+	return NULL;
+}
+
 _q_static void set_portage_env_var(env_vars *var, const char *value)
 {
 	switch (var->type) {
@@ -673,6 +685,7 @@ void initialize_portage_env(void)
 		_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
 		_Q_EVB(BOOL, NOCOLOR,             nocolor,             0)
 		_Q_EVS(ISTR, FEATURES,            features,            "noman noinfo nodoc")
+		_Q_EVS(STR,  EPREFIX,             eprefix,             EPREFIX)
 		_Q_EVS(STR,  PORTDIR,             portdir,             EPREFIX "usr/portage")
 		_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             DEFAULT_PORTAGE_BINHOST)
 		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         EPREFIX "var/tmp/portage/")
@@ -709,11 +722,75 @@ void initialize_portage_env(void)
 			set_portage_env_var(var, s);
 		if (getenv("DEBUG") IF_DEBUG(|| 1)) {
 			fprintf(stderr, "%s = ", var->name);
-			switch (vars_to_read[i].type) {
+			switch (var->type) {
 			case _Q_BOOL: fprintf(stderr, "%i\n", *var->value.b); break;
 			case _Q_STR:
 			case _Q_ISTR: fprintf(stderr, "%s\n", *var->value.s); break;
 			}
+		}
+	}
+
+	/* expand any nested variables e.g. PORTDIR=${EPREFIX}/usr/portage */
+	for (i = 0; vars_to_read[i].name; ++i) {
+		char *svar;
+
+		var = &vars_to_read[i];
+		if (var->type == _Q_BOOL)
+			continue;
+
+		while ((svar = strchr(*var->value.s, '$'))) {
+			env_vars *evar;
+			bool brace;
+			const char *sval;
+			size_t slen, pre_len, var_len, post_len;
+			char byte;
+
+			pre_len = svar - *var->value.s;
+
+			/* First skip the leading "${" */
+			s = ++svar;
+			brace = (*svar == '{');
+			if (brace)
+				s = ++svar;
+
+			/* Now skip the variable name itself */
+			while (isalnum(*svar) || *svar == '_')
+				++svar;
+
+			/* Finally skip the trailing "}" */
+			if (brace && *svar != '}') {
+				warn("invalid variable setting: %s\n", *var->value.s);
+				break;
+			}
+
+			var_len = svar - *var->value.s + 1;
+
+			byte = *svar;
+			*svar = '\0';
+			evar = get_portage_env_var(vars_to_read, s);
+			if (evar) {
+				sval = *evar->value.s;
+			} else {
+				sval = getenv(s);
+				if (!sval)
+					sval = "";
+			}
+			*svar = byte;
+			slen = strlen(sval);
+			post_len = strlen(svar + 1);
+			*var->value.s = xrealloc(*var->value.s, pre_len + MAX(var_len, slen) + post_len + 1);
+
+			/*
+			 * VAR=XxXxX	(slen = 5)
+			 * FOO${VAR}BAR
+			 * pre_len = 3
+			 * var_len = 6
+			 * post_len = 3
+			 */
+			memmove(*var->value.s + pre_len + slen,
+				*var->value.s + pre_len + var_len,
+				post_len + 1);
+			memcpy(*var->value.s + pre_len, sval, slen);
 		}
 	}
 
