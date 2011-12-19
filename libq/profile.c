@@ -72,6 +72,6 @@ _q_static void *
 q_profile_walk(const char *file, q_profile_callback_t callback, void *data)
 {
 	/* Walk the profiles and read the file in question */
-	data = q_profile_walk_at(AT_FDCWD, EPREFIX "etc/make.profile", file, callback, data);
-	return q_profile_walk_at(AT_FDCWD, EPREFIX "etc/portage/make.profile", file, callback, data);
+	data = q_profile_walk_at(AT_FDCWD, CONFIG_EPREFIX "etc/make.profile", file, callback, data);
+	return q_profile_walk_at(AT_FDCWD, CONFIG_EPREFIX "etc/portage/make.profile", file, callback, data);
 }

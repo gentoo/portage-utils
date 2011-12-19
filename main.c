@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.209 2011/12/19 20:09:48 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.210 2011/12/19 20:27:36 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -657,10 +657,10 @@ void initialize_portage_env(void)
 	const char *s;
 
 	static const char * const files[] = {
-		EPREFIX "etc/make.globals",
-		EPREFIX "usr/share/portage/config/make.globals",
-		EPREFIX "etc/make.conf",
-		EPREFIX "etc/portage/make.conf",
+		CONFIG_EPREFIX "etc/make.globals",
+		CONFIG_EPREFIX "usr/share/portage/config/make.globals",
+		CONFIG_EPREFIX "etc/make.conf",
+		CONFIG_EPREFIX "etc/portage/make.conf",
 	};
 	bool nocolor = 0;
 
@@ -682,16 +682,16 @@ void initialize_portage_env(void)
 		_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      "")
 		_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        "")
 		_Q_EVS(STR,  ARCH,                portarch,            "")
-		_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      EPREFIX "etc")
+		_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      CONFIG_EPREFIX "etc")
 		_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
 		_Q_EVB(BOOL, NOCOLOR,             nocolor,             0)
 		_Q_EVS(ISTR, FEATURES,            features,            "noman noinfo nodoc")
-		_Q_EVS(STR,  EPREFIX,             eprefix,             EPREFIX)
-		_Q_EVS(STR,  PORTDIR,             portdir,             EPREFIX "usr/portage")
+		_Q_EVS(STR,  EPREFIX,             eprefix,             CONFIG_EPREFIX)
+		_Q_EVS(STR,  PORTDIR,             portdir,             CONFIG_EPREFIX "usr/portage")
 		_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             DEFAULT_PORTAGE_BINHOST)
-		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         EPREFIX "var/tmp/portage/")
-		_Q_EVS(STR,  PKGDIR,              pkgdir,              EPREFIX "usr/portage/packages/")
-		_Q_EVS(STR,  Q_VDB,               portvdb,             EPREFIX "var/db/pkg")
+		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         CONFIG_EPREFIX "var/tmp/portage/")
+		_Q_EVS(STR,  PKGDIR,              pkgdir,              CONFIG_EPREFIX "usr/portage/packages/")
+		_Q_EVS(STR,  Q_VDB,               portvdb,             CONFIG_EPREFIX "var/db/pkg")
 		{ NULL, 0, _Q_BOOL, { NULL }, 0, NULL, }
 
 #undef _Q_EV
@@ -709,8 +709,8 @@ void initialize_portage_env(void)
 	if (!s)
 		s = "/";
 
-	read_portage_profile(s, EPREFIX "etc/make.profile", vars_to_read);
-	read_portage_profile(s, EPREFIX "etc/portage/make.profile", vars_to_read);
+	read_portage_profile(s, CONFIG_EPREFIX "etc/make.profile", vars_to_read);
+	read_portage_profile(s, CONFIG_EPREFIX "etc/portage/make.profile", vars_to_read);
 
 	/* now read all the config files */
 	for (i = 0; i < ARRAY_SIZE(files); ++i)
@@ -1182,7 +1182,7 @@ int main(int argc, char **argv)
 
 #ifdef ENABLE_NLS	/* never tested */
 	setlocale(LC_ALL, "");
-	bindtextdomain(argv0, EPREFIX "usr/share/locale");
+	bindtextdomain(argv0, CONFIG_EPREFIX "usr/share/locale");
 	textdomain(argv0);
 #endif
 #if 1

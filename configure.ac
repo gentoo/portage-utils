@@ -19,7 +19,7 @@ case "$with_eprefix" in
 	*/) with_eprefix="$with_eprefix" ;;
 	*)  with_eprefix="${with_eprefix}/" ;;
 esac
-AC_DEFINE_UNQUOTED([EPREFIX], ["$with_eprefix"], [path for Gentoo/Prefix project])
+AC_DEFINE_UNQUOTED([CONFIG_EPREFIX], ["$with_eprefix"], [path for Gentoo/Prefix project])
 
 AX_CFLAGS_WARN_ALL
 AC_DEFUN([PT_CHECK_CFLAG],[AX_CHECK_COMPILER_FLAGS([$1],[CFLAGS="$CFLAGS $1"])])
