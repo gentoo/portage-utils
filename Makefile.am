@@ -108,6 +108,8 @@ EXTRA_DIST += \
 	libq/profile.c \
 	libq/rmspace.c \
 	libq/safe_io.c \
+	libq/scandirat.c \
+	libq/vdb.c \
 	libq/vdb_get_next_dir.c \
 	libq/virtuals.c \
 	libq/which.c \

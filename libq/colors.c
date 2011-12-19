@@ -18,7 +18,7 @@ static const char *YELLOW = _MAKE_COLOR("33", "01");
 static const char *BRYELLOW = _MAKE_COLOR("01", "33");
 static const char *WHITE = _MAKE_COLOR("01", "38");
 
-static const char *COLOR_MAP = "/etc/portage/color.map";
+static const char *COLOR_MAP = EPREFIX "etc/portage/color.map";
 
 #define COLOR _MAKE_COLOR
 

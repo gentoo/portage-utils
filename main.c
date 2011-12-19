@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.207 2011/12/19 04:39:24 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.208 2011/12/19 19:43:36 grobian Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -708,6 +708,7 @@ void initialize_portage_env(void)
 	s = getenv("PORTAGE_CONFIGROOT");
 	if (!s)
 		s = "/";
+
 	read_portage_profile(s, EPREFIX "etc/make.profile", vars_to_read);
 	read_portage_profile(s, EPREFIX "etc/portage/make.profile", vars_to_read);
 
