@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.205 2011/12/19 04:28:35 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.206 2011/12/19 04:37:23 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -692,7 +692,7 @@ void initialize_portage_env(void)
 		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         EPREFIX "var/tmp/portage/")
 		_Q_EVS(STR,  PKGDIR,              pkgdir,              EPREFIX "usr/portage/packages/")
 		_Q_EVS(STR,  Q_VDB,               portvdb,             EPREFIX "var/db/pkg")
-		{ }
+		{ NULL, 0, _Q_BOOL, NULL, 0, NULL, }
 
 #undef _Q_EV
 	};
