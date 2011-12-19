@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.23 2011/12/18 06:31:29 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.24 2011/12/19 04:28:35 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,7 +46,7 @@ static const char * const qxpak_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.23 2011/12/18 06:31:29 vapier Exp $";
+static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.24 2011/12/19 04:28:35 vapier Exp $";
 #define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, lookup_applet_idx("qxpak"))
 
 typedef struct {
@@ -140,7 +140,7 @@ static void _xpak_close(_xpak_archive *x)
 }
 
 static void
-_xpak_list_callback(int dir_fd, char *pathname, _q_unused_ int pathname_len,
+_xpak_list_callback(_q_unused_ int dir_fd, char *pathname, _q_unused_ int pathname_len,
                     int data_offset, int data_len, _q_unused_ char *data)
 {
 	if (!verbose)

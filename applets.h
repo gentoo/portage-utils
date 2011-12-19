@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.27 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/applets.h,v 1.28 2011/12/19 04:28:35 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,7 +35,7 @@ DECLARE_APPLET(qglsa) /* disable */
 #undef DECLARE_APPLET
 
 #define DEFINE_APPLET_STUB(applet) \
-	int applet##_main(int argc, char **argv) { \
+	int applet##_main(_q_unused_ int argc, _q_unused_ char **argv) { \
 		err("Sorry, this applet has been disabled"); \
 	}
 

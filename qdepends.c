@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.54 2011/12/18 20:21:15 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.55 2011/12/19 04:28:35 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char * const qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.54 2011/12/18 20:21:15 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.55 2011/12/19 04:28:35 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -278,7 +278,7 @@ this_node_sucks:
 	if (root->neighbor) _dep_dump_tree(root->neighbor, space);
 }
 #else
-void _dep_dump_tree(dep_node *root, int space) {;}
+void _dep_dump_tree(_q_unused_ dep_node *root, _q_unused_ int space) {;}
 #endif
 
 void dep_burn_tree(dep_node *root)

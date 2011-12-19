@@ -32,7 +32,7 @@
 /* pass in a fd and get back a fd; filename is for display only */
 typedef int (*hash_cb_t) (int, const char *);
 
-static int hash_cb_default(int fd, const char *filename) { return fd; }
+static int hash_cb_default(int fd, _q_unused_ const char *filename) { return fd; }
 
 /* This might be useful elsewhere */
 static unsigned char *hash_bin_to_hex(unsigned char *hash_value,
