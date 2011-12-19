@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.54 2011/12/18 20:21:15 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.55 2011/12/19 04:23:18 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qcheck_opts_help[] = {
 	"Undo prelink when calculating checksums",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.54 2011/12/18 20:21:15 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.55 2011/12/19 04:23:18 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 #define qcprintf(fmt, args...) if (!state->bad_only) printf(_(fmt), ## args)
@@ -232,10 +232,12 @@ static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_sta
 	fclose(fp);
 
 	if (state->qc_update) {
-		if (fchown(fd, cst.st_uid, cst.st_gid))
+		if (fchown(fd, cst.st_uid, cst.st_gid)) {
 			/* meh */;
-		if (fchmod(fd, cst.st_mode))
+		}
+		if (fchmod(fd, cst.st_mode)) {
 			/* meh */;
+		}
 		fclose(fpx);
 		if (renameat(pkg_ctx->fd, "CONTENTS~", pkg_ctx->fd, "CONTENTS"))
 			unlinkat(pkg_ctx->fd, "CONTENTS~", 0);
