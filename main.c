@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.208 2011/12/19 19:43:36 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.209 2011/12/19 20:09:48 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -722,14 +722,6 @@ void initialize_portage_env(void)
 		s = getenv(var->name);
 		if (s != NULL)
 			set_portage_env_var(var, s);
-		if (getenv("DEBUG") IF_DEBUG(|| 1)) {
-			fprintf(stderr, "%s = ", var->name);
-			switch (var->type) {
-			case _Q_BOOL: fprintf(stderr, "%i\n", *var->value.b); break;
-			case _Q_STR:
-			case _Q_ISTR: fprintf(stderr, "%s\n", *var->value.s); break;
-			}
-		}
 	}
 
 	/* expand any nested variables e.g. PORTDIR=${EPREFIX}/usr/portage */
@@ -793,6 +785,18 @@ void initialize_portage_env(void)
 				*var->value.s + pre_len + var_len,
 				post_len + 1);
 			memcpy(*var->value.s + pre_len, sval, slen);
+		}
+	}
+
+	if (getenv("DEBUG") IF_DEBUG(|| 1)) {
+		for (i = 0; vars_to_read[i].name; ++i) {
+			var = &vars_to_read[i];
+			fprintf(stderr, "%s = ", var->name);
+			switch (var->type) {
+			case _Q_BOOL: fprintf(stderr, "%i\n", *var->value.b); break;
+			case _Q_STR:
+			case _Q_ISTR: fprintf(stderr, "%s\n", *var->value.s); break;
+			}
 		}
 	}
 
