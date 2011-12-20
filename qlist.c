@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.66 2011/12/18 20:23:34 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.67 2011/12/20 22:47:45 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.66 2011/12/18 20:23:34 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.67 2011/12/20 22:47:45 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 queue *filter_dups(queue *sets);
@@ -67,13 +67,8 @@ queue *filter_dups(queue *sets)
 _q_static char *q_vdb_pkg_eat(q_vdb_pkg_ctx *pkg_ctx, const char *item)
 {
 	static char buf[_Q_PATH_MAX];
-	int fd;
 
-	fd = q_vdb_pkg_openat(pkg_ctx, item, O_RDONLY);
-	if (fd == -1)
-		return NULL;
-
-	eat_file_at(fd, item, buf, sizeof(buf));
+	eat_file_at(pkg_ctx->fd, item, buf, sizeof(buf));
 	rmspace(buf);
 
 	return buf;
