@@ -33,6 +33,10 @@ diff -u list ${as}/list05.good
 qlist -C mtools -s > list
 diff -u list ${as}/list06.good
 
+# SLOT test
+qlist -ICSL | grep -v CVS > list
+diff -u list ${as}/list07.good
+
 cleantmpdir
 
 pass
