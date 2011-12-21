@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.55 2011/12/19 04:28:35 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.56 2011/12/21 21:54:44 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char * const qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.55 2011/12/19 04:28:35 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.56 2011/12/21 21:54:44 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -375,11 +375,8 @@ _q_static int qdepends_main_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 	IF_DEBUG(warn("matched %s/%s", catname, pkgname));
 
-	if (!eat_file_at(pkg_ctx->fd, state->depend_file, depend, sizeof(depend))) {
-		warn("i'm such a fatty, could not eat_file(%s) with %zi bytes",
-			state->depend_file, sizeof(depend));
+	if (!eat_file_at(pkg_ctx->fd, state->depend_file, depend, sizeof(depend)))
 		return 0;
-	}
 
 	IF_DEBUG(warn("growing tree..."));
 	dep_tree = dep_grow_tree(depend);
@@ -437,10 +434,8 @@ _q_static int qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 	IF_DEBUG(warn("matched %s/%s", catname, pkgname));
 
-	if (!eat_file_at(pkg_ctx->fd, state->depend_file, depend, sizeof(depend))) {
-		warn("i'm such a fatty, could not eat_file(%s)", state->depend_file);
+	if (!eat_file_at(pkg_ctx->fd, state->depend_file, depend, sizeof(depend)))
 		return 0;
-	}
 
 	IF_DEBUG(warn("growing tree..."));
 	dep_tree = dep_grow_tree(depend);
