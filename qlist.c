@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.67 2011/12/20 22:47:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.68 2011/12/21 04:59:21 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.67 2011/12/20 22:47:45 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.68 2011/12/21 04:59:21 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 queue *filter_dups(queue *sets);
@@ -214,8 +214,6 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	static char *slotted_item, *slot;
 	const char *catname = pkg_ctx->cat_ctx->name;
 	const char *pkgname = pkg_ctx->name;
-	depend_atom *atom;
-	char swap[_Q_PATH_MAX];
 
 	slot = slotted_item = NULL;
 
@@ -236,7 +234,9 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		}
 	}
 	if (state->just_pkgname) {
+		depend_atom *atom;
 		if (state->dups_only) {
+			char swap[_Q_PATH_MAX];
 			atom = atom_explode(pkgname);
 			snprintf(state->buf, state->buflen, "%s/%s", catname, atom->P);
 			snprintf(swap, sizeof(swap), "%s/%s", catname, atom->PN);
