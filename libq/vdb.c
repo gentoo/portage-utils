@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.3 2011/12/18 20:21:15 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.4 2011/12/21 04:20:00 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -80,6 +80,13 @@ typedef struct {
 _q_static int q_vdb_filter_cat(const struct dirent *de)
 {
 	int i;
+
+#ifdef DT_UNKNOWN
+	if (de->d_type != DT_UNKNOWN &&
+	    de->d_type != DT_DIR &&
+	    de->d_type != DT_LNK)
+		return 0;
+#endif
 
 	if (de->d_name[0] == '.' || de->d_name[0] == '-')
 		return 0;
@@ -168,6 +175,13 @@ typedef struct {
 
 _q_static int q_vdb_filter_pkg(const struct dirent *de)
 {
+#ifdef DT_UNKNOWN
+	if (de->d_type != DT_UNKNOWN &&
+	    de->d_type != DT_DIR &&
+	    de->d_type != DT_LNK)
+		return 0;
+#endif
+
 	if (de->d_name[0] == '.' || de->d_name[0] == '-')
 		return 0;
 
