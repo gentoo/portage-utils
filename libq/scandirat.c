@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/scandirat.c,v 1.2 2011/12/18 06:31:29 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/scandirat.c,v 1.3 2011/12/22 18:29:23 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -31,7 +31,7 @@ static int scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
 			continue;
 
 		ret = realloc(ret, sizeof(*ret) * (cnt + 1));
-		ret[cnt++] = xmemdup(de, sizeof(*de));
+		ret[cnt++] = xmemdup(de, de->d_reclen);
 	}
 	*dirlist = ret;
 
