@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.213 2011/12/22 17:49:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.214 2011/12/22 20:26:20 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -531,20 +531,28 @@ _q_static void set_portage_env_var(env_vars *var, const char *value)
 }
 
 /* Helper to read a portage env file (e.g. make.conf) */
-_q_static void read_portage_env_file(const char *file, env_vars vars[])
+_q_static void read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 {
-	size_t i, buflen, line;
+	size_t i, buflen, line, configroot_len, file_len;
 	FILE *fp;
 	char *buf, *s, *p;
 
 	IF_DEBUG(fprintf(stderr, "profile %s\n", file));
 
-	fp = fopen(file, "r");
+	configroot_len = strlen(configroot);
+	file_len = strlen(file);
+	buflen = configroot_len + file_len + 1;
+	buf = xmalloc(buflen);
+
+	memcpy(buf, configroot, configroot_len);
+	memcpy(buf + configroot_len, file, file_len);
+	buf[buflen - 1] = '\0';
+
+	fp = fopen(buf, "r");
 	if (fp == NULL)
-		return;
+		goto done;
 
 	line = 0;
-	buf = NULL;
 	while (getline(&buf, &buflen, fp) != -1) {
 		++line;
 		rmspace(buf);
@@ -552,8 +560,27 @@ _q_static void read_portage_env_file(const char *file, env_vars vars[])
 			continue;
 
 		/* Handle "source" keyword */
-		if (!strncmp(buf, "source ", 7))
-			read_portage_env_file(buf + 7, vars);
+		if (!strncmp(buf, "source ", 7)) {
+			const char *sfile = buf + 7;
+
+			if (sfile[0] != '/') {
+				/* handle relative paths */
+				size_t file_path_len, source_len;
+
+				s = strrchr(file, '/');
+				file_path_len = s - file + 1;
+				source_len = strlen(sfile);
+
+				if (buflen <= source_len + file_path_len)
+					buf = xrealloc(buf, buflen = source_len + file_path_len + 1);
+				memmove(buf + file_path_len, buf + 7, source_len + 1);
+				memcpy(buf, file, file_path_len);
+				sfile = buf;
+			}
+
+			read_portage_env_file(configroot, sfile, vars);
+			continue;
+		}
 
 		/* look for our desired variables and grab their value */
 		for (i = 0; vars[i].name; ++i) {
@@ -607,8 +634,9 @@ _q_static void read_portage_env_file(const char *file, env_vars vars[])
 		}
 	}
 
-	free(buf);
 	fclose(fp);
+ done:
+	free(buf);
 }
 
 /* Helper to recursively read stacked make.defaults in profiles */
@@ -631,12 +659,12 @@ static void read_portage_profile(const char *configroot, const char *profile, en
 
 	/* first consume the profile's make.defaults */
 	strcpy(sub_file, "make.defaults");
-	read_portage_env_file(profile_file, vars);
+	read_portage_env_file("", profile_file, vars);
 
 	/* now walk all the parents */
 	strcpy(sub_file, "parent");
 	if (eat_file(profile_file, buf, sizeof(buf)) == 0)
-		return;
+		goto done;
 	rmspace(buf);
 
 	s = strtok(buf, "\n");
@@ -646,6 +674,7 @@ static void read_portage_profile(const char *configroot, const char *profile, en
 		s = strtok(NULL, "\n");
 	}
 
+ done:
 	free(profile_file);
 }
 
@@ -654,12 +683,6 @@ void initialize_portage_env(void)
 	size_t i;
 	const char *s;
 
-	static const char * const files[] = {
-		CONFIG_EPREFIX "etc/make.globals",
-		CONFIG_EPREFIX "usr/share/portage/config/make.globals",
-		CONFIG_EPREFIX "etc/make.conf",
-		CONFIG_EPREFIX "etc/portage/make.conf",
-	};
 	bool nocolor = 0;
 
 	env_vars *var;
@@ -702,17 +725,19 @@ void initialize_portage_env(void)
 			*var->value.s = xstrdup(var->default_value);
 	}
 
-	/* walk all the stacked profiles */
+	/* figure out where to find our config files */
 	s = getenv("PORTAGE_CONFIGROOT");
 	if (!s)
 		s = "/";
 
+	/* walk all the stacked profiles */
 	read_portage_profile(s, CONFIG_EPREFIX "etc/make.profile", vars_to_read);
 	read_portage_profile(s, CONFIG_EPREFIX "etc/portage/make.profile", vars_to_read);
 
 	/* now read all the config files */
-	for (i = 0; i < ARRAY_SIZE(files); ++i)
-		read_portage_env_file(files[i], vars_to_read);
+	read_portage_env_file("", CONFIG_EPREFIX "usr/share/portage/config/make.globals", vars_to_read);
+	read_portage_env_file(s, CONFIG_EPREFIX "etc/make.conf", vars_to_read);
+	read_portage_env_file(s, CONFIG_EPREFIX "etc/portage/make.conf", vars_to_read);
 
 	/* finally, check the env */
 	for (i = 0; vars_to_read[i].name; ++i) {
