@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.211 2011/12/21 04:35:09 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.212 2011/12/22 17:11:11 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -458,7 +458,7 @@ static void strincr_var(const char *name, const char *s, char **value, size_t *v
 	memcpy(nv, s, len + 1);
 
 	while ((p = strstr(nv, "-*")) != NULL)
-		memset(*value, ' ', p - *value);
+		memset(*value, ' ', p - *value + 2);
 
 	/* This function is mainly used by the startup code for parsing
 		make.conf and stacking variables remove.
