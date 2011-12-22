@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.212 2011/12/22 17:11:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.213 2011/12/22 17:49:19 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -619,8 +619,6 @@ static void read_portage_profile(const char *configroot, const char *profile, en
 	char buf[BUFSIZE], *s;
 
 	/* initialize the base profile path */
-	if (!configroot)
-		configroot = "";
 	configroot_len = strlen(configroot);
 	profile_len = strlen(profile);
 	sub_len = 1024;	/* should be big enough for longest line in "parent" */
@@ -644,7 +642,7 @@ static void read_portage_profile(const char *configroot, const char *profile, en
 	s = strtok(buf, "\n");
 	while (s) {
 		strncpy(sub_file, s, sub_len);
-		read_portage_profile(NULL, profile_file, vars);
+		read_portage_profile("", profile_file, vars);
 		s = strtok(NULL, "\n");
 	}
 
