@@ -2,33 +2,44 @@
 
 . ../init.sh
 
-TEST_CASES=( \
-	[1]="q file -Cq /bin/bash /bin/XXXXX" \
-	[2]="q file -Co /bin/bash /bin/XXXXX" \
-	[3]="echo -e \"/bin/bash\n/bin/XXXXX\" | q file -Cq -f -" \
-	[4]="echo -e \"/bin/bash\n/bin/XXXXX\" | q file -Co -f -" \
-	[5]="q file -Co -x bash /bin/bash" \
-	[6]="q file -Co -x app-shells/bash /bin/bash" \
-	[7]="q file -Co -x bash:0 /bin/bash" \
-	[8]="q file -Co -x app-shells/bash:0 /bin/bash" \
+tests=(
+	"q file -Cq /bin/bash /bin/XXXXX"
+	"app-shells/bash"
+
+	"q file -Co /bin/bash /bin/XXXXX"
+	"/bin/XXXXX"
+
+	"echo -e \"/bin/bash\n/bin/XXXXX\" | q file -Cq -f -"
+	"app-shells/bash"
+
+	"echo -e \"/bin/bash\n/bin/XXXXX\" | q file -Co -f -"
+	"/bin/XXXXX"
+
+	"q file -Co -x bash /bin/bash"
+	"/bin/bash"
+
+	"q file -Co -x app-shells/bash /bin/bash"
+	"/bin/bash"
+
+	"q file -Co -x bash:0 /bin/bash"
+	"/bin/bash"
+
+	"q file -Co -x app-shells/bash:0 /bin/bash"
+	"/bin/bash"
 )
 
-EXPECTED_RESULTS=( \
-	[1]="app-shells/bash" \
-	[2]="/bin/XXXXX" \
-	[3]="app-shells/bash" \
-	[4]="/bin/XXXXX" \
-	[5]="/bin/bash" \
-	[6]="/bin/bash" \
-	[7]="/bin/bash" \
-	[8]="/bin/bash" \
-)
+set -- "${tests[@]}"
+while [[ $# -gt 0 ]] ; do
+	test=$1; shift
+	exp=$1; shift
 
-for i in `seq 1 ${#TEST_CASES[@]}` ; do
-	if [[ $(eval ${TEST_CASES[$i]}) != "${EXPECTED_RESULTS[$i]}" ]]; then
-		echo "Test #${i} failed: ${TEST_CASES[$i]}" > /dev/stderr
-		echo " - expected result was: ${EXPECTED_RESULTS[$i]}" > /dev/stderr
-		echo " - actual result was:   $(eval ${TEST_CASES[$i]})" > /dev/stderr
+	res=$(eval ${test})
+	if [[ "${res}" != "${exp}" ]] ; then
+		(
+		echo "Test failed: ${test}"
+		echo " - expected result was: ${exp}"
+		echo " - actual result was:   ${res}"
+		) > /dev/stderr
 		fail
 	fi
 done
