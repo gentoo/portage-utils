@@ -10,6 +10,7 @@ mktmpdir
 # check mkdir
 m="${_m} m"
 for d in a a/ a/b a/b/ a/b/c a/b/c/ ; do
+	_d=${d}
 	$m ${d}
 
 	rmdir ${d}
@@ -18,9 +19,12 @@ for d in a a/ a/b a/b/ a/b/c a/b/c/ ; do
 		d=${d%/*}
 		rmdir ${d}
 	done
+
+	tpass "empty ${_d}"
 done
 
 for d in a a/ a/b a/b/ a/b/c a/b/c/ ; do
+	_d=${d}
 	mkdir -p ${d}
 	$m ${d}
 
@@ -30,6 +34,8 @@ for d in a a/ a/b a/b/ a/b/c a/b/c/ ; do
 		d=${d%/*}
 		rmdir ${d}
 	done
+
+	tpass "exist ${_d}"
 done
 
 # check rm_rf
@@ -38,16 +44,19 @@ m="${_m} rm"
 mkdir -p a/b/c/d
 $m a/b/
 rmdir a
+tpass "rm a/b/"
 
 mkdir -p a/b/c/d
 $m a/b
 rmdir a
+tpass "rm a/b"
 
 mkdir -p a/b/c/d
 cd a
 $m . || : # ignore EBUSY failure
 cd ..
 rmdir a
+tpass "rm ."
 
 mkdir -p a/b/c/d
 ln -s . a/b/d
@@ -58,7 +67,8 @@ touch a/b/f
 ln -s ../f a/b/c/f
 $m a
 [ ! -e a ]
+tpass "rm a tree"
 
 cleantmpdir
 
-pass
+end

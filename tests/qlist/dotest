@@ -9,34 +9,34 @@ export Q_VDB=/
 
 mktmpdir
 
+test() {
+	local num=$1; shift
+	eval "$@" > list
+	diff -u list ${as}/list${num}.good
+	tend $? "$*"
+}
+
 # simple install check
-qlist -IC | grep -v CVS > list
-diff -u list ${as}/list01.good
+test 01 "qlist -IC | grep -v CVS"
 
 # simple files list
-qlist -C cpio > list
-diff -u list ${as}/list02.good
+test 02 "qlist -C cpio"
 
 # symlink verbose list
-qlist -C mtools -e -v > list
-diff -u list ${as}/list03.good
+test 03 "qlist -C mtools -e -v"
 
 # dir test
-qlist -C mtools -d > list
-diff -u list ${as}/list04.good
+test 04 "qlist -C mtools -d"
 
 # obj test
-qlist -C mtools -o > list
-diff -u list ${as}/list05.good
+test 05 "qlist -C mtools -o"
 
 # sym test
-qlist -C mtools -s > list
-diff -u list ${as}/list06.good
+test 06 "qlist -C mtools -s"
 
 # SLOT test
-qlist -ICSL | grep -v CVS > list
-diff -u list ${as}/list07.good
+test 07 "qlist -ICSL | grep -v CVS"
 
 cleantmpdir
 
-pass
+end

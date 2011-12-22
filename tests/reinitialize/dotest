@@ -2,4 +2,7 @@
 
 . ../init.sh
 
-q -Cr && pass || fail
+q -Cr
+tend $? "q -CR"
+
+end

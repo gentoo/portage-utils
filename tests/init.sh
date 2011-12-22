@@ -30,20 +30,40 @@ unset ROOT PORTAGE_CONFIGROOT PORTAGE_QUIET
 
 q -i -q
 
-fail() {
-	echo "${BAD}FAILED:${NORMAL} $*"
-	exit 1
+tret=0
+tpassed=0
+tfailed=0
+
+tfail() {
+	echo "${BAD}FAIL:${NORMAL} $*"
+	: $(( ++tfailed ))
+	tret=1
+	return 1
 }
-die() { fail "$@" ; }
+tpass() {
+	echo "${GOOD}PASS:${NORMAL} $*"
+	: $(( ++tpassed ))
+	return 0
+}
+tend() {
+	local r=$1; shift
+	[[ $r -eq 0 ]] && tpass "$@" || tfail "$@"
+	return $r
+}
+
+die() {
+	tfail "$@"
+	end
+}
 
 skip() {
 	echo "${WARN}SKIPPED:${NORMAL} $*"
 	exit 0
 }
 
-pass() {
-	echo "${GOOD}PASSED:${NORMAL} ${PWD##*/}"
-	exit 0
+end() {
+	echo "${HILITE}${PWD##*/}:${NORMAL} ${tpassed} passes / ${tfailed} fails"
+	exit ${tret}
 }
 
 mktmpdir() {

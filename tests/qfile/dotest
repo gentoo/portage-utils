@@ -34,14 +34,13 @@ while [[ $# -gt 0 ]] ; do
 	exp=$1; shift
 
 	res=$(eval ${test})
-	if [[ "${res}" != "${exp}" ]] ; then
+	[[ "${res}" == "${exp}" ]]
+	if ! tend $? "${test}" ; then
 		(
-		echo "Test failed: ${test}"
 		echo " - expected result was: ${exp}"
 		echo " - actual result was:   ${res}"
 		) > /dev/stderr
-		fail
 	fi
 done
 
-pass
+end

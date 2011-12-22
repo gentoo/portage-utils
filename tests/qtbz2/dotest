@@ -30,33 +30,38 @@ raw_tar_check()
 	rm $1
 }
 
-# check basic creation
+################
 qtbz2 -j tarbz2 xpak tbz2
 raw_tar_check tbz2
+tpass "check basic creation"
 
-# check basic creation with dir change
+################
 mkdir new
 cd new
 qtbz2 -j tarbz2 xpak tbz2 -d ..
 raw_tar_check tbz2
 cd ..
 rmdir new
+tpass "check basic creation with dir change"
 
-# check basic creation (with guess)
+################
 qtbz2 -j tarbz2 xpak
 raw_tar_check tarbz2.tbz2
+tpass "check basic creation (with guess)"
 
-# check basic creation (with better guess)
+################
 mv tarbz2 x.tar.bz2
 mv xpak x.xpak
 qtbz2 -j x.tar.bz2 x.xpak
 raw_tar_check x.tbz2
+tpass "check basic creation (with better guess)"
 
-# check basic creation (with best guess)
+################
 qtbz2 -j x.tar.bz2
 raw_tar_check x.tbz2
+tpass "check basic creation (with best guess)"
 
-# check basic splitting
+################
 qtbz2 -j x.tar.bz2
 mkdir new
 cd new
@@ -66,15 +71,17 @@ cmp {.,..}/x.xpak
 rm x.{xpak,tar.bz2}
 cd ..
 rmdir new
+tpass "check basic splitting"
 
-# check basic splitting to diff dir
+################
 mkdir new
 qtbz2 -s x.tbz2 -d new
 cmp {.,new}/x.tar.bz2
 cmp {.,new}/x.xpak
 rm new/x.{xpak,tar.bz2}
 rmdir new
+tpass "check basic splitting to diff dir"
 
 cleantmpdir
 
-pass
+end

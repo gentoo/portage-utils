@@ -14,15 +14,20 @@ rm -f ${applets}
 if ! ln -f `which q` ; then
 	skip "could not 'ln -f'"
 fi
-./q -i || die "./q -i"
+f./q -i || die "./q -i"
 
 for app in ${applets} ; do
-	[ ! -e $app ] && die "$app does not exist"
-	if [ "$app" != "q" ] ; then
+	if [ ! -e $app ] ; then
+		tfail "$app does not exist"
+	elif [ "$app" != "q" ] ; then
 		t=$(readlink $app)
-		[ "$t" != "q" ] && die "$app target is not 'q', it is '$t'"
+		if [ "$t" != "q" ] ; then
+			tfail "$app target is not 'q', it is '$t'"
+		else
+			tpass "${app}"
+		fi
 	fi
 done
 rm ${applets}
 
-pass
+end

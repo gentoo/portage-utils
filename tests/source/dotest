@@ -2,18 +2,15 @@
 
 . ../init.sh
 
-ret=0
-
 testit() {
 	if [ -s $1 ] ; then
-		echo "${BAD}FAIL:${NORMAL} $1"
+		tfail "$1"
 		cat $1
 		rm -f $1
-		ret=1
 		return
 	fi
 	rm -f $1
-	echo "${GOOD}PASS:${NORMAL} $1"
+	tpass "$1"
 }
 
 prune=(
@@ -149,4 +146,4 @@ for x in $(find ${ats} "${src_files[@]}" -print); do
 done > src.space
 testit src.space
 
-exit ${ret}
+end

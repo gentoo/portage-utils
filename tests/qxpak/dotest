@@ -11,45 +11,50 @@ for l in ${files} ; do
 	echo $l > $l
 done
 
-# check basic creation
+################
 qxpak -c xpak ${files}
 qxpak -l -v xpak > list
 diff -u list ${as}/list01.good
+tpass "check basic creation"
 
-# check single extraction
+################
 for l in ${files} ; do
 	mv $l $l.good
 	qxpak -x xpak $l
 	diff -u $l $l.good
+	tpass "single file extraction: $l"
 done
 
-# check multiple extraction
+################
 rm ${files}
 qxpak -x xpak ${files}
 for l in ${files} ; do
 	diff -u $l $l.good
 done
+tpass "multi file extraction"
 
-# check unpacking to diff dir
+################
 mkdir new
 qxpak -d new -x xpak ${files}
 for l in ${files} ; do
 	diff -u $l new/$l
 done
+tpass "check unpacking to diff dir"
 
-# check creating from diff dir
+################
 rm -f ${files} ?.good
 qxpak -c xpak -d new ${files}
 qxpak -l -v xpak > list
 diff -u list ${as}/list01.good
 qxpak -d . -x xpak ${files}
+tpass "check creating from diff dir"
 
-# check creation with clobbered output
-# check creation with file order
+################
 qxpak -c xpak `echo ${files} | tr ' ' '\n' | tac`
 qxpak -l -v xpak > list
 diff -u list ${as}/list02.good
+tpass "check creation with clobbered output and file order"
 
 cleantmpdir
 
-pass
+end

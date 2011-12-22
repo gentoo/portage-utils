@@ -25,6 +25,7 @@ done
 quse -CD ${all} > x
 diff -u x all.good
 rm x good all.good
+tpass "arch.list"
 
 # check use.desc
 f="$d/use.desc"
@@ -38,6 +39,7 @@ done
 quse -CD ${all} > x
 diff -u x all.good
 rm x good all.good
+tpass "use.desc"
 
 # check use.local.desc
 f="$d/use.local.desc"
@@ -51,6 +53,7 @@ done
 quse -CD ${all} > x
 diff -u x all.good
 rm x good all.good
+tpass "use.local.desc"
 
 # check desc subdir
 f="$d/desc/elibc.desc"
@@ -64,6 +67,7 @@ done
 quse -CD ${all} > x
 diff -u x all.good
 rm x good all.good
+tpass "desc/elibc.desc"
 
 # check cross file matches
 # sort because quse order depends on the readdir order
@@ -72,11 +76,12 @@ rm x good all.good
 quse -CD abc | LC_ALL=C sort > x
 diff -u ${as}/list01.good x
 rm x
+tpass "multi file match"
 
 trimtmpdir
 
 ###### faster test needed.########
-pass
+end
 ##################################
 type -p mksquashfs || exit 0
 
