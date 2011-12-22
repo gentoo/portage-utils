@@ -14,7 +14,7 @@ rm -f ${applets}
 if ! ln -f `which q` ; then
 	skip "could not 'ln -f'"
 fi
-f./q -i || die "./q -i"
+./q -i || die "./q -i"
 
 for app in ${applets} ; do
 	if [ ! -e $app ] ; then
