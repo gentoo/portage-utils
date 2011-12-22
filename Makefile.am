@@ -143,6 +143,7 @@ EXTRA_DIST += \
 	quse.c \
 	qxpak.c \
 	tests/Makefile \
+	tests/atom_compare/.cvsignore \
 	tests/atom_compare/Makefile \
 	tests/atom_compare/atom-compare.py \
 	tests/atom_compare/static.good \
@@ -155,11 +156,19 @@ EXTRA_DIST += \
 	tests/atom_explode/dotest \
 	tests/atom_explode/test.c \
 	tests/init.sh \
+	tests/install/.cvsignore \
 	tests/install/Makefile \
 	tests/install/dotest \
+	tests/mkdir/.cvsignore \
 	tests/mkdir/Makefile \
 	tests/mkdir/dotest \
 	tests/mkdir/test.c \
+	tests/profile/Makefile \
+	tests/profile/dotest \
+	tests/profile/profile1/etc/parent.conf \
+	tests/profile/profile1/etc/portage/make.conf \
+	tests/profile/profile1/etc/portage/subdir/file.conf \
+	tests/profile/profile1/etc/portage/this.level.conf \
 	tests/qfile/Makefile \
 	tests/qfile/dotest \
 	tests/qlist/Makefile \
@@ -170,12 +179,18 @@ EXTRA_DIST += \
 	tests/qlist/list04.good \
 	tests/qlist/list05.good \
 	tests/qlist/list06.good \
+	tests/qlist/list07.good \
 	tests/qlist/root/-merge-foo/CONTENTS \
 	tests/qlist/root/a-b/a-0/CONTENTS \
+	tests/qlist/root/a-b/a-0/SLOT \
 	tests/qlist/root/a-b/b-0/CONTENTS \
+	tests/qlist/root/a-b/b-0/SLOT \
 	tests/qlist/root/app-arch/cpio-2.11/CONTENTS \
+	tests/qlist/root/app-arch/cpio-2.11/SLOT \
 	tests/qlist/root/cat/pkg-1/CONTENTS \
+	tests/qlist/root/cat/pkg-1/SLOT \
 	tests/qlist/root/sys-fs/mtools-4.0.13/CONTENTS \
+	tests/qlist/root/sys-fs/mtools-4.0.13/SLOT \
 	tests/qtbz2/Makefile \
 	tests/qtbz2/dotest \
 	tests/quse/Makefile \
