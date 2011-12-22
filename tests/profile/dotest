@@ -1,0 +1,50 @@
+#!/bin/bash
+
+. ../init.sh
+
+qenv() {
+	# get q to dump its processed env so we can check
+	DEBUG= q 2>&1 >/dev/null
+}
+
+tenv() {
+	local profile=$1 var=$2 exp=$3
+
+	export PORTAGE_CONFIGROOT=${as}/profile${profile}
+	local e=$(qenv)
+
+	res=$(echo "${e}" | sed -n "/^${var} = /{s:^${var} = ::;p}")
+
+	[[ ${res} == "${exp}" ]]
+	if ! tend $? "(${profile}) ${var} = ${exp}" ; then
+		echo "we got: {${res}}"
+		echo "full env:"
+		echo "${e}" | while read line ; do
+			printf '\t{%s}\n' "${line}"
+		done
+	fi
+}
+
+# clear out env vars that would affect our tests
+unset $(qenv | awk '{print $1}')
+
+# test vars that should default to known values.
+# cannot test too many more as portage's default
+# make.globals will kick in.
+tenv inv ROOT /
+tenv inv ARCH
+tenv inv PORTAGE_BINHOST
+
+# this validates simple stuff
+tenv 1 ARCH x86
+tenv 1 INSTALL_MASK imask
+
+# this validates -* behavior
+tenv 1 CONFIG_PROTECT
+
+# this indirectly validates relative sourcing
+tenv 1 FEATURES feat
+tenv 1 CONFIG_PROTECT_MASK asdf
+tenv 1 ACCEPT_LICENSE lic
+
+end

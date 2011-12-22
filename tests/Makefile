@@ -1,7 +1,7 @@
 TESTS = \
 	reinitialize atom_compare atom_explode mkdir \
 	qfile qlist qtbz2 quse qxpak \
-	install source
+	install profilesource
 
 all: check
 
