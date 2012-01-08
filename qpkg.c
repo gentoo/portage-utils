@@ -1,13 +1,15 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.36 2011/12/18 06:31:29 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.37 2012/01/08 09:53:35 solar Exp $
  *
- * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2010 Ned Ludd	- <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qpkg
+
+#include <fnmatch.h>
 
 #define QPKG_FLAGS "cEpP:" COMMON_FLAGS
 static struct option const qpkg_long_opts[] = {
@@ -24,7 +26,7 @@ static const char * const qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.36 2011/12/18 06:31:29 vapier Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.37 2012/01/08 09:53:35 solar Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
@@ -42,8 +44,8 @@ int qpkg_make(depend_atom *);
 /* checks to make sure this is a .tbz2 file. used by scandir() */
 int filter_tbz2(const struct dirent *dentry)
 {
-        if (dentry->d_name[0] == '.')
-                return 0;
+	if (dentry->d_name[0] == '.')
+		return 0;
 	if (strlen(dentry->d_name) < 6)
 		return 0;
 	return !strcmp(".tbz2", dentry->d_name + strlen(dentry->d_name) - 5);
@@ -198,6 +200,29 @@ const char *qpkg_get_bindir(void)
 	return qpkg_bindir;
 }
 
+int check_pkg_install_mask(char *name);
+int check_pkg_install_mask(char *name)
+{
+	int i, iargc, ret;
+	char **iargv;
+
+	i = iargc = ret = 0;
+
+	if (*name != '/')
+		return ret;
+
+	makeargv(pkg_install_mask, &iargc, &iargv);
+
+	for (i = 1; i < iargc; i++) {
+		if (fnmatch(iargv[i], name, 0) != 0)
+			continue;
+		ret = 1;
+		break;
+	}
+	freeargv(iargc, iargv);
+	return ret;
+}
+
 int qpkg_make(depend_atom *atom)
 {
 	FILE *fp, *out;
@@ -236,6 +261,8 @@ int qpkg_make(depend_atom *atom)
 		contents_entry *e;
 		e = contents_parse_line(buf);
 		if (!e || e->type == CONTENTS_DIR)
+			continue;
+		if (check_pkg_install_mask(e->name) != 0)
 			continue;
 		fprintf(out, "%s\n", e->name+1); /* dont output leading / */
 		if (e->type == CONTENTS_OBJ && verbose) {
