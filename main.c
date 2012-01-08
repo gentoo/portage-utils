@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.214 2011/12/22 20:26:20 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.215 2012/01/08 17:41:07 solar Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -75,6 +75,7 @@ static char *binhost;
 static char *features;
 static char *accept_license;
 static char *install_mask;
+static char *pkg_install_mask;
 
 const char err_noapplet[] = "Sorry this applet was disabled at compile time";
 
@@ -702,6 +703,7 @@ void initialize_portage_env(void)
 		_Q_EVS(STR,  ROOT,                portroot,            "/")
 		_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      "")
 		_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        "")
+		_Q_EVS(ISTR, PKG_INSTALL_MASK,    pkg_install_mask,    "")
 		_Q_EVS(STR,  ARCH,                portarch,            "")
 		_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      CONFIG_EPREFIX "etc")
 		_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
