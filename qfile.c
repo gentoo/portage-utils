@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.59 2011/12/18 08:01:03 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.60 2012/01/16 01:12:31 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.59 2011/12/18 08:01:03 vapier Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.60 2012/01/16 01:12:31 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -328,7 +328,7 @@ int prepare_qfile_args(const int argc, const char **argv,
 	/* Try to get $PWD. Must be absolute, with no trailing slash. */
 	if ((pwd = getenv("PWD")) != NULL && pwd[0] == '/') {
 		pwd = xstrdup(pwd);
-		if ((pwd[strlen(pwd) - 1] == '/'))
+		if (pwd[strlen(pwd) - 1] == '/')
 			pwd[strlen(pwd) - 1] = '\0';
 	} else
 		pwd = NULL;
