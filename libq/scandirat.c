@@ -1,11 +1,19 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/scandirat.c,v 1.3 2011/12/22 18:29:23 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/scandirat.c,v 1.4 2012/01/16 01:10:32 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
  */
+
+#if !defined(HAVE_SCANDIRAT)
+# if defined(__GLIBC__) && (__GLIBC__ << 8 | __GLIBC_MINOR__) > (2 << 8 | 14)
+#  define HAVE_SCANDIRAT
+# endif
+#endif
+
+#if !defined(HAVE_SCANDIRAT)
 
 static int scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
 	int (*filter)(const struct dirent *),
@@ -42,6 +50,8 @@ static int scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
 
 	return cnt;
 }
+
+#endif
 
 _q_static void scandir_free(struct dirent **de, int cnt)
 {

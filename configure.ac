@@ -13,6 +13,10 @@ AC_USE_SYSTEM_EXTENSIONS
 gl_EARLY
 gl_INIT
 
+AC_CHECK_FUNCS_ONCE(m4_flatten([
+	scandirat
+]))
+
 AC_ARG_WITH([eprefix], [AS_HELP_STRING([--with-eprefix], [path for Gentoo/Prefix project])])
 # ensure eprefix ends with a slash, since the code base expects that
 case "$with_eprefix" in
