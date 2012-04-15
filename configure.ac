@@ -47,7 +47,7 @@ m4_foreach_w([flag], [
 	-Wsequence-point
 	-Wextra
 ], [
-	AX_CHECK_COMPILER_FLAGS(flag, AS_VAR_APPEND([CFLAGS], " flag"))
+	AX_CHECK_COMPILE_FLAG(flag, AS_VAR_APPEND([CFLAGS], " flag"))
 ])
 
 AC_CONFIG_FILES([
