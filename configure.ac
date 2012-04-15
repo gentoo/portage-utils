@@ -13,6 +13,8 @@ AC_USE_SYSTEM_EXTENSIONS
 gl_EARLY
 gl_INIT
 
+AC_CHECK_LIB([kvm], [kvm_open])
+
 AC_CHECK_FUNCS_ONCE(m4_flatten([
 	scandirat
 ]))
