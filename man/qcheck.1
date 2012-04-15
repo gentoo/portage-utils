@@ -1,46 +1,52 @@
-.TH qcheck "1" "April 2008" "Gentoo Foundation" "qcheck"
+.TH qcheck "1" "April 2012" "Gentoo Foundation" "qcheck"
 .SH NAME
 qcheck \- verify integrity of installed packages
 .SH SYNOPSIS
 .B qcheck
 \fI<opts> <pkgname>\fR
 .SH DESCRIPTION
-Options: \fB\-[eauAHTBvqChV]\fR
-.TP
-\fB\-e\fR, \fB\-\-exact\fR
-* Exact match (only CAT/PN or PN without PV)
+Options: \fB\-[aes:uABHTpvqChV]\fR
 .TP
 \fB\-a\fR, \fB\-\-all\fR
-* List all packages
+List all packages
+.TP
+\fB\-e\fR, \fB\-\-exact\fR
+Exact match (only CAT/PN or PN without PV)
+.TP
+\fB\-s\fR, \fB\-\-skip\fR <arg>
+Ignore files matching the regular expression <arg>
 .TP
 \fB\-u\fR, \fB\-\-update\fR
-* Update missing files, chksum and mtimes for packages
+Update missing files, chksum and mtimes for packages
 .TP
 \fB\-A\fR, \fB\-\-noafk\fR
-* Ignore missing files
-.TP
-\fB\-H\fR, \fB\-\-nohash\fR
-* Ignore differing/unknown file chksums
-.TP
-\fB\-T\fR, \fB\-\-nomtime\fR
-* Ignore differing file mtimes
+Ignore missing files
 .TP
 \fB\-B\fR, \fB\-\-badonly\fR
-* Only print pkgs containing bad files excluding /etc.
+Only print pkgs containing bad files
+.TP
+\fB\-H\fR, \fB\-\-nohash\fR
+Ignore differing/unknown file chksums
+.TP
+\fB\-T\fR, \fB\-\-nomtime\fR
+Ignore differing file mtimes
+.TP
+\fB\-p\fR, \fB\-\-prelink\fR
+Undo prelink when calculating checksums
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
-* Make a lot of noise
+Make a lot of noise
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
-* Tighter output; suppress warnings
+Tighter output; suppress warnings
 .TP
 \fB\-C\fR, \fB\-\-nocolor\fR
-* Don't output color
+Don't output color
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-* Print this help and exit
+Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
-* Print version and exit
+Print version and exit
 .PP
-$Id: qcheck.1,v 1.24 2008/04/12 17:26:00 solar Exp $
+$Id: qcheck.1,v 1.25 2012/04/15 05:31:07 vapier Exp $

@@ -1,4 +1,4 @@
-.TH qcache "1" "May 2007" "Gentoo Foundation" "qcache"
+.TH qcache "1" "April 2012" "Gentoo Foundation" "qcache"
 .SH NAME
 qcache \- search the metadata cache
 .SH SYNOPSIS
@@ -7,45 +7,41 @@ qcache \- search the metadata cache
 .SH DESCRIPTION
 Options: \fB\-[p:c:idtansvqChV]\fR
 .HP
-\fB\-p\fR, \fB\-\-matchpkg\fR <arg>
-.BR
- * match pkgname
+\fB\-p\fR, \fB\-\-matchpkg\fR <arg> * match pkgname
 .HP
-\fB\-c\fR, \fB\-\-matchcat\fR <arg>
-.BR
- * match catname
+\fB\-c\fR, \fB\-\-matchcat\fR <arg> * match catname
 .TP
 \fB\-i\fR, \fB\-\-imlate\fR
-* list packages that can be marked stable on a given arch
+list packages that can be marked stable on a given arch
 .TP
 \fB\-d\fR, \fB\-\-dropped\fR
-* list packages that have dropped keywords on a version bump on a given arch
+list packages that have dropped keywords on a version bump on a given arch
 .TP
 \fB\-t\fR, \fB\-\-testing\fR
-* list packages that have ~arch versions, but no stable versions on a given arch
+list packages that have ~arch versions, but no stable versions on a given arch
 .TP
 \fB\-s\fR, \fB\-\-stats\fR
-* display statistics about the portage tree
+display statistics about the portage tree
 .TP
 \fB\-a\fR, \fB\-\-all\fR
-* list packages that have at least one version keyworded for on a given arch
+list packages that have at least one version keyworded for on a given arch
 .TP
 \fB\-n\fR, \fB\-\-not\fR
-* list packages that aren't keyworded on a given arch.
+list packages that aren't keyworded on a given arch.
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
-* Make a lot of noise
+Make a lot of noise
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
-* Tighter output; suppress warnings
+Tighter output; suppress warnings
 .TP
 \fB\-C\fR, \fB\-\-nocolor\fR
-* Don't output color
+Don't output color
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-* Print this help and exit
+Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
-* Print version and exit
+Print version and exit
 .PP
-$Id: qcache.1,v 1.6 2007/05/11 08:25:06 solar Exp $
+$Id: qcache.1,v 1.7 2012/04/15 05:31:07 vapier Exp $

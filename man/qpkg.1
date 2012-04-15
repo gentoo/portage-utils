@@ -1,36 +1,37 @@
-.TH qpkg "1" "May 2007" "Gentoo Foundation" "qpkg"
+.TH qpkg "1" "April 2012" "Gentoo Foundation" "qpkg"
 .SH NAME
 qpkg \- manipulate Gentoo binpkgs
 .SH SYNOPSIS
 .B qpkg
 \fI<opts> <misc args>\fR
 .SH DESCRIPTION
-Options: \fB\-[cpP:vqChV]\fR
+Options: \fB\-[cEpP:vqChV]\fR
 .TP
 \fB\-c\fR, \fB\-\-clean\fR
-* clean pkgdir of unused binary files
+clean pkgdir of unused binary files
+.TP
+\fB\-E\fR, \fB\-\-eclean\fR
+clean pkgdir of files not in the tree anymore (slow)
 .TP
 \fB\-p\fR, \fB\-\-pretend\fR
-* pretend only
+pretend only
 .TP
-\fB\-P\fR, \fB\-\-pkgdir\fR
-<arg>
-.BR
- * alternate package directory
+\fB\-P\fR, \fB\-\-pkgdir\fR <arg>
+alternate package directory
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
-* Make a lot of noise
+Make a lot of noise
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
-* Tighter output; suppress warnings
+Tighter output; suppress warnings
 .TP
 \fB\-C\fR, \fB\-\-nocolor\fR
-* Don't output color
+Don't output color
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-* Print this help and exit
+Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
-* Print version and exit
+Print version and exit
 .PP
-$Id: qpkg.1,v 1.19 2007/06/01 00:10:07 solar Exp $
+$Id: qpkg.1,v 1.20 2012/04/15 05:31:07 vapier Exp $

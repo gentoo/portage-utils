@@ -1,45 +1,46 @@
-.TH qsearch "1" "May 2007" "Gentoo Foundation" "qsearch"
+.TH qsearch "1" "April 2012" "Gentoo Foundation" "qsearch"
 .SH NAME
 qsearch \- search pkgname/desc
 .SH SYNOPSIS
 .B qsearch
 \fI<opts> <regex>\fR
 .SH DESCRIPTION
-Options: \fB\-[acsSNHvqChV]\fR
+Options: \fB\-[acesSNHvqChV]\fR
 .TP
 \fB\-a\fR, \fB\-\-all\fR
-* List the descriptions of every package in the cache
+List the descriptions of every package in the cache
 .TP
 \fB\-c\fR, \fB\-\-cache\fR
-* Use the portage cache
+Use the portage cache (default)
+.TP
+\fB\-e\fR, \fB\-\-ebuilds\fR
+Use the portage ebuild tree
 .TP
 \fB\-s\fR, \fB\-\-search\fR
-* Regex search package basenames
+Regex search package basenames
 .TP
-\fB\-S\fR, \fB\-\-desc\fR
-<arg>
-.BR
- * Regex search package descriptions
+\fB\-S\fR, \fB\-\-desc\fR <arg>
+Regex search package descriptions
 .TP
 \fB\-N\fR, \fB\-\-name\-only\fR
-* Only show package name
+Only show package name
 .TP
 \fB\-H\fR, \fB\-\-homepage\fR
-* Show homepage info
+Show homepage info
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
-* Make a lot of noise
+Make a lot of noise
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
-* Tighter output; suppress warnings
+Tighter output; suppress warnings
 .TP
 \fB\-C\fR, \fB\-\-nocolor\fR
-* Don't output color
+Don't output color
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-* Print this help and exit
+Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
-* Print version and exit
+Print version and exit
 .PP
-$Id: qsearch.1,v 1.21 2007/05/11 08:25:06 solar Exp $
+$Id: qsearch.1,v 1.22 2012/04/15 05:31:07 vapier Exp $

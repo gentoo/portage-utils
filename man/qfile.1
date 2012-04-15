@@ -1,46 +1,48 @@
-.TH qfile "1" "January 2007" "Gentoo Foundation" "qfile"
+.TH qfile "1" "April 2012" "Gentoo Foundation" "qfile"
 .SH NAME
 qfile \- list all pkgs owning files
 .SH SYNOPSIS
 .B qfile
-\fI<filename>\fR
+\fI<opts> <filename>\fR
 .SH DESCRIPTION
-Options: \fB\-[ef:m:oRx:vqChV]\fR
+Options: \fB\-[ef:m:oRx:SvqChV]\fR
 .TP
 \fB\-e\fR, \fB\-\-exact\fR
-* Exact match
+Exact match
 .TP
 \fB\-f\fR, \fB\-\-from\fR <arg>
- * Read arguments from file <arg> ("-" for stdin)
+Read arguments from file <arg> ("\-" for stdin)
 .HP
-\fB\-m\fR, \fB\-\-max\-args\fR <arg>
- * Treat from file arguments by groups of <arg> (defaults to 5000)
+\fB\-m\fR, \fB\-\-max\-args\fR <arg> * Treat from file arguments by groups of <arg> (defaults to 5000)
 .TP
 \fB\-o\fR, \fB\-\-orphans\fR
-* List orphan files
+List orphan files
 .TP
 \fB\-R\fR, \fB\-\-root\-prefix\fR
-* Assume arguments are already prefixed by $ROOT
+Assume arguments are already prefixed by $ROOT
 .TP
 \fB\-x\fR, \fB\-\-exclude\fR <arg>
- * Don't look in package <arg>
+Don't look in package <arg>
+.TP
+\fB\-S\fR, \fB\-\-slots\fR
+Display installed packages with slots
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
-* Make a lot of noise
+Make a lot of noise
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
-* Tighter output; suppress warnings
+Tighter output; suppress warnings
 .TP
 \fB\-C\fR, \fB\-\-nocolor\fR
-* Don't output color
+Don't output color
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-* Print this help and exit
+Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
-* Print version and exit
+Print version and exit
 .PP
-$Id: qfile.1,v 1.24 2007/01/13 19:17:40 solar Exp $
+$Id: qfile.1,v 1.25 2012/04/15 05:31:07 vapier Exp $
 file written for Gentoo by <solar and vapier 
  gentoo.org>
 .SH "FINDING FILES OWNERS"

@@ -1,4 +1,4 @@
-.TH q "1" "January 2007" "Gentoo Foundation" "q"
+.TH q "1" "April 2012" "Gentoo Foundation" "q"
 .SH NAME
 q \- invoke a portage utility applet
 .SH SYNOPSIS
@@ -7,84 +7,65 @@ q \- invoke a portage utility applet
 .SH DESCRIPTION
 .SS "Currently defined applets:"
 .TP
-q <applet> <args>
-: virtual applet
+q <applet> <args> : virtual applet
 .TP
-qatom <pkg>
-: split atom strings
+qatom <pkg> : split atom strings
 .TP
-qcache <action> <args>
-: search the metadata cache
+qcache <action> <args> : search the metadata cache
 .TP
-qcheck <pkgname>
-: verify mtimes/digests
+qcheck <pkgname> : verify integrity of installed packages
 .TP
-qdepends <pkgname>
-: show dependency info
+qdepends <pkgname> : show dependency info
 .TP
-qfile <filename>
-: list all pkgs owning files
+qfile <filename> : list all pkgs owning files
 .TP
-qglsa <action> <list>
-: check GLSAs against system
+qgrep <misc args> : grep in ebuilds
 .TP
-qgrep <misc args>
-: grep in ebuilds
+qlist <pkgname> : list files owned by pkgname
 .TP
-qlist <pkgname>
-: list files owned by pkgname
+qlop <pkgname> : emerge log analyzer
 .TP
-qlop <pkgname>
-: emerge log analyzer
+qmerge <pkgnames> : fetch and merge binary package
 .TP
-qmerge <pkgnames>
-: fetch and merge binary package
+qpkg <misc args> : manipulate Gentoo binpkgs
 .TP
-qpkg <misc args>
-: manipulate Gentoo binpkgs
+qsearch <regex> : search pkgname/desc
 .TP
-qpy <misc args>
-: python interface
+qsize <pkgname> : calculate size usage
 .TP
-qsearch <regex>
-: search pkgname/desc
+qtbz2 <misc args> : manipulate tbz2 packages
 .TP
-qsize <pkgname>
-: calculate size usage
+quse <useflag> : find pkgs using useflags
 .TP
-qtbz2 <misc args>
-: manipulate tbz2 packages
-.TP
-quse <useflag>
-: find pkgs using useflags
-.TP
-qxpak <misc args>
-: manipulate xpak archives
+qxpak <misc args> : manipulate xpak archives
 .PP
-Options: \fB\-[irmvqChV]\fR
+Options: \fB\-[irmM:vqChV]\fR
 .TP
 \fB\-i\fR, \fB\-\-install\fR
-* Install symlinks for applets
+Install symlinks for applets
 .TP
 \fB\-r\fR, \fB\-\-reinitialize\fR
-* Reinitialize ebuild cache
+Reinitialize ebuild cache
 .TP
 \fB\-m\fR, \fB\-\-metacache\fR
-* Reinitialize metadata cache
+Reinitialize metadata cache
+.TP
+\fB\-M\fR, \fB\-\-modpath\fR <arg>
+Module path
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
-* Make a lot of noise
+Make a lot of noise
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
-* Tighter output; suppress warnings
+Tighter output; suppress warnings
 .TP
 \fB\-C\fR, \fB\-\-nocolor\fR
-* Don't output color
+Don't output color
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-* Print this help and exit
+Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
-* Print version and exit
+Print version and exit
 .PP
-$Id: q.1,v 1.22 2007/01/07 20:32:41 solar Exp $
+$Id: q.1,v 1.23 2012/04/15 05:31:07 vapier Exp $

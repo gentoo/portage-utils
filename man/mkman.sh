@@ -1,23 +1,45 @@
-#!/bin/sh
+#!/bin/bash
+
 export NOCOLOR=1
 
-APPLETS=$(../q | grep -e ' : ' | awk '{print $1}' | grep ^q$1)
+[[ $# -eq 0 ]] && set -- $(../q | awk '$0 ~ / : / && $1 != "Usage:" { print $1 }')
 
-for applet in $APPLETS; do
+for applet in "$@" ; do
+	man="${applet}.1"
+	echo "creating ${man}"
+
 	help2man -N -S "Gentoo Foundation" -m ${applet} -s 1 \
-		$(for incl in include/${applet}-*.include; do echo "-I ${incl}"; done) \
+		$(printf ' -I %s' include/${applet}-*.include) \
 		-n "$(../q $applet | sed -n '/^Usage/{s|^.* : ||p;q;}')" \
-		-o ${applet}.1 "../q $applet"
-	[[ $? == 0 ]] || continue;
-	sed  -i -e s/'PORTAGE-UTILS-CVS:'/${applet}/g \
-		-e s/'portage-utils-cvs:'/${applet}/g \
-		-e '/\.SH SYNOPSIS/,/\.SH/'s/' : .*\\fR$'/'\\fR'/ \
-		-e '/\.SH DESCRIPTION/,/\.SH/s|^\(Options:.*\)\\fR\(.*\)|\1\2\\fR|' \
-		-e s/'> \*'/'>@\.BR@ \*'/g ${applet}.1
-	head -n $(($(cat ${applet}.1 | wc -l)-1)) ${applet}.1 \
-		| tr '@' '\n' > ${applet}.1~ && mv ${applet}.1~ ${applet}.1
+		-o ${man} "../q ${applet}"
+	[[ $? == 0 ]] || continue
 
-	sed -i -e s/'compiled on'/'@@@@@@@@@@@@@@'/ ${applet}.1
-	cat ${applet}.1 | cut -d @ -f 1 > ${applet}.1~ && mv ${applet}.1~ ${applet}.1
-	grep -v 'DO NOT MODIFY THIS FILE' <  ${applet}.1 > ${applet}.1~ && mv ${applet}.1~ ${applet}.1
+	sed \
+		-e "s/PORTAGE-UTILS-CVS:/${applet}/g" \
+		-e "s/portage-utils-cvs:/${applet}/g" \
+		-e '/\.SH SYNOPSIS/,/\.SH/s/ : .*\\fR$/\\fR/' \
+		-e '/\.SH DESCRIPTION/,/\.SH/s|^\(Options:.*\)\\fR\(.*\)|\1\2\\fR|' \
+		${man} | \
+		awk '{
+			if ($1 == "<arg>") {
+				line = line " " $1
+				$1 = ""
+			}
+			if (line)
+				print line
+			line = $0
+		}
+		END { print line }
+		' | \
+		sed -e 's:^ *[*] ::' > ${man}~
+	mv ${man}~ ${man}
+
+	head -n $(($(wc -l < ${man})-1)) ${man} \
+		| tr '@' '\n' > ${man}~ && mv ${man}~ ${man}
+
+	sed -e s/'compiled on'/'@@@@@@@@@@@@@@'/ ${man} |
+		cut -d @ -f 1 | \
+		grep -v 'DO NOT MODIFY THIS FILE' \
+		> ${man}~
+	mv ${man}~ ${man}
 done

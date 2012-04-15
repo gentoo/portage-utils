@@ -1,73 +1,70 @@
-.TH qgrep "1" "April 2007" "Gentoo Foundation" "qgrep"
+.TH qgrep "1" "April 2012" "Gentoo Foundation" "qgrep"
 .SH NAME
 qgrep \- grep in ebuilds
 .SH SYNOPSIS
 .B qgrep
-\fI<misc args>\fR
+\fI<opts> <misc args>\fR
 .SH DESCRIPTION
 Options: \fB\-[IiHNclLexJEsS:B:A:vqChV]\fR
 .TP
 \fB\-I\fR, \fB\-\-invert\-match\fR
-* Select non\-matching lines
+Select non\-matching lines
 .TP
 \fB\-i\fR, \fB\-\-ignore\-case\fR
-* Ignore case distinctions
+Ignore case distinctions
 .TP
 \fB\-H\fR, \fB\-\-with\-filename\fR
-* Print the filename for each match
+Print the filename for each match
 .TP
 \fB\-N\fR, \fB\-\-with\-name\fR
-* Print the package or eclass name for each match
+Print the package or eclass name for each match
 .TP
 \fB\-c\fR, \fB\-\-count\fR
-* Only print a count of matching lines per FILE
+Only print a count of matching lines per FILE
 .TP
 \fB\-l\fR, \fB\-\-list\fR
-* Only print FILE names containing matches
+Only print FILE names containing matches
 .TP
 \fB\-L\fR, \fB\-\-invert\-list\fR
-* Only print FILE names containing no match
+Only print FILE names containing no match
 .TP
 \fB\-e\fR, \fB\-\-regexp\fR
-* Use PATTERN as a regular expression
+Use PATTERN as a regular expression
 .TP
 \fB\-x\fR, \fB\-\-extended\fR
-* Use PATTERN as an extended regular expression
+Use PATTERN as an extended regular expression
 .TP
 \fB\-J\fR, \fB\-\-installed\fR
-* Search in installed ebuilds instead of the tree
+Search in installed ebuilds instead of the tree
 .TP
 \fB\-E\fR, \fB\-\-eclass\fR
-* Search in eclasses instead of ebuilds
+Search in eclasses instead of ebuilds
 .TP
 \fB\-s\fR, \fB\-\-skip\-comments\fR
-* Skip comments lines
+Skip comments lines
 .TP
 \fB\-S\fR, \fB\-\-skip\fR <arg>
-.BR
- * Skip lines matching <arg>
+Skip lines matching <arg>
 .TP
 \fB\-B\fR, \fB\-\-before\fR <arg>
-.BR
- * Print <arg> lines of leading context
+Print <arg> lines of leading context
 .TP
 \fB\-A\fR, \fB\-\-after\fR <arg>
-.BR
- * Print <arg> lines of trailing context
+Print <arg> lines of trailing context
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
-* Make a lot of noise
+Make a lot of noise
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
-* Tighter output; suppress warnings
+Tighter output; suppress warnings
 .TP
 \fB\-C\fR, \fB\-\-nocolor\fR
-* Don't output color
+Don't output color
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-* Print this help and exit
+Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
-* Print version and exit
+Print version and exit
 .PP
-$Id: qgrep.1,v 1.17 2007/04/05 18:25:27 solar Exp $
+$Id: qgrep.1,v 1.18 2012/04/15 05:31:07 vapier Exp $
