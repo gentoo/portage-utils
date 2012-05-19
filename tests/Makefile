@@ -5,17 +5,14 @@ TESTS = \
 
 all: check
 
-test check:
-	ret=0 ; \
-	for test in $(TESTS) ; do \
-		if cd $$test ; then \
-			$(MAKE) check || ret=1 ; \
-			cd .. ; \
-		else \
-			ret=1 ; \
-		fi ; \
-	done ; \
-	exit $${ret}
+test check: $(TESTS:=_subdir)
+
+%_subdir:
+	cd $(@:_subdir=) || exit 1; \
+	out=`$(MAKE) check 2>&1`; \
+	ret=$$?; \
+	echo "$$out"; \
+	exit $$ret
 
 clean:
 	for test in $(TESTS) ; do \
