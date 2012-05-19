@@ -7,6 +7,7 @@ qenv() {
 	DEBUG= q 2>&1 >/dev/null
 }
 
+# Usage: <profile dir suffix> <variable> <value>
 tenv() {
 	local profile=$1 var=$2 exp=$3
 
@@ -46,5 +47,9 @@ tenv 1 CONFIG_PROTECT
 tenv 1 FEATURES feat
 tenv 1 CONFIG_PROTECT_MASK asdf
 tenv 1 ACCEPT_LICENSE lic
+
+# this validates trailing comment handling #416585
+tenv 1 PORTAGE_BINHOST http://someurl/
+tenv 1 NOCOLOR 1
 
 end

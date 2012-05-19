@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.215 2012/01/08 17:41:07 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.216 2012/05/19 13:20:20 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -599,34 +599,36 @@ _q_static void read_portage_env_file(const char *configroot, const char *file, e
 			while (isspace(*s))
 				++s;
 			if (*s == '"' || *s == '\'') {
+				char *endq;
 				char q = *s;
-				size_t l = strlen(s);
 
-				if (q != s[l - 1]) {
+				/* make sure we handle spacing/comments after the quote */
+				endq = strchr(s + 1, q);
+				if (!endq) {
 					/* If the last char is not a quote, then we span lines */
 					size_t abuflen;
-					char *abuf, *qq;
+					char *abuf;
 
-					qq = abuf = NULL;
+					abuf = NULL;
 					while (getline(&abuf, &abuflen, fp) != -1) {
 						buf = xrealloc(buf, buflen + abuflen);
 						strcat(buf, abuf);
 						buflen += abuflen;
 
-						qq = strchr(abuf, q);
-						if (qq) {
-							*qq = '\0';
+						endq = strchr(abuf, q);
+						if (endq) {
+							*endq = '\0';
 							break;
 						}
 					}
 					free(abuf);
 
-					if (!qq)
+					if (!endq)
 						warn("%s:%zu: %s: quote mismatch", file, line, vars[i].name);
 
 					s = buf + vars[i].name_len + 1;
 				} else {
-					s[l - 1] = '\0';
+					*endq = '\0';
 					++s;
 				}
 			}
