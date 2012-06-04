@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.216 2012/05/19 13:20:20 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.217 2012/06/04 23:13:23 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -788,13 +788,19 @@ void initialize_portage_env(void)
 
 			byte = *svar;
 			*svar = '\0';
-			evar = get_portage_env_var(vars_to_read, s);
-			if (evar) {
-				sval = *evar->value.s;
+
+			/* Don't try to expand ourselves */
+			if (strcmp(var->name, s)) {
+				evar = get_portage_env_var(vars_to_read, s);
+				if (evar) {
+					sval = *evar->value.s;
+				} else {
+					sval = getenv(s);
+					if (!sval)
+						sval = "";
+				}
 			} else {
-				sval = getenv(s);
-				if (!sval)
-					sval = "";
+				sval = "";
 			}
 			*svar = byte;
 			slen = strlen(sval);
