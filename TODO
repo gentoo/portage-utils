@@ -32,3 +32,9 @@
 	- only 64bit values are supported in any individual version component
 		foo-(1234)_alpha(56789)
 	- these limits should not be an issue for all practical purposes
+
+- env vars only get expanded once, so this fails:
+	ACCEPT_LICENSE="foo"
+	ACCEPT_LICENSE="${ACCEPT_LICENSE} bar"
+  we end up getting just:
+	ACCEPT_LICENSE=" bar"
