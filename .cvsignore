@@ -1,4 +1,5 @@
 .cvsignore
+.git
 q
 *bz2
 *~
