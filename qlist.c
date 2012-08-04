@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.68 2011/12/21 04:59:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.69 2012/08/04 20:07:26 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -18,6 +18,7 @@ static struct option const qlist_long_opts[] = {
 	{"columns",   no_argument, NULL, 'c'},
 	{"umap",      no_argument, NULL, 'U'},
 	{"dups",      no_argument, NULL, 'D'},
+	{"showdebug", no_argument, NULL, 128},
 	{"exact",     no_argument, NULL, 'e'},
 	{"all",       no_argument, NULL, 'a'},
 	{"dir",       no_argument, NULL, 'd'},
@@ -33,6 +34,7 @@ static const char * const qlist_opts_help[] = {
 	"Display column view",
 	"Display installed packages with flags used",
 	"Only show package dups",
+	"Show /usr/lib/debug files",
 	"Exact match (only CAT/PN or PN without PV)",
 	"Show every installed package",
 	"Only show directories",
@@ -41,7 +43,7 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.68 2011/12/21 04:59:21 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.69 2012/08/04 20:07:26 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 queue *filter_dups(queue *sets);
@@ -199,6 +201,7 @@ struct qlist_opt_state {
 	bool show_sym;
 	bool show_slots;
 	bool show_umap;
+	bool show_dbg;
 	bool columns;
 	const char *slot_separator;
 	queue *sets;
@@ -280,6 +283,12 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		if (!e)
 			continue;
 
+		if (!state->show_dbg) {
+			if (!strncmp(e->name, "/usr/lib/debug", 14) &&
+			    (e->name[14] == '/' || e->name[14] == '\0'))
+				continue;
+		}
+
 		switch (e->type) {
 			case CONTENTS_DIR:
 				if (state->show_dir)
@@ -318,6 +327,7 @@ int qlist_main(int argc, char **argv)
 		.show_sym = false,
 		.show_slots = false,
 		.show_umap = false,
+		.show_dbg = false,
 		.columns = false,
 		.slot_separator = " ",
 		.sets = NULL,
@@ -338,6 +348,7 @@ int qlist_main(int argc, char **argv)
 		case 'U': state.just_pkgname = state.show_umap = true; break;
 		case 'e': state.exact = true; break;
 		case 'd': state.show_dir = true; break;
+		case 128: state.show_dbg = true; break;
 		case 'o': state.show_obj = true; break;
 		case 's': state.show_sym = true; break;
 		case 'D': state.dups_only = state.exact = state.just_pkgname = true; break;
