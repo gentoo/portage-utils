@@ -724,6 +724,7 @@ static void *md5_end(void *resbuf, struct md5_ctx_t *ctx)
 {
 	/* Take yet unprocessed bytes into account.  */
 	uint32_t bytes = ctx->buflen;
+	uint32_t swap_bytes;
 	size_t pad;
 
 	/* Now count remaining bytes.  */
@@ -739,10 +740,13 @@ static void *md5_end(void *resbuf, struct md5_ctx_t *ctx)
 	memcpy(&ctx->buffer[bytes], fillbuf, pad);
 # endif	/* MD5SUM_SIZE_VS_SPEED > 0 */
 
-	/* Put the 64-bit file length in *bits* at the end of the buffer.  */
-	*(uint32_t *) & ctx->buffer[bytes + pad] = SWAP(ctx->total[0] << 3);
-	*(uint32_t *) & ctx->buffer[bytes + pad + 4] =
-		SWAP(((ctx->total[1] << 3) | (ctx->total[0] >> 29)));
+	/* Put the 64-bit file length in *bits* at the end of the buffer.
+	   Use memcpy to avoid aliasing problems.  On most systems, this
+	   will be optimized away to the same code.  */
+	swap_bytes = SWAP(ctx->total[0] << 3);
+	memcpy(&ctx->buffer[bytes + pad], &swap_bytes, sizeof(swap_bytes));
+	swap_bytes = SWAP(((ctx->total[1] << 3) | (ctx->total[0] >> 29)));
+	memcpy(&ctx->buffer[bytes + pad + 4], &swap_bytes, sizeof(swap_bytes));
 
 	/* Process last bytes.  */
 	md5_hash_block(ctx->buffer, bytes + pad + 8, ctx);
