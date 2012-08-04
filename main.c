@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.217 2012/06/04 23:13:23 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.218 2012/08/04 20:24:56 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -159,13 +159,22 @@ static void usage(int status, const char *flags, struct option const opts[],
 
 	printf("\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
 	for (i = 0; opts[i].name; ++i) {
-		assert(help[i] != NULL); /* this assert is a life saver when adding new applets. */
-		if (opts[i].has_arg == no_argument)
-			printf("  -%c, --%-15s%s*%s %s\n", opts[i].val,
-				opts[i].name, RED, NORM, _(help[i]));
+		/* this assert is a life saver when adding new applets. */
+		assert(help[i] != NULL);
+
+		/* first output the short flag if it has one */
+		if (opts[i].val > '~')
+			printf("      ");
 		else
-			printf("  -%c, --%-8s %s<arg>%s %s*%s %s\n", opts[i].val,
-				opts[i].name, DKBLUE, NORM, RED, NORM, _(help[i]));
+			printf("  -%c, ", opts[i].val);
+
+		/* then the long flag + help text */
+		if (opts[i].has_arg == no_argument)
+			printf("--%-15s%s*%s %s\n", opts[i].name,
+				RED, NORM, _(help[i]));
+		else
+			printf("--%-8s %s<arg>%s %s*%s %s\n", opts[i].name,
+				DKBLUE, NORM, RED, NORM, _(help[i]));
 	}
 	exit(status);
 }
