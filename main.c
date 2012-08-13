@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.218 2012/08/04 20:24:56 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.219 2012/08/13 21:16:57 robbat2 Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -57,13 +57,15 @@ char *modpath = NULL;
 int found = 0;
 int verbose = 0;
 int quiet = 0;
+int portcachedir_type = 0;
 char pretend = 0;
 char reinitialize = 0;
 char reinitialize_metacache = 0;
 static char *portdir;
 static char *portarch;
 static char *portvdb;
-const char portcachedir[] = "metadata/cache";
+const char portcachedir_pms[] = "metadata/cache";
+const char portcachedir_md5[] = "metadata/md5-cache";
 static char *portroot;
 static char *eprefix;
 static char *config_protect, *config_protect_mask;
@@ -861,7 +863,9 @@ void initialize_portage_env(void)
 
 enum {
 	CACHE_EBUILD = 1,
-	CACHE_METADATA = 2
+	CACHE_METADATA = 2,
+    CACHE_METADATA_PMS = 10,
+    CACHE_METADATA_MD5 = 11,
 };
 
 int filter_hidden(const struct dirent *dentry);
@@ -881,6 +885,7 @@ const char *initialize_flat(int cache_type)
 	struct stat st;
 	struct timeval start, finish;
 	static const char *cache_file;
+	const char *portcachedir_actual;
 	char *p;
 	int a, b, c, d, e, i;
 	int frac, secs, count;
@@ -896,9 +901,17 @@ const char *initialize_flat(int cache_type)
 		goto ret;
 	}
 
-	if (cache_type == CACHE_METADATA && chdir(portcachedir) != 0) {
-		warnp("chdir to portage cache '%s/%s' failed", portdir, portcachedir);
-		goto ret;
+	if (cache_type == CACHE_METADATA) {
+		if(chdir(portcachedir_md5) == 0) {
+			portcachedir_type = CACHE_METADATA_MD5;
+			portcachedir_actual = portcachedir_md5;
+		} else if(chdir(portcachedir_pms) == 0) {
+			portcachedir_type = CACHE_METADATA_PMS;
+			portcachedir_actual = portcachedir_pms;
+		} else {
+			warnp("chdir to portage cache '%s/%s' or '%s/%s' failed", portdir, portcachedir_md5, portdir, portcachedir_pms);
+			goto ret;
+		}
 	}
 
 	if (stat(cache_file, &st) != -1)
@@ -921,7 +934,7 @@ const char *initialize_flat(int cache_type)
 		if (cache_type == CACHE_EBUILD)
 			warnfp("opening '%s/%s' failed", portdir, cache_file);
 		else
-			warnfp("opening '%s/%s/%s' failed", portdir, portcachedir, cache_file);
+			warnfp("opening '%s/%s/%s' failed", portdir, portcachedir_actual, cache_file);
 		if (errno == EACCES)
 			warnf("You should run this command as root: q -%c",
 					cache_type == CACHE_EBUILD ? 'r' : 'm');
@@ -1037,11 +1050,27 @@ typedef struct {
 	char *EAPI;
 	char *PROPERTIES;
 	depend_atom *atom;
+	/* These are MD5-Cache only */
+	char *DEFINED_PHASES;
+	char *REQUIRED_USE;
+	char *_eclasses_;
+	char *_md5_;
 } portage_cache;
 
 void cache_free(portage_cache *cache);
+portage_cache *cache_read_file_pms(const char *file);
+portage_cache *cache_read_file_md5(const char *file);
 portage_cache *cache_read_file(const char *file);
+
 portage_cache *cache_read_file(const char *file)
+{
+	if(portcachedir_type == CACHE_METADATA_MD5)
+		return(cache_read_file_md5(file));
+	else if(portcachedir_type == CACHE_METADATA_PMS)
+		return(cache_read_file_pms(file));
+}
+
+portage_cache *cache_read_file_pms(const char *file)
 {
 	struct stat s;
 	char *ptr;
@@ -1094,6 +1123,105 @@ portage_cache *cache_read_file(const char *file)
 	return ret;
 
 err:
+	if (ret) cache_free(ret);
+	return NULL;
+}
+
+portage_cache *cache_read_file_md5(const char *file)
+{
+	struct stat s;
+	char *ptr, *endptr;
+	//const char *cmpkey;
+	FILE *f;
+	portage_cache *ret = NULL;
+	size_t len;
+
+	if ((f = fopen(file, "r")) == NULL)
+		goto err;
+
+	if (fstat(fileno(f), &s) != 0)
+		goto err;
+	len = sizeof(*ret) + s.st_size + 1;
+	ret = xzalloc(len);
+	ptr = (char*)ret;
+	ret->_data = ptr + sizeof(*ret);
+	if ((off_t)fread(ret->_data, 1, s.st_size, f) != s.st_size)
+		goto err;
+
+	ret->atom = atom_explode(file);
+	
+	/* We have a block of key=value\n data.
+	 * KEY=VALUE\n
+	 * Where KEY does NOT contain:
+	 * \0 \n =
+	 * And VALUE does NOT contain:
+	 * \0 \n
+	 * */
+#define assign_var_cmp(keyname, cmpkey) \
+	if (strncmp(keyptr, cmpkey, strlen(cmpkey)) == 0) { \
+		ret->keyname = valptr; \
+		continue; \
+	}
+#define assign_var(keyname) \
+	assign_var_cmp(keyname, #keyname);
+
+	ptr = ret->_data;
+	endptr = strchr(ptr, '\0');
+	if(endptr == NULL) {
+			warn("Invalid cache file '%s' - could not find end of cache data", file);
+			goto err;
+	}
+
+	while(ptr != NULL && ptr != endptr) {
+		char *keyptr;
+		char *valptr;
+		keyptr = ptr;
+		valptr = strchr(ptr, '=');
+		if(valptr == NULL) {
+			warn("Invalid cache file '%s' val", file);
+			goto err;
+		}
+		*valptr = '\0';
+		valptr++;
+		ptr = strchr(valptr, '\n');
+		if(ptr == NULL) {
+			warn("Invalid cache file '%s' key", file);
+			goto err;
+		}
+		*ptr = '\0';
+		ptr++;
+
+		assign_var(CDEPEND);
+		assign_var(DEPEND);
+		assign_var(DESCRIPTION);
+		assign_var(EAPI);
+		assign_var(HOMEPAGE);
+		assign_var(INHERITED);
+		assign_var(IUSE);
+		assign_var(KEYWORDS);
+		assign_var(LICENSE);
+		assign_var(PDEPEND);
+		assign_var(PROPERTIES);
+		assign_var(PROVIDE);
+		assign_var(RDEPEND);
+		assign_var(RESTRICT);
+		assign_var(SLOT);
+		assign_var(SRC_URI);
+		assign_var(DEFINED_PHASES);
+		assign_var(REQUIRED_USE);
+		assign_var(_eclasses_);
+		assign_var(_md5_);
+		warn("Cache file '%s' with unknown key %s", file, keyptr);
+	}
+#undef assign_var
+#undef assign_var_cmp
+
+	fclose(f);
+
+	return ret;
+
+err:
+	fclose(f);
 	if (ret) cache_free(ret);
 	return NULL;
 }
