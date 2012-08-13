@@ -20,22 +20,28 @@ test() {
 test 01 "qlist -IC | grep -v CVS"
 
 # simple files list
-test 02 "qlist -C cpio"
+test 02 "qlist -C --showdebug cpio"
 
 # symlink verbose list
-test 03 "qlist -C mtools -e -v"
+test 03 "qlist -C --showdebug mtools -e -v"
 
 # dir test
-test 04 "qlist -C mtools -d"
+test 04 "qlist -C --showdebug mtools -d"
 
 # obj test
-test 05 "qlist -C mtools -o"
+test 05 "qlist -C --showdebug mtools -o"
 
 # sym test
-test 06 "qlist -C mtools -s"
+test 06 "qlist -C --showdebug mtools -s"
 
 # SLOT test
 test 07 "qlist -ICSL | grep -v CVS"
+
+# showdebug test #1
+test 08 "qlist -C cpio"
+
+# dir test
+test 09 "qlist -C mtools -d"
 
 cleantmpdir
 
