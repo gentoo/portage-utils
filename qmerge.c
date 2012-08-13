@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.115 2011/12/19 04:58:09 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.116 2012/08/13 22:23:35 robbat2 Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.115 2011/12/19 04:58:09 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.116 2012/08/13 22:23:35 robbat2 Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -298,7 +298,7 @@ void install_mask_pwd(int iargc, char **iargv, const struct stat st)
 
 			globbuf.gl_offs = 0;
 			if (glob(buf, GLOB_DOOFFS|GLOB_BRACE, NULL, &globbuf) == 0) {
-				for (g = 0; g < globbuf.gl_pathc; g++) {
+				for (g = 0; g < (int)globbuf.gl_pathc; g++) {
 					strncpy(buf, globbuf.gl_pathv[g], sizeof(buf));
 					/* qprintf("globbed: %s\n", globbuf.gl_pathv[g]); */
 					crossmount_rm(globbuf.gl_pathv[g], st);

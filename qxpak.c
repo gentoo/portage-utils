@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.24 2011/12/19 04:28:35 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qxpak.c,v 1.25 2012/08/13 22:23:35 robbat2 Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,7 +46,7 @@ static const char * const qxpak_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.24 2011/12/19 04:28:35 vapier Exp $";
+static const char qxpak_rcsid[] = "$Id: qxpak.c,v 1.25 2012/08/13 22:23:35 robbat2 Exp $";
 #define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, lookup_applet_idx("qxpak"))
 
 typedef struct {
@@ -214,13 +214,13 @@ xpak_extract(int dir_fd, const char *file, int argc, char **argv)
 
 	assert((size_t)x->index_len < sizeof(buf));
 	in = fread(x->index, 1, x->index_len, x->fp);
-	if (in != x->index_len)
+	if ((int)in != x->index_len)
 		err("index chunk: read %i bytes, wanted %i bytes", (int)in, x->index_len);
 
 	/* the xpak may be large (like when it has CONTENTS) #300744 */
 	x->data = (size_t)x->data_len < sizeof(ext) ? ext : xmalloc(x->data_len);
 	in = fread(x->data, 1, x->data_len, x->fp);
-	if (in != x->data_len)
+	if ((int)in != x->data_len)
 		err("data chunk: read %i bytes, wanted %i bytes", (int)in, x->data_len);
 
 	_xpak_walk_index(x, argc, argv, &_xpak_extract_callback);

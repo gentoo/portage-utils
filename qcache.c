@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.39 2011/02/21 07:33:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.40 2012/08/13 22:23:35 robbat2 Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -47,7 +47,7 @@ static const char * const qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.39 2011/02/21 07:33:21 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.40 2012/08/13 22:23:35 robbat2 Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -75,7 +75,7 @@ typedef struct {
 /********************************************************************/
 
 static char **archlist; /* Read from PORTDIR/profiles/arch.list in qcache_init() */
-static unsigned int archlist_count;
+static int archlist_count;
 const char status[3] = {'-', '~', '+'};
 int qcache_skip, qcache_test_arch, qcache_last = 0;
 char *qcache_matchpkg = NULL, *qcache_matchcat = NULL;
@@ -120,10 +120,10 @@ int decode_status(char c)
  * OUT:
  *  int pos - location of arch in archlist[]
  */
-unsigned int decode_arch(const char *arch);
-unsigned int decode_arch(const char *arch)
+int decode_arch(const char *arch);
+int decode_arch(const char *arch)
 {
-	unsigned int a;
+	int a;
 	const char *p;
 
 	p = arch;
@@ -149,7 +149,7 @@ unsigned int decode_arch(const char *arch)
 void print_keywords(char *category, char *ebuild, int *keywords);
 void print_keywords(char *category, char *ebuild, int *keywords)
 {
-	unsigned int a;
+	int a;
 	char *package;
 
 	package = xstrdup(ebuild);
@@ -189,7 +189,7 @@ int read_keywords(char *s, int *keywords)
 {
 	char *arch, delim[2] = { ' ', '\0' };
 	size_t slen;
-	unsigned int a;
+	int a;
 
 	if (!s)
 		return -1;
@@ -233,7 +233,7 @@ int read_keywords(char *s, int *keywords)
  */
 static unsigned int qcache_count_lines(char *filename)
 {
-	unsigned int count, fd;
+	int count, fd;
 	char c;
 
 	if ((fd = open(filename, O_RDONLY)) != -1) {
@@ -265,7 +265,7 @@ static unsigned int qcache_count_lines(char *filename)
 char **qcache_read_lines(char *filename);
 char **qcache_read_lines(char *filename)
 {
-	unsigned int len, fd, count, i, num_lines;
+	int len, fd, count, i, num_lines;
 	char **lines, c;
 
 	if (-1 == (num_lines = qcache_count_lines(filename)))
@@ -626,7 +626,7 @@ void qcache_imlate(qcache_data *data);
 void qcache_imlate(qcache_data *data)
 {
 	int *keywords;
-	unsigned int a;
+	int a;
 
 	keywords = xmalloc(sizeof(*keywords) * archlist_count);
 
@@ -742,15 +742,14 @@ void qcache_stats(qcache_data *data);
 void qcache_stats(qcache_data *data)
 {
 	static time_t runtime;
-	static unsigned int numpkg  = 0;
-	static unsigned int numebld = 0;
-	static unsigned int numcat;
-	static unsigned int *packages_stable;
-	static unsigned int *packages_testing;
+	static int numpkg  = 0;
+	static int numebld = 0;
+	static int numcat;
+	static int *packages_stable;
+	static int *packages_testing;
 	static int *current_package_keywords;
 	static int *keywords;
-	int i;
-	unsigned int a;
+	int a, i;
 
 	if (!numpkg) {
 		struct dirent **categories;

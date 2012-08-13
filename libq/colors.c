@@ -49,11 +49,11 @@ void color_remap(void);
 void color_remap(void)
 {
 	FILE *fp;
-	int i;
+	unsigned int i;
 	size_t buflen;
 	char *buf;
 	char *p;
-	int lineno = 0;
+	unsigned int lineno = 0;
 
 	if ((fp = fopen(COLOR_MAP, "r")) == NULL)
 		return;

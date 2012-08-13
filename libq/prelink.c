@@ -1,7 +1,7 @@
 /*
  * Copyright 2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/prelink.c,v 1.3 2011/12/09 16:52:15 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/prelink.c,v 1.4 2012/08/13 22:23:35 robbat2 Exp $
  */
 
 #include <signal.h>
@@ -75,7 +75,7 @@ static bool is_prelink_elf(int fd, const char *filename)
 	}
 	if (lseek(fd, 0, SEEK_SET) != 0)
 		errp("unable to reset after ELF check %s\n", filename);
-	if (len < sizeof(header))
+	if (len < (ssize_t)sizeof(header))
 		return false;
 
 	if (memcmp(header, ELFMAG, SELFMAG))

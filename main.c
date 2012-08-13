@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.219 2012/08/13 21:16:57 robbat2 Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.220 2012/08/13 22:23:35 robbat2 Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -902,10 +902,10 @@ const char *initialize_flat(int cache_type)
 	}
 
 	if (cache_type == CACHE_METADATA) {
-		if(chdir(portcachedir_md5) == 0) {
+		if (chdir(portcachedir_md5) == 0) {
 			portcachedir_type = CACHE_METADATA_MD5;
 			portcachedir_actual = portcachedir_md5;
-		} else if(chdir(portcachedir_pms) == 0) {
+		} else if (chdir(portcachedir_pms) == 0) {
 			portcachedir_type = CACHE_METADATA_PMS;
 			portcachedir_actual = portcachedir_pms;
 		} else {
@@ -1064,10 +1064,12 @@ portage_cache *cache_read_file(const char *file);
 
 portage_cache *cache_read_file(const char *file)
 {
-	if(portcachedir_type == CACHE_METADATA_MD5)
+	if (portcachedir_type == CACHE_METADATA_MD5)
 		return(cache_read_file_md5(file));
-	else if(portcachedir_type == CACHE_METADATA_PMS)
+	else if (portcachedir_type == CACHE_METADATA_PMS)
 		return(cache_read_file_pms(file));
+	warn("Unknown metadata cache type!");
+	return NULL;
 }
 
 portage_cache *cache_read_file_pms(const char *file)
@@ -1131,7 +1133,6 @@ portage_cache *cache_read_file_md5(const char *file)
 {
 	struct stat s;
 	char *ptr, *endptr;
-	//const char *cmpkey;
 	FILE *f;
 	portage_cache *ret = NULL;
 	size_t len;
@@ -1149,7 +1150,7 @@ portage_cache *cache_read_file_md5(const char *file)
 		goto err;
 
 	ret->atom = atom_explode(file);
-	
+
 	/* We have a block of key=value\n data.
 	 * KEY=VALUE\n
 	 * Where KEY does NOT contain:
@@ -1167,24 +1168,24 @@ portage_cache *cache_read_file_md5(const char *file)
 
 	ptr = ret->_data;
 	endptr = strchr(ptr, '\0');
-	if(endptr == NULL) {
+	if (endptr == NULL) {
 			warn("Invalid cache file '%s' - could not find end of cache data", file);
 			goto err;
 	}
 
-	while(ptr != NULL && ptr != endptr) {
+	while (ptr != NULL && ptr != endptr) {
 		char *keyptr;
 		char *valptr;
 		keyptr = ptr;
 		valptr = strchr(ptr, '=');
-		if(valptr == NULL) {
+		if (valptr == NULL) {
 			warn("Invalid cache file '%s' val", file);
 			goto err;
 		}
 		*valptr = '\0';
 		valptr++;
 		ptr = strchr(valptr, '\n');
-		if(ptr == NULL) {
+		if (ptr == NULL) {
 			warn("Invalid cache file '%s' key", file);
 			goto err;
 		}

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.64 2011/02/21 07:33:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.65 2012/08/13 22:23:35 robbat2 Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,10 +35,10 @@ static const char * const quse_opts_help[] = {
 	"Only show package name",
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.64 2011/02/21 07:33:21 vapier Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.65 2012/08/13 22:23:35 robbat2 Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
-int quse_describe_flag(int ind, int argc, char **argv);
+int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv);
 
 char quse_name_only = 0;
 
@@ -81,12 +81,12 @@ static void print_highlighted_use_flags(char *string, int ind, int argc, char **
 	}
 }
 
-int quse_describe_flag(int ind, int argc, char **argv)
+int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 {
 #define NUM_SEARCH_FILES ARRAY_SIZE(search_files)
 	size_t buflen;
 	char *buf, *p;
-	int i, f;
+	unsigned int i, f;
 	size_t s;
 	const char *search_files[] = { "use.desc", "use.local.desc", "arch.list", "lang.desc" };
 	FILE *fp[NUM_SEARCH_FILES];

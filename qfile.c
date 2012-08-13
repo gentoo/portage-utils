@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.60 2012/01/16 01:12:31 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.61 2012/08/13 22:23:35 robbat2 Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,12 +34,12 @@ static const char * const qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.60 2012/01/16 01:12:31 vapier Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.61 2012/08/13 22:23:35 robbat2 Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
 	(!prefix_length \
-		|| (strlen(path) >= prefix_length \
+		|| (strlen(path) >= (size_t)prefix_length \
 			&& (path[prefix_length] == '/' || path[prefix_length] == '\0') \
 			&& !strncmp(path, prefix, prefix_length)))
 
@@ -97,7 +97,7 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 		/* We reuse pkg for reading files in the subdir */
 		base = basename(path);
 		i = snprintf(pkg, sizeof(pkg), "%s/%s", base, dentry->d_name);
-		if (i + 20 >= sizeof(pkg)) {
+		if (i + 20 >= (ssize_t)sizeof(pkg)) {
 			warn("skipping long pkg name: %s/%s", base, dentry->d_name);
 			continue;
 		}
