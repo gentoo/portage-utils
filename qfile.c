@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.61 2012/08/13 22:23:35 robbat2 Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.62 2012/10/28 07:56:51 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.61 2012/08/13 22:23:35 robbat2 Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.62 2012/10/28 07:56:51 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -55,23 +55,28 @@ typedef struct {
 	char *exclude_slot;
 } qfile_args_t;
 
-bool qfile_slotted = false;
-bool qfile_exact = false;
+struct qfile_opt_state {
+	char *buf;
+	size_t buflen;
+	qfile_args_t *args;
+	char *root;
+	bool slotted;
+	bool exact;
+};
 
 /*
  * We assume the people calling us have chdir(/var/db/pkg) and so
  * we use relative paths throughout here.
  */
-void qfile(char *, const char *, qfile_args_t *);
-void qfile(char *path, const char *root, qfile_args_t *args)
+_q_static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
+	struct qfile_opt_state *state = priv;
+	const char *catname = pkg_ctx->cat_ctx->name;
+	const char *pkgname = pkg_ctx->name;
+	qfile_args_t *args = state->args;
 	FILE *fp;
-	DIR *dir;
-	struct dirent *dentry;
 	const char *base;
-	size_t buflen;
-	char *p, *buf;
-	char pkg[150];
+	char pkg[_Q_PATH_MAX];
 	depend_atom *atom = NULL;
 	int i, path_ok;
 	char bn_firstchar;
@@ -81,237 +86,184 @@ void qfile(char *path, const char *root, qfile_args_t *args)
 	char **real_dir_names = args->realdirnames;
 	char *bn_firstchars = args->bn_firstchars;
 	short *non_orphans = args->non_orphans;
+	int found = 0;
 
-	if ((dir = opendir(path)) == NULL) {
-		warnp("opendir(%s) failed", path);
-		return;
+	snprintf(pkg, sizeof(pkg), "%s/%s", catname, pkgname);
+
+	/* If exclude_pkg is not NULL, check it.  We are looking for files
+	 * collisions, and must exclude one package.
+	 */
+	if (args->exclude_pkg) {
+		if (strcmp(args->exclude_pkg, pkg) == 0)
+			goto check_pkg_slot; /* CAT/PF matches */
+		if (strcmp(args->exclude_pkg, pkg_ctx->name) == 0)
+			goto check_pkg_slot; /* PF matches */
+		if ((atom = atom_explode(pkg)) == NULL) {
+			warn("invalid atom %s", pkg);
+			goto dont_skip_pkg;
+		}
+		snprintf(state->buf, state->buflen, "%s/%s", atom->CATEGORY, atom->PN);
+		if (strncmp(args->exclude_pkg, state->buf, state->buflen) != 0
+				&& strcmp(args->exclude_pkg, atom->PN) != 0)
+			goto dont_skip_pkg; /* "(CAT/)?PN" doesn't match */
+ check_pkg_slot: /* Also compare slots, if any was specified */
+		if (args->exclude_slot == NULL)
+			goto qlist_done; /* "(CAT/)?(PN|PF)" matches, and no SLOT specified */
+		eat_file_at(pkg_ctx->fd, "SLOT", state->buf, state->buflen);
+		rmspace(state->buf);
+		if (strcmp(args->exclude_slot, state->buf) == 0)
+			goto qlist_done; /* "(CAT/)?(PN|PF):SLOT" matches */
 	}
+ dont_skip_pkg: /* End of the package exclusion tests. */
 
-	buflen = _Q_PATH_MAX;
-	buf = xmalloc(buflen);
+	fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
+	if (fp == NULL)
+		goto qlist_done;
 
-	while ((dentry = readdir(dir))) {
-		if (dentry->d_name[0] == '.')
+	while (getline(&state->buf, &state->buflen, fp) != -1) {
+		contents_entry *e;
+		e = contents_parse_line(state->buf);
+		if (!e)
 			continue;
 
-		/* We reuse pkg for reading files in the subdir */
-		base = basename(path);
-		i = snprintf(pkg, sizeof(pkg), "%s/%s", base, dentry->d_name);
-		if (i + 20 >= (ssize_t)sizeof(pkg)) {
-			warn("skipping long pkg name: %s/%s", base, dentry->d_name);
-			continue;
-		}
-		p = pkg + i;
-
-		/* Will be exploded once at most, as needed. */
-		if (atom) {
-			atom_implode(atom);
-			atom = NULL;
-		}
-
-		/* If exclude_pkg is not NULL, check it.  We are looking for files
-		 * collisions, and must exclude one package.
-		 */
-		if (args->exclude_pkg != NULL) {
-			if (strncmp(args->exclude_pkg, pkg, sizeof(pkg)) == 0)
-				goto check_pkg_slot; /* CAT/PF matches */
-			if (strcmp(args->exclude_pkg, dentry->d_name) == 0)
-				goto check_pkg_slot; /* PF matches */
-			if ((atom = atom_explode(pkg)) == NULL
-					|| atom->PN == NULL || atom->CATEGORY == NULL) {
-				warn("invalid atom %s", pkg);
-				goto dont_skip_pkg;
-			}
-			snprintf(buf, buflen, "%s/%s", atom->CATEGORY, atom->PN);
-			if (strncmp(args->exclude_pkg, buf, buflen) != 0
-					&& strcmp(args->exclude_pkg, atom->PN) != 0)
-				goto dont_skip_pkg; /* "(CAT/)?PN" doesn't match */
-check_pkg_slot: /* Also compare slots, if any was specified */
-			if (args->exclude_slot == NULL)
-				continue; /* "(CAT/)?(PN|PF)" matches, and no SLOT specified */
-			buf[0] = '0'; buf[1] = '\0';
-			strcpy(p, "/SLOT");
-			eat_file(pkg, buf, buflen);
-			rmspace(buf);
-			*p = '\0';
-			if (strncmp(args->exclude_slot, buf, buflen) == 0)
-				continue; /* "(CAT/)?(PN|PF):SLOT" matches */
-		}
-dont_skip_pkg: /* End of the package exclusion tests. */
-
-		strcpy(p, "/CONTENTS");
-		fp = fopen(pkg, "r");
-		*p = '\0';
-		if (fp == NULL)
+		/* assume sane basename() -- doesnt modify argument */
+		if ((base = basename(e->name)) == NULL)
 			continue;
 
-		while (getline(&buf, &buflen, fp) != -1) {
-			contents_entry *e;
-			e = contents_parse_line(buf);
-			if (!e)
+		/* used to cut the number of strcmp() calls */
+		bn_firstchar = base[0];
+
+		for (i = 0; i < args->length; i++) {
+			if (base_names[i] == NULL)
+				continue;
+			if (non_orphans && non_orphans[i])
+				continue;
+			path_ok = (dir_names[i] == NULL && real_dir_names[i] == NULL);
+
+			if (bn_firstchar != bn_firstchars[i]
+					|| strcmp(base, base_names[i]))
 				continue;
 
-			/* assume sane basename() -- doesnt modify argument */
-			if ((base = basename(e->name)) == NULL)
-				continue;
+			if (!path_ok) {
+				/* check the full filepath ... */
+				size_t dirname_len = (base - e->name - 1);
+				/* basename(/usr)     = usr, dirname(/usr)     = /
+				 * basename(/usr/bin) = bin, dirname(/usr/bin) = /usr
+				 */
+				if (dirname_len == 0)
+					dirname_len = 1;
 
-			/* used to cut the number of strcmp() calls */
-			bn_firstchar = base[0];
+				if (dir_names[i] &&
+				    strncmp(e->name, dir_names[i], dirname_len) == 0 &&
+				    dir_names[i][dirname_len] == '\0')
+					/* dir_name == dirname(CONTENTS) */
+					path_ok = 1;
 
-			for (i = 0; i < args->length; i++) {
-				if (base_names[i] == NULL)
-					continue;
-				if (non_orphans != NULL && non_orphans[i])
-					continue;
-				path_ok = (dir_names[i] == NULL && real_dir_names[i] == NULL);
+				else if (real_dir_names[i] &&
+				         strncmp(e->name, real_dir_names[i], dirname_len) == 0 &&
+				         real_dir_names[i][dirname_len] == '\0')
+					/* real_dir_name == dirname(CONTENTS) */
+					path_ok = 1;
 
-				if (bn_firstchar != bn_firstchars[i]
-						|| strcmp(base, base_names[i]))
-					continue;
+				else if (real_root[0]) {
+					char rpath[_Q_PATH_MAX + 1], *_rpath;
+					char *fullpath;
+					size_t real_root_len = strlen(real_root);
 
-				if (!path_ok) {
-					/* check the full filepath ... */
-					size_t dirname_len = (base - e->name - 1);
-					/* basename(/usr)     = usr, dirname(/usr)     = /
-					 * basename(/usr/bin) = bin, dirname(/usr/bin) = /usr
-					 */
-					if (dirname_len == 0)
-						dirname_len = 1;
-
-					if (dir_names[i] &&
-					    strncmp(e->name, dir_names[i], dirname_len) == 0 &&
-					    dir_names[i][dirname_len] == '\0')
-						/* dir_name == dirname(CONTENTS) */
-						path_ok = 1;
-
-					else if (real_dir_names[i] &&
-					         strncmp(e->name, real_dir_names[i], dirname_len) == 0 &&
-					         real_dir_names[i][dirname_len] == '\0')
-						/* real_dir_name == dirname(CONTENTS) */
-						path_ok = 1;
-
-					else if (real_root[0]) {
-						char rpath[_Q_PATH_MAX + 1], *_rpath;
-						char *fullpath;
-						size_t real_root_len = strlen(real_root);
-
-						xasprintf(&fullpath, "%s%s", real_root, e->name);
-						fullpath[real_root_len + dirname_len] = '\0';
-						_rpath = rpath + real_root_len;
-						if (realpath(fullpath, rpath) == NULL) {
-							if (verbose) {
-								warnp("Could not read real path of \"%s\" (from %s)", fullpath, pkg);
-								warn("We'll never know whether \"%s\" was a result for your query...",
-										e->name);
-							}
-						} else if (!qfile_is_prefix(rpath, real_root, real_root_len)) {
-							if (verbose)
-								warn("Real path of \"%s\" is not under ROOT: %s", fullpath, rpath);
-						} else if (dir_names[i] &&
-						           strcmp(_rpath, dir_names[i]) == 0) {
-							/* dir_name == realpath(dirname(CONTENTS)) */
-							path_ok = 1;
-						} else if (real_dir_names[i] &&
-						           strcmp(_rpath, real_dir_names[i]) == 0) {
-							/* real_dir_name == realpath(dirname(CONTENTS)) */
-							path_ok = 1;
+					xasprintf(&fullpath, "%s%s", real_root, e->name);
+					fullpath[real_root_len + dirname_len] = '\0';
+					_rpath = rpath + real_root_len;
+					if (realpath(fullpath, rpath) == NULL) {
+						if (verbose) {
+							warnp("Could not read real path of \"%s\" (from %s)", fullpath, pkg);
+							warn("We'll never know whether \"%s\" was a result for your query...",
+									e->name);
 						}
-						free(fullpath);
+					} else if (!qfile_is_prefix(rpath, real_root, real_root_len)) {
+						if (verbose)
+							warn("Real path of \"%s\" is not under ROOT: %s", fullpath, rpath);
+					} else if (dir_names[i] &&
+					           strcmp(_rpath, dir_names[i]) == 0) {
+						/* dir_name == realpath(dirname(CONTENTS)) */
+						path_ok = 1;
+					} else if (real_dir_names[i] &&
+					           strcmp(_rpath, real_dir_names[i]) == 0) {
+						/* real_dir_name == realpath(dirname(CONTENTS)) */
+						path_ok = 1;
 					}
+					free(fullpath);
 				}
-				if (!path_ok)
-					continue;
+			}
+			if (!path_ok)
+				continue;
 
-				if (non_orphans == NULL) {
-					char pkgslot[126];
+			if (non_orphans == NULL) {
+				char slot[126];
 
-					if (atom == NULL && (atom = atom_explode(pkg)) == NULL) {
+				if (!atom) {
+					if ((atom = atom_explode(pkg)) == NULL) {
 						warn("invalid atom %s", pkg);
 						continue;
 					}
-					if (qfile_slotted) {
-						strcpy(p, "/SLOT");
-						eat_file(pkg, pkgslot+1, sizeof(pkgslot)-1);
-						rmspace(pkgslot+1);
-						*pkgslot = ':';
-						*p = '\0';
-					} else
-						*pkgslot = '\0';
-					printf("%s%s/%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
-						(qfile_exact ? dentry->d_name : atom->PN),
-						pkgslot, NORM);
-					if (quiet)
-						puts("");
-					else
-						printf(" (%s%s)\n", root ? : "", e->name);
-
-				} else {
-					non_orphans[i] = 1;
 				}
-				found++;
+				if (state->slotted) {
+					eat_file_at(pkg_ctx->fd, "SLOT", slot+1, sizeof(slot)-1);
+					rmspace(slot+1);
+					slot[0] = ':';
+				} else
+					slot[0] = '\0';
+				printf("%s%s/%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
+					(state->exact ? pkg_ctx->name : atom->PN),
+					slot, NORM);
+				if (quiet)
+					puts("");
+				else
+					printf(" (%s%s)\n", state->root ? : "", e->name);
+
+			} else {
+				non_orphans[i] = 1;
 			}
+			found++;
 		}
-		fclose(fp);
 	}
-	closedir(dir);
+	fclose(fp);
 
-	free(buf);
-	return;
+ qlist_done:
+	if (atom)
+		atom_implode(atom);
+
+	return found;
 }
 
-qfile_args_t *create_qfile_args();
-qfile_args_t *create_qfile_args()
-{
-	qfile_args_t *qfile_args;
-
-	qfile_args = xmalloc(sizeof(qfile_args_t));
-
-	memset(qfile_args, 0, sizeof(qfile_args_t));
-	return qfile_args;
-}
-
-void destroy_qfile_args(qfile_args_t *);
-void destroy_qfile_args(qfile_args_t *qfile_args)
+_q_static void destroy_qfile_args(qfile_args_t *qfile_args)
 {
 	int i;
 
 	for (i = 0; i < qfile_args->length; ++i) {
-		if (qfile_args->basenames != NULL && qfile_args->basenames[i] != NULL)
+		if (qfile_args->basenames)
 			free(qfile_args->basenames[i]);
-		if (qfile_args->dirnames != NULL && qfile_args->dirnames[i] != NULL)
+		if (qfile_args->dirnames)
 			free(qfile_args->dirnames[i]);
-		if (qfile_args->realdirnames != NULL && qfile_args->realdirnames[i] != NULL)
+		if (qfile_args->realdirnames)
 			free(qfile_args->realdirnames[i]);
 	}
 
-	if (qfile_args->basenames != NULL)
-		free(qfile_args->basenames);
-	if (qfile_args->dirnames != NULL)
-		free(qfile_args->dirnames);
-	if (qfile_args->realdirnames != NULL)
-		free(qfile_args->realdirnames);
-
-	if (qfile_args->bn_firstchars != NULL)
-		free(qfile_args->bn_firstchars);
-
-	if (qfile_args->non_orphans != NULL)
-		free(qfile_args->non_orphans);
-
-	if (qfile_args->real_root != NULL)
-		free(qfile_args->real_root);
-
-	if (qfile_args->exclude_pkg != NULL)
-		free(qfile_args->exclude_pkg);
+	free(qfile_args->basenames);
+	free(qfile_args->dirnames);
+	free(qfile_args->realdirnames);
+	free(qfile_args->bn_firstchars);
+	free(qfile_args->non_orphans);
+	free(qfile_args->real_root);
+	free(qfile_args->exclude_pkg);
 	/* don't free qfile_args->exclude_slot, it's the same chunk */
 
 	memset(qfile_args, 0, sizeof(qfile_args_t));
 }
 
-int prepare_qfile_args(const int, const char **,
-		const short, const short, const char *, qfile_args_t *);
-int prepare_qfile_args(const int argc, const char **argv,
-		const short assume_root_prefix, const short search_orphans,
-		const char *exclude_pkg_arg, qfile_args_t *qfile_args)
+_q_static int
+prepare_qfile_args(const int argc, const char **argv,
+	bool assume_root_prefix, bool search_orphans,
+	const char *exclude_pkg_arg, qfile_args_t *qfile_args)
 {
 	int i;
 	int nb_of_queries = argc;
@@ -336,7 +288,7 @@ int prepare_qfile_args(const int argc, const char **argv,
 	/* Get realpath of $ROOT, with no trailing slash */
 	if (portroot[0] == '/')
 		strncpy(tmppath, portroot, _Q_PATH_MAX);
-	else if (pwd != NULL)
+	else if (pwd)
 		snprintf(tmppath, _Q_PATH_MAX, "%s/%s", pwd, portroot);
 	else {
 		free(pwd);
@@ -389,7 +341,7 @@ int prepare_qfile_args(const int argc, const char **argv,
 				strncpy(abspath, argv[i], _Q_PATH_MAX);
 			else
 				snprintf(abspath, _Q_PATH_MAX, "%s%s", real_root, argv[i]);
-		} else if (pwd != NULL) {
+		} else if (pwd) {
 			if (assume_root_prefix)
 				snprintf(abspath, _Q_PATH_MAX, "%s/%s", pwd, argv[i]);
 			else
@@ -399,7 +351,7 @@ int prepare_qfile_args(const int argc, const char **argv,
 			goto skip_query_item;
 		}
 
-		if (basenames[i] != NULL) {
+		if (basenames[i]) {
 			/* Get both the dirname and its realpath.  This paths will
 			 * have no trailing slash, but if it is the only char (ie.,
 			 * when searching for "/foobar").
@@ -450,14 +402,13 @@ int prepare_qfile_args(const int argc, const char **argv,
 		skip_query_item:
 			--nb_of_queries;
 			warn("Skipping query item \"%s\".", argv[i]);
-			if (basenames[i] != NULL) free(basenames[i]);
-			if (dirnames[i] != NULL) free(dirnames[i]);
-			if (realdirnames[i] != NULL) free(realdirnames[i]);
+			free(basenames[i]);
+			free(dirnames[i]);
+			free(realdirnames[i]);
 			basenames[i] = dirnames[i] = realdirnames[i] = NULL;
 	}
 
-	if (pwd != NULL)
-		free(pwd);
+	free(pwd);
 
 	qfile_args->real_root = real_root;
 	qfile_args->basenames = basenames;
@@ -471,7 +422,7 @@ int prepare_qfile_args(const int argc, const char **argv,
 		memset(qfile_args->non_orphans, 0, argc);
 	}
 
-	if (exclude_pkg_arg != NULL) {
+	if (exclude_pkg_arg) {
 		qfile_args->exclude_pkg = xstrdup(exclude_pkg_arg);
 		if ((qfile_args->exclude_slot = strchr(qfile_args->exclude_pkg, ':')) != NULL)
 			*qfile_args->exclude_slot++ = '\0';
@@ -483,21 +434,20 @@ int prepare_qfile_args(const int argc, const char **argv,
 
 int qfile_main(int argc, char **argv)
 {
-	DIR *dir;
-	struct dirent *dentry;
-	int i, nb_of_queries;
+	struct qfile_opt_state state = {
+		.buflen = _Q_PATH_MAX,
+		.slotted = false,
+		.exact = false,
+	};
+	int i, nb_of_queries, found = 0;
 	char *p;
-	short search_orphans = 0;
-	short assume_root_prefix = 0;
-	char *root_prefix = NULL;
+	bool search_orphans = false;
+	bool assume_root_prefix = false;
 	char *exclude_pkg_arg = NULL;
-	qfile_args_t *qfile_args = NULL;
 	int qargc = 0;
 	char **qargv = NULL;
 	FILE *args_file = NULL;
 	int max_args = QFILE_DEFAULT_MAX_ARGS;
-	size_t buflen;
-	char *buf;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -505,13 +455,11 @@ int qfile_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QFILE, qfile, "")) != -1) {
 		switch (i) {
 			COMMON_GETOPTS_CASES(qfile)
-			case 'S': qfile_slotted = true; break;
-			case 'e': qfile_exact = true; break;
+			case 'S': state.slotted = true; break;
+			case 'e': state.exact = true; break;
 			case 'f':
-				if (args_file != NULL) {
-					warn("Don't use -f twice!");
-					goto exit;
-				}
+				if (args_file)
+					err("Don't use -f twice!");
 				if (strcmp(optarg, "-") == 0)
 					args_file = stdin;
 				else if ((args_file = fopen(optarg, "r")) == NULL) {
@@ -534,129 +482,106 @@ int qfile_main(int argc, char **argv)
 					goto exit;
 				}
 				break;
-			case 'o': search_orphans = 1; break;
-			case 'R': assume_root_prefix = 1; break;
+			case 'o': search_orphans = true; break;
+			case 'R': assume_root_prefix = true; break;
 			case 'x':
-				if (exclude_pkg_arg != NULL) {
-					warn("--exclude can only be used once.");
-					goto exit;
-				}
+				if (exclude_pkg_arg)
+					err("--exclude can only be used once.");
 				exclude_pkg_arg = optarg;
 				break;
 		}
 	}
-	if (!qfile_exact && verbose) qfile_exact = true;
+	if (!state.exact && verbose)
+		state.exact = true;
 	if ((argc == optind) && (args_file == NULL))
 		qfile_usage(EXIT_FAILURE);
 
 	if ((args_file == NULL) && (max_args != QFILE_DEFAULT_MAX_ARGS))
 		warn("--max-args is only used when reading arguments from a file (with -f)");
 
-	xasprintf(&buf, "%s/%s", portroot, portvdb);
-	xchdir(buf);
-	free(buf);
-	buf = NULL;
-
-	/* Get a copy of $ROOT, with no trailing slash
-	 * (this one is just for qfile(...) output)
-	 */
-	root_prefix = xstrdup(portroot);
-	if (root_prefix[strlen(root_prefix) - 1] == '/')
-		root_prefix[strlen(root_prefix) - 1] = '\0';
-
 	/* Are we using --from ? */
 	if (args_file == NULL) {
 		qargc = argc - optind;
 		qargv = argv + optind;
 	} else {
+		qargc = 0;
 		qargv = xcalloc(max_args, sizeof(char*));
 	}
 
+	state.buf = xmalloc(state.buflen);
+	state.args = xzalloc(sizeof(qfile_args_t));
+	if (assume_root_prefix) {
+		/* Get a copy of $ROOT, with no trailing slash
+		 * (this one is just for qfile(...) output)
+		 */
+		size_t lastc = strlen(portroot) - 1;
+		state.root = xstrdup(portroot);
+		if (state.root[lastc] == '/')
+			state.root[lastc] = '\0';
+	}
+
 	do { /* This block may be repeated if using --from with a big files list */
-		if (args_file != NULL) {
+		if (args_file) {
 			/* Read up to max_args files from the input file */
+			for (i = 0; i < qargc; ++i)
+				free(qargv[i]);
 			qargc = 0;
-			while (getline(&buf, &buflen, args_file) != -1) {
-				if ((p = strchr(buf, '\n')) != NULL)
+			while (getline(&state.buf, &state.buflen, args_file) != -1) {
+				if ((p = strchr(state.buf, '\n')) != NULL)
 					*p = '\0';
-				if (buf == p)
+				if (state.buf == p)
 					continue;
-				qargv[qargc] = xstrdup(buf);
-				qargc++;
-				if (qargc >= max_args)
+				qargv[qargc] = xstrdup(state.buf);
+				if (++qargc >= max_args)
 					break;
 			}
 		}
-
-		if (qargc == 0) break;
-
-		if (qfile_args == NULL) { /* qfile_args is allocated only once */
-			if ((qfile_args = create_qfile_args()) == NULL) {
-				warn("Out of memory");
-				goto exit;
-			}
-		} else {
-			destroy_qfile_args(qfile_args);
-		}
+		if (qargc == 0)
+			break;
 
 		/* Prepare the qfile(...) arguments structure */
 		nb_of_queries = prepare_qfile_args(qargc, (const char **) qargv,
-				assume_root_prefix, search_orphans, exclude_pkg_arg, qfile_args);
+				assume_root_prefix, search_orphans, exclude_pkg_arg, state.args);
 		if (nb_of_queries < 0)
-			goto exit;
+			break;
 
-		if ((dir = opendir(".")) == NULL) {
-			warnp("could not read(ROOT/%s) for installed packages database", portvdb);
-			goto exit;
-		}
+		if (nb_of_queries)
+			found += q_vdb_foreach_pkg(qfile_cb, &state, NULL);
 
-		/* Iteration over VDB categories */
-		while (nb_of_queries && (dentry = q_vdb_get_next_dir(dir))) {
-			char *path;
-			xasprintf(&path, "%s/%s/%s", qfile_args->real_root, portvdb, dentry->d_name);
-			qfile(path, (assume_root_prefix ? root_prefix : NULL), qfile_args);
-			free(path);
-		}
-
-		if (qfile_args->non_orphans != NULL) {
+		if (state.args->non_orphans) {
 			/* display orphan files */
-			for (i = 0; i < qfile_args->length; i++) {
-				if (qfile_args->non_orphans[i])
+			for (i = 0; i < state.args->length; i++) {
+				if (state.args->non_orphans[i])
 					continue;
-				if (qfile_args->basenames[i] != NULL) {
+				if (state.args->basenames[i]) {
 					found = 0; /* ~inverse return code (as soon as an orphan is found, return non-zero) */
 					if (!quiet)
-						printf("%s\n", qargv[i]);
-					else break;
+						puts(qargv[i]);
+					else
+						break;
 				}
 			}
 		}
 
-		if (args_file != NULL && qargv != NULL) {
-			for (i = 0; i < qargc; i++) {
-				if (qargv[i] != NULL) free(qargv[i]);
-				qargv[i] = NULL;
-			}
+		destroy_qfile_args(state.args);
+	} while (args_file && qargc == max_args);
+
+ exit:
+	if (args_file) {
+		if (qargv) {
+			for (i = 0; i < qargc; ++i)
+				free(qargv[i]);
+			free(qargv);
 		}
-	} while (args_file != NULL && qargc == max_args);
 
-exit:
-
-	if (args_file != NULL && qargv != NULL) {
-		for (i = 0; i < qargc; i++)
-			if (qargv[i] != NULL) free(qargv[i]);
-		free(qargv);
+		if (args_file != stdin)
+			fclose(args_file);
 	}
 
-	if (args_file != NULL && args_file != stdin)
-		fclose(args_file);
-
-	if (qfile_args != NULL) {
-		destroy_qfile_args(qfile_args);
-		free(qfile_args);
-	}
-
-	free(root_prefix);
+	destroy_qfile_args(state.args);
+	free(state.buf);
+	free(state.args);
+	free(state.root);
 
 	return (found ? EXIT_SUCCESS : EXIT_FAILURE);
 }

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.222 2012/10/28 06:27:59 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.223 2012/10/28 07:56:51 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,7 +53,6 @@ int lookup_applet_idx(const char *);
 /* variables to control runtime behavior */
 char *module_name = NULL;
 char *modpath = NULL;
-int found = 0;
 int verbose = 0;
 int quiet = 0;
 int portcachedir_type = 0;
