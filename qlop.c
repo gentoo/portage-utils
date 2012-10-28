@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.60 2012/10/28 04:16:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.61 2012/10/28 04:56:05 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -52,14 +52,15 @@ static const char * const qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.60 2012/10/28 04:16:19 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.61 2012/10/28 04:56:05 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
 #define QLOP_UNLIST  0x02
 
-void print_seconds_for_earthlings(const unsigned long t);
-void print_seconds_for_earthlings(const unsigned long t) {
+_q_static void
+print_seconds_for_earthlings(const unsigned long t)
+{
 	unsigned dd, hh, mm, ss;
 	unsigned long tt = t;
 	ss = tt % 60; tt /= 60;
@@ -72,8 +73,8 @@ void print_seconds_for_earthlings(const unsigned long t) {
 	printf("%s%u%s second%s", GREEN, ss, NORM, (ss == 1 ? "" : "s"));
 }
 
-static const char *chop_ctime(time_t t);
-static const char *chop_ctime(time_t t)
+_q_static const char *
+chop_ctime(time_t t)
 {
 	static char ctime_out[50];
 	char *p;
@@ -83,8 +84,8 @@ static const char *chop_ctime(time_t t)
 	return ctime_out;
 }
 
-unsigned long show_merge_times(char *package, const char *logfile, int average, char human_readable);
-unsigned long show_merge_times(char *package, const char *logfile, int average, char human_readable)
+_q_static unsigned long
+show_merge_times(char *package, const char *logfile, int average, char human_readable)
 {
 	FILE *fp;
 	char cat[126], buf[2][BUFSIZ];
@@ -237,8 +238,8 @@ unsigned long show_merge_times(char *package, const char *logfile, int average, 
 	return 0;
 }
 
-void show_emerge_history(char listflag, int argc, char **argv, const char *logfile);
-void show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
+_q_static void
+show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
 {
 	FILE *fp;
 	size_t buflen;
@@ -305,8 +306,8 @@ void show_emerge_history(char listflag, int argc, char **argv, const char *logfi
 	fclose(fp);
 }
 
-void show_sync_history(const char *logfile);
-void show_sync_history(const char *logfile)
+_q_static void
+show_sync_history(const char *logfile)
 {
 	FILE *fp;
 	size_t buflen;
@@ -345,7 +346,7 @@ void show_sync_history(const char *logfile)
 	fclose(fp);
 }
 
-void show_current_emerge(void);
+_q_static void show_current_emerge(void);
 #ifdef __linux__
 #include <elf.h>
 static unsigned long hz = 0;
