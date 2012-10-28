@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.4 2011/12/21 04:20:00 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.5 2012/10/28 06:27:59 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -169,6 +169,7 @@ _q_static void q_vdb_close_cat(q_vdb_cat_ctx *cat_ctx)
 
 typedef struct {
 	const char *name;
+	const char *slot;
 	int fd;
 	q_vdb_cat_ctx *cat_ctx;
 } q_vdb_pkg_ctx;
@@ -199,6 +200,7 @@ _q_static q_vdb_pkg_ctx *q_vdb_open_pkg(q_vdb_cat_ctx *cat_ctx, const char *name
 
 	pkg_ctx = xmalloc(sizeof(*pkg_ctx));
 	pkg_ctx->name = name;
+	pkg_ctx->slot = NULL;
 	pkg_ctx->fd = fd;
 	pkg_ctx->cat_ctx = cat_ctx;
 	return pkg_ctx;

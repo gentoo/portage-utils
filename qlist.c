@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.72 2012/10/28 05:03:41 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.73 2012/10/28 06:27:59 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,7 +41,7 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.72 2012/10/28 05:03:41 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.73 2012/10/28 06:27:59 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 queue *filter_dups(queue *sets);
@@ -152,32 +152,62 @@ _q_static bool qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, bool exact)
 	const char *pkgname = pkg_ctx->name;
 	char buf[_Q_PATH_MAX];
 	char swap[_Q_PATH_MAX];
+	const char *uslot;
 	depend_atom *atom;
 
-	snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
+	uslot = strchr(name, ':');
+	if (uslot) {
+		++uslot;
+		if (!pkg_ctx->slot)
+			pkg_ctx->slot = q_vdb_pkg_eat(pkg_ctx, "SLOT");
+		/* require exact match on SLOTs */
+		if (strcmp(pkg_ctx->slot, uslot) != 0)
+			return false;
+	}
+
 	/* printf("buf=%s:%s\n", buf,grab_vdb_item("SLOT", catname, pkgname)); */
 	if (exact) {
+		snprintf(buf, sizeof(buf), "%s/%s:%s", catname, pkgname, pkg_ctx->slot);
+
+		/* exact match: CAT/PN-PVR[:SLOT] */
 		if (strcmp(name, buf) == 0)
 			return true;
+		/* exact match: PN-PVR[:SLOT] */
 		if (strcmp(name, strstr(buf, "/") + 1) == 0)
 			return true;
 
+		/* let's try exact matching w/out the PV */
 		if ((atom = atom_explode(buf)) == NULL) {
 			warn("invalid atom %s", buf);
 			return false;
 		}
-		snprintf(swap, sizeof(swap), "%s/%s",
-			 atom->CATEGORY, atom->PN);
+		if (uslot)
+			snprintf(swap, sizeof(swap), "%s/%s:%s",
+				 atom->CATEGORY, atom->PN, atom->SLOT);
+		else
+			snprintf(swap, sizeof(swap), "%s/%s",
+				 atom->CATEGORY, atom->PN);
 		atom_implode(atom);
+		/* exact match: CAT/PN[:SLOT] */
 		if (strcmp(name, swap) == 0)
 			return true;
+		/* exact match: PN[:SLOT] */
 		if (strcmp(name, strstr(swap, "/") + 1) == 0)
 			return true;
 	} else {
-		if (charmatch(name, buf) == 0)
+		size_t ulen;
+		if (uslot)
+			ulen = uslot - name - 1;
+		else
+			ulen = strlen(name);
+		snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
+		/* partial leading match: CAT/PN-PVR */
+		if (strncmp(name, buf, ulen) == 0)
 			return true;
-		if (charmatch(name, pkgname) == 0)
+		/* partial leading match: PN-PVR */
+		if (strncmp(name, pkgname, ulen) == 0)
 			return true;
+		/* try again but with regexps */
 		if (rematch(name, buf, REG_EXTENDED) == 0)
 			return true;
 		if (rematch(name, pkgname, REG_EXTENDED) == 0)
@@ -211,28 +241,16 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	struct qlist_opt_state *state = priv;
 	int i;
 	FILE *fp;
-	static char *slotted_item, *slot;
 	const char *catname = pkg_ctx->cat_ctx->name;
 	const char *pkgname = pkg_ctx->name;
 
-	slot = slotted_item = NULL;
-
 	/* see if this cat/pkg is requested */
-	for (i = optind; i < state->argc; ++i) {
-		char *name = pkg_name(state->argv[i]);
-		if (qlist_match(pkg_ctx, name, state->exact))
+	for (i = optind; i < state->argc; ++i)
+		if (qlist_match(pkg_ctx, state->argv[i], state->exact))
 			break;
-	}
 	if ((i == state->argc) && (state->argc != optind))
 		return 0;
 
-	if (i < state->argc) {
-		if ((slotted_item = slot_name(state->argv[i])) != NULL) {
-			slot = q_vdb_pkg_eat(pkg_ctx, "SLOT");
-			if (strcmp(slotted_item, slot) != 0)
-				return 0;
-		}
-	}
 	if (state->just_pkgname) {
 		depend_atom *atom;
 		if (state->dups_only) {
@@ -246,17 +264,13 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		}
 		atom = (verbose ? NULL : atom_explode(pkgname));
 		if ((state->all + state->just_pkgname) < 2) {
-
-			slot = NULL;
-
-			if (state->show_slots)
-				slot = q_vdb_pkg_eat(pkg_ctx, "SLOT");
-
+			if (state->show_slots && !pkg_ctx->slot)
+				pkg_ctx->slot = q_vdb_pkg_eat(pkg_ctx, "SLOT");
 			/* display it */
 			printf("%s%s/%s%s%s%s%s%s%s%s%s%s\n", BOLD, catname, BLUE,
 				(!state->columns ? (atom ? atom->PN : pkgname) : atom->PN),
 				(state->columns ? " " : ""), (state->columns ? atom->PV : ""),
-				NORM, YELLOW, slot ? ":" : "", slot ? slot : "", NORM,
+				NORM, YELLOW, state->show_slots ? ":" : "", state->show_slots ? pkg_ctx->slot : "", NORM,
 				umapstr(state->show_umap, catname, pkgname));
 		}
 		if (atom)

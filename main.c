@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.221 2012/10/28 04:16:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.222 2012/10/28 06:27:59 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -40,7 +40,6 @@
 
 /* prototypes and such */
 static char eat_file(const char *file, char *buf, const size_t bufsize);
-int charmatch(const char *str1, const char *str2);
 int rematch(const char *, const char *, int);
 static char *rmspace(char *);
 
@@ -249,24 +248,6 @@ static bool prompt(const char *p)
 	}
 }
 
-/* if all chars in str1 coincide with the begining of the str2 return 0 */
-int charmatch(const char *str1, const char *str2)
-{
-	if ((str1 == NULL) || (str2 == NULL))
-		return EXIT_FAILURE;
-
-	while (*str1 != 0) {
-		/* if str2==0 but str1!=0 we'll return and so it's
-		 * impossible to touch match++ address here */
-		if (*str1 != *str2)
-			return 1;
-		str1++;
-		str2++;
-	}
-
-	return 0;
-}
-
 int rematch(const char *re, const char *match, int cflags)
 {
 	regex_t preg;
@@ -307,28 +288,6 @@ static char *remove_extra_space(char *str)
 	strcpy(str, buf);
 	free(buf);
 	return str;
-}
-
-static char *pkg_name(const char *const_name);
-static char *pkg_name(const char *const_name) {
-	static char name[_POSIX_PATH_MAX];
-	char *ptr;
-	if (!const_name)
-		return NULL;
-	strncpy(name, const_name, sizeof(name));
-	if ((ptr = strrchr(name, ':')) != NULL)
-		*ptr = 0;
-	return name;
-}
-
-static char *slot_name(const char *name);
-static char *slot_name(const char *name) {
-	char *ptr;
-	if (!name)
-		return NULL;
-	if ((ptr = strrchr(name, ':')) != NULL)
-		return ptr+1;
-	return NULL;
 }
 
 static void freeargv(int argc, char **argv)
