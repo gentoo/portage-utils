@@ -39,7 +39,7 @@ tenv inv ARCH
 
 # this validates simple stuff
 tenv 1 ARCH x86
-tenv 1 INSTALL_MASK imask
+tenv 1 INSTALL_MASK "imask x b"
 
 # this validates -* behavior
 tenv 1 CONFIG_PROTECT

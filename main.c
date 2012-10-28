@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.224 2012/10/28 10:11:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.225 2012/10/28 10:29:38 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -581,25 +581,30 @@ _q_static void read_portage_env_file(const char *configroot, const char *file, e
 					abuf = NULL;
 					while (getline(&abuf, &abuflen, fp) != -1) {
 						buf = xrealloc(buf, buflen + abuflen);
+						endq = strchr(abuf, q);
+						if (endq)
+							*endq = '\0';
+
 						strcat(buf, abuf);
 						buflen += abuflen;
 
-						endq = strchr(abuf, q);
-						if (endq) {
-							*endq = '\0';
+						if (endq)
 							break;
-						}
 					}
 					free(abuf);
 
 					if (!endq)
 						warn("%s:%zu: %s: quote mismatch", file, line, vars[i].name);
 
-					s = buf + vars[i].name_len + 1;
+					s = buf + vars[i].name_len + 2;
 				} else {
 					*endq = '\0';
 					++s;
 				}
+			} else {
+				/* no quotes, so chop the spacing/comments ourselves */
+				size_t off = strcspn(s, "# \t\n");
+				s[off] = '\0';
 			}
 
 			set_portage_env_var(&vars[i], s);
