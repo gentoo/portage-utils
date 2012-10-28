@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.40 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.41 2012/10/28 04:16:19 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char * const qsearch_opts_help[] = {
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.40 2011/02/21 01:33:47 vapier Exp $";
+static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.41 2012/10/28 04:16:19 vapier Exp $";
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
 
 int qsearch_main(int argc, char **argv)
@@ -109,9 +109,9 @@ int qsearch_main(int argc, char **argv)
 		case CACHE_METADATA: {
 			portage_cache *pcache;
 			if ((pcache = cache_read_file(ebuild)) != NULL) {
-				if ((strcmp(pcache->atom->PN, last)) != 0) {
+				if (strcmp(pcache->atom->PN, last) != 0) {
 					strncpy(last, pcache->atom->PN, sizeof(last));
-					if (((rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE)) == 0) || (search_all))
+					if ((rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE) == 0) || search_all)
 						printf("%s%s/%s%s%s %s\n", BOLD, pcache->atom->CATEGORY, BLUE,
 						       pcache->atom->PN, NORM,
 						       (show_name_only ? "" :
@@ -129,15 +129,16 @@ int qsearch_main(int argc, char **argv)
 		case CACHE_EBUILD: {
 			FILE *ebuildfp;
 			str = xstrdup(ebuild);
-			p = (char *) dirname(str);
+			p = dirname(str);
 
-			if ((strcmp(p, last)) != 0) {
+			if (strcmp(p, last) != 0) {
 				strncpy(last, p, sizeof(last));
 				if (search_name)
-					if ((rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE)) != 0)
+					if (rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE) != 0)
 						goto no_cache_ebuild_match;
+
 				if ((ebuildfp = fopen(ebuild, "r")) != NULL) {
-					while ((fgets(buf, sizeof(buf), ebuildfp)) != NULL) {
+					while (fgets(buf, sizeof(buf), ebuildfp) != NULL) {
 						if (strlen(buf) <= search_len)
 							continue;
 						if (strncmp(buf, search_vars[idx], search_len) == 0) {

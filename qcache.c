@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.40 2012/08/13 22:23:35 robbat2 Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.41 2012/10/28 04:16:19 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -47,7 +47,7 @@ static const char * const qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.40 2012/08/13 22:23:35 robbat2 Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.41 2012/10/28 04:16:19 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -349,43 +349,43 @@ portage_cache *qcache_read_cache_file(const char *filename)
 		if ((ptr = strrchr(buf, '\n')) != NULL)
 			*ptr = 0;
 
-		if ((strncmp(buf, "DEPEND=", 7)) == 0)
+		if (strncmp(buf, "DEPEND=", 7) == 0)
 			ret->DEPEND = xstrdup(buf + 7);
 
-		if ((strncmp(buf, "DESCRIPTION=", 12)) == 0)
+		if (strncmp(buf, "DESCRIPTION=", 12) == 0)
 			ret->DESCRIPTION = xstrdup(buf + 12);
 
-		if ((strncmp(buf, "HOMEPAGE=", 9)) == 0)
+		if (strncmp(buf, "HOMEPAGE=", 9) == 0)
 			ret->HOMEPAGE = xstrdup(buf + 9);
 
-		if ((strncmp(buf, "INHERITED=", 10)) == 0)
+		if (strncmp(buf, "INHERITED=", 10) == 0)
 			ret->INHERITED = xstrdup(buf + 10);
 
-		if ((strncmp(buf, "IUSE=", 4)) == 0)
+		if (strncmp(buf, "IUSE=", 4) == 0)
 			ret->IUSE = xstrdup(buf + 4);
 
-		if ((strncmp(buf, "KEYWORDS=", 9)) == 0)
+		if (strncmp(buf, "KEYWORDS=", 9) == 0)
 			ret->KEYWORDS = xstrdup(buf + 9);
 
-		if ((strncmp(buf, "LICENSE=", 8)) == 0)
+		if (strncmp(buf, "LICENSE=", 8) == 0)
 			ret->LICENSE = xstrdup(buf + 8);
 
-		if ((strncmp(buf, "PDEPEND=", 8)) == 0)
+		if (strncmp(buf, "PDEPEND=", 8) == 0)
 			ret->PDEPEND = xstrdup(buf + 8);
 
-		if ((strncmp(buf, "PROVIDE=", 8)) == 0)
+		if (strncmp(buf, "PROVIDE=", 8) == 0)
 			ret->PROVIDE = xstrdup(buf + 8);
 
-		if ((strncmp(buf, "RDEPEND=", 8)) == 0)
+		if (strncmp(buf, "RDEPEND=", 8) == 0)
 			ret->RDEPEND = xstrdup(buf + 8);
 
-		if ((strncmp(buf, "RESTRICT=", 9)) == 0)
+		if (strncmp(buf, "RESTRICT=", 9) == 0)
 			ret->RESTRICT = xstrdup(buf + 9);
 
-		if ((strncmp(buf, "SLOT=", 5)) == 0)
+		if (strncmp(buf, "SLOT=", 5) == 0)
 			ret->SLOT = xstrdup(buf + 5);
 
-		if ((strncmp(buf, "SRC_URI=", 8)) == 0)
+		if (strncmp(buf, "SRC_URI=", 8) == 0)
 			ret->SRC_URI = xstrdup(buf + 8);
 	}
 

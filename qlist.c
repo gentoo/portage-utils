@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.70 2012/08/13 22:23:35 robbat2 Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.71 2012/10/28 04:16:19 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -43,7 +43,7 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.70 2012/08/13 22:23:35 robbat2 Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.71 2012/10/28 04:16:19 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 queue *filter_dups(queue *sets);
@@ -100,7 +100,7 @@ static char *grab_pkg_umap(const char *CAT, const char *PV)
 		makeargv(iuse, &iuse_argc, &iuse_argv);
 		for (u = 1; u < use_argc; u++) {
 			for (i = 1; i < iuse_argc; i++) {
-				if ((strcmp(use_argv[u], iuse_argv[i])) == 0) {
+				if (strcmp(use_argv[u], iuse_argv[i]) == 0) {
 					strncat(umap, use_argv[u], sizeof(umap)-strlen(umap)-1);
 					strncat(umap, " ", sizeof(umap)-strlen(umap)-1);
 				}

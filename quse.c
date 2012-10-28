@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.65 2012/08/13 22:23:35 robbat2 Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.66 2012/10/28 04:16:19 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,7 +35,7 @@ static const char * const quse_opts_help[] = {
 	"Only show package name",
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.65 2012/08/13 22:23:35 robbat2 Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.66 2012/10/28 04:16:19 vapier Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv);
@@ -99,7 +99,7 @@ int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 	for (i = 0; i < NUM_SEARCH_FILES; ++i) {
 		snprintf(buf, buflen, "%s/profiles/%s", portdir, search_files[i]);
 		if ((fp[i] = fopen(buf, "r")) == NULL)
-			if ((strcmp(search_files[i], "lang.desc")) != 0)
+			if (strcmp(search_files[i], "lang.desc") != 0)
 				warnp("skipping %s", search_files[i]);
 	}
 
@@ -176,7 +176,7 @@ skip_file:
 			continue;
 
 		snprintf(buf, buflen, "%s/profiles/desc/%s", portdir, de->d_name);
-		if ((fp[0]=fopen(buf, "r")) == NULL) {
+		if ((fp[0] = fopen(buf, "r")) == NULL) {
 			warn("Could not open '%s' for reading; skipping", de->d_name);
 			continue;
 		}
@@ -275,17 +275,17 @@ int quse_main(int argc, char **argv)
 			revision[0] = 0;
 			user[0] = 0;
 			date[0] = 0;
-			while ((fgets(buf0, sizeof(buf0), newfp)) != NULL) {
+			while (fgets(buf0, sizeof(buf0), newfp) != NULL) {
 				int ok = 0;
 				char warned = 0;
 				lineno++;
 
 				if (*buf0 == '#') {
-					if ((strncmp(buf0, "# $Header: /", 12)) == 0)
+					if (strncmp(buf0, "# $Header: /", 12) == 0)
 						sscanf(buf0, "%*s %*s %*s %s %s %*s %s %*s %*s", (char *) &revision, (char *) &date, (char *) &user);
 					continue;
 				}
-				if ((strncmp(buf0, search_vars[idx], search_len)) != 0)
+				if (strncmp(buf0, search_vars[idx], search_len) != 0)
 					continue;
 
 				if ((p = strchr(buf0, '\n')) != NULL)
@@ -312,7 +312,7 @@ int quse_main(int argc, char **argv)
 				multiline:
 					*p = ' ';
 
-					if ((fgets(buf1, sizeof(buf1), newfp)) == NULL)
+					if (fgets(buf1, sizeof(buf1), newfp) == NULL)
 						continue;
 					lineno++;
 
@@ -374,7 +374,7 @@ int quse_main(int argc, char **argv)
 							}
 							strcpy(buf2, p + 1);
 							strcpy(buf1, buf2);
-							if ((strchr(buf1, ' ')) == NULL)
+							if (strchr(buf1, ' ') == NULL)
 								for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
 									if (strcmp(buf1, argv[i]) == 0) {
 										ok = 1;

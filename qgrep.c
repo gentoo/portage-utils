@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.31 2012/08/13 22:23:35 robbat2 Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qgrep.c,v 1.32 2012/10/28 04:16:19 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -47,7 +47,7 @@ static const char * const qgrep_opts_help[] = {
 	"Print <arg> lines of trailing context",
 	COMMON_OPTS_HELP
 };
-static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.31 2012/08/13 22:23:35 robbat2 Exp $";
+static const char qgrep_rcsid[] = "$Id: qgrep.c,v 1.32 2012/10/28 04:16:19 vapier Exp $";
 #define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, lookup_applet_idx("qgrep"))
 
 char qgrep_name_match(const char*, const int, depend_atom**);
@@ -170,7 +170,7 @@ void qgrep_print_line(qgrep_buf_t *current, const char *label,
 		/* Iteration over substring matches, for color output. */
 		char *q;
 		int searchlen = strlen(searchstr);
-		while (searchlen && ((q = ((searchfunc) (p, searchstr))) != NULL)) {
+		while (searchlen && ((q = searchfunc(p, searchstr)) != NULL)) {
 			if (p < q)
 				printf("%.*s", (int)(q - p), p);
 			printf("%s%.*s%s", RED, searchlen, q, NORM);
@@ -397,7 +397,7 @@ int qgrep_main(int argc, char **argv)
 				&& snprintf(ebuild, sizeof(ebuild), "eclass/%s", dentry->d_name))
 			: (do_installed
 				? (get_next_installed_ebuild(ebuild, vdb_dir, &dentry, &cat_dir) != NULL)
-				: ((fgets(ebuild, sizeof(ebuild), fp)) != NULL))) {
+				: (fgets(ebuild, sizeof(ebuild), fp) != NULL))) {
 		FILE *newfp;
 
 		/* filter badly named files, prepare eclass or package name, etc. */
@@ -475,7 +475,7 @@ int qgrep_main(int argc, char **argv)
 				if (skip_pattern) {
 					/* reject some other lines which match an optional pattern */
 					if (!do_regex) {
-						if (( (QGREP_STR_FUNC *) (strfunc) (buf_list->buf, skip_pattern)) != NULL)
+						if (strfunc(buf_list->buf, skip_pattern) != NULL)
 							goto print_after_context;
 					} else {
 						if (regexec(&skip_preg, buf_list->buf, 0, NULL, 0) == 0)
@@ -486,7 +486,7 @@ int qgrep_main(int argc, char **argv)
 				/* four ways to match a line (with/without inversion and regexp) */
 				if (!invert_match) {
 					if (do_regex == 0) {
-						if (( (QGREP_STR_FUNC *) (strfunc) (buf_list->buf, argv[optind])) == NULL)
+						if (strfunc(buf_list->buf, argv[optind]) == NULL)
 							goto print_after_context;
 					} else {
 						if (regexec(&preg, buf_list->buf, 0, NULL, 0) != 0)
@@ -494,7 +494,7 @@ int qgrep_main(int argc, char **argv)
 					}
 				} else {
 					if (do_regex == 0) {
-						if (( (QGREP_STR_FUNC *) (strfunc) (buf_list->buf, argv[optind])) != NULL)
+						if (strfunc(buf_list->buf, argv[optind]) != NULL)
 							goto print_after_context;
 					} else {
 						if (regexec(&preg, buf_list->buf, 0, NULL, 0) == 0)

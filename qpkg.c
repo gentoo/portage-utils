@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.37 2012/01/08 09:53:35 solar Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qpkg.c,v 1.38 2012/10/28 04:16:19 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd	- <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -26,7 +26,7 @@ static const char * const qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.37 2012/01/08 09:53:35 solar Exp $";
+static const char qpkg_rcsid[] = "$Id: qpkg.c,v 1.38 2012/10/28 04:16:19 vapier Exp $";
 #define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
 
 extern char pretend;
@@ -83,7 +83,7 @@ uint64_t qpkg_clean_dir(char *dirp, queue *vdb)
 		if (!del)
 			continue;
 		snprintf(buf, sizeof(buf), "%s.tbz2", fnames[i]->d_name);
-		if ((lstat(buf, &st)) != (-1)) {
+		if (lstat(buf, &st) != -1) {
 			if (S_ISREG(st.st_mode)) {
 				disp_units = KILOBYTE;
 				if ((st.st_size / KILOBYTE) > 1000)
@@ -338,7 +338,7 @@ int qpkg_main(int argc, char **argv)
 		case 'P':
 			restrict_chmod = 1;
 			qpkg_bindir = xstrdup(optarg);
-			if ((access(qpkg_bindir, W_OK) != 0))
+			if (access(qpkg_bindir, W_OK) != 0)
 				errp("%s", qpkg_bindir);
 			break;
 		COMMON_GETOPTS_CASES(qpkg)

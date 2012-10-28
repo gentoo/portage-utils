@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.220 2012/08/13 22:23:35 robbat2 Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.221 2012/10/28 04:16:19 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -951,7 +951,7 @@ const char *initialize_flat(int cache_type)
 		if (!S_ISDIR(st.st_mode))
 			continue;
 		if (strchr(category[i]->d_name, '-') == NULL)
-			if ((strncmp(category[i]->d_name, "virtual", 7)) != 0)
+			if (strncmp(category[i]->d_name, "virtual", 7) != 0)
 				continue;
 
 		if ((b = scandir(category[i]->d_name, &pn, q_vdb_filter_pkg, alphasort)) < 0)
@@ -1359,7 +1359,7 @@ int main(int argc, char **argv)
 #if 1
 	if (fstat(fileno(stdout), &st) != -1)
 		if (!isatty(fileno(stdout)))
-			if ((S_ISFIFO(st.st_mode)) == 0)
+			if (S_ISFIFO(st.st_mode) == 0)
 				no_colors();
 #endif
 	if ((getenv("TERM") == NULL) || (strcmp(getenv("TERM"), "dumb") == 0))

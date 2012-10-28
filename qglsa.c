@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.13 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qglsa.c,v 1.14 2012/10/28 04:16:19 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char * const qglsa_opts_help[] = {
 	"Mark specified GLSAs as fixed",
 	COMMON_OPTS_HELP
 };
-static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.13 2011/02/21 01:33:47 vapier Exp $";
+static const char qglsa_rcsid[] = "$Id: qglsa.c,v 1.14 2012/10/28 04:16:19 vapier Exp $";
 #define qglsa_usage(ret) usage(ret, QGLSA_FLAGS, qglsa_long_opts, qglsa_opts_help, lookup_applet_idx("qglsa"))
 
 static char *qglsa_load_list(void);
@@ -76,7 +76,7 @@ static void qglsa_decode_entities(char *xml_buf, size_t len)
 	for (i=0; i < ARRAY_SIZE(encoded); ++i) {
 		/* for now, we assume that strlen(decoded) is always 1 ... if
 		 * this changes, we have to update the 'p++' accordingly */
-		while ((p=strstr(xml_buf, encoded[i])) != NULL) {
+		while ((p = strstr(xml_buf, encoded[i])) != NULL) {
 			strcpy(p, decoded[i]);
 			q = p++ + strlen(encoded[i]);
 			memmove(p, q, len-(q-xml_buf)+1);
