@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.71 2012/10/28 04:16:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.72 2012/10/28 05:03:41 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -14,7 +14,6 @@
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
 	{"slots",     no_argument, NULL, 'S'},
-	{"separator", no_argument, NULL, 'L'},
 	{"columns",   no_argument, NULL, 'c'},
 	{"umap",      no_argument, NULL, 'U'},
 	{"dups",      no_argument, NULL, 'D'},
@@ -30,7 +29,6 @@ static struct option const qlist_long_opts[] = {
 static const char * const qlist_opts_help[] = {
 	"Just show installed packages",
 	"Display installed packages with slots",
-	"Display : as the slot separator",
 	"Display column view",
 	"Display installed packages with flags used",
 	"Only show package dups",
@@ -43,7 +41,7 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.71 2012/10/28 04:16:19 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.72 2012/10/28 05:03:41 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
 queue *filter_dups(queue *sets);
@@ -203,7 +201,6 @@ struct qlist_opt_state {
 	bool show_umap;
 	bool show_dbg;
 	bool columns;
-	const char *slot_separator;
 	queue *sets;
 	char *buf;
 	size_t buflen;
@@ -259,7 +256,7 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 			printf("%s%s/%s%s%s%s%s%s%s%s%s%s\n", BOLD, catname, BLUE,
 				(!state->columns ? (atom ? atom->PN : pkgname) : atom->PN),
 				(state->columns ? " " : ""), (state->columns ? atom->PV : ""),
-				NORM, YELLOW, slot ? state->slot_separator : "", slot ? slot : "", NORM,
+				NORM, YELLOW, slot ? ":" : "", slot ? slot : "", NORM,
 				umapstr(state->show_umap, catname, pkgname));
 		}
 		if (atom)
@@ -329,7 +326,6 @@ int qlist_main(int argc, char **argv)
 		.show_umap = false,
 		.show_dbg = false,
 		.columns = false,
-		.slot_separator = " ",
 		.sets = NULL,
 		.buflen = _Q_PATH_MAX,
 	};
@@ -343,7 +339,6 @@ int qlist_main(int argc, char **argv)
 		COMMON_GETOPTS_CASES(qlist)
 		case 'a': state.all = true;
 		case 'I': state.just_pkgname = true; break;
-		case 'L': state.slot_separator = ":"; break;
 		case 'S': state.just_pkgname = state.show_slots = true; break;
 		case 'U': state.just_pkgname = state.show_umap = true; break;
 		case 'e': state.exact = true; break;
@@ -386,7 +381,7 @@ int qlist_main(int argc, char **argv)
 				printf("%s%s/%s%s%s%s%s%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
 					(!state.columns ? (verbose ? atom->P : atom->PN) : atom->PN),
 					(state.columns ? " " : ""), (state.columns ? atom->PV : ""),
-					NORM, YELLOW, slot ? state.slot_separator : "", slot ? slot : "", NORM);
+					NORM, YELLOW, slot ? ":" : "", slot ? slot : "", NORM);
 				puts(umapstr(state.show_umap, atom->CATEGORY, atom->P));
 			}
 			atom_implode(atom);

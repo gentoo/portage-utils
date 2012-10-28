@@ -35,7 +35,7 @@ test 05 "qlist -C --showdebug mtools -o"
 test 06 "qlist -C --showdebug mtools -s"
 
 # SLOT test
-test 07 "qlist -ICSL | grep -v CVS"
+test 07 "qlist -ICS | grep -v CVS"
 
 # showdebug test #1
 test 08 "qlist -C cpio"
