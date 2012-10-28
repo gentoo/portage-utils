@@ -22,6 +22,10 @@ setup_env() {
 	: ${ats:=${PWD}/../..}
 	: ${ab:=${atb}/tests/${a}}
 	: ${as:=${ats}/tests/${a}}
+
+	if [[ -z ${GOOD} ]] && [[ -d ${ats}/.git || -d ${ats}/CVS ]] ; then
+		eval $(eval_ecolors) 2>/dev/null
+	fi
 }
 setup_env
 
