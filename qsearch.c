@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.41 2012/10/28 04:16:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qsearch.c,v 1.42 2012/10/28 04:31:20 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char * const qsearch_opts_help[] = {
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.41 2012/10/28 04:16:19 vapier Exp $";
+static const char qsearch_rcsid[] = "$Id: qsearch.c,v 1.42 2012/10/28 04:31:20 vapier Exp $";
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
 
 int qsearch_main(int argc, char **argv)
@@ -39,8 +39,6 @@ int qsearch_main(int argc, char **argv)
 	char buf[_Q_PATH_MAX];
 	char ebuild[_Q_PATH_MAX];
 	char last[126] = "";
-	char dp[126] = "";
-	char bp[126] = "";
 	char *p, *q, *str;
 	char *search_me = NULL;
 	char show_homepage = 0, show_name_only = 0;
@@ -61,7 +59,7 @@ int qsearch_main(int argc, char **argv)
 		case 's': search_desc = 0; search_name = 1; break;
 		case 'S': search_desc = 1; search_name = 0; break;
 		case 'N': show_name_only = 1; break;
-		case 'H': show_homepage = 1, idx=1; break;
+		case 'H': show_homepage = 1, idx = 1; break;
 		}
 	}
 
@@ -132,10 +130,16 @@ int qsearch_main(int argc, char **argv)
 			p = dirname(str);
 
 			if (strcmp(p, last) != 0) {
+				bool show_it = false;
 				strncpy(last, p, sizeof(last));
-				if (search_name)
-					if (rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE) != 0)
+				if (search_name) {
+					if (rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE) != 0) {
 						goto no_cache_ebuild_match;
+					} else {
+						q = NULL;
+						show_it = true;
+					}
+				}
 
 				if ((ebuildfp = fopen(ebuild, "r")) != NULL) {
 					while (fgets(buf, sizeof(buf), ebuildfp) != NULL) {
@@ -149,13 +153,7 @@ int qsearch_main(int argc, char **argv)
 							q = buf + search_len + 1;
 							if (!search_all && !search_name && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
 								break;
-							/* hppa/arm dirname(),basename() eats the ptr so we need to copy the variables before */
-							/* doing operations with them. */
-							strncpy(dp, p, sizeof(dp));
-							strncpy(bp, p, sizeof(bp));
-							printf("%s%s/%s%s%s %s\n",
-								BOLD, dirname(dp), BLUE, basename(bp), NORM,
-								(show_name_only ? "" : q));
+							show_it = true;
 							break;
 						}
 					}
@@ -164,6 +162,13 @@ int qsearch_main(int argc, char **argv)
 					if (!reinitialize)
 						warnfp("(cache update pending) %s", ebuild);
 					reinitialize = 1;
+				}
+
+				if (show_it) {
+					const char *b = basename(p);
+					printf("%s%s/%s%s%s %s\n",
+						BOLD, dirname(p), BLUE, b, NORM,
+						(show_name_only ? "" : q ? : "<no DESCRIPTION found>"));
 				}
 			}
 no_cache_ebuild_match:
