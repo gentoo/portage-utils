@@ -26,6 +26,12 @@ tests=(
 
 	"q file -Co -x app-shells/bash:0 /bin/bash"
 	"/bin/bash"
+
+	"(cd /bin; q file -Cq bash)"
+	"app-shells/bash"
+
+	"(cd /; q file -Co bash)"
+	"bash"
 )
 
 set -- "${tests[@]}"

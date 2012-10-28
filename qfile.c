@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.63 2012/10/28 08:57:18 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.64 2012/10/28 09:44:24 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -34,7 +34,7 @@ static const char * const qfile_opts_help[] = {
 	"Display installed packages with slots",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.63 2012/10/28 08:57:18 vapier Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.64 2012/10/28 09:44:24 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -82,8 +82,8 @@ _q_static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	const char *base;
 	char pkg[_Q_PATH_MAX];
 	depend_atom *atom = NULL;
-	int i, path_ok;
-	char bn_firstchar;
+	int i;
+	bool path_ok;
 	char *real_root = state->real_root;
 	char **base_names = args->basenames;
 	char **dir_names = args->dirnames;
@@ -134,72 +134,70 @@ _q_static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		if ((base = basename(e->name)) == NULL)
 			continue;
 
-		/* used to cut the number of strcmp() calls */
-		bn_firstchar = base[0];
-
 		for (i = 0; i < args->length; i++) {
 			if (base_names[i] == NULL)
 				continue;
 			if (non_orphans && non_orphans[i])
 				continue;
-			path_ok = (dir_names[i] == NULL && real_dir_names[i] == NULL);
 
 			/* For optimization of qfile(), we also give it an array of the first char
 			 * of each basename.  This way we avoid numerous strcmp() calls.
 			*/
-			if (bn_firstchar != base_names[i][0]
-					|| strcmp(base, base_names[i]))
+			if (base[0] != base_names[i][0] || strcmp(base, base_names[i]))
 				continue;
 
-			if (!path_ok) {
-				/* check the full filepath ... */
-				size_t dirname_len = (base - e->name - 1);
-				/* basename(/usr)     = usr, dirname(/usr)     = /
-				 * basename(/usr/bin) = bin, dirname(/usr/bin) = /usr
-				 */
-				if (dirname_len == 0)
-					dirname_len = 1;
+			path_ok = false;
 
-				if (dir_names[i] &&
-				    strncmp(e->name, dir_names[i], dirname_len) == 0 &&
-				    dir_names[i][dirname_len] == '\0')
-					/* dir_name == dirname(CONTENTS) */
-					path_ok = 1;
+			/* check the full filepath ... */
+			size_t dirname_len = (base - e->name - 1);
+			/* basename(/usr)     = usr, dirname(/usr)     = /
+			 * basename(/usr/bin) = bin, dirname(/usr/bin) = /usr
+			 */
+			if (dirname_len == 0)
+				dirname_len = 1;
 
-				else if (real_dir_names[i] &&
-				         strncmp(e->name, real_dir_names[i], dirname_len) == 0 &&
-				         real_dir_names[i][dirname_len] == '\0')
-					/* real_dir_name == dirname(CONTENTS) */
-					path_ok = 1;
+			if (dir_names[i] &&
+			    strncmp(e->name, dir_names[i], dirname_len) == 0 &&
+			    dir_names[i][dirname_len] == '\0') {
+				/* dir_name == dirname(CONTENTS) */
+				path_ok = true;
 
-				else if (real_root[0]) {
-					char rpath[_Q_PATH_MAX + 1], *_rpath;
-					char *fullpath;
-					size_t real_root_len = state->real_root_len;
+			} else if (real_dir_names[i] &&
+			         strncmp(e->name, real_dir_names[i], dirname_len) == 0 &&
+			         real_dir_names[i][dirname_len] == '\0') {
+				/* real_dir_name == dirname(CONTENTS) */
+				path_ok = true;
 
-					xasprintf(&fullpath, "%s%s", real_root, e->name);
-					fullpath[real_root_len + dirname_len] = '\0';
-					_rpath = rpath + real_root_len;
-					if (realpath(fullpath, rpath) == NULL) {
-						if (verbose) {
-							warnp("Could not read real path of \"%s\" (from %s)", fullpath, pkg);
-							warn("We'll never know whether \"%s\" was a result for your query...",
-									e->name);
-						}
-					} else if (!qfile_is_prefix(rpath, real_root, real_root_len)) {
-						if (verbose)
-							warn("Real path of \"%s\" is not under ROOT: %s", fullpath, rpath);
-					} else if (dir_names[i] &&
-					           strcmp(_rpath, dir_names[i]) == 0) {
-						/* dir_name == realpath(dirname(CONTENTS)) */
-						path_ok = 1;
-					} else if (real_dir_names[i] &&
-					           strcmp(_rpath, real_dir_names[i]) == 0) {
-						/* real_dir_name == realpath(dirname(CONTENTS)) */
-						path_ok = 1;
+			} else if (real_root[0]) {
+				char rpath[_Q_PATH_MAX + 1], *_rpath;
+				char *fullpath;
+				size_t real_root_len = state->real_root_len;
+
+				xasprintf(&fullpath, "%s%s", real_root, e->name);
+				fullpath[real_root_len + dirname_len] = '\0';
+				_rpath = rpath + real_root_len;
+				if (realpath(fullpath, rpath) == NULL) {
+					if (verbose) {
+						warnp("Could not read real path of \"%s\" (from %s)", fullpath, pkg);
+						warn("We'll never know whether \"%s\" was a result for your query...",
+								e->name);
 					}
-					free(fullpath);
+				} else if (!qfile_is_prefix(rpath, real_root, real_root_len)) {
+					if (verbose)
+						warn("Real path of \"%s\" is not under ROOT: %s", fullpath, rpath);
+				} else if (dir_names[i] &&
+				           strcmp(_rpath, dir_names[i]) == 0) {
+					/* dir_name == realpath(dirname(CONTENTS)) */
+					path_ok = true;
+				} else if (real_dir_names[i] &&
+				           strcmp(_rpath, real_dir_names[i]) == 0) {
+					/* real_dir_name == realpath(dirname(CONTENTS)) */
+					path_ok = true;
 				}
+				free(fullpath);
+			} else if (state->pwd) {
+				if (!strncmp(e->name, state->pwd, dirname_len))
+					path_ok = true;
 			}
 			if (!path_ok)
 				continue;
