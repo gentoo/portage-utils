@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.56 2012/10/28 04:52:56 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.57 2012/11/10 00:08:46 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -36,7 +36,7 @@ static const char * const qcheck_opts_help[] = {
 	"Undo prelink when calculating checksums",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.56 2012/10/28 04:52:56 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.57 2012/11/10 00:08:46 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 #define qcprintf(fmt, args...) if (!state->bad_only) printf(_(fmt), ## args)
@@ -173,7 +173,7 @@ static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_sta
 				}
 				continue;
 			}
-			hashed_file = (char*)hash_file_cb(e->name, hash_algo, hash_cb);
+			hashed_file = (char *)hash_file_at_cb(pkg_ctx->cat_ctx->ctx->portroot_fd, e->name + 1, hash_algo, hash_cb);
 			if (!hashed_file) {
 				++num_files_unknown;
 				free(hashed_file);
