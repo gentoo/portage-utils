@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.56 2011/12/21 21:54:44 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.57 2012/11/10 06:35:21 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char * const qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.56 2011/12/21 21:54:44 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.57 2012/11/10 06:35:21 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -520,6 +520,7 @@ int qdepends_main(int argc, char **argv)
 		int ret = 0;
 		for (i = 0; depend_files[i]; ++i) {
 			printf(" %s*%s %s\n", GREEN, NORM, depend_files[i]);
+			state.depend_file = depend_files[i];
 			ret += q_vdb_foreach_pkg(cb, &state, NULL);
 		}
 		return ret;
