@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.64 2012/10/28 09:44:24 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.65 2012/11/10 06:44:05 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -15,26 +15,26 @@
 
 #define QFILE_FLAGS "ef:m:oRx:S" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
-	{"exact",       no_argument, NULL, 'e'},
-	{"from",        a_argument,  NULL, 'f'},
-	{"max-args",    a_argument,  NULL, 'm'},
-	{"orphans",     no_argument, NULL, 'o'},
-	{"root-prefix", no_argument, NULL, 'R'},
-	{"exclude",     a_argument,  NULL, 'x'},
 	{"slots",       no_argument, NULL, 'S'},
+	{"root-prefix", no_argument, NULL, 'R'},
+	{"from",         a_argument, NULL, 'f'},
+	{"max-args",     a_argument, NULL, 'm'},
+	{"orphans",     no_argument, NULL, 'o'},
+	{"exclude",      a_argument, NULL, 'x'},
+	{"exact",       no_argument, NULL, 'e'},
 	COMMON_LONG_OPTS
 };
 static const char * const qfile_opts_help[] = {
-	"Exact match",
+	"Display installed packages with slots",
+	"Assume arguments are already prefixed by $ROOT",
 	"Read arguments from file <arg> (\"-\" for stdin)",
 	"Treat from file arguments by groups of <arg> (defaults to " QFILE_DEFAULT_MAX_ARGS_STR ")",
 	"List orphan files",
-	"Assume arguments are already prefixed by $ROOT",
-	"Don't look in package <arg>",
-	"Display installed packages with slots",
+	"Don't look in package <arg> (used with --orphans)",
+	"Exact match (used with --exclude)",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.64 2012/10/28 09:44:24 vapier Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.65 2012/11/10 06:44:05 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
