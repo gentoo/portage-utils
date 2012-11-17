@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.19 2011/10/02 21:52:29 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.20 2012/11/17 18:25:22 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -39,14 +39,14 @@ static struct option const qtbz2_long_opts[] = {
 };
 static const char * const qtbz2_opts_help[] = {
 	"Change to specified directory",
-	"Join tar.bz2 + xpak into a tbz2",
+	"Join: <tar.bz2> <xpak> <tbz2>",
 	"Split a tbz2 into a tar.bz2 + xpak",
 	"Just split the tar.bz2",
 	"Just split the xpak",
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.19 2011/10/02 21:52:29 vapier Exp $";
+static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.20 2012/11/17 18:25:22 vapier Exp $";
 #define qtbz2_usage(ret) usage(ret, QTBZ2_FLAGS, qtbz2_long_opts, qtbz2_opts_help, lookup_applet_idx("qtbz2"))
 
 static char tbz2_stdout = 0;
@@ -313,7 +313,8 @@ int qtbz2_main(int argc, char **argv)
 		}
 
 		if (tbz2_compose(dir_fd, tarbz2, xpak, tbz2))
-			warn("Could not compose '%s' and '%s'", tarbz2, xpak);
+			warnp("Could not create '%s' from '%s' and '%s'",
+				tbz2, tarbz2, xpak);
 
 	/* tbz2tool split .tbz2 .tar.bz2 .xpak */
 	} else {
