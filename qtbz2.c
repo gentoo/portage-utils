@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.20 2012/11/17 18:25:22 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.21 2012/11/17 18:44:58 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,7 +46,7 @@ static const char * const qtbz2_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.20 2012/11/17 18:25:22 vapier Exp $";
+static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.21 2012/11/17 18:44:58 vapier Exp $";
 #define qtbz2_usage(ret) usage(ret, QTBZ2_FLAGS, qtbz2_long_opts, qtbz2_opts_help, lookup_applet_idx("qtbz2"))
 
 static char tbz2_stdout = 0;
@@ -91,6 +91,7 @@ tbz2_compose(int dir_fd, const char *tarbz2, const char *xpak, const char *tbz2)
 	FILE *out, *in_tarbz2, *in_xpak;
 	struct stat st;
 	int ret = 1, fd;
+	char buf[8];
 
 	if (verbose)
 		printf("input xpak: %s\ninput tar.bz2: %s\noutput tbz2: %s\n",
@@ -105,6 +106,8 @@ tbz2_compose(int dir_fd, const char *tarbz2, const char *xpak, const char *tbz2)
 		fclose(out);
 		return ret;
 	}
+	if (pread(fd, buf, 3, 0) != 3 || memcmp(buf, "BZh", 3))
+			warn("%s: does not appear to be a .tar.bz2", tarbz2);
 	in_tarbz2 = fdopen(fd, "r");
 	if (in_tarbz2 == NULL) {
 		fclose(out);
@@ -118,6 +121,8 @@ tbz2_compose(int dir_fd, const char *tarbz2, const char *xpak, const char *tbz2)
 		fclose(in_tarbz2);
 		return ret;
 	}
+	if (pread(fd, buf, 8, 0) != 8 || memcmp(buf, "XPAKPACK", 8))
+		warn("%s: does not appear to be a .xpak", xpak);
 	in_xpak = fdopen(fd, "r");
 	if (in_xpak == NULL) {
 		fclose(out);
