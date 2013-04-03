@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.225 2012/10/28 10:29:38 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.226 2013/04/03 18:39:22 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -137,6 +137,8 @@ static void usage(int status, const char *flags, struct option const opts[],
                   const char * const help[], int blabber)
 {
 	unsigned long i;
+	if (status != EXIT_SUCCESS)
+		dup2(STDERR_FILENO, STDOUT_FILENO);
 	if (blabber == 0) {
 		printf("%sUsage:%s %sq%s %s<applet> <args>%s  : %s"
 			"invoke a portage utility applet\n\n", GREEN,

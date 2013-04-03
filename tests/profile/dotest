@@ -4,7 +4,7 @@
 
 qenv() {
 	# get q to dump its processed env so we can check
-	DEBUG= q 2>&1 >/dev/null
+	DEBUG= q -V 2>&1 >/dev/null
 }
 
 # Usage: <profile dir suffix> <variable> <value>
