@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.116 2012/08/13 22:23:35 robbat2 Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.117 2013/04/20 07:32:07 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.116 2012/08/13 22:23:35 robbat2 Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.117 2013/04/20 07:32:07 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -210,14 +210,15 @@ struct qmerge_bv_state {
 _q_static int qmerge_filter_cat(q_vdb_cat_ctx *cat_ctx, void *priv)
 {
 	struct qmerge_bv_state *state = priv;
-	return strcmp(cat_ctx->name, state->catname) == 0;
+	return !state->catname || strcmp(cat_ctx->name, state->catname) == 0;
 }
 
 _q_static int qmerge_best_version_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qmerge_bv_state *state = priv;
 	if (qlist_match(pkg_ctx, state->buf, true))
-		strcpy(state->retbuf, state->buf);
+		snprintf(state->retbuf, sizeof(state->buf), "%s/%s",
+			pkg_ctx->cat_ctx->name, pkg_ctx->name);
 	return 0;
 }
 
@@ -230,8 +231,9 @@ _q_static char *best_version(const char *catname, const char *pkgname)
 		.retbuf = retbuf,
 	};
 
-	snprintf(state.buf, sizeof(state.buf), "%s/%s", catname, pkgname);
 	retbuf[0] = '\0';
+	snprintf(state.buf, sizeof(state.buf), "%s%s%s",
+		catname ? : "", catname ? "/" : "", pkgname);
 	q_vdb_foreach_pkg(qmerge_best_version_cb, &state, qmerge_filter_cat);
 
 	return retbuf;
