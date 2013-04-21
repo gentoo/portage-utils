@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.117 2013/04/20 07:32:07 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.118 2013/04/21 04:28:10 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.117 2013/04/20 07:32:07 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.118 2013/04/21 04:28:10 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -533,7 +533,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 
 			/* syntax: obj filename hash mtime */
 			hash = hash_file_at(subfd_src, name, HASH_MD5);
-			fprintf(contents, "obj %s %s %lu\n", cpath, hash, (unsigned long)st.st_mtime);
+			fprintf(contents, "obj %s %s %"PRIu64"u\n", cpath, hash, (uint64_t)st.st_mtime);
 
 			/* Check CONFIG_PROTECT */
 			if (config_protected(cpath, cp_argc, cp_argv, cpm_argc, cpm_argv)) {
@@ -631,7 +631,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			sym[len] = '\0';
 
 			/* syntax: sym src -> dst mtime */
-			fprintf(contents, "sym %s -> %s %lu\n", cpath, sym, (unsigned long)st.st_mtime);
+			fprintf(contents, "sym %s -> %s %"PRIu64"u\n", cpath, sym, (uint64_t)st.st_mtime);
 			qprintf("%s>>>%s %s%s -> %s%s\n", GREEN, NORM, CYAN, cpath, sym, NORM);
 			*objs = add_set(cpath, "", *objs);
 

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.61 2012/10/28 04:56:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlop.c,v 1.62 2013/04/21 04:28:10 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -52,7 +52,7 @@ static const char * const qlop_opts_help[] = {
 	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
-static const char qlop_rcsid[] = "$Id: qlop.c,v 1.61 2012/10/28 04:56:05 vapier Exp $";
+static const char qlop_rcsid[] = "$Id: qlop.c,v 1.62 2013/04/21 04:28:10 vapier Exp $";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
 
 #define QLOP_LIST    0x01
@@ -210,7 +210,7 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 							if (human_readable)
 								print_seconds_for_earthlings(t[1] - t[0]);
 							else
-								printf("%s%lu%s seconds", GREEN, (t[1] - t[0]), NORM);
+								printf("%s%"PRIu64"u%s seconds", GREEN, (uint64_t)(t[1] - t[0]), NORM);
 							puts("");
 						}
 						merge_time += (t[1] - t[0]);

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.66 2012/10/28 04:16:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/quse.c,v 1.67 2013/04/21 04:28:10 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -35,7 +35,7 @@ static const char * const quse_opts_help[] = {
 	"Only show package name",
 	COMMON_OPTS_HELP
 };
-static const char quse_rcsid[] = "$Id: quse.c,v 1.66 2012/10/28 04:16:19 vapier Exp $";
+static const char quse_rcsid[] = "$Id: quse.c,v 1.67 2013/04/21 04:28:10 vapier Exp $";
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
 int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv);
@@ -338,8 +338,8 @@ int quse_main(int argc, char **argv)
 					}
 				}
 
-				if ((size_t)strlen(buf0) < (size_t)(search_len+1)) {
-					/* warnf("err '%s'/%lu <= %lu; line %d\n", buf0, (unsigned long)strlen(buf0), (unsigned long)(search_len+1), lineno); */
+				if (strlen(buf0) < search_len + 1) {
+					/* warnf("err '%s'/%zu <= %zu; line %u\n", buf0, strlen(buf0), search_len + 1, lineno); */
 					continue;
 				}
 

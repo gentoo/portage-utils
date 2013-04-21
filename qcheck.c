@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.57 2012/11/10 00:08:46 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcheck.c,v 1.58 2013/04/21 04:28:10 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -36,7 +36,7 @@ static const char * const qcheck_opts_help[] = {
 	"Undo prelink when calculating checksums",
 	COMMON_OPTS_HELP
 };
-static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.57 2012/11/10 00:08:46 vapier Exp $";
+static const char qcheck_rcsid[] = "$Id: qcheck.c,v 1.58 2013/04/21 04:28:10 vapier Exp $";
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
 #define qcprintf(fmt, args...) if (!state->bad_only) printf(_(fmt), ## args)
@@ -188,7 +188,7 @@ static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_sta
 				if (state->chk_hash) {
 					const char *digest_disp;
 					if (state->qc_update)
-						fprintf(fpx, "obj %s %s %lu\n", e->name, hashed_file, st.st_mtime);
+						fprintf(fpx, "obj %s %s %"PRIu64"u\n", e->name, hashed_file, (uint64_t)st.st_mtime);
 					switch (hash_algo) {
 						case HASH_MD5:  digest_disp = "MD5"; break;
 						case HASH_SHA1: digest_disp = "SHA1"; break;
@@ -210,12 +210,12 @@ static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_sta
 				if (state->chk_mtime) {
 					qcprintf(" %sMTIME%s: %s", RED, NORM, e->name);
 					if (verbose)
-						qcprintf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
+						qcprintf(" (recorded '%"PRIu64"u' != actual '%"PRIu64"u')", (uint64_t)e->mtime, (uint64_t)st.st_mtime);
 					qcprintf("\n");
 
 					/* This can only be an obj, dir and sym have no digest */
 					if (state->qc_update)
-						fprintf(fpx, "obj %s %s %lu\n", e->name, e->digest, st.st_mtime);
+						fprintf(fpx, "obj %s %s %"PRIu64"u\n", e->name, e->digest, (uint64_t)st.st_mtime);
 				} else {
 					--num_files;
 					++num_files_ignored;
@@ -233,12 +233,13 @@ static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_sta
 			if (state->chk_mtime) {
 				qcprintf(" %sMTIME%s: %s", RED, NORM, e->name);
 				if (verbose)
-					qcprintf(" (recorded '%lu' != actual '%lu')", e->mtime, (unsigned long)st.st_mtime);
+					qcprintf(" (recorded '%"PRIu64"u' != actual '%"PRIu64"u')",
+						(uint64_t)e->mtime, (uint64_t)st.st_mtime);
 				qcprintf("\n");
 
 				/* This can only be a sym */
 				if (state->qc_update)
-					fprintf(fpx, "sym %s -> %s %lu\n", e->name, e->sym_target, st.st_mtime);
+					fprintf(fpx, "sym %s -> %s %"PRIu64"u\n", e->name, e->sym_target, (uint64_t)st.st_mtime);
 			} else {
 				--num_files;
 				++num_files_ignored;
