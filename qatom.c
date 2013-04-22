@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qatom.c,v 1.8 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qatom.c,v 1.9 2013/04/22 04:36:28 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -19,7 +19,7 @@ static const char * const qatom_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qatom_rcsid[] = "$Id: qatom.c,v 1.8 2011/02/21 01:33:47 vapier Exp $";
+static const char qatom_rcsid[] = "$Id: qatom.c,v 1.9 2013/04/22 04:36:28 vapier Exp $";
 #define qatom_usage(ret) usage(ret, QATOM_FLAGS, qatom_long_opts, qatom_opts_help, lookup_applet_idx("qatom"))
 
 int qatom_main(int argc, char **argv)
@@ -41,11 +41,12 @@ int qatom_main(int argc, char **argv)
 	if (argc == optind)
 		qatom_usage(EXIT_FAILURE);
 
+	if (action == _COMPARE && (argc - optind) % 2)
+		err("compare needs even number of arguments");
+
 	for (i = optind; i < argc; ++i) {
 		switch (action) {
 		case _COMPARE:
-			if (i+1 == argc)
-				errf("Wrong number of arguments");
 			printf("%s %s %s\n", argv[i], booga[atom_compare_str(argv[i], argv[i+1])], argv[i+1]);
 			++i;
 			break;
