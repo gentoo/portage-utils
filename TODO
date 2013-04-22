@@ -24,6 +24,9 @@
 	- remote vdb
 	- don't bother emitting any "DIR" entries to CONTENTS ?
 		- auto rmdir any empty dirs
+	- set up ROOT / D / etc...
+	- avoid Packages fetching all the damned time
+	- parallel fetch tbz2s
 	- check order of pkg_{pre,post}{inst,rm} during install, unmerge, and upgrade
 	- env is not saved/restored between pkg_{pre,post}inst (see portage and REPO_LAYOUT_CONF_WARN)
 
