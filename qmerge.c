@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.124 2013/04/29 06:51:33 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.125 2013/04/29 16:18:34 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.124 2013/04/29 06:51:33 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.125 2013/04/29 16:18:34 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -881,6 +881,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	fflush(stdout);
 
 	eat_file("vdb/DEFINED_PHASES", phases, sizeof(phases));
+	pkg_run_func("vdb", phases, "pkg_setup", D, T);
 	pkg_run_func("vdb", phases, "pkg_preinst", D, T);
 
 	/* XXX: kill this off */
