@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.123 2013/04/29 06:29:55 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.124 2013/04/29 06:51:33 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.123 2013/04/29 06:29:55 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.124 2013/04/29 06:51:33 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -407,7 +407,8 @@ qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	return c;
 }
 
-_q_static void pkg_run_func(const char *vdb_path, const char *phases, const char *func)
+_q_static void
+pkg_run_func(const char *vdb_path, const char *phases, const char *func, const char *D, const char *T)
 {
 	const char *phase;
 	char *script;
@@ -441,14 +442,22 @@ _q_static void pkg_run_func(const char *vdb_path, const char *phases, const char
 		"eerror() { elog \"$@\"; }\n"
 		"die() { eerror \"$@\"; exit 1; }\n"
 		"ebegin() { printf ' * %%b ...' \"$*\"; }\n"
-		"eend() { local r=${1:-$?}; [ $r -eq 0 ] && echo '[ ok ]' || echo '[ !! ]'; return $r; }\n"
+		"eend() { local r=${1:-$?}; [ $# -gt 0 ] && shift; [ $r -eq 0 ] && echo ' [ ok ]' || echo \" $* \"'[ !! ]'; return $r; }\n"
 		/* Unpack the env if need be */
 		"[ -e '%1$s/environment' ] || { bzip2 -dc '%1$s/environment.bz2' > '%1$s/environment' || exit 1; }\n"
-		/* Load the env and run the func */
-		". '%1$s/environment' && %2$s\n"
+		/* Load the main env */
+		". '%1$s/environment'\n"
+		/* Reload env vars that matter to us */
+		"ROOT='%4$s'\n"
+		"EROOT=\"${EPREFIX%%/}/${ROOT#/}\"\n"
+		"D='%5$s'\n"
+		"ED=\"${EPREFIX%%/}/${D#/}\"\n"
+		"T='%6$s'\n"
+		/* Finally run the func */
+		"%2$s\n"
 		/* Ignore func return values (not exit values) */
 		":",
-		vdb_path, func, phase);
+		vdb_path, func, phase, portroot, D, T);
 	xsystembash(script);
 	free(script);
 }
@@ -723,7 +732,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	queue *objs;
 	FILE *fp, *contents;
 	char buf[1024], phases[128];
-	char *tbz2, *p;
+	char *tbz2, *p, *D, *T;
 	int i;
 	char **ARGV;
 	int ARGC;
@@ -848,6 +857,10 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	/* Doesn't actually remove $PWD, just everything under it */
 	rm_rf(".");
 
+	xasprintf(&D, "%s/qmerge/%s/image", port_tmpdir, pkg->PF);
+	xasprintf(&T, "%s/qmerge/%s/temp", port_tmpdir, pkg->PF);
+	mkdir("temp", 0755);
+
 	/* XXX: maybe some day we should have this step operate on the
 	 *      tarball directly rather than unpacking it first. */
 
@@ -868,7 +881,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	fflush(stdout);
 
 	eat_file("vdb/DEFINED_PHASES", phases, sizeof(phases));
-	pkg_run_func("vdb", phases, "pkg_preinst");
+	pkg_run_func("vdb", phases, "pkg_preinst", D, T);
 
 	/* XXX: kill this off */
 	xchdir("image");
@@ -901,7 +914,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	freeargv(iargc, iargv);
 
 	/* run postinst */
-	pkg_run_func("vdb", phases, "pkg_postinst");
+	pkg_run_func("vdb", phases, "pkg_postinst", D, T);
 
 	/* XXX: hmm, maybe we'll want to strip more ? */
 	unlink("vdb/environment");
@@ -960,6 +973,8 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		free(q->item);
 		free(q);
 	}
+	free(D);
+	free(T);
 
 	/* Update the magic counter */
 	if ((fp = fopen("vdb/COUNTER", "w")) != NULL) {
@@ -990,7 +1005,7 @@ _q_static int
 pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 {
 	size_t buflen;
-	char *buf, *vdb_path, phases[128];
+	char *buf, *vdb_path, *T, phases[128];
 	FILE *fp;
 	int ret, fd, vdb_fd, portroot_fd;
 	int cp_argc, cpm_argc;
@@ -1023,6 +1038,7 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 	/* Get a handle on the vdb path which we'll use everywhere else */
 	/* Note: This vdb_path must be absolute since we use it in pkg_run_func() */
 	xasprintf(&vdb_path, "%s%s/%s/%s/", portroot, portvdb, cat, pkgname);
+	xasprintf(&T, "%stemp", vdb_path);
 	vdb_fd = openat(portroot_fd, vdb_path, O_RDONLY | O_CLOEXEC);
 	if (vdb_fd == -1) {
 		warnp("unable to read %s", vdb_path);
@@ -1032,7 +1048,8 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 	/* First execute the pkg_prerm step */
 	if (!pretend) {
 		eat_file_at(vdb_fd, "DEFINED_PHASES", phases, sizeof(phases));
-		pkg_run_func(vdb_path, phases, "pkg_prerm");
+		mkdir_p(T, 0755);
+		pkg_run_func(vdb_path, phases, "pkg_prerm", T, T);
 	}
 
 	/* Now start removing all the installed files */
@@ -1157,7 +1174,8 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 
 	if (!pretend) {
 		/* Then execute the pkg_postrm step */
-		pkg_run_func(vdb_path, phases, "pkg_postrm");
+		pkg_run_func(vdb_path, phases, "pkg_postrm", T, T);
+		rm_rf(T);
 
 		/* Finally delete the vdb entry */
 		rm_rf_at(portroot_fd, vdb_path);
@@ -1175,6 +1193,7 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 	if (portroot_fd != -1)
 		close(portroot_fd);
 	free(buf);
+	free(T);
 	free(vdb_path);
 
 	return ret;
