@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.120 2013/04/29 05:10:35 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.121 2013/04/29 06:26:57 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.120 2013/04/29 05:10:35 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.121 2013/04/29 06:26:57 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -225,6 +225,7 @@ _q_static int qmerge_best_version_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 _q_static char *best_version(const char *catname, const char *pkgname)
 {
+	static int vdb_check = 1;
 	static char retbuf[4096];
 	struct qmerge_bv_state state = {
 		.catname = catname,
@@ -232,11 +233,28 @@ _q_static char *best_version(const char *catname, const char *pkgname)
 		.retbuf = retbuf,
 	};
 
+	/* Make sure these dirs exist before we try walking them */
+	switch (vdb_check) {
+	case 1: {
+		int fd = open(portroot, O_RDONLY|O_CLOEXEC);
+		if (fd >= 0) {
+			/* skip leading slash */
+			vdb_check = faccessat(fd, portvdb + 1, X_OK, 0);
+			close(fd);
+		} else
+			vdb_check = -1;
+	}
+		if (vdb_check)
+	case -1:
+			goto done;
+	}
+
 	retbuf[0] = '\0';
 	snprintf(state.buf, sizeof(state.buf), "%s%s%s",
 		catname ? : "", catname ? "/" : "", pkgname);
 	q_vdb_foreach_pkg(qmerge_best_version_cb, &state, qmerge_filter_cat);
 
+ done:
 	return retbuf;
 }
 
