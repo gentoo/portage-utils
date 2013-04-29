@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qatom.c,v 1.9 2013/04/22 04:36:28 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qatom.c,v 1.10 2013/04/29 04:38:16 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -19,7 +19,7 @@ static const char * const qatom_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qatom_rcsid[] = "$Id: qatom.c,v 1.9 2013/04/22 04:36:28 vapier Exp $";
+static const char qatom_rcsid[] = "$Id: qatom.c,v 1.10 2013/04/29 04:38:16 vapier Exp $";
 #define qatom_usage(ret) usage(ret, QATOM_FLAGS, qatom_long_opts, qatom_opts_help, lookup_applet_idx("qatom"))
 
 int qatom_main(int argc, char **argv)
@@ -61,6 +61,10 @@ int qatom_main(int argc, char **argv)
 				printf(" r%i", atom->PR_int);
 			if (atom->SLOT)
 				printf(" :%s", atom->SLOT);
+			if (verbose || atom->pfx_op != ATOM_OP_NONE)
+				printf(" %s", atom->pfx_op == ATOM_OP_NONE ? "-" : atom_op_str[atom->pfx_op]);
+			if (verbose || atom->sfx_op != ATOM_OP_NONE)
+				printf(" %s", atom->sfx_op == ATOM_OP_NONE ? "-" : atom_op_str[atom->sfx_op]);
 			if (verbose > 1)
 				printf(" %c", (atom->letter ? : '-'));
 			putchar('\n');

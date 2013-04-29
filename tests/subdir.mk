@@ -10,6 +10,8 @@ builddir = .
 srcdir = .
 endif
 
+mkdir = $(if $(wildcard $(dir $(1))),:,mkdir -p "$(dir $(1))")
+
 b = $(builddir)
 s = $(srcdir)
 atb = $(abs_top_builddir)

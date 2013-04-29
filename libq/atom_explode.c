@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.26 2011/01/18 03:12:19 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_explode.c,v 1.27 2013/04/29 04:38:16 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
@@ -15,8 +15,23 @@ typedef struct {
 	uint64_t sint;
 } atom_suffix;
 
+const char * const atom_op_str[] = { "", ">", ">=", "=", "<=", "<", "~", "!", "!!", "*" };
+typedef enum {
+	/*    */ ATOM_OP_NONE = 0,
+	/* >  */ ATOM_OP_NEWER,
+	/* >= */ ATOM_OP_NEWER_EQUAL,
+	/* =  */ ATOM_OP_EQUAL,
+	/* <= */ ATOM_OP_OLDER_EQUAL,
+	/* <  */ ATOM_OP_OLDER,
+	/* ~  */ ATOM_OP_PV_EQUAL,
+	/* !  */ ATOM_OP_BLOCK,
+	/* !! */ ATOM_OP_BLOCK_HARD,
+	/* *  */ ATOM_OP_STAR,
+} atom_operator;
+
 typedef struct {
 	/* XXX: we don't provide PF ... */
+	atom_operator pfx_op, sfx_op;
 	char *CATEGORY;
 	char *PN;
 	unsigned int PR_int;
@@ -59,6 +74,42 @@ depend_atom *atom_explode(const char *atom)
 	ret->P = ptr + sizeof(*ret);
 	ret->PVR = ret->P + slen + 1;
 	ret->CATEGORY = ret->PVR + slen + 1 + 3;
+
+	/* eat any prefix operators */
+	switch (atom[0]) {
+	case '>':
+		++atom;
+		if (atom[0] == '=') {
+			++atom;
+			ret->pfx_op = ATOM_OP_NEWER_EQUAL;
+		} else
+			ret->pfx_op = ATOM_OP_NEWER;
+		break;
+	case '=':
+		++atom;
+		ret->pfx_op = ATOM_OP_EQUAL;
+		break;
+	case '<':
+		++atom;
+		if (atom[0] == '=') {
+			++atom;
+			ret->pfx_op = ATOM_OP_OLDER_EQUAL;
+		} else
+			ret->pfx_op = ATOM_OP_OLDER;
+		break;
+	case '~':
+		++atom;
+		ret->pfx_op = ATOM_OP_PV_EQUAL;
+		break;
+	case '!':
+		++atom;
+		if (atom[0] == '!') {
+			++atom;
+			ret->pfx_op = ATOM_OP_BLOCK_HARD;
+		} else
+			ret->pfx_op = ATOM_OP_BLOCK;
+		break;
+	}
 	strcpy(ret->CATEGORY, atom);
 
 	/* eat file name crap */
@@ -69,6 +120,15 @@ depend_atom *atom_explode(const char *atom)
 	if ((ptr = strrchr(ret->CATEGORY, ':')) != NULL) {
 		ret->SLOT = ptr + 1;
 		*ptr = '\0';
+	}
+
+	/* see if we have any suffix operators */
+	if ((ptr = strrchr(ret->CATEGORY, '*')) != NULL) {
+		/* make sure it's the last byte */
+		if (ptr[1] == '\0') {
+			ret->sfx_op = ATOM_OP_STAR;
+			*ptr = '\0';
+		}
 	}
 
 	/* break up the CATEOGRY and PVR */

@@ -1,43 +1,73 @@
 /*
  * Copyright 2005-2008 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.7 2011/02/21 01:33:47 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/atom_compare.c,v 1.8 2013/04/29 04:38:16 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-/*
-typedef struct {
-	char *CATEGORY;
-	char *PN;
-	int PR_int;
-	char *PV, *PVR;
-	char *P;
-} depend_atom;
-*/
-
 const char * const booga[] = {"!!!", "!=", "==", ">", "<"};
 enum { ERROR=0, NOT_EQUAL, EQUAL, NEWER, OLDER };
+
+static int _atom_compare_match(int ret, atom_operator op)
+{
+	if (op == ATOM_OP_NONE)
+		return ret;
+
+#define E(x) ((x) ? EQUAL : NOT_EQUAL)
+	switch (op) {
+	case ATOM_OP_NEWER:
+		return E(ret == NEWER);
+	case ATOM_OP_NEWER_EQUAL:
+		return E(ret != OLDER);
+	case ATOM_OP_PV_EQUAL:	/* we handled this in atom_compare */
+	case ATOM_OP_EQUAL:
+		return E(ret == EQUAL);
+	case ATOM_OP_OLDER_EQUAL:
+		return E(ret != NEWER);
+	case ATOM_OP_OLDER:
+		return E(ret == OLDER);
+	default:
+		/* blockers/etc... */
+		return NOT_EQUAL;
+	}
+#undef E
+}
+
 /* a1 <return value> a2
  * foo-1 <EQUAL> foo-1
  * foo-1 <OLDER> foo-2
  * foo-1 <NOT_EQUAL> bar-1
  */
-int atom_compare(const depend_atom * const a1, const depend_atom * const a2);
-int atom_compare(const depend_atom * const a1, const depend_atom * const a2)
+static int atom_compare(const depend_atom *a1, const depend_atom *a2)
 {
-	/* check slot */
-	if (a1->SLOT && a2->SLOT)
-		if (strcmp(a1->SLOT, a2->SLOT))
+	/* sanity check that at most one has operators */
+	if (a1->pfx_op != ATOM_OP_NONE || a1->sfx_op != ATOM_OP_NONE) {
+		/* this is bogus, so punt it */
+		if (a2->pfx_op != ATOM_OP_NONE || a2->sfx_op != ATOM_OP_NONE)
 			return NOT_EQUAL;
+		/* swap a1 & a2 so that a2 is the atom with operators */
+		const depend_atom *as = a2;
+		a2 = a1;
+		a1 = as;
+	}
+	atom_operator pfx_op = a2->pfx_op;
+	atom_operator sfx_op = a2->sfx_op;
 
-	/* check category */
+	/* check slot */
+	if (a1->SLOT || a2->SLOT) {
+		if (!a1->SLOT || !a2->SLOT || strcmp(a1->SLOT, a2->SLOT))
+			return NOT_EQUAL;
+	}
+
+	/* Check category, iff both are specified.  This way we can match
+	 * atoms like "sys-devel/gcc" and "gcc".
+	 */
 	if (a1->CATEGORY && a2->CATEGORY) {
 		if (strcmp(a1->CATEGORY, a2->CATEGORY))
 			return NOT_EQUAL;
-	} else if (a1->CATEGORY || a2->CATEGORY)
-		return NOT_EQUAL;
+	}
 
 	/* check name */
 	if (a1->PN && a2->PN) {
@@ -45,6 +75,22 @@ int atom_compare(const depend_atom * const a1, const depend_atom * const a2)
 			return NOT_EQUAL;
 	} else if (a1->PN || a2->PN)
 		return NOT_EQUAL;
+
+	/* in order to handle suffix globs, we need to know all of the
+	 * version elements provided in it ahead of time
+	 */
+	unsigned int ver_bits = 0;
+	if (sfx_op == ATOM_OP_STAR) {
+		if (a2->letter)
+			ver_bits |= (1 << 0);
+		if (a2->suffixes[0].suffix != VER_NORM)
+			ver_bits |= (1 << 1);
+		/* This doesn't handle things like foo-1.0-r0*, but that atom
+		 * doesn't ever show up in practice, so who cares.
+		 */
+		if (a2->PR_int)
+			ver_bits |= (1 << 2);
+	}
 
 	/* check version */
 	if (a1->PV && a2->PV) {
@@ -61,16 +107,17 @@ int atom_compare(const depend_atom * const a1, const depend_atom * const a2)
 					++s2;
 				}
 				if (*s1 == '0' && isdigit(*s2))
-					return OLDER;
+					return _atom_compare_match(OLDER, pfx_op);
 				else if (*s2 == '0' && isdigit(*s1))
-					return NEWER;
-			}
+					return _atom_compare_match(NEWER, pfx_op);
+			} else if (sfx_op == ATOM_OP_STAR && !s2 && !ver_bits)
+				return _atom_compare_match(EQUAL, pfx_op);
 			n1 = (s1 ? atoll(s1) : 0);
 			n2 = (s2 ? atoll(s2) : 0);
 			if (n1 < n2)
-				return OLDER;
+				return _atom_compare_match(OLDER, pfx_op);
 			else if (n1 > n2)
-				return NEWER;
+				return _atom_compare_match(NEWER, pfx_op);
 			if (s1) {
 				s1 = strchr(s1, '.');
 				if (s1) ++s1;
@@ -80,43 +127,61 @@ int atom_compare(const depend_atom * const a1, const depend_atom * const a2)
 				if (s2) ++s2;
 			}
 		}
+
 		/* compare trailing letter 1.0[z]_alpha1 */
+		if (sfx_op == ATOM_OP_STAR) {
+			ver_bits >>= 1;
+			if (!a2->letter && !ver_bits)
+				return _atom_compare_match(EQUAL, pfx_op);
+		}
 		if (a1->letter < a2->letter)
-			return OLDER;
-		else if (a1->letter > a2->letter)
-			return NEWER;
+			return _atom_compare_match(OLDER, pfx_op);
+		if (a1->letter > a2->letter)
+			return _atom_compare_match(NEWER, pfx_op);
 		/* find differing suffixes 1.0z[_alpha1] */
-		size_t sidx = 0;
-		while (a1->suffixes[sidx].suffix == a2->suffixes[sidx].suffix) {
-			if (a1->suffixes[sidx].suffix == VER_NORM ||
-			    a2->suffixes[sidx].suffix == VER_NORM)
+		const atom_suffix *as1 = &a1->suffixes[0];
+		const atom_suffix *as2 = &a2->suffixes[0];
+		while (as1->suffix == as2->suffix) {
+			if (as1->suffix == VER_NORM ||
+			    as2->suffix == VER_NORM)
 				break;
 
-			if (a1->suffixes[sidx].sint != a2->suffixes[sidx].sint)
+			if (as1->sint != as2->sint)
 				break;
 
-			++sidx;
+			++as1;
+			++as2;
 		}
 		/* compare suffixes 1.0z[_alpha]1 */
-		if (a1->suffixes[sidx].suffix < a2->suffixes[sidx].suffix)
-			return OLDER;
-		else if (a1->suffixes[sidx].suffix > a2->suffixes[sidx].suffix)
-			return NEWER;
+		if (sfx_op == ATOM_OP_STAR) {
+			ver_bits >>= 1;
+			if (as2->suffix == VER_NORM && !ver_bits)
+				return _atom_compare_match(EQUAL, pfx_op);
+		}
+		if (as1->suffix < as2->suffix)
+			return _atom_compare_match(OLDER, pfx_op);
+		else if (as1->suffix > as2->suffix)
+			return _atom_compare_match(NEWER, pfx_op);
 		/* compare suffix number 1.0z_alpha[1] */
-		if (a1->suffixes[sidx].sint < a2->suffixes[sidx].sint)
-			return OLDER;
-		else if (a1->suffixes[sidx].sint > a2->suffixes[sidx].sint)
-			return NEWER;
+		if (sfx_op == ATOM_OP_STAR && !as2->sint && !ver_bits)
+			return _atom_compare_match(EQUAL, pfx_op);
+		else if (as1->sint < as2->sint)
+			return _atom_compare_match(OLDER, pfx_op);
+		else if (as1->sint > as2->sint)
+			return _atom_compare_match(NEWER, pfx_op);
 		/* fall through to -r# check below */
 	} else if (a1->PV || a2->PV)
-		return NOT_EQUAL;
-
-	if (a1->PR_int == a2->PR_int)
 		return EQUAL;
+
+	/* Make sure the -r# is the same. */
+	if ((sfx_op == ATOM_OP_STAR && !a2->PR_int) ||
+	    pfx_op == ATOM_OP_PV_EQUAL ||
+	    a1->PR_int == a2->PR_int)
+		return _atom_compare_match(EQUAL, pfx_op);
 	else if (a1->PR_int < a2->PR_int)
-		return OLDER;
+		return _atom_compare_match(OLDER, pfx_op);
 	else
-		return NEWER;
+		return _atom_compare_match(NEWER, pfx_op);
 }
 
 int atom_compare_str(const char * const s1, const char * const s2);

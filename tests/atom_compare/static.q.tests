@@ -1,0 +1,12 @@
+# Certain atom matching styles that portage does not support
+# but qatom accepts.  Or I can't quite figure out how to get
+# portage to do the compare.  Not a big deal either way.
+a/b b
+a/b-1 b
+a-1 =a-1.0*
+a-1:1234 a-1
+a-1:0 a-2:0
+a-1:0 a-1:0
+
+# In this case, it's because portage gets it wrong.  #467826
+a-1_alpha1 =a-1-r1*

@@ -3,20 +3,27 @@ include ../subdir.mk
 
 all: test
 
-test check: static portage
+test check: static static.q portage
 	diff -u $(s)/static.good $(b)/static
+	diff -u $(s)/static.q.good $(b)/static.q
 	diff -u $(s)/static.good $(b)/portage
 
+t = \
+	set -f && \
+	$(call mkdir,$(b)) && \
+	$(realpath $(lastword $^)) $(1) `sed 's:\#.*::' $<` \
+	> $(@:.tests=)
+
 static: $(s)/static.tests $(atb)/q
-	mkdir -p $(b)
-	$(atb)/q atom -c `cat $<` > $(b)/static
-	#q atom -c `cat static.tests` > static
+	$(call t,atom -c)
+
+static.q: $(s)/static.q.tests $(atb)/q
+	$(call t,atom -c)
 
 portage: $(s)/static.tests $(s)/atom-compare.py
-	mkdir -p $(b)
-	./atom-compare.py `cat $<` > $(b)/portage
+	$(call t)
 
 clean:
-	rm -f $(b)/static $(b)/portage
+	rm -f $(b)/static $(b)/static.q $(b)/portage
 
 .PHONY: all check clean test
