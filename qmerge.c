@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.121 2013/04/29 06:26:57 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.122 2013/04/29 06:28:21 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.121 2013/04/29 06:26:57 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.122 2013/04/29 06:28:21 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1467,6 +1467,26 @@ unmerge_packages(queue *todo)
 	return 0;
 }
 
+_q_static FILE *
+open_binpkg_index(void)
+{
+	FILE *fp;
+	char buf[BUFSIZ];
+
+	snprintf(buf, sizeof(buf), "%s/portage/%s", port_tmpdir, Packages);
+	fp = fopen(buf, "r");
+	if (fp)
+		return fp;
+
+	snprintf(buf, sizeof(buf), "%s/%s", pkgdir, Packages);
+	fp = fopen(buf, "r");
+	if (fp)
+		return fp;
+
+	errp("Unable to open package file %s in %s/portage or %s",
+		Packages, port_tmpdir, pkgdir);
+}
+
 _q_static struct pkg_t *
 grab_binpkg_info(const char *name)
 {
@@ -1475,19 +1495,14 @@ grab_binpkg_info(const char *name)
 	char *p;
 	depend_atom *atom;
 
-	struct pkg_t *pkg = xmalloc(sizeof(struct pkg_t));
-	struct pkg_t *rpkg = xmalloc(sizeof(struct pkg_t));
+	struct pkg_t *pkg = xzalloc(sizeof(struct pkg_t));
+	struct pkg_t *rpkg = xzalloc(sizeof(struct pkg_t));
 
 	static char best_match[sizeof(Pkg.PF)+2+sizeof(Pkg.CATEGORY)];
 
 	best_match[0] = 0;
 
-	memset(pkg, 0, sizeof(struct pkg_t));
-	memset(rpkg, 0, sizeof(struct pkg_t));
-	snprintf(buf, sizeof(buf), "%s/portage/Packages", port_tmpdir);
-
-	if ((fp = fopen(buf, "r")) == NULL)
-		errp("Unable to open package file %s", buf);
+	fp = open_binpkg_index();
 
 	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		if (*buf == '\n') {
@@ -1588,10 +1603,7 @@ find_binpkg(const char *name)
 	if (NULL == name)
 		return best_match;
 
-	snprintf(buf, sizeof(buf), "%s/portage/Packages", port_tmpdir);
-
-	if ((fp = fopen(buf, "r")) == NULL)
-		errp("Unable to open package file %s", buf);
+	fp = open_binpkg_index();
 
 	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		if (*buf == '\n') {
@@ -1664,8 +1676,7 @@ parse_packages(queue *todo)
 	char *buf, *p;
 	long lineno = 0;
 
-	if ((fp = fopen(Packages, "r")) == NULL)
-		errp("Unable to open package file %s", Packages);
+	fp = open_binpkg_index();
 
 	memset(&Pkg, 0, sizeof(Pkg));
 
