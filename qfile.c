@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.65 2012/11/10 06:44:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.66 2013/04/29 05:32:43 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -13,12 +13,13 @@
 #define QFILE_DEFAULT_MAX_ARGS 5000
 #define QFILE_DEFAULT_MAX_ARGS_STR "5000"
 
-#define QFILE_FLAGS "ef:m:oRx:S" COMMON_FLAGS
+#define QFILE_FLAGS "bef:m:oRx:S" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"slots",       no_argument, NULL, 'S'},
 	{"root-prefix", no_argument, NULL, 'R'},
 	{"from",         a_argument, NULL, 'f'},
 	{"max-args",     a_argument, NULL, 'm'},
+	{"basename",    no_argument, NULL, 'b'},
 	{"orphans",     no_argument, NULL, 'o'},
 	{"exclude",      a_argument, NULL, 'x'},
 	{"exact",       no_argument, NULL, 'e'},
@@ -29,12 +30,13 @@ static const char * const qfile_opts_help[] = {
 	"Assume arguments are already prefixed by $ROOT",
 	"Read arguments from file <arg> (\"-\" for stdin)",
 	"Treat from file arguments by groups of <arg> (defaults to " QFILE_DEFAULT_MAX_ARGS_STR ")",
+	"Match any component of the path",
 	"List orphan files",
 	"Don't look in package <arg> (used with --orphans)",
 	"Exact match (used with --exclude)",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.65 2012/11/10 06:44:05 vapier Exp $";
+static const char qfile_rcsid[] = "$Id: qfile.c,v 1.66 2013/04/29 05:32:43 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
@@ -63,6 +65,7 @@ struct qfile_opt_state {
 	char *exclude_slot;
 	depend_atom *exclude_atom;
 	bool slotted;
+	bool basename;
 	bool exact;
 	bool orphans;
 	bool assume_root_prefix;
@@ -195,6 +198,8 @@ _q_static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 					path_ok = true;
 				}
 				free(fullpath);
+			} else if (state->basename) {
+				path_ok = true;
 			} else if (state->pwd) {
 				if (!strncmp(e->name, state->pwd, dirname_len))
 					path_ok = true;
@@ -389,6 +394,7 @@ int qfile_main(int argc, char **argv)
 	struct qfile_opt_state state = {
 		.buflen = _Q_PATH_MAX,
 		.slotted = false,
+		.basename = false,
 		.exact = false,
 		.orphans = false,
 		.assume_root_prefix = false,
@@ -407,6 +413,7 @@ int qfile_main(int argc, char **argv)
 		switch (i) {
 			COMMON_GETOPTS_CASES(qfile)
 			case 'S': state.slotted = true; break;
+			case 'b': state.basename = true; break;
 			case 'e': state.exact = true; break;
 			case 'f':
 				if (args_file)
