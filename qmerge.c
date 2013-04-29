@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.125 2013/04/29 16:18:34 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.126 2013/04/29 16:30:22 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.125 2013/04/29 16:18:34 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.126 2013/04/29 16:30:22 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -432,13 +432,17 @@ pkg_run_func(const char *vdb_path, const char *phases, const char *func, const c
 		"debug-print-section() { :; }\n"
 		/* Not quite right */
 		"has_version() { qlist -ICq -e '$1' >/dev/null; }\n"
+		/* best_version() */
 		"use() { useq \"$@\"; }\n"
-		"useq() { hasq $1 $USE; }\n"
+		"usex() { useq \"$1\" && echo \"${2-yes}$4\" || echo \"${3-no}$5\"; }\n"
+		"useq() { hasq \"$1\" $USE; }\n"
 		"has() { hasq \"$@\"; }\n"
 		"hasq() { local h=$1; shift; case \" $* \" in *\" $h \"*) return 0;; *) return 1;; esac; }\n"
+		"hasv() { hasq \"$@\" && echo \"$1\"; }\n"
 		"elog() { printf ' * %%b\\n' \"$*\"; }\n"
 		"einfo() { elog \"$@\"; }\n"
 		"ewarn() { elog \"$@\"; }\n"
+		"eqawarn() { elog \"QA: \"\"$@\"; }\n"
 		"eerror() { elog \"$@\"; }\n"
 		"die() { eerror \"$@\"; exit 1; }\n"
 		"ebegin() { printf ' * %%b ...' \"$*\"; }\n"
@@ -448,6 +452,7 @@ pkg_run_func(const char *vdb_path, const char *phases, const char *func, const c
 		/* Load the main env */
 		". '%1$s/environment'\n"
 		/* Reload env vars that matter to us */
+		"MERGE_TYPE=binary\n"
 		"ROOT='%4$s'\n"
 		"EROOT=\"${EPREFIX%%/}/${ROOT#/}\"\n"
 		"D='%5$s'\n"
@@ -881,6 +886,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	fflush(stdout);
 
 	eat_file("vdb/DEFINED_PHASES", phases, sizeof(phases));
+	pkg_run_func("vdb", phases, "pkg_pretend", D, T);
 	pkg_run_func("vdb", phases, "pkg_setup", D, T);
 	pkg_run_func("vdb", phases, "pkg_preinst", D, T);
 
