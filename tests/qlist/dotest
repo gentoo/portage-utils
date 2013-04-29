@@ -43,6 +43,9 @@ test 08 "qlist -C cpio"
 # dir test
 test 09 "qlist -C mtools -d"
 
+# ver test
+test 10 "qlist -Iv =mtools-4*"
+
 cleantmpdir
 
 end

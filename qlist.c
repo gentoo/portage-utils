@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.74 2012/11/10 05:28:25 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qlist.c,v 1.75 2013/04/29 05:10:35 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -41,11 +41,10 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-static const char qlist_rcsid[] = "$Id: qlist.c,v 1.74 2012/11/10 05:28:25 vapier Exp $";
+static const char qlist_rcsid[] = "$Id: qlist.c,v 1.75 2013/04/29 05:10:35 vapier Exp $";
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
-queue *filter_dups(queue *sets);
-queue *filter_dups(queue *sets)
+_q_static queue *filter_dups(queue *sets)
 {
 	queue *ll = NULL;
 	queue *dups = NULL;
@@ -147,7 +146,8 @@ static const char *umapstr(char display, const char *cat, const char *name)
 	return buf;
 }
 
-_q_static bool qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, bool exact)
+_q_static bool
+qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, bool exact)
 {
 	const char *catname = pkg_ctx->cat_ctx->name;
 	const char *pkgname = pkg_ctx->name;
@@ -161,6 +161,38 @@ _q_static bool qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, bool exact)
 		++uslot;
 		if (!pkg_ctx->slot)
 			pkg_ctx->slot = q_vdb_pkg_eat(pkg_ctx, "SLOT");
+	}
+
+	/* maybe they're using a version range */
+	switch (name[0]) {
+	case '=':
+	case '>':
+	case '<':
+	case '~':
+		snprintf(buf, sizeof(buf), "%s/%s%c%s", catname, pkgname,
+			pkg_ctx->slot ? ':' : '\0', pkg_ctx->slot ? : "");
+		if ((atom = atom_explode(buf)) == NULL) {
+			warn("invalid atom %s", buf);
+			return false;
+		}
+
+		depend_atom *_atom = NULL;
+		if (!name_atom)
+			name_atom = &_atom;
+		if (!*name_atom) {
+			if ((*name_atom = atom_explode(name)) == NULL) {
+				atom_implode(atom);
+				warn("invalid atom %s", name);
+				return false;
+			}
+		}
+
+		bool ret = atom_compare(atom, *name_atom) == EQUAL;
+		atom_implode(atom);
+		return ret;
+	}
+
+	if (uslot) {
 		/* require exact match on SLOTs */
 		if (strcmp(pkg_ctx->slot, uslot) != 0)
 			return false;
@@ -221,6 +253,7 @@ _q_static bool qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, bool exact)
 struct qlist_opt_state {
 	int argc;
 	char **argv;
+	depend_atom **atoms;
 	bool exact;
 	bool all;
 	bool just_pkgname;
@@ -247,7 +280,7 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 	/* see if this cat/pkg is requested */
 	for (i = optind; i < state->argc; ++i)
-		if (qlist_match(pkg_ctx, state->argv[i], state->exact))
+		if (qlist_match(pkg_ctx, state->argv[i], &state->atoms[i - optind], state->exact))
 			break;
 	if ((i == state->argc) && (state->argc != optind))
 		return 0;
@@ -374,6 +407,7 @@ int qlist_main(int argc, char **argv)
 		qlist_usage(EXIT_FAILURE);
 
 	state.buf = xmalloc(state.buflen);
+	state.atoms = xcalloc(argc - optind, sizeof(*state.atoms));
 	ret = q_vdb_foreach_pkg_sorted(qlist_cb, &state);
 
 	if (state.dups_only) {

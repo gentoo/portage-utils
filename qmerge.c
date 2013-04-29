@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.119 2013/04/22 03:55:18 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.120 2013/04/29 05:10:35 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.119 2013/04/22 03:55:18 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.120 2013/04/29 05:10:35 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -217,7 +217,7 @@ _q_static int qmerge_filter_cat(q_vdb_cat_ctx *cat_ctx, void *priv)
 _q_static int qmerge_best_version_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qmerge_bv_state *state = priv;
-	if (qlist_match(pkg_ctx, state->buf, true))
+	if (qlist_match(pkg_ctx, state->buf, NULL, true))
 		snprintf(state->retbuf, sizeof(state->buf), "%s/%s",
 			pkg_ctx->cat_ctx->name, pkg_ctx->name);
 	return 0;
