@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.126 2013/04/29 16:30:22 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.127 2013/04/29 23:03:31 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.126 2013/04/29 16:30:22 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.127 2013/04/29 23:03:31 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -854,17 +854,18 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		return;
 
 	/* Set up our temp dir to unpack this stuff */
-	xasprintf(&p, "%s/qmerge/%s", port_tmpdir, pkg->PF);
+	xasprintf(&p, "%s/qmerge/%s/%s", port_tmpdir, pkg->CATEGORY, pkg->PF);
 	mkdir_p(p, 0755);
 	xchdir(p);
+	xasprintf(&D, "%s/image", p);
+	xasprintf(&T, "%s/temp", p);
 	free(p);
 
 	/* Doesn't actually remove $PWD, just everything under it */
 	rm_rf(".");
 
-	xasprintf(&D, "%s/qmerge/%s/image", port_tmpdir, pkg->PF);
-	xasprintf(&T, "%s/qmerge/%s/temp", port_tmpdir, pkg->PF);
 	mkdir("temp", 0755);
+	mkdir_p(portroot, 0755);
 
 	/* XXX: maybe some day we should have this step operate on the
 	 *      tarball directly rather than unpacking it first. */
@@ -915,7 +916,8 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	if ((contents = fopen("vdb/CONTENTS", "w")) == NULL)
 		errf("come on wtf?");
 	objs = NULL;
-	merge_tree("image", portroot, contents, &objs, iargc, iargv);
+	if (merge_tree("image", portroot, contents, &objs, iargc, iargv))
+		errp("failed to merge to %s", portroot);
 	fclose(contents);
 
 	freeargv(iargc, iargv);
