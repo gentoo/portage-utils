@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.122 2013/04/29 06:28:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.123 2013/04/29 06:29:55 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.122 2013/04/29 06:28:21 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.123 2013/04/29 06:29:55 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -184,20 +184,21 @@ _q_static void qmerge_initialize(void)
 			errp("could not setup PKGDIR: %s", pkgdir);
 	}
 
-	mkdir_p(port_tmpdir, 0755);
-	xchdir(port_tmpdir);
-	mkdir_p("portage", 0755);
-	xchdir("portage");
+	char *buf;
+	xasprintf(&buf, "%s/portage", port_tmpdir);
+	mkdir_p(buf, 0755);
+	xchdir(buf);
 
-	if (force_download && force_download != 2)
-		unlink(Packages);
+	if (force_download != 2) {
+		if (force_download)
+			unlink(Packages);
 
-	if ((access(Packages, R_OK) != 0) && (force_download != 2)) {
-		char *tbuf = NULL;
-		xasprintf(&tbuf, "%s/portage/", port_tmpdir);
-		if (access(Packages, R_OK) != 0)
-			fetch(tbuf, Packages);
-		free(tbuf);
+		if (access(Packages, R_OK) != 0) {
+			xasprintf(&buf, "%s/portage/", port_tmpdir);
+			if (access(Packages, R_OK) != 0)
+				fetch(buf, Packages);
+			free(buf);
+		}
 	}
 }
 
