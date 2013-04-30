@@ -148,6 +148,8 @@ EXTRA_DIST += \
 	tests/atom_compare/Makefile \
 	tests/atom_compare/atom-compare.py \
 	tests/atom_compare/static.good \
+	tests/atom_compare/static.q.good \
+	tests/atom_compare/static.q.tests \
 	tests/atom_compare/static.tests \
 	tests/atom_explode/.cvsignore \
 	tests/atom_explode/.gitignore \
@@ -184,6 +186,9 @@ EXTRA_DIST += \
 	tests/qlist/list05.good \
 	tests/qlist/list06.good \
 	tests/qlist/list07.good \
+	tests/qlist/list08.good \
+	tests/qlist/list09.good \
+	tests/qlist/list10.good \
 	tests/qlist/root/-merge-foo/CONTENTS \
 	tests/qlist/root/a-b/a-0/CONTENTS \
 	tests/qlist/root/a-b/a-0/SLOT \
@@ -195,6 +200,10 @@ EXTRA_DIST += \
 	tests/qlist/root/cat/pkg-1/SLOT \
 	tests/qlist/root/sys-fs/mtools-4.0.13/CONTENTS \
 	tests/qlist/root/sys-fs/mtools-4.0.13/SLOT \
+	tests/qmerge/Makefile \
+	tests/qmerge/dotest \
+	tests/qmerge/packages/Packages \
+	tests/qmerge/packages/sys-devel/qmerge-test-1.3.tbz2 \
 	tests/qtbz2/Makefile \
 	tests/qtbz2/dotest \
 	tests/quse/Makefile \
