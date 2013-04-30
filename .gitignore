@@ -6,7 +6,7 @@
 *.orig
 *.rej
 *.diff
-portage-utils-*
+/portage-utils-*
 contrib
 
 aclocal.m4
@@ -18,23 +18,23 @@ configure
 autotools
 Makefile.in
 
-q
-qatom
-qcache
-qcheck
-qdepends
-qfile
-qfile.old.c
-qglsa
-qgrep
-qlist
-qlop
-qmerge
-qpkg
-qsearch
-qsize
-quse
-qxpak
+/*.old.c
+/q
+/qatom
+/qcache
+/qcheck
+/qdepends
+/qfile
+/qglsa
+/qgrep
+/qlist
+/qlop
+/qmerge
+/qpkg
+/qsearch
+/qsize
+/quse
+/qxpak
 
 a.out
 core
