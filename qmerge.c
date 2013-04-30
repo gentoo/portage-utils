@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.127 2013/04/29 23:03:31 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.128 2013/04/30 01:50:20 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.127 2013/04/29 23:03:31 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.128 2013/04/30 01:50:20 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1078,6 +1078,8 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 	makeargv(config_protect, &cp_argc, &cp_argv);
 	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
+	bool unmerge_config_protected = !!strstr(features, "config-protect-if-modified");
+
 	while (getline(&buf, &buflen, fp) != -1) {
 		queue *q;
 		contents_entry *e;
@@ -1097,17 +1099,21 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 
 		/* Should we remove in order symlinks,objects,dirs ? */
 		switch (e->type) {
-			case CONTENTS_DIR:
-				if (!protected) {
-					/* since the dir contains files, we remove it later */
-					llist_char *list = xmalloc(sizeof(llist_char));
-					list->data = xstrdup(e->name);
-					list->next = dirs;
-					dirs = list;
-				}
+			case CONTENTS_DIR: {
+				/* since the dir contains files, we remove it later */
+				llist_char *list = xmalloc(sizeof(llist_char));
+				list->data = xstrdup(e->name);
+				list->next = dirs;
+				dirs = list;
 				continue;
+			}
 
 			case CONTENTS_OBJ:
+				if (protected && unmerge_config_protected) {
+					/* If the file wasn't modified, unmerge it */
+					unsigned char *hash = hash_file_at(portroot_fd, e->name + 1, HASH_MD5);
+					protected = strcmp(e->digest, (const char *)hash);
+				}
 				break;
 
 			case CONTENTS_SYM:
