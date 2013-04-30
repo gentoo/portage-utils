@@ -1,0 +1,82 @@
+#!/bin/bash
+
+. ../init.sh
+
+set -e
+
+export QMERGE=1
+export PKGDIR=${as}/packages
+export FEATURES='config-protect-if-modified'
+
+if [[ ! -e ${PKGDIR}/Packages ]] ; then
+	emaint binhost -f
+fi
+
+mktmpdir
+
+export ROOT=${PWD}/root
+export PORTAGE_TMPDIR=${PWD}
+
+set +e
+
+# Do a merge into an empty tree.
+
+out=$(yes | qmerge -F qmerge-test)
+tend $? "qmerge-test: [N] basic merge" || echo "${out}"
+
+[[ ${out} != *"FAIL"* ]]
+tend $? "qmerge-test: [N] FAIL messages" || echo "${out}"
+
+order=$(echo "${out}" | awk '$1 == ">>>" { printf "%s ", $NF }')
+[[ ${order} == "pkg_pretend pkg_setup pkg_preinst pkg_postinst " ]]
+tend $? "qmerge-test: [N] pkg_* order of execution" || printf '%s\n' "${order}" "${out}"
+
+ls -d "${ROOT}"/var/db/pkg/sys-devel/qmerge-test-* >/dev/null
+tend $? "qmerge-test: [N] vdb installed"
+
+[[ -x ${ROOT}/usr/bin/qmerge-test && \
+   -f ${ROOT}/etc/some.conf && \
+   -f ${ROOT}/etc/another.conf ]]
+tend $? "qmerge-test: [N] installed expected files" || ls -R ${ROOT}
+
+# Now do a re-emerge.
+
+out=$(yes | qmerge -F qmerge-test)
+tend $? "qmerge-test: [R] re-emerge" || echo "${out}"
+
+[[ -x ${ROOT}/usr/bin/qmerge-test ]]
+tend $? "qmerge-test: [R] installed expected files" || ls -R ${ROOT}
+
+order=$(echo "${out}" | awk '$1 == ">>>" { printf "%s ", $NF }')
+[[ ${order} == "pkg_pretend pkg_setup pkg_preinst pkg_postinst pkg_prerm pkg_postrm " ]]
+tend $? "qmerge-test: [R] pkg_* order of execution" || printf '%s\n' "${order}" "${out}"
+
+[[ -x ${ROOT}/usr/bin/qmerge-test && \
+   -f ${ROOT}/etc/some.conf && \
+   -f ${ROOT}/etc/another.conf && \
+   -f ${ROOT}/etc/._cfg0000_some.conf ]]
+tend $? "qmerge-test: [R] re-installed expected files" || ls -R ${ROOT}
+
+# Finally do an unmerge.
+
+echo alkdsjfalksdf > "${ROOT}/etc/some.conf"
+
+rm -f "${ROOT}/etc/._cfg0000_some.conf"
+out=$(yes | qmerge -FU qmerge-test)
+tend $? "qmerge-test: [C] uninstall" || echo "${out}"
+
+order=$(echo "${out}" | awk '$1 == ">>>" { printf "%s ", $NF }')
+[[ ${order} == "pkg_prerm pkg_postrm " ]]
+tend $? "qmerge-test: [C] pkg_* order of execution" || printf '%s\n' "${order}" "${out}"
+
+[[ ! -x ${ROOT}/usr/bin/qmerge-test && \
+     -f ${ROOT}/etc/some.conf && \
+   ! -f ${ROOT}/etc/another.conf && \
+   ! -d ${ROOT}/var ]]
+tend $? "qmerge-test: [C] uninstalled expected files" || ls -R ${ROOT}
+
+set -e
+
+cleantmpdir
+
+end
