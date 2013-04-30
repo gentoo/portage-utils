@@ -107,7 +107,9 @@ _q_static int rmdir_r_at(int dfd, const char *path)
 	return 0;
 }
 
+/*
 _q_static int rmdir_r(const char *path)
 {
 	return rmdir_r_at(AT_FDCWD, path);
 }
+*/
