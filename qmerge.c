@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.129 2013/05/03 22:28:48 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.130 2013/05/09 05:28:11 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.129 2013/05/03 22:28:48 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.130 2013/05/09 05:28:11 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1092,7 +1092,6 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 			continue;
 
 		protected = config_protected(e->name, cp_argc, cp_argv, cpm_argc, cpm_argv);
-		snprintf(zing, sizeof(zing), "%s%s%s", protected ? YELLOW : GREEN, protected ? "***" : "<<<" , NORM);
 
 		/* This should never happen ... */
 		assert(e->name[0] == '/' && e->name[1] != '/');
@@ -1133,6 +1132,8 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 				continue;
 		}
 
+		snprintf(zing, sizeof(zing), "%s%s%s", protected ? YELLOW : GREEN, protected ? "***" : "<<<" , NORM);
+
 		if (protected) {
 			qprintf("%s %s\n", zing, e->name);
 			continue;
@@ -1156,7 +1157,8 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 		if (!keep || q) {
 			char *p;
 
-			unlinkat(portroot_fd, e->name + 1, 0);
+			if (unlinkat(portroot_fd, e->name + 1, 0))
+				errp("could not unlink: %s%s", portroot, e->name + 1);
 
 			p = strrchr(e->name, '/');
 			if (p) {
