@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.44 2013/09/29 18:33:22 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.45 2013/09/29 18:36:11 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -47,7 +47,7 @@ static const char * const qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.44 2013/09/29 18:33:22 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.45 2013/09/29 18:36:11 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -789,7 +789,6 @@ void qcache_stats(qcache_data *data)
 	memset(keywords, 0, archlist_count * sizeof(*keywords));
 	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
 		warn("Failed to read keywords for %s%s/%s%s%s", BOLD, data->category, BLUE, data->ebuild, NORM);
-		free(keywords);
 		return;
 	}
 
