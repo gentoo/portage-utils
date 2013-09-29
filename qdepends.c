@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2013 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.64 2013/09/29 10:10:51 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.65 2013/09/29 10:36:08 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char * const qdepends_opts_help[] = {
 	"Pretty format specified depend strings",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.64 2013/09/29 10:10:51 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.65 2013/09/29 10:36:08 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -479,7 +479,7 @@ _q_static int qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	char depend[16384], use[8192];
 	dep_node *dep_tree;
 
-	IF_DEBUG(warn("matched %s/%s", catname, pkgname));
+	IF_DEBUG(warn("matched %s/%s for %s", catname, pkgname, state->depend_file));
 
 	if (!eat_file_at(pkg_ctx->fd, state->depend_file, depend, sizeof(depend)))
 		return 0;
