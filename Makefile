@@ -1,6 +1,6 @@
 # Copyright 2005-2008 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.74 2011/12/19 04:59:53 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.75 2013/09/29 17:52:39 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -49,7 +49,7 @@ DOCS      := TODO README qsync
 #endif
 
 #####################################################
-APPLETS   := $(shell sed -n '/^DECLARE_APPLET/s:.*(\(.*\))$$:\1:p' applets.h|sort)
+APPLETS   := $(shell ./applets.sh)
 SRC       := $(APPLETS:%=%.c) main.c
 APP_FLAGS := $(foreach a,$(APPLETS),-DAPPLET_$a)
 CPPFLAGS  += $(APP_FLAGS)
