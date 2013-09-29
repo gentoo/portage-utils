@@ -1,8 +1,10 @@
 #!/bin/bash
+set -e
 
 export NOCOLOR=1
+cd "${0%/*}"
 
-[[ $# -eq 0 ]] && set -- $(../q | awk '$0 ~ / : / && $1 != "Usage:" { print $1 }')
+[[ $# -eq 0 ]] && set -- $(../applets.sh)
 
 for applet in "$@" ; do
 	man="${applet}.1"
@@ -10,7 +12,7 @@ for applet in "$@" ; do
 
 	help2man -N -S "Gentoo Foundation" -m ${applet} -s 1 \
 		$(printf ' -I %s' include/${applet}-*.include) \
-		-n "$(../q $applet | sed -n '/^Usage/{s|^.* : ||p;q;}')" \
+		-n "$(../q ${applet} --help | sed -n '/^Usage/{s|^.* : ||p;q;}')" \
 		-o ${man} "../q ${applet}"
 	[[ $? == 0 ]] || continue
 
