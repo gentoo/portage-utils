@@ -36,6 +36,13 @@
 	- these limits should not be an issue for all practical purposes
 	- need to handle USE deps like: cat/pkg-123[foo(+)]
 
+- qcache:
+	- need to convert it to new metadata/md5 style
+
+- qdepends:
+	- support querying uninstalled packages (via metadata/md5 cache)
+	- verify version matching works: qdepend =nano-2*
+
 - env vars only get expanded once, so this fails:
 	ACCEPT_LICENSE="foo"
 	ACCEPT_LICENSE="${ACCEPT_LICENSE} bar"
