@@ -1,0 +1,8 @@
+.SH "EXAMPLES"
+For finding out what a particular package depends on for building, you could do:
+.nf
+	$ \fIqdepends nano\fR
+	app-editors/nano-2.3.2: >=sys-libs/ncurses-5.9-r1[unicode] sys-apps/file ...
+.fi
+This tells us that we have \fIapp-editors/nano-2.3.2\fR installed and it depends
+on ncurses (among other things).

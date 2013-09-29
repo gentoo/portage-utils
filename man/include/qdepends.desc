@@ -1,0 +1,11 @@
+The qdepends applet has a couple different modes.  Normally it is geared towards
+answering the queries "what does package X depend on" and "what packages depend
+on X".  Both can further be classified into build, run, and post dependencies.
+
+By default, it will tell you the build time dependencies only (DEPEND).
+
+Currently, qdepends will only query installed packages.  There is no support for
+querying packages not yet installed (the \fBequery\fR(1) tool can do that).
+
+If there is no answer to your query (i.e. you've asked for a package that is not
+installed, or a version that does not match), then you will get back no output.
