@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.58 2013/09/29 05:09:29 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.59 2013/09/29 06:44:39 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char * const qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.58 2013/09/29 05:09:29 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.59 2013/09/29 06:44:39 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -43,9 +43,7 @@ typedef enum {
 	DEP_OR = 3,
 	DEP_GROUP = 4
 } dep_type;
-#ifdef EBUG
 static const char * const _dep_names[] = { "NULL", "NORM", "USE", "OR", "GROUP" };
-#endif
 
 struct _dep_node {
 	dep_type type;
@@ -60,21 +58,17 @@ typedef struct _dep_node dep_node;
 
 /* prototypes */
 #define dep_dump_tree(r) _dep_dump_tree(r,0)
-void _dep_dump_tree(dep_node *root, int space);
-dep_node *dep_grow_tree(char *depend);
+_q_static void _dep_dump_tree(const dep_node *root, int space);
 void dep_burn_tree(dep_node *root);
-void dep_prune_use(dep_node *root, char *use);
-char *dep_flatten_tree(dep_node *root);
-dep_node *_dep_grow_node(dep_type type, char *info, size_t info_len);
-void _dep_attach(dep_node *root, dep_node *attach_me, int type);
-void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos);
-void _dep_burn_node(dep_node *node);
+char *dep_flatten_tree(const dep_node *root);
+_q_static void _dep_attach(dep_node *root, dep_node *attach_me, int type);
+_q_static void _dep_flatten_tree(const dep_node *root, char *buf, size_t *pos);
+_q_static void _dep_burn_node(dep_node *node);
 int qdepends_main_vdb(const char *depend_file, int argc, char **argv);
 int qdepends_vdb_deep(const char *depend_file, const char *query);
 
 #ifdef EBUG
-void print_word(char *ptr, int num);
-void print_word(char *ptr, int num)
+_q_static void print_word(const char *ptr, size_t num)
 {
 	while (num--)
 		printf("%c", *ptr++);
@@ -82,7 +76,8 @@ void print_word(char *ptr, int num)
 }
 #endif
 
-dep_node *_dep_grow_node(dep_type type, char *info, size_t info_len)
+_q_static dep_node *
+_dep_grow_node(dep_type type, const char *info, size_t info_len)
 {
 	dep_node *ret;
 	size_t len;
@@ -139,10 +134,10 @@ void _dep_attach(dep_node *root, dep_node *attach_me, int type)
 	}
 }
 
-dep_node *dep_grow_tree(char *depend)
+_q_static dep_node *dep_grow_tree(const char *depend)
 {
 	signed long paren_balanced;
-	char *word, *ptr, *p;
+	const char *ptr, *word;
 	int curr_attach;
 	dep_node *ret, *curr_node, *new_node;
 	dep_type prev_type;
@@ -152,9 +147,6 @@ dep_node *dep_grow_tree(char *depend)
 	paren_balanced = 0;
 	curr_attach = _DEP_NEIGH;
 	word = NULL;
-
-	p = strrchr(depend, '\n');
-	if (p != NULL) *p = 0;
 
 #define _maybe_consume_word(t) \
 	do { \
@@ -259,9 +251,12 @@ error_out:
 	return NULL;
 }
 
-#ifdef EBUG
-void _dep_dump_tree(dep_node *root, int space)
+_q_static void _dep_dump_tree(const dep_node *root, int space)
 {
+#ifndef EBUG
+	return;
+#endif
+
 	int spaceit = space;
 	assert(root);
 	if (root->type == DEP_NULL) goto this_node_sucks;
@@ -276,9 +271,6 @@ void _dep_dump_tree(dep_node *root, int space)
 this_node_sucks:
 	if (root->neighbor) _dep_dump_tree(root->neighbor, space);
 }
-#else
-void _dep_dump_tree(_q_unused_ dep_node *root, _q_unused_ int space) {;}
-#endif
 
 void dep_burn_tree(dep_node *root)
 {
@@ -288,7 +280,7 @@ void dep_burn_tree(dep_node *root)
 	_dep_burn_node(root);
 }
 
-void dep_prune_use(dep_node *root, char *use)
+_q_static void dep_prune_use(dep_node *root, const char *use)
 {
 	if (root->neighbor) dep_prune_use(root->neighbor, use);
 	if (root->type == DEP_USE) {
@@ -305,7 +297,7 @@ void dep_prune_use(dep_node *root, char *use)
 	if (root->children) dep_prune_use(root->children, use);
 }
 
-void _dep_flatten_tree(dep_node *root, char *buf, size_t *pos)
+void _dep_flatten_tree(const dep_node *root, char *buf, size_t *pos)
 {
 	if (root->type == DEP_NULL) goto this_node_sucks;
 	if (root->type == DEP_NORM) {
@@ -327,7 +319,7 @@ this_node_sucks:
 	if (root->neighbor) _dep_flatten_tree(root->neighbor, buf, pos);
 }
 
-char *dep_flatten_tree(dep_node *root)
+char *dep_flatten_tree(const dep_node *root)
 {
 	static char flat[8192];
 	size_t pos = 0;
