@@ -1,4 +1,4 @@
-[Reading arguments from a file (or stdin)]
+.SH "READING ARGUMENTS FROM A FILE/STDIN"
 .PP
 When you try to launch \fBqfile\fP with a large number of arguments, you may
 hit the following shell error:

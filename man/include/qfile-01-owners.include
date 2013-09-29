@@ -1,4 +1,4 @@
-[Finding files owners]
+.SH "FINDING FILES OWNERS"
 .PP
 This is the default behavior of \fBqfile\fP.  It will list the packages which
 own the files (or directories, or symlinks, or anything else Portage can 

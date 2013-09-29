@@ -1,4 +1,4 @@
-[Handling of the ROOT variable]
+.SH "$ROOT HANDLING"
 .PP
 By setting the \fIROOT\fP environment variable, you can force \fBqfile\fP to
 work in the sytem of your choice. This example shows queries for owner of 

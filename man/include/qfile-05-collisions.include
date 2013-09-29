@@ -1,4 +1,4 @@
-[Searching for files collisions]
+.SH "SEARCHING FOR FILE COLLISIONS"
 .PP
 A last option of \fBqfile\fP is \fB\-\-exclude\fP (\fB\-x\fP), which will makes
 it skip one particular package when doing its files owners search.  This option

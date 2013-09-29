@@ -1,4 +1,4 @@
-[Finding orphan files]
+.SH "FINDING ORPHAN FILES"
 .PP
 \fBqfile\fP can also, with the \fB\-\-orphans\fP option, find files which are 
 not owned by any package.  This behavior is the opposite of the usual file 

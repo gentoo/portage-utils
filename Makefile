@@ -1,6 +1,6 @@
 # Copyright 2005-2008 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.75 2013/09/29 17:52:39 vapier Exp $
+# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.76 2013/09/29 22:12:51 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -119,7 +119,7 @@ install: all
 	)
 
 man: q
-	cd man && ./mkman.sh
+	./man/mkman.py
 
 symlinks: all
 	./q --install
