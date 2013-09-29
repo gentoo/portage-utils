@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2013 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.62 2013/09/29 10:03:06 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.63 2013/09/29 10:07:28 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char * const qdepends_opts_help[] = {
 	"Pretty format specified depend strings",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.62 2013/09/29 10:03:06 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.63 2013/09/29 10:07:28 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -146,7 +146,6 @@ void _dep_attach(dep_node *root, dep_node *attach_me, int type)
 
 _q_static dep_node *dep_grow_tree(const char *depend)
 {
-	bool saw_whitespace;
 	signed long paren_balanced;
 	const char *ptr, *word;
 	int curr_attach;
@@ -176,10 +175,8 @@ _q_static dep_node *dep_grow_tree(const char *depend)
 	word = NULL; \
 	} while (0)
 
-	saw_whitespace = true;
 	for (ptr = depend; *ptr; ++ptr) {
 		if (isspace(*ptr)) {
-			saw_whitespace = true;
 			_maybe_consume_word(DEP_NORM);
 			continue;
 		}
@@ -195,8 +192,6 @@ _q_static dep_node *dep_grow_tree(const char *depend)
 			continue;
 		}
 		case '|': {
-			if (!saw_whitespace)
-				break;
 			if (ptr[1] != '|') {
 				warnf("Found a | but not ||");
 				goto error_out;
@@ -208,8 +203,6 @@ _q_static dep_node *dep_grow_tree(const char *depend)
 		}
 		case '(': {
 			++paren_balanced;
-			if (!saw_whitespace)
-				break;
 			if (prev_type == DEP_OR || prev_type == DEP_USE) {
 				_maybe_consume_word(DEP_NORM);
 				prev_type = DEP_NULL;
@@ -226,8 +219,6 @@ _q_static dep_node *dep_grow_tree(const char *depend)
 		}
 		case ')': {
 			--paren_balanced;
-			if (!saw_whitespace)
-				break;
 			_maybe_consume_word(DEP_NORM);
 
 			if (curr_node->parent == NULL) {
@@ -242,7 +233,6 @@ _q_static dep_node *dep_grow_tree(const char *depend)
 			if (!word)
 				word = ptr;
 		}
-		saw_whitespace = false;
 
 		/* fall through to the paren failure below */
 		if (paren_balanced < 0)
