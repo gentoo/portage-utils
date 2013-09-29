@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/scandirat.c,v 1.5 2013/09/29 10:07:28 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/scandirat.c,v 1.6 2013/09/29 10:25:25 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -13,7 +13,7 @@
 # endif
 #endif
 
-#if !defined(HAVE_SCANDIRATf)
+#if !defined(HAVE_SCANDIRAT)
 
 #if defined(_DIRENT_HAVE_D_RECLEN)
 # define reclen(de) ((de)->d_reclen)
