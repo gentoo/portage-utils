@@ -1,10 +1,10 @@
 /*
- * Copyright 2005-2010 Gentoo Foundation
+ * Copyright 2005-2013 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.60 2013/09/29 09:14:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.61 2013/09/29 10:01:55 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qdepends
@@ -32,7 +32,7 @@ static const char * const qdepends_opts_help[] = {
 	"Pretty format specified depend strings",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.60 2013/09/29 09:14:14 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.61 2013/09/29 10:01:55 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -57,6 +57,10 @@ struct _dep_node {
 	struct _dep_node *children;
 };
 typedef struct _dep_node dep_node;
+
+static const dep_node null_node = {
+	.type = DEP_NULL,
+};
 
 /* prototypes */
 #ifdef NDEBUG
@@ -246,7 +250,7 @@ _q_static dep_node *dep_grow_tree(const char *depend)
 
 #undef _maybe_consume_word
 
-	return ret;
+	return ret ? : xmemdup(&null_node, sizeof(null_node));
 
 error_out:
 	warnf("DEPEND: %s", depend);
@@ -294,11 +298,13 @@ _q_static void _dep_print_tree(FILE *fp, const dep_node *root, size_t space)
 		_dep_print_tree(fp, root->neighbor, space);
 }
 
-_q_static void dep_print_depend(FILE *fp, const char *depend)
+_q_static bool dep_print_depend(FILE *fp, const char *depend)
 {
-	dep_node *dep_tree = dep_grow_tree(depend);
+	dep_node *dep_tree;
+
+	dep_tree = dep_grow_tree(depend);
 	if (dep_tree == NULL)
-		return;
+		return false;
 
 	if (!quiet)
 		fprintf(fp, "DEPEND=\"\n");
@@ -308,6 +314,8 @@ _q_static void dep_print_depend(FILE *fp, const char *depend)
 	dep_burn_tree(dep_tree);
 	if (!quiet)
 		fprintf(fp, "\"\n");
+
+	return true;
 }
 
 void dep_burn_tree(dep_node *root)
@@ -545,7 +553,8 @@ int qdepends_main(int argc, char **argv)
 
 	if (do_format) {
 		while (optind < argc) {
-			dep_print_depend(stdout, argv[optind++]);
+			if (!dep_print_depend(stdout, argv[optind++]))
+				return EXIT_FAILURE;
 			if (optind < argc)
 				fprintf(stdout, "\n");
 		}
