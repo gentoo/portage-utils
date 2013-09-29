@@ -1,31 +1,36 @@
-.TH qfile "1" "April 2012" "Gentoo Foundation" "qfile"
+.TH qfile "1" "Sep 2013" "Gentoo Foundation" "qfile"
 .SH NAME
 qfile \- list all pkgs owning files
 .SH SYNOPSIS
 .B qfile
 \fI<opts> <filename>\fR
 .SH DESCRIPTION
-Options: \fB\-[ef:m:oRx:SvqChV]\fR
+
+.SH OPTIONS
 .TP
-\fB\-e\fR, \fB\-\-exact\fR
-Exact match
-.TP
-\fB\-f\fR, \fB\-\-from\fR <arg>
-Read arguments from file <arg> ("\-" for stdin)
-.HP
-\fB\-m\fR, \fB\-\-max\-args\fR <arg> * Treat from file arguments by groups of <arg> (defaults to 5000)
-.TP
-\fB\-o\fR, \fB\-\-orphans\fR
-List orphan files
+\fB\-S\fR, \fB\-\-slots\fR
+Display installed packages with slots
 .TP
 \fB\-R\fR, \fB\-\-root\-prefix\fR
 Assume arguments are already prefixed by $ROOT
 .TP
-\fB\-x\fR, \fB\-\-exclude\fR <arg>
-Don't look in package <arg>
+\fB\-f\fR \fI<arg>\fR, \fB\-\-from\fR \fI<arg>\fR
+Read arguments from file <arg> ("-" for stdin)
 .TP
-\fB\-S\fR, \fB\-\-slots\fR
-Display installed packages with slots
+\fB\-m\fR \fI<arg>\fR, \fB\-\-max\-args\fR \fI<arg>\fR
+Treat from file arguments by groups of <arg> (defaults to 5000)
+.TP
+\fB\-b\fR, \fB\-\-basename\fR
+Match any component of the path
+.TP
+\fB\-o\fR, \fB\-\-orphans\fR
+List orphan files
+.TP
+\fB\-x\fR \fI<arg>\fR, \fB\-\-exclude\fR \fI<arg>\fR
+Don't look in package <arg> (used with --orphans)
+.TP
+\fB\-e\fR, \fB\-\-exact\fR
+Exact match (used with --exclude)
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
 Make a lot of noise
@@ -41,21 +46,17 @@ Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
-.PP
-$Id: qfile.1,v 1.25 2012/04/15 05:31:07 vapier Exp $
-file written for Gentoo by <solar and vapier 
- gentoo.org>
 .SH "FINDING FILES OWNERS"
 .PP
 This is the default behavior of \fBqfile\fP.  It will list the packages which
-own the files (or directories, or symlinks, or anything else Portage can 
+own the files (or directories, or symlinks, or anything else Portage can
 install) you are querying.  Query items may be file paths or simple file names.
 By default, output includes packages names and the complete paths to
-the matching files.  If using \fB\-\-exact\fP, versions of the packages will 
-also be shown.  At the contrary, when using \fB\-\-quiet\fP, only package 
+the matching files.  If using \fB\-\-exact\fP, versions of the packages will
+also be shown.  At the contrary, when using \fB\-\-quiet\fP, only package
 names are listed, without files paths.  Finally, \fB\-\-verbose\fP is similar
-to \fB\-\-exact\fP, but may adds a few warnings.  The return status of 
-\fBqfile\fP will be \fI0\fP as soon as an owning package has been found for 
+to \fB\-\-exact\fP, but may adds a few warnings.  The return status of
+\fBqfile\fP will be \fI0\fP as soon as an owning package has been found for
 one of the query items.
 .PP
 Find names of package(s) owning "/bin/bash":
@@ -71,7 +72,7 @@ Find package(s) owning any file named "bash", and show paths of this files:
 	app-shells/bash (/etc/bash)
 .fi
 .PP
-Find packages(s) owning the file named "bash" in the current directory. Also 
+Find packages(s) owning the file named "bash" in the current directory. Also
 display their exact version:
 .nf\fI
 	$ cd /bin
@@ -88,12 +89,12 @@ Find the package(s) owning the libraries needed by the Bash binary:
 .fi
 .SH "FINDING ORPHAN FILES"
 .PP
-\fBqfile\fP can also, with the \fB\-\-orphans\fP option, find files which are 
-not owned by any package.  This behavior is the opposite of the usual file 
+\fBqfile\fP can also, with the \fB\-\-orphans\fP option, find files which are
+not owned by any package.  This behavior is the opposite of the usual file
 owner search: the output is the list of query items for which no reference has
 been found in your installed packages database.  The \fB\-\-exact\fP option has
-no effect in this mode, whereas \fB\-\-verbose\fP may add a few warning 
-messages.  As for \fB\-\-quiet\fP, it will completly turn off the output, 
+no effect in this mode, whereas \fB\-\-verbose\fP may add a few warning
+messages.  As for \fB\-\-quiet\fP, it will completly turn off the output,
 leaving just a silent test command, which returns \fI0\fP if and only if
 there was no orphan in your query items.
 .PP
@@ -110,10 +111,10 @@ any package:
 	libinstalledmanually.so.2
 .fi
 .PP
-.SH "HANDLING OF THE ROOT VARIABLE"
+.SH "$ROOT HANDLING"
 .PP
 By setting the \fIROOT\fP environment variable, you can force \fBqfile\fP to
-work in the sytem of your choice. This example shows queries for owner of 
+work in the sytem of your choice. This example shows queries for owner of
 "/bin/sh", first on your main system, and then on a system mounted on "/mnt":
 .nf\fI
 	$ qfile -q /bin/sh
@@ -122,19 +123,19 @@ work in the sytem of your choice. This example shows queries for owner of
 	sys-apps/busybox
 .fi
 .PP
-Note that the query item is "/bin/sh" in both commands: by default, what 
-\fBqfile\fP looks for is file paths as they are recorded in the packages 
+Note that the query item is "/bin/sh" in both commands: by default, what
+\fBqfile\fP looks for is file paths as they are recorded in the packages
 database of the target system, and this paths don't include \fI$ROOT\fP.
-If, at the contrary, you want to query files with their current actual 
-paths (including the mount point), you should add the \fB\-\-root\-prefix\fP 
+If, at the contrary, you want to query files with their current actual
+paths (including the mount point), you should add the \fB\-\-root\-prefix\fP
 (\fB\-R\fP) option:
 .nf\fI
 	$ ROOT=/mnt qfile -Rq /mnt/bin/sh
 	sys-apps/busybox
 .fi
 .PP
-The other difference beetween defaults and \fB\-R\fP queries is the output 
-of files paths.  The former doesn't include the \fI$ROOT\fP prefix, and the 
+The other difference beetween defaults and \fB\-R\fP queries is the output
+of files paths.  The former doesn't include the \fI$ROOT\fP prefix, and the
 later does:
 .nf\fI
 	$ ROOT=/mnt qfile sh
@@ -150,7 +151,7 @@ Sure, the same differences hold when querying for orphan files:
 	$ ROOT=/mnt qfile -Ro /mnt/bin/*
 	/mnt/bin/dostuff.sh
 .fi
-.SH "READING ARGUMENTS FROM A FILE (OR STDIN)"
+.SH "READING ARGUMENTS FROM A FILE/STDIN"
 .PP
 When you try to launch \fBqfile\fP with a large number of arguments, you may
 hit the following shell error:
@@ -170,10 +171,10 @@ allows reading your arguments list in a file:
 .fi
 .PP
 Your arguments list must be formatted with one file per line, and without any
-kind of garbage (no leading or trailing space, no empty line, etc.).  The 
+kind of garbage (no leading or trailing space, no empty line, etc.).  The
 default \fBfind\fP output format is just fine in general.
 .PP
-You can also read the arguments list from standard input with the "\fB\-\fP" 
+You can also read the arguments list from standard input with the "\fB\-\fP"
 pseudo filename, which is useful with shell pipes:
 .nf\fI
 	$ find /usr/lib | qfile -o -f -
@@ -183,7 +184,7 @@ pseudo filename, which is useful with shell pipes:
 .fi
 .PP
 Here is an other example of use.  This script lists some files which may be
-orphan config files left behind by Portage after uninstallation or upgrade of 
+orphan config files left behind by Portage after uninstallation or upgrade of
 some packages:
 .nf\fI
 	#!/bin/bash
@@ -211,18 +212,18 @@ bit more memory, but may be a bit faster for really big queries.  Be careful
 though, using some stupidly high or low value can completly kill the
 performances.  In short, you probably don't want to touch this option.
 .PP
-.SH "SEARCHING FOR FILES COLLISIONS"
+.SH "SEARCHING FOR FILE COLLISIONS"
 .PP
 A last option of \fBqfile\fP is \fB\-\-exclude\fP (\fB\-x\fP), which will makes
 it skip one particular package when doing its files owners search.  This option
 takes one argument, which can be a package name (\fBbash\fP or
 \fBapp\-shells/bash\fP), or a versioned package (\fBbash\-3.2_p9\-r1\fP or
-\fBapp\-shells/bash\-3.2_p9\-r1\fP), or a slotted package (\fBbash:0\fP or 
-\fBapp\-shells/bash:0\fP). It is useful for finding file collisions beetween 
-packages (ie., comparing the contents of one package with the contents of all 
+\fBapp\-shells/bash\-3.2_p9\-r1\fP), or a slotted package (\fBbash:0\fP or
+\fBapp\-shells/bash:0\fP). It is useful for finding file collisions beetween
+packages (ie., comparing the contents of one package with the contents of all
 the others).
 .PP
-For example, the following script will search collisions beetween all your 
+For example, the following script will search collisions beetween all your
 installed packages. Be careful, this will takes time:
 .nf\fI
 	#!/bin/bash
@@ -239,7 +240,7 @@ installed packages. Be careful, this will takes time:
 	done
 .fi
 .PP
-An other example is the following script, which can be used to check that a 
+An other example is the following script, which can be used to check that a
 binary package (.tbz2) has no conflict with any of your installed packages,
 but the one it may replace (same name and slot), if any:
 .nf\fI
@@ -259,5 +260,31 @@ tar tjf "${tarbz2}" \\
 rm -rf "${tmpdir}"
 .PP
 .SH "ADDITIONAL CONTRIBUTORS"
-.TP
+.nf
 TGL degrenier[at]easyconnect.fr
+.fi
+.SH "REPORTING BUGS"
+Please report bugs via http://bugs.gentoo.org/
+.br
+Product: Portage Development; Component: Tools
+.SH AUTHORS
+.nf
+Ned Ludd <solar@gentoo.org>
+Mike Frysinger <vapier@gentoo.org>
+.fi
+.SH "SEE ALSO"
+.BR q (1),
+.BR qatom (1),
+.BR qcache (1),
+.BR qcheck (1),
+.BR qdepends (1),
+.BR qgrep (1),
+.BR qlist (1),
+.BR qlop (1),
+.BR qmerge (1),
+.BR qpkg (1),
+.BR qsearch (1),
+.BR qsize (1),
+.BR qtbz2 (1),
+.BR quse (1),
+.BR qxpak (1)

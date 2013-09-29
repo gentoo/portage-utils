@@ -1,45 +1,12 @@
-.TH q "1" "April 2012" "Gentoo Foundation" "q"
+.TH q "1" "Sep 2013" "Gentoo Foundation" "q"
 .SH NAME
 q \- invoke a portage utility applet
 .SH SYNOPSIS
 .B q
 \fI<applet> <args> \fR
 .SH DESCRIPTION
-.SS "Currently defined applets:"
-.TP
-q <applet> <args> : virtual applet
-.TP
-qatom <pkg> : split atom strings
-.TP
-qcache <action> <args> : search the metadata cache
-.TP
-qcheck <pkgname> : verify integrity of installed packages
-.TP
-qdepends <pkgname> : show dependency info
-.TP
-qfile <filename> : list all pkgs owning files
-.TP
-qgrep <misc args> : grep in ebuilds
-.TP
-qlist <pkgname> : list files owned by pkgname
-.TP
-qlop <pkgname> : emerge log analyzer
-.TP
-qmerge <pkgnames> : fetch and merge binary package
-.TP
-qpkg <misc args> : manipulate Gentoo binpkgs
-.TP
-qsearch <regex> : search pkgname/desc
-.TP
-qsize <pkgname> : calculate size usage
-.TP
-qtbz2 <misc args> : manipulate tbz2 packages
-.TP
-quse <useflag> : find pkgs using useflags
-.TP
-qxpak <misc args> : manipulate xpak archives
-.PP
-Options: \fB\-[irmM:vqChV]\fR
+
+.SH OPTIONS
 .TP
 \fB\-i\fR, \fB\-\-install\fR
 Install symlinks for applets
@@ -50,7 +17,7 @@ Reinitialize ebuild cache
 \fB\-m\fR, \fB\-\-metacache\fR
 Reinitialize metadata cache
 .TP
-\fB\-M\fR, \fB\-\-modpath\fR <arg>
+\fB\-M\fR \fI<arg>\fR, \fB\-\-modpath\fR \fI<arg>\fR
 Module path
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
@@ -67,5 +34,49 @@ Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
-.PP
-$Id: q.1,v 1.23 2012/04/15 05:31:07 vapier Exp $
+.SH APPLETS
+.nf
+.B This applet also has sub applets:
+        q <applet> <args> : virtual applet
+    qatom <pkg>           : split atom strings
+   qcache <action> <args> : search the metadata cache
+   qcheck <pkgname>       : verify integrity of installed packages
+ qdepends <pkgname>       : show dependency info
+    qfile <filename>      : list all pkgs owning files
+    qglsa <action> <list> : check GLSAs against system
+    qgrep <misc args>     : grep in ebuilds
+    qlist <pkgname>       : list files owned by pkgname
+     qlop <pkgname>       : emerge log analyzer
+   qmerge <pkgnames>      : fetch and merge binary package
+     qpkg <misc args>     : manipulate Gentoo binpkgs
+  qsearch <regex>         : search pkgname/desc
+    qsize <pkgname>       : calculate size usage
+    qtbz2 <misc args>     : manipulate tbz2 packages
+     quse <useflag>       : find pkgs using useflags
+    qxpak <misc args>     : manipulate xpak archives
+.fi
+.SH "REPORTING BUGS"
+Please report bugs via http://bugs.gentoo.org/
+.br
+Product: Portage Development; Component: Tools
+.SH AUTHORS
+.nf
+Ned Ludd <solar@gentoo.org>
+Mike Frysinger <vapier@gentoo.org>
+.fi
+.SH "SEE ALSO"
+.BR qatom (1),
+.BR qcache (1),
+.BR qcheck (1),
+.BR qdepends (1),
+.BR qfile (1),
+.BR qgrep (1),
+.BR qlist (1),
+.BR qlop (1),
+.BR qmerge (1),
+.BR qpkg (1),
+.BR qsearch (1),
+.BR qsize (1),
+.BR qtbz2 (1),
+.BR quse (1),
+.BR qxpak (1)

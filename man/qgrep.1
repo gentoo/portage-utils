@@ -1,14 +1,15 @@
-.TH qgrep "1" "April 2012" "Gentoo Foundation" "qgrep"
+.TH qgrep "1" "Sep 2013" "Gentoo Foundation" "qgrep"
 .SH NAME
 qgrep \- grep in ebuilds
 .SH SYNOPSIS
 .B qgrep
 \fI<opts> <misc args>\fR
 .SH DESCRIPTION
-Options: \fB\-[IiHNclLexJEsS:B:A:vqChV]\fR
+
+.SH OPTIONS
 .TP
 \fB\-I\fR, \fB\-\-invert\-match\fR
-Select non\-matching lines
+Select non-matching lines
 .TP
 \fB\-i\fR, \fB\-\-ignore\-case\fR
 Ignore case distinctions
@@ -43,13 +44,13 @@ Search in eclasses instead of ebuilds
 \fB\-s\fR, \fB\-\-skip\-comments\fR
 Skip comments lines
 .TP
-\fB\-S\fR, \fB\-\-skip\fR <arg>
+\fB\-S\fR \fI<arg>\fR, \fB\-\-skip\fR \fI<arg>\fR
 Skip lines matching <arg>
 .TP
-\fB\-B\fR, \fB\-\-before\fR <arg>
+\fB\-B\fR \fI<arg>\fR, \fB\-\-before\fR \fI<arg>\fR
 Print <arg> lines of leading context
 .TP
-\fB\-A\fR, \fB\-\-after\fR <arg>
+\fB\-A\fR \fI<arg>\fR, \fB\-\-after\fR \fI<arg>\fR
 Print <arg> lines of trailing context
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
@@ -66,5 +67,29 @@ Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
-.PP
-$Id: qgrep.1,v 1.18 2012/04/15 05:31:07 vapier Exp $
+
+.SH "REPORTING BUGS"
+Please report bugs via http://bugs.gentoo.org/
+.br
+Product: Portage Development; Component: Tools
+.SH AUTHORS
+.nf
+Ned Ludd <solar@gentoo.org>
+Mike Frysinger <vapier@gentoo.org>
+.fi
+.SH "SEE ALSO"
+.BR q (1),
+.BR qatom (1),
+.BR qcache (1),
+.BR qcheck (1),
+.BR qdepends (1),
+.BR qfile (1),
+.BR qlist (1),
+.BR qlop (1),
+.BR qmerge (1),
+.BR qpkg (1),
+.BR qsearch (1),
+.BR qsize (1),
+.BR qtbz2 (1),
+.BR quse (1),
+.BR qxpak (1)

@@ -1,11 +1,12 @@
-.TH quse "1" "April 2012" "Gentoo Foundation" "quse"
+.TH quse "1" "Sep 2013" "Gentoo Foundation" "quse"
 .SH NAME
 quse \- find pkgs using useflags
 .SH SYNOPSIS
 .B quse
 \fI<opts> <useflag>\fR
 .SH DESCRIPTION
-Options: \fB\-[eavKLDF:NvqChV]\fR
+
+.SH OPTIONS
 .TP
 \fB\-e\fR, \fB\-\-exact\fR
 Show exact non regexp matching using strcmp
@@ -22,8 +23,8 @@ Use the LICENSE vs IUSE
 \fB\-D\fR, \fB\-\-describe\fR
 Describe the USE flag
 .TP
-\fB\-F\fR, \fB\-\-format\fR <arg>
-Use your own variable formats. \fB\-F\fR NAME=
+\fB\-F\fR \fI<arg>\fR, \fB\-\-format\fR \fI<arg>\fR
+Use your own variable formats. -F NAME=
 .TP
 \fB\-N\fR, \fB\-\-name\-only\fR
 Only show package name
@@ -42,5 +43,29 @@ Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
-.PP
-$Id: quse.1,v 1.23 2012/04/15 05:31:07 vapier Exp $
+
+.SH "REPORTING BUGS"
+Please report bugs via http://bugs.gentoo.org/
+.br
+Product: Portage Development; Component: Tools
+.SH AUTHORS
+.nf
+Ned Ludd <solar@gentoo.org>
+Mike Frysinger <vapier@gentoo.org>
+.fi
+.SH "SEE ALSO"
+.BR q (1),
+.BR qatom (1),
+.BR qcache (1),
+.BR qcheck (1),
+.BR qdepends (1),
+.BR qfile (1),
+.BR qgrep (1),
+.BR qlist (1),
+.BR qlop (1),
+.BR qmerge (1),
+.BR qpkg (1),
+.BR qsearch (1),
+.BR qsize (1),
+.BR qtbz2 (1),
+.BR qxpak (1)

@@ -1,11 +1,12 @@
-.TH qcheck "1" "April 2012" "Gentoo Foundation" "qcheck"
+.TH qcheck "1" "Sep 2013" "Gentoo Foundation" "qcheck"
 .SH NAME
 qcheck \- verify integrity of installed packages
 .SH SYNOPSIS
 .B qcheck
 \fI<opts> <pkgname>\fR
 .SH DESCRIPTION
-Options: \fB\-[aes:uABHTpvqChV]\fR
+
+.SH OPTIONS
 .TP
 \fB\-a\fR, \fB\-\-all\fR
 List all packages
@@ -13,7 +14,7 @@ List all packages
 \fB\-e\fR, \fB\-\-exact\fR
 Exact match (only CAT/PN or PN without PV)
 .TP
-\fB\-s\fR, \fB\-\-skip\fR <arg>
+\fB\-s\fR \fI<arg>\fR, \fB\-\-skip\fR \fI<arg>\fR
 Ignore files matching the regular expression <arg>
 .TP
 \fB\-u\fR, \fB\-\-update\fR
@@ -30,6 +31,9 @@ Ignore differing/unknown file chksums
 .TP
 \fB\-T\fR, \fB\-\-nomtime\fR
 Ignore differing file mtimes
+.TP
+\fB\-\-skip\-protected\fR
+Ignore files in CONFIG_PROTECT-ed paths
 .TP
 \fB\-p\fR, \fB\-\-prelink\fR
 Undo prelink when calculating checksums
@@ -48,5 +52,29 @@ Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
-.PP
-$Id: qcheck.1,v 1.25 2012/04/15 05:31:07 vapier Exp $
+
+.SH "REPORTING BUGS"
+Please report bugs via http://bugs.gentoo.org/
+.br
+Product: Portage Development; Component: Tools
+.SH AUTHORS
+.nf
+Ned Ludd <solar@gentoo.org>
+Mike Frysinger <vapier@gentoo.org>
+.fi
+.SH "SEE ALSO"
+.BR q (1),
+.BR qatom (1),
+.BR qcache (1),
+.BR qdepends (1),
+.BR qfile (1),
+.BR qgrep (1),
+.BR qlist (1),
+.BR qlop (1),
+.BR qmerge (1),
+.BR qpkg (1),
+.BR qsearch (1),
+.BR qsize (1),
+.BR qtbz2 (1),
+.BR quse (1),
+.BR qxpak (1)

@@ -1,17 +1,18 @@
-.TH qtbz2 "1" "April 2012" "Gentoo Foundation" "qtbz2"
+.TH qtbz2 "1" "Sep 2013" "Gentoo Foundation" "qtbz2"
 .SH NAME
 qtbz2 \- manipulate tbz2 packages
 .SH SYNOPSIS
 .B qtbz2
 \fI<opts> <misc args>\fR
 .SH DESCRIPTION
-Options: \fB\-[d:jstxOvqChV]\fR
+
+.SH OPTIONS
 .TP
-\fB\-d\fR, \fB\-\-dir\fR <arg>
+\fB\-d\fR \fI<arg>\fR, \fB\-\-dir\fR \fI<arg>\fR
 Change to specified directory
 .TP
 \fB\-j\fR, \fB\-\-join\fR
-Join tar.bz2 + xpak into a tbz2
+Join: <tar.bz2> <xpak> <tbz2>
 .TP
 \fB\-s\fR, \fB\-\-split\fR
 Split a tbz2 into a tar.bz2 + xpak
@@ -39,5 +40,29 @@ Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
-.PP
-$Id: qtbz2.1,v 1.20 2012/04/15 05:31:07 vapier Exp $
+
+.SH "REPORTING BUGS"
+Please report bugs via http://bugs.gentoo.org/
+.br
+Product: Portage Development; Component: Tools
+.SH AUTHORS
+.nf
+Ned Ludd <solar@gentoo.org>
+Mike Frysinger <vapier@gentoo.org>
+.fi
+.SH "SEE ALSO"
+.BR q (1),
+.BR qatom (1),
+.BR qcache (1),
+.BR qcheck (1),
+.BR qdepends (1),
+.BR qfile (1),
+.BR qgrep (1),
+.BR qlist (1),
+.BR qlop (1),
+.BR qmerge (1),
+.BR qpkg (1),
+.BR qsearch (1),
+.BR qsize (1),
+.BR quse (1),
+.BR qxpak (1)

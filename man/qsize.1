@@ -1,11 +1,12 @@
-.TH qsize "1" "April 2012" "Gentoo Foundation" "qsize"
+.TH qsize "1" "Sep 2013" "Gentoo Foundation" "qsize"
 .SH NAME
 qsize \- calculate size usage
 .SH SYNOPSIS
 .B qsize
 \fI<opts> <pkgname>\fR
 .SH DESCRIPTION
-Options: \fB\-[fasSmkbi:vqChV]\fR
+
+.SH OPTIONS
 .TP
 \fB\-f\fR, \fB\-\-filesystem\fR
 Show size used on disk
@@ -28,7 +29,7 @@ Display size in kilobytes
 \fB\-b\fR, \fB\-\-bytes\fR
 Display size in bytes
 .TP
-\fB\-i\fR, \fB\-\-ignore\fR <arg>
+\fB\-i\fR \fI<arg>\fR, \fB\-\-ignore\fR \fI<arg>\fR
 Ignore regexp string
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
@@ -45,5 +46,29 @@ Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
-.PP
-$Id: qsize.1,v 1.23 2012/04/15 05:31:07 vapier Exp $
+
+.SH "REPORTING BUGS"
+Please report bugs via http://bugs.gentoo.org/
+.br
+Product: Portage Development; Component: Tools
+.SH AUTHORS
+.nf
+Ned Ludd <solar@gentoo.org>
+Mike Frysinger <vapier@gentoo.org>
+.fi
+.SH "SEE ALSO"
+.BR q (1),
+.BR qatom (1),
+.BR qcache (1),
+.BR qcheck (1),
+.BR qdepends (1),
+.BR qfile (1),
+.BR qgrep (1),
+.BR qlist (1),
+.BR qlop (1),
+.BR qmerge (1),
+.BR qpkg (1),
+.BR qsearch (1),
+.BR qtbz2 (1),
+.BR quse (1),
+.BR qxpak (1)

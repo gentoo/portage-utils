@@ -1,11 +1,12 @@
-.TH qpkg "1" "April 2012" "Gentoo Foundation" "qpkg"
+.TH qpkg "1" "Sep 2013" "Gentoo Foundation" "qpkg"
 .SH NAME
 qpkg \- manipulate Gentoo binpkgs
 .SH SYNOPSIS
 .B qpkg
 \fI<opts> <misc args>\fR
 .SH DESCRIPTION
-Options: \fB\-[cEpP:vqChV]\fR
+
+.SH OPTIONS
 .TP
 \fB\-c\fR, \fB\-\-clean\fR
 clean pkgdir of unused binary files
@@ -16,7 +17,7 @@ clean pkgdir of files not in the tree anymore (slow)
 \fB\-p\fR, \fB\-\-pretend\fR
 pretend only
 .TP
-\fB\-P\fR, \fB\-\-pkgdir\fR <arg>
+\fB\-P\fR \fI<arg>\fR, \fB\-\-pkgdir\fR \fI<arg>\fR
 alternate package directory
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
@@ -33,5 +34,29 @@ Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
-.PP
-$Id: qpkg.1,v 1.20 2012/04/15 05:31:07 vapier Exp $
+
+.SH "REPORTING BUGS"
+Please report bugs via http://bugs.gentoo.org/
+.br
+Product: Portage Development; Component: Tools
+.SH AUTHORS
+.nf
+Ned Ludd <solar@gentoo.org>
+Mike Frysinger <vapier@gentoo.org>
+.fi
+.SH "SEE ALSO"
+.BR q (1),
+.BR qatom (1),
+.BR qcache (1),
+.BR qcheck (1),
+.BR qdepends (1),
+.BR qfile (1),
+.BR qgrep (1),
+.BR qlist (1),
+.BR qlop (1),
+.BR qmerge (1),
+.BR qsearch (1),
+.BR qsize (1),
+.BR qtbz2 (1),
+.BR quse (1),
+.BR qxpak (1)

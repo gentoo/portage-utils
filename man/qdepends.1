@@ -1,11 +1,19 @@
-.TH qdepends "1" "April 2012" "Gentoo Foundation" "qdepends"
+.TH qdepends "1" "Sep 2013" "Gentoo Foundation" "qdepends"
 .SH NAME
 qdepends \- show dependency info
 .SH SYNOPSIS
 .B qdepends
 \fI<opts> <pkgname>\fR
 .SH DESCRIPTION
-Options: \fB\-[drpaNk:Q:vqChV]\fR
+The qdepends applet has a couple different modes.  Normally it is geared towards
+answering the queries "what does package X depend on" and "what packages depend
+on X".  Both can further be classified into build, run, and post dependencies.
+
+By default, it will tell you the build time dependencies only (DEPEND).
+
+Currently, qdepends will only query installed packages.  There is no support for
+querying packages not yet installed (the \fBequery\fR(1) tool can do that).
+.SH OPTIONS
 .TP
 \fB\-d\fR, \fB\-\-depend\fR
 Show DEPEND info (default)
@@ -16,10 +24,10 @@ Show RDEPEND info
 \fB\-p\fR, \fB\-\-pdepend\fR
 Show PDEPEND info
 .TP
-\fB\-k\fR, \fB\-\-key\fR <arg>
+\fB\-k\fR \fI<arg>\fR, \fB\-\-key\fR \fI<arg>\fR
 User defined vdb key
 .TP
-\fB\-Q\fR, \fB\-\-query\fR <arg>
+\fB\-Q\fR \fI<arg>\fR, \fB\-\-query\fR \fI<arg>\fR
 Query reverse deps
 .TP
 \fB\-N\fR, \fB\-\-name\-only\fR
@@ -27,6 +35,9 @@ Only show package name
 .TP
 \fB\-a\fR, \fB\-\-all\fR
 Show all DEPEND info
+.TP
+\fB\-f\fR, \fB\-\-format\fR
+Pretty format specified depend strings
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
 Make a lot of noise
@@ -42,5 +53,22 @@ Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
-.PP
-$Id: qdepends.1,v 1.23 2012/04/15 05:31:07 vapier Exp $
+.SH "EXAMPLES"
+For finding out what a particular package depends on for building, you could do:
+.nf
+	$ \fIqdepends nano\fR
+	app-editors/nano-2.3.2: >=sys-libs/ncurses-5.9-r1[unicode] sys-apps/file ...
+.fi
+This tells us that we have \fIapp-editors/nano-2.3.2\fR installed and it depends
+on ncurses (among other things).
+.SH "REPORTING BUGS"
+Please report bugs via http://bugs.gentoo.org/
+.br
+Product: Portage Development; Component: Tools
+.SH AUTHORS
+.nf
+Ned Ludd <solar@gentoo.org>
+Mike Frysinger <vapier@gentoo.org>
+.fi
+.SH "SEE ALSO"
+

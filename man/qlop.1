@@ -1,11 +1,12 @@
-.TH qlop "1" "April 2012" "Gentoo Foundation" "qlop"
+.TH qlop "1" "Sep 2013" "Gentoo Foundation" "qlop"
 .SH NAME
 qlop \- emerge log analyzer
 .SH SYNOPSIS
 .B qlop
 \fI<opts> <pkgname>\fR
 .SH DESCRIPTION
-Options: \fB\-[gtHluscf:vqChV]\fR
+
+.SH OPTIONS
 .TP
 \fB\-g\fR, \fB\-\-gauge\fR
 Gauge number of times a package has been merged
@@ -14,7 +15,7 @@ Gauge number of times a package has been merged
 Calculate merge time for a specific package
 .TP
 \fB\-H\fR, \fB\-\-human\fR
-Print seconds in human readable format (needs \fB\-t\fR)
+Print seconds in human readable format (needs -t)
 .TP
 \fB\-l\fR, \fB\-\-list\fR
 Show merge history
@@ -28,7 +29,7 @@ Show sync history
 \fB\-c\fR, \fB\-\-current\fR
 Show current emerging packages
 .TP
-\fB\-f\fR, \fB\-\-logfile\fR <arg>
+\fB\-f\fR \fI<arg>\fR, \fB\-\-logfile\fR \fI<arg>\fR
 Read emerge logfile instead of /var/log/emerge.log
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
@@ -45,5 +46,29 @@ Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
-.PP
-$Id: qlop.1,v 1.21 2012/04/15 05:31:07 vapier Exp $
+
+.SH "REPORTING BUGS"
+Please report bugs via http://bugs.gentoo.org/
+.br
+Product: Portage Development; Component: Tools
+.SH AUTHORS
+.nf
+Ned Ludd <solar@gentoo.org>
+Mike Frysinger <vapier@gentoo.org>
+.fi
+.SH "SEE ALSO"
+.BR q (1),
+.BR qatom (1),
+.BR qcache (1),
+.BR qcheck (1),
+.BR qdepends (1),
+.BR qfile (1),
+.BR qgrep (1),
+.BR qlist (1),
+.BR qmerge (1),
+.BR qpkg (1),
+.BR qsearch (1),
+.BR qsize (1),
+.BR qtbz2 (1),
+.BR quse (1),
+.BR qxpak (1)

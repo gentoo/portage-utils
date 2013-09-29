@@ -1,20 +1,18 @@
-.TH qlist "1" "April 2012" "Gentoo Foundation" "qlist"
+.TH qlist "1" "Sep 2013" "Gentoo Foundation" "qlist"
 .SH NAME
 qlist \- list files owned by pkgname
 .SH SYNOPSIS
 .B qlist
 \fI<opts> <pkgname>\fR
 .SH DESCRIPTION
-Options: \fB\-[ISULcDeadosvqChV]\fR
+
+.SH OPTIONS
 .TP
 \fB\-I\fR, \fB\-\-installed\fR
 Just show installed packages
 .TP
 \fB\-S\fR, \fB\-\-slots\fR
 Display installed packages with slots
-.TP
-\fB\-L\fR, \fB\-\-separator\fR
-Display : as the slot separator
 .TP
 \fB\-c\fR, \fB\-\-columns\fR
 Display column view
@@ -24,6 +22,9 @@ Display installed packages with flags used
 .TP
 \fB\-D\fR, \fB\-\-dups\fR
 Only show package dups
+.TP
+\fB\-\-showdebug\fR
+Show /usr/lib/debug files
 .TP
 \fB\-e\fR, \fB\-\-exact\fR
 Exact match (only CAT/PN or PN without PV)
@@ -54,5 +55,29 @@ Print this help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
-.PP
-$Id: qlist.1,v 1.25 2012/04/15 05:31:07 vapier Exp $
+
+.SH "REPORTING BUGS"
+Please report bugs via http://bugs.gentoo.org/
+.br
+Product: Portage Development; Component: Tools
+.SH AUTHORS
+.nf
+Ned Ludd <solar@gentoo.org>
+Mike Frysinger <vapier@gentoo.org>
+.fi
+.SH "SEE ALSO"
+.BR q (1),
+.BR qatom (1),
+.BR qcache (1),
+.BR qcheck (1),
+.BR qdepends (1),
+.BR qfile (1),
+.BR qgrep (1),
+.BR qlop (1),
+.BR qmerge (1),
+.BR qpkg (1),
+.BR qsearch (1),
+.BR qsize (1),
+.BR qtbz2 (1),
+.BR quse (1),
+.BR qxpak (1)
