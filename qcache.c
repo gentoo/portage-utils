@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.45 2013/09/29 18:36:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.46 2013/09/29 18:40:22 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -47,7 +47,7 @@ static const char * const qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.45 2013/09/29 18:36:11 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.46 2013/09/29 18:40:22 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -598,8 +598,8 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 					qcache_free_data(data.cache_data);
 				} else
-					warn("unable to read cache '%s'\n"
-                         "\tperhaps you need to `egencache -j 4` ?", cachepath);
+					warnp("unable to read cache '%s'\n"
+					      "\tperhaps you need to `egencache -j 4` ?", cachepath);
 
 				free(ebuilds[k]);
 				free(cachepath);
