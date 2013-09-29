@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.59 2013/09/29 06:44:39 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.60 2013/09/29 09:14:14 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -9,7 +9,7 @@
 
 #ifdef APPLET_qdepends
 
-#define QDEPENDS_FLAGS "drpaNk:Q:" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpafNk:Q:" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
 	{"depend",    no_argument, NULL, 'd'},
 	{"rdepend",   no_argument, NULL, 'r'},
@@ -18,6 +18,7 @@ static struct option const qdepends_long_opts[] = {
 	{"query",      a_argument, NULL, 'Q'},
 	{"name-only", no_argument, NULL, 'N'},
 	{"all",       no_argument, NULL, 'a'},
+	{"format",    no_argument, NULL, 'f'},
 	COMMON_LONG_OPTS
 };
 static const char * const qdepends_opts_help[] = {
@@ -28,9 +29,10 @@ static const char * const qdepends_opts_help[] = {
 	"Query reverse deps",
 	"Only show package name",
 	"Show all DEPEND info",
+	"Pretty format specified depend strings",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.59 2013/09/29 06:44:39 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.60 2013/09/29 09:14:14 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -57,8 +59,12 @@ struct _dep_node {
 typedef struct _dep_node dep_node;
 
 /* prototypes */
-#define dep_dump_tree(r) _dep_dump_tree(r,0)
-_q_static void _dep_dump_tree(const dep_node *root, int space);
+#ifdef NDEBUG
+# define dep_dump_tree(r)
+#else
+# define dep_dump_tree(r) _dep_print_tree(stdout, r, 0)
+#endif
+_q_static void _dep_print_tree(FILE *fp, const dep_node *root, size_t space);
 void dep_burn_tree(dep_node *root);
 char *dep_flatten_tree(const dep_node *root);
 _q_static void _dep_attach(dep_node *root, dep_node *attach_me, int type);
@@ -251,25 +257,57 @@ error_out:
 	return NULL;
 }
 
-_q_static void _dep_dump_tree(const dep_node *root, int space)
+_q_static void _dep_print_tree(FILE *fp, const dep_node *root, size_t space)
 {
-#ifndef EBUG
-	return;
-#endif
+	size_t s;
 
-	int spaceit = space;
 	assert(root);
-	if (root->type == DEP_NULL) goto this_node_sucks;
+	if (root->type == DEP_NULL)
+		goto this_node_sucks;
 
-	while (spaceit--) printf("\t");
-	printf("Node [%s]: ", _dep_names[root->type]);
+	for (s = space; s; --s)
+		fprintf(fp, "\t");
+
+	if (verbose > 1)
+		fprintf(fp, "Node [%s]: ", _dep_names[root->type]);
 	/*printf("Node %p [%s] %p %p %p: ", root, _dep_names[root->type], root->parent, root->neighbor, root->children);*/
-	if (root->info) printf("'%s'", root->info);
-	printf("\n");
+	if (root->type == DEP_OR)
+		fprintf(fp, "|| (");
+	if (root->info) {
+		fprintf(fp, "%s", root->info);
+		/* If there is only one child, be nice to one-line: foo? ( pkg ) */
+		if (root->type == DEP_USE)
+			fprintf(fp, "? (");
+	}
+	fprintf(fp, "\n");
 
-	if (root->children) _dep_dump_tree(root->children, space+1);
-this_node_sucks:
-	if (root->neighbor) _dep_dump_tree(root->neighbor, space);
+	if (root->children)
+		_dep_print_tree(fp, root->children, space+1);
+
+	if (root->type == DEP_OR || root->type == DEP_USE) {
+		for (s = space; s; --s)
+			fprintf(fp, "\t");
+		fprintf(fp, ")\n");
+	}
+ this_node_sucks:
+	if (root->neighbor)
+		_dep_print_tree(fp, root->neighbor, space);
+}
+
+_q_static void dep_print_depend(FILE *fp, const char *depend)
+{
+	dep_node *dep_tree = dep_grow_tree(depend);
+	if (dep_tree == NULL)
+		return;
+
+	if (!quiet)
+		fprintf(fp, "DEPEND=\"\n");
+
+	_dep_print_tree(fp, dep_tree, 1);
+
+	dep_burn_tree(dep_tree);
+	if (!quiet)
+		fprintf(fp, "\"\n");
 }
 
 void dep_burn_tree(dep_node *root)
@@ -478,6 +516,7 @@ int qdepends_main(int argc, char **argv)
 	};
 	q_vdb_pkg_cb *cb;
 	int i;
+	bool do_format = false;
 	const char *query = NULL;
 	const char *depend_file;
 	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", NULL, NULL };
@@ -498,10 +537,20 @@ int qdepends_main(int argc, char **argv)
 		case 'a': depend_file = NULL; break;
 		case 'Q': query = optarg; break;
 		case 'N': qdep_name_only = 1; break;
+		case 'f': do_format = true; break;
 		}
 	}
-	if ((argc == optind) && (query == NULL))
+	if ((argc == optind) && (query == NULL) && !do_format)
 		qdepends_usage(EXIT_FAILURE);
+
+	if (do_format) {
+		while (optind < argc) {
+			dep_print_depend(stdout, argv[optind++]);
+			if (optind < argc)
+				fprintf(stdout, "\n");
+		}
+		return EXIT_SUCCESS;
+	}
 
 	state.depend_file = depend_file;
 	state.query = query;
