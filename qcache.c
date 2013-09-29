@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.43 2013/09/29 18:32:44 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.44 2013/09/29 18:33:22 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -47,7 +47,7 @@ static const char * const qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.43 2013/09/29 18:32:44 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.44 2013/09/29 18:33:22 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -530,7 +530,8 @@ int qcache_traverse(void (*func)(qcache_data*))
 		xasprintf(&pkgpath, "%s/%s", portdir, categories[i]->d_name);
 
 		if (-1 == (num_pkg = scandir(pkgpath, &packages, qcache_file_select, alphasort))) {
-			warnp("Found a cache dir, but unable to process %s", pkgpath);
+			if (errno != ENOENT)
+				warnp("Found a cache dir, but unable to process %s", pkgpath);
 			free(categories[i]);
 			free(pkgpath);
 			continue;
