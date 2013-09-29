@@ -1,13 +1,11 @@
 thisdir = mkdir
 include ../subdir.mk
 
-CFLAGS += -Wall
-
 all: $(b)/m
 
 $(b)/m: $(s)/test.c
 	mkdir -p $(b)
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $(CPPFLAGS) $< -o $@
 
 test check: dotest
 

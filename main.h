@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.15 2011/12/19 20:27:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.16 2013/09/29 22:42:36 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -53,10 +53,6 @@
 
 #define _q_unused_ __attribute__((__unused__))
 
-#ifndef BUFSIZE
-# define BUFSIZE 8192
-#endif
-
 #ifdef EBUG
 # define DBG(fmt, args...) warnf(fmt , ## args)
 # define IF_DEBUG(x) x
@@ -68,20 +64,4 @@
 #define GETOPT_LONG(A, a, ex) \
 	getopt_long(argc, argv, ex A ## _FLAGS, a ## _long_opts, NULL)
 
-#ifndef MIN
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#endif
-#ifndef MAX
-#define MAX(x, y) ((x) < (y) ? (y) : (x))
-#endif
-
 #define a_argument required_argument
-
-/* Easy enough to glue to older versions */
-#ifndef O_CLOEXEC
-# define O_CLOEXEC 0
-#endif
-
-#ifndef CONFIG_EPREFIX
-#define CONFIG_EPREFIX "/"
-#endif

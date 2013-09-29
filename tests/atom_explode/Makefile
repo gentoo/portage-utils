@@ -1,13 +1,11 @@
 thisdir = atom_explode
 include ../subdir.mk
 
-CFLAGS += -Wall
-
 all: $(b)/e
 
 $(b)/e: $(s)/test.c
 	mkdir -p $(b)
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $(CPPFLAGS) $< -o $@
 
 test check: dotest basic
 

@@ -18,3 +18,6 @@ atb = $(abs_top_builddir)
 ats = $(abs_top_srcdir)
 
 export b s atb ats
+
+CFLAGS += -Wall
+CPPFLAGS += -I$(abs_top_srcdir)

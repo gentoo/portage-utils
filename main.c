@@ -1,44 +1,13 @@
 /*
- * Copyright 2005-2008 Gentoo Foundation
+ * Copyright 2005-2013 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.227 2013/05/23 03:19:00 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.228 2013/09/29 22:42:36 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2008 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"  /* make sure we have EPREFIX, if set */
-#endif
-
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#ifndef _FILE_OFFSET_BITS
-#define _FILE_OFFSET_BITS 64 /* #471024 */
-#endif
-#ifdef _AIX
-#define _LINUX_SOURCE_COMPAT
-#endif
-
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <sys/types.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <time.h>
-#include <sys/time.h>
-#include <ctype.h>
-#include <dirent.h>
-#include <getopt.h>
-#include <regex.h>
-#include <errno.h>
-#include <libgen.h>
-#include <limits.h>
-#include <assert.h>
+#include "porting.h"
 #include "main.h"
 
 /* prototypes and such */
