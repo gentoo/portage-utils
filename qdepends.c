@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.57 2012/11/10 06:35:21 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.58 2013/09/29 05:09:29 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -30,7 +30,7 @@ static const char * const qdepends_opts_help[] = {
 	"Show all DEPEND info",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.57 2012/11/10 06:35:21 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.58 2013/09/29 05:09:29 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -96,8 +96,7 @@ dep_node *_dep_grow_node(dep_type type, char *info, size_t info_len)
 			info_len = strlen(info);
 		len += info_len + 1;
 	}
-	ret = xmalloc(len);
-	memset(ret, 0x00, len);
+	ret = xzalloc(len);
 
 	ret->type = type;
 	if (info) {
