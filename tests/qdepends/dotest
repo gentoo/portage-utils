@@ -1,0 +1,44 @@
+#!/bin/bash
+
+. ../init.sh
+
+set -e
+
+mktmpdir
+
+test() {
+	local num=$1 dep=$2 exp=${3:-0} ret
+	local cmd=( qdepends -f "${dep}" )
+
+	"${cmd[@]}" >& list && ret=0 || ret=$?
+	if [[ ${ret} -ne ${exp} ]] ; then
+		tend 1 "exit code: wanted ${exp} but got ${ret}: ${cmd[*]}"
+	elif [[ ${exp} -ne 0 ]] ; then
+		# for errors, let the message be anything
+		return
+	fi
+
+	local good="${as}/list${num}.good"
+	if [[ ! -e ${good} ]] ; then
+		cp list "${good}"
+	fi
+	diff -u list "${good}"
+	tend $? "${cmd[*]}"
+}
+
+# basic sanity checks
+test 00 '|' 1
+test 01 ''
+test 02 'a/b'
+test 03 'foo? ( a/b )'
+test 04 '|| ( a/b )'
+
+# a bit more complicated with or deps
+test 05 '|| ( || ( || ( x ) a ) )'
+
+# hande use deps on atoms #470180
+test 06 'a[foo(+)]'
+
+cleantmpdir
+
+end
