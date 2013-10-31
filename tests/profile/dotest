@@ -53,4 +53,7 @@ tenv 1 ACCEPT_LICENSE lic
 tenv 1 PORTAGE_BINHOST http://someurl/
 tenv 1 NOCOLOR 1
 
+# this validates pathological vars
+tenv 1 PKGDIR " "
+
 end

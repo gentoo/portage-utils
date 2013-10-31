@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2013 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.228 2013/09/29 22:42:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.229 2013/10/31 02:40:23 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
@@ -752,7 +752,7 @@ void initialize_portage_env(void)
 			}
 			*svar = byte;
 			slen = strlen(sval);
-			post_len = strlen(svar + 1);
+			post_len = strlen(svar + !!brace);
 			*var->value.s = xrealloc(*var->value.s, pre_len + MAX(var_len, slen) + post_len + 1);
 
 			/*
