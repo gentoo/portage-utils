@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/scandirat.c,v 1.6 2013/09/29 10:25:25 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/scandirat.c,v 1.7 2013/11/17 10:26:53 grobian Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -18,7 +18,7 @@
 #if defined(_DIRENT_HAVE_D_RECLEN)
 # define reclen(de) ((de)->d_reclen)
 #else
-# define reclen(de) (sizeof(*(de)))
+# define reclen(de) (sizeof(*(de)) + strlen((de)->d_name))
 #endif
 
 static int scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
