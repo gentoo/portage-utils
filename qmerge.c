@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.130 2013/05/09 05:28:11 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.131 2014/01/07 19:17:25 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.130 2013/05/09 05:28:11 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.131 2014/01/07 19:17:25 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1157,8 +1157,11 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 		if (!keep || q) {
 			char *p;
 
-			if (unlinkat(portroot_fd, e->name + 1, 0))
-				errp("could not unlink: %s%s", portroot, e->name + 1);
+			if (unlinkat(portroot_fd, e->name + 1, 0)) {
+				/* If a file was already deleted, ignore the error */
+				if (errno != ENOENT)
+					errp("could not unlink: %s%s", portroot, e->name + 1);
+			}
 
 			p = strrchr(e->name, '/');
 			if (p) {
