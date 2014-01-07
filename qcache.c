@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.46 2013/09/29 18:40:22 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.47 2014/01/07 19:48:45 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -47,7 +47,7 @@ static const char * const qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.46 2013/09/29 18:40:22 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.47 2014/01/07 19:48:45 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -236,7 +236,7 @@ static unsigned int qcache_count_lines(char *filename)
 	int count, fd;
 	char c;
 
-	if ((fd = open(filename, O_RDONLY)) != -1) {
+	if ((fd = open(filename, O_RDONLY|O_CLOEXEC)) != -1) {
 		count = 0;
 
 		while (read(fd, &c, 1) == 1)
@@ -274,7 +274,7 @@ char **qcache_read_lines(char *filename)
 	len   = sizeof(char*) * (num_lines + 1);
 	lines = xzalloc(len);
 
-	if ((fd = open(filename, O_RDONLY)) != -1) {
+	if ((fd = open(filename, O_RDONLY|O_CLOEXEC)) != -1) {
 		for (i = 0; i < num_lines; i++) {
 			count = 0;
 
