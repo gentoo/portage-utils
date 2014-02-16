@@ -11,8 +11,6 @@
 
 - speed up queue structure ... append walks the whole list
 
-- use O_PATH with fd's that are only used to open other files
-
 - qmerge
 	- dep resolver needs spanktastic love.
 	- needs safe deleting (merge in place rather than unmerge;merge)
@@ -35,6 +33,7 @@
 		foo-(1234)_alpha(56789)
 	- these limits should not be an issue for all practical purposes
 	- need to handle USE deps like: cat/pkg-123[foo(+)]
+	- show support slots like: qmerge -U automake:1.12
 
 - qcache:
 	- need to convert it to new metadata/md5 style

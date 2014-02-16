@@ -43,6 +43,7 @@ _q_static int rm_rf_at(int dfd, const char *path)
 	DIR *dir;
 	struct dirent *de;
 
+	/* Cannot use O_PATH as we want to use fdopendir() */
 	subdfd = openat(dfd, path, O_RDONLY|O_CLOEXEC|O_NOFOLLOW);
 	if (subdfd < 0)
 		return -1;

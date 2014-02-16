@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.21 2012/11/17 18:44:58 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qtbz2.c,v 1.22 2014/02/16 21:14:24 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -46,7 +46,7 @@ static const char * const qtbz2_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.21 2012/11/17 18:44:58 vapier Exp $";
+static const char qtbz2_rcsid[] = "$Id: qtbz2.c,v 1.22 2014/02/16 21:14:24 vapier Exp $";
 #define qtbz2_usage(ret) usage(ret, QTBZ2_FLAGS, qtbz2_long_opts, qtbz2_opts_help, lookup_applet_idx("qtbz2"))
 
 static char tbz2_stdout = 0;
@@ -263,7 +263,7 @@ int qtbz2_main(int argc, char **argv)
 		case 'd':
 			if (dir_fd != AT_FDCWD)
 				err("Only use -d once");
-			dir_fd = open(optarg, O_RDONLY|O_CLOEXEC);
+			dir_fd = open(optarg, O_RDONLY|O_CLOEXEC|O_PATH);
 			break;
 		}
 	}

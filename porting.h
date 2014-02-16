@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2013 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/porting.h,v 1.1 2013/09/29 22:42:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/porting.h,v 1.2 2014/02/16 21:14:24 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,6 +65,9 @@
 /* Easy enough to glue to older versions */
 #ifndef O_CLOEXEC
 #define O_CLOEXEC 0
+#endif
+#ifndef O_PATH
+#define O_PATH 0
 #endif
 
 #ifndef CONFIG_EPREFIX

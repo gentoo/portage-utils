@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.5 2012/10/28 06:27:59 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.6 2014/02/16 21:14:24 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -24,7 +24,7 @@ _q_static q_vdb_ctx *q_vdb_open(/*const char *sroot, const char *svdb*/void)
 
 	if (!sroot)
 		sroot = portroot;
-	ctx->portroot_fd = open(sroot, O_RDONLY|O_CLOEXEC);
+	ctx->portroot_fd = open(sroot, O_RDONLY|O_CLOEXEC|O_PATH);
 	if (ctx->portroot_fd == -1) {
 		warnp("could not open root: %s", sroot);
 		goto f_error;
@@ -36,6 +36,7 @@ _q_static q_vdb_ctx *q_vdb_open(/*const char *sroot, const char *svdb*/void)
 	svdb++;
 	if (*svdb == '\0')
 		svdb = ".";
+	/* Cannot use O_PATH as we want to use fdopendir() */
 	ctx->vdb_fd = openat(ctx->portroot_fd, svdb, O_RDONLY|O_CLOEXEC);
 	if (ctx->vdb_fd == -1) {
 		warnp("could not open vdb: %s (in root %s)", svdb, sroot);
@@ -114,6 +115,7 @@ _q_static q_vdb_cat_ctx *q_vdb_open_cat(q_vdb_ctx *ctx, const char *name)
 	int fd;
 	DIR *dir;
 
+	/* Cannot use O_PATH as we want to use fdopendir() */
 	fd = openat(ctx->vdb_fd, name, O_RDONLY|O_CLOEXEC);
 	if (fd == -1)
 		return NULL;
@@ -194,9 +196,10 @@ _q_static q_vdb_pkg_ctx *q_vdb_open_pkg(q_vdb_cat_ctx *cat_ctx, const char *name
 	q_vdb_pkg_ctx *pkg_ctx;
 	int fd;
 
-	fd = openat(cat_ctx->fd, name, O_RDONLY|O_CLOEXEC);
+//	fd = openat(cat_ctx->fd, name, O_RDONLY|O_CLOEXEC|O_PATH);
 	if (fd == -1)
 		return NULL;
+	fd = -1;
 
 	pkg_ctx = xmalloc(sizeof(*pkg_ctx));
 	pkg_ctx->name = name;
@@ -251,7 +254,8 @@ _q_static FILE *q_vdb_pkg_fopenat(q_vdb_pkg_ctx *pkg_ctx, const char *file,
 
 _q_static void q_vdb_close_pkg(q_vdb_pkg_ctx *pkg_ctx)
 {
-	close(pkg_ctx->fd);
+	if (pkg_ctx->fd != -1)
+		close(pkg_ctx->fd);
 	free(pkg_ctx);
 }
 

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.131 2014/01/07 19:17:25 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.132 2014/02/16 21:14:24 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.131 2014/01/07 19:17:25 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.132 2014/02/16 21:14:24 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -237,7 +237,7 @@ _q_static char *best_version(const char *catname, const char *pkgname)
 	/* Make sure these dirs exist before we try walking them */
 	switch (vdb_check) {
 	case 1: {
-		int fd = open(portroot, O_RDONLY|O_CLOEXEC);
+		int fd = open(portroot, O_RDONLY|O_CLOEXEC|O_PATH);
 		if (fd >= 0) {
 			/* skip leading slash */
 			vdb_check = faccessat(fd, portvdb + 1, X_OK, 0);
@@ -483,10 +483,11 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 	ret = -1;
 
 	/* Get handles to these subdirs */
+	/* Cannot use O_PATH as we want to use fdopendir() */
 	subfd_src = openat(fd_src, src, O_RDONLY|O_CLOEXEC);
 	if (subfd_src < 0)
 		return ret;
-	subfd_dst = openat(fd_dst, dst, O_RDONLY|O_CLOEXEC);
+	subfd_dst = openat(fd_dst, dst, O_RDONLY|O_CLOEXEC|O_PATH);
 	if (subfd_dst < 0) {
 		close(subfd_src);
 		return ret;
@@ -1038,7 +1039,7 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 		return 0;
 
 	/* Get a handle to the root to play with */
-	portroot_fd = open(portroot, O_RDONLY | O_CLOEXEC);
+	portroot_fd = open(portroot, O_RDONLY|O_CLOEXEC|O_PATH);
 	if (portroot_fd == -1) {
 		warnp("unable to read %s", portroot);
 		goto done;
@@ -1048,7 +1049,7 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 	/* Note: This vdb_path must be absolute since we use it in pkg_run_func() */
 	xasprintf(&vdb_path, "%s%s/%s/%s/", portroot, portvdb, cat, pkgname);
 	xasprintf(&T, "%stemp", vdb_path);
-	vdb_fd = openat(portroot_fd, vdb_path, O_RDONLY | O_CLOEXEC);
+	vdb_fd = openat(portroot_fd, vdb_path, O_RDONLY|O_CLOEXEC|O_PATH);
 	if (vdb_fd == -1) {
 		warnp("unable to read %s", vdb_path);
 		goto done;

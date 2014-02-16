@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/scandirat.c,v 1.7 2013/11/17 10:26:53 grobian Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/scandirat.c,v 1.8 2014/02/16 21:14:24 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -29,6 +29,7 @@ static int scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
 	DIR *dirp;
 	struct dirent *de, **ret;
 
+	/* Cannot use O_PATH as we want to use fdopendir() */
 	fd = openat(dir_fd, dir, O_RDONLY|O_CLOEXEC);
 	if (fd == -1)
 		return -1;

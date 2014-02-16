@@ -10,7 +10,7 @@ q_profile_walk_at(int dir_fd, const char *dir, const char *file,
 	char *buf;
 
 	/* Pop open this profile dir */
-	subdir_fd = openat(dir_fd, dir, O_RDONLY|O_CLOEXEC);
+	subdir_fd = openat(dir_fd, dir, O_RDONLY|O_CLOEXEC|O_PATH);
 	if (subdir_fd < 0)
 		return data;
 
