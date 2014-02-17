@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.132 2014/02/16 21:14:24 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.133 2014/02/17 06:32:33 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.132 2014/02/16 21:14:24 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.133 2014/02/17 06:32:33 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -113,16 +113,15 @@ _q_static char *find_binpkg(const char *);
 
 _q_static void fetch(const char *destdir, const char *src)
 {
-	char buf[BUFSIZ];
-
 	if (!binhost[0])
-		errf("PORTAGE_BINHOST= does not appear to be valid");
+		return;
 
 	fflush(stdout);
 	fflush(stderr);
 
 #if 0
 	if (getenv("FETCHCOMMAND") != NULL) {
+		char buf[BUFSIZ];
 		snprintf(buf, sizeof(buf), "(export DISTDIR='%s' URI='%s/%s'; %s)",
 			destdir, binhost, src, getenv("FETCHCOMMAND"));
 		xsystem(buf);
@@ -131,6 +130,7 @@ _q_static void fetch(const char *destdir, const char *src)
 	{
 		pid_t p;
 		int status;
+		char *path;
 
 		char prog[] = "wget";
 		char argv_c[] = "-c";
@@ -142,18 +142,23 @@ _q_static void fetch(const char *destdir, const char *src)
 			argv_c,
 			argv_P,
 			argv_dir,
-			buf,
+			path,
 			quiet ? argv_q : NULL,
 			NULL,
 		};
 		if (!(force_download || install) && pretend)
 			strcpy(prog, "echo");
-		snprintf(buf, sizeof(buf), "%s/%s", binhost, src);
+		xasprintf(&path, "%s/%s", binhost, src);
 
 		p = vfork();
-		if (p == 0)
+		switch (p) {
+		case 0:
 			_exit(execvp(prog, argv));
+		case -1:
+			errp("vfork failed");
+		}
 
+		free(path);
 		free(argv_dir);
 
 		waitpid(p, &status, 0);
