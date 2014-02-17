@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2011 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.6 2014/02/16 21:14:24 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/vdb.c,v 1.7 2014/02/17 06:31:10 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2011 Mike Frysinger  - <vapier@gentoo.org>
@@ -196,10 +196,9 @@ _q_static q_vdb_pkg_ctx *q_vdb_open_pkg(q_vdb_cat_ctx *cat_ctx, const char *name
 	q_vdb_pkg_ctx *pkg_ctx;
 	int fd;
 
-//	fd = openat(cat_ctx->fd, name, O_RDONLY|O_CLOEXEC|O_PATH);
+	fd = openat(cat_ctx->fd, name, O_RDONLY|O_CLOEXEC|O_PATH);
 	if (fd == -1)
 		return NULL;
-	fd = -1;
 
 	pkg_ctx = xmalloc(sizeof(*pkg_ctx));
 	pkg_ctx->name = name;
