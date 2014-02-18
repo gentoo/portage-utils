@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2013 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.230 2014/02/18 07:26:14 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.231 2014/02/18 07:31:33 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
@@ -69,8 +69,8 @@ void init_coredumps(void)
 /* include common library code */
 #include "libq/libq.c"
 
-void no_colors(void);
-void no_colors()
+_q_static
+void no_colors(void)
 {
 	/* echo $(awk '{print $4,"="}' libq/colors.c  | grep ^* |cut -c 2-| grep ^[A-Z] |tr '\n' ' ') = \"\"\;  */
 	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = DKGREEN = MAGENTA = RED = YELLOW = BRYELLOW = WHITE = "";
