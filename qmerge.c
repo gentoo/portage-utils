@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.133 2014/02/17 06:32:33 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.134 2014/02/18 04:32:52 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.133 2014/02/17 06:32:33 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.134 2014/02/18 04:32:52 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -132,6 +132,8 @@ _q_static void fetch(const char *destdir, const char *src)
 		int status;
 		char *path;
 
+		xasprintf(&path, "%s/%s", binhost, src);
+
 		char prog[] = "wget";
 		char argv_c[] = "-c";
 		char argv_P[] = "-P";
@@ -148,7 +150,6 @@ _q_static void fetch(const char *destdir, const char *src)
 		};
 		if (!(force_download || install) && pretend)
 			strcpy(prog, "echo");
-		xasprintf(&path, "%s/%s", binhost, src);
 
 		p = vfork();
 		switch (p) {
