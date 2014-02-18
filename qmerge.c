@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.137 2014/02/18 06:58:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.138 2014/02/18 06:59:05 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -48,6 +48,7 @@ static struct option const qmerge_long_opts[] = {
 	{"yes",     no_argument, NULL, 'y'},
 	{"nodeps",  no_argument, NULL, 'O'},
 	{"nomd5",   no_argument, NULL, '5'},
+	{"debug",   no_argument, NULL, 128},
 	COMMON_LONG_OPTS
 };
 
@@ -62,10 +63,11 @@ static const char * const qmerge_opts_help[] = {
 	"Don't prompt before overwriting",
 	"Don't merge dependencies",
 	"Don't verify MD5 digest of files",
+	"Run shell funcs with `set -x`",
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.137 2014/02/18 06:58:45 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.138 2014/02/18 06:59:05 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -77,6 +79,7 @@ char follow_rdepends = 1;
 char nomd5 = 0;
 char qmerge_strict = 0;
 char update_only = 0;
+bool debug = false;
 const char Packages[] = "Packages";
 
 /*
@@ -467,10 +470,16 @@ pkg_run_func(const char *vdb_path, const char *phases, const char *func, const c
 		"ED=\"${EPREFIX%%/}/${D#/}\"\n"
 		"T='%6$s'\n"
 		/* Finally run the func */
-		"%2$s\n"
+		"%7$s%2$s\n"
 		/* Ignore func return values (not exit values) */
 		":",
-		vdb_path, func, phase, portroot, D, T);
+		/*1*/ vdb_path,
+		/*2*/ func,
+		/*3*/ phase,
+		/*4*/ portroot,
+		/*5*/ D,
+		/*6*/ T,
+		/*7*/ debug ? "set -x;" : "");
 	xsystembash(script);
 	free(script);
 }
@@ -1961,6 +1970,7 @@ int qmerge_main(int argc, char **argv)
 			case 'y': interactive = 0; break;
 			case 'O': follow_rdepends = 0; break;
 			case '5': nomd5 = 1; break;
+			case 128: debug = true; break;
 			COMMON_GETOPTS_CASES(qmerge)
 		}
 	}
