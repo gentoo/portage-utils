@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.47 2014/01/07 19:48:45 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.48 2014/02/18 07:30:30 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -47,7 +47,7 @@ static const char * const qcache_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.47 2014/01/07 19:48:45 vapier Exp $";
+static const char qcache_rcsid[] = "$Id: qcache.c,v 1.48 2014/02/18 07:30:30 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
@@ -100,7 +100,7 @@ enum { none = 0, testing, stable, minus };
  * OUT:
  *  int - one of the following enum { none = 0, testing, stable, minus };
  */
-int decode_status(char c);
+_q_static
 int decode_status(char c)
 {
 	switch (c) {
@@ -120,7 +120,7 @@ int decode_status(char c)
  * OUT:
  *  int pos - location of arch in archlist[]
  */
-int decode_arch(const char *arch);
+_q_static
 int decode_arch(const char *arch)
 {
 	int a;
@@ -146,8 +146,8 @@ int decode_arch(const char *arch)
  *  char *category - current category of the current package
  *  int *keywords - an array of keywords that coincides with archlist
  */
-void print_keywords(char *category, char *ebuild, int *keywords);
-void print_keywords(char *category, char *ebuild, int *keywords)
+_q_static
+void print_keywords(const char *category, const char *ebuild, int *keywords)
 {
 	int a;
 	char *package;
@@ -184,7 +184,7 @@ void print_keywords(char *category, char *ebuild, int *keywords)
  * ERR:
  *  int rc - -1 is returned on error (if !s || !keywords)
  */
-int read_keywords(char *s, int *keywords);
+_q_static
 int read_keywords(char *s, int *keywords)
 {
 	char *arch, delim[2] = { ' ', '\0' };
@@ -231,7 +231,8 @@ int read_keywords(char *s, int *keywords)
  * ERR:
  *  -1 is returned if the file cannot be read.
  */
-static unsigned int qcache_count_lines(char *filename)
+_q_static
+unsigned int qcache_count_lines(char *filename)
 {
 	int count, fd;
 	char c;
@@ -262,7 +263,7 @@ static unsigned int qcache_count_lines(char *filename)
  * ERR:
  *  NULL is returned if an error occurs.
  */
-char **qcache_read_lines(char *filename);
+_q_static
 char **qcache_read_lines(char *filename)
 {
 	int len, fd, count, i, num_lines;
@@ -302,7 +303,7 @@ char **qcache_read_lines(char *filename)
  *
  * free()'s memory allocated by qcache_read_lines
  */
-void qcache_free_lines(char **lines);
+_q_static
 void qcache_free_lines(char **lines)
 {
 	int i;
@@ -325,7 +326,7 @@ void qcache_free_lines(char **lines)
  * ERR:
  *  NULL is returned when an error occurs.
  */
-portage_cache *qcache_read_cache_file(const char *filename);
+_q_static
 portage_cache *qcache_read_cache_file(const char *filename)
 {
 	struct stat s;
@@ -396,7 +397,7 @@ portage_cache *qcache_read_cache_file(const char *filename)
 
 	return ret;
 
-err:
+ err:
 	if (ret)
 		cache_free(ret);
 	return NULL;
@@ -410,7 +411,7 @@ err:
  * IN:
  *  portage_cache *cache - the portage_cache to be free()'d
  */
-void qcache_free_data(portage_cache *cache);
+_q_static
 void qcache_free_data(portage_cache *cache)
 {
 	int i;
@@ -444,7 +445,7 @@ void qcache_free_data(portage_cache *cache)
  *   1 (OLDER)
  *   0 (SAME)
  */
-int qcache_vercmp(const struct dirent **x, const struct dirent **y);
+_q_static
 int qcache_vercmp(const struct dirent **x, const struct dirent **y)
 {
 	switch (atom_compare_str((*x)->d_name, (*y)->d_name)) {
@@ -469,7 +470,7 @@ int qcache_vercmp(const struct dirent **x, const struct dirent **y)
  * OUT:
  *  int - 0 if filename begins with '.' or is "metadata.xml", otherwise 1
  */
-int qcache_file_select(const struct dirent *entry);
+_q_static
 int qcache_file_select(const struct dirent *entry)
 {
 	return !(entry->d_name[0] == '.' || (strcmp(entry->d_name, "metadata.xml") == 0) || (strstr(entry->d_name, ".cpickle") != 0));
@@ -485,7 +486,7 @@ int qcache_file_select(const struct dirent *entry)
  * OUT:
  *  int - 1 if the filename ends in ".ebuild", otherwise 0
  */
-int qcache_ebuild_select(const struct dirent *entry);
+_q_static
 int qcache_ebuild_select(const struct dirent *entry)
 {
 	return ((strlen(entry->d_name) > 7) && !strcmp(entry->d_name+strlen(entry->d_name)-7, ".ebuild"));
@@ -507,7 +508,7 @@ int qcache_ebuild_select(const struct dirent *entry)
  * ERR:
  *  exit or return -1 on failure.
  */
-int qcache_traverse(void (*func)(qcache_data*));
+_q_static
 int qcache_traverse(void (*func)(qcache_data*))
 {
 	qcache_data data;
@@ -625,7 +626,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 /* functors                                                         */
 /********************************************************************/
 
-void qcache_imlate(qcache_data *data);
+_q_static
 void qcache_imlate(qcache_data *data)
 {
 	int *keywords;
@@ -657,7 +658,7 @@ void qcache_imlate(qcache_data *data)
 	free(keywords);
 }
 
-void qcache_not(qcache_data *data);
+_q_static
 void qcache_not(qcache_data *data)
 {
 	int *keywords;
@@ -679,7 +680,7 @@ void qcache_not(qcache_data *data)
 	free(keywords);
 }
 
-void qcache_all(qcache_data *data);
+_q_static
 void qcache_all(qcache_data *data)
 {
 	int *keywords;
@@ -700,7 +701,7 @@ void qcache_all(qcache_data *data)
 	free(keywords);
 }
 
-void qcache_dropped(qcache_data *data);
+_q_static
 void qcache_dropped(qcache_data *data)
 {
 	static int possible = 0;
@@ -741,7 +742,7 @@ void qcache_dropped(qcache_data *data)
 	free(keywords);
 }
 
-void qcache_stats(qcache_data *data);
+_q_static
 void qcache_stats(qcache_data *data)
 {
 	static time_t runtime;
@@ -855,7 +856,7 @@ void qcache_stats(qcache_data *data)
 	}
 }
 
-void qcache_testing_only(qcache_data *data);
+_q_static
 void qcache_testing_only(qcache_data *data)
 {
 	static int possible = 0;
@@ -903,8 +904,8 @@ void qcache_testing_only(qcache_data *data)
  * ERR:
  *  -1 is returned on error.
  */
-int qcache_init();
-int qcache_init()
+_q_static
+int qcache_init(void)
 {
 	char *filename;
 	unsigned int len;
@@ -933,8 +934,8 @@ int qcache_init()
  *
  * Deallocate variables (archlist)
  */
-void qcache_free();
-void qcache_free()
+_q_static
+void qcache_free(void)
 {
 	qcache_free_lines(archlist);
 }
