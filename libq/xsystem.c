@@ -3,7 +3,7 @@
  *
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/xsystem.c,v 1.2 2011/02/21 22:02:59 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/xsystem.c,v 1.3 2014/02/18 06:52:17 vapier Exp $
  */
 
 #include <stdlib.h>
@@ -28,8 +28,12 @@ static void xsystembash(const char *command)
 
 	default: /* parent */
 		waitpid(p, &status, 0);
-		if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
-			return;
+		if (WIFEXITED(status)) {
+			if (WEXITSTATUS(status) == 0)
+				return;
+			else
+				exit(WEXITSTATUS(status));
+		}
 		/* fall through */
 
 	case -1: /* fucked */
