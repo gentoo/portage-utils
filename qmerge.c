@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.134 2014/02/18 04:32:52 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.135 2014/02/18 06:57:41 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.134 2014/02/18 04:32:52 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.135 2014/02/18 06:57:41 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -437,7 +437,7 @@ pkg_run_func(const char *vdb_path, const char *phases, const char *func, const c
 		"debug-print-function() { :; }\n"
 		"debug-print-section() { :; }\n"
 		/* Not quite right */
-		"has_version() { qlist -ICq -e '$1' >/dev/null; }\n"
+		"has_version() { [ -n \"$(qlist -ICqe \"$1\")\" ]; }\n"
 		/* best_version() */
 		"use() { useq \"$@\"; }\n"
 		"usex() { useq \"$1\" && echo \"${2-yes}$4\" || echo \"${3-no}$5\"; }\n"
