@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.16 2013/09/29 22:42:36 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.h,v 1.17 2014/02/18 04:32:04 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,25 +22,64 @@
 /* http://tinderbox.dev.gentoo.org/default-linux/hppa */
 
 #ifdef __linux__
-#undef  URL
-#define URL "http://tinderbox.dev.gentoo.org"
-# ifdef __i386__
-#  ifdef __UCLIBC__
-#   define DEFAULT_PORTAGE_BINHOST URL "/uclibc/i386"
+# undef URL_BASE
+# define URL_BASE "http://tinderbox.dev.gentoo.org"
+
+# undef URL_PROFILE
+# ifdef __UCLIBC__
+#  define URL_PROFILE "uclibc"
+# else
+#  ifdef __SSP__
+#   define URL_PROFILE "hardened"
 #  else
-#   ifdef __SSP__
-#    define DEFAULT_PORTAGE_BINHOST URL "/hardened/x86"
-#   else
-#    define DEFAULT_PORTAGE_BINHOST URL "/default-linux/x86/All"
-#   endif
+#   define URL_PROFILE "default/linux"
 #  endif
-#  if defined(__powerpc__) && defined(__SSP__)
-#   if !defined(__UCLIBC__)
-#    define DEFAULT_PORTAGE_BINHOST URL "/hardened/ppc"
-#   else
-#    define DEFAULT_PORTAGE_BINHOST URL "/uclibc/ppc"
-#   endif
+# endif
+
+# undef URL_ARCH
+# if 0
+# elif defined(__alpha__)
+#  define URL_ARCH "alpha"
+# elif defined(__x86_64__)
+#  define URL_ARCH "amd64"
+# elif defined(__arm__)
+#  define URL_ARCH "arm"
+# elif defined(__aarch64__)
+#  define URL_ARCH "arm64"
+# elif defined(__bfin__)
+#  define URL_ARCH "bfin"
+# elif defined(__cris__)
+#  define URL_ARCH "cris"
+# elif defined(__hppa__)
+#  define URL_ARCH "hppa"
+# elif defined(__ia64__)
+#  define URL_ARCH "ia64"
+# elif defined(__m68k__)
+#  define URL_ARCH "m68k"
+# elif defined(__mips__)
+#  define URL_ARCH "mips"
+# elif defined(__powerpc__)
+#  if defined(__powerpc64__)
+#   define URL_ARCH "ppc64"
+#  else
+#   define URL_ARCH "ppc"
 #  endif
+# elif defined(__s390__)
+#  if defined(__s390x__)
+#   define URL_ARCH "s390x"
+#  else
+#   define URL_ARCH "s390"
+#  endif
+# elif defined(__sh4__)
+#  define URL_ARCH "sh"
+# elif defined(__sparc__)
+#  define URL_ARCH "sparc"
+# elif defined(__i386__)
+#  define URL_ARCH "x86"
+# endif
+
+# if defined(URL_PROFILE) && defined(URL_ARCH)
+#  define DEFAULT_PORTAGE_BINHOST URL_BASE "/" URL_PROFILE "/" URL_ARCH
 # endif
 #endif
 
