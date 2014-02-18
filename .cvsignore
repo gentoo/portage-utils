@@ -18,13 +18,13 @@ configure
 autotools
 Makefile.in
 
+*.old.c
 q
 qatom
 qcache
 qcheck
 qdepends
 qfile
-qfile.old.c
 qglsa
 qgrep
 qlist
