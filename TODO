@@ -26,6 +26,7 @@
 	- parallel fetch tbz2s
 	- check order of pkg_{pre,post}{inst,rm} during install, unmerge, and upgrade
 	- env is not saved/restored between pkg_{pre,post}inst (see portage and REPO_LAYOUT_CONF_WARN)
+	- support installing via path to tbz2 package
 
 - atoms:
 	- only 32bit values are supported for revision (-r#)
