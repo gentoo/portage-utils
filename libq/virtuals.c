@@ -1,12 +1,12 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.27 2011/12/18 20:41:54 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.28 2014/02/18 07:26:13 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
  *
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.27 2011/12/18 20:41:54 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/virtuals.c,v 1.28 2014/02/18 07:26:13 vapier Exp $
  */
 
 #include <stdio.h>
@@ -23,13 +23,8 @@ struct queue_t {
 
 typedef struct queue_t queue;
 
-/* global */
-queue *virtuals = NULL;
-
 queue *del_set(char *s, queue *q, int *ok);
 queue *add_set(const char *vv, const char *ss, queue *q);
-
-/* void free_virtuals(queue *list); */
 
 static queue *append_set(queue *q, queue *ll)
 {
@@ -155,123 +150,4 @@ void print_sets(queue *list)
 	queue *ll;
 	for (ll = list; ll != NULL; ll = ll->next)
 		printf("%s -> %s\n", ll->name, ll->item);
-}
-
-queue *resolve_vdb_virtuals(char *vdb);
-queue *resolve_vdb_virtuals(char *vdb)
-{
-	DIR *dir, *dirp;
-	struct dirent *dentry_cat, *dentry_pkg;
-	char buf[_Q_PATH_MAX];
-	depend_atom *atom;
-
-	xchdir("/");
-
-	/* now try to run through vdb and locate matches for user inputs */
-	if ((dir = opendir(vdb)) == NULL)
-		return virtuals;
-
-	/* scan all the categories */
-	while ((dentry_cat = q_vdb_get_next_dir(dir)) != NULL) {
-		snprintf(buf, sizeof(buf), "%s/%s", vdb, dentry_cat->d_name);
-		if ((dirp = opendir(buf)) == NULL)
-			continue;
-
-		/* scan all the packages in this category */
-		while ((dentry_pkg = q_vdb_get_next_dir(dirp)) != NULL) {
-			char *p;
-			/* see if user wants any of these packages */
-			snprintf(buf, sizeof(buf), "%s/%s/%s/PROVIDE", vdb, dentry_cat->d_name, dentry_pkg->d_name);
-
-			if (!eat_file(buf, buf, sizeof(buf)))
-				continue;
-
-			if ((p = strrchr(buf, '\n')) != NULL)
-				*p = 0;
-
-			rmspace(buf);
-
-			if (*buf) {
-				int ok = 0;
-				char *v, *tmp = xstrdup(buf);
-				snprintf(buf, sizeof(buf), "%s/%s", dentry_cat->d_name, dentry_pkg->d_name);
-
-				atom = atom_explode(buf);
-				if (!atom) {
-					warn("could not explode '%s'", buf);
-					continue;
-				}
-				sprintf(buf, "%s/%s", atom->CATEGORY, atom->PN);
-				if ((v = virtual(tmp, virtuals)) != NULL) {
-					/* IF_DEBUG(fprintf(stderr, "%s provided by %s (removing)\n", tmp, v)); */
-					virtuals = del_set(tmp,  virtuals, &ok);
-				}
-				virtuals = add_set(tmp, buf, virtuals);
-				/* IF_DEBUG(fprintf(stderr, "%s provided by %s/%s (adding)\n", tmp, atom->CATEGORY, dentry_pkg->d_name)); */
-				free(tmp);
-				atom_implode(atom);
-			}
-		}
-	}
-
-	return virtuals;
-}
-
-static queue *resolve_local_profile_virtuals(void)
-{
-	static size_t buflen;
-	static char *buf = NULL;
-	FILE *fp;
-	char *p;
-	static const char * const paths[] = { "/etc/portage/profile/virtuals", "/etc/portage/virtuals" };
-	size_t i;
-
-	for (i = 0; i < ARRAY_SIZE(paths); ++i) {
-		fp = fopen(paths[i], "r");
-		if (!fp)
-			continue;
-
-		while (getline(&buf, &buflen, fp) != -1) {
-			if (*buf != 'v')
-				continue;
-			rmspace(buf);
-			if ((p = strchr(buf, ' ')) != NULL) {
-				int ok = 0;
-				*p = 0;
-				virtuals = del_set(buf, virtuals, &ok);
-				virtuals = add_set(buf, rmspace(++p), virtuals);
-				ok = 0;
-			}
-		}
-
-		fclose(fp);
-	}
-
-	return virtuals;
-}
-
-_q_static void *
-resolve_virtuals_line(void *data, char *buf)
-{
-	char *p;
-
-	if (*buf != 'v')
-		return data;
-
-	rmspace(buf);
-	if ((p = strchr(buf, ' ')) != NULL) {
-		*p = 0;
-		if (virtual(buf, virtuals) == NULL)
-			virtuals = add_set(buf, rmspace(++p), virtuals);
-	}
-
-	return data;
-}
-
-_q_static queue *resolve_virtuals(void)
-{
-	free_sets(virtuals);
-	virtuals = resolve_local_profile_virtuals();
-	virtuals = resolve_vdb_virtuals(portvdb);
-	return q_profile_walk("virtuals", resolve_virtuals_line, virtuals);
 }

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.138 2014/02/18 06:59:05 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.139 2014/02/18 07:26:14 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -67,7 +67,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.138 2014/02/18 06:59:05 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.139 2014/02/18 07:26:14 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -814,25 +814,12 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 						/* warn("newname = %s", name); */
 					}
 					if ((subatom = atom_explode(name)) != NULL) {
-						char *dep;
 						struct pkg_t *subpkg;
 						char *resolved = NULL;
 
-						dep = find_binpkg(name);
+						resolved = find_binpkg(name);
 
-						if (strncmp(name, "virtual/", 8) == 0) {
-							if (virtuals == NULL)
-								virtuals = resolve_virtuals();
-							resolved = find_binpkg(virtual(name, virtuals));
-							if (resolved == NULL || !strlen(resolved))
-								resolved = find_binpkg(name);
-						} else
-							resolved = NULL;
-
-						if (resolved == NULL)
-							resolved = dep;
-
-						IF_DEBUG(fprintf(stderr, "+Atom: argv0(%s) dep(%s) resolved(%s)\n", name, dep, resolved));
+						IF_DEBUG(fprintf(stderr, "+Atom: argv0(%s) resolved(%s)\n", name, resolved));
 
 						if (strlen(resolved) < 1) {
 							warn("Cant find a binpkg for %s from rdepend(%s)", name, pkg->RDEPEND);

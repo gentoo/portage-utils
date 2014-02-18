@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2013 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.66 2013/09/29 22:19:39 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qdepends.c,v 1.67 2014/02/18 07:26:14 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
@@ -32,7 +32,7 @@ static const char * const qdepends_opts_help[] = {
 	"Pretty format specified depend strings",
 	COMMON_OPTS_HELP
 };
-static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.66 2013/09/29 22:19:39 vapier Exp $";
+static const char qdepends_rcsid[] = "$Id: qdepends.c,v 1.67 2014/02/18 07:26:14 vapier Exp $";
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
@@ -358,14 +358,6 @@ void _dep_flatten_tree(const dep_node *root, char *buf, size_t *pos)
 	if (root->type == DEP_NULL) goto this_node_sucks;
 	if (root->type == DEP_NORM) {
 		size_t len = strlen(root->info);
-#if 1
-		if (*root->info == 'v')
-			if (strncmp(root->info, "virtual/", 8) == 0) {
-				if (virtuals == NULL)
-					virtuals = resolve_virtuals();
-				IF_DEBUG(fprintf(stderr, "(%s->%s)", root->info, virtual(root->info, virtuals)));
-			}
-#endif
 		memcpy(buf + *pos, root->info, len);
 		*pos += len+1;
 		buf[*pos-1] = ' ';

@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2013 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.229 2013/10/31 02:40:23 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.230 2014/02/18 07:26:14 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
@@ -1278,7 +1278,6 @@ _q_static queue *get_vdb_atoms(int fullcpv)
 void cleanup(void)
 {
 	reinitialize_as_needed();
-	free_sets(virtuals);
 	fclose(stderr);
 }
 
