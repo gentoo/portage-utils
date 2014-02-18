@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.136 2014/02/18 06:58:13 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.137 2014/02/18 06:58:45 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.136 2014/02/18 06:58:13 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.137 2014/02/18 06:58:45 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -1378,7 +1378,7 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	}
 	if (access(buf, R_OK) == 0) {
 		if (!pkg->SHA1[0] && !pkg->MD5[0]) {
-			warn("No checksum data for %s", buf);
+			warn("No checksum data for %s (try `emaint binhost --fix`)", buf);
 			return;
 		} else {
 			if (pkg_verify_checksums(buf, pkg, atom, qmerge_strict, !quiet) == 0) {
@@ -1520,20 +1520,51 @@ _q_static FILE *
 open_binpkg_index(void)
 {
 	FILE *fp;
-	char buf[BUFSIZ];
+	char *path;
 
-	snprintf(buf, sizeof(buf), "%s/portage/%s", port_tmpdir, Packages);
-	fp = fopen(buf, "r");
+	xasprintf(&path, "%s/portage/%s", port_tmpdir, Packages);
+	fp = fopen(path, "r");
 	if (fp)
-		return fp;
+		goto done;
+	free(path);
 
-	snprintf(buf, sizeof(buf), "%s/%s", pkgdir, Packages);
-	fp = fopen(buf, "r");
+	xasprintf(&path, "%s/%s", pkgdir, Packages);
+	fp = fopen(path, "r");
 	if (fp)
-		return fp;
+		goto done;
 
-	errp("Unable to open package file %s in %s/portage or %s",
+	/* This is normal when installing from local repo only. */
+	warnp("Unable to open package file %s in %s/portage or %s",
 		Packages, port_tmpdir, pkgdir);
+	warn("Attempting to manually regen via `emaint binhost`");
+
+	pid_t p;
+	int status;
+
+	char argv_emaint[] = "emaint";
+	char argv_binhost[] = "binhost";
+	char argv_fix[] = "--fix";
+	char *argv[] = {
+		argv_emaint,
+		argv_binhost,
+		argv_fix,
+		NULL,
+	};
+
+	p = vfork();
+	switch (p) {
+	case 0:
+		_exit(execvp(argv[0], argv));
+	case -1:
+		errp("vfork failed");
+	}
+	waitpid(p, &status, 0);
+
+	fp = fopen(path, "r");
+
+ done:
+	free(path);
+	return fp;
 }
 
 _q_static struct pkg_t *
@@ -1812,7 +1843,7 @@ parse_packages(queue *todo)
 	free(buf);
 	fclose(fp);
 
-	return 0;
+	return EXIT_SUCCESS;
 }
 
 _q_static queue *
