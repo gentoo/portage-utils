@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.135 2014/02/18 06:57:41 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.136 2014/02/18 06:58:13 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -65,7 +65,7 @@ static const char * const qmerge_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.135 2014/02/18 06:57:41 vapier Exp $";
+static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.136 2014/02/18 06:58:13 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
@@ -453,11 +453,13 @@ pkg_run_func(const char *vdb_path, const char *phases, const char *func, const c
 		"die() { eerror \"$@\"; exit 1; }\n"
 		"ebegin() { printf ' * %%b ...' \"$*\"; }\n"
 		"eend() { local r=${1:-$?}; [ $# -gt 0 ] && shift; [ $r -eq 0 ] && echo ' [ ok ]' || echo \" $* \"'[ !! ]'; return $r; }\n"
+		"emake() { ${MAKE:-make} ${MAKEOPTS} \"$@\"; }\n"
 		/* Unpack the env if need be */
 		"[ -e '%1$s/environment' ] || { bzip2 -dc '%1$s/environment.bz2' > '%1$s/environment' || exit 1; }\n"
 		/* Load the main env */
 		". '%1$s/environment'\n"
 		/* Reload env vars that matter to us */
+		"FILESDIR=/.does/not/exist/anywhere\n"
 		"MERGE_TYPE=binary\n"
 		"ROOT='%4$s'\n"
 		"EROOT=\"${EPREFIX%%/}/${ROOT#/}\"\n"
