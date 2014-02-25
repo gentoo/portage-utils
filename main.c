@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2013 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.231 2014/02/18 07:31:33 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.232 2014/02/25 21:30:50 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
@@ -83,6 +83,7 @@ void no_colors(void)
 /* Common usage for all applets */
 #define COMMON_FLAGS "vqChV"
 #define COMMON_LONG_OPTS \
+	{"root",       a_argument, NULL, 0x1}, \
 	{"verbose",   no_argument, NULL, 'v'}, \
 	{"quiet",     no_argument, NULL, 'q'}, \
 	{"nocolor",   no_argument, NULL, 'C'}, \
@@ -90,6 +91,7 @@ void no_colors(void)
 	{"version",   no_argument, NULL, 'V'}, \
 	{NULL,        no_argument, NULL, 0x0}
 #define COMMON_OPTS_HELP \
+	"Set the ROOT env var", \
 	"Make a lot of noise", \
 	"Tighter output; suppress warnings", \
 	"Don't output color", \
@@ -97,6 +99,7 @@ void no_colors(void)
 	"Print version and exit", \
 	NULL
 #define COMMON_GETOPTS_CASES(applet) \
+	case 0x1: portroot = optarg; break; \
 	case 'v': ++verbose; break; \
 	case 'q': ++quiet; if (freopen("/dev/null", "w", stderr)) { /* ignore errors */ } break; \
 	case 'V': version_barf( applet ## _rcsid ); break; \
@@ -137,7 +140,7 @@ static void usage(int status, const char *flags, struct option const opts[],
 		assert(help[i] != NULL);
 
 		/* first output the short flag if it has one */
-		if (opts[i].val > '~')
+		if (opts[i].val > '~' || opts[i].val < ' ')
 			printf("      ");
 		else
 			printf("  -%c, ", opts[i].val);

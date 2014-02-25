@@ -1,7 +1,7 @@
 /*
  * Copyright 2005-2010 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.52 2011/03/17 03:32:51 vapier Exp $
+ * $Header: /var/cvsroot/gentoo-projects/portage-utils/q.c,v 1.53 2014/02/25 21:30:50 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
@@ -22,7 +22,7 @@ static const char * const q_opts_help[] = {
 	"Module path",
 	COMMON_OPTS_HELP
 };
-static const char q_rcsid[] = "$Id: q.c,v 1.52 2011/03/17 03:32:51 vapier Exp $";
+static const char q_rcsid[] = "$Id: q.c,v 1.53 2014/02/25 21:30:50 vapier Exp $";
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
 
 static APPLET lookup_applet(const char *applet)
@@ -145,16 +145,17 @@ int q_main(int argc, char **argv)
 		return 1;
 
 	/* In case of "q --option ... appletname ...", remove appletname from the
-	 * applet's args, exchange "appletname" and "--option". */
+	 * applet's args. */
 	if (optind > 1) {
-		char* appletname = argv[optind];
-		argv[optind] = argv[1];
-		argv[1] = appletname;
-	}
+		argv[0] = argv[optind];
+		for (i = optind; i < argc; ++i)
+			argv[i] = argv[i + 1];
+	} else
+		++argv;
 
 	optind = 0; /* reset so the applets can call getopt */
 
-	return (func)(argc - 1, ++argv);
+	return (func)(argc - 1, argv);
 }
 
 static int run_applet_l(const char *arg, ...)
