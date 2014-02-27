@@ -807,8 +807,8 @@ void initialize_portage_env(void)
 enum {
 	CACHE_EBUILD = 1,
 	CACHE_METADATA = 2,
-    CACHE_METADATA_PMS = 10,
-    CACHE_METADATA_MD5 = 11,
+	CACHE_METADATA_PMS = 10,
+	CACHE_METADATA_MD5 = 11,
 };
 
 int filter_hidden(const struct dirent *dentry);
