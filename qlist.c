@@ -9,7 +9,7 @@
 
 #ifdef APPLET_qlist
 
-#define QLIST_FLAGS "ISULcDeados" COMMON_FLAGS
+#define QLIST_FLAGS "ISUcDeados" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
 	{"slots",     no_argument, NULL, 'S'},
