@@ -125,6 +125,7 @@ EXTRA_DIST += \
 	libq/xsystem.c \
 	main.c \
 	main.h \
+	porting.h \
 	q.c \
 	qatom.c \
 	qcache.c \
@@ -171,6 +172,14 @@ EXTRA_DIST += \
 	tests/profile/profile1/etc/portage/make.conf \
 	tests/profile/profile1/etc/portage/subdir/file.conf \
 	tests/profile/profile1/etc/portage/this.level.conf \
+	tests/qdepends/Makefile \
+	tests/qdepends/dotest \
+	tests/qdepends/list01.good \
+	tests/qdepends/list02.good \
+	tests/qdepends/list03.good \
+	tests/qdepends/list04.good \
+	tests/qdepends/list05.good \
+	tests/qdepends/list06.good \
 	tests/qfile/Makefile \
 	tests/qfile/dotest \
 	tests/qlist/Makefile \
@@ -220,5 +229,6 @@ EXTRA_DIST += \
 	tests/source/Makefile \
 	tests/source/dotest \
 	tests/source/space \
-	tests/subdir.mk
+	tests/subdir.mk \
+	tests/tests.h
 # @@@ GEN START @@@ #
