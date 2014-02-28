@@ -9,12 +9,13 @@
 
 #ifdef APPLET_qlist
 
-#define QLIST_FLAGS "ISUcDeados" COMMON_FLAGS
+#define QLIST_FLAGS "ISRUcDeados" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
 	{"slots",     no_argument, NULL, 'S'},
-	{"columns",   no_argument, NULL, 'c'},
+	{"repo",      no_argument, NULL, 'R'},
 	{"umap",      no_argument, NULL, 'U'},
+	{"columns",   no_argument, NULL, 'c'},
 	{"dups",      no_argument, NULL, 'D'},
 	{"showdebug", no_argument, NULL, 128},
 	{"exact",     no_argument, NULL, 'e'},
@@ -28,8 +29,9 @@ static struct option const qlist_long_opts[] = {
 static const char * const qlist_opts_help[] = {
 	"Just show installed packages",
 	"Display installed packages with slots",
-	"Display column view",
+	"Display installed packages with repository",
 	"Display installed packages with flags used",
+	"Display column view",
 	"Only show package dups",
 	"Show /usr/lib/debug files",
 	"Exact match (only CAT/PN or PN without PV)",
@@ -142,13 +144,31 @@ qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, b
 	char buf[_Q_PATH_MAX];
 	char swap[_Q_PATH_MAX];
 	const char *uslot;
+	size_t uslot_len = 0;
+	const char *urepo;
+	size_t urepo_len = 0;
 	depend_atom *atom;
 
 	uslot = strchr(name, ':');
 	if (uslot) {
-		++uslot;
-		if (!pkg_ctx->slot)
-			q_vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot, &pkg_ctx->slot_len);
+		if (*++uslot == ':')
+			uslot = NULL;
+		else {
+			if (!pkg_ctx->slot)
+				q_vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot, &pkg_ctx->slot_len);
+			uslot_len = strlen(uslot);
+		}
+	}
+
+	urepo = strstr(name, "::");
+	if (urepo) {
+		if (!pkg_ctx->repo)
+			q_vdb_pkg_eat(pkg_ctx, "repository", &pkg_ctx->repo, &pkg_ctx->repo_len);
+		urepo_len = strlen(urepo);
+		urepo += 2;
+
+		if (uslot_len)
+			uslot_len -= urepo_len;
 	}
 
 	/* maybe they're using a version range */
@@ -157,8 +177,9 @@ qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, b
 	case '>':
 	case '<':
 	case '~':
-		snprintf(buf, sizeof(buf), "%s/%s%c%s", catname, pkgname,
-			pkg_ctx->slot ? ':' : '\0', pkg_ctx->slot ? : "");
+		snprintf(buf, sizeof(buf), "%s/%s%c%s%s%s", catname, pkgname,
+			pkg_ctx->slot ? ':' : '\0', pkg_ctx->slot ? : "",
+			pkg_ctx->repo ? "::" : "", pkg_ctx->repo ? : "");
 		if ((atom = atom_explode(buf)) == NULL) {
 			warn("invalid atom %s", buf);
 			return false;
@@ -182,18 +203,27 @@ qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, b
 
 	if (uslot) {
 		/* require exact match on SLOTs */
-		if (strcmp(pkg_ctx->slot, uslot) != 0)
+		if (strncmp(pkg_ctx->slot, uslot, uslot_len) != 0 || pkg_ctx->slot[uslot_len] != '\0')
+			return false;
+	}
+
+	if (urepo) {
+		/* require exact match on repositories */
+		if (strcmp(pkg_ctx->repo, urepo) != 0)
 			return false;
 	}
 
 	/* printf("buf=%s:%s\n", buf,grab_vdb_item("SLOT", catname, pkgname)); */
 	if (exact) {
-		snprintf(buf, sizeof(buf), "%s/%s:%s", catname, pkgname, pkg_ctx->slot);
+		int i;
 
-		/* exact match: CAT/PN-PVR[:SLOT] */
+		snprintf(buf, sizeof(buf), "%s/%s:%s::%s",
+			catname, pkgname, pkg_ctx->slot, pkg_ctx->repo);
+
+		/* exact match: CAT/PN-PVR[:SLOT][::REPO] */
 		if (strcmp(name, buf) == 0)
 			return true;
-		/* exact match: PN-PVR[:SLOT] */
+		/* exact match: PN-PVR[:SLOT][::REPO] */
 		if (strcmp(name, strstr(buf, "/") + 1) == 0)
 			return true;
 
@@ -202,25 +232,26 @@ qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, b
 			warn("invalid atom %s", buf);
 			return false;
 		}
-		if (uslot)
-			snprintf(swap, sizeof(swap), "%s/%s:%s",
-				 atom->CATEGORY, atom->PN, atom->SLOT);
-		else
-			snprintf(swap, sizeof(swap), "%s/%s",
-				 atom->CATEGORY, atom->PN);
+
+		i = snprintf(swap, sizeof(swap), "%s/%s", atom->CATEGORY, atom->PN);
+		if (uslot && i <= (int)sizeof(swap))
+			i += snprintf(swap + i, sizeof(swap) - i, ":%s", atom->SLOT);
+		if (urepo && i <= (int)sizeof(swap))
+			i += snprintf(swap + i, sizeof(swap) - i, "::%s", atom->REPO);
+
 		atom_implode(atom);
-		/* exact match: CAT/PN[:SLOT] */
+		/* exact match: CAT/PN[:SLOT][::REPO] */
 		if (strcmp(name, swap) == 0)
 			return true;
-		/* exact match: PN[:SLOT] */
+		/* exact match: PN[:SLOT][::REPO] */
 		if (strcmp(name, strstr(swap, "/") + 1) == 0)
 			return true;
 	} else {
-		size_t ulen;
+		size_t ulen = strlen(name);
+		if (urepo)
+			ulen -= (urepo_len + 2);
 		if (uslot)
-			ulen = uslot - name - 1;
-		else
-			ulen = strlen(name);
+			ulen -= (uslot_len + 1);
 		snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
 		/* partial leading match: CAT/PN-PVR */
 		if (strncmp(name, buf, ulen) == 0)
@@ -248,6 +279,7 @@ struct qlist_opt_state {
 	bool dups_only;
 	bool show_dir;
 	bool show_obj;
+	bool show_repo;
 	bool show_sym;
 	bool show_slots;
 	bool show_umap;
@@ -288,11 +320,14 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		if ((state->all + state->just_pkgname) < 2) {
 			if (state->show_slots && !pkg_ctx->slot)
 				q_vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot, &pkg_ctx->slot_len);
+			if (state->show_repo && !pkg_ctx->repo)
+				q_vdb_pkg_eat(pkg_ctx, "repository", &pkg_ctx->repo, &pkg_ctx->repo_len);
 			/* display it */
-			printf("%s%s/%s%s%s%s%s%s%s%s%s%s\n", BOLD, catname, BLUE,
+			printf("%s%s/%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", BOLD, catname, BLUE,
 				(!state->columns ? (atom ? atom->PN : pkgname) : atom->PN),
 				(state->columns ? " " : ""), (state->columns ? atom->PV : ""),
 				NORM, YELLOW, state->show_slots ? ":" : "", state->show_slots ? pkg_ctx->slot : "", NORM,
+				NORM, GREEN, state->show_repo ? "::" : "", state->show_repo ? pkg_ctx->repo : "", NORM,
 				umapstr(state->show_umap, catname, pkgname));
 		}
 		if (atom)
@@ -357,6 +392,7 @@ int qlist_main(int argc, char **argv)
 		.dups_only = false,
 		.show_dir = false,
 		.show_obj = false,
+		.show_repo = false,
 		.show_sym = false,
 		.show_slots = false,
 		.show_umap = false,
@@ -376,6 +412,7 @@ int qlist_main(int argc, char **argv)
 		case 'a': state.all = true;
 		case 'I': state.just_pkgname = true; break;
 		case 'S': state.just_pkgname = state.show_slots = true; break;
+		case 'R': state.just_pkgname = state.show_repo = true; break;
 		case 'U': state.just_pkgname = state.show_umap = true; break;
 		case 'e': state.exact = true; break;
 		case 'd': state.show_dir = true; break;
@@ -413,12 +450,16 @@ int qlist_main(int argc, char **argv)
 			strncpy(last, atom->PN, sizeof(last));
 			if (ok)	{
 				char *slot = NULL;
+				char *repo = NULL;
 				if (state.show_slots)
 					slot = grab_vdb_item("SLOT", atom->CATEGORY, atom->P);
-				printf("%s%s/%s%s%s%s%s%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
+				if (state.show_repo)
+					repo = grab_vdb_item("repository", atom->CATEGORY, atom->P);
+				printf("%s%s/%s%s%s%s%s%s%s%s%s%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
 					(!state.columns ? (verbose ? atom->P : atom->PN) : atom->PN),
 					(state.columns ? " " : ""), (state.columns ? atom->PV : ""),
-					NORM, YELLOW, slot ? ":" : "", slot ? slot : "", NORM);
+					NORM, YELLOW, slot ? ":" : "", slot ? slot : "",
+					NORM, GREEN, repo ? "::" : "", repo ? repo : "", NORM);
 				puts(umapstr(state.show_umap, atom->CATEGORY, atom->P));
 			}
 			atom_implode(atom);

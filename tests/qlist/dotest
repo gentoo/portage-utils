@@ -46,6 +46,15 @@ test 09 "qlist -C mtools -d"
 # ver test
 test 10 "qlist -Iv =mtools-4*"
 
+# repo test
+test 11 "qlist -ICR"
+
+# slot with repo test
+test 12 "qlist -ICSR"
+
+# exact CAT/PN:slot::repo files list test
+test 13 "qlist -Ce --showdebug app-arch/cpio:0::gentoo"
+
 cleantmpdir
 
 end

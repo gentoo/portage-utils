@@ -194,17 +194,25 @@ EXTRA_DIST += \
 	tests/qlist/list08.good \
 	tests/qlist/list09.good \
 	tests/qlist/list10.good \
+	tests/qlist/list11.good \
+	tests/qlist/list12.good \
+	tests/qlist/list13.good \
 	tests/qlist/root/-merge-foo/CONTENTS \
 	tests/qlist/root/a-b/a-0/CONTENTS \
 	tests/qlist/root/a-b/a-0/SLOT \
+	tests/qlist/root/a-b/a-0/repository \
 	tests/qlist/root/a-b/b-0/CONTENTS \
 	tests/qlist/root/a-b/b-0/SLOT \
+	tests/qlist/root/a-b/b-0/repository \
 	tests/qlist/root/app-arch/cpio-2.11/CONTENTS \
 	tests/qlist/root/app-arch/cpio-2.11/SLOT \
+	tests/qlist/root/app-arch/cpio-2.11/repository \
 	tests/qlist/root/cat/pkg-1/CONTENTS \
 	tests/qlist/root/cat/pkg-1/SLOT \
+	tests/qlist/root/cat/pkg-1/repository \
 	tests/qlist/root/sys-fs/mtools-4.0.13/CONTENTS \
 	tests/qlist/root/sys-fs/mtools-4.0.13/SLOT \
+	tests/qlist/root/sys-fs/mtools-4.0.13/repository \
 	tests/qmerge/Makefile \
 	tests/qmerge/dotest \
 	tests/qmerge/packages/Packages \

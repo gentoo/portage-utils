@@ -1,0 +1,5 @@
+a-b/a::a
+a-b/b::b
+app-arch/cpio::gentoo
+cat/pkg::repo
+sys-fs/mtools::gentoo

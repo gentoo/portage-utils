@@ -60,6 +60,12 @@ static int atom_compare(const depend_atom *a1, const depend_atom *a2)
 			return NOT_EQUAL;
 	}
 
+	/* check repo */
+	if (a1->REPO || a2->REPO) {
+		if (!a1->REPO || !a2->REPO || strcmp(a1->REPO, a2->REPO))
+			return NOT_EQUAL;
+	}
+
 	/* Check category, iff both are specified.  This way we can match
 	 * atoms like "sys-devel/gcc" and "gcc".
 	 */

@@ -37,7 +37,7 @@ typedef struct {
 	char letter;
 	atom_suffix *suffixes;
 	char *PV, *PVR;
-	char *P, *SLOT;
+	char *P, *SLOT, *REPO;
 } depend_atom;
 
 #ifdef _USE_CACHE
@@ -114,6 +114,12 @@ depend_atom *atom_explode(const char *atom)
 	/* eat file name crap */
 	if ((ptr = strstr(ret->CATEGORY, ".ebuild")) != NULL)
 		*ptr = '\0';
+
+	/* chip off the trailing [::REPO] as needed */
+	if ((ptr = strstr(ret->CATEGORY, "::")) != NULL) {
+		ret->REPO = ptr + 2;
+		*ptr = '\0';
+	}
 
 	/* chip off the trailing [:SLOT] as needed */
 	if ((ptr = strrchr(ret->CATEGORY, ':')) != NULL) {
