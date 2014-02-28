@@ -437,6 +437,9 @@ int qlist_main(int argc, char **argv)
 		free_sets(state.sets);
 	}
 
+	free(state.buf);
+	free(state.atoms);
+
 	return ret;
 }
 
