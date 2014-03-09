@@ -1,10 +1,9 @@
 /*
- * Copyright 2005-2010 Gentoo Foundation
+ * Copyright 2005-2014 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qmerge.c,v 1.139 2014/02/18 07:26:14 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qmerge
@@ -51,7 +50,6 @@ static struct option const qmerge_long_opts[] = {
 	{"debug",   no_argument, NULL, 128},
 	COMMON_LONG_OPTS
 };
-
 static const char * const qmerge_opts_help[] = {
 	"Fetch package and newest Packages metadata",
 	"Fetch package (skipping Packages)",
@@ -66,8 +64,6 @@ static const char * const qmerge_opts_help[] = {
 	"Run shell funcs with `set -x`",
 	COMMON_OPTS_HELP
 };
-
-static const char qmerge_rcsid[] = "$Id: qmerge.c,v 1.139 2014/02/18 07:26:14 vapier Exp $";
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;

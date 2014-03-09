@@ -1,10 +1,9 @@
 /*
- * Copyright 2005-2013 Gentoo Foundation
+ * Copyright 2005-2014 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/main.c,v 1.232 2014/02/25 21:30:50 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #include "porting.h"
@@ -102,7 +101,7 @@ void no_colors(void)
 	case 0x1: portroot = optarg; break; \
 	case 'v': ++verbose; break; \
 	case 'q': ++quiet; if (freopen("/dev/null", "w", stderr)) { /* ignore errors */ } break; \
-	case 'V': version_barf( applet ## _rcsid ); break; \
+	case 'V': version_barf(); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': no_colors(); break; \
 	default: applet ## _usage(EXIT_FAILURE); break;
@@ -156,14 +155,18 @@ static void usage(int status, const char *flags, struct option const opts[],
 	exit(status);
 }
 
-static void version_barf(const char *Id)
+static void version_barf(void)
 {
 #ifndef VERSION
-# define VERSION "cvs"
+# define VERSION "git"
 #endif
-	printf("portage-utils-%s: compiled on %s\n%s\n"
+#ifndef VCSID
+# define VCSID "<unknown>"
+#endif
+	printf("portage-utils-%s: compiled on %s\n"
+	       "vcs id: %s\n"
 	       "%s written for Gentoo by <solar and vapier @ gentoo.org>\n",
-	       VERSION, __DATE__, Id, argv0);
+	       VERSION, __DATE__, VCSID, argv0);
 	exit(EXIT_SUCCESS);
 }
 

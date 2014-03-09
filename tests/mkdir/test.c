@@ -1,10 +1,9 @@
 /*
- * Copyright 2005-2013 Gentoo Foundation
+ * Copyright 2005-2014 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/tests/mkdir/test.c,v 1.3 2013/09/29 22:42:36 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #include "tests/tests.h"

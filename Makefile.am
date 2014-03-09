@@ -143,7 +143,6 @@ EXTRA_DIST += \
 	quse.c \
 	qxpak.c \
 	tests/Makefile \
-	tests/atom_compare/.cvsignore \
 	tests/atom_compare/.gitignore \
 	tests/atom_compare/Makefile \
 	tests/atom_compare/atom-compare.py \
@@ -151,7 +150,6 @@ EXTRA_DIST += \
 	tests/atom_compare/static.q.good \
 	tests/atom_compare/static.q.tests \
 	tests/atom_compare/static.tests \
-	tests/atom_explode/.cvsignore \
 	tests/atom_explode/.gitignore \
 	tests/atom_explode/Makefile \
 	tests/atom_explode/atom-explode.py \
@@ -160,11 +158,9 @@ EXTRA_DIST += \
 	tests/atom_explode/dotest \
 	tests/atom_explode/test.c \
 	tests/init.sh \
-	tests/install/.cvsignore \
 	tests/install/.gitignore \
 	tests/install/Makefile \
 	tests/install/dotest \
-	tests/mkdir/.cvsignore \
 	tests/mkdir/.gitignore \
 	tests/mkdir/Makefile \
 	tests/mkdir/dotest \

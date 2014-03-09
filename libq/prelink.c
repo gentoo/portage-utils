@@ -1,7 +1,6 @@
 /*
- * Copyright 2011 Gentoo Foundation
+ * Copyright 2014 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/prelink.c,v 1.4 2012/08/13 22:23:35 robbat2 Exp $
  */
 
 #include <signal.h>

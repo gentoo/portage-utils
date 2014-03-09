@@ -1,10 +1,9 @@
 /*
- * Copyright 2005-2010 Gentoo Foundation
+ * Copyright 2005-2014 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qfile.c,v 1.66 2013/04/29 05:32:43 vapier Exp $
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2010 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #ifdef APPLET_qfile
@@ -36,7 +35,6 @@ static const char * const qfile_opts_help[] = {
 	"Exact match (used with --exclude)",
 	COMMON_OPTS_HELP
 };
-static const char qfile_rcsid[] = "$Id: qfile.c,v 1.66 2013/04/29 05:32:43 vapier Exp $";
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \

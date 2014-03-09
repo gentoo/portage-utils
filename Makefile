@@ -1,6 +1,5 @@
-# Copyright 2005-2008 Gentoo Foundation
+# Copyright 2005-2014 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/Makefile,v 1.77 2014/02/18 07:31:33 vapier Exp $
 ####################################################################
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
@@ -37,7 +36,9 @@ endif
 ifdef PV
 CPPFLAGS  += -DVERSION=\"$(PV)\"
 else
-PV        := cvs
+PV        := git
+VCSID     := $(shell git describe --tags HEAD)
+CPPFLAGS  += -DVCSID='"$(VCSID)"'
 endif
 ifndef PF
 PF        := portage-utils-$(PV)
@@ -100,24 +101,21 @@ testclean:
 	cd tests && $(MAKE) clean
 
 install: all
-	-$(MKDIR) $(PREFIX)/bin/
+	$(MKDIR) $(PREFIX)/bin/
 	$(CP) q $(PREFIX)/bin/
-	if [ ! -d CVS ] ; then \
-		$(MKDIR) $(PREFIX)/share/man/man1/ ; \
-		for mpage in $(wildcard man/*.1) ; do \
-			[ -e $$mpage ] \
-				&& cp $$mpage $(PREFIX)/share/man/man1/ || : ;\
-		done ; \
-		$(MKDIR) $(PREFIX)/share/doc/$(PF) ; \
-		for doc in $(DOCS) ; do \
-			cp $$doc $(PREFIX)/share/doc/$(PF)/ ; \
-		done ; \
-	fi
-	(cd $(PREFIX)/bin/ ; \
-		for applet in $(APPLETS); do \
-			[ ! -e "$$applet" ] && ln -s q $${applet} ; \
-		done \
-	)
+
+	set -e ; \
+	for applet in $(filter-out q,$(APPLETS)) ; do \
+		ln -sf q $(PREFIX)/bin/$${applet} ; \
+	done
+
+ifneq ($(wildcard man/*.1),)
+	$(MKDIR) $(PREFIX)/share/man/man1/
+	cp $(wildcard man/*.1) $(PREFIX)/share/man/man1/
+endif
+
+	$(MKDIR) $(PREFIX)/share/doc/$(PF)
+	cp $(DOCS) $(PREFIX)/share/doc/$(PF)/
 
 man: q
 	./man/mkman.py
@@ -138,7 +136,7 @@ EXTRA_DIST = \
 	$(SRC) \
 	qglsa.c \
 	$(wildcard libq/*.c *.h libq/*.h) \
-	$(shell find tests -type f '!' -ipath '*/CVS/*')
+	$(shell find tests -type f)
 MAKE_MULTI_LINES = $(patsubst %,\\\\\n\t%,$(sort $(1)))
 # 2nd level of indirection here is so the $(find) doesn't pick up
 # files in EXTRA_DIST that get cleaned up ...

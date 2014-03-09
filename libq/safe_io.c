@@ -1,9 +1,8 @@
 /*
  * utility funcs
  *
- * Copyright 2005-2010 Gentoo Foundation
+ * Copyright 2005-2014 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/safe_io.c,v 1.3 2011/12/19 04:41:58 vapier Exp $
  */
 
 #include <stdio.h>

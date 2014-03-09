@@ -1,9 +1,11 @@
-# Copyright 2005-2006 Gentoo Foundation
+# Copyright 2005-2014 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-projects/portage-utils/README,v 1.23 2007/01/22 05:38:49 solar Exp $
 
 Contact:
-	portage-utils@gentoo.org
+  Please file bugs at:
+	https://bugs.gentoo.org/enter_bug.cgi?product=Portage%20Development&format=guided
+  Use Component of "Third-Party Tools".
+
 Current developer list:
 	solar@gentoo.org
 	vapier@gentoo.org
@@ -21,10 +23,9 @@ Current developer list:
     q: Finished 20655 entries in 203.664252 seconds
 
 
-- Fetching via anoncvs.
-The cvs module for gentoo-projects is mirrored. You may download a 
-pretty recent copy using the following command. Note: that this is not 
-the official cvs server but rather a mirror so it lags about a hour or 
-so behind the real tree which is hosted on cvs.gentoo.org
+- Fetching via anon git:
 
-cvs -d:pserver:anonymous@anoncvs.gentoo.org:/var/cvsroot -q co -R gentoo-projects/portage-utils
+  git clone git://git.overlays.gentoo.org/proj/portage-utils.git
+
+You can view it online via gitweb:
+	http://git.overlays.gentoo.org/gitweb/?p=proj/portage-utils.git

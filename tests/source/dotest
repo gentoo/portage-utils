@@ -19,7 +19,6 @@ prune=(
 		'('
 			-type d -a
 			'('
-				-name CVS -o
 				-name tests -o
 				-name autotools -o
 				-name autom4te.cache -o

@@ -1,10 +1,9 @@
 /*
- * Copyright 2003-2007 Gentoo Foundation
+ * Copyright 2003-2014 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/libq/xarray.c,v 1.1 2011/10/03 16:18:25 vapier Exp $
  *
  * Copyright 2003-2007 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2004-2007 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2004-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 typedef struct {

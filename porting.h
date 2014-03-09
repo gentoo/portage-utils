@@ -1,10 +1,9 @@
 /*
- * Copyright 2005-2013 Gentoo Foundation
+ * Copyright 2005-2014 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/porting.h,v 1.2 2014/02/16 21:14:24 vapier Exp $
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2013 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  *
  * All the junk in one trunk!
  */

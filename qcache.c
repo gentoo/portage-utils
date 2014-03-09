@@ -1,7 +1,6 @@
 /*
- * Copyright 2005-2010 Gentoo Foundation
+ * Copyright 2005-2014 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
- * $Header: /var/cvsroot/gentoo-projects/portage-utils/qcache.c,v 1.48 2014/02/18 07:30:30 vapier Exp $
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
@@ -34,7 +33,6 @@ static struct option const qcache_long_opts[] = {
 	{"not",     no_argument, NULL, 'n'},
 	COMMON_LONG_OPTS
 };
-
 static const char * const qcache_opts_help[] = {
 	"match pkgname",
 	"match catname",
@@ -46,8 +44,6 @@ static const char * const qcache_opts_help[] = {
 	"list packages that aren't keyworded on a given arch.",
 	COMMON_OPTS_HELP
 };
-
-static const char qcache_rcsid[] = "$Id: qcache.c,v 1.48 2014/02/18 07:30:30 vapier Exp $";
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/

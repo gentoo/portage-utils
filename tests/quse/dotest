@@ -97,7 +97,6 @@ for arch in $arches; do
 	for ebuild in $(awk '{print $1}' < arch.${arch}) ; do cp $PORTDIR/$ebuild ./$ebuild; done ;
 	quse -CKe ${arch} | awk '{print $1}' | cut -d / -f 1-2 | uniq | while read cpn ; do cp -a $PORTDIR/$cpn/files ./$cpn/; done ;
 	cp -a $PORTDIR/{eclass,profiles,licences} . ; sync ; 
-	find . -type d -name CVS | while read foo; do rm $foo/* ; sync ; rmdir $foo ; done ;
 	mksquashfs ./ ../PORTDIR-${arch}.squashfs -noappend -e arch.${arch} ; 
 	rm -rf *-*
 	cd -
