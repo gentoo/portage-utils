@@ -38,8 +38,8 @@ const char *make_human_readable_str(unsigned long long size,
 {
 	/* The code will adjust for additional (appended) units. */
 	static const char zero_and_units[] = { '0', 0, 'k', 'M', 'G', 'T' };
-	static const char fmt[] = "%Lu";
-	static const char fmt_tenths[] = "%Lu.%d%c";
+	static const char fmt[] = "%'Lu";
+	static const char fmt_tenths[] = "%'Lu%s%d%c";
 
 	static char str[21];		/* Sufficient for 64 bit unsigned integers. */
 
@@ -85,7 +85,7 @@ const char *make_human_readable_str(unsigned long long size,
 	}
 
 	/* If f==fmt then 'frac' and 'u' are ignored. */
-	snprintf(str, sizeof(str), f, val, frac, *u);
+	snprintf(str, sizeof(str), f, val, decimal_point, frac, *u);
 
 	return str;
 }

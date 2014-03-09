@@ -4,6 +4,7 @@
 
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
 	then echo "$(1)"; else echo "$(2)"; fi)
+istrue = $(if $(filter 1 yes true on,$(strip $1)),1,0)
 
 ####################################################
 WFLAGS    := -Wall -Wunused -Wimplicit -Wshadow -Wformat=2 \
@@ -18,6 +19,7 @@ WFLAGS    := -Wall -Wunused -Wimplicit -Wshadow -Wformat=2 \
 CFLAGS    ?= -O2 -g -pipe
 CFLAGS    += -std=gnu99
 CPPFLAGS  ?=
+CPPFLAGS  += -DENABLE_NLS=$(call istrue,$(NLS))
 #CFLAGS   += -DEBUG -g
 #CFLAGS   += -Os -DOPTIMIZE_FOR_SIZE=2 -falign-functions=2 -falign-jumps=2 -falign-labels=2 -falign-loops=2
 #LDFLAGS  := -pie

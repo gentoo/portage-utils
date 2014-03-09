@@ -1425,7 +1425,7 @@ print_Pkg(int full, struct pkg_t *pkg)
 	printf("%s%s/%s%s%s%s%s%s\n", BOLD, pkg->CATEGORY, BLUE, pkg->PF, NORM,
 		!quiet ? " [" : "",
 		!quiet ? make_human_readable_str(pkg->SIZE, 1, KILOBYTE) : "",
-		!quiet ? "KB]" : "");
+		!quiet ? "KiB]" : "");
 
 	if (full == 0)
 		return;

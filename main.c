@@ -1293,11 +1293,10 @@ int main(int argc, char **argv)
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
 
-#ifdef ENABLE_NLS	/* never tested */
 	setlocale(LC_ALL, "");
 	bindtextdomain(argv0, CONFIG_EPREFIX "usr/share/locale");
 	textdomain(argv0);
-#endif
+
 #if 1
 	if (fstat(fileno(stdout), &st) != -1)
 		if (!isatty(fileno(stdout)))

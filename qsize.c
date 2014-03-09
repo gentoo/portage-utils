@@ -62,8 +62,8 @@ int qsize_main(int argc, char **argv)
 		case 'a': search_all = 1; break;
 		case 's': summary = 1; break;
 		case 'S': summary = summary_only = 1; break;
-		case 'm': disp_units = MEGABYTE; str_disp_units = "MB"; break;
-		case 'k': disp_units = KILOBYTE; str_disp_units = "KB"; break;
+		case 'm': disp_units = MEGABYTE; str_disp_units = "MiB"; break;
+		case 'k': disp_units = KILOBYTE; str_disp_units = "KiB"; break;
 		case 'b': disp_units = 1; str_disp_units = "bytes"; break;
 		case 'i': ignore_regexp = add_set(optarg, optarg, ignore_regexp); break;
 		}
@@ -139,19 +139,20 @@ int qsize_main(int argc, char **argv)
 			num_all_ignored += num_ignored;
 
 			if (!summary_only) {
-				printf("%s%s/%s%s%s: %lu files, %lu non-files, ", BOLD,
+				printf("%s%s/%s%s%s: %'lu files, %'lu non-files, ", BOLD,
 				       catname, BLUE, pkgname, NORM,
 				       (unsigned long)num_files,
 				       (unsigned long)num_nonfiles);
 				if (num_ignored)
-					printf("%lu names-ignored, ", (unsigned long)num_ignored);
+					printf("%'lu names-ignored, ", (unsigned long)num_ignored);
 				if (disp_units)
 					printf("%s %s\n",
 					       make_human_readable_str(num_bytes, 1, disp_units),
 					       str_disp_units);
 				else
-					printf("%lu.%lu KB\n",
+					printf("%'lu%s%lu KiB\n",
 					       (unsigned long)(num_bytes / KILOBYTE),
+					       decimal_point,
 					       (unsigned long)(((num_bytes%KILOBYTE)*1000)/KILOBYTE));
 			}
 
@@ -161,18 +162,19 @@ int qsize_main(int argc, char **argv)
 	}
 
 	if (summary) {
-		printf(" %sTotals%s: %lu files, %lu non-files, ", BOLD, NORM,
+		printf(" %sTotals%s: %'lu files, %'lu non-files, ", BOLD, NORM,
 		       (unsigned long)num_all_files,
 		       (unsigned long)num_all_nonfiles);
 		if (num_all_ignored)
-			printf("%lu names-ignored, ", (unsigned long)num_all_ignored);
+			printf("%'lu names-ignored, ", (unsigned long)num_all_ignored);
 		if (disp_units)
 			printf("%s %s\n",
 			       make_human_readable_str(num_all_bytes, 1, disp_units),
 			       str_disp_units);
 		else
-			printf("%lu.%lu MB\n",
+			printf("%'lu%s%lu MiB\n",
 			       (unsigned long)(num_all_bytes / MEGABYTE),
+			       decimal_point,
 			       (unsigned long)(((num_all_bytes%MEGABYTE)*1000)/MEGABYTE));
 	}
 	free_sets(ignore_regexp);
