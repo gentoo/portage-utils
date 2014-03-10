@@ -26,7 +26,7 @@ git) ver="HEAD" ;;
 	fi
 	;;
 esac
-p="portage-utils-$ver"
+p="portage-utils-${ver#v}"
 
 rm -rf "${p}"
 mkdir "${p}"
