@@ -69,7 +69,7 @@ static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_sta
 
 	fpx = NULL;
 
-	fd = q_vdb_pkg_openat(pkg_ctx, "CONTENTS", O_RDONLY|O_CLOEXEC);
+	fd = q_vdb_pkg_openat(pkg_ctx, "CONTENTS", O_RDONLY|O_CLOEXEC, 0);
 	if (fd == -1)
 		return EXIT_SUCCESS;
 	if (fstat(fd, &cst)) {

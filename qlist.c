@@ -61,17 +61,6 @@ _q_static queue *filter_dups(queue *sets)
 	return dups;
 }
 
-_q_static char *q_vdb_pkg_eat(q_vdb_pkg_ctx *pkg_ctx, const char *item)
-{
-	static char *buf;
-	static size_t buf_len;
-
-	eat_file_at(pkg_ctx->fd, item, &buf, &buf_len);
-	rmspace(buf);
-
-	return buf;
-}
-
 static char *grab_pkg_umap(const char *CAT, const char *PV)
 {
 	static char umap[BUFSIZ];
@@ -159,7 +148,7 @@ qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, b
 	if (uslot) {
 		++uslot;
 		if (!pkg_ctx->slot)
-			pkg_ctx->slot = q_vdb_pkg_eat(pkg_ctx, "SLOT");
+			q_vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot, &pkg_ctx->slot_len);
 	}
 
 	/* maybe they're using a version range */
@@ -298,7 +287,7 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		atom = (verbose ? NULL : atom_explode(pkgname));
 		if ((state->all + state->just_pkgname) < 2) {
 			if (state->show_slots && !pkg_ctx->slot)
-				pkg_ctx->slot = q_vdb_pkg_eat(pkg_ctx, "SLOT");
+				q_vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot, &pkg_ctx->slot_len);
 			/* display it */
 			printf("%s%s/%s%s%s%s%s%s%s%s%s%s\n", BOLD, catname, BLUE,
 				(!state->columns ? (atom ? atom->PN : pkgname) : atom->PN),
