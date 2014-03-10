@@ -396,7 +396,8 @@ _q_static int qdepends_main_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	int i;
 	char *ptr;
 	char buf[_Q_PATH_MAX];
-	char depend[65536], use[8192];
+	static char *depend, *use;
+	static size_t depend_len, use_len;
 	dep_node *dep_tree;
 
 	/* see if this cat/pkg is requested */
@@ -412,7 +413,7 @@ _q_static int qdepends_main_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 	IF_DEBUG(warn("matched %s/%s", catname, pkgname));
 
-	if (!eat_file_at(pkg_ctx->fd, state->depend_file, depend, sizeof(depend)))
+	if (!eat_file_at(pkg_ctx->fd, state->depend_file, &depend, &depend_len))
 		return 0;
 
 	IF_DEBUG(warn("growing tree..."));
@@ -433,7 +434,7 @@ _q_static int qdepends_main_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		printf("%s%s/%s%s%s: ", BOLD, catname, BLUE, pkgname, NORM);
 	}
 
-	if (!eat_file_at(pkg_ctx->fd, "USE", use, sizeof(use))) {
+	if (!eat_file_at(pkg_ctx->fd, "USE", &use, &use_len)) {
 		warn("Could not eat_file(%s), you'll prob have incorrect output", buf);
 	} else {
 		for (ptr = use; *ptr; ++ptr)
@@ -466,12 +467,13 @@ _q_static int qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	size_t len;
 	char *ptr;
 	char buf[_Q_PATH_MAX];
-	char depend[16384], use[8192];
+	static char *depend, *use;
+	static size_t depend_len, use_len;
 	dep_node *dep_tree;
 
 	IF_DEBUG(warn("matched %s/%s for %s", catname, pkgname, state->depend_file));
 
-	if (!eat_file_at(pkg_ctx->fd, state->depend_file, depend, sizeof(depend)))
+	if (!eat_file_at(pkg_ctx->fd, state->depend_file, &depend, &depend_len))
 		return 0;
 
 	IF_DEBUG(warn("growing tree..."));
@@ -481,7 +483,7 @@ _q_static int qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	IF_DEBUG(puts(depend));
 	IF_DEBUG(dep_dump_tree(dep_tree));
 
-	if (eat_file_at(pkg_ctx->fd, "USE", use, sizeof(use)) == 1)
+	if (eat_file_at(pkg_ctx->fd, "USE", &use, &use_len))
 		use[0] = ' ';
 
 	for (ptr = use; *ptr; ++ptr)

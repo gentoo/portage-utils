@@ -385,7 +385,8 @@ void show_current_emerge(void)
 	DIR *proc;
 	struct dirent *de;
 	pid_t pid;
-	char buf[BUFSIZE], bufstat[300];
+	static char *cmdline, *bufstat;
+	static size_t cmdline_len, bufstat_len;
 	char path[50];
 	char *p, *q;
 	unsigned long long start_time = 0;
@@ -407,17 +408,17 @@ void show_current_emerge(void)
 
 		/* portage renames the cmdline so the package name is first */
 		snprintf(path, sizeof(path), "/proc/%i/cmdline", pid);
-		if (!eat_file(path, buf, sizeof(buf)))
+		if (!eat_file(path, &cmdline, &cmdline_len))
 			continue;
 
-		if (buf[0] == '[' && (p = strchr(buf, ']')) != NULL && strstr(buf, "sandbox") != NULL) {
+		if (cmdline[0] == '[' && (p = strchr(cmdline, ']')) != NULL && strstr(cmdline, "sandbox") != NULL) {
 			*p = '\0';
-			p = buf+1;
+			p = cmdline + 1;
 			q = p + strlen(p) + 1;
 
 			/* open the stat file to figure out how long we have been running */
 			snprintf(path, sizeof(path), "/proc/%i/stat", pid);
-			if (!eat_file(path, bufstat, sizeof(bufstat)))
+			if (!eat_file(path, &bufstat, &bufstat_len))
 				continue;
 
 			/* ripped from procps/proc/readproc.c */
@@ -435,7 +436,7 @@ void show_current_emerge(void)
 				"%llu ",
 				&start_time);
 			/* get uptime */
-			if (!eat_file("/proc/uptime", bufstat, sizeof(bufstat)))
+			if (!eat_file("/proc/uptime", &bufstat, &bufstat_len))
 				continue;
 			sscanf(bufstat, "%lf", &uptime_secs);
 

@@ -114,7 +114,7 @@ _q_static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		}
 		if (state->exclude_slot == NULL)
 			goto qlist_done; /* "(CAT/)?(PN|PF)" matches, and no SLOT specified */
-		eat_file_at(pkg_ctx->fd, "SLOT", state->buf, state->buflen);
+		eat_file_at(pkg_ctx->fd, "SLOT", &state->buf, &state->buflen);
 		rmspace(state->buf);
 		if (strcmp(state->exclude_slot, state->buf) == 0)
 			goto qlist_done; /* "(CAT/)?(PN|PF):SLOT" matches */
@@ -215,8 +215,11 @@ _q_static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 					}
 				}
 				if (state->slotted) {
-					eat_file_at(pkg_ctx->fd, "SLOT", slot+1, sizeof(slot)-1);
-					rmspace(slot+1);
+					/* XXX: This assumes the buf is big enough. */
+					char *slot_hack = slot + 1;
+					size_t slot_len = sizeof(slot) - 1;
+					eat_file_at(pkg_ctx->fd, "SLOT", &slot_hack, &slot_len);
+					rmspace(slot_hack);
 					slot[0] = ':';
 				} else
 					slot[0] = '\0';

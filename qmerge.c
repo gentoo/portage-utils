@@ -754,7 +754,9 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 {
 	queue *objs;
 	FILE *fp, *contents;
-	char buf[1024], phases[128];
+	static char *phases;
+	static size_t phases_len;
+	char buf[1024];
 	char *tbz2, *p, *D, *T;
 	int i;
 	char **ARGV;
@@ -891,7 +893,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	xsystem(buf);
 	fflush(stdout);
 
-	eat_file("vdb/DEFINED_PHASES", phases, sizeof(phases));
+	eat_file("vdb/DEFINED_PHASES", &phases, &phases_len);
 	pkg_run_func("vdb", phases, "pkg_pretend", D, T);
 	pkg_run_func("vdb", phases, "pkg_setup", D, T);
 	pkg_run_func("vdb", phases, "pkg_preinst", D, T);
@@ -1019,7 +1021,9 @@ _q_static int
 pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 {
 	size_t buflen;
-	char *buf, *vdb_path, *T, phases[128];
+	static char *phases;
+	static size_t phases_len;
+	char *buf, *vdb_path, *T;
 	FILE *fp;
 	int ret, fd, vdb_fd, portroot_fd;
 	int cp_argc, cpm_argc;
@@ -1061,7 +1065,7 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 
 	/* First execute the pkg_prerm step */
 	if (!pretend) {
-		eat_file_at(vdb_fd, "DEFINED_PHASES", phases, sizeof(phases));
+		eat_file_at(vdb_fd, "DEFINED_PHASES", &phases, &phases_len);
 		mkdir_p(T, 0755);
 		pkg_run_func(vdb_path, phases, "pkg_prerm", T, T);
 	}

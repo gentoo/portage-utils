@@ -10,7 +10,9 @@
 #include "main.h"
 
 /* prototypes and such */
-static char eat_file(const char *file, char *buf, const size_t bufsize);
+static bool eat_file(const char *, char **, size_t *);
+static bool eat_file_fd(int, char **, size_t *);
+static bool eat_file_at(int, const char *, char **, size_t *);
 int rematch(const char *, const char *, int);
 static char *rmspace(char *);
 
@@ -170,47 +172,70 @@ static void version_barf(void)
 	exit(EXIT_SUCCESS);
 }
 
-static char eat_file_fd(int fd, char *buf, const size_t bufsize)
+static bool eat_file_fd(int fd, char **bufptr, size_t *bufsize)
 {
+	bool ret = true;
 	struct stat s;
+	char *buf;
+	size_t read_size;
 
+	/* First figure out how much data we should read from the fd. */
+	if (fd == -1 || fstat(fd, &s) != 0) {
+		ret = false;
+		read_size = 0;
+		/* Fall through so we set the first byte 0 */
+	} else if (!s.st_size) {
+		/* We might be trying to eat a virtual file like in /proc, so
+		 * read an arbitrary size that should be "enough". */
+		read_size = BUFSIZE;
+	} else
+		read_size = (size_t)s.st_size;
+
+	/* Now allocate enough space (at least 1 byte). */
+	if (!*bufptr || *bufsize < read_size) {
+		/* We assume a min allocation size so that repeat calls don't
+		 * hit ugly ramp ups -- if you read a file that is 1 byte, then
+		 * 5 bytes, then 10 bytes, then 20 bytes, ... you'll allocate
+		 * constantly.  So we round up a few pages as wasiting virtual
+		 * memory is cheap when it is unused.  */
+		*bufsize = ((read_size + 1) + BUFSIZE - 1) & -BUFSIZE;
+		*bufptr = xrealloc(*bufptr, *bufsize);
+	}
+	buf = *bufptr;
+
+	/* Finally do the actual read. */
 	buf[0] = '\0';
-	if (fstat(fd, &s) != 0)
-		return 0;
-	if (s.st_size) {
-		if (bufsize < (size_t)s.st_size)
-			return 0;
-		if (read(fd, buf, s.st_size) != (ssize_t)s.st_size)
-			return 0;
-		buf[s.st_size] = '\0';
-	} else {
-		if (read(fd, buf, bufsize) == 0)
-			return 0;
-		buf[bufsize - 1] = '\0';
+	if (read_size) {
+		if (s.st_size) {
+			if (read(fd, buf, read_size) != (ssize_t)read_size)
+				return false;
+			buf[read_size] = '\0';
+		} else {
+			if (read(fd, buf, read_size) == 0)
+				return false;
+			buf[read_size - 1] = '\0';
+		}
 	}
 
-	return 1;
-}
-
-static char eat_file_at(int dfd, const char *file, char *buf, const size_t bufsize)
-{
-	int fd;
-	char ret;
-
-	if ((fd = openat(dfd, file, O_CLOEXEC|O_RDONLY)) == -1) {
-		buf[0] = '\0';
-		return 0;
-	}
-
-	ret = eat_file_fd(fd, buf, bufsize);
-
-	close(fd);
 	return ret;
 }
 
-static char eat_file(const char *file, char *buf, const size_t bufsize)
+static bool eat_file_at(int dfd, const char *file, char **bufptr, size_t *bufsize)
 {
-	return eat_file_at(AT_FDCWD, file, buf, bufsize);
+	bool ret;
+	int fd;
+
+	fd = openat(dfd, file, O_CLOEXEC|O_RDONLY);
+	ret = eat_file_fd(fd, bufptr, bufsize);
+	if (fd != -1)
+		close(fd);
+
+	return ret;
+}
+
+static bool eat_file(const char *file, char **bufptr, size_t *bufsize)
+{
+	return eat_file_at(AT_FDCWD, file, bufptr, bufsize);
 }
 
 static bool prompt(const char *p)
@@ -601,7 +626,10 @@ static void read_portage_profile(const char *configroot, const char *profile, en
 {
 	size_t configroot_len, profile_len, sub_len;
 	char *profile_file, *sub_file;
-	char buf[BUFSIZE], *s;
+	char *s;
+
+	static char *buf;
+	static size_t buf_len;
 
 	/* initialize the base profile path */
 	configroot_len = strlen(configroot);
@@ -620,7 +648,7 @@ static void read_portage_profile(const char *configroot, const char *profile, en
 
 	/* now walk all the parents */
 	strcpy(sub_file, "parent");
-	if (eat_file(profile_file, buf, sizeof(buf)) == 0)
+	if (eat_file(profile_file, &buf, &buf_len) == 0)
 		goto done;
 	rmspace(buf);
 
@@ -1212,17 +1240,25 @@ char *atom_to_pvr(depend_atom *atom) {
 	return (atom->PR_int == 0 ? atom->P : atom->PVR );
 }
 
+/* TODO: Delete this in favor of libq/vdb.c API. */
 static char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF)
 {
-	static char buf[_Q_PATH_MAX];
+	static char *buf;
+	static size_t buf_len;
 
-	snprintf(buf, sizeof(buf), "%s%s/%s/%s/%s", portroot, portvdb, CATEGORY, PF, item);
-	eat_file(buf, buf, sizeof(buf));
+	if (buf == NULL) {
+		buf_len = _Q_PATH_MAX;
+		buf = xmalloc(buf_len);
+	}
+
+	snprintf(buf, buf_len, "%s%s/%s/%s/%s", portroot, portvdb, CATEGORY, PF, item);
+	eat_file(buf, &buf, &buf_len);
 	rmspace(buf);
 
 	return buf;
 }
 
+/* TODO: Merge this into libq/vdb.c somehow. */
 _q_static queue *get_vdb_atoms(int fullcpv)
 {
 	q_vdb_ctx *ctx;
@@ -1232,6 +1268,7 @@ _q_static queue *get_vdb_atoms(int fullcpv)
 
 	char buf[_Q_PATH_MAX];
 	char slot[_Q_PATH_MAX];
+	size_t slot_len;
 
 	struct dirent **cat;
 	struct dirent **pf;
@@ -1255,11 +1292,12 @@ _q_static queue *get_vdb_atoms(int fullcpv)
 			if ((atom = atom_explode(buf)) == NULL)
 				continue;
 
-			slot[0] = '0';
-			slot[1] = 0;
+			/* XXX: This assumes static slot buf is big enough, but should be fine
+			 * until this is rewritten & merged into libq/vdb.c. */
+			slot_len = sizeof(slot);
 			strncat(buf, "/SLOT", sizeof(buf));
-			eat_file_at(ctx->vdb_fd, buf, buf, sizeof(buf));
-			rmspace(buf);
+			eat_file_at(ctx->vdb_fd, buf, (char **)&slot, &slot_len);
+			rmspace(slot);
 
 			if (fullcpv) {
 				if (atom->PR_int)

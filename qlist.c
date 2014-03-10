@@ -63,9 +63,10 @@ _q_static queue *filter_dups(queue *sets)
 
 _q_static char *q_vdb_pkg_eat(q_vdb_pkg_ctx *pkg_ctx, const char *item)
 {
-	static char buf[_Q_PATH_MAX];
+	static char *buf;
+	static size_t buf_len;
 
-	eat_file_at(pkg_ctx->fd, item, buf, sizeof(buf));
+	eat_file_at(pkg_ctx->fd, item, &buf, &buf_len);
 	rmspace(buf);
 
 	return buf;
