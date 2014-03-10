@@ -357,6 +357,7 @@ qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	char install_ver[126] = "";
 	char c = 'N';
+	const char *color;
 
 	if (!pretend)
 		return 0;
@@ -385,10 +386,13 @@ qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
 			return c;
 		if ((c == 'R' || c == 'D') && update_only && level)
 			return c;
-		if (c == 'R')
-			snprintf(buf, sizeof(buf), "%s%c%s", YELLOW, c, NORM);
-		if (c == 'U' || c == 'D')
-			snprintf(buf, sizeof(buf), "%s%c%s", BLUE, c, NORM);
+		switch (c) {
+		case 'R': color = YELLOW; break;
+		case 'U': color = BLUE; break;
+		case 'D': color = DKBLUE; break;
+		default: color = RED; break;
+		}
+		snprintf(buf, sizeof(buf), "%s%c%s", color, c, NORM);
 #if 0
 		if (level) {
 			switch (c) {
