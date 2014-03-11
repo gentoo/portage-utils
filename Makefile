@@ -20,7 +20,7 @@ CFLAGS    ?= -O2 -g -pipe
 CFLAGS    += -std=gnu99
 CPPFLAGS  ?=
 CPPFLAGS  += -DENABLE_NLS=$(call istrue,$(NLS))
-#CFLAGS   += -DEBUG -g
+DBG_CFLAGS = -O0 -DEBUG -g3 -ggdb -fno-pie $(call check_gcc, -fsanitize=address)
 #CFLAGS   += -Os -DOPTIMIZE_FOR_SIZE=2 -falign-functions=2 -falign-jumps=2 -falign-labels=2 -falign-loops=2
 #LDFLAGS  := -pie
 LIBADD    += $(shell echo | $(CC) -dM -E - | grep -q ' __FreeBSD__' && echo '-lkvm')
@@ -62,7 +62,7 @@ all: q
 	@true
 
 debug:
-	$(MAKE) CFLAGS="$(CFLAGS) -O0 -DEBUG -g3 -ggdb -fno-pie" clean symlinks
+	$(MAKE) CFLAGS="$(CFLAGS) $(DBG_CFLAGS)" clean symlinks
 	@-scanelf -o /dev/null -BXxz permsx q
 
 q: $(SRC) libq/*.c *.h libq/*.h
