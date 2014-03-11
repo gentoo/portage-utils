@@ -16,7 +16,6 @@ static struct option const qlist_long_opts[] = {
 	{"repo",      no_argument, NULL, 'R'},
 	{"umap",      no_argument, NULL, 'U'},
 	{"columns",   no_argument, NULL, 'c'},
-	{"dups",      no_argument, NULL, 'D'},
 	{"showdebug", no_argument, NULL, 128},
 	{"exact",     no_argument, NULL, 'e'},
 	{"all",       no_argument, NULL, 'a'},
@@ -32,7 +31,6 @@ static const char * const qlist_opts_help[] = {
 	"Display installed packages with repository",
 	"Display installed packages with flags used",
 	"Display column view",
-	"Only show package dups",
 	"Show /usr/lib/debug files",
 	"Exact match (only CAT/PN or PN without PV)",
 	"Show every installed package",
@@ -43,25 +41,6 @@ static const char * const qlist_opts_help[] = {
 	COMMON_OPTS_HELP
 };
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
-
-_q_static queue *filter_dups(queue *sets)
-{
-	queue *ll = NULL;
-	queue *dups = NULL;
-	queue *list = NULL;
-
-	for (list = sets; list != NULL;  list = list->next) {
-		for (ll = sets; ll != NULL; ll = ll->next) {
-			if ((strcmp(ll->name, list->name) == 0) && (strcmp(ll->item, list->item) != 0)) {
-				int ok = 0;
-				dups = del_set(ll->item, dups, &ok);
-				ok = 0;
-				dups = add_set(ll->item, ll->item, dups);
-			}
-		}
-	}
-	return dups;
-}
 
 static char *grab_pkg_umap(const char *CAT, const char *PV)
 {
@@ -276,7 +255,6 @@ struct qlist_opt_state {
 	bool exact;
 	bool all;
 	bool just_pkgname;
-	bool dups_only;
 	bool show_dir;
 	bool show_obj;
 	bool show_repo;
@@ -307,15 +285,6 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 	if (state->just_pkgname) {
 		depend_atom *atom;
-		if (state->dups_only) {
-			char swap[_Q_PATH_MAX];
-			atom = atom_explode(pkgname);
-			snprintf(state->buf, state->buflen, "%s/%s", catname, atom->P);
-			snprintf(swap, sizeof(swap), "%s/%s", catname, atom->PN);
-			state->sets = add_set(swap, state->buf, state->sets);
-			atom_implode(atom);
-			return 0;
-		}
 		atom = (verbose ? NULL : atom_explode(pkgname));
 		if ((state->all + state->just_pkgname) < 2) {
 			if (state->show_slots && !pkg_ctx->slot)
@@ -389,7 +358,6 @@ int qlist_main(int argc, char **argv)
 		.exact = false,
 		.all = false,
 		.just_pkgname = false,
-		.dups_only = false,
 		.show_dir = false,
 		.show_obj = false,
 		.show_repo = false,
@@ -419,12 +387,12 @@ int qlist_main(int argc, char **argv)
 		case 128: state.show_dbg = true; break;
 		case 'o': state.show_obj = true; break;
 		case 's': state.show_sym = true; break;
-		case 'D': state.dups_only = state.exact = state.just_pkgname = true; break;
 		case 'c': state.columns = true; break;
 		case 'f': break;
 		}
 	}
-	if (state.columns) verbose = 0; /* if not set to zero; atom wont be exploded; segv */
+	if (state.columns)
+		verbose = 0; /* if not set to zero; atom wont be exploded; segv */
 	/* default to showing syms and objs */
 	if (!state.show_dir && !state.show_obj && !state.show_sym)
 		state.show_obj = state.show_sym = true;
@@ -434,40 +402,6 @@ int qlist_main(int argc, char **argv)
 	state.buf = xmalloc(state.buflen);
 	state.atoms = xcalloc(argc - optind, sizeof(*state.atoms));
 	ret = q_vdb_foreach_pkg_sorted(qlist_cb, &state);
-
-	if (state.dups_only) {
-		char last[126];
-		depend_atom *atom;
-		queue *ll, *dups = filter_dups(state.sets);
-		last[0] = 0;
-
-		for (ll = dups; ll != NULL; ll = ll->next) {
-			int ok = 1;
-			atom = atom_explode(ll->item);
-			if (strcmp(last, atom->PN) == 0)
-				if (!verbose)
-					ok = 0;
-			strncpy(last, atom->PN, sizeof(last));
-			if (ok)	{
-				char *slot = NULL;
-				char *repo = NULL;
-				if (state.show_slots)
-					slot = grab_vdb_item("SLOT", atom->CATEGORY, atom->P);
-				if (state.show_repo)
-					repo = grab_vdb_item("repository", atom->CATEGORY, atom->P);
-				printf("%s%s/%s%s%s%s%s%s%s%s%s%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
-					(!state.columns ? (verbose ? atom->P : atom->PN) : atom->PN),
-					(state.columns ? " " : ""), (state.columns ? atom->PV : ""),
-					NORM, YELLOW, slot ? ":" : "", slot ? slot : "",
-					NORM, GREEN, repo ? "::" : "", repo ? repo : "", NORM);
-				puts(umapstr(state.show_umap, atom->CATEGORY, atom->P));
-			}
-			atom_implode(atom);
-		}
-		free_sets(dups);
-		free_sets(state.sets);
-	}
-
 	free(state.buf);
 	free(state.atoms);
 
