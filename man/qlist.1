@@ -1,4 +1,4 @@
-.TH qlist "1" "Sep 2013" "Gentoo Foundation" "qlist"
+.TH qlist "1" "Mar 2014" "Gentoo Foundation" "qlist"
 .SH NAME
 qlist \- list files owned by pkgname
 .SH SYNOPSIS
@@ -14,14 +14,14 @@ Just show installed packages
 \fB\-S\fR, \fB\-\-slots\fR
 Display installed packages with slots
 .TP
-\fB\-c\fR, \fB\-\-columns\fR
-Display column view
+\fB\-R\fR, \fB\-\-repo\fR
+Display installed packages with repository
 .TP
 \fB\-U\fR, \fB\-\-umap\fR
 Display installed packages with flags used
 .TP
-\fB\-D\fR, \fB\-\-dups\fR
-Only show package dups
+\fB\-c\fR, \fB\-\-columns\fR
+Display column view
 .TP
 \fB\-\-showdebug\fR
 Show /usr/lib/debug files
@@ -40,6 +40,9 @@ Only show objects
 .TP
 \fB\-s\fR, \fB\-\-sym\fR
 Only show symlinks
+.TP
+\fB\-\-root\fR \fI<arg>\fR
+Set the ROOT env var
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
 Make a lot of noise

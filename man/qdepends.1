@@ -1,4 +1,4 @@
-.TH qdepends "1" "Sep 2013" "Gentoo Foundation" "qdepends"
+.TH qdepends "1" "Mar 2014" "Gentoo Foundation" "qdepends"
 .SH NAME
 qdepends \- show dependency info
 .SH SYNOPSIS
@@ -13,6 +13,9 @@ By default, it will tell you the build time dependencies only (DEPEND).
 
 Currently, qdepends will only query installed packages.  There is no support for
 querying packages not yet installed (the \fBequery\fR(1) tool can do that).
+
+If there is no answer to your query (i.e. you've asked for a package that is not
+installed, or a version that does not match), then you will get back no output.
 .SH OPTIONS
 .TP
 \fB\-d\fR, \fB\-\-depend\fR
@@ -38,6 +41,9 @@ Show all DEPEND info
 .TP
 \fB\-f\fR, \fB\-\-format\fR
 Pretty format specified depend strings
+.TP
+\fB\-\-root\fR \fI<arg>\fR
+Set the ROOT env var
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
 Make a lot of noise
@@ -71,4 +77,18 @@ Ned Ludd <solar@gentoo.org>
 Mike Frysinger <vapier@gentoo.org>
 .fi
 .SH "SEE ALSO"
-
+.BR q (1),
+.BR qatom (1),
+.BR qcache (1),
+.BR qcheck (1),
+.BR qfile (1),
+.BR qgrep (1),
+.BR qlist (1),
+.BR qlop (1),
+.BR qmerge (1),
+.BR qpkg (1),
+.BR qsearch (1),
+.BR qsize (1),
+.BR qtbz2 (1),
+.BR quse (1),
+.BR qxpak (1)
