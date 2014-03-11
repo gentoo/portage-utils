@@ -227,9 +227,11 @@ _q_static q_vdb_pkg_ctx *q_vdb_next_pkg(q_vdb_cat_ctx *cat_ctx)
 _q_static int
 q_vdb_pkg_openat(q_vdb_pkg_ctx *pkg_ctx, const char *file, int flags, mode_t mode)
 {
-	pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name, O_RDONLY|O_CLOEXEC|O_PATH);
-	if (pkg_ctx->fd == -1)
-		return -1;
+	if (pkg_ctx->fd == -1) {
+		pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name, O_RDONLY|O_CLOEXEC|O_PATH);
+		if (pkg_ctx->fd == -1)
+			return -1;
+	}
 
 	return openat(pkg_ctx->fd, file, flags|O_CLOEXEC, mode);
 }
@@ -259,6 +261,8 @@ q_vdb_pkg_eat(q_vdb_pkg_ctx *pkg_ctx, const char *file, char **bufptr, size_t *b
 	int fd = q_vdb_pkg_openat(pkg_ctx, file, O_RDONLY, 0);
 	bool ret = eat_file_fd(fd, bufptr, buflen);
 	rmspace(*bufptr);
+	if (fd != -1)
+		close(fd);
 	return ret;
 }
 
