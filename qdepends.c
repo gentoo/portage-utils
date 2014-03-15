@@ -484,13 +484,16 @@ _q_static int qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	IF_DEBUG(dep_dump_tree(dep_tree));
 
 	if (q_vdb_pkg_eat(pkg_ctx, "USE", &use, &use_len))
-		use[0] = ' ';
+		use[0] = '\0';
 
 	for (ptr = use; *ptr; ++ptr)
 		if (*ptr == '\n' || *ptr == '\t')
 			*ptr = ' ';
-	len = strlen(use);
-	assert(len+1 < sizeof(use));
+	len = ptr - use;
+	if (len == use_len) {
+		use_len += BUFSIZE;
+		use = xrealloc(use, use_len);
+	}
 	use[len] = ' ';
 	use[len+1] = '\0';
 	memmove(use+1, use, len);
