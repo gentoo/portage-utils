@@ -14,7 +14,7 @@ basic: $(b)/e
 	diff -u $(s)/basic.good $(b)/basic
 
 dotest: $(b)/e
-	$(s)/dotest
+	$(Q)$(s)/dotest
 
 clean:
 	rm -f $(b)/me $(b)/py $(b)/e $(b)/q $(b)/basic

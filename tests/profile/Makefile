@@ -4,6 +4,6 @@ include ../subdir.mk
 all: check
 
 test check:
-	$(s)/dotest
+	$(Q)$(s)/dotest
 
 .PHONY: all check clean test

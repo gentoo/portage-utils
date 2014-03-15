@@ -10,7 +10,7 @@ $(b)/m: $(s)/test.c
 test check: dotest
 
 dotest: $(b)/m
-	$(s)/dotest
+	$(Q)$(s)/dotest
 
 clean:
 	rm -f $(b)/m

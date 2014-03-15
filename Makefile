@@ -35,6 +35,7 @@ Q = @
 else
 Q =
 endif
+export Q
 ifdef PV
 CPPFLAGS  += -DVERSION=\"$(PV)\"
 else

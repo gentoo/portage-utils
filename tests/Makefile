@@ -8,7 +8,7 @@ all: check
 test check: $(TESTS:=_subdir)
 
 %_subdir:
-	cd $(@:_subdir=) || exit 1; \
+	$(Q)cd $(@:_subdir=) || exit 1; \
 	out=`$(MAKE) check 2>&1`; \
 	ret=$$?; \
 	echo "$$out"; \

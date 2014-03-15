@@ -4,7 +4,7 @@ include ../subdir.mk
 all: check
 
 test check:
-	$(s)/dotest
+	$(Q)$(s)/dotest
 
 clean:
 	rm -f $(b)/PORTDIR-* $(b)/*.squashfs

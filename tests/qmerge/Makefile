@@ -7,7 +7,7 @@ PACKAGES = $(PKGDIR)/Packages
 all: test
 
 test check: $(PACKAGES)
-	./dotest
+	$(Q)$(s)/dotest
 
 $(PACKAGES): $(wildcard $(PKGDIR)/*/*.tbz2)
 	PKGDIR=$(PKGDIR) emaint binhost -f 
