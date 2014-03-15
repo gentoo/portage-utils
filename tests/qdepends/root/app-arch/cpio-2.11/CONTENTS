@@ -1,0 +1,22 @@
+dir /bin
+obj /bin/cpio 2d0175bda0d523cb1866f2a86d5e1d36 1279420243
+dir /usr
+dir /usr/share
+dir /usr/share/man
+dir /usr/share/man/man1
+obj /usr/share/man/man1/cpio.1.lzma 59ce265e35d90956a01681a410321dca 1279420242
+dir /usr/share/doc
+dir /usr/share/doc/cpio-2.11
+obj /usr/share/doc/cpio-2.11/ChangeLog.lzma e4c19516c2281dcae742d629481963cf 1279420242
+obj /usr/share/doc/cpio-2.11/NEWS.lzma 65222bcc052d4493e2f686bea7b391b3 1279420242
+obj /usr/share/doc/cpio-2.11/README.lzma 78234895f4a2f4ffabf3454d7b09d3d7 1279420242
+dir /usr/share/locale
+dir /usr/share/locale/de
+dir /usr/share/locale/de/LC_MESSAGES
+obj /usr/share/locale/de/LC_MESSAGES/cpio.mo e70bf4aad229f9f5c491f525601631b7 1279420242
+dir /usr/share/info
+obj /usr/share/info/cpio.info.lzma ad50ca81ccb87d49e84a46fb6d3fbb7f 1279420242
+dir /usr/lib
+dir /usr/lib/debug
+dir /usr/lib/debug/bin
+obj /usr/lib/debug/bin/cpio.debug 9da741b0b5cd1d997623feb674301b08 1279420243

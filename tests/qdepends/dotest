@@ -4,11 +4,14 @@
 
 set -e
 
+export ROOT=${as}/root
+export Q_VDB=/
+
 mktmpdir
 
 test() {
-	local num=$1 dep=$2 exp=${3:-0} ret
-	local cmd=( qdepends -f "${dep}" )
+	local num=$1 exp=$2 ret
+	local cmd=( qdepends "${@:3}" )
 
 	"${cmd[@]}" >& list && ret=0 || ret=$?
 	if [[ ${ret} -ne ${exp} ]] ; then
@@ -26,18 +29,25 @@ test() {
 	tend $? "${cmd[*]}"
 }
 
+testf() { test "$1" "${3:-0}" -f "$2"; }
+
 # basic sanity checks
-test 00 '|' 1
-test 01 ''
-test 02 'a/b'
-test 03 'foo? ( a/b )'
-test 04 '|| ( a/b )'
+testf 00 '|' 1
+testf 01 ''
+testf 02 'a/b'
+testf 03 'foo? ( a/b )'
+testf 04 '|| ( a/b )'
 
 # a bit more complicated with or deps
-test 05 '|| ( || ( || ( x ) a ) )'
+testf 05 '|| ( || ( || ( x ) a ) )'
 
 # hande use deps on atoms #470180
-test 06 'a[foo(+)]'
+testf 06 'a[foo(+)]'
+
+testQ() { test "$1" "${3:-0}" -Q "$2"; }
+
+# reverse checks #504636
+testQ 07 xinit
 
 cleantmpdir
 
