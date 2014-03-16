@@ -95,7 +95,7 @@ int q_main(int argc, char **argv)
 
 	if (install) {
 		char buf[_Q_PATH_MAX];
-		const char *prog;
+		const char *prog, *dir;
 		ssize_t rret;
 		int fd, ret;
 
@@ -115,9 +115,10 @@ int q_main(int argc, char **argv)
 			buf[rret] = '\0';
 
 		prog = basename(buf);
-		fd = open(dirname(buf), O_RDONLY|O_CLOEXEC);
+		dir = dirname(buf);
+		fd = open(dir, O_RDONLY|O_CLOEXEC|O_PATH);
 		if (fd < 0) {
-			warnfp("chdir(%s) failed", buf);
+			warnfp("open(%s) failed", dir);
 			return 1;
 		}
 
