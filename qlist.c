@@ -63,9 +63,11 @@ static char *grab_pkg_umap(q_vdb_pkg_ctx *pkg_ctx)
 	umap[0] = '\0'; /* reset the buffer */
 
 	makeargv(use, &use_argc, &use_argv);
+	/* strip out possible leading +/- flags in IUSE */
 	for (i = 0; i < (int)strlen(iuse); i++)
 		if (iuse[i] == '+' || iuse[i] == '-')
-			iuse[i] = ' ';
+			if (i == 0 || iuse[i - 1] == ' ')
+				iuse[i] = ' ';
 	makeargv(iuse, &iuse_argc, &iuse_argv);
 	for (u = 1; u < use_argc; u++) {
 		for (i = 1; i < iuse_argc; i++) {
