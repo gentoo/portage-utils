@@ -348,8 +348,6 @@ int qpkg_main(int argc, char **argv)
 	if (argc == optind)
 		qpkg_usage(EXIT_FAILURE);
 
-	xchdir(portroot);
-
 	/* setup temp dirs */
 	i = 0;
 	bindir = qpkg_get_bindir();
@@ -367,6 +365,10 @@ retry_mkdir:
 			if (chmod(bindir, 0750))
 				errp("could not chmod(0750) temp bindir '%s'", bindir);
 	}
+
+	/* we have to change to the root so that we can feed the full paths
+	 * to tar when we create the binary package. */
+	xchdir(portroot);
 
 	/* first process any arguments which point to /var/db/pkg */
 	pkgs_made = 0;
