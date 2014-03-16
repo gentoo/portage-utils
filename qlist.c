@@ -56,7 +56,7 @@ static char *grab_pkg_umap(const char *CAT, const char *PV)
 	if ((use = grab_vdb_item("USE", CAT, PV)) == NULL)
 		return NULL;
 
-	memset(umap, 0, sizeof(umap)); /* reset the buffer */
+	umap[0] = '\0'; /* reset the buffer */
 
 	/* grab_vdb is a static function so save it to memory right away */
 	makeargv(use, &use_argc, &use_argv);
@@ -85,8 +85,7 @@ static char *grab_pkg_umap(const char *CAT, const char *PV)
 		sets = del_set(use_argv[i], sets, &ok);
 		sets = add_set(use_argv[i], use_argv[i], sets);
 	}
-	memset(umap, 0, sizeof(umap)); /* reset the buffer */
-	strcpy(umap, "");
+	umap[0] = '\0'; /* reset the buffer */
 	for (ll = sets; ll != NULL; ll = ll->next) {
 		strncat(umap, ll->name, sizeof(umap)-strlen(umap)-1);
 		strncat(umap, " ", sizeof(umap)-strlen(umap)-1);
