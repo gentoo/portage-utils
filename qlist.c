@@ -42,39 +42,40 @@ static const char * const qlist_opts_help[] = {
 };
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
 
-static char *grab_pkg_umap(const char *CAT, const char *PV)
+static char *grab_pkg_umap(q_vdb_pkg_ctx *pkg_ctx)
 {
 	static char umap[BUFSIZ];
-	char *use = NULL;
-	char *iuse = NULL;
+	static char *use, *iuse;
+	static size_t use_len, iuse_len;
 	int use_argc = 0, iuse_argc = 0;
 	char **use_argv = NULL, **iuse_argv = NULL;
 	queue *ll = NULL;
 	queue *sets = NULL;
 	int i, u;
 
-	if ((use = grab_vdb_item("USE", CAT, PV)) == NULL)
+	q_vdb_pkg_eat(pkg_ctx, "USE", &use, &use_len);
+	if (!use[0])
+		return NULL;
+	q_vdb_pkg_eat(pkg_ctx, "IUSE", &iuse, &iuse_len);
+	if (!iuse[0])
 		return NULL;
 
 	umap[0] = '\0'; /* reset the buffer */
 
-	/* grab_vdb is a static function so save it to memory right away */
 	makeargv(use, &use_argc, &use_argv);
-	if ((iuse = grab_vdb_item("IUSE", CAT, PV)) != NULL) {
-		for (i = 0; i < (int)strlen(iuse); i++)
-			if (iuse[i] == '+' || iuse[i] == '-')
-				iuse[i] = ' ';
-		makeargv(iuse, &iuse_argc, &iuse_argv);
-		for (u = 1; u < use_argc; u++) {
-			for (i = 1; i < iuse_argc; i++) {
-				if (strcmp(use_argv[u], iuse_argv[i]) == 0) {
-					strncat(umap, use_argv[u], sizeof(umap)-strlen(umap)-1);
-					strncat(umap, " ", sizeof(umap)-strlen(umap)-1);
-				}
+	for (i = 0; i < (int)strlen(iuse); i++)
+		if (iuse[i] == '+' || iuse[i] == '-')
+			iuse[i] = ' ';
+	makeargv(iuse, &iuse_argc, &iuse_argv);
+	for (u = 1; u < use_argc; u++) {
+		for (i = 1; i < iuse_argc; i++) {
+			if (strcmp(use_argv[u], iuse_argv[i]) == 0) {
+				strncat(umap, use_argv[u], sizeof(umap)-strlen(umap)-1);
+				strncat(umap, " ", sizeof(umap)-strlen(umap)-1);
 			}
 		}
-		freeargv(iuse_argc, iuse_argv);
 	}
+	freeargv(iuse_argc, iuse_argv);
 	freeargv(use_argc, use_argv);
 
 	/* filter out the dup use flags */
@@ -97,7 +98,7 @@ static char *grab_pkg_umap(const char *CAT, const char *PV)
 	return umap;
 }
 
-static const char *umapstr(char display, const char *cat, const char *name)
+static const char *umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
 {
 	static char buf[BUFSIZ];
 	char *umap = NULL;
@@ -105,7 +106,7 @@ static const char *umapstr(char display, const char *cat, const char *name)
 	buf[0] = '\0';
 	if (!display)
 		return buf;
-	if ((umap = grab_pkg_umap(cat, name)) == NULL)
+	if ((umap = grab_pkg_umap(pkg_ctx)) == NULL)
 		return buf;
 	rmspace(umap);
 	if (!strlen(umap))
@@ -191,7 +192,6 @@ qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, b
 			return false;
 	}
 
-	/* printf("buf=%s:%s\n", buf,grab_vdb_item("SLOT", catname, pkgname)); */
 	if (exact) {
 		int i;
 
@@ -296,7 +296,7 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 				(state->columns ? " " : ""), (state->columns ? atom->PV : ""),
 				NORM, YELLOW, state->show_slots ? ":" : "", state->show_slots ? pkg_ctx->slot : "", NORM,
 				NORM, GREEN, state->show_repo ? "::" : "", state->show_repo ? pkg_ctx->repo : "", NORM,
-				umapstr(state->show_umap, catname, pkgname));
+				umapstr(state->show_umap, pkg_ctx));
 		}
 		if (atom)
 			atom_implode(atom);
