@@ -17,7 +17,6 @@
 #include "md5_sha1_sum.c"
 #include "human_readable.c"
 #include "rmspace.c"
-#include "which.c"
 #include "compat.c"
 
 #include "copy_file.c"

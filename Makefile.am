@@ -112,7 +112,6 @@ EXTRA_DIST += \
 	libq/vdb.c \
 	libq/vdb_get_next_dir.c \
 	libq/virtuals.c \
-	libq/which.c \
 	libq/xarray.c \
 	libq/xasprintf.c \
 	libq/xchdir.c \

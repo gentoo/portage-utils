@@ -104,15 +104,10 @@ int q_main(int argc, char **argv)
 
 		rret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
 		if (rret == -1) {
-			char *ptr = which("q");
-			if (ptr == NULL) {
-				warnfp("haha no symlink love for you");
-				return 1;
-			}
-			strncpy(buf, ptr, sizeof(buf));
-			buf[sizeof(buf) - 1] = '\0';
-		} else
-			buf[rret] = '\0';
+			warnfp("haha no symlink love for you");
+			return 1;
+		}
+		buf[rret] = '\0';
 
 		prog = basename(buf);
 		dir = dirname(buf);

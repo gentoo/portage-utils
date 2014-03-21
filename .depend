@@ -1,7 +1,7 @@
 main.o: main.c porting.h main.h libq/libq.c libq/busybox.h libq/i18n.h \
  libq/libq.h libq/colors.c libq/xmalloc.c libq/xstrdup.c libq/xasprintf.c \
  libq/hash_fd.c libq/md5_sha1_sum.c libq/human_readable.c libq/rmspace.c \
- libq/which.c libq/compat.c libq/copy_file.c libq/safe_io.c libq/xchdir.c \
+ libq/compat.c libq/copy_file.c libq/safe_io.c libq/xchdir.c \
  libq/xgetcwd.c libq/xmkdir.c libq/xreadlink.c libq/xregex.c \
  libq/xsystem.c libq/xarray.c libq/atom_explode.c libq/atom_compare.c \
  libq/basename.c libq/scandirat.c libq/prelink.c libq/profile.c \
