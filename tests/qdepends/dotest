@@ -26,7 +26,7 @@ test() {
 		cp list "${good}"
 	fi
 	diff -u list "${good}"
-	tend $? "${cmd[*]}"
+	tend $? "${num} ${cmd[*]}"
 }
 
 testf() { test "$1" "${3:-0}" -f "$2"; }
@@ -48,6 +48,11 @@ testQ() { test "$1" "${3:-0}" -Q "$2"; }
 
 # reverse checks #504636
 testQ 07 xinit
+
+testq() { test "$1" "${3:-0}" -q "$2"; }
+
+# forward checks #504636
+testq 08 xdm
 
 cleantmpdir
 

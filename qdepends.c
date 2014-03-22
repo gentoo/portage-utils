@@ -440,8 +440,11 @@ _q_static int qdepends_main_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		for (ptr = use; *ptr; ++ptr)
 			if (*ptr == '\n' || *ptr == '\t')
 				*ptr = ' ';
-		len = strlen(use);
-		assert(len+1 < sizeof(use));
+		len = ptr - use;
+		if (len + 1 >= use_len) {
+			use_len += BUFSIZE;
+			use = xrealloc(use, use_len);
+		}
 		use[len] = ' ';
 		use[len+1] = '\0';
 		memmove(use+1, use, len);
@@ -490,7 +493,7 @@ _q_static int qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		if (*ptr == '\n' || *ptr == '\t')
 			*ptr = ' ';
 	len = ptr - use;
-	if (len == use_len) {
+	if (len + 1 >= use_len) {
 		use_len += BUFSIZE;
 		use = xrealloc(use, use_len);
 	}
