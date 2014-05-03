@@ -27,7 +27,7 @@ static struct option const qlist_long_opts[] = {
 };
 static const char * const qlist_opts_help[] = {
 	"Just show installed packages",
-	"Display installed packages with slots",
+	"Display installed packages with slots (use twice for subslots)",
 	"Display installed packages with repository",
 	"Display installed packages with flags used",
 	"Display column view",
@@ -260,7 +260,7 @@ struct qlist_opt_state {
 	bool show_obj;
 	bool show_repo;
 	bool show_sym;
-	bool show_slots;
+	int show_slots;
 	bool show_umap;
 	bool show_dbg;
 	bool columns;
@@ -288,8 +288,15 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		depend_atom *atom;
 		atom = (verbose ? NULL : atom_explode(pkgname));
 		if ((state->all + state->just_pkgname) < 2) {
-			if (state->show_slots && !pkg_ctx->slot)
+			if (state->show_slots && !pkg_ctx->slot) {
 				q_vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot, &pkg_ctx->slot_len);
+				/* chop off the subslot if desired */
+				if (state->show_slots == 1) {
+					char *s = strchr(pkg_ctx->slot, '/');
+					if (s)
+						*s = '\0';
+				}
+			}
 			if (state->show_repo && !pkg_ctx->repo)
 				q_vdb_pkg_eat(pkg_ctx, "repository", &pkg_ctx->repo, &pkg_ctx->repo_len);
 			/* display it */
@@ -363,7 +370,7 @@ int qlist_main(int argc, char **argv)
 		.show_obj = false,
 		.show_repo = false,
 		.show_sym = false,
-		.show_slots = false,
+		.show_slots = 0,
 		.show_umap = false,
 		.show_dbg = false,
 		.columns = false,
@@ -380,7 +387,7 @@ int qlist_main(int argc, char **argv)
 		COMMON_GETOPTS_CASES(qlist)
 		case 'a': state.all = true;
 		case 'I': state.just_pkgname = true; break;
-		case 'S': state.just_pkgname = state.show_slots = true; break;
+		case 'S': state.just_pkgname = true; ++state.show_slots; break;
 		case 'R': state.just_pkgname = state.show_repo = true; break;
 		case 'U': state.just_pkgname = state.show_umap = true; break;
 		case 'e': state.exact = true; break;

@@ -55,6 +55,9 @@ test 12 "qlist -ICSR"
 # exact CAT/PN:slot::repo files list test
 test 13 "qlist -Ce --showdebug app-arch/cpio:0::gentoo"
 
+# sub-SLOT test
+test 14 "qlist -ICSS"
+
 cleantmpdir
 
 end
