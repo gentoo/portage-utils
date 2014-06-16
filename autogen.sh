@@ -12,22 +12,26 @@ fi
 # reload the gnulib code if possible
 PATH=/usr/local/src/gnu/gnulib:${PATH}
 mods="
+	alloca
 	faccessat
 	fdopendir
 	fstatat
 	futimens
 	getline
+	getopt-posix
 	mkdirat
 	openat
 	progname
 	readlinkat
 	renameat
 	stat-time
+	strcasestr-simple
 	strncat
 	symlinkat
 	sys_stat
 	unlinkat
 	utimensat
+	vasprintf-posix
 "
 v gnulib-tool \
 	--source-base=autotools/gnulib --m4-base=autotools/m4 \

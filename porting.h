@@ -25,6 +25,7 @@
 #define _LINUX_SOURCE_COMPAT
 #endif
 
+#include <alloca.h>
 #include <assert.h>
 #include <ctype.h>
 #include <dirent.h>

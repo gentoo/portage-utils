@@ -179,6 +179,14 @@ EXTRA_DIST += \
 	tests/qdepends/list04.good \
 	tests/qdepends/list05.good \
 	tests/qdepends/list06.good \
+	tests/qdepends/list07.good \
+	tests/qdepends/list08.good \
+	tests/qdepends/root/app-arch/cpio-2.11/CONTENTS \
+	tests/qdepends/root/app-arch/cpio-2.11/SLOT \
+	tests/qdepends/root/app-arch/cpio-2.11/repository \
+	tests/qdepends/root/x11-apps/xdm-1.1.11-r3/DEPEND \
+	tests/qdepends/root/x11-apps/xdm-1.1.11-r3/RDEPEND \
+	tests/qdepends/root/x11-apps/xdm-1.1.11-r3/USE \
 	tests/qfile/Makefile \
 	tests/qfile/dotest \
 	tests/qlist/Makefile \
@@ -196,6 +204,7 @@ EXTRA_DIST += \
 	tests/qlist/list11.good \
 	tests/qlist/list12.good \
 	tests/qlist/list13.good \
+	tests/qlist/list14.good \
 	tests/qlist/root/-merge-foo/CONTENTS \
 	tests/qlist/root/a-b/a-0/CONTENTS \
 	tests/qlist/root/a-b/a-0/SLOT \
@@ -209,6 +218,9 @@ EXTRA_DIST += \
 	tests/qlist/root/cat/pkg-1/CONTENTS \
 	tests/qlist/root/cat/pkg-1/SLOT \
 	tests/qlist/root/cat/pkg-1/repository \
+	tests/qlist/root/cat/sub-2/CONTENTS \
+	tests/qlist/root/cat/sub-2/SLOT \
+	tests/qlist/root/cat/sub-2/repository \
 	tests/qlist/root/sys-fs/mtools-4.0.13/CONTENTS \
 	tests/qlist/root/sys-fs/mtools-4.0.13/SLOT \
 	tests/qlist/root/sys-fs/mtools-4.0.13/repository \
