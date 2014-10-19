@@ -1,6 +1,11 @@
 *bz2
 *~
-*.o
+*.[adio]
+*.l[ao]
+*.gdb
+*.pyc
+*.deps
+*.libs
 
 *.patch
 *.orig
@@ -9,14 +14,25 @@
 /portage-utils-*
 contrib
 
+a.out*
+lib*.so*
+core
+.gdb_history
+.gdbinit
+
 aclocal.m4
 autom4te.cache
 build
+config.cache
 config.h
 config.h.in
+config.log
+config.status
 configure
 autotools
+libtool
 Makefile.in
+stamp-h1
 
 /*.old.c
 /q
@@ -35,8 +51,3 @@ Makefile.in
 /qsize
 /quse
 /qxpak
-
-a.out
-core
-.gdb_history
-.gdbinit
