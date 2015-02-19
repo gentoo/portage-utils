@@ -444,7 +444,8 @@ pkg_run_func(const char *vdb_path, const char *phases, const char *func, const c
 		/* best_version() */
 		"use() { useq \"$@\"; }\n"
 		"usex() { useq \"$1\" && echo \"${2-yes}$4\" || echo \"${3-no}$5\"; }\n"
-		"useq() { hasq \"$1\" $USE; }\n"
+		"useq() { hasq \"$1\" ${USE}; }\n"
+		"usev() { hasv \"$1\" ${USE}; }\n"
 		"has() { hasq \"$@\"; }\n"
 		"hasq() { local h=$1; shift; case \" $* \" in *\" $h \"*) return 0;; *) return 1;; esac; }\n"
 		"hasv() { hasq \"$@\" && echo \"$1\"; }\n"
@@ -454,8 +455,11 @@ pkg_run_func(const char *vdb_path, const char *phases, const char *func, const c
 		"eqawarn() { elog \"QA: \"\"$@\"; }\n"
 		"eerror() { elog \"$@\"; }\n"
 		"die() { eerror \"$@\"; exit 1; }\n"
+		/* TODO: This should suppress `die` */
+		"nonfatal() { \"$@\"; }\n"
 		"ebegin() { printf ' * %%b ...' \"$*\"; }\n"
 		"eend() { local r=${1:-$?}; [ $# -gt 0 ] && shift; [ $r -eq 0 ] && echo ' [ ok ]' || echo \" $* \"'[ !! ]'; return $r; }\n"
+		/* TODO: This should be fatal upon error */
 		"emake() { ${MAKE:-make} ${MAKEOPTS} \"$@\"; }\n"
 		/* Unpack the env if need be */
 		"[ -e '%1$s/environment' ] || { bzip2 -dc '%1$s/environment.bz2' > '%1$s/environment' || exit 1; }\n"
