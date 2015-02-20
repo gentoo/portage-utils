@@ -1,2 +1,2 @@
- one.desc:abc: cow
- two.desc:abc: pig
+ one:abc: cow
+ two:abc: pig

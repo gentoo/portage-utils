@@ -60,7 +60,9 @@ f="$d/desc/elibc.desc"
 all=$(entries "$f" | awk '{print $1}')
 for x in ${all} ; do
 	quse -CD $x > x
-	sed -n -e "/^$x - /{s|^[^ ]* - | ${f##*/}:$x: |;p}" "$f" > good
+	dispf=${f##*/}
+	dispf=${dispf%.desc}
+	sed -n -e "/^$x - /{s|^[^ ]* - | ${dispf}:$x: |;p}" "$f" > good
 	cat good >> all.good
 	diff -u x good
 done

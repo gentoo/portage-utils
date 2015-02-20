@@ -161,7 +161,11 @@ skip_file:
 	}
 
 	while ((de = readdir(d)) != NULL) {
-		if (strcmp(de->d_name+strlen(de->d_name)-5, ".desc"))
+		s = strlen(de->d_name);
+		if (s < 6)
+			continue;
+		p = de->d_name + s - 5;
+		if (strcmp(p, ".desc"))
 			continue;
 
 		snprintf(buf, buflen, "%s/profiles/desc/%s", portdir, de->d_name);
@@ -169,6 +173,9 @@ skip_file:
 			warn("Could not open '%s' for reading; skipping", de->d_name);
 			continue;
 		}
+
+		/* Chop the trailing .desc for better display */
+		*p = '\0';
 
 		while (getline(&buf, &buflen, fp[0]) != -1) {
 			if (buf[0] == '#' || buf[0] == '\n')
