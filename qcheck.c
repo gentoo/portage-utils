@@ -8,7 +8,7 @@
 
 #ifdef APPLET_qcheck
 
-#define QCHECK_FLAGS "aes:uABHTp" COMMON_FLAGS
+#define QCHECK_FLAGS "aes:uABHTPp" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
 	{"all",            no_argument, NULL, 'a'},
 	{"exact",          no_argument, NULL, 'e'},
@@ -18,7 +18,7 @@ static struct option const qcheck_long_opts[] = {
 	{"badonly",        no_argument, NULL, 'B'},
 	{"nohash",         no_argument, NULL, 'H'},
 	{"nomtime",        no_argument, NULL, 'T'},
-	{"skip-protected", no_argument, NULL, 128},
+	{"skip-protected", no_argument, NULL, 'P'},
 	{"prelink",        no_argument, NULL, 'p'},
 	COMMON_LONG_OPTS
 };
@@ -392,7 +392,7 @@ int qcheck_main(int argc, char **argv)
 		case 'B': state.bad_only = true; break;
 		case 'H': state.chk_hash = false; break;
 		case 'T': state.chk_mtime = false; break;
-		case 128: state.chk_config_protect = false; break;
+		case 'P': state.chk_config_protect = false; break;
 		case 'p': state.undo_prelink = prelink_available(); break;
 		}
 	}
