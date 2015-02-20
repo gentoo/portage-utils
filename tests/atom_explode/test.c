@@ -29,12 +29,15 @@ int main(int argc, char *argv[])
 		atom_implode(a);
 	}
 	if (argc == 1) {
-		char buf[1024], *p;
-		while (fgets(buf, sizeof(buf), stdin) != NULL) {
+		size_t buflen;
+		char *buf, *p;
+
+		buf = NULL;
+		while (getline(&buf, &buflen, stdin) != -1) {
 			if ((p = strchr(buf, '\n')) != NULL)
 				*p = '\0';
 			a = atom_explode(buf);
-			boom(a,buf);
+			boom(a, buf);
 			atom_implode(a);
 		}
 	}

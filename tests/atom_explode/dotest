@@ -2,8 +2,8 @@
 
 . ../init.sh
 
-[[ $PORTDIR == "" ]] && PORTDIR=$(portageq envvar PORTDIR)
-pushd ${PORTDIR}/metadata/cache >/dev/null || { echo SKIPPED; exit 0 ; }
+: ${PORTDIR:=$(portageq envvar PORTDIR)}
+pushd "${PORTDIR}"/metadata/md5-cache >/dev/null || { echo SKIPPED; exit 0 ; }
 
 if [[ $1 == -v ]] ; then
 	find . -mindepth 2 -type f -printf '%P\n%f\n' | while read line ; do
