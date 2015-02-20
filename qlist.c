@@ -311,7 +311,7 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 			atom_implode(atom);
 
 		if (!state->all)
-			return 0;
+			return 1;
 	}
 
 	if (verbose > 1)
@@ -319,7 +319,7 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 	fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
 	if (fp == NULL)
-		return 0;
+		return 1;
 
 	while (getline(&state->buf, &state->buflen, fp) != -1) {
 		contents_entry *e;
@@ -355,7 +355,7 @@ _q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	}
 	fclose(fp);
 
-	return 0;
+	return 1;
 }
 
 int qlist_main(int argc, char **argv)
@@ -413,7 +413,8 @@ int qlist_main(int argc, char **argv)
 	free(state.buf);
 	free(state.atoms);
 
-	return ret;
+	/* The return value is whether we matched anything. */
+	return ret ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 #else

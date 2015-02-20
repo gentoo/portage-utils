@@ -10,53 +10,62 @@ export Q_VDB=/
 mktmpdir
 
 test() {
-	local num=$1; shift
-	eval "$@" > list
-	diff -u list ${as}/list${num}.good
+	local num=$1 exp=$2 ret=0
+	shift 2
+	eval "$@" > list || ret=$?
+	if ! diff -u list ${as}/list${num}.good ; then
+		tfail "output does not match"
+	fi
+	if [[ ${exp} -ne ${ret} ]] ; then
+		tfail "exit code (${ret}) does not match expected (${exp})"
+	fi
 	tend $? "$*"
 }
 
 # simple install check
-test 01 "qlist -IC"
+test 01 0 "qlist -IC"
 
 # simple files list
-test 02 "qlist -C --showdebug cpio"
+test 02 0 "qlist -C --showdebug cpio"
 
 # symlink verbose list
-test 03 "qlist -C --showdebug mtools -e -v"
+test 03 0 "qlist -C --showdebug mtools -e -v"
 
 # dir test
-test 04 "qlist -C --showdebug mtools -d"
+test 04 0 "qlist -C --showdebug mtools -d"
 
 # obj test
-test 05 "qlist -C --showdebug mtools -o"
+test 05 0 "qlist -C --showdebug mtools -o"
 
 # sym test
-test 06 "qlist -C --showdebug mtools -s"
+test 06 0 "qlist -C --showdebug mtools -s"
 
 # SLOT test
-test 07 "qlist -ICS"
+test 07 0 "qlist -ICS"
 
 # showdebug test #1
-test 08 "qlist -C cpio"
+test 08 0 "qlist -C cpio"
 
 # dir test
-test 09 "qlist -C mtools -d"
+test 09 0 "qlist -C mtools -d"
 
 # ver test
-test 10 "qlist -Iv =mtools-4*"
+test 10 0 "qlist -Iv =mtools-4*"
 
 # repo test
-test 11 "qlist -ICR"
+test 11 0 "qlist -ICR"
 
 # slot with repo test
-test 12 "qlist -ICSR"
+test 12 0 "qlist -ICSR"
 
 # exact CAT/PN:slot::repo files list test
-test 13 "qlist -Ce --showdebug app-arch/cpio:0::gentoo"
+test 13 0 "qlist -Ce --showdebug app-arch/cpio:0::gentoo"
 
 # sub-SLOT test
-test 14 "qlist -ICSS"
+test 14 0 "qlist -ICSS"
+
+# no matches
+test 15 1 "qlist -Iv lajsdflkjasdflkjasdfljasdf"
 
 cleantmpdir
 
