@@ -86,7 +86,7 @@ int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 	char *buf, *p;
 	unsigned int i, f;
 	size_t s;
-	const char *search_files[] = { "use.desc", "use.local.desc", "arch.list", "lang.desc" };
+	const char * const search_files[] = { "use.desc", "use.local.desc", "arch.list", };
 	FILE *fp[NUM_SEARCH_FILES];
 	DIR *d;
 	struct dirent *de;
@@ -97,8 +97,7 @@ int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 	for (i = 0; i < NUM_SEARCH_FILES; ++i) {
 		snprintf(buf, buflen, "%s/profiles/%s", portdir, search_files[i]);
 		if ((fp[i] = fopen(buf, "r")) == NULL)
-			if (strcmp(search_files[i], "lang.desc") != 0)
-				warnp("skipping %s", search_files[i]);
+			warnp("skipping %s", search_files[i]);
 	}
 
 	for (i = ind; i < argc; i++) {
@@ -141,14 +140,6 @@ int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 							printf(" %sarch%s:%s%s%s: %s architecture\n", BOLD, NORM, BLUE, argv[i], NORM, argv[i]);
 							goto skip_file;
 						}
-						break;
-
-					case 3: /* Languages lang.desc */
-						if (!strncmp(buf, argv[i], s))
-							if (buf[s] == ' ' && buf[s+1] == '-') {
-								printf(" %slang%s:%s%s%s: %s lingua\n", BOLD, NORM, BLUE, argv[i], NORM, buf+s+3);
-								goto skip_file;
-							}
 						break;
 				}
 			}
