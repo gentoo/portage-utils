@@ -36,11 +36,10 @@ static const char * const quse_opts_help[] = {
 };
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
 
-int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv);
-
 char quse_name_only = 0;
 
-static void print_highlighted_use_flags(char *string, int ind, int argc, char **argv)
+static void
+print_highlighted_use_flags(char *string, int ind, int argc, char **argv)
 {
 	char *str, *p;
 	char buf[BUFSIZ];
@@ -79,7 +78,8 @@ static void print_highlighted_use_flags(char *string, int ind, int argc, char **
 	}
 }
 
-int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
+static int
+quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 {
 #define NUM_SEARCH_FILES ARRAY_SIZE(search_files)
 	size_t buflen;
@@ -91,7 +91,8 @@ int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 	DIR *d;
 	struct dirent *de;
 
-	buflen = _Q_PATH_MAX;
+	/* pick 1000 arbitrarily long enough for all files under desc/ */
+	buflen = strlen(portdir) + 1000;
 	buf = xmalloc(buflen);
 
 	for (i = 0; i < NUM_SEARCH_FILES; ++i) {
@@ -117,8 +118,8 @@ int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 				switch (f) {
 					case 0: /* Global use.desc */
 						if (!strncmp(buf, argv[i], s))
-							if (buf[s] == ' ' && buf[s+1] == '-') {
-								printf(" %sglobal%s:%s%s%s: %s\n", BOLD, NORM, BLUE, argv[i], NORM, buf+s+3);
+							if (buf[s] == ' ' && buf[s + 1] == '-') {
+								printf(" %sglobal%s:%s%s%s: %s\n", BOLD, NORM, BLUE, argv[i], NORM, buf + s + 3);
 								goto skip_file;
 							}
 						break;
@@ -128,9 +129,9 @@ int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 							break;
 						++p;
 						if (!strncmp(p, argv[i], s)) {
-							if (p[s] == ' ' && p[s+1] == '-') {
+							if (p[s] == ' ' && p[s + 1] == '-') {
 								*p = '\0';
-								printf(" %slocal%s:%s%s%s:%s%s%s %s\n", BOLD, NORM, BLUE, argv[i], NORM, BOLD, buf, NORM, p+s+3);
+								printf(" %slocal%s:%s%s%s:%s%s%s %s\n", BOLD, NORM, BLUE, argv[i], NORM, BOLD, buf, NORM, p + s + 3);
 							}
 						}
 						break;
@@ -144,12 +145,12 @@ int quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 				}
 			}
 
-skip_file:
+ skip_file:
 			rewind(fp[f]);
 		}
 	}
 
-	for (f=0; f < NUM_SEARCH_FILES; ++f)
+	for (f = 0; f < NUM_SEARCH_FILES; ++f)
 		if (fp[f] != NULL)
 			fclose(fp[f]);
 
@@ -185,13 +186,13 @@ skip_file:
 				*p = '\0';
 
 			if ((p = strchr(buf, '-')) == NULL) {
-invalid_line:
+ invalid_line:
 				warn("Invalid line in '%s': %s", de->d_name, buf);
 				continue;
 			}
 			while (p[-1] != ' ' && p[1] != ' ') {
 				/* maybe the flag has a '-' in it ... */
-				if ((p = strchr(p+1, '-')) == NULL)
+				if ((p = strchr(p + 1, '-')) == NULL)
 					goto invalid_line;
 			}
 			p[-1] = '\0';
@@ -303,7 +304,7 @@ int quse_main(int argc, char **argv)
 					}
 				}
 #ifdef THIS_SUCKS
-				if ((p = strrchr(&buf0[search_len+1], '\\')) != NULL) {
+				if ((p = strrchr(&buf0[search_len + 1], '\\')) != NULL) {
 
 				multiline:
 					*p = ' ';
@@ -323,13 +324,13 @@ int quse_main(int argc, char **argv)
 #else
 				remove_extra_space(buf0);
 #endif
-				while ((p = strrchr(&buf0[search_len+1], '"')) != NULL)  *p = 0;
-				while ((p = strrchr(&buf0[search_len+1], '\'')) != NULL) *p = 0;
-				while ((p = strrchr(&buf0[search_len+1], '\\')) != NULL) *p = ' ';
+				while ((p = strrchr(&buf0[search_len + 1], '"')) != NULL)  *p = 0;
+				while ((p = strrchr(&buf0[search_len + 1], '\'')) != NULL) *p = 0;
+				while ((p = strrchr(&buf0[search_len + 1], '\\')) != NULL) *p = ' ';
 
 				if (verbose && warned == 0) {
 					if ((strchr(buf0, '$') != NULL) || (strchr(buf0, '\\') != NULL)) {
-						warned=1;
+						warned = 1;
 						warn("# Line %d of %s has an annoying %s", lineno, ebuild, buf0);
 					}
 				}
@@ -345,14 +346,14 @@ int quse_main(int argc, char **argv)
 					ok = 0;
 					if (regexp_matching) {
 						for (i = optind; i < argc; ++i) {
-							if (rematch(argv[i], &buf0[search_len+1], REG_NOSUB) == 0) {
+							if (rematch(argv[i], &buf0[search_len + 1], REG_NOSUB) == 0) {
 								ok = 1;
 								break;
 							}
 						}
 					} else {
 						remove_extra_space(buf0);
-						strcpy(buf1, &buf0[search_len+1]);
+						strcpy(buf1, &buf0[search_len + 1]);
 
 						for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
 							if (strcmp(buf1, argv[i]) == 0) {
@@ -372,9 +373,8 @@ int quse_main(int argc, char **argv)
 							strcpy(buf1, buf2);
 							if (strchr(buf1, ' ') == NULL)
 								for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
-									if (strcmp(buf1, argv[i]) == 0) {
+									if (strcmp(buf1, argv[i]) == 0)
 										ok = 1;
-									}
 								}
 						}
 					}
@@ -384,12 +384,12 @@ int quse_main(int argc, char **argv)
 						printf("%s %s %s ", *user ? user : "MISSING", *revision ? revision : "MISSING", *date ? date : "MISSING");
 
 					printf("%s%s%s ", CYAN, ebuild, NORM);
-					print_highlighted_use_flags(&buf0[search_len+1], optind, argc, argv);
+					print_highlighted_use_flags(&buf0[search_len + 1], optind, argc, argv);
 					puts(NORM);
 					if (verbose > 1) {
 						char **ARGV = NULL;
 						int ARGC = 0;
-						makeargv(&buf0[search_len+1], &ARGC, &ARGV);
+						makeargv(&buf0[search_len + 1], &ARGC, &ARGV);
 						if (ARGC > 0) {
 							quse_describe_flag(1, ARGC, ARGV);
 							for (i = 0; i < ARGC; i++)
