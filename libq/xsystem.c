@@ -27,11 +27,14 @@ static void xsystembash(const char *command)
 
 	default: /* parent */
 		waitpid(p, &status, 0);
-		if (WIFEXITED(status)) {
+		if (WIFSIGNALED(status)) {
+			err("phase crashed with signal %i: %s", WTERMSIG(status),
+			    strsignal(WTERMSIG(status)));
+		} else if (WIFEXITED(status)) {
 			if (WEXITSTATUS(status) == 0)
 				return;
 			else
-				exit(WEXITSTATUS(status));
+				err("phase exited %i", WEXITSTATUS(status));
 		}
 		/* fall through */
 
