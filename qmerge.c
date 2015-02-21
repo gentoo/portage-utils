@@ -1197,9 +1197,9 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 		qprintf("%s%s%s %s%s%s/\n", rm ? YELLOW : GREEN, rm ? "---" : "<<<",
 			NORM, DKBLUE, dir, NORM);
 
+		dirs = dirs->next;
 		free(list->data);
 		free(list);
-		dirs = dirs->next;
 	}
 
 	freeargv(cp_argc, cp_argv);
