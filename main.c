@@ -1290,7 +1290,7 @@ _q_static queue *get_vdb_atoms(int fullcpv)
 				snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
 			}
 			atom_implode(atom);
-			cpf = add_set(buf, slot, cpf);
+			cpf = add_set(buf, cpf);
 		}
 		scandir_free(pf, dfd);
 	}

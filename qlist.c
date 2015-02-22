@@ -86,7 +86,7 @@ static char *grab_pkg_umap(q_vdb_pkg_ctx *pkg_ctx)
 	for (i = 1; i < use_argc; i++) {
 		int ok = 0;
 		sets = del_set(use_argv[i], sets, &ok);
-		sets = add_set(use_argv[i], use_argv[i], sets);
+		sets = add_set(use_argv[i], sets);
 	}
 	umap[0] = '\0'; /* reset the buffer */
 	for (ll = sets; ll != NULL; ll = ll->next) {

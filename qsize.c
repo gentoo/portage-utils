@@ -65,7 +65,7 @@ int qsize_main(int argc, char **argv)
 		case 'm': disp_units = MEGABYTE; str_disp_units = "MiB"; break;
 		case 'k': disp_units = KILOBYTE; str_disp_units = "KiB"; break;
 		case 'b': disp_units = 1; str_disp_units = "bytes"; break;
-		case 'i': ignore_regexp = add_set(optarg, optarg, ignore_regexp); break;
+		case 'i': ignore_regexp = add_set(optarg, ignore_regexp); break;
 		}
 	}
 	if ((argc == optind) && !search_all)

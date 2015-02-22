@@ -157,7 +157,7 @@ int qpkg_clean(char *dirp)
 
 				/* num_all_bytes will be off when pretend and eclean are enabled together */
 				/* vdb = del_set(buf, vdb, &i); */
-				vdb = add_set(buf, "0", vdb);
+				vdb = add_set(buf, vdb);
 			}
 
 			free(buf);

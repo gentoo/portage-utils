@@ -14,7 +14,6 @@
 /* used to queue a lot of things */
 struct queue_t {
 	char *name;
-	char *item;
 	struct queue_t *next;
 };
 
@@ -38,47 +37,13 @@ append_set(queue *q, queue *ll)
 
 /* add a set to a cache */
 _q_static queue *
-add_set(const char *vv, const char *ss, queue *q)
+add_set(const char *name, queue *q)
 {
-	queue *ll;
-	char *s, *ptr;
-	char *v, *vptr;
-
-	s = xstrdup(ss);
-	v = xstrdup(vv);
-	ptr = xmalloc(strlen(ss));
-	vptr = xmalloc(strlen(vv));
-
-	do {
-		*ptr = 0;
-		*vptr = 0;
-		rmspace(ptr);
-		rmspace(s);
-		rmspace(vptr);
-		rmspace(v);
-
-		ll = xmalloc(sizeof(queue));
-		ll->next = NULL;
-		ll->name = xmalloc(strlen(v) + 1);
-		ll->item = xmalloc(strlen(s) + 1);
-		strcpy(ll->item, s);
-		strcpy(ll->name, v);
-
-		q = append_set(q, ll);
-
-		*v = 0;
-		strcpy(v, vptr);
-		*s = 0;
-		strcpy(s, ptr);
-
-	} while (v[0]);
-
-	free(s);
-	free(ptr);
-	free(v);
-	free(vptr);
-
-	return q;
+	queue *ll = xmalloc(sizeof(*ll));
+	ll->next = NULL;
+	ll->name = xstrdup(name);
+	rmspace(ll->name);
+	return append_set(q, ll);
 }
 
 /* remove a set from a cache. matches ->name and frees name,item */
@@ -96,14 +61,12 @@ del_set(char *s, queue *q, int *ok)
 			if (ll == list) {
 				list = (ll->next);
 				free(ll->name);
-				free(ll->item);
 				free(ll);
 				ll = list;
 
 			} else {
 				old->next = ll->next;
 				free(ll->name);
-				free(ll->item);
 				free(ll);
 				ll = old->next;
 			}
@@ -125,7 +88,6 @@ free_sets(queue *list)
 	while (ll != NULL) {
 		q = ll->next;
 		free(ll->name);
-		free(ll->item);
 		free(ll);
 		ll = q;
 	}
@@ -136,5 +98,5 @@ void print_sets(const queue *list)
 {
 	const queue *ll;
 	for (ll = list; ll != NULL; ll = ll->next)
-		printf("%s -> %s\n", ll->name, ll->item);
+		puts(ll->name);
 }

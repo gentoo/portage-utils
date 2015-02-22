@@ -567,7 +567,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 #if 0		/* We filter out "dir" as it's generally unnecessary cruft */
 			/* syntax: dir dirname */
 			fprintf(contents, "dir %s\n", cpath);
-			*objs = add_set(cpath, "", *objs);
+			*objs = add_set(cpath, *objs);
 			qprintf("%s>>>%s %s%s%s/\n", GREEN, NORM, DKBLUE, cpath, NORM);
 #endif
 
@@ -614,7 +614,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 				dname = name;
 				qprintf("%s>>>%s %s\n", GREEN, NORM, cpath);
 			}
-			*objs = add_set(cpath, "", *objs);
+			*objs = add_set(cpath, *objs);
 
 			/* First try fast path -- src/dst are same device */
 			if (renameat(subfd_src, dname, subfd_dst, name) == 0)
@@ -690,7 +690,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			/* syntax: sym src -> dst mtime */
 			fprintf(contents, "sym %s -> %s %"PRIu64"u\n", cpath, sym, (uint64_t)st.st_mtime);
 			qprintf("%s>>>%s %s%s -> %s%s\n", GREEN, NORM, CYAN, cpath, sym, NORM);
-			*objs = add_set(cpath, "", *objs);
+			*objs = add_set(cpath, *objs);
 
 			/* Make it in the dest tree */
 			if (symlinkat(sym, subfd_dst, name)) {
@@ -1240,15 +1240,6 @@ _q_static int match_pkg(queue *ll, const struct pkg_t *pkg)
 
 	if (match)
 		goto match_done;
-
-	if (ll->item) {
-		depend_atom *subatom = atom_explode(ll->name);
-		if (subatom == NULL)
-			goto match_done;
-		if (strcmp(atom->PN, subatom->PN) == 0)
-			match = 1;
-		atom_implode(subatom);
-	}
 
 match_done:
 	atom_implode(atom);
@@ -1809,23 +1800,6 @@ parse_packages(queue *todo)
 }
 
 _q_static queue *
-qmerge_add_set_atom(char *satom, queue *set)
-{
-	char *p;
-	const char *slot = "";
-
-	if (!uninstall) {
-		if ((p = strchr(satom, ':')) != NULL) {
-			*p = 0;
-			slot = p + 1;
-		} else
-			slot = "0";
-	}
-
-	return add_set(satom, slot, set);
-}
-
-_q_static queue *
 qmerge_add_set_file(const char *dir, const char *file, queue *set)
 {
 	FILE *fp;
@@ -1846,7 +1820,7 @@ qmerge_add_set_file(const char *dir, const char *file, queue *set)
 	buf = NULL;
 	while (getline(&buf, &buflen, fp) != -1) {
 		rmspace(buf);
-		set = qmerge_add_set_atom(buf, set);
+		set = add_set(buf, set);
 	}
 	free(buf);
 
@@ -1868,7 +1842,7 @@ qmerge_add_set_system(void *data, char *buf)
 
 	s = buf;
 	if (*s == '*')
-		set = add_set(s + 1, "", set);
+		set = add_set(s + 1, set);
 	else if (s[0] == '-' && s[1] == '*') {
 		int ok;
 		set = del_set(s + 2, set, &ok);
@@ -1892,7 +1866,7 @@ qmerge_add_set(char *buf, queue *set)
 	else if (buf[0] == '@')
 		return qmerge_add_set_file("/etc/portage", buf+1, set);
 	else
-		return qmerge_add_set_atom(buf, set);
+		return add_set(buf, set);
 }
 
 _q_static int
