@@ -995,13 +995,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	}
 
 	/* Clean up the package state */
-	while (objs) {
-		queue *q = objs;
-		objs = q->next;
-		free(q->name);
-		free(q->item);
-		free(q);
-	}
+	free_sets(objs);
 	free(D);
 	free(T);
 
