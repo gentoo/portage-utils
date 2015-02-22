@@ -1,11 +1,11 @@
 /* Emulate `mkdir -p -m MODE PATH` */
-static int mkdir_p(const char *path, mode_t mode)
+static int mkdir_p_at(int dfd, const char *path, mode_t mode)
 {
 	char *_p, *p, *s;
 
 	/* Assume that most of the time, only the last element
 	 * is missing.  So if we can mkdir it right away, bail. */
-	if (mkdir(path, mode) == 0 || errno == EEXIST)
+	if (mkdirat(dfd, path, mode) == 0 || errno == EEXIST)
 		return 0;
 
 	/* Build up the whole tree */
@@ -19,13 +19,13 @@ static int mkdir_p(const char *path, mode_t mode)
 		/* Find the next path element */
 		s = strchr(p, '/');
 		if (!s) {
-			mkdir(_p, mode);
+			mkdirat(dfd, _p, mode);
 			break;
 		}
 
 		/* Make it */
 		*s = '\0';
-		mkdir(_p, mode);
+		mkdirat(dfd, _p, mode);
 		*s = '/';
 
 		p = s;
@@ -34,6 +34,10 @@ static int mkdir_p(const char *path, mode_t mode)
 	free(_p);
 
 	return 0;
+}
+static int mkdir_p(const char *path, mode_t mode)
+{
+	return mkdir_p_at(AT_FDCWD, path, mode);
 }
 
 /* Emulate `rm -rf PATH` */
