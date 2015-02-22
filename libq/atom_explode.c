@@ -40,6 +40,20 @@ typedef struct {
 	char *P, *SLOT, *REPO;
 } depend_atom;
 
+void atom_print(const depend_atom *atom);
+void atom_print(const depend_atom *atom)
+{
+	if (atom->CATEGORY)
+		printf("%s/", atom->CATEGORY);
+	printf("%s", atom->P);
+	if (atom->PR_int)
+		printf("-r%i", atom->PR_int);
+	if (atom->SLOT)
+		printf(":%s", atom->SLOT);
+	if (atom->REPO)
+		printf("::%s", atom->REPO);
+}
+
 #ifdef _USE_CACHE
 static depend_atom *_atom_cache = NULL;
 static size_t _atom_cache_len = 0;
