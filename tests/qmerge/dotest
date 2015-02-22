@@ -17,6 +17,8 @@ mktmpdir
 export ROOT=${PWD}/root
 export PORTAGE_TMPDIR=${PWD}
 
+mkdir -p "${ROOT}/var/db/pkg"
+
 set +e
 
 # Do a merge into an empty tree.
@@ -72,7 +74,7 @@ tend $? "qmerge-test: [C] pkg_* order of execution" || printf '%s\n' "${order}" 
 [[ ! -x ${ROOT}/usr/bin/qmerge-test && \
      -f ${ROOT}/etc/some.conf && \
    ! -f ${ROOT}/etc/another.conf && \
-   ! -d ${ROOT}/var ]]
+   ! -d ${ROOT}/var/pkg/db/sys-devel ]]
 tend $? "qmerge-test: [C] uninstalled expected files" || treedir "${ROOT}"
 
 set -e

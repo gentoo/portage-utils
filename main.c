@@ -1240,24 +1240,6 @@ char *atom_to_pvr(depend_atom *atom) {
 	return (atom->PR_int == 0 ? atom->P : atom->PVR );
 }
 
-/* TODO: Delete this in favor of libq/vdb.c API. */
-static char *grab_vdb_item(const char *item, const char *CATEGORY, const char *PF)
-{
-	static char *buf;
-	static size_t buf_len;
-
-	if (buf == NULL) {
-		buf_len = _Q_PATH_MAX;
-		buf = xmalloc(buf_len);
-	}
-
-	snprintf(buf, buf_len, "%s%s/%s/%s/%s", portroot, portvdb, CATEGORY, PF, item);
-	eat_file(buf, &buf, &buf_len);
-	rmspace(buf);
-
-	return buf;
-}
-
 /* TODO: Merge this into libq/vdb.c somehow. */
 _q_static queue *get_vdb_atoms(int fullcpv)
 {

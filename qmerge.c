@@ -106,7 +106,7 @@ typedef struct llist_char_t llist_char;
 
 _q_static void pkg_fetch(int, const depend_atom *, const struct pkg_t *);
 _q_static void pkg_merge(int, const depend_atom *, const struct pkg_t *);
-_q_static int pkg_unmerge(const char *, const char *, queue *);
+_q_static int pkg_unmerge(q_vdb_pkg_ctx *, queue *);
 _q_static struct pkg_t *grab_binpkg_info(const char *);
 _q_static char *find_binpkg(const char *);
 
@@ -470,9 +470,9 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		"MERGE_TYPE=binary\n"
 		"ROOT='%4$s'\n"
 		"EROOT=\"${EPREFIX%%/}/${ROOT#/}\"\n"
-		"D='%5$s'\n"
+		"D=\"%5$s\"\n"
 		"ED=\"${EPREFIX%%/}/${D#/}\"\n"
-		"T='%6$s'\n"
+		"T=\"%6$s\"\n"
 		/* Finally run the func */
 		"%7$s%2$s\n"
 		/* Ignore func return values (not exit values) */
@@ -758,6 +758,8 @@ _q_static void
 pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 {
 	queue *objs;
+	q_vdb_ctx *vdb_ctx;
+	q_vdb_cat_ctx *cat_ctx;
 	FILE *fp, *contents;
 	static char *phases;
 	static size_t phases_len;
@@ -865,6 +867,20 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	if (pretend)
 		return;
 
+	/* Get a handle on the main vdb repo */
+	vdb_ctx = q_vdb_open();
+	if (!vdb_ctx)
+		return;
+	cat_ctx = q_vdb_open_cat(vdb_ctx, pkg->CATEGORY);
+	if (!cat_ctx) {
+		if (errno != ENOENT)
+			return;
+		mkdirat(vdb_ctx->vdb_fd, pkg->CATEGORY, 0755);
+		cat_ctx = q_vdb_open_cat(vdb_ctx, pkg->CATEGORY);
+		if (!cat_ctx)
+			return;
+	}
+
 	/* Set up our temp dir to unpack this stuff */
 	xasprintf(&p, "%s/qmerge/%s/%s", port_tmpdir, pkg->CATEGORY, pkg->PF);
 	mkdir_p(p, 0755);
@@ -942,48 +958,40 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	/* FIXME */ /* move unmerging to around here ? */
 	/* check for an already installed pkg */
-	snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, pkg->PF);
 
 	/* Unmerge any stray pieces from the older version which we didn't replace */
-	p = best_version(atom->CATEGORY, atom->PN);
-	if (*p) {
-		/* XXX: Should see about merging with unmerge_packages() */
-		makeargv(p, &ARGC, &ARGV);
-		for (i = 1; i < ARGC; i++) {
-			int ret, u;
-			const char *pn;
-			char *pf;
-			char *slot = NULL;
+	/* XXX: Should see about merging with unmerge_packages() */
+	while (1) {
+		int ret;
+		q_vdb_pkg_ctx *pkg_ctx;
+		depend_atom *old_atom;
 
-			pf = ARGV[i];
-			switch ((ret = atom_compare_str(buf, pf))) {
-				case ERROR:
-				case NOT_EQUAL:
-					continue;
-				case NEWER:
-				case OLDER:
-				case EQUAL:
-					u = 1;
-					pn = basename(pf);
-					slot = grab_vdb_item("SLOT", atom->CATEGORY, pn);
-					if (pkg->SLOT[0] && slot) {
-						if (strcmp(pkg->SLOT, slot) != 0)
-							u = 0;
-					}
-					/* We need to really set this unmerge pending after we look at contents of the new pkg */
-					if (u)
-						break;
-					continue;
-				default:
-					warn("no idea how we reached here.");
-					continue;
-			}
+		pkg_ctx = q_vdb_next_pkg(cat_ctx);
+		if (!pkg_ctx)
+			break;
 
-			qprintf("%s+++%s %s %s %s\n", GREEN, NORM, buf, booga[ret], pf);
-
-			pkg_unmerge(atom->CATEGORY, pn, objs);
+		old_atom = atom_explode(pkg_ctx->name);
+		/* This cast sucks, but we know for now the field isn't modified */
+		old_atom->CATEGORY = (char *)cat_ctx->name;
+		ret = atom_compare(atom, old_atom);
+		atom_implode(old_atom);
+		switch (ret) {
+			case NEWER:
+			case OLDER:
+			case EQUAL:
+				/* We need to really set this unmerge pending after we look at contents of the new pkg */
+				break;
+			default:
+				warn("no idea how we reached here.");
+			case ERROR:
+			case NOT_EQUAL:
+				continue;
 		}
-		freeargv(ARGC, ARGV);
+
+		qprintf("%s+++%s %s/%s %s %s/%s\n", GREEN, NORM, atom->CATEGORY, pkg->PF,
+			booga[ret], cat_ctx->name, pkg_ctx->name);
+
+		pkg_unmerge(pkg_ctx, objs);
 	}
 
 	/* Clean up the package state */
@@ -1023,67 +1031,44 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 }
 
 _q_static int
-pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
+pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 {
+	q_vdb_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
+	const char *cat = cat_ctx->name;
+	const char *pkgname = pkg_ctx->name;
 	size_t buflen;
 	static char *phases;
 	static size_t phases_len;
-	char *buf, *vdb_path, *T;
+	const char *T;
+	char *buf;
 	FILE *fp;
-	int ret, fd, vdb_fd, portroot_fd;
+	int ret, portroot_fd;
 	int cp_argc, cpm_argc;
 	char **cp_argv, **cpm_argv;
 	llist_char *dirs = NULL;
 
 	ret = 1;
-	buf = NULL;
-	vdb_path = NULL;
-	vdb_fd = portroot_fd = fd = -1;
+	buf = phases = NULL;
+	T = "${PWD}/temp";
 
-	if ((strchr(pkgname, ' ') != NULL) || (strchr(cat, ' ') != NULL)) {
-		qfprintf(stderr, "%s!!!%s '%s' '%s' (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
-		qfprintf(stderr, "%s!!!%s %s/%s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, cat, pkgname);
-		/* qfprintf(stderr, "%s!!!%s %s %s (ambiguous name) specify fully-qualified pkgs\n", RED, NORM, pkgname); */
-		return 1;
-	}
 	printf("%s<<<%s %s%s%s/%s%s%s\n", YELLOW, NORM, WHITE, cat, NORM, CYAN, pkgname, NORM);
 
 	if (pretend == 100)
 		return 0;
 
-	/* Get a handle to the root to play with */
-	portroot_fd = open(portroot, O_RDONLY|O_CLOEXEC|O_PATH);
-	if (portroot_fd == -1) {
-		warnp("unable to read %s", portroot);
-		goto done;
-	}
-
-	/* Get a handle on the vdb path which we'll use everywhere else */
-	/* Note: This vdb_path must be absolute since we use it in pkg_run_func() */
-	xasprintf(&vdb_path, "%s%s/%s/%s/", portroot, portvdb, cat, pkgname);
-	xasprintf(&T, "%stemp", vdb_path);
-	vdb_fd = openat(portroot_fd, vdb_path, O_RDONLY|O_CLOEXEC|O_PATH);
-	if (vdb_fd == -1) {
-		warnp("unable to read %s", vdb_path);
-		goto done;
-	}
-
-	/* First execute the pkg_prerm step */
-	if (!pretend) {
-		eat_file_at(vdb_fd, "DEFINED_PHASES", &phases, &phases_len);
-		mkdir_p(T, 0755);
-		pkg_run_func(vdb_path, phases, "pkg_prerm", T, T);
-	}
-
-	/* Now start removing all the installed files */
-	fd = openat(vdb_fd, "CONTENTS", O_RDONLY | O_CLOEXEC);
-	if (fd == -1) {
-		warnp("unable to read %s", "CONTENTS");
-		goto done;
-	}
-	fp = fdopen(fd, "r");
+	/* First get a handle on the things to clean up */
+	fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
 	if (fp == NULL)
 		goto done;
+
+	portroot_fd = cat_ctx->ctx->portroot_fd;
+
+	/* Then execute the pkg_prerm step */
+	if (!pretend) {
+		q_vdb_pkg_eat(pkg_ctx, "DEFINED_PHASES", &phases, &phases_len);
+		mkdirat(pkg_ctx->fd, "temp", 0755);
+		pkg_run_func_at(pkg_ctx->fd, ".", phases, "pkg_prerm", T, T);
+	}
 
 	/* XXX: be nice to pull this out of the current func
 	 *      so we don't keep reparsing the same env var
@@ -1186,7 +1171,6 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 	}
 
 	fclose(fp);
-	fd = -1;
 
 	/* Then remove all dirs in reverse order */
 	while (dirs != NULL) {
@@ -1208,27 +1192,20 @@ pkg_unmerge(const char *cat, const char *pkgname, queue *keep)
 
 	if (!pretend) {
 		/* Then execute the pkg_postrm step */
-		pkg_run_func(vdb_path, phases, "pkg_postrm", T, T);
-		rm_rf(T);
+		pkg_run_func_at(pkg_ctx->fd, ".", phases, "pkg_postrm", T, T);
 
 		/* Finally delete the vdb entry */
-		rm_rf_at(portroot_fd, vdb_path);
+		rm_rf_at(pkg_ctx->fd, ".");
+		unlinkat(cat_ctx->fd, pkg_ctx->name, AT_REMOVEDIR);
 
-		/* And prune any empty vdb dirs */
-		rmdir_r_at(portroot_fd, vdb_path);
+		/* And prune the category if it's empty */
+		unlinkat(cat_ctx->ctx->vdb_fd, cat_ctx->name, AT_REMOVEDIR);
 	}
 
 	ret = 0;
  done:
-	if (fd != -1)
-		close(fd);
-	if (vdb_fd != -1)
-		close(vdb_fd);
-	if (portroot_fd != -1)
-		close(portroot_fd);
+	free(phases);
 	free(buf);
-	free(T);
-	free(vdb_path);
 
 	return ret;
 }
@@ -1485,40 +1462,23 @@ print_Pkg(int full, struct pkg_t *pkg)
 }
 
 _q_static int
-unmerge_packages(queue *todo)
+qmerge_unmerge_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
-	depend_atom *atom;
-	char *p;
-	int i, argc;
-	char **argv;
+	queue *todo = priv;
 
 	while (todo) {
-		char buf[512];
-
-		if (todo->name[0] == '-')
-			goto next;
-
-		p = best_version(NULL, todo->name);
-		if (!*p)
-			goto next;
-
-		makeargv(p, &argc, &argv);
-		for (i = 1; i < argc; ++i) {
-			if ((atom = atom_explode(argv[i])) == NULL)
-				continue;
-			if (atom->CATEGORY) {
-				atom2str(atom, buf, sizeof(buf));
-				pkg_unmerge(atom->CATEGORY, buf, NULL);
-			}
-			atom_implode(atom);
-		}
-		freeargv(argc, argv);
-
- next:
+		if (qlist_match(pkg_ctx, todo->name, NULL, true))
+			pkg_unmerge(pkg_ctx, NULL);
 		todo = todo->next;
 	}
 
 	return 0;
+}
+
+_q_static int
+unmerge_packages(queue *todo)
+{
+	return q_vdb_foreach_pkg(qmerge_unmerge_cb, todo, NULL);
 }
 
 _q_static FILE *
@@ -1858,13 +1818,15 @@ _q_static queue *
 qmerge_add_set_atom(char *satom, queue *set)
 {
 	char *p;
-	const char *slot;
+	const char *slot = "";
 
-	if ((p = strchr(satom, ':')) != NULL) {
-		*p = 0;
-		slot = p + 1;
-	} else
-		slot = "0";
+	if (!uninstall) {
+		if ((p = strchr(satom, ':')) != NULL) {
+			*p = 0;
+			slot = p + 1;
+		} else
+			slot = "0";
+	}
 
 	return add_set(satom, slot, set);
 }
