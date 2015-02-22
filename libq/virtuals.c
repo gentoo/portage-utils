@@ -20,10 +20,8 @@ struct queue_t {
 
 typedef struct queue_t queue;
 
-queue *del_set(char *s, queue *q, int *ok);
-queue *add_set(const char *vv, const char *ss, queue *q);
-
-static queue *append_set(queue *q, queue *ll)
+_q_static queue *
+append_set(queue *q, queue *ll)
 {
 	queue *z;
 
@@ -39,7 +37,8 @@ static queue *append_set(queue *q, queue *ll)
 }
 
 /* add a set to a cache */
-queue *add_set(const char *vv, const char *ss, queue *q)
+_q_static queue *
+add_set(const char *vv, const char *ss, queue *q)
 {
 	queue *ll;
 	char *s, *ptr;
@@ -83,7 +82,8 @@ queue *add_set(const char *vv, const char *ss, queue *q)
 }
 
 /* remove a set from a cache. matches ->name and frees name,item */
-queue *del_set(char *s, queue *q, int *ok)
+_q_static queue *
+del_set(char *s, queue *q, int *ok)
 {
 	queue *ll, *list, *old;
 	ll = q;
@@ -117,8 +117,8 @@ queue *del_set(char *s, queue *q, int *ok)
 }
 
 /* clear out a list */
-void free_sets(queue *list);
-void free_sets(queue *list)
+_q_static void
+free_sets(queue *list)
 {
 	queue *ll, *q;
 	ll = list;
@@ -131,20 +131,10 @@ void free_sets(queue *list)
 	}
 }
 
-char *virtual(char *name, queue *list);
-char *virtual(char *name, queue *list)
+void print_sets(const queue *list);
+void print_sets(const queue *list)
 {
-	queue *ll;
-	for (ll = list; ll != NULL; ll = ll->next)
-		if ((strcmp(ll->name, name)) == 0)
-			return ll->item;
-	return NULL;
-}
-
-void print_sets(queue *list);
-void print_sets(queue *list)
-{
-	queue *ll;
+	const queue *ll;
 	for (ll = list; ll != NULL; ll = ll->next)
 		printf("%s -> %s\n", ll->name, ll->item);
 }
