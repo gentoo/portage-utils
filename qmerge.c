@@ -1959,7 +1959,7 @@ int qmerge_main(int argc, char **argv)
 		switch (i) {
 			case 'f': force_download = 1; break;
 			case 'F': force_download = 2; break;
-			case 's': search_pkgs = 1; break;
+			case 's': search_pkgs = 1; interactive = 0; break;
 			/* case 'i': case 'g': */
 			case 'K': install = 1; break;
 			case 'U': uninstall = 1; break;
