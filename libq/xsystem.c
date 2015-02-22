@@ -14,13 +14,16 @@ static void xsystem(const char *command)
 		errp("system(%s) failed", command);
 }
 
-static void xsystembash(const char *command)
+static void xsystembash(const char *command, int cwd)
 {
 	pid_t p = vfork();
 	int status;
 
 	switch (p) {
 	case 0: /* child */
+		if (cwd != AT_FDCWD)
+			if (fchdir(cwd))
+				errp("fchdir failed");
 		execl("/bin/bash", "bash", "--norc", "--noprofile", "-c", command, NULL);
 		/* Hrm, still here ?  Maybe no bash ... */
 		_exit(execl("/bin/sh", "sh", "-c", command, NULL));

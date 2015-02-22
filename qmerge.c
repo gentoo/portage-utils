@@ -417,7 +417,7 @@ qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
 }
 
 _q_static void
-pkg_run_func(const char *vdb_path, const char *phases, const char *func, const char *D, const char *T)
+pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char *func, const char *D, const char *T)
 {
 	const char *phase;
 	char *script;
@@ -484,9 +484,10 @@ pkg_run_func(const char *vdb_path, const char *phases, const char *func, const c
 		/*5*/ D,
 		/*6*/ T,
 		/*7*/ debug ? "set -x;" : "");
-	xsystembash(script);
+	xsystembash(script, dirfd);
 	free(script);
 }
+#define pkg_run_func(...) pkg_run_func_at(AT_FDCWD, __VA_ARGS__)
 
 /* Copy one tree (the single package) to another tree (ROOT) */
 _q_static int
