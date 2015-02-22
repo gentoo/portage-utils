@@ -76,7 +76,8 @@ int qdepends_main_vdb(const char *depend_file, int argc, char **argv);
 int qdepends_vdb_deep(const char *depend_file, const char *query);
 
 #ifdef EBUG
-_q_static void print_word(const char *ptr, size_t num)
+void print_word(const char *ptr, size_t num);
+void print_word(const char *ptr, size_t num)
 {
 	while (num--)
 		printf("%c", *ptr++);
