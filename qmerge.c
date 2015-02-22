@@ -95,7 +95,7 @@ struct pkg_t {
 	size_t SIZE;
 	char USE[BUFSIZ];
 	char REPO[64];
-} Pkg;
+};
 
 struct llist_char_t {
 	char *data;
@@ -1579,6 +1579,7 @@ grab_binpkg_info(const char *name)
 	char *p;
 	depend_atom *atom;
 
+	struct pkg_t Pkg;
 	struct pkg_t *pkg = xzalloc(sizeof(struct pkg_t));
 	struct pkg_t *rpkg = xzalloc(sizeof(struct pkg_t));
 
@@ -1678,6 +1679,7 @@ find_binpkg(const char *name)
 	FILE *fp;
 	char buf[BUFSIZ];
 	char *p;
+	struct pkg_t Pkg;
 	char PF[sizeof(Pkg.PF)];
 	char CATEGORY[sizeof(Pkg.CATEGORY)];
 
@@ -1759,6 +1761,7 @@ parse_packages(queue *todo)
 	size_t buflen;
 	char *buf, *p;
 	long lineno = 0;
+	struct pkg_t Pkg;
 
 	fp = open_binpkg_index();
 
