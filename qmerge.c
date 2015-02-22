@@ -35,7 +35,7 @@
 
 int old_repo = 0;
 
-#define QMERGE_FLAGS "fFsKUpuyO5" COMMON_FLAGS
+#define QMERGE_FLAGS "fFsKUpuyO" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
 	{"fetch",   no_argument, NULL, 'f'},
 	{"force",   no_argument, NULL, 'F'},
@@ -46,7 +46,6 @@ static struct option const qmerge_long_opts[] = {
 	{"update",  no_argument, NULL, 'u'},
 	{"yes",     no_argument, NULL, 'y'},
 	{"nodeps",  no_argument, NULL, 'O'},
-	{"nomd5",   no_argument, NULL, '5'},
 	{"debug",   no_argument, NULL, 128},
 	COMMON_LONG_OPTS
 };
@@ -60,7 +59,6 @@ static const char * const qmerge_opts_help[] = {
 	"Update only",
 	"Don't prompt before overwriting",
 	"Don't merge dependencies",
-	"Don't verify MD5 digest of files",
 	"Run shell funcs with `set -x`",
 	COMMON_OPTS_HELP
 };
@@ -72,7 +70,6 @@ char install = 0;
 char uninstall = 0;
 char force_download = 0;
 char follow_rdepends = 1;
-char nomd5 = 0;
 char qmerge_strict = 0;
 char update_only = 0;
 bool debug = false;
@@ -1254,9 +1251,6 @@ pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *at
 	char *hash = NULL;
 	int ret = 0;
 
-	if (nomd5)
-		return ret;
-
 	if (pkg->MD5[0]) {
 		if ((hash = (char*) hash_file(fname, HASH_MD5)) == NULL) {
 			errf("hash is NULL for %s", fname);
@@ -1898,7 +1892,6 @@ int qmerge_main(int argc, char **argv)
 			case 'u': update_only = 1;
 			case 'y': interactive = 0; break;
 			case 'O': follow_rdepends = 0; break;
-			case '5': nomd5 = 1; break;
 			case 128: debug = true; break;
 			COMMON_GETOPTS_CASES(qmerge)
 		}
