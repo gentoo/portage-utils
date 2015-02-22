@@ -85,3 +85,10 @@ _cleantmpdir() {
 }
 cleantmpdir() { _cleantmpdir "rm -rf" "$@" ; }
 trimtmpdir() { _cleantmpdir "rmdir" "$@" ; }
+
+treedir() {
+	local d=$1
+	if ! tree "${d}" 2>/dev/null ; then
+		ls -R "${d}"
+	fi
+}
