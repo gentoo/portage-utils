@@ -62,8 +62,8 @@ CPPFLAGS  += $(APP_FLAGS)
 all: q
 	@true
 
-debug:
-	$(MAKE) CFLAGS="$(CFLAGS) $(DBG_CFLAGS)" clean symlinks
+debug: clean
+	$(MAKE) CFLAGS="$(CFLAGS) $(DBG_CFLAGS)" symlinks
 	@-scanelf -o /dev/null -BXxz permsx q
 
 q: $(SRC) libq/*.c *.h libq/*.h
@@ -123,7 +123,7 @@ endif
 man: q
 	./man/mkman.py
 
-symlinks: all
+symlinks: q
 	./q --install
 
 -include .depend
