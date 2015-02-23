@@ -1700,7 +1700,6 @@ parse_packages(queue *todo)
 	FILE *fp;
 	size_t buflen;
 	char *buf, *p;
-	long lineno = 0;
 	struct pkg_t Pkg;
 
 	fp = open_binpkg_index();
@@ -1709,7 +1708,6 @@ parse_packages(queue *todo)
 
 	buf = NULL;
 	while (getline(&buf, &buflen, fp) != -1) {
-		lineno++;
 		if (*buf == '\n') {
 			if ((strlen(Pkg.PF) > 0) && (strlen(Pkg.CATEGORY) > 0)) {
 				struct pkg_t *pkg = xmalloc(sizeof(*pkg));
