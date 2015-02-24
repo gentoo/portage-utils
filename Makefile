@@ -76,7 +76,7 @@ endif
 endif
 	$(Q)$(CC) $(WFLAGS) $(PYFLAGS) $(LDFLAGS) $(CFLAGS) $(CPPFLAGS) main.c -o q $(LIBADD)
 
-.depend: $(SRC)
+.depend: $(SRC) applets.h
 	sed -n '/^DECLARE_APPLET/s:.*(\(.*\)).*:#include "\1.c":p' applets.h > include_applets.h
 	@#$(CC) $(CFLAGS) -MM $(SRC) > .depend
 	$(CC) $(CPPFLAGS) $(CFLAGS) -MM main.c > .depend
