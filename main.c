@@ -165,10 +165,9 @@ static void version_barf(void)
 #ifndef VCSID
 # define VCSID "<unknown>"
 #endif
-	printf("portage-utils-%s: compiled on %s\n"
-	       "vcs id: %s\n"
+	printf("portage-utils-%s: %s\n"
 	       "%s written for Gentoo by <solar and vapier @ gentoo.org>\n",
-	       VERSION, __DATE__, VCSID, argv0);
+	       VERSION, VCSID, argv0);
 	exit(EXIT_SUCCESS);
 }
 
