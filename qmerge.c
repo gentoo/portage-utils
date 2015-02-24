@@ -1675,13 +1675,40 @@ parse_packages(queue *todo)
 	char *buf, *p;
 	struct pkg_t Pkg;
 	depend_atom *pkg_atom;
+	char repo[sizeof(Pkg.REPO)];
 
 	fp = open_binpkg_index();
 
+	buf = NULL;
+	repo[0] = '\0';
+
+	/* First consume the header with the common data. */
+	while (getline(&buf, &buflen, fp) != -1) {
+		if (*buf == '\n')
+			break;
+
+		if ((p = strchr(buf, '\n')) != NULL)
+			*p = 0;
+		if ((p = strchr(buf, ':')) == NULL)
+			continue;
+		if (p[1] != ' ')
+			continue;
+		*p = 0;
+		p += 2;
+
+		switch (*buf) {
+		case 'R':
+			if (!strcmp(buf, "REPO"))
+				strncpy(repo, p, sizeof(repo));
+			break;
+		}
+	}
+
 	pkg_atom = NULL;
 	memset(&Pkg, 0, sizeof(Pkg));
+	strcpy(Pkg.SLOT, "0");
 
-	buf = NULL;
+	/* Then walk all the package entries. */
 	while (getline(&buf, &buflen, fp) != -1) {
 		if (*buf == '\n') {
 			if (pkg_atom) {
@@ -1706,6 +1733,8 @@ parse_packages(queue *todo)
 				pkg_atom = NULL;
 			}
 			memset(&Pkg, 0, sizeof(Pkg));
+			strcpy(Pkg.SLOT, "0");
+			strcpy(Pkg.REPO, repo);
 			continue;
 		}
 
