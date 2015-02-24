@@ -29,7 +29,7 @@ tend $? "qmerge-test: [N] basic merge" || echo "${out}"
 [[ ${out} != *"FAIL"* ]]
 tend $? "qmerge-test: [N] FAIL messages" || echo "${out}"
 
-order=$(echo "${out}" | awk '$1 == ">>>" { printf "%s ", $NF }')
+order=$(echo "${out}" | awk '$1 == ">>>" && $2 ~ /^pkg_/ { printf "%s ", $NF }')
 [[ ${order} == "pkg_pretend pkg_setup pkg_preinst pkg_postinst " ]]
 tend $? "qmerge-test: [N] pkg_* order of execution" || printf '%s\n' "${order}" "${out}"
 
@@ -49,7 +49,7 @@ tend $? "qmerge-test: [R] re-emerge" || echo "${out}"
 [[ -x ${ROOT}/usr/bin/qmerge-test ]]
 tend $? "qmerge-test: [R] installed expected files" || treedir "${ROOT}"
 
-order=$(echo "${out}" | awk '$1 == ">>>" { printf "%s ", $NF }')
+order=$(echo "${out}" | awk '$1 == ">>>" && $2 ~ /^pkg_/ { printf "%s ", $NF }')
 [[ ${order} == "pkg_pretend pkg_setup pkg_preinst pkg_postinst pkg_prerm pkg_postrm " ]]
 tend $? "qmerge-test: [R] pkg_* order of execution" || printf '%s\n' "${order}" "${out}"
 
