@@ -1210,31 +1210,6 @@ _q_static int unlink_empty(const char *buf)
 	return -1;
 }
 
-_q_static int match_pkg(const queue *ll, const depend_atom *atom, const struct pkg_t *pkg)
-{
-	char buf[255];
-	int match = 0;
-
-	snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
-
-	/* verify this is the requested package */
-	if (strcmp(ll->name, buf) == 0)
-		match = 1;
-
-	if (strcmp(ll->name, pkg->PF) == 0)
-		match = 2;
-
-	snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
-
-	if (strcmp(ll->name, buf) == 0)
-		match = 3;
-
-	if (strcmp(ll->name, atom->PN) == 0)
-		match = 4;
-
-	return match;
-}
-
 _q_static int
 pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *atom,
                      int strict, int display)
@@ -1275,22 +1250,6 @@ pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *at
 		errf("strict is set in features");
 
 	return ret;
-}
-
-_q_static
-void pkg_process(const queue *todo, const depend_atom *atom, const struct pkg_t *pkg)
-{
-	const queue *ll;
-
-	ll = todo;
-	while (ll) {
-		if (ll->name[0] != '-' && match_pkg(ll, atom, pkg)) {
-			/* fetch all requested packages */
-			pkg_fetch(0, atom, pkg);
-		}
-
-		ll = ll->next;
-	}
 }
 
 _q_static void
@@ -1712,23 +1671,26 @@ parse_packages(queue *todo)
 	while (getline(&buf, &buflen, fp) != -1) {
 		if (*buf == '\n') {
 			if (pkg_atom) {
-				struct pkg_t *pkg = xmalloc(sizeof(*pkg));
-				*pkg = Pkg;
-
-				if (search_pkgs) {
-					if (todo) {
-						queue *ll = todo;
-						while (ll) {
-							if ((match_pkg(ll, pkg_atom, pkg) > 0) || (strcmp(ll->name, pkg->CATEGORY) == 0))
-								print_Pkg(verbose, pkg_atom, pkg);
-							ll = ll->next;
+				if (search_pkgs && !todo) {
+					print_Pkg(verbose, pkg_atom, &Pkg);
+				} else {
+					const queue *ll = todo;
+					depend_atom *todo_atom;
+					while (ll) {
+						todo_atom = atom_explode(ll->name);
+						pkg_atom->REPO = todo_atom->REPO ? Pkg.REPO : NULL;
+						pkg_atom->SLOT = todo_atom->SLOT ? Pkg.SLOT : NULL;
+						if (atom_compare(todo_atom, pkg_atom) == EQUAL) {
+							if (search_pkgs)
+								print_Pkg(verbose, pkg_atom, &Pkg);
+							else
+								pkg_fetch(0, pkg_atom, &Pkg);
 						}
-					} else
-						print_Pkg(verbose, pkg_atom, pkg);
-				} else
-					pkg_process(todo, pkg_atom, pkg);
+						atom_implode(todo_atom);
+						ll = ll->next;
+					}
+				}
 
-				free(pkg);
 				atom_implode(pkg_atom);
 				pkg_atom = NULL;
 			}
