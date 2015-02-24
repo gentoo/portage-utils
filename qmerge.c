@@ -1210,15 +1210,12 @@ _q_static int unlink_empty(const char *buf)
 	return -1;
 }
 
-_q_static int match_pkg(queue *ll, const struct pkg_t *pkg)
+_q_static int match_pkg(const queue *ll, const depend_atom *atom, const struct pkg_t *pkg)
 {
-	depend_atom *atom;
-	char buf[255], buf2[255];
+	char buf[255];
 	int match = 0;
 
 	snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
-	if ((atom = atom_explode(buf)) == NULL)
-		errf("%s/%s is not a valid atom", pkg->CATEGORY, pkg->PF);
 
 	/* verify this is the requested package */
 	if (strcmp(ll->name, buf) == 0)
@@ -1227,19 +1224,13 @@ _q_static int match_pkg(queue *ll, const struct pkg_t *pkg)
 	if (strcmp(ll->name, pkg->PF) == 0)
 		match = 2;
 
-	snprintf(buf2, sizeof(buf2), "%s/%s", pkg->CATEGORY, atom->PN);
+	snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
 
-	if (strcmp(ll->name, buf2) == 0)
+	if (strcmp(ll->name, buf) == 0)
 		match = 3;
 
 	if (strcmp(ll->name, atom->PN) == 0)
 		match = 4;
-
-	if (match)
-		goto match_done;
-
-match_done:
-	atom_implode(atom);
 
 	return match;
 }
@@ -1287,28 +1278,19 @@ pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *at
 }
 
 _q_static
-void pkg_process(queue *todo, const struct pkg_t *pkg)
+void pkg_process(const queue *todo, const depend_atom *atom, const struct pkg_t *pkg)
 {
-	queue *ll;
-	depend_atom *atom;
-	char buf[255];
-
-	snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
-	if ((atom = atom_explode(buf)) == NULL)
-		errf("%s/%s is not a valid atom", pkg->CATEGORY, pkg->PF);
+	const queue *ll;
 
 	ll = todo;
 	while (ll) {
-		if (ll->name[0] != '-' && match_pkg(ll, pkg)) {
+		if (ll->name[0] != '-' && match_pkg(ll, atom, pkg)) {
 			/* fetch all requested packages */
 			pkg_fetch(0, atom, pkg);
 		}
 
 		ll = ll->next;
 	}
-
-	/* free the atom */
-	atom_implode(atom);
 }
 
 _q_static void
@@ -1382,19 +1364,15 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 }
 
 _q_static void
-print_Pkg(int full, struct pkg_t *pkg)
+print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 {
 	char *p = NULL;
 	char buf[512];
-	depend_atom *atom = NULL;
 
-	if (!pkg->CATEGORY[0]) errf("CATEGORY is NULL");
-	if (!pkg->PF[0]) errf("PF is NULL");
-
-	printf("%s%s/%s%s%s%s%s%s\n", BOLD, pkg->CATEGORY, BLUE, pkg->PF, NORM,
+	printf("%s%s/%s%s%s%s%s%s\n", BOLD, atom->CATEGORY, BLUE, pkg->PF, NORM,
 		!quiet ? " [" : "",
 		!quiet ? make_human_readable_str(pkg->SIZE, 1, KILOBYTE) : "",
-		!quiet ? "KiB]" : "");
+		!quiet ? " KiB]" : "");
 
 	if (full == 0)
 		return;
@@ -1419,10 +1397,6 @@ print_Pkg(int full, struct pkg_t *pkg)
 		if (strcmp(pkg->REPO, "gentoo") != 0)
 			printf(" %sRepo%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->REPO);
 
-	snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
-	atom = atom_explode(buf);
-	if ((atom = atom_explode(buf)) == NULL)
-		return;
 	if ((p = best_version(pkg->CATEGORY, atom->PN)) != NULL) {
 		if (*p) {
 			int ret;
@@ -1437,7 +1411,6 @@ print_Pkg(int full, struct pkg_t *pkg)
 			printf(" %sInstalled%s:%s %s%s%s\n", DKGREEN, YELLOW, NORM, icolor, p, NORM);
 		}
 	}
-	atom_implode(atom);
 }
 
 _q_static int
@@ -1701,15 +1674,17 @@ parse_packages(queue *todo)
 	size_t buflen;
 	char *buf, *p;
 	struct pkg_t Pkg;
+	depend_atom *pkg_atom;
 
 	fp = open_binpkg_index();
 
+	pkg_atom = NULL;
 	memset(&Pkg, 0, sizeof(Pkg));
 
 	buf = NULL;
 	while (getline(&buf, &buflen, fp) != -1) {
 		if (*buf == '\n') {
-			if ((strlen(Pkg.PF) > 0) && (strlen(Pkg.CATEGORY) > 0)) {
+			if (pkg_atom) {
 				struct pkg_t *pkg = xmalloc(sizeof(*pkg));
 				*pkg = Pkg;
 
@@ -1717,16 +1692,18 @@ parse_packages(queue *todo)
 					if (todo) {
 						queue *ll = todo;
 						while (ll) {
-							if ((match_pkg(ll, pkg) > 0) || (strcmp(ll->name, pkg->CATEGORY) == 0))
-								print_Pkg(verbose, pkg);
+							if ((match_pkg(ll, pkg_atom, pkg) > 0) || (strcmp(ll->name, pkg->CATEGORY) == 0))
+								print_Pkg(verbose, pkg_atom, pkg);
 							ll = ll->next;
 						}
 					} else
-						print_Pkg(verbose, pkg);
+						print_Pkg(verbose, pkg_atom, pkg);
 				} else
-					pkg_process(todo, pkg);
+					pkg_process(todo, pkg_atom, pkg);
 
 				free(pkg);
+				atom_implode(pkg_atom);
+				pkg_atom = NULL;
 			}
 			memset(&Pkg, 0, sizeof(Pkg));
 			continue;
@@ -1766,14 +1743,12 @@ parse_packages(queue *todo)
 			case 'C':
 				if (strcmp(buf, "CATEGORY") == 0) strncpy(Pkg.CATEGORY, p, sizeof(Pkg.CATEGORY));
 				if (strcmp(buf, "CPV") == 0) {
-					depend_atom *atom;
-					if ((atom = atom_explode(p)) != NULL) {
-						if (atom->PR_int)
-							snprintf(Pkg.PF, sizeof(Pkg.PF), "%s-%s-r%i", atom->PN, atom->PV, atom->PR_int);
+					if ((pkg_atom = atom_explode(p)) != NULL) {
+						if (pkg_atom->PR_int)
+							snprintf(Pkg.PF, sizeof(Pkg.PF), "%s-%s-r%i", pkg_atom->PN, pkg_atom->PV, pkg_atom->PR_int);
 						else
-							snprintf(Pkg.PF, sizeof(Pkg.PF), "%s-%s", atom->PN, atom->PV);
-						strncpy(Pkg.CATEGORY, atom->CATEGORY, sizeof(Pkg.CATEGORY));
-						atom_implode(atom);
+							snprintf(Pkg.PF, sizeof(Pkg.PF), "%s-%s", pkg_atom->PN, pkg_atom->PV);
+						strncpy(Pkg.CATEGORY, pkg_atom->CATEGORY, sizeof(Pkg.CATEGORY));
 					}
 				}
 				break;
@@ -1787,6 +1762,8 @@ parse_packages(queue *todo)
 
 	free(buf);
 	fclose(fp);
+	if (pkg_atom)
+		atom_implode(pkg_atom);
 
 	return EXIT_SUCCESS;
 }
