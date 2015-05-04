@@ -1,0 +1,9 @@
+Checking a-b/pkg-1.0 ...
+ MD5-DIGEST: /bin/bad-md5
+ MTIME: /bin/bad-mtime-obj
+ SHA1-DIGEST: /bin/bad-sha1
+ MTIME: /bin/bad-mtime-sym
+ AFK: /bin/broken-sym
+ AFK: /bin/missing-sym
+ AFK: /missing-dir
+  * 4 out of 11 files are good (2 files were ignored)

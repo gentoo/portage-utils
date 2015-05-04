@@ -186,7 +186,7 @@ static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_sta
 				if (state->chk_hash) {
 					const char *digest_disp;
 					if (state->qc_update)
-						fprintf(fpx, "obj %s %s %"PRIu64"u\n", e->name, hashed_file, (uint64_t)st.st_mtime);
+						fprintf(fpx, "obj %s %s %"PRIu64"\n", e->name, hashed_file, (uint64_t)st.st_mtime);
 					switch (hash_algo) {
 						case HASH_MD5:  digest_disp = "MD5"; break;
 						case HASH_SHA1: digest_disp = "SHA1"; break;
@@ -208,12 +208,12 @@ static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_sta
 				if (state->chk_mtime) {
 					qcprintf(" %sMTIME%s: %s", RED, NORM, e->name);
 					if (verbose)
-						qcprintf(" (recorded '%"PRIu64"u' != actual '%"PRIu64"u')", (uint64_t)e->mtime, (uint64_t)st.st_mtime);
+						qcprintf(" (recorded '%"PRIu64"' != actual '%"PRIu64"')", (uint64_t)e->mtime, (uint64_t)st.st_mtime);
 					qcprintf("\n");
 
 					/* This can only be an obj, dir and sym have no digest */
 					if (state->qc_update)
-						fprintf(fpx, "obj %s %s %"PRIu64"u\n", e->name, e->digest, (uint64_t)st.st_mtime);
+						fprintf(fpx, "obj %s %s %"PRIu64"\n", e->name, e->digest, (uint64_t)st.st_mtime);
 				} else {
 					--num_files;
 					++num_files_ignored;
@@ -231,13 +231,13 @@ static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_sta
 			if (state->chk_mtime) {
 				qcprintf(" %sMTIME%s: %s", RED, NORM, e->name);
 				if (verbose)
-					qcprintf(" (recorded '%"PRIu64"u' != actual '%"PRIu64"u')",
+					qcprintf(" (recorded '%"PRIu64"' != actual '%"PRIu64"')",
 						(uint64_t)e->mtime, (uint64_t)st.st_mtime);
 				qcprintf("\n");
 
 				/* This can only be a sym */
 				if (state->qc_update)
-					fprintf(fpx, "sym %s -> %s %"PRIu64"u\n", e->name, e->sym_target, (uint64_t)st.st_mtime);
+					fprintf(fpx, "sym %s -> %s %"PRIu64"\n", e->name, e->sym_target, (uint64_t)st.st_mtime);
 			} else {
 				--num_files;
 				++num_files_ignored;

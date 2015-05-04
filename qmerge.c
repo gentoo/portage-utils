@@ -587,7 +587,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 
 			/* syntax: obj filename hash mtime */
 			hash = hash_file_at(subfd_src, name, HASH_MD5);
-			fprintf(contents, "obj %s %s %"PRIu64"u\n", cpath, hash, (uint64_t)st.st_mtime);
+			fprintf(contents, "obj %s %s %"PRIu64"\n", cpath, hash, (uint64_t)st.st_mtime);
 
 			/* Check CONFIG_PROTECT */
 			if (config_protected(cpath, cp_argc, cp_argv, cpm_argc, cpm_argv)) {
@@ -685,7 +685,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			sym[len] = '\0';
 
 			/* syntax: sym src -> dst mtime */
-			fprintf(contents, "sym %s -> %s %"PRIu64"u\n", cpath, sym, (uint64_t)st.st_mtime);
+			fprintf(contents, "sym %s -> %s %"PRIu64"\n", cpath, sym, (uint64_t)st.st_mtime);
 			qprintf("%s>>>%s %s%s -> %s%s\n", GREEN, NORM, CYAN, cpath, sym, NORM);
 			*objs = add_set(cpath, *objs);
 

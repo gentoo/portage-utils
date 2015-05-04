@@ -1,0 +1,13 @@
+dir /bin
+obj /bin/good-md5 2b00042f7481c7b056c4b410d28f33cf 1398954900
+obj /bin/bad-md5 2b00042f7481c7b056c4b410d28f33cf 1398954900
+obj /bin/bad-mtime-obj 2b00042f7481c7b056c4b410d28f33cf 1
+obj /bin/good-sha1 7d97e98f8af710c7e7fe703abc8f639e0ee507c4 1398954900
+obj /bin/bad-sha1 7d97e98f8af710c7e7fe703abc8f639e0ee507c4 1398954900
+sym /bin/good-sym -> good-md5 1398954900
+sym /bin/bad-mtime-sym -> good-md5 1
+sym /bin/broken-sym -> broken 1398954900
+sym /bin/missing-sym -> noooooope 1398954900
+dir /missing-dir
+obj /missing-dir/missing-file 2b00042f7481c7b056c4b410d28f33cf 1398954900
+sym /missing-dir/missing-sym -> nowhere 1398954900

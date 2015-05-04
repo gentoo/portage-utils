@@ -1,0 +1,11 @@
+Checking a-b/pkg-1.0 ...
+ MD5-DIGEST: /bin/bad-md5 (recorded '2b00042f7481c7b056c4b410d28f33cf' != actual 'f873a43958ea3a2c7a21fb0beb91001a')
+ MTIME: /bin/bad-mtime-obj (recorded '1' != actual '1398954900')
+ SHA1-DIGEST: /bin/bad-sha1 (recorded '7d97e98f8af710c7e7fe703abc8f639e0ee507c4' != actual '93e53f957b54a6a5bb2891d998fda65719887f84')
+ MTIME: /bin/bad-mtime-sym (recorded '1' != actual '1398954900')
+ AFK: /bin/broken-sym
+ AFK: /bin/missing-sym
+ AFK: /missing-dir
+ AFK: /missing-dir/missing-file
+ AFK: /missing-dir/missing-sym
+  * 4 out of 13 files are good

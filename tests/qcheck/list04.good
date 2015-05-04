@@ -1,0 +1,11 @@
+Checking a-b/pkg-1.0 ...
+ MTIME: /bin/bad-mtime-obj
+ MTIME: /bin/bad-mtime-sym
+ AFK: /bin/broken-sym
+ AFK: /bin/missing-sym
+ AFK: /missing-dir
+ AFK: /missing-dir/missing-file
+ AFK: /missing-dir/missing-sym
+  * 4 out of 11 files are good (2 files were ignored)
+Checking cat/pkg-1 ...
+  * 0 out of 0 file are good

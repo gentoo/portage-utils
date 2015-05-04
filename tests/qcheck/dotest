@@ -1,0 +1,64 @@
+#!/bin/bash
+
+. ../init.sh
+
+set -e
+
+export ROOT=${as}/root
+export Q_VDB=/
+
+# This is the "valid" mtime the test packages have hardcoded in the CONTENTS
+# files.  The stamp is the CONTENTS while the touch date is the corresponding
+# unpacked date.
+STAMP=1398954900 DATE=201405011035
+find "${ROOT}" -exec touch -h -t "${DATE}" {} +
+
+mktmpdir
+
+test() {
+	local num=$1 exp=$2 ret=0
+	shift 2
+	eval "$@" > list || ret=$?
+	if ! diff -u list ${as}/list${num}.good ; then
+		tfail "output does not match"
+	fi
+	if [[ ${exp} -ne ${ret} ]] ; then
+		tfail "exit code (${ret}) does not match expected (${exp})"
+	fi
+	tend $? "$*"
+}
+
+# simple check
+test 01 1 "qcheck a-b/pkg"
+
+# exclude check
+test 02 1 "qcheck a-b/pkg -s ^/missing-dir/.*"
+
+# bad-only check
+test 03 1 "qcheck -Ba"
+
+# hash mismatch ignore check
+test 04 1 "qcheck -Ha"
+
+# mtime mismatch ignore check
+test 05 1 "qcheck -Ta"
+
+# missing ignore check
+test 06 1 "qcheck -Aa"
+
+# hash+mtime+missing mismatch ignore check
+test 07 0 "qcheck -AHTa"
+
+# verbose check
+test 08 1 "qcheck -v a-b/pkg"
+
+# update check
+(
+cp -a "${ROOT}" mod
+ROOT=${PWD}/mod
+test 09 0 "qcheck -u a-b/pkg && qcheck a-b/pkg"
+)
+
+cleantmpdir
+
+end

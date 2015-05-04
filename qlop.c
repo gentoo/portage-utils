@@ -208,7 +208,7 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 							if (human_readable)
 								print_seconds_for_earthlings(t[1] - t[0]);
 							else
-								printf("%s%"PRIu64"u%s seconds", GREEN, (uint64_t)(t[1] - t[0]), NORM);
+								printf("%s%"PRIu64"%s seconds", GREEN, (uint64_t)(t[1] - t[0]), NORM);
 							puts("");
 						}
 						merge_time += (t[1] - t[0]);

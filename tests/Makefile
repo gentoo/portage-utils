@@ -1,6 +1,6 @@
 TESTS = \
 	reinitialize atom_compare atom_explode mkdir \
-	qdepends qfile qlist qmerge qtbz2 quse qxpak \
+	qcheck qdepends qfile qlist qmerge qtbz2 quse qxpak \
 	install profile source
 
 all: check
