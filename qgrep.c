@@ -371,9 +371,9 @@ int qgrep_main(int argc, char **argv)
 
 	/* go look either in ebuilds or eclasses or VDB */
 	if (!do_eclass && !do_installed) {
-		initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
-		if ((fp = fopen(CACHE_EBUILD_FILE, "r")) == NULL)
+		if ((fp = fopen(initialize_ebuild_flat(), "r")) == NULL)
 			return 1;
+		xchdir(portdir);
 	} else if (do_eclass) {
 		xchdir(portdir);
 		if ((eclass_dir = opendir("eclass")) == NULL)

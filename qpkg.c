@@ -122,19 +122,7 @@ int qpkg_clean(char *dirp)
 	}
 
 	if (eclean) {
-		char fname[_Q_PATH_MAX] = "";
-		const char *ecache;
-
-		/* CACHE_EBUILD_FILE is a macro so don't put it in the .bss */
-		ecache = CACHE_EBUILD_FILE;
-
-		if (ecache) {
-			if (*ecache != '/')
-				snprintf(fname, sizeof(fname), "%s/%s", portdir, ecache);
-			else
-				strncpy(fname, ecache, sizeof(fname));
-		}
-		if ((fp = fopen(fname, "r")) != NULL) {
+		if ((fp = fopen(initialize_ebuild_flat(), "r")) != NULL) {
 			size_t buflen;
 			char *buf;
 
