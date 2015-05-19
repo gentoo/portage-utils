@@ -214,6 +214,7 @@ quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 int quse_main(int argc, char **argv)
 {
 	FILE *fp;
+	const char *cache_file;
 	char *p;
 
 	char buf0[_Q_PATH_MAX];
@@ -251,19 +252,31 @@ int quse_main(int argc, char **argv)
 		return quse_describe_flag(optind, argc, argv);
 
 	if (quse_all) optind = argc;
-	initialize_ebuild_flat();	/* sets our pwd to $PORTDIR */
+	cache_file = initialize_ebuild_flat();
 
 	search_len = strlen(search_vars[idx]);
 	assert(search_len < sizeof(buf0));
 
-	if ((fp = fopen(CACHE_EBUILD_FILE, "r")) == NULL)
+	if ((fp = fopen(cache_file, "r")) == NULL) {
+		warnp("could not read cache: %s", cache_file);
 		return 1;
+	}
+
+	int portdir_fd = open(portdir, O_RDONLY|O_CLOEXEC|O_PATH);
+
 	ebuild = NULL;
 	while (getline(&ebuild, &ebuildlen, fp) != -1) {
 		FILE *newfp;
+		int fd;
+
 		if ((p = strchr(ebuild, '\n')) != NULL)
 			*p = 0;
-		if ((newfp = fopen(ebuild, "r")) != NULL) {
+
+		fd = openat(portdir_fd, ebuild, O_RDONLY|O_CLOEXEC);
+		if (fd < 0)
+			continue;
+		newfp = fdopen(fd, "r");
+		if (newfp != NULL) {
 			unsigned int lineno = 0;
 			char revision[sizeof(buf0)];
 			char date[sizeof(buf0)];
@@ -408,6 +421,7 @@ int quse_main(int argc, char **argv)
 		}
 	}
 	fclose(fp);
+	close(portdir_fd);
 	return EXIT_SUCCESS;
 }
 
