@@ -47,13 +47,6 @@ static const char * const qcache_opts_help[] = {
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
 
 /********************************************************************/
-/* Constants                                                        */
-/********************************************************************/
-
-/* TODO: allow the user to override this value if s/he wishes */
-#define QCACHE_EDB "/var/cache/edb/dep"
-
-/********************************************************************/
 /* Structs                                                          */
 /********************************************************************/
 
@@ -512,7 +505,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 	int i, j, k, len, num_cat, num_pkg, num_ebuild;
 	struct dirent **categories, **packages, **ebuilds;
 
-	xasprintf(&catpath, "%s%s", QCACHE_EDB, portdir);
+	xasprintf(&catpath, "%s/dep/%s", portedb, portdir);
 
 	if (-1 == (num_cat = scandir(catpath, &categories, qcache_file_select, alphasort))) {
 		errp("%s", catpath);
@@ -754,11 +747,8 @@ void qcache_stats(qcache_data *data)
 	if (!numpkg) {
 		struct dirent **categories;
 		char *catpath;
-		int len;
 
-		len = sizeof(char) * (strlen(QCACHE_EDB) + strlen(portdir) + 1);
-		catpath = xzalloc(len);
-		snprintf(catpath, len, "%s%s", QCACHE_EDB, portdir);
+		xasprintf(&catpath, "%s/dep/%s", portedb, portdir);
 
 		if (-1 == (numcat = scandir(catpath, &categories, qcache_file_select, alphasort))) {
 			errp("%s", catpath);

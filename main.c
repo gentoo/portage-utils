@@ -35,6 +35,7 @@ char reinitialize_metacache = 0;
 static char *portdir;
 static char *portarch;
 static char *portvdb;
+static char *portedb;
 const char portcachedir_pms[] = "metadata/cache";
 const char portcachedir_md5[] = "metadata/md5-cache";
 static char *portroot;
@@ -698,6 +699,7 @@ void initialize_portage_env(void)
 		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         CONFIG_EPREFIX "var/tmp/portage/")
 		_Q_EVS(STR,  PKGDIR,              pkgdir,              CONFIG_EPREFIX "usr/portage/packages/")
 		_Q_EVS(STR,  Q_VDB,               portvdb,             CONFIG_EPREFIX "var/db/pkg")
+		_Q_EVS(STR,  Q_EDB,               portedb,             CONFIG_EPREFIX "var/cache/edb")
 		{ NULL, 0, _Q_BOOL, { NULL }, 0, NULL, }
 
 #undef _Q_EV
@@ -846,92 +848,83 @@ int filter_hidden(const struct dirent *dentry)
 	return 1;
 }
 
-#define CACHE_EBUILD_FILE (getenv("CACHE_EBUILD_FILE") ? getenv("CACHE_EBUILD_FILE") : ".ebuild.x")
-#define CACHE_METADATA_FILE ".metadata.x"
-const char *initialize_flat(int cache_type);
-const char *initialize_flat(int cache_type)
+static const char *
+initialize_flat(int cache_type, bool force)
 {
 	struct dirent **category, **pn, **eb;
 	struct stat st;
 	struct timeval start, finish;
-	static const char *cache_file;
-	const char *portcachedir_actual;
+	char *cache_file;
 	char *p;
-	int a, b, c, d, e, i;
+	int i;
 	int frac, secs, count;
 	FILE *fp;
 
-	a = b = c = d = e = i = 0;
 	count = frac = secs = 0;
 
-	cache_file = (cache_type == CACHE_EBUILD ? CACHE_EBUILD_FILE : CACHE_METADATA_FILE);
-
-	if (chdir(portdir) != 0) {
-		warnp("chdir to PORTDIR '%s' failed", portdir);
-		goto ret;
-	}
+	int portdir_fd, subdir_fd;
+	portdir_fd = open(portdir, O_RDONLY|O_CLOEXEC|O_PATH);
 
 	if (cache_type == CACHE_METADATA) {
-		if (chdir(portcachedir_md5) == 0) {
-			portcachedir_type = CACHE_METADATA_MD5;
-			portcachedir_actual = portcachedir_md5;
-		} else if (chdir(portcachedir_pms) == 0) {
+		subdir_fd = openat(portdir_fd, portcachedir_md5, O_RDONLY|O_CLOEXEC);
+		if (subdir_fd == -1) {
+			subdir_fd = openat(portdir_fd, portcachedir_pms, O_RDONLY|O_CLOEXEC);
+			if (subdir_fd == -1) {
+				warnp("could not read md5 or pms cache dirs in %s", portdir);
+				goto ret;
+			}
 			portcachedir_type = CACHE_METADATA_PMS;
-			portcachedir_actual = portcachedir_pms;
-		} else {
-			warnp("chdir to portage cache '%s/%s' or '%s/%s' failed", portdir, portcachedir_md5, portdir, portcachedir_pms);
-			goto ret;
-		}
-	}
+		} else
+			portcachedir_type = CACHE_METADATA_MD5;
+	} else
+		subdir_fd = portdir_fd;
+	xasprintf(&cache_file, "%s/dep/%s/%s", portedb, portdir,
+		(cache_type == CACHE_EBUILD ? ".ebuild.x" : ".metadata.x"));
 
-	if (stat(cache_file, &st) != -1)
+	if (stat(cache_file, &st) != -1) {
 		if (st.st_size == 0)
 			unlink(cache_file);
-
-	/* assuming --sync is used with --delete this will get recreated after every merge */
-	if (access(cache_file, R_OK) == 0)
+	} else if (!force) {
+		/* assuming --sync is used with --delete this will get recreated after every merge */
 		goto ret;
+	}
 	if (!quiet)
 		warn("Updating ebuild %scache ... ", cache_type == CACHE_EBUILD ? "" : "meta");
 
-	unlink(cache_file);
-	if (errno != ENOENT) {
-		warnfp("unlinking '%s/%s' failed", portdir, cache_file);
-		goto ret;
-	}
-
-	if ((fp = fopen(cache_file, "w")) == NULL) {
-		if (cache_type == CACHE_EBUILD)
-			warnfp("opening '%s/%s' failed", portdir, cache_file);
-		else
-			warnfp("opening '%s/%s/%s' failed", portdir, portcachedir_actual, cache_file);
+	if ((fp = fopen(cache_file, "we")) == NULL) {
+		warnfp("opening cache failed: %s", cache_file);
 		if (errno == EACCES)
 			warnf("You should run this command as root: q -%c",
-					cache_type == CACHE_EBUILD ? 'r' : 'm');
+				cache_type == CACHE_EBUILD ? 'r' : 'm');
 		goto ret;
 	}
 
 	gettimeofday(&start, NULL);
 
-	if ((a = scandir(".", &category, q_vdb_filter_cat, alphasort)) < 0)
+	int cat_cnt;
+	cat_cnt = scandirat(subdir_fd, ".", &category, q_vdb_filter_cat, alphasort);
+	if (cat_cnt < 0)
 		goto ret;
 
-	for (i = 0; i < a; i++) {
-		stat(category[i]->d_name, &st);
+	for (i = 0; i < cat_cnt; i++) {
+		if (fstatat(subdir_fd, category[i]->d_name, &st, 0))
+			continue;
 		if (!S_ISDIR(st.st_mode))
 			continue;
 		if (strchr(category[i]->d_name, '-') == NULL)
 			if (strncmp(category[i]->d_name, "virtual", 7) != 0)
 				continue;
 
-		if ((b = scandir(category[i]->d_name, &pn, q_vdb_filter_pkg, alphasort)) < 0)
+		int c, pkg_cnt;
+		pkg_cnt = scandirat(subdir_fd, category[i]->d_name, &pn, q_vdb_filter_pkg, alphasort);
+		if (pkg_cnt < 0)
 			continue;
-		for (c = 0; c < b; c++) {
+		for (c = 0; c < pkg_cnt; c++) {
 			char de[_Q_PATH_MAX];
 
 			snprintf(de, sizeof(de), "%s/%s", category[i]->d_name, pn[c]->d_name);
 
-			if (stat(de, &st) < 0)
+			if (fstatat(subdir_fd, de, &st, 0) < 0)
 				continue;
 
 			switch (cache_type) {
@@ -943,24 +936,25 @@ const char *initialize_flat(int cache_type)
 				if (S_ISREG(st.st_mode))
 					fprintf(fp, "%s\n", de);
 				continue;
-				break;
 			}
-			if ((e = scandir(de, &eb, filter_hidden, alphasort)) < 0)
+
+			int e, ebuild_cnt;
+			ebuild_cnt = scandirat(subdir_fd, de, &eb, filter_hidden, alphasort);
+			if (ebuild_cnt < 0)
 				continue;
-			for (d = 0; d < e; d++) {
-				if ((p = strrchr(eb[d]->d_name, '.')) != NULL)
+			for (e = 0; e < ebuild_cnt; ++e) {
+				if ((p = strrchr(eb[e]->d_name, '.')) != NULL)
 					if (strcmp(p, ".ebuild") == 0) {
 						count++;
-						fprintf(fp, "%s/%s/%s\n", category[i]->d_name, pn[c]->d_name, eb[d]->d_name);
+						fprintf(fp, "%s/%s\n", de, eb[e]->d_name);
 					}
 			}
-			while (d--) free(eb[d]);
-			free(eb);
+			scandir_free(eb, ebuild_cnt);
 		}
-		scandir_free(pn, b);
+		scandir_free(pn, pkg_cnt);
 	}
 	fclose(fp);
-	scandir_free(category, a);
+	scandir_free(category, cat_cnt);
 
 	if (quiet) goto ret;
 
@@ -978,27 +972,20 @@ const char *initialize_flat(int cache_type)
 	if (secs > 120)
 		warn("You should consider using the noatime mount option for PORTDIR='%s' if it's not already enabled", portdir);
 ret:
+	close(subdir_fd);
+	if (subdir_fd != portdir_fd)
+		close(portdir_fd);
 	return cache_file;
 }
-#define initialize_ebuild_flat() initialize_flat(CACHE_EBUILD)
-#define initialize_metadata_flat() initialize_flat(CACHE_METADATA)
-
-void reinitialize_ebuild_flat(void)
-{
-	if (chdir(portdir) != 0) {
-		warnp("chdir to PORTDIR '%s' failed", portdir);
-		return;
-	}
-	unlink(CACHE_EBUILD_FILE);
-	initialize_ebuild_flat();
-}
+#define initialize_ebuild_flat() initialize_flat(CACHE_EBUILD, false)
+#define initialize_metadata_flat() initialize_flat(CACHE_METADATA, false)
 
 void reinitialize_as_needed(void)
 {
 	if (reinitialize)
-		reinitialize_ebuild_flat();
+		initialize_flat(CACHE_EBUILD, true);
 	if (reinitialize_metacache)
-		initialize_metadata_flat();
+		initialize_flat(CACHE_METADATA, true);
 }
 
 typedef struct {

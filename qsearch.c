@@ -88,7 +88,7 @@ int qsearch_main(int argc, char **argv)
 	}
 #endif
 	last[0] = 0;
-	fp = fopen(initialize_flat(search_cache), "r");
+	fp = fopen(initialize_flat(search_cache, false), "r");
 	if (!fp)
 		return 1;
 

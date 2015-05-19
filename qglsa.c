@@ -8,8 +8,6 @@
 
 #ifdef APPLET_qglsa
 
-#define QGLSA_DB "/var/cache/edb/glsa"
-
 #define QGLSA_FLAGS "ldtpfi" COMMON_FLAGS
 static struct option const qglsa_long_opts[] = {
 	{"list",      no_argument, NULL, 'l'},
@@ -34,19 +32,25 @@ static const char * const qglsa_opts_help[] = {
 static char *qglsa_load_list(void);
 static char *qglsa_load_list(void)
 {
-	char *ret = NULL;
+	char *file, *ret = NULL;
 	size_t size = 0;
-	eat_file(QGLSA_DB, &ret, &size);
+	xasprintf(&file, "%s/glsa", portedb);
+	eat_file(file, &ret, &size);
+	free(file);
 	return ret;
 }
 static void qglsa_append_to_list(const char *glsa);
 static void qglsa_append_to_list(const char *glsa)
 {
+	char *file;
 	FILE *f;
-	if ((f = fopen(QGLSA_DB, "a")) != NULL) {
-		fprintf(f, "%s\n", glsa);
+	xasprintf(&file, "%s/glsa", portedb);
+	if ((f = fopen(file, "a")) != NULL) {
+		fputs(glsa, f);
+		fputc('\n', f);
 		fclose(f);
 	}
+	free(file);
 }
 
 static void qglsa_decode_entities(char *xml_buf, size_t len);
