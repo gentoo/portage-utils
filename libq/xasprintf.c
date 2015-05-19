@@ -23,7 +23,9 @@
 
 /* asprintf(char **strp, const char *fmt, ...); */
 #define xasprintf(strp, fmt, args...) \
-	do { \
-		if (asprintf(strp, fmt , ## args) == -1) \
+	({ \
+		int _ret = asprintf(strp, fmt , ## args); \
+		if (_ret == -1) \
 			err("Out of memory"); \
-	} while (0)
+		_ret; \
+	})
