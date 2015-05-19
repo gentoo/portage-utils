@@ -94,6 +94,7 @@ EXTRA_DIST += \
 	libq/atom_compare.c \
 	libq/atom_explode.c \
 	libq/basename.c \
+	libq/binpackages.c \
 	libq/busybox.h \
 	libq/colors.c \
 	libq/compat.c \
@@ -171,6 +172,29 @@ EXTRA_DIST += \
 	tests/profile/profile1/etc/portage/make.conf \
 	tests/profile/profile1/etc/portage/subdir/file.conf \
 	tests/profile/profile1/etc/portage/this.level.conf \
+	tests/qcheck/Makefile \
+	tests/qcheck/dotest \
+	tests/qcheck/list01.good \
+	tests/qcheck/list02.good \
+	tests/qcheck/list03.good \
+	tests/qcheck/list04.good \
+	tests/qcheck/list05.good \
+	tests/qcheck/list06.good \
+	tests/qcheck/list07.good \
+	tests/qcheck/list08.good \
+	tests/qcheck/list09.good \
+	tests/qcheck/root/a-b/pkg-1.0/CONTENTS \
+	tests/qcheck/root/a-b/pkg-1.0/SLOT \
+	tests/qcheck/root/a-b/pkg-1.0/repository \
+	tests/qcheck/root/bin/bad-md5 \
+	tests/qcheck/root/bin/bad-mtime \
+	tests/qcheck/root/bin/bad-mtime-obj \
+	tests/qcheck/root/bin/bad-sha1 \
+	tests/qcheck/root/bin/good-md5 \
+	tests/qcheck/root/bin/good-sha1 \
+	tests/qcheck/root/cat/pkg-1/CONTENTS \
+	tests/qcheck/root/cat/pkg-1/SLOT \
+	tests/qcheck/root/cat/pkg-1/repository \
 	tests/qdepends/Makefile \
 	tests/qdepends/dotest \
 	tests/qdepends/list01.good \
@@ -205,6 +229,7 @@ EXTRA_DIST += \
 	tests/qlist/list12.good \
 	tests/qlist/list13.good \
 	tests/qlist/list14.good \
+	tests/qlist/list15.good \
 	tests/qlist/root/-merge-foo/CONTENTS \
 	tests/qlist/root/a-b/a-0/CONTENTS \
 	tests/qlist/root/a-b/a-0/SLOT \
@@ -224,6 +249,11 @@ EXTRA_DIST += \
 	tests/qlist/root/sys-fs/mtools-4.0.13/CONTENTS \
 	tests/qlist/root/sys-fs/mtools-4.0.13/SLOT \
 	tests/qlist/root/sys-fs/mtools-4.0.13/repository \
+	tests/qlop/Makefile \
+	tests/qlop/dotest \
+	tests/qlop/list01.good \
+	tests/qlop/sync.log \
+	tests/qmerge/.gdb_history \
 	tests/qmerge/Makefile \
 	tests/qmerge/dotest \
 	tests/qmerge/packages/Packages \
