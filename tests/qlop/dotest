@@ -1,0 +1,30 @@
+#!/bin/bash
+
+. ../init.sh
+
+set -e
+
+mktmpdir
+
+test() {
+	local num=$1 exp=$2 ret=0
+	shift 2
+	eval "$@" > list || ret=$?
+	if ! diff -u list ${as}/list${num}.good ; then
+		tfail "output does not match"
+	fi
+	if [[ ${exp} -ne ${ret} ]] ; then
+		tfail "exit code (${ret}) does not match expected (${exp})"
+	fi
+	tend $? "$*"
+}
+
+# We output dates, so make sure it matches our logs.
+export LC_TIME="C"
+
+# simple install check
+test 01 0 "qlop -s -f ${as}/sync.log"
+
+cleantmpdir
+
+end

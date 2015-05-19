@@ -1,0 +1,13 @@
+1106804103: Started emerge on: Jan 27, 2005 05:35:03
+1106804103:  *** emerge  sync
+1106804103:  === sync
+1106804103: >>> starting rsync with rsync://192.168.0.5/gentoo-portage
+1106804537: === Sync completed with rsync://192.168.0.5/gentoo-portage
+1106804538:  *** terminating.
+1431764402: Started emerge on: May 16, 2015 04:20:01
+1431764402:  *** emerge --quiet --keep-going --verbose --nospinner --oneshot --quiet-build=n --sync
+1431764402:  === sync
+1431764402: >>> Syncing repository 'gentoo' into '/usr/portage'...
+1431764402: >>> Starting rsync with rsync://[2a01:90:200:10::1a]/gentoo-portage
+1431764460: === Sync completed for gentoo
+1431764493:  *** terminating.

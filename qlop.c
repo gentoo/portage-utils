@@ -304,12 +304,31 @@ show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
 	fclose(fp);
 }
 
+/* The format of the sync log has changed over time.
+
+Old format:
+1106804103: Started emerge on: Jan 27, 2005 05:35:03
+1106804103:  *** emerge  sync
+1106804103:  === sync
+1106804103: >>> starting rsync with rsync://192.168.0.5/gentoo-portage
+1106804537: === Sync completed with rsync://192.168.0.5/gentoo-portage
+1106804538:  *** terminating.
+
+New format:
+1431764402: Started emerge on: May 16, 2015 04:20:01
+1431764402:  *** emerge --quiet --keep-going --verbose --nospinner --oneshot --quiet-build=n --sync
+1431764402:  === sync
+1431764402: >>> Syncing repository 'gentoo' into '/usr/portage'...
+1431764402: >>> Starting rsync with rsync://[2a01:90:200:10::1a]/gentoo-portage
+1431764460: === Sync completed for gentoo
+1431764493:  *** terminating.
+*/
 _q_static void
 show_sync_history(const char *logfile)
 {
 	FILE *fp;
-	size_t buflen;
-	char *buf, *p, *q;
+	size_t buflen, len;
+	char *buf, *p;
 	time_t t;
 
 	if ((fp = fopen(logfile, "r")) == NULL) {
@@ -318,26 +337,35 @@ show_sync_history(const char *logfile)
 	}
 
 	buf = NULL;
+	/* Just find the finish lines. */
 	while (getline(&buf, &buflen, fp) != -1) {
-		if (strlen(buf) < 35)
-			continue;
-		if (strncmp(buf+12, "=== Sync completed with", 23) != 0)
+		len = strlen(buf);
+		/* This cuts out like ~10% of the log. */
+		if (len < 35)
 			continue;
 
-		if ((p = strchr(buf, '\n')) != NULL)
-			*p = 0;
+		/* Make sure there's a timestamp in here. */
 		if ((p = strchr(buf, ':')) == NULL)
 			continue;
-		*p = 0;
-		q = p+2;
+		p += 2;
+
+		if (strncmp(p, "=== Sync completed ", 19) != 0)
+			continue;
+		p += 19;
+
+		if (buf[len - 1] == '\n')
+			buf[len - 1] = '\0';
 
 		t = (time_t)atol(buf);
 
-		if ((p = strstr(q, "with")) == NULL)
+		if (!strncmp(p, "with ", 5))
+			p += 5;
+		else if (!strncmp(p, "for ", 4))
+			/* This shows just the repo name not the remote host ... */
+			p += 4;
+		else
 			continue;
-		q = p + 5;
-
-		printf("%s >>> %s%s%s\n", chop_ctime(t), GREEN, q, NORM);
+		printf("%s >>> %s%s%s\n", chop_ctime(t), GREEN, p, NORM);
 	}
 
 	free(buf);
