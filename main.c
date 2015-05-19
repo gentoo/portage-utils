@@ -32,6 +32,7 @@ int portcachedir_type = 0;
 char pretend = 0;
 char reinitialize = 0;
 char reinitialize_metacache = 0;
+static char *portlogdir;
 static char *portdir;
 static char *portarch;
 static char *portvdb;
@@ -694,6 +695,7 @@ void initialize_portage_env(void)
 		_Q_EVB(BOOL, NOCOLOR,             nocolor,             0)
 		_Q_EVS(ISTR, FEATURES,            features,            "noman noinfo nodoc")
 		_Q_EVS(STR,  EPREFIX,             eprefix,             CONFIG_EPREFIX)
+		_Q_EVS(STR,  EMERGE_LOG_DIR,      portlogdir,          CONFIG_EPREFIX "var/log")
 		_Q_EVS(STR,  PORTDIR,             portdir,             CONFIG_EPREFIX "usr/portage")
 		_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             DEFAULT_PORTAGE_BINHOST)
 		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         CONFIG_EPREFIX "var/tmp/portage/")

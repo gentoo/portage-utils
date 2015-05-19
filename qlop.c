@@ -26,7 +26,7 @@
 # include <sys/sysctl.h>
 #endif
 
-#define QLOP_DEFAULT_LOGFILE CONFIG_EPREFIX "var/log/emerge.log"
+#define QLOP_DEFAULT_LOGFILE "emerge.log"
 
 #define QLOP_FLAGS "gtHluscf:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
@@ -48,7 +48,7 @@ static const char * const qlop_opts_help[] = {
 	"Show unmerge history",
 	"Show sync history",
 	"Show current emerging packages",
-	"Read emerge logfile instead of " QLOP_DEFAULT_LOGFILE,
+	"Read emerge logfile instead of $EMERGE_LOG_DIR/" QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, lookup_applet_idx("qlop"))
@@ -646,13 +646,11 @@ int qlop_main(int argc, char **argv)
 {
 	int i, average = 1;
 	char do_time, do_list, do_unlist, do_sync, do_current, do_human_readable = 0;
-	char *opt_logfile;
-	const char *logfile = QLOP_DEFAULT_LOGFILE;
+	char *logfile = NULL;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 		argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
-	opt_logfile = NULL;
 	do_time = do_list = do_unlist = do_sync = do_current = 0;
 
 	while ((i = GETOPT_LONG(QLOP, qlop, "")) != -1) {
@@ -667,15 +665,15 @@ int qlop_main(int argc, char **argv)
 			case 'g': do_time = 1; average = 0; break;
 			case 'H': do_human_readable = 1; break;
 			case 'f':
-				if (opt_logfile) err("Only use -f once");
-				opt_logfile = xstrdup(optarg);
+				if (logfile) err("Only use -f once");
+				logfile = xstrdup(optarg);
 				break;
 		}
 	}
 	if (!do_list && !do_unlist && !do_time && !do_sync && !do_current)
 		qlop_usage(EXIT_FAILURE);
-	if (opt_logfile != NULL)
-		logfile = opt_logfile;
+	if (logfile == NULL)
+		xasprintf(&logfile, "%s/%s", portlogdir, QLOP_DEFAULT_LOGFILE);
 
 	argc -= optind;
 	argv += optind;
@@ -696,7 +694,7 @@ int qlop_main(int argc, char **argv)
 			show_merge_times(argv[i], logfile, average, do_human_readable);
 	}
 
-	if (opt_logfile) free(opt_logfile);
+	free(logfile);
 
 	return EXIT_SUCCESS;
 }
