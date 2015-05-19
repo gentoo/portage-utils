@@ -34,19 +34,9 @@ static const char * const qglsa_opts_help[] = {
 static char *qglsa_load_list(void);
 static char *qglsa_load_list(void)
 {
-	char *ret;
-	struct stat st;
-
-	if (stat(QGLSA_DB, &st))
-		return NULL;
-
-	ret = xmalloc(st.st_size+1);
-
-	if (!eat_file(QGLSA_DB, ret, st.st_size)) {
-		free(ret);
-		return NULL;
-	}
-
+	char *ret = NULL;
+	size_t size = 0;
+	eat_file(QGLSA_DB, &ret, &size);
 	return ret;
 }
 static void qglsa_append_to_list(const char *glsa);
@@ -158,8 +148,8 @@ int qglsa_main(int argc, char **argv)
 	int i;
 	DIR *dir;
 	struct dirent *dentry;
-	struct stat st;
-	char buf[BUFSIZE*4];
+	char *buf;
+	size_t buflen = 0;
 	char *s, *p, *glsa_fixed_list;
 	int action = GLSA_FUNKYTOWN;
 	int all_glsas = 0;
@@ -198,16 +188,19 @@ int qglsa_main(int argc, char **argv)
 	}
 	glsa_fixed_list = qglsa_load_list();
 
-	xchdir(portdir);
-	xchdir("./metadata/glsa");
+	int portdir_fd, glsa_fd;
+	portdir_fd = open(portdir, O_RDONLY|O_CLOEXEC|O_PATH);
+	glsa_fd = openat(portdir_fd, "metadata/glsa", O_RDONLY|O_CLOEXEC);
 
 	switch (action) {
 	/*case GLSA_FIX:*/
 	case GLSA_INJECT:
+		buf = NULL;
 		for (i = optind; i < argc; ++i) {
-			snprintf(buf, sizeof(buf), "glsa-%s.xml", argv[i]);
-			if (stat(buf, &st)) {
-				warn("Skipping invalid GLSA '%s'", argv[i]);
+			free(buf);
+			xasprintf(&buf, "glsa-%s.xml", argv[i]);
+			if (faccessat(glsa_fd, buf, R_OK, 0)) {
+				warnp("Skipping invalid GLSA '%s'", argv[i]);
 				continue;
 			}
 			if (glsa_fixed_list) {
@@ -223,21 +216,27 @@ int qglsa_main(int argc, char **argv)
 				printf("Injecting GLSA %s%s%s\n", GREEN, argv[i], NORM);
 			qglsa_append_to_list(argv[i]);
 		}
+		free(buf);
 		break;
 
 	default:
-		if ((dir = opendir(".")) == NULL)
+		if ((dir = fdopendir(glsa_fd)) == NULL)
 			return EXIT_FAILURE;
 
+		buf = NULL;
+		buflen = 0;
 		while ((dentry = readdir(dir)) != NULL) {
 			/* validate this file as a proper glsa */
 			char glsa_id[20];
 			if (strncmp(dentry->d_name, "glsa-", 5))
 				continue;
-			strcpy(glsa_id, dentry->d_name + 5);
-			if ((s = strchr(glsa_id, '.')) == NULL || memcmp(s, ".xml\0", 5))
+			if ((s = strchr(dentry->d_name, '.')) == NULL || memcmp(s, ".xml\0", 5))
 				continue;
-			*s = '\0';
+			size_t len = s - dentry->d_name;
+			if (len >= sizeof(glsa_id) || len <= 5)
+				continue;
+			memcpy(glsa_id, dentry->d_name + 5, len - 5);
+			glsa_id[len - 5] = '\0';
 
 			/* see if we want to skip glsa's already fixed */
 			if (!all_glsas && glsa_fixed_list) {
@@ -246,7 +245,7 @@ int qglsa_main(int argc, char **argv)
 			}
 
 			/* load the glsa into memory */
-			if (eat_file(dentry->d_name, buf, sizeof(buf)) == 0)
+			if (!eat_file_at(glsa_fd, dentry->d_name, &buf, &buflen))
 				errp("could not eat %s", dentry->d_name);
 
 			/* now lets figure out what to do with this memory */
@@ -300,6 +299,8 @@ int qglsa_main(int argc, char **argv)
 	}
 
 	free(glsa_fixed_list);
+	close(glsa_fd);
+	close(portdir_fd);
 
 	return EXIT_SUCCESS;
 }
