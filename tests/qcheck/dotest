@@ -28,6 +28,9 @@ test() {
 	tend $? "$*"
 }
 
+# have to avoid the -a flag and walk one package at a time as qcheck does not
+# sort the vdb dirs before processing them.
+
 # simple check
 test 01 1 "qcheck a-b/pkg"
 
@@ -38,16 +41,16 @@ test 02 1 "qcheck a-b/pkg -s ^/missing-dir/.*"
 test 03 1 "qcheck -Ba"
 
 # hash mismatch ignore check
-test 04 1 "qcheck -Ha"
+test 04 1 "qcheck -H cat/pkg && qcheck -H a-b/pkg"
 
 # mtime mismatch ignore check
-test 05 1 "qcheck -Ta"
+test 05 1 "qcheck -T cat/pkg && qcheck -T a-b/pkg"
 
 # missing ignore check
-test 06 1 "qcheck -Aa"
+test 06 1 "qcheck -A cat/pkg && qcheck -A a-b/pkg"
 
 # hash+mtime+missing mismatch ignore check
-test 07 0 "qcheck -AHTa"
+test 07 0 "qcheck -AHT cat/pkg && qcheck -AHT a-b/pkg"
 
 # verbose check
 test 08 1 "qcheck -v a-b/pkg"
