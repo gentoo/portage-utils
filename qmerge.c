@@ -1107,8 +1107,11 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 
 			case CONTENTS_SYM:
 				if (fstatat(portroot_fd, e->name + 1, &st, AT_SYMLINK_NOFOLLOW)) {
-					warnp("stat failed for %s -> '%s'", e->name, e->sym_target);
-					continue;
+					if (errno != ENOENT) {
+						warnp("stat failed for %s -> '%s'", e->name, e->sym_target);
+						continue;
+					} else
+						break;
 				}
 
 				/* Hrm, if it isn't a symlink anymore, then leave it be */
