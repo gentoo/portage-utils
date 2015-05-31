@@ -22,8 +22,16 @@ static void xsystembash(const char *command, int cwd)
 	switch (p) {
 	case 0: /* child */
 		if (cwd != AT_FDCWD)
-			if (fchdir(cwd))
-				errp("fchdir failed");
+			if (fchdir(cwd)) {
+				/* fchdir works with O_PATH starting w/linux-3.5 */
+				if (errno == EBADF) {
+					char *path;
+					xasprintf(&path, "/proc/self/fd/%i", cwd);
+					if (chdir(path))
+						errp("chdir(%s) failed", path);
+				} else
+					errp("fchdir(%i) failed", cwd);
+			}
 		execl("/bin/bash", "bash", "--norc", "--noprofile", "-c", command, NULL);
 		/* Hrm, still here ?  Maybe no bash ... */
 		_exit(execl("/bin/sh", "sh", "-c", command, NULL));
