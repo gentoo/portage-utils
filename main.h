@@ -64,12 +64,8 @@
 #   define URL_ARCH "ppc"
 #  endif
 # elif defined(__s390__)
-#  if defined(__s390x__)
-#   define URL_ARCH "s390x"
-#  else
-#   define URL_ARCH "s390"
-#  endif
-# elif defined(__sh4__)
+#  define URL_ARCH "s390"
+# elif defined(__sh__)
 #  define URL_ARCH "sh"
 # elif defined(__sparc__)
 #  define URL_ARCH "sparc"
