@@ -49,6 +49,8 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
+#include <iniparser.h>
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*(arr)))
 
 #ifndef BUFSIZE

@@ -24,6 +24,7 @@ DBG_CFLAGS = -O0 -DEBUG -g3 -ggdb -fno-pie $(call check_gcc, -fsanitize=address 
 #CFLAGS   += -Os -DOPTIMIZE_FOR_SIZE=2 -falign-functions=2 -falign-jumps=2 -falign-labels=2 -falign-loops=2
 #LDFLAGS  := -pie
 LIBADD    += $(shell echo | $(CC) -dM -E - | grep -q ' __FreeBSD__' && echo '-lkvm')
+LIBADD    += -liniparser
 DESTDIR   :=
 PREFIX    := $(DESTDIR)/usr
 STRIP     := strip

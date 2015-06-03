@@ -421,6 +421,57 @@ contents_entry *contents_parse_line(char *line)
 	return &e;
 }
 
+/* Handle a single file in the repos.conf format. */
+static void read_one_repos_conf(const char *repos_conf)
+{
+	char *conf;
+	const char *repo, *path;
+	dictionary *dict;
+
+	dict = iniparser_load(repos_conf);
+
+	repo = iniparser_getstring(dict, "DEFAULT:main-repo", NULL);
+	if (repo) {
+		xasprintf(&conf, "%s:location", repo);
+		path = iniparser_getstring(dict, conf, NULL);
+		if (path) {
+			free(portdir);
+			portdir = xstrdup(path);
+		}
+		free(conf);
+	}
+
+	iniparser_freedict(dict);
+}
+
+/* Handle a possible directory of files. */
+static void read_repos_conf(const char *configroot, const char *repos_conf)
+{
+	char *top_conf, *sub_conf;
+	int i, count;
+	struct dirent **confs;
+
+	xasprintf(&top_conf, "%s%s", configroot, repos_conf);
+	count = scandir(top_conf, &confs, NULL, alphasort);
+	if (count == -1) {
+		if (errno == ENOTDIR)
+			read_one_repos_conf(top_conf);
+	} else {
+		for (i = 0; i < count; ++i) {
+			const char *name = confs[i]->d_name;
+
+			if (name[0] == '.' || confs[i]->d_type != DT_REG)
+				continue;
+
+			xasprintf(&sub_conf, "%s/%s", top_conf, name);
+			read_one_repos_conf(sub_conf);
+			free(sub_conf);
+		}
+		scandir_free(confs, count);
+	}
+	free(top_conf);
+}
+
 static void strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 {
 	size_t len;
@@ -715,18 +766,18 @@ void initialize_portage_env(void)
 	}
 
 	/* figure out where to find our config files */
-	s = getenv("PORTAGE_CONFIGROOT");
-	if (!s)
-		s = "/";
+	const char *configroot = getenv("PORTAGE_CONFIGROOT");
+	if (!configroot)
+		configroot = "/";
 
 	/* walk all the stacked profiles */
-	read_portage_profile(s, CONFIG_EPREFIX "etc/make.profile", vars_to_read);
-	read_portage_profile(s, CONFIG_EPREFIX "etc/portage/make.profile", vars_to_read);
+	read_portage_profile(configroot, CONFIG_EPREFIX "etc/make.profile", vars_to_read);
+	read_portage_profile(configroot, CONFIG_EPREFIX "etc/portage/make.profile", vars_to_read);
 
 	/* now read all the config files */
 	read_portage_env_file("", CONFIG_EPREFIX "usr/share/portage/config/make.globals", vars_to_read);
-	read_portage_env_file(s, CONFIG_EPREFIX "etc/make.conf", vars_to_read);
-	read_portage_env_file(s, CONFIG_EPREFIX "etc/portage/make.conf", vars_to_read);
+	read_portage_env_file(configroot, CONFIG_EPREFIX "etc/make.conf", vars_to_read);
+	read_portage_env_file(configroot, CONFIG_EPREFIX "etc/portage/make.conf", vars_to_read);
 
 	/* finally, check the env */
 	for (i = 0; vars_to_read[i].name; ++i) {
@@ -825,6 +876,8 @@ void initialize_portage_env(void)
 		portroot[var->value_len] = '/';
 		portroot[var->value_len + 1] = '\0';
 	}
+
+	read_repos_conf(configroot, CONFIG_EPREFIX "etc/portage/repos.conf");
 
 	if (getenv("PORTAGE_QUIET") != NULL)
 		quiet = 1;
