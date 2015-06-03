@@ -31,6 +31,8 @@ setup_env
 
 # clean any random vars from the host system
 unset ROOT PORTAGE_CONFIGROOT PORTAGE_QUIET
+# but make sure we don't implicitly rely on user's setup
+export PORTAGE_CONFIGROOT="${ab}/not/a/real/path"
 
 q -i -q
 
