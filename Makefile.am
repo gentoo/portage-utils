@@ -9,6 +9,7 @@ q_CPPFLAGS = \
 	-I$(top_srcdir)/autotools/gnulib
 q_LDADD = \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
+	-liniparser \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS)
 
