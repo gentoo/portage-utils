@@ -936,12 +936,11 @@ initialize_flat(int cache_type, bool force)
 	xasprintf(&cache_file, "%s/dep/%s/%s", portedb, portdir,
 		(cache_type == CACHE_EBUILD ? ".ebuild.x" : ".metadata.x"));
 
-	if (stat(cache_file, &st) != -1) {
-		if (st.st_size == 0)
-			unlink(cache_file);
-	} else if (!force) {
-		/* assuming --sync is used with --delete this will get recreated after every merge */
-		goto ret;
+	/* If we aren't forcing a regen, make sure the file is somewhat sane. */
+	if (!force) {
+		if (stat(cache_file, &st) != -1)
+			if (st.st_size)
+				goto ret;
 	}
 	if (!quiet)
 		warn("Updating ebuild %scache ... ", cache_type == CACHE_EBUILD ? "" : "meta");
