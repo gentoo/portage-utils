@@ -399,7 +399,7 @@ int qcheck_main(int argc, char **argv)
 	if ((argc == optind) && !state.search_all)
 		qcheck_usage(EXIT_FAILURE);
 
-	ret = q_vdb_foreach_pkg(qcheck_cb, &state, NULL);
+	ret = q_vdb_foreach_pkg_sorted(qcheck_cb, &state);
 	xarrayfree(regex_arr);
 	return ret;
 }
