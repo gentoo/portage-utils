@@ -915,6 +915,19 @@ initialize_flat(int cache_type, bool force)
 	int frac, secs, count;
 	FILE *fp;
 
+	xasprintf(&cache_file, "%s/dep/%s/%s", portedb, portdir,
+		(cache_type == CACHE_EBUILD ? ".ebuild.x" : ".metadata.x"));
+
+	/* If we aren't forcing a regen, make sure the file is somewhat sane. */
+	if (!force) {
+		if (stat(cache_file, &st) != -1)
+			if (st.st_size)
+				return cache_file;
+	}
+
+	if (!quiet)
+		warn("Updating ebuild %scache ... ", cache_type == CACHE_EBUILD ? "" : "meta");
+
 	count = frac = secs = 0;
 
 	int portdir_fd, subdir_fd;
@@ -933,17 +946,6 @@ initialize_flat(int cache_type, bool force)
 			portcachedir_type = CACHE_METADATA_MD5;
 	} else
 		subdir_fd = portdir_fd;
-	xasprintf(&cache_file, "%s/dep/%s/%s", portedb, portdir,
-		(cache_type == CACHE_EBUILD ? ".ebuild.x" : ".metadata.x"));
-
-	/* If we aren't forcing a regen, make sure the file is somewhat sane. */
-	if (!force) {
-		if (stat(cache_file, &st) != -1)
-			if (st.st_size)
-				goto ret;
-	}
-	if (!quiet)
-		warn("Updating ebuild %scache ... ", cache_type == CACHE_EBUILD ? "" : "meta");
 
 	if ((fp = fopen(cache_file, "we")) == NULL) {
 		warnfp("opening cache failed: %s", cache_file);
