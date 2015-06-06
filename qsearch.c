@@ -34,15 +34,14 @@ static const char * const qsearch_opts_help[] = {
 int qsearch_main(int argc, char **argv)
 {
 	FILE *fp;
-	char buf[_Q_PATH_MAX];
-	char ebuild[_Q_PATH_MAX];
+	char *ebuild = NULL;
 	char last[126] = "";
 	char *p, *q, *str;
 	char *search_me = NULL;
 	char show_homepage = 0, show_name_only = 0;
 	char search_desc = 0, search_all = 0, search_name = 1, search_cache = CACHE_EBUILD;
 	const char *search_vars[] = { "DESCRIPTION=", "HOMEPAGE=" };
-	size_t search_len;
+	size_t search_len, ebuild_len;
 	int i, idx=0;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -92,9 +91,14 @@ int qsearch_main(int argc, char **argv)
 	if (!fp)
 		return 1;
 
+	int portdir_fd = open(portdir, O_RDONLY|O_CLOEXEC|O_PATH);
+	if (portdir_fd < 0)
+		errp("open(%s) failed", portdir);
+
+	q = NULL; /* Silence a gcc warning. */
 	search_len = strlen(search_vars[idx]);
 
-	while (fgets(ebuild, sizeof(ebuild), fp) != NULL) {
+	while (getline(&ebuild, &ebuild_len, fp) != -1) {
 		if ((p = strchr(ebuild, '\n')) != NULL)
 			*p = 0;
 		if (!ebuild[0])
@@ -139,35 +143,46 @@ int qsearch_main(int argc, char **argv)
 					}
 				}
 
-				if ((ebuildfp = fopen(ebuild, "r")) != NULL) {
-					while (fgets(buf, sizeof(buf), ebuildfp) != NULL) {
-						if (strlen(buf) <= search_len)
-							continue;
-						if (strncmp(buf, search_vars[idx], search_len) == 0) {
-							if ((q = strrchr(buf, '"')) != NULL)
-								*q = 0;
-							if (strlen(buf) <= search_len)
-								break;
-							q = buf + search_len + 1;
-							if (!search_all && !search_name && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
-								break;
-							show_it = true;
-							break;
-						}
+				int fd = openat(portdir_fd, ebuild, O_RDONLY|O_CLOEXEC);
+				if (fd != -1) {
+					ebuildfp = fdopen(fd, "r");
+					if (ebuildfp == NULL) {
+						close(fd);
+						continue;
 					}
-					fclose(ebuildfp);
 				} else {
 					if (!reinitialize)
 						warnfp("(cache update pending) %s", ebuild);
 					reinitialize = 1;
+					goto no_cache_ebuild_match;
+				}
+
+				char *buf = NULL;
+				size_t buflen;
+				while (getline(&buf, &buflen, ebuildfp) != -1) {
+					if (strlen(buf) <= search_len)
+						continue;
+					if (strncmp(buf, search_vars[idx], search_len) != 0)
+						continue;
+					if ((q = strrchr(buf, '"')) != NULL)
+						*q = 0;
+					if (strlen(buf) <= search_len)
+						break;
+					q = buf + search_len + 1;
+					if (!search_all && !search_name && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
+						break;
+					show_it = true;
+					break;
 				}
 
 				if (show_it) {
-					const char *b = basename(p);
 					printf("%s%s/%s%s%s %s\n",
-						BOLD, dirname(p), BLUE, b, NORM,
+						BOLD, dirname(p), BLUE, basename(p), NORM,
 						(show_name_only ? "" : q ? : "<no DESCRIPTION found>"));
 				}
+
+				free(buf);
+				fclose(ebuildfp);
 			}
 no_cache_ebuild_match:
 			free(str);
@@ -176,6 +191,8 @@ no_cache_ebuild_match:
 		} /* case CACHE_EBUILD */
 		} /* switch (search_cache) */
 	}
+	free(ebuild);
+	close(portdir_fd);
 	fclose(fp);
 	return EXIT_SUCCESS;
 }
