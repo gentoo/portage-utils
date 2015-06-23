@@ -460,10 +460,27 @@ static void read_repos_conf(const char *configroot, const char *repos_conf)
 		for (i = 0; i < count; ++i) {
 			const char *name = confs[i]->d_name;
 
-			if (name[0] == '.' || confs[i]->d_type != DT_REG)
+			if (name[0] == '.')
 				continue;
 
+#ifdef DT_UNKNOWN
+			if (confs[i]->d_type != DT_UNKNOWN &&
+			    confs[i]->d_type != DT_REG &&
+			    confs[i]->d_type != DT_LNK)
+				continue;
+#endif
+
 			xasprintf(&sub_conf, "%s/%s", top_conf, name);
+
+#ifdef DT_UNKNOWN
+			if (confs[i]->d_type != DT_REG)
+#endif
+			{
+				struct stat st;
+				if (stat(sub_conf, &st) || S_ISREG(st.st_mode))
+					continue;
+			}
+
 			read_one_repos_conf(sub_conf);
 			free(sub_conf);
 		}
