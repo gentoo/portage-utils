@@ -56,8 +56,8 @@ int qatom_main(int argc, char **argv)
 			printf("%s %s %s", atom->CATEGORY, atom->PN, atom->PV);
 			if (verbose || atom->PR_int)
 				printf(" r%i", atom->PR_int);
-			if (atom->SLOT)
-				printf(" :%s", atom->SLOT);
+			if (verbose || atom->SLOT)
+				printf(" :%s", atom->SLOT ? atom->SLOT : "-");
 			if (verbose || atom->pfx_op != ATOM_OP_NONE)
 				printf(" %s", atom->pfx_op == ATOM_OP_NONE ? "-" : atom_op_str[atom->pfx_op]);
 			if (verbose || atom->sfx_op != ATOM_OP_NONE)
