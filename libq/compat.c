@@ -32,6 +32,8 @@ char* strcasestr(const char *big, const char *little) {
 
 #elif defined(__hpux__) || defined(__MINT__)
 	/* must not include both dir.h and dirent.h on hpux11..11 & FreeMiNT */
+#elif defined(__linux__)
+	/* Linux systems do not need sys/dir.h as they are generally POSIX sane */
 #else /* __sun__ */
 # include <sys/dir.h>
 #endif
