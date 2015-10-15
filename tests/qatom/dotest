@@ -1,0 +1,44 @@
+#!/bin/bash
+
+. ../init.sh
+
+test() {
+	local num=$1 exp=$2 ret=0 out
+	shift 2
+	set -- q atom "$@"
+	out=$("$@") || ret=$?
+	if [[ ${num} == l* ]] ; then
+		out=$(echo "${out}" | sed -r -e 's: +: :g' -e 's: *$::')
+	fi
+	if [[ ${out} != "${exp}" ]] ; then
+		tfail "output does not match: wanted '${exp}' but got '${out}'"
+	elif [[ ${ret} -ne 0 ]] ; then
+		tfail "exit code (${ret}) does not match expected (0)"
+	fi
+	tend $? "$*"
+}
+
+# Legacy format.
+test l01 "(null) pkg (null)" "pkg"
+test l02 "cat pkg (null)" "cat/pkg"
+test l03 "cat pkg 123" "cat/pkg-123"
+test l04 "cat pkg 123 r4" "cat/pkg-123-r4"
+test l05 "cat pkg 123 r4 :5" "cat/pkg-123-r4:5"
+test l06 "cat pkg 123 :5" "cat/pkg-123:5"
+test l07 "cat pkg 123 >=" ">=cat/pkg-123"
+test l07 "cat pkg 123 = *" "=cat/pkg-123*"
+
+# Explicit format.
+test f01 "cat"    -F '%{CATEGORY}' "cat/pkg"
+test f02 "(null)" -F '%{CATEGORY}' "pkg"
+test f03 ""       -F '%[CATEGORY]' "pkg"
+test f04 "cat"        -F '%{CATEGORY}' "cat/pkg-123-r4:5"
+test f05 "pkg-123"    -F '%{P}'        "cat/pkg-123-r4:5"
+test f06 "pkg"        -F '%{PN}'       "cat/pkg-123-r4:5"
+test f07 "123"        -F '%{PV}'       "cat/pkg-123-r4:5"
+test f08 "123-r4"     -F '%{PVR}'      "cat/pkg-123-r4:5"
+test f09 "pkg-123-r4" -F '%{PF}'       "cat/pkg-123-r4:5"
+test f10 "r4"         -F '%{PR}'       "cat/pkg-123-r4:5"
+test f11 ":5"         -F '%{SLOT}'     "cat/pkg-123-r4:5"
+
+end
