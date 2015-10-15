@@ -161,7 +161,6 @@ depend_atom *atom_explode(const char *atom)
 		ret->PN = ret->CATEGORY;
 		ret->CATEGORY = NULL;
 	}
-	strcpy(ret->PVR, ret->PN);
 
 	/* find -r# */
 	ptr = ret->PN + strlen(ret->PN) - 1;
@@ -170,8 +169,7 @@ depend_atom *atom_explode(const char *atom)
 			if (ptr[0] == 'r' && ptr[-1] == '-') {
 				ret->PR_int = atoi(ptr + 1);
 				ptr[-1] = '\0';
-			} else
-				strcat(ret->PVR, "-r0");
+			}
 			break;
 		}
 		--ptr;
@@ -236,6 +234,8 @@ depend_atom *atom_explode(const char *atom)
 			break;
 	if (has_pv) {
 		ret->PV = ret->P + (ptr - ret->PN) + 1;
+		ptr = stpcpy(ret->PVR, ret->PV);
+		sprintf(ptr, "-r%i", ret->PR_int);
 	} else {
 		/* atom has no version */
 		ret->PV = ret->PVR = NULL;
