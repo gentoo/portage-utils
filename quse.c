@@ -205,7 +205,7 @@ quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 				if (!strcmp(argv[i], buf))
 					printf(" %s%s%s:%s%s%s: %s\n", BOLD, de->d_name, NORM, BLUE, argv[i], NORM, p);
 		}
-		close(f);
+		fclose(fp[0]);
 	}
 	closedir(d);
 
