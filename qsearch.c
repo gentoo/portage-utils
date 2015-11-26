@@ -68,24 +68,6 @@ int qsearch_main(int argc, char **argv)
 			qsearch_usage(EXIT_FAILURE);
 		search_me = argv[optind];
 	}
-#ifdef TESTING
-	/* FIXME: hardcoded */
-	if ((search_cache == CACHE_EBUILD) && (access("/usr/portage/.qsearch.x", R_OK) == 0)) {
-		if ((fp = fopen("/usr/portage/.qsearch.x", "r")) != NULL) {
-			search_len = strlen(search_me);
-			while (fgets(buf, sizeof(buf), fp) != NULL) {
-				if (strlen(buf) <= search_len)
-					continue;
-				/* add regexp, color highlighting and basename checks */
-				if (strncmp(buf, search_me, search_len) == 0) {
-					fputs(buf, stdout);
-				}
-			}
-			fclose(fp);
-			return 0;
-		}
-	}
-#endif
 	last[0] = 0;
 	fp = fopen(initialize_flat(search_cache, false), "r");
 	if (!fp)
