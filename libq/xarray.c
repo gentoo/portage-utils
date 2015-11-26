@@ -12,8 +12,14 @@ typedef struct {
 } array_t;
 
 #define xrealloc_array(ptr, size, ele_size) xrealloc(ptr, (size) * (ele_size))
+/* The assignment after the check is unfortunate as we do a non-NULL check (we
+ * already do not permit pushing of NULL pointers), but we can't put it in the
+ * increment phase as that will cause a load beyond the bounds of valid memory.
+ */
 #define array_for_each(arr, n, ele) \
-	for (n = 0, ele = arr->eles[n]; n < arr->num; ++n, ele = arr->eles[n])
+	for (n = 0, ele = array_cnt(arr) ? arr->eles[n] : NULL; \
+	     n < array_cnt(arr) && (ele = arr->eles[n]); \
+	     ++n)
 #define array_init_decl { .eles = NULL, .num = 0, }
 #define array_cnt(arr) (arr)->num
 #define DECLARE_ARRAY(arr) array_t _##arr = array_init_decl, *arr = &_##arr
