@@ -72,6 +72,8 @@ void init_coredumps(void)
 /* include common library code */
 #include "libq/libq.c"
 
+static DECLARE_ARRAY(overlays);
+
 _q_static
 void no_colors(void)
 {
@@ -424,19 +426,30 @@ contents_entry *contents_parse_line(char *line)
 /* Handle a single file in the repos.conf format. */
 static void read_one_repos_conf(const char *repos_conf)
 {
+	int nsec;
 	char *conf;
-	const char *repo, *path;
+	const char *main_repo, *repo, *path;
 	dictionary *dict;
 
 	dict = iniparser_load(repos_conf);
 
-	repo = iniparser_getstring(dict, "DEFAULT:main-repo", NULL);
-	if (repo) {
+	main_repo = iniparser_getstring(dict, "DEFAULT:main-repo", NULL);
+
+	nsec = iniparser_getnsec(dict);
+	while (nsec-- > 0) {
+		repo = iniparser_getsecname(dict, nsec);
+		if (!strcmp(repo, "DEFAULT"))
+			continue;
+
 		xasprintf(&conf, "%s:location", repo);
 		path = iniparser_getstring(dict, conf, NULL);
 		if (path) {
-			free(portdir);
-			portdir = xstrdup(path);
+			if (main_repo && !strcmp(repo, main_repo)) {
+				free(portdir);
+				portdir = xstrdup(path);
+			}
+
+			xarraypush_str(overlays, path);
 		}
 		free(conf);
 	}
