@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. ../init.sh
+. ../init.sh || exit 1
 
 test() {
 	local num=$1 exp=$2 ret=0 out

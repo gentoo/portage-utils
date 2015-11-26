@@ -1,8 +1,8 @@
 #!/bin/bash
 
-rm -f q
+. ../init.sh || exit 1
 
-. ../init.sh
+rm -f q
 
 applets=$(q -Ch | \
 	sed -n '/^Currently defined applets:/,/^Options/p' | \

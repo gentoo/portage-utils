@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. ../init.sh
+. ../init.sh || exit 1
 
 testit() {
 	if [ -s $1 ] ; then
