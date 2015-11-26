@@ -400,15 +400,11 @@ int quse_main(int argc, char **argv)
 					print_highlighted_use_flags(&buf0[search_len + 1], optind, argc, argv);
 					puts(NORM);
 					if (verbose > 1) {
-						char **ARGV = NULL;
-						int ARGC = 0;
+						char **ARGV;
+						int ARGC;
 						makeargv(&buf0[search_len + 1], &ARGC, &ARGV);
-						if (ARGC > 0) {
-							quse_describe_flag(1, ARGC, ARGV);
-							for (i = 0; i < ARGC; i++)
-								free(ARGV[i]);
-							free(ARGV);
-						}
+						quse_describe_flag(1, ARGC, ARGV);
+						freeargv(ARGC, ARGV);
 					}
 				}
 				break;
