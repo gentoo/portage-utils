@@ -1376,12 +1376,9 @@ int main(int argc, char **argv)
 	bindtextdomain(argv0, CONFIG_EPREFIX "usr/share/locale");
 	textdomain(argv0);
 
-#if 1
 	if (fstat(fileno(stdout), &st) != -1)
 		if (!isatty(fileno(stdout)))
-			if (S_ISFIFO(st.st_mode) == 0)
-				no_colors();
-#endif
+			no_colors();
 	if ((getenv("TERM") == NULL) || (strcmp(getenv("TERM"), "dumb") == 0))
 		no_colors();
 
