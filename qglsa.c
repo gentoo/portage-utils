@@ -29,6 +29,10 @@ static const char * const qglsa_opts_help[] = {
 };
 #define qglsa_usage(ret) usage(ret, QGLSA_FLAGS, qglsa_long_opts, qglsa_opts_help, lookup_applet_idx("qglsa"))
 
+typedef enum {
+	GLSA_FUNKYTOWN, GLSA_LIST, GLSA_DUMP, GLSA_TEST, GLSA_FIX, GLSA_INJECT
+} qglsa_action;
+
 static char *qglsa_load_list(void);
 static char *qglsa_load_list(void)
 {
@@ -146,69 +150,35 @@ static void qglsa_act_list(char *glsa)
 
 }
 */
-int qglsa_main(int argc, char **argv)
+
+static int
+qglsa_run_action(const char *overlay, qglsa_action action, const char *fixed_list,
+                 bool all_glsas, unsigned int ind, int argc, char **argv)
 {
-	enum { GLSA_FUNKYTOWN, GLSA_LIST, GLSA_DUMP, GLSA_TEST, GLSA_FIX, GLSA_INJECT };
 	int i;
 	DIR *dir;
 	struct dirent *dentry;
 	char *buf;
 	size_t buflen = 0;
-	char *s, *p, *glsa_fixed_list;
-	int action = GLSA_FUNKYTOWN;
-	int all_glsas = 0;
+	char *s, *p;
+	int overlay_fd, glsa_fd;
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
-	while ((i = GETOPT_LONG(QGLSA, qglsa, "")) != -1) {
-#define set_action(a) { if (action == 0) action = a; else err("cannot specify more than one action at a time"); }
-		switch (i) {
-		case 'l': set_action(GLSA_LIST); break;
-		case 'd': set_action(GLSA_DUMP); break;
-		case 't': set_action(GLSA_TEST); break;
-		case 'p': pretend = 1; break;
-		case 'f': set_action(GLSA_FIX); break;
-		case 'i': set_action(GLSA_INJECT); break;
-		COMMON_GETOPTS_CASES(qglsa)
-		}
-	}
-	if (action == GLSA_FUNKYTOWN)
-		qglsa_usage(EXIT_FAILURE);
-	if (action != GLSA_LIST && optind == argc)
-		err("specified action requires a list, either 'all', 'new', or GLSA numbers");
-
-	glsa_fixed_list = NULL;
-	for (i = optind; i < argc; ++i) {
-		if (!strcmp(argv[i], "all")) {
-			all_glsas = 1;
-			if (optind+1 != argc)
-				err("You may only use class names by themselves");
-		} else if (!strcmp(argv[i], "new")) {
-			all_glsas = 0;
-			if (optind+1 != argc)
-				err("You may only use class names by themselves");
-		}
-	}
-	glsa_fixed_list = qglsa_load_list();
-
-	int portdir_fd, glsa_fd;
-	portdir_fd = open(portdir, O_RDONLY|O_CLOEXEC|O_PATH);
-	glsa_fd = openat(portdir_fd, "metadata/glsa", O_RDONLY|O_CLOEXEC);
+	overlay_fd = open(overlay, O_RDONLY|O_CLOEXEC|O_PATH);
+	glsa_fd = openat(overlay_fd, "metadata/glsa", O_RDONLY|O_CLOEXEC);
 
 	switch (action) {
 	/*case GLSA_FIX:*/
 	case GLSA_INJECT:
 		buf = NULL;
-		for (i = optind; i < argc; ++i) {
+		for (i = ind; i < argc; ++i) {
 			free(buf);
 			xasprintf(&buf, "glsa-%s.xml", argv[i]);
 			if (faccessat(glsa_fd, buf, R_OK, 0)) {
 				warnp("Skipping invalid GLSA '%s'", argv[i]);
 				continue;
 			}
-			if (glsa_fixed_list) {
-				if (strstr(glsa_fixed_list, argv[i])) {
+			if (fixed_list) {
+				if (strstr(fixed_list, argv[i])) {
 					warn("Skipping already installed GLSA %s", argv[i]);
 					continue;
 				}
@@ -243,8 +213,8 @@ int qglsa_main(int argc, char **argv)
 			glsa_id[len - 5] = '\0';
 
 			/* see if we want to skip glsa's already fixed */
-			if (!all_glsas && glsa_fixed_list) {
-				if (strstr(glsa_fixed_list, glsa_id))
+			if (!all_glsas && fixed_list) {
+				if (strstr(fixed_list, glsa_id))
 					continue;
 			}
 
@@ -302,11 +272,58 @@ int qglsa_main(int argc, char **argv)
 		closedir(dir);
 	}
 
-	free(glsa_fixed_list);
 	close(glsa_fd);
-	close(portdir_fd);
+	close(overlay_fd);
 
 	return EXIT_SUCCESS;
+}
+
+int qglsa_main(int argc, char **argv)
+{
+	int i;
+	char *fixed_list;
+	qglsa_action action = GLSA_FUNKYTOWN;
+	bool all_glsas = false;
+
+	DBG("argc=%d argv[0]=%s argv[1]=%s",
+	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
+
+	while ((i = GETOPT_LONG(QGLSA, qglsa, "")) != -1) {
+#define set_action(a) { if (action == 0) action = a; else err("cannot specify more than one action at a time"); }
+		switch (i) {
+		case 'l': set_action(GLSA_LIST); break;
+		case 'd': set_action(GLSA_DUMP); break;
+		case 't': set_action(GLSA_TEST); break;
+		case 'p': pretend = 1; break;
+		case 'f': set_action(GLSA_FIX); break;
+		case 'i': set_action(GLSA_INJECT); break;
+		COMMON_GETOPTS_CASES(qglsa)
+		}
+	}
+	if (action == GLSA_FUNKYTOWN)
+		qglsa_usage(EXIT_FAILURE);
+	if (action != GLSA_LIST && optind == argc)
+		err("specified action requires a list, either 'all', 'new', or GLSA numbers");
+
+	for (i = optind; i < argc; ++i) {
+		if (!strcmp(argv[i], "all")) {
+			all_glsas = true;
+			if (optind+1 != argc)
+				err("You may only use class names by themselves");
+		} else if (!strcmp(argv[i], "new")) {
+			all_glsas = false;
+			if (optind+1 != argc)
+				err("You may only use class names by themselves");
+		}
+	}
+	fixed_list = qglsa_load_list();
+
+	int ret = 0;
+	size_t n;
+	const char *overlay;
+	array_for_each(overlays, n, overlay)
+		ret |= qglsa_run_action(overlay, action, fixed_list, all_glsas, optind, argc, argv);
+	return ret;
 }
 
 #else
