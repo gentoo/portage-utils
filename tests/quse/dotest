@@ -4,9 +4,9 @@
 
 set -e
 
-export PORTDIR=${as}/portdir
-
 mktmpdir
+
+mkportdir "${as}/portdir"
 
 d=${PORTDIR}/profiles
 entries() {
@@ -80,7 +80,7 @@ diff -u ${as}/list01.good x
 rm x
 tpass "multi file match"
 
-trimtmpdir
+cleantmpdir
 
 ###### faster test needed.########
 end

@@ -78,8 +78,8 @@ print_highlighted_use_flags(char *string, int ind, int argc, char **argv)
 	}
 }
 
-static int
-quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
+static void
+quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, char **argv)
 {
 #define NUM_SEARCH_FILES ARRAY_SIZE(search_files)
 	size_t buflen;
@@ -88,15 +88,16 @@ quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 	size_t s;
 	const char * const search_files[] = { "use.desc", "use.local.desc", "arch.list", };
 	FILE *fp[NUM_SEARCH_FILES];
+	int dfd, fd;
 	DIR *d;
 	struct dirent *de;
 
 	/* pick 1000 arbitrarily long enough for all files under desc/ */
-	buflen = strlen(portdir) + 1000;
+	buflen = strlen(overlay) + 1000;
 	buf = xmalloc(buflen);
 
 	for (i = 0; i < NUM_SEARCH_FILES; ++i) {
-		snprintf(buf, buflen, "%s/profiles/%s", portdir, search_files[i]);
+		snprintf(buf, buflen, "%s/profiles/%s", overlay, search_files[i]);
 		fp[i] = fopen(buf, "r");
 		if (verbose && fp[i] == NULL)
 			warnp("skipping %s", buf);
@@ -156,10 +157,16 @@ quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 			fclose(fp[f]);
 
 	/* now scan the desc dir */
-	snprintf(buf, buflen, "%s/profiles/desc/", portdir);
-	if ((d = opendir(buf)) == NULL) {
+	snprintf(buf, buflen, "%s/profiles/desc/", overlay);
+	dfd = open(buf, O_RDONLY|O_CLOEXEC);
+	if (dfd == -1) {
 		if (verbose)
 			warnp("skipping %s", buf);
+		goto done;
+	}
+	d = fdopendir(dfd);
+	if (!d) {
+		close(dfd);
 		goto done;
 	}
 
@@ -171,10 +178,15 @@ quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 		if (strcmp(p, ".desc"))
 			continue;
 
-		snprintf(buf, buflen, "%s/profiles/desc/%s", portdir, de->d_name);
-		if ((fp[0] = fopen(buf, "r")) == NULL) {
+		fd = openat(dfd, de->d_name, O_RDONLY|O_CLOEXEC);
+		if (fd == -1) {
 			if (verbose)
-				warnp("skipping %s", buf);
+				warnp("skipping %s/profiles/desc/%s", overlay, de->d_name);
+			continue;
+		}
+		fp[0] = fdopen(fd, "r");
+		if (!fp[0]) {
+			close(fd);
 			continue;
 		}
 
@@ -211,7 +223,6 @@ quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 
  done:
 	free(buf);
-	return 0;
 }
 
 int quse_main(int argc, char **argv)
@@ -251,8 +262,13 @@ int quse_main(int argc, char **argv)
 	if (argc == optind && !quse_all && idx >= 0)
 		quse_usage(EXIT_FAILURE);
 
-	if (idx == -1)
-		return quse_describe_flag(optind, argc, argv);
+	if (idx == -1) {
+		size_t n;
+		const char *overlay;
+		array_for_each(overlays, n, overlay)
+			quse_describe_flag(overlay, optind, argc, argv);
+		return 0;
+	}
 
 	if (quse_all) optind = argc;
 	cache_file = initialize_ebuild_flat();
@@ -406,7 +422,7 @@ int quse_main(int argc, char **argv)
 						char **ARGV;
 						int ARGC;
 						makeargv(&buf0[search_len + 1], &ARGC, &ARGV);
-						quse_describe_flag(1, ARGC, ARGV);
+						quse_describe_flag(portdir, 1, ARGC, ARGV);
 						freeargv(ARGC, ARGV);
 					}
 				}

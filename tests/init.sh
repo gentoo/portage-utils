@@ -96,3 +96,16 @@ treedir() {
 		ls -R "${d}"
 	fi
 }
+
+mkportdir() {
+	export PORTDIR=$1
+
+	export PORTAGE_CONFIGROOT=${PWD}
+	mkdir -p etc/portage/
+	cat <<-EOF >etc/portage/repos.conf
+	[DEFAULT]
+	main-repo = utils-test
+	[utils-test]
+	location = ${PORTDIR}
+	EOF
+}
