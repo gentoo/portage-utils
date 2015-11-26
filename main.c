@@ -934,7 +934,7 @@ int filter_hidden(const struct dirent *dentry)
 }
 
 static const char *
-initialize_flat(int cache_type, bool force)
+initialize_flat(const char *overlay, int cache_type, bool force)
 {
 	struct dirent **category, **pn, **eb;
 	struct stat st;
@@ -945,7 +945,7 @@ initialize_flat(int cache_type, bool force)
 	int frac, secs, count;
 	FILE *fp;
 
-	xasprintf(&cache_file, "%s/dep/%s/%s", portedb, portdir,
+	xasprintf(&cache_file, "%s/dep/%s/%s", portedb, overlay,
 		(cache_type == CACHE_EBUILD ? ".ebuild.x" : ".metadata.x"));
 
 	/* If we aren't forcing a regen, make sure the file is somewhat sane. */
@@ -960,22 +960,22 @@ initialize_flat(int cache_type, bool force)
 
 	count = frac = secs = 0;
 
-	int portdir_fd, subdir_fd;
-	portdir_fd = open(portdir, O_RDONLY|O_CLOEXEC|O_PATH);
+	int overlay_fd, subdir_fd;
+	overlay_fd = open(overlay, O_RDONLY|O_CLOEXEC|O_PATH);
 
 	if (cache_type == CACHE_METADATA) {
-		subdir_fd = openat(portdir_fd, portcachedir_md5, O_RDONLY|O_CLOEXEC);
+		subdir_fd = openat(overlay_fd, portcachedir_md5, O_RDONLY|O_CLOEXEC);
 		if (subdir_fd == -1) {
-			subdir_fd = openat(portdir_fd, portcachedir_pms, O_RDONLY|O_CLOEXEC);
+			subdir_fd = openat(overlay_fd, portcachedir_pms, O_RDONLY|O_CLOEXEC);
 			if (subdir_fd == -1) {
-				warnp("could not read md5 or pms cache dirs in %s", portdir);
+				warnp("could not read md5 or pms cache dirs in %s", overlay);
 				goto ret;
 			}
 			portcachedir_type = CACHE_METADATA_PMS;
 		} else
 			portcachedir_type = CACHE_METADATA_MD5;
 	} else
-		subdir_fd = portdir_fd;
+		subdir_fd = overlay_fd;
 
 	if ((fp = fopen(cache_file, "we")) == NULL) {
 		warnfp("opening cache failed: %s", cache_file);
@@ -1056,22 +1056,28 @@ initialize_flat(int cache_type, bool force)
 
 	warn("Finished %u entries in %d.%06d seconds", count, secs, frac);
 	if (secs > 120)
-		warn("You should consider using the noatime mount option for PORTDIR='%s' if it's not already enabled", portdir);
+		warn("You should consider using the noatime mount option for '%s' if it's not already enabled", overlay);
 ret:
 	close(subdir_fd);
-	if (subdir_fd != portdir_fd)
-		close(portdir_fd);
+	if (subdir_fd != overlay_fd)
+		close(overlay_fd);
 	return cache_file;
 }
-#define initialize_ebuild_flat() initialize_flat(CACHE_EBUILD, false)
-#define initialize_metadata_flat() initialize_flat(CACHE_METADATA, false)
+#define initialize_ebuild_flat() initialize_flat(portdir, CACHE_EBUILD, false)
+#define initialize_metadata_flat() initialize_flat(portdir, CACHE_METADATA, false)
 
 void reinitialize_as_needed(void)
 {
+	size_t n;
+	const char *overlay;
+
 	if (reinitialize)
-		initialize_flat(CACHE_EBUILD, true);
+		array_for_each(overlays, n, overlay)
+			initialize_flat(overlay, CACHE_EBUILD, true);
+
 	if (reinitialize_metacache)
-		initialize_flat(CACHE_METADATA, true);
+		array_for_each(overlays, n, overlay)
+			initialize_flat(overlay, CACHE_METADATA, true);
 }
 
 typedef struct {

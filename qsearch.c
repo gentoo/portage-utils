@@ -69,7 +69,7 @@ int qsearch_main(int argc, char **argv)
 		search_me = argv[optind];
 	}
 	last[0] = 0;
-	fp = fopen(initialize_flat(search_cache, false), "r");
+	fp = fopen(initialize_flat(portdir, search_cache, false), "r");
 	if (!fp)
 		return 1;
 
