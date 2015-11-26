@@ -48,3 +48,9 @@
 	ACCEPT_LICENSE="${ACCEPT_LICENSE} bar"
   we end up getting just:
 	ACCEPT_LICENSE=" bar"
+
+- qpkg:
+	- fix "would be freed" message when --pretend is *not* active
+	- add a verbose output that describes why a package is cleaned
+		- newer binpkgs available
+		- newer installed version available
