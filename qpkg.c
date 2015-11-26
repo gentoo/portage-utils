@@ -122,7 +122,14 @@ int qpkg_clean(char *dirp)
 	}
 
 	if (eclean) {
-		if ((fp = fopen(initialize_ebuild_flat(), "r")) != NULL) {
+		size_t n;
+		const char *overlay;
+
+		array_for_each(overlays, n, overlay) {
+			fp = fopen(initialize_flat(overlay, CACHE_EBUILD, false), "re");
+			if (fp == NULL)
+				continue;
+
 			size_t buflen;
 			char *buf;
 
