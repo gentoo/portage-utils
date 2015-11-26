@@ -70,7 +70,6 @@ _q_static void _dep_print_tree(FILE *fp, const dep_node *root, size_t space);
 void dep_burn_tree(dep_node *root);
 char *dep_flatten_tree(const dep_node *root);
 _q_static void _dep_attach(dep_node *root, dep_node *attach_me, int type);
-_q_static void _dep_flatten_tree(const dep_node *root, char *buf, size_t *pos);
 _q_static void _dep_burn_node(dep_node *node);
 int qdepends_main_vdb(const char *depend_file, int argc, char **argv);
 int qdepends_vdb_deep(const char *depend_file, const char *query);
@@ -352,33 +351,33 @@ _q_static void dep_prune_use(dep_node *root, const char *use)
 	if (root->children) dep_prune_use(root->children, use);
 }
 
-void _dep_flatten_tree(const dep_node *root, char *buf, size_t *pos)
+_q_static char *
+_dep_flatten_tree(const dep_node *root, char *buf)
 {
 	if (root->type == DEP_NULL) goto this_node_sucks;
 	if (root->type == DEP_NORM) {
-		size_t len = strlen(root->info);
-		memcpy(buf + *pos, root->info, len);
-		*pos += len+1;
-		buf[*pos-1] = ' ';
+		buf[0] = ' ';
+		buf = stpcpy(buf + 1, root->info);
 	}
-	if (root->children) _dep_flatten_tree(root->children, buf, pos);
+	if (root->children)
+		buf = _dep_flatten_tree(root->children, buf);
 this_node_sucks:
-	if (root->neighbor) _dep_flatten_tree(root->neighbor, buf, pos);
+	if (root->neighbor)
+		buf = _dep_flatten_tree(root->neighbor, buf);
+	return buf;
 }
 
 char *dep_flatten_tree(const dep_node *root)
 {
-	static char flat[8192];
-	size_t pos = 0;
-	_dep_flatten_tree(root, flat, &pos);
-	if (pos == 0) {
+	static char flat[1024 * 1024];
+	char *buf = _dep_flatten_tree(root, flat);
+	if (buf == flat) {
 		/* all the nodes were squashed ... for example:
 		 * USE=-selinux RDEPEND="selinux? ( sys-libs/libselinux )"
 		 */
 		return NULL;
 	}
-	flat[pos-1] = '\0';
-	return flat;
+	return flat + 1;
 }
 
 struct qdepends_opt_state {
