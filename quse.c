@@ -97,8 +97,9 @@ quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 
 	for (i = 0; i < NUM_SEARCH_FILES; ++i) {
 		snprintf(buf, buflen, "%s/profiles/%s", portdir, search_files[i]);
-		if ((fp[i] = fopen(buf, "r")) == NULL)
-			warnp("skipping %s", search_files[i]);
+		fp[i] = fopen(buf, "r");
+		if (verbose && fp[i] == NULL)
+			warnp("skipping %s", buf);
 	}
 
 	for (i = ind; i < argc; i++) {
@@ -157,7 +158,8 @@ quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 	/* now scan the desc dir */
 	snprintf(buf, buflen, "%s/profiles/desc/", portdir);
 	if ((d = opendir(buf)) == NULL) {
-		warnp("skipping profiles/desc/");
+		if (verbose)
+			warnp("skipping %s", buf);
 		goto done;
 	}
 
@@ -171,7 +173,8 @@ quse_describe_flag(unsigned int ind, unsigned int argc, char **argv)
 
 		snprintf(buf, buflen, "%s/profiles/desc/%s", portdir, de->d_name);
 		if ((fp[0] = fopen(buf, "r")) == NULL) {
-			warn("Could not open '%s' for reading; skipping", de->d_name);
+			if (verbose)
+				warnp("skipping %s", buf);
 			continue;
 		}
 
