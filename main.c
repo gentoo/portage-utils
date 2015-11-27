@@ -34,7 +34,7 @@ char pretend = 0;
 char reinitialize = 0;
 char reinitialize_metacache = 0;
 static char *portlogdir;
-static char *portdir;
+static char *main_overlay;
 static char *portarch;
 static char *portvdb;
 static char *portedb;
@@ -447,7 +447,7 @@ static void read_one_repos_conf(const char *repos_conf)
 		if (path) {
 			void *ele = xarraypush_str(overlays, path);
 			if (main_repo && !strcmp(repo, main_repo))
-				portdir = ele;
+				main_overlay = ele;
 		}
 		free(conf);
 	}
@@ -775,7 +775,7 @@ void initialize_portage_env(void)
 		_Q_EVS(ISTR, FEATURES,            features,            "noman noinfo nodoc")
 		_Q_EVS(STR,  EPREFIX,             eprefix,             CONFIG_EPREFIX)
 		_Q_EVS(STR,  EMERGE_LOG_DIR,      portlogdir,          CONFIG_EPREFIX "var/log")
-		_Q_EVS(STR,  PORTDIR,             portdir,             CONFIG_EPREFIX "usr/portage")
+		_Q_EVS(STR,  PORTDIR,             main_overlay,        CONFIG_EPREFIX "usr/portage")
 		_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             DEFAULT_PORTAGE_BINHOST)
 		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         CONFIG_EPREFIX "var/tmp/portage/")
 		_Q_EVS(STR,  PKGDIR,              pkgdir,              CONFIG_EPREFIX "usr/portage/packages/")
@@ -906,6 +906,8 @@ void initialize_portage_env(void)
 	}
 
 	read_repos_conf(configroot, CONFIG_EPREFIX "etc/portage/repos.conf");
+	if (array_cnt(overlays) == 0)
+		xarraypush_str(overlays, main_overlay);
 
 	if (getenv("PORTAGE_QUIET") != NULL)
 		quiet = 1;
@@ -1061,8 +1063,6 @@ ret:
 		close(overlay_fd);
 	return cache_file;
 }
-#define initialize_ebuild_flat() initialize_flat(portdir, CACHE_EBUILD, false)
-#define initialize_metadata_flat() initialize_flat(portdir, CACHE_METADATA, false)
 
 void reinitialize_as_needed(void)
 {
