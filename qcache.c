@@ -525,7 +525,9 @@ void qcache_imlate(qcache_data *data)
 	keywords = xmalloc(sizeof(*keywords) * archlist_count);
 
 	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
-		warn("Failed to read keywords for %s%s/%s%s%s", BOLD, data->category, BLUE, data->ebuild, NORM);
+		if (verbose)
+			warn("Failed to read keywords for %s%s/%s%s%s",
+				BOLD, data->category, BLUE, data->ebuild, NORM);
 		free(keywords);
 		return;
 	}
@@ -559,7 +561,9 @@ void qcache_not(qcache_data *data)
 	keywords = xmalloc(sizeof(*keywords) * archlist_count);
 
 	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
-		warn("Failed to read keywords for %s%s/%s%s%s", BOLD, data->category, BLUE, data->ebuild, NORM);
+		if (verbose)
+			warn("Failed to read keywords for %s%s/%s%s%s",
+				BOLD, data->category, BLUE, data->ebuild, NORM);
 		free(keywords);
 		return;
 	}
@@ -584,7 +588,9 @@ void qcache_all(qcache_data *data)
 	keywords = xmalloc(sizeof(*keywords) * archlist_count);
 
 	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
-		warn("Failed to read keywords for %s%s/%s%s%s", BOLD, data->category, BLUE, data->ebuild, NORM);
+		if (verbose)
+			warn("Failed to read keywords for %s%s/%s%s%s",
+				BOLD, data->category, BLUE, data->ebuild, NORM);
 		free(keywords);
 		return;
 	}
@@ -612,7 +618,9 @@ void qcache_dropped(qcache_data *data)
 	keywords = xmalloc(sizeof(*keywords) * archlist_count);
 
 	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
-		warn("Failed to read keywords for %s%s/%s%s%s", BOLD, data->category, BLUE, data->ebuild, NORM);
+		if (verbose)
+			warn("Failed to read keywords for %s%s/%s%s%s",
+				BOLD, data->category, BLUE, data->ebuild, NORM);
 		free(keywords);
 		return;
 	}
@@ -727,7 +735,9 @@ void qcache_stats(qcache_data *data)
 
 	memset(keywords, 0, archlist_count * sizeof(*keywords));
 	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
-		warn("Failed to read keywords for %s%s/%s%s%s", BOLD, data->category, BLUE, data->ebuild, NORM);
+		if (verbose)
+			warn("Failed to read keywords for %s%s/%s%s%s",
+				BOLD, data->category, BLUE, data->ebuild, NORM);
 		return;
 	}
 
@@ -774,7 +784,9 @@ void qcache_testing_only(qcache_data *data)
 	keywords = xmalloc(sizeof(*keywords) * archlist_count);
 
 	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
-		warn("Failed to read keywords for %s%s/%s%s%s", BOLD, data->category, BLUE, data->ebuild, NORM);
+		if (verbose)
+			warn("Failed to read keywords for %s%s/%s%s%s",
+				BOLD, data->category, BLUE, data->ebuild, NORM);
 		free(keywords);
 		return;
 	}
