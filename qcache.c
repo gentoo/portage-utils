@@ -319,10 +319,10 @@ _q_static
 portage_cache *qcache_read_cache_file(const char *filename)
 {
 	struct stat s;
-	char *ptr, *buf;
+	char *buf;
 	FILE *f;
 	portage_cache *ret = NULL;
-	size_t len, buflen;
+	size_t len, buflen, linelen;
 
 	if ((f = fopen(filename, "r")) == NULL)
 		goto err;
@@ -336,9 +336,8 @@ portage_cache *qcache_read_cache_file(const char *filename)
 	len = sizeof(*ret) + s.st_size + 1;
 	ret = xzalloc(len);
 
-	while (getline(&buf, &buflen, f) != -1) {
-		if ((ptr = strrchr(buf, '\n')) != NULL)
-			*ptr = 0;
+	while ((linelen = getline(&buf, &buflen, f)) != -1) {
+		rmspace_len(buf, linelen);
 
 		if (strncmp(buf, "DEPEND=", 7) == 0)
 			ret->DEPEND = xstrdup(buf + 7);

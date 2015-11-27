@@ -50,7 +50,7 @@ void color_remap(void)
 {
 	FILE *fp;
 	unsigned int i;
-	size_t buflen;
+	size_t buflen, linelen;
 	char *buf;
 	char *p;
 	unsigned int lineno = 0;
@@ -59,22 +59,18 @@ void color_remap(void)
 		return;
 
 	buf = NULL;
-	while (getline(&buf, &buflen, fp) != -1) {
+	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
 		lineno++;
 		/* eat comments */
 		if ((p = strchr(buf, '#')) != NULL)
 			*p = '\0';
 
-		if (strchr(buf, '=') == NULL)
-			continue;
-
-		/* eat the end of the buffer first */
-		if ((p = strchr(buf, '\r')) != NULL)
-			*p = 0;
-		if ((p = strchr(buf, '\n')) != NULL)
-			*p = 0;
+		rmspace_len(buf, linelen);
 
 		p = strchr(buf, '=');
+		if (p == NULL)
+			continue;
+
 		*p++ = 0; /* split the pair */
 		for (i = 0; i < ARRAY_SIZE(color_pairs); ++i)
 			if (strcmp(buf, color_pairs[i].name) == 0) {

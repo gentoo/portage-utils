@@ -15,6 +15,7 @@ static bool eat_file_fd(int, char **, size_t *);
 static bool eat_file_at(int, const char *, char **, size_t *);
 int rematch(const char *, const char *, int);
 static char *rmspace(char *);
+static char *rmspace_len(char *, size_t);
 
 void initialize_portage_env(void);
 void initialize_ebuild_flat(void);

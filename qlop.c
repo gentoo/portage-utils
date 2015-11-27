@@ -240,7 +240,7 @@ _q_static void
 show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
 {
 	FILE *fp;
-	size_t buflen;
+	size_t buflen, linelen;
 	char *buf, merged;
 	char *p, *q;
 	int i;
@@ -252,8 +252,8 @@ show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
 	}
 
 	buf = NULL;
-	while (getline(&buf, &buflen, fp) != -1) {
-		if (strlen(buf) < 30)
+	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
+		if (linelen < 30)
 			continue;
 
 		for (i = 0; i < argc; ++i)
@@ -262,8 +262,7 @@ show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
 		if (argc && i == argc)
 			continue;
 
-		if ((p = strchr(buf, '\n')) != NULL)
-			*p = 0;
+		rmspace_len(buf, linelen);
 		if ((p = strchr(buf, ':')) == NULL)
 			continue;
 		*p = 0;
@@ -327,7 +326,7 @@ _q_static void
 show_sync_history(const char *logfile)
 {
 	FILE *fp;
-	size_t buflen, len;
+	size_t buflen, linelen;
 	char *buf, *p;
 	time_t t;
 
@@ -338,10 +337,9 @@ show_sync_history(const char *logfile)
 
 	buf = NULL;
 	/* Just find the finish lines. */
-	while (getline(&buf, &buflen, fp) != -1) {
-		len = strlen(buf);
+	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
 		/* This cuts out like ~10% of the log. */
-		if (len < 35)
+		if (linelen < 35)
 			continue;
 
 		/* Make sure there's a timestamp in here. */
@@ -353,8 +351,7 @@ show_sync_history(const char *logfile)
 			continue;
 		p += 19;
 
-		if (buf[len - 1] == '\n')
-			buf[len - 1] = '\0';
+		rmspace_len(buf, linelen);
 
 		t = (time_t)atol(buf);
 

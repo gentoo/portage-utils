@@ -6,7 +6,7 @@ q_profile_walk_at(int dir_fd, const char *dir, const char *file,
 {
 	FILE *fp;
 	int subdir_fd, fd;
-	size_t buflen;
+	size_t buflen, linelen;
 	char *buf;
 
 	/* Pop open this profile dir */
@@ -46,13 +46,14 @@ q_profile_walk_at(int dir_fd, const char *dir, const char *file,
 	}
 
 	buf = NULL;
-	while (getline(&buf, &buflen, fp) != -1) {
+	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
 		char *s;
+
+		rmspace_len(buf, linelen);
 
 		s = strchr(buf, '#');
 		if (s)
 			*s = '\0';
-		rmspace(buf);
 
 		data = q_profile_walk_at(subdir_fd, buf, file, callback, data);
 	}

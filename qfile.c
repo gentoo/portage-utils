@@ -513,10 +513,10 @@ int qfile_main(int argc, char **argv)
 			for (i = 0; i < qargc; ++i)
 				free(qargv[i]);
 			qargc = 0;
-			while (getline(&state.buf, &state.buflen, args_file) != -1) {
-				if ((p = strchr(state.buf, '\n')) != NULL)
-					*p = '\0';
-				if (state.buf == p)
+			size_t linelen;
+			while ((linelen = getline(&state.buf, &state.buflen, args_file)) != -1) {
+				rmspace_len(state.buf, linelen);
+				if (state.buf[0] == '\0')
 					continue;
 				qargv[qargc] = xstrdup(state.buf);
 				if (++qargc >= max_args)

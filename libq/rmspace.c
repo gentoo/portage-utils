@@ -1,9 +1,8 @@
 
 /* removed leading/trailing extraneous white space */
-static char *rmspace(char *s)
+static char *rmspace_len(char *s, size_t len)
 {
 	char *p;
-	size_t len = strlen(s);
 	/* find the start of trailing space and set it to \0 */
 	for (p = s + len - 1; (p >= s && isspace(*p)); --p)
 		continue;
@@ -16,4 +15,9 @@ static char *rmspace(char *s)
 	if (p != s)
 		memmove(s, p, len - (p - s) + 1);
 	return s;
+}
+
+static char *rmspace(char *s)
+{
+	return rmspace_len(s, strlen(s));
 }

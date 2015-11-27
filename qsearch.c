@@ -41,7 +41,7 @@ int qsearch_main(int argc, char **argv)
 	char show_homepage = 0, show_name_only = 0;
 	char search_desc = 0, search_all = 0, search_name = 1, search_cache = CACHE_EBUILD;
 	const char *search_vars[] = { "DESCRIPTION=", "HOMEPAGE=" };
-	size_t search_len, ebuild_len;
+	size_t search_len, ebuild_len, linelen;
 	int i, idx=0;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
@@ -80,9 +80,8 @@ int qsearch_main(int argc, char **argv)
 	q = NULL; /* Silence a gcc warning. */
 	search_len = strlen(search_vars[idx]);
 
-	while (getline(&ebuild, &ebuild_len, fp) != -1) {
-		if ((p = strchr(ebuild, '\n')) != NULL)
-			*p = 0;
+	while ((linelen = getline(&ebuild, &ebuild_len, fp)) != -1) {
+		rmspace_len(ebuild, linelen);
 		if (!ebuild[0])
 			continue;
 
@@ -141,8 +140,8 @@ int qsearch_main(int argc, char **argv)
 
 				char *buf = NULL;
 				size_t buflen;
-				while (getline(&buf, &buflen, ebuildfp) != -1) {
-					if (strlen(buf) <= search_len)
+				while ((linelen = getline(&buf, &buflen, ebuildfp)) != -1) {
+					if (linelen <= search_len)
 						continue;
 					if (strncmp(buf, search_vars[idx], search_len) != 0)
 						continue;

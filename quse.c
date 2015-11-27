@@ -82,7 +82,7 @@ static void
 quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, char **argv)
 {
 #define NUM_SEARCH_FILES ARRAY_SIZE(search_files)
-	size_t buflen;
+	size_t buflen, linelen;
 	char *buf, *p;
 	unsigned int i, f;
 	size_t s;
@@ -110,12 +110,10 @@ quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, cha
 			if (fp[f] == NULL)
 				continue;
 
-			while (getline(&buf, &buflen, fp[f]) != -1) {
-				if (buf[0] == '#' || buf[0] == '\n')
+			while ((linelen = getline(&buf, &buflen, fp[f])) != -1) {
+				rmspace_len(buf, linelen);
+				if (buf[0] == '#' || buf[0] == '\0')
 					continue;
-
-				if ((p = strrchr(buf, '\n')) != NULL)
-					*p = '\0';
 
 				switch (f) {
 					case 0: /* Global use.desc */
@@ -193,12 +191,10 @@ quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, cha
 		/* Chop the trailing .desc for better display */
 		*p = '\0';
 
-		while (getline(&buf, &buflen, fp[0]) != -1) {
-			if (buf[0] == '#' || buf[0] == '\n')
+		while ((linelen = getline(&buf, &buflen, fp[0])) != -1) {
+			rmspace_len(buf, linelen);
+			if (buf[0] == '#' || buf[0] == '\0')
 				continue;
-
-			if ((p = strrchr(buf, '\n')) != NULL)
-				*p = '\0';
 
 			if ((p = strchr(buf, '-')) == NULL) {
  invalid_line:
@@ -235,7 +231,7 @@ int quse_main(int argc, char **argv)
 	char buf1[_Q_PATH_MAX];
 	char buf2[_Q_PATH_MAX];
 
-	size_t ebuildlen;
+	size_t ebuildlen, linelen;
 	char *ebuild;
 
 	const char *search_var = NULL;
@@ -284,12 +280,11 @@ int quse_main(int argc, char **argv)
 	int portdir_fd = open(portdir, O_RDONLY|O_CLOEXEC|O_PATH);
 
 	ebuild = NULL;
-	while (getline(&ebuild, &ebuildlen, fp) != -1) {
+	while ((linelen = getline(&ebuild, &ebuildlen, fp)) != -1) {
 		FILE *newfp;
 		int fd;
 
-		if ((p = strchr(ebuild, '\n')) != NULL)
-			*p = 0;
+		rmspace_len(ebuild, linelen);
 
 		fd = openat(portdir_fd, ebuild, O_RDONLY|O_CLOEXEC);
 		if (fd < 0)
