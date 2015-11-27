@@ -24,11 +24,13 @@ typedef struct {
 #define array_cnt(arr) (arr)->num
 #define DECLARE_ARRAY(arr) array_t _##arr = array_init_decl, *arr = &_##arr
 
-static void xarraypush(array_t *arr, const void *ele, size_t ele_len)
+static void *xarraypush(array_t *arr, const void *ele, size_t ele_len)
 {
+	void *nele;
 	size_t n = arr->num++;
 	arr->eles = xrealloc_array(arr->eles, arr->num, sizeof(ele));
-	arr->eles[n] = xmemdup(ele, ele_len);
+	arr->eles[n] = nele = xmemdup(ele, ele_len);
+	return nele;
 }
 #define xarraypush_str(arr, ele) xarraypush(arr, ele, strlen(ele) + 1 /*NUL*/)
 

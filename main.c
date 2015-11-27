@@ -445,12 +445,9 @@ static void read_one_repos_conf(const char *repos_conf)
 		xasprintf(&conf, "%s:location", repo);
 		path = iniparser_getstring(dict, conf, NULL);
 		if (path) {
-			if (main_repo && !strcmp(repo, main_repo)) {
-				free(portdir);
-				portdir = xstrdup(path);
-			}
-
-			xarraypush_str(overlays, path);
+			void *ele = xarraypush_str(overlays, path);
+			if (main_repo && !strcmp(repo, main_repo))
+				portdir = ele;
 		}
 		free(conf);
 	}
