@@ -578,9 +578,14 @@ int qcache_traverse(void (*func)(qcache_data*))
 						func(&data);
 
 					qcache_free_data(data.cache_data);
-				} else
-					warnp("unable to read cache '%s'\n"
-					      "\tperhaps you need to `egencache -j 4` ?", cachepath);
+				} else {
+					static bool warned = false;
+					if (!warned) {
+						warned = true;
+						warnp("unable to read cache '%s'\n"
+						      "\tperhaps you need to `egencache -j 4` ?", cachepath);
+					}
+				}
 
 				free(ebuilds[k]);
 				free(cachepath);
