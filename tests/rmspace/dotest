@@ -1,0 +1,22 @@
+#!/bin/bash
+
+. ../init.sh || exit 1
+
+set -e
+
+m=${ab}/m
+
+tests=(
+	""
+	"a"
+	" a"
+	"	a"
+	" 	 a"
+	"a "
+	"a	"
+	"	a "
+)
+${m} "${tests[@]}"
+: $(( tpassed += ${#tests[@]} ))
+
+end
