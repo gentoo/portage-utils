@@ -46,6 +46,22 @@ add_set(const char *name, queue *q)
 	return append_set(q, ll);
 }
 
+/* Performance here is terrible.  Should use a hash at some point. */
+_q_static queue *
+add_set_unique(const char *name, queue *q, bool *ok)
+{
+	queue *ll = q;
+	while (ll) {
+		if (!strcmp(ll->name, name)) {
+			*ok = false;
+			return q;
+		}
+		ll = ll->next;
+	}
+	*ok = true;
+	return add_set(name, q);
+}
+
 /* remove a set from a cache. matches ->name and frees name,item */
 _q_static queue *
 del_set(char *s, queue *q, int *ok)

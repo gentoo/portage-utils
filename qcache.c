@@ -51,9 +51,10 @@ static const char * const qcache_opts_help[] = {
 /********************************************************************/
 
 typedef struct {
-	char *category;
-	char *package;
-	char *ebuild;
+	const char *overlay;
+	const char *category;
+	const char *package;
+	const char *ebuild;
 	portage_cache *cache_data;
 	unsigned char cur;
 	unsigned char num;
@@ -63,7 +64,7 @@ typedef struct {
 /* Global Variables                                                 */
 /********************************************************************/
 
-static char **archlist; /* Read from PORTDIR/profiles/arch.list in qcache_init() */
+static queue *arches;
 static int archlist_count;
 static size_t arch_longest_len;
 const char status[3] = {'-', '~', '+'};
@@ -113,6 +114,7 @@ int decode_status(char c)
 _q_static
 int decode_arch(const char *arch)
 {
+	queue *q = arches;
 	int a;
 	const char *p;
 
@@ -120,9 +122,13 @@ int decode_arch(const char *arch)
 	if (*p == '~' || *p == '-')
 		p++;
 
-	for (a = 0; a < archlist_count; ++a)
-		if (strcmp(archlist[a], p) == 0)
+	a = 0;
+	while (q) {
+		if (strcmp(q->name, p) == 0)
 			return a;
+		++a;
+		q = q->next;
+	}
 
 	return -1;
 }
@@ -139,6 +145,7 @@ int decode_arch(const char *arch)
 _q_static
 void print_keywords(const char *category, const char *ebuild, int *keywords)
 {
+	queue *arch = arches;
 	int a;
 	char *package;
 
@@ -149,14 +156,13 @@ void print_keywords(const char *category, const char *ebuild, int *keywords)
 	for (a = 0; a < archlist_count; ++a) {
 		switch (keywords[a]) {
 			case stable:
-				printf("%s%c%s%s ", GREEN, status[keywords[a]], archlist[a], NORM);
+				printf("%s%c%s%s ", GREEN, status[keywords[a]], arch->name, NORM);
 				break;
 			case testing:
-				printf("%s%c%s%s ", YELLOW, status[keywords[a]], archlist[a], NORM);
-				break;
-			default:
+				printf("%s%c%s%s ", YELLOW, status[keywords[a]], arch->name, NORM);
 				break;
 		}
+		arch = arch->next;
 	}
 
 	printf("\n");
@@ -386,6 +392,8 @@ int qcache_ebuild_select(const struct dirent *entry)
 /* Traversal function                                               */
 /********************************************************************/
 
+_q_static void qcache_load_arches(const char *overlay);
+
 /*
  * int qcache_traverse(void (*func)(qcache_data*));
  *
@@ -399,14 +407,16 @@ int qcache_ebuild_select(const struct dirent *entry)
  *  exit or return -1 on failure.
  */
 _q_static
-int qcache_traverse(void (*func)(qcache_data*))
+int qcache_traverse_overlay(void (*func)(qcache_data*), const char *overlay)
 {
-	qcache_data data;
+	qcache_data data = {
+		.overlay = overlay,
+	};
 	char *catpath, *pkgpath, *ebuildpath, *cachepath;
 	int i, j, k, len, num_cat, num_pkg, num_ebuild;
 	struct dirent **categories, **packages, **ebuilds;
 
-	xasprintf(&catpath, "%s/dep/%s", portedb, portdir);
+	xasprintf(&catpath, "%s/dep/%s", portedb, overlay);
 
 	if (-1 == (num_cat = scandir(catpath, &categories, qcache_file_select, alphasort))) {
 		errp("%s", catpath);
@@ -418,7 +428,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 	/* traverse categories */
 	for (i = 0; i < num_cat; i++) {
-		xasprintf(&pkgpath, "%s/%s", portdir, categories[i]->d_name);
+		xasprintf(&pkgpath, "%s/%s", overlay, categories[i]->d_name);
 
 		if (-1 == (num_pkg = scandir(pkgpath, &packages, qcache_file_select, alphasort))) {
 			if (errno != ENOENT)
@@ -439,7 +449,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 		/* traverse packages */
 		for (j = 0; j < num_pkg; j++) {
-			xasprintf(&ebuildpath, "%s/%s/%s", portdir, categories[i]->d_name, packages[j]->d_name);
+			xasprintf(&ebuildpath, "%s/%s/%s", overlay, categories[i]->d_name, packages[j]->d_name);
 
 			if (-1 == (num_ebuild = scandir(ebuildpath, &ebuilds, qcache_ebuild_select, qcache_vercmp))) {
 				/* Do not complain about spurious files */
@@ -504,9 +514,28 @@ int qcache_traverse(void (*func)(qcache_data*))
 	free(categories);
 	free(catpath);
 
+	return 0;
+}
+
+_q_static
+int qcache_traverse(void (*func)(qcache_data*))
+{
+	int ret;
+	size_t n;
+	const char *overlay;
+
+	/* Preload all the arches. Not entirely correctly (as arches are bound
+	 * to overlays if set), but oh well. */
+	array_for_each(overlays, n, overlay)
+		qcache_load_arches(overlay);
+
+	ret = 0;
+	array_for_each(overlays, n, overlay)
+		ret |= qcache_traverse_overlay(func, overlay);
+
 	func(NULL);
 
-	return 0;
+	return ret;
 }
 
 /********************************************************************/
@@ -653,6 +682,8 @@ _q_static
 void qcache_stats(qcache_data *data)
 {
 	static time_t runtime;
+	static queue *allcats;
+	static const char *last_overlay;
 	static int numpkg  = 0;
 	static int numebld = 0;
 	static int numcat;
@@ -686,12 +717,14 @@ void qcache_stats(qcache_data *data)
 			(int)arch_longest_len, "", RED, "only", NORM);
 		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
 
+		queue *arch = arches;
 		for (a = 0; a < archlist_count; ++a) {
-			printf("| %s%*s%s |", GREEN, (int)arch_longest_len, archlist[a], NORM);
+			printf("| %s%*s%s |", GREEN, (int)arch_longest_len, arch->name, NORM);
 			printf("%s%8d%s |", BLUE, packages_stable[a], NORM);
 			printf("%s%8d%s |", BLUE, packages_testing[a], NORM);
 			printf("%s%8d%s |", BLUE, packages_testing[a]+packages_stable[a], NORM);
 			printf("%s%11.2f%s%% |\n", BLUE, (100.0*(packages_testing[a]+packages_stable[a]))/numpkg, NORM);
+			arch = arch->next;
 		}
 
 		printf("+%.*s+\n\n", (int)(arch_longest_len + 46), border);
@@ -704,23 +737,33 @@ void qcache_stats(qcache_data *data)
 		free(packages_testing);
 		free(keywords);
 		free(current_package_keywords);
+		free_sets(allcats);
 		return;
 	}
 
-	if (!numpkg) {
-		struct dirent **categories;
+	if (last_overlay != data->overlay) {
+		DIR *dir;
+		struct dirent *de;
 		char *catpath;
-
-		xasprintf(&catpath, "%s/dep/%s", portedb, portdir);
-
-		if (-1 == (numcat = scandir(catpath, &categories, qcache_file_select, alphasort))) {
-			errp("%s", catpath);
-			free(catpath);
-		}
-		scandir_free(categories, numcat);
 
 		runtime = time(NULL);
 
+		xasprintf(&catpath, "%s/dep/%s", portedb, data->overlay);
+		dir = opendir(catpath);
+		while ((de = readdir(dir)))
+			if (de->d_type == DT_DIR && de->d_name[0] != '.') {
+				bool ok;
+				allcats = add_set_unique(de->d_name, allcats, &ok);
+				if (ok)
+					++numcat;
+			}
+		closedir(dir);
+		free(catpath);
+
+		last_overlay = data->overlay;
+	}
+
+	if (!numpkg) {
 		packages_stable          = xcalloc(archlist_count, sizeof(*packages_stable));
 		packages_testing         = xcalloc(archlist_count, sizeof(*packages_testing));
 		keywords                 = xcalloc(archlist_count, sizeof(*keywords));
@@ -812,26 +855,15 @@ void qcache_testing_only(qcache_data *data)
 /* Misc functions                                                   */
 /********************************************************************/
 
-/*
- * int qcache_init();
- *
- * Initialize variables (archlist, num_arches)
- *
- * OUT:
- *  0 is return on success.
- * ERR:
- *  -1 is returned on error.
- */
 _q_static
-bool qcache_init(void)
+void qcache_load_arches(const char *overlay)
 {
-	bool ret = false;
 	FILE *fp;
 	char *filename, *s;
 	size_t buflen, linelen;
 	char *buf;
 
-	xasprintf(&filename, "%s/profiles/arch.list", portdir);
+	xasprintf(&filename, "%s/profiles/arch.list", overlay);
 	fp = fopen(filename, "re");
 	if (!fp)
 		goto done;
@@ -847,18 +879,18 @@ bool qcache_init(void)
 		if (buf[0] == '\0')
 			continue;
 
-		++archlist_count;
-		archlist = xrealloc_array(archlist, sizeof(*archlist), archlist_count);
-		archlist[archlist_count - 1] = xstrdup(buf);
-		arch_longest_len = MAX(arch_longest_len, strlen(buf));
+		bool ok;
+		arches = add_set_unique(buf, arches, &ok);
+		if (ok) {
+			++archlist_count;
+			arch_longest_len = MAX(arch_longest_len, strlen(buf));
+		}
 	}
 	free(buf);
 
-	ret = true;
 	fclose(fp);
  done:
 	free(filename);
-	return ret;
 }
 
 /*
@@ -869,11 +901,7 @@ bool qcache_init(void)
 _q_static
 void qcache_free(void)
 {
-	size_t a;
-
-	for (a = 0; a < archlist_count; ++a)
-		free(archlist[a]);
-	free(archlist);
+	free_sets(arches);
 }
 
 /********************************************************************/
@@ -905,9 +933,6 @@ int qcache_main(int argc, char **argv)
 			COMMON_GETOPTS_CASES(qcache)
 		}
 	}
-
-	if (!qcache_init())
-		err("Could not initialize arch list");
 
 	if (optind < argc)
 		qcache_test_arch = decode_arch(argv[optind]);
