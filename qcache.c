@@ -67,7 +67,7 @@ static char **archlist; /* Read from PORTDIR/profiles/arch.list in qcache_init()
 static int archlist_count;
 static size_t arch_longest_len;
 const char status[3] = {'-', '~', '+'};
-int qcache_skip, qcache_test_arch, qcache_last = 0;
+int qcache_skip, qcache_test_arch;
 char *qcache_matchpkg = NULL, *qcache_matchcat = NULL;
 
 /********************************************************************/
@@ -462,6 +462,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 			qcache_skip = 0;
 
 			/* traverse ebuilds */
+			data.num = num_ebuild;
 			for (k = 0; k < num_ebuild; k++) {
 				len = xasprintf(&cachepath, "%s/%s/%s", catpath, categories[i]->d_name, ebuilds[k]->d_name);
 				cachepath[len - 7] = '\0'; /* remove ".ebuild" */
@@ -470,14 +471,9 @@ int qcache_traverse(void (*func)(qcache_data*))
 				data.package = packages[j]->d_name;
 				data.ebuild = ebuilds[k]->d_name;
 				data.cur = k + 1;
-				data.num = num_ebuild;
 				data.cache_data = qcache_read_cache_file(cachepath);
 
 				if (data.cache_data != NULL) {
-					/* is this the last ebuild? */
-					if (i+1 == num_cat && j+1 == num_pkg && k+1 == num_ebuild)
-						qcache_last = 1;
-
 					if (!qcache_skip)
 						func(&data);
 
@@ -508,6 +504,8 @@ int qcache_traverse(void (*func)(qcache_data*))
 	free(categories);
 	free(catpath);
 
+	func(NULL);
+
 	return 0;
 }
 
@@ -520,6 +518,9 @@ void qcache_imlate(qcache_data *data)
 {
 	int *keywords;
 	int a;
+
+	if (!data)
+		return;
 
 	keywords = xmalloc(sizeof(*keywords) * archlist_count);
 
@@ -552,6 +553,9 @@ void qcache_not(qcache_data *data)
 {
 	int *keywords;
 
+	if (!data)
+		return;
+
 	keywords = xmalloc(sizeof(*keywords) * archlist_count);
 
 	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
@@ -574,6 +578,9 @@ void qcache_all(qcache_data *data)
 {
 	int *keywords;
 
+	if (!data)
+		return;
+
 	keywords = xmalloc(sizeof(*keywords) * archlist_count);
 
 	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
@@ -595,6 +602,9 @@ void qcache_dropped(qcache_data *data)
 {
 	static int possible = 0;
 	int *keywords, i;
+
+	if (!data)
+		return;
 
 	if (data->cur == 1)
 		possible = 0;
@@ -643,6 +653,51 @@ void qcache_stats(qcache_data *data)
 	static int *current_package_keywords;
 	static int *keywords;
 	int a;
+
+	/* Is this the last time we'll be called? */
+	if (!data) {
+		const char border[] = "------------------------------------------------------------------";
+
+		printf("+%.*s+\n", 25, border);
+		printf("|   general statistics    |\n");
+		printf("+%.*s+\n", 25, border);
+		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "architectures", NORM, BLUE, archlist_count, NORM);
+		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "categories", NORM, BLUE, numcat, NORM);
+		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "packages", NORM, BLUE, numpkg, NORM);
+		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "ebuilds", NORM, BLUE, numebld, NORM);
+		printf("+%.*s+\n\n", 25, border);
+
+		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
+		printf("|%*skeyword distribution                          |\n",
+			(int)arch_longest_len, "");
+		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
+		printf("| %s%*s%s |%s%8s%s |%s%8s%s |%s%8s%s | %s%8s%s |\n",
+			RED, (int)arch_longest_len, "architecture", NORM, RED, "stable", NORM,
+			RED, "~arch", NORM, RED, "total", NORM, RED, "total/#pkgs", NORM);
+		printf("| %*s |         |%s%8s%s |         |             |\n",
+			(int)arch_longest_len, "", RED, "only", NORM);
+		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
+
+		for (a = 0; a < archlist_count; ++a) {
+			printf("| %s%*s%s |", GREEN, (int)arch_longest_len, archlist[a], NORM);
+			printf("%s%8d%s |", BLUE, packages_stable[a], NORM);
+			printf("%s%8d%s |", BLUE, packages_testing[a], NORM);
+			printf("%s%8d%s |", BLUE, packages_testing[a]+packages_stable[a], NORM);
+			printf("%s%11.2f%s%% |\n", BLUE, (100.0*(packages_testing[a]+packages_stable[a]))/numpkg, NORM);
+		}
+
+		printf("+%.*s+\n\n", (int)(arch_longest_len + 46), border);
+
+		printf("Completed in ");
+		print_seconds_for_earthlings(time(NULL) - runtime);
+		printf("\n");
+
+		free(packages_stable);
+		free(packages_testing);
+		free(keywords);
+		free(current_package_keywords);
+		return;
+	}
 
 	if (!numpkg) {
 		struct dirent **categories;
@@ -702,48 +757,6 @@ void qcache_stats(qcache_data *data)
 			}
 		}
 	}
-
-	if (qcache_last) {
-		const char border[] = "------------------------------------------------------------------";
-		printf("+%.*s+\n", 25, border);
-		printf("|   general statistics    |\n");
-		printf("+%.*s+\n", 25, border);
-		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "architectures", NORM, BLUE, archlist_count, NORM);
-		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "categories", NORM, BLUE, numcat, NORM);
-		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "packages", NORM, BLUE, numpkg, NORM);
-		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "ebuilds", NORM, BLUE, numebld, NORM);
-		printf("+%.*s+\n\n", 25, border);
-
-		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
-		printf("|%*skeyword distribution                          |\n",
-			(int)arch_longest_len, "");
-		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
-		printf("| %s%*s%s |%s%8s%s |%s%8s%s |%s%8s%s | %s%8s%s |\n",
-			RED, (int)arch_longest_len, "architecture", NORM, RED, "stable", NORM,
-			RED, "~arch", NORM, RED, "total", NORM, RED, "total/#pkgs", NORM);
-		printf("| %*s |         |%s%8s%s |         |             |\n",
-			(int)arch_longest_len, "", RED, "only", NORM);
-		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
-
-		for (a = 0; a < archlist_count; ++a) {
-			printf("| %s%*s%s |", GREEN, (int)arch_longest_len, archlist[a], NORM);
-			printf("%s%8d%s |", BLUE, packages_stable[a], NORM);
-			printf("%s%8d%s |", BLUE, packages_testing[a], NORM);
-			printf("%s%8d%s |", BLUE, packages_testing[a]+packages_stable[a], NORM);
-			printf("%s%11.2f%s%% |\n", BLUE, (100.0*(packages_testing[a]+packages_stable[a]))/numpkg, NORM);
-		}
-
-		printf("+%.*s+\n\n", (int)(arch_longest_len + 46), border);
-
-		printf("Completed in ");
-		print_seconds_for_earthlings(time(NULL) - runtime);
-		printf("\n");
-
-		free(packages_stable);
-		free(packages_testing);
-		free(keywords);
-		free(current_package_keywords);
-	}
 }
 
 _q_static
@@ -751,6 +764,9 @@ void qcache_testing_only(qcache_data *data)
 {
 	static int possible = 0;
 	int *keywords;
+
+	if (!data)
+		return;
 
 	if (data->cur == 1)
 		possible = 0;
