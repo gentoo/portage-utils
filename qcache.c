@@ -528,10 +528,8 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 		if (qcache_matchcat) {
 			if (strcmp(categories[i]->d_name, qcache_matchcat) != 0) {
-				for (j = 0; j < num_pkg; j++)
-					free(packages[j]);
+				scandir_free(packages, num_pkg);
 				free(categories[i]);
-				free(packages);
 				free(pkgpath);
 				continue;
 			}
@@ -552,10 +550,8 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 			if (qcache_matchpkg) {
 				if (strcmp(packages[j]->d_name, qcache_matchpkg) != 0) {
-					for (k = 0; k < num_ebuild; k++)
-						free(ebuilds[k]);
+					scandir_free(ebuilds, num_ebuild);
 					free(packages[j]);
-					free(ebuilds);
 					free(ebuildpath);
 					continue;
 				}
@@ -741,7 +737,7 @@ void qcache_stats(qcache_data *data)
 	static int *packages_testing;
 	static int *current_package_keywords;
 	static int *keywords;
-	int a, i;
+	int a;
 
 	if (!numpkg) {
 		struct dirent **categories;
@@ -753,10 +749,7 @@ void qcache_stats(qcache_data *data)
 			errp("%s", catpath);
 			free(catpath);
 		}
-
-		for (i = 0; i < numcat; i++)
-			free(categories[i]);
-		free(categories);
+		scandir_free(categories, numcat);
 
 		runtime = time(NULL);
 
