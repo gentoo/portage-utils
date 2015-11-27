@@ -204,105 +204,6 @@ int read_keywords(char *s, int *keywords)
 	return 0;
 }
 
-/********************************************************************/
-/* File reading helper functions                                    */
-/********************************************************************/
-
-/*
- * inline unsigned int qcache_count_lines(char *filename);
- *
- * Count the number of new line characters '\n' in a file.
- *
- * IN:
- *  char *filename - name of the file to read.
- * OUT:
- *  unsigned int count - number of new lines counted.
- * ERR:
- *  -1 is returned if the file cannot be read.
- */
-_q_static
-unsigned int qcache_count_lines(char *filename)
-{
-	int count, fd;
-	char c;
-
-	if ((fd = open(filename, O_RDONLY|O_CLOEXEC)) != -1) {
-		count = 0;
-
-		while (read(fd, &c, 1) == 1)
-			if (c == '\n')
-				count++;
-
-		close(fd);
-		return count;
-	}
-
-	return -1;
-}
-
-/*
- * char **qcache_read_lines(char *filename);
- *
- * Reads in every line contained in a file
- *
- * IN:
- *  char *filename - name of the file to read.
- * OUT:
- *  char **lines - number of new lines counted.
- * ERR:
- *  NULL is returned if an error occurs.
- */
-_q_static
-char **qcache_read_lines(char *filename)
-{
-	int len, fd, count, i, num_lines;
-	char **lines, c;
-
-	if (-1 == (num_lines = qcache_count_lines(filename)))
-		return NULL;
-
-	len   = sizeof(char*) * (num_lines + 1);
-	lines = xzalloc(len);
-
-	if ((fd = open(filename, O_RDONLY|O_CLOEXEC)) != -1) {
-		for (i = 0; i < num_lines; i++) {
-			count = 0;
-
-			/* determine the space needed for storing the line */
-			while (read(fd, &c, 1) == 1 && c != '\n')
-				count++;
-			lseek(fd, (lseek(fd, 0, SEEK_CUR) - count - 1), SEEK_SET);
-
-			lines[i] = xzalloc(sizeof(char) * (count+1));
-
-			/* copy the line into lines[i] */
-			assert(read(fd, lines[i], count) == count);
-			assert(read(fd, &c, 1) == 1);	/* skip '\n' */
-		}
-
-		close(fd);
-		return lines;
-	}
-
-	return NULL;
-}
-
-/*
- * void qcache_free_lines(char **lines);
- *
- * free()'s memory allocated by qcache_read_lines
- */
-_q_static
-void qcache_free_lines(char **lines)
-{
-	int i;
-
-	for (i = 0; lines[i]; i++)
-		free(lines[i]);
-
-	free(lines);
-}
-
 /*
  * portage_cache *qcache_read_cache_file(const char *file);
  *
@@ -884,25 +785,40 @@ void qcache_testing_only(qcache_data *data)
  *  -1 is returned on error.
  */
 _q_static
-int qcache_init(void)
+bool qcache_init(void)
 {
-	char *filename;
-	int len;
+	bool ret = false;
+	FILE *fp;
+	char *filename, *s;
+	size_t buflen, linelen;
+	char *buf;
 
 	xasprintf(&filename, "%s/profiles/arch.list", portdir);
+	fp = fopen(filename, "re");
+	if (!fp)
+		goto done;
 
-	if (NULL == (archlist = qcache_read_lines(filename))) {
-		free(filename);
-		return -1;
+	archlist_count = 0;
+	buf = NULL;
+	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
+		rmspace_len(buf, linelen);
+
+		if ((s = strchr(buf, '#')) != NULL)
+			*s = '\0';
+		if (buf[0] == '\0')
+			continue;
+
+		++archlist_count;
+		archlist = xrealloc_array(archlist, sizeof(*archlist), archlist_count);
+		archlist[archlist_count - 1] = xstrdup(buf);
 	}
+	free(buf);
 
-	len = 0;
-	while (archlist[len])
-		++len;
-	archlist_count = len;
-
+	ret = true;
+	fclose(fp);
+ done:
 	free(filename);
-	return 0;
+	return ret;
 }
 
 /*
@@ -913,7 +829,11 @@ int qcache_init(void)
 _q_static
 void qcache_free(void)
 {
-	qcache_free_lines(archlist);
+	size_t a;
+
+	for (a = 0; a < archlist_count; ++a)
+		free(archlist[a]);
+	free(archlist);
 }
 
 /********************************************************************/
@@ -946,7 +866,7 @@ int qcache_main(int argc, char **argv)
 		}
 	}
 
-	if (-1 == qcache_init())
+	if (!qcache_init())
 		err("Could not initialize arch list");
 
 	if (optind < argc)
