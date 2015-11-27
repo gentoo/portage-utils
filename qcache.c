@@ -441,9 +441,11 @@ int qcache_traverse(void (*func)(qcache_data*))
 			xasprintf(&ebuildpath, "%s/%s/%s", portdir, categories[i]->d_name, packages[j]->d_name);
 
 			if (-1 == (num_ebuild = scandir(ebuildpath, &ebuilds, qcache_ebuild_select, qcache_vercmp))) {
-				warnp("%s", ebuildpath);
-				free(packages[i]);
-				free(pkgpath);
+				/* Do not complain about spurious files */
+				if (errno != ENOTDIR)
+					warnp("%s", ebuildpath);
+				free(packages[j]);
+				free(ebuildpath);
 				continue;
 			}
 
