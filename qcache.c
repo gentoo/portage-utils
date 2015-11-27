@@ -65,6 +65,7 @@ typedef struct {
 
 static char **archlist; /* Read from PORTDIR/profiles/arch.list in qcache_init() */
 static int archlist_count;
+static size_t arch_longest_len;
 const char status[3] = {'-', '~', '+'};
 int qcache_skip, qcache_test_arch, qcache_last = 0;
 char *qcache_matchpkg = NULL, *qcache_matchcat = NULL;
@@ -703,31 +704,36 @@ void qcache_stats(qcache_data *data)
 	}
 
 	if (qcache_last) {
-		printf("+-------------------------+\n");
+		const char border[] = "------------------------------------------------------------------";
+		printf("+%.*s+\n", 25, border);
 		printf("|   general statistics    |\n");
-		printf("+-------------------------+\n");
+		printf("+%.*s+\n", 25, border);
 		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "architectures", NORM, BLUE, archlist_count, NORM);
 		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "categories", NORM, BLUE, numcat, NORM);
 		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "packages", NORM, BLUE, numpkg, NORM);
 		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "ebuilds", NORM, BLUE, numebld, NORM);
-		printf("+-------------------------+\n\n");
+		printf("+%.*s+\n\n", 25, border);
 
-		printf("+----------------------------------------------------------+\n");
-		printf("|                   keyword distribution                   |\n");
-		printf("+----------------------------------------------------------+\n");
-		printf("| %s%12s%s |%s%8s%s |%s%8s%s |%s%8s%s | %s%8s%s |\n", RED, "architecture", NORM, RED, "stable", NORM, RED, "~arch", NORM, RED, "total", NORM, RED, "total/#pkgs", NORM);
-		printf("|              |         |%s%8s%s |         |             |\n", RED, "only", NORM);
-		printf("+----------------------------------------------------------+\n");
+		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
+		printf("|%*skeyword distribution                          |\n",
+			(int)arch_longest_len, "");
+		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
+		printf("| %s%*s%s |%s%8s%s |%s%8s%s |%s%8s%s | %s%8s%s |\n",
+			RED, (int)arch_longest_len, "architecture", NORM, RED, "stable", NORM,
+			RED, "~arch", NORM, RED, "total", NORM, RED, "total/#pkgs", NORM);
+		printf("| %*s |         |%s%8s%s |         |             |\n",
+			(int)arch_longest_len, "", RED, "only", NORM);
+		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
 
 		for (a = 0; a < archlist_count; ++a) {
-			printf("| %s%12s%s |", GREEN, archlist[a], NORM);
+			printf("| %s%*s%s |", GREEN, (int)arch_longest_len, archlist[a], NORM);
 			printf("%s%8d%s |", BLUE, packages_stable[a], NORM);
 			printf("%s%8d%s |", BLUE, packages_testing[a], NORM);
 			printf("%s%8d%s |", BLUE, packages_testing[a]+packages_stable[a], NORM);
 			printf("%s%11.2f%s%% |\n", BLUE, (100.0*(packages_testing[a]+packages_stable[a]))/numpkg, NORM);
 		}
 
-		printf("+----------------------------------------------------------+\n\n");
+		printf("+%.*s+\n\n", (int)(arch_longest_len + 46), border);
 
 		printf("Completed in %s%d%s seconds.\n", BLUE, (int)(time(NULL)-runtime), NORM);
 
@@ -801,6 +807,7 @@ bool qcache_init(void)
 		goto done;
 
 	archlist_count = 0;
+	arch_longest_len = 0;
 	buf = NULL;
 	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
 		rmspace_len(buf, linelen);
@@ -813,6 +820,7 @@ bool qcache_init(void)
 		++archlist_count;
 		archlist = xrealloc_array(archlist, sizeof(*archlist), archlist_count);
 		archlist[archlist_count - 1] = xstrdup(buf);
+		arch_longest_len = MAX(arch_longest_len, strlen(buf));
 	}
 	free(buf);
 
