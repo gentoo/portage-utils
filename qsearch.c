@@ -31,18 +31,114 @@ static const char * const qsearch_opts_help[] = {
 };
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
 
+#define LAST_BUF_SIZE 256
+
+/* Search an ebuild's details via the metadata cache. */
+static void
+qsearch_ebuild_metadata(_q_unused_ int overlay_fd, const char *ebuild, const char *search_me, char *last,
+                        bool search_desc, bool search_all, _q_unused_ bool search_name, bool show_name_only, bool show_homepage)
+{
+	portage_cache *pcache = cache_read_file(ebuild);
+
+	if (pcache == NULL) {
+		if (!reinitialize)
+			warnf("(cache update pending) %s", ebuild);
+		reinitialize = 1;
+		return;
+	}
+
+	if (strcmp(pcache->atom->PN, last) != 0) {
+		strncpy(last, pcache->atom->PN, LAST_BUF_SIZE);
+		if (search_all || rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE) == 0)
+			printf("%s%s/%s%s%s %s\n", BOLD, pcache->atom->CATEGORY, BLUE,
+			       pcache->atom->PN, NORM,
+			       (show_name_only ? "" :
+			        (show_homepage ? pcache->HOMEPAGE : pcache->DESCRIPTION)));
+	}
+	cache_free(pcache);
+}
+
+/* Search an ebuild's details via the ebuild cache. */
+static void
+qsearch_ebuild_ebuild(int overlay_fd, const char *ebuild, const char *search_me, char *last,
+                      _q_unused_ bool search_desc, bool search_all, bool search_name, bool show_name_only, _q_unused_ bool show_homepage)
+{
+	const char * const search_vars[] = { "DESCRIPTION=", "HOMEPAGE=" };
+	const char *search_var = search_vars[show_homepage ? 1 : 0];
+	size_t search_len = strlen(search_var);
+	char *p, *q, *str;
+
+	FILE *ebuildfp;
+	str = xstrdup(ebuild);
+	p = dirname(str);
+
+	if (strcmp(p, last) == 0)
+		goto no_cache_ebuild_match;
+
+	bool show_it = false;
+	strncpy(last, p, LAST_BUF_SIZE);
+	if (search_name) {
+		if (rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE) != 0) {
+			goto no_cache_ebuild_match;
+		} else {
+			q = NULL;
+			show_it = true;
+		}
+	}
+
+	int fd = openat(overlay_fd, ebuild, O_RDONLY|O_CLOEXEC);
+	if (fd != -1) {
+		ebuildfp = fdopen(fd, "r");
+		if (ebuildfp == NULL) {
+			close(fd);
+			goto no_cache_ebuild_match;
+		}
+	} else {
+		if (!reinitialize)
+			warnfp("(cache update pending) %s", ebuild);
+		reinitialize = 1;
+		goto no_cache_ebuild_match;
+	}
+
+	char *buf = NULL;
+	size_t buflen, linelen;
+	while ((linelen = getline(&buf, &buflen, ebuildfp)) != -1) {
+		if (linelen <= search_len)
+			continue;
+		if (strncmp(buf, search_var, search_len) != 0)
+			continue;
+		if ((q = strrchr(buf, '"')) != NULL)
+			*q = 0;
+		if (strlen(buf) <= search_len)
+			break;
+		q = buf + search_len + 1;
+		if (!search_all && !search_name && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
+			break;
+		show_it = true;
+		break;
+	}
+
+	if (show_it) {
+		printf("%s%s/%s%s%s %s\n",
+			BOLD, dirname(p), BLUE, basename(p), NORM,
+			(show_name_only ? "" : q ? : "<no DESCRIPTION found>"));
+	}
+
+	free(buf);
+	fclose(ebuildfp);
+ no_cache_ebuild_match:
+	free(str);
+}
+
 int qsearch_main(int argc, char **argv)
 {
-	FILE *fp;
-	char *ebuild = NULL;
-	char last[126] = "";
-	char *p, *q, *str;
+	char last[LAST_BUF_SIZE];
 	char *search_me = NULL;
-	char show_homepage = 0, show_name_only = 0;
-	char search_desc = 0, search_all = 0, search_name = 1, search_cache = CACHE_EBUILD;
-	const char *search_vars[] = { "DESCRIPTION=", "HOMEPAGE=" };
-	size_t search_len, ebuild_len, linelen;
-	int i, idx=0;
+	bool show_homepage = false, show_name_only = false;
+	bool search_desc = false, search_all = false, search_name = true;
+	int search_cache = CACHE_EBUILD;
+	int i;
+	void (*search_func)(int, const char *, const char *, char *last, bool, bool, bool, bool, bool);
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -50,132 +146,72 @@ int qsearch_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QSEARCH, qsearch, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsearch)
-		case 'a': search_all = 1; break;
+		case 'a': search_all = true; break;
 		case 'c': search_cache = CACHE_METADATA; break;
 		case 'e': search_cache = CACHE_EBUILD; break;
-		case 's': search_desc = 0; search_name = 1; break;
-		case 'S': search_desc = 1; search_name = 0; break;
-		case 'N': show_name_only = 1; break;
-		case 'H': show_homepage = 1, idx = 1; break;
+		case 's': search_desc = false; search_name = true; break;
+		case 'S': search_desc = true; search_name = false; break;
+		case 'N': show_name_only = true; break;
+		case 'H': show_homepage = true; break;
 		}
 	}
 
+	switch (search_cache) {
+	case CACHE_METADATA:
+		search_func = qsearch_ebuild_metadata;
+		break;
+	case CACHE_EBUILD:
+		search_func = qsearch_ebuild_ebuild;
+		break;
+	default:
+		err("unknown cache %i", search_cache);
+	}
+
 	if (search_all) {
-		search_desc = 1;
-		search_name = 0;
+		search_desc = true;
+		search_name = false;
 	} else {
 		if (argc == optind)
 			qsearch_usage(EXIT_FAILURE);
 		search_me = argv[optind];
 	}
 	last[0] = 0;
-	fp = fopen(initialize_flat(portdir, search_cache, false), "r");
-	if (!fp)
-		return 1;
 
-	int portdir_fd = open(portdir, O_RDONLY|O_CLOEXEC|O_PATH);
-	if (portdir_fd < 0)
-		errp("open(%s) failed", portdir);
-
-	q = NULL; /* Silence a gcc warning. */
-	search_len = strlen(search_vars[idx]);
-
-	while ((linelen = getline(&ebuild, &ebuild_len, fp)) != -1) {
-		rmspace_len(ebuild, linelen);
-		if (!ebuild[0])
+	int ret = 0;
+	size_t n;
+	const char *overlay;
+	array_for_each(overlays, n, overlay) {
+		FILE *fp = fopen(initialize_flat(overlay, search_cache, false), "r");
+		if (!fp) {
+			warnp("opening cache for %s failed", overlay);
+			ret = 1;
 			continue;
-
-		switch (search_cache) {
-
-		case CACHE_METADATA: {
-			portage_cache *pcache;
-			if ((pcache = cache_read_file(ebuild)) != NULL) {
-				if (strcmp(pcache->atom->PN, last) != 0) {
-					strncpy(last, pcache->atom->PN, sizeof(last));
-					if ((rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE) == 0) || search_all)
-						printf("%s%s/%s%s%s %s\n", BOLD, pcache->atom->CATEGORY, BLUE,
-						       pcache->atom->PN, NORM,
-						       (show_name_only ? "" :
-						        (show_homepage ? pcache->HOMEPAGE : pcache->DESCRIPTION)));
-				}
-				cache_free(pcache);
-			} else {
-				if (!reinitialize)
-					warnf("(cache update pending) %s", ebuild);
-				reinitialize = 1;
-			}
-			break;
 		}
 
-		case CACHE_EBUILD: {
-			FILE *ebuildfp;
-			str = xstrdup(ebuild);
-			p = dirname(str);
+		int overlay_fd = open(overlay, O_RDONLY|O_CLOEXEC|O_PATH);
+		if (overlay_fd < 0) {
+			fclose(fp);
+			warnp("open failed: %s", overlay);
+			ret = 1;
+			continue;
+		}
 
-			if (strcmp(p, last) != 0) {
-				bool show_it = false;
-				strncpy(last, p, sizeof(last));
-				if (search_name) {
-					if (rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE) != 0) {
-						goto no_cache_ebuild_match;
-					} else {
-						q = NULL;
-						show_it = true;
-					}
-				}
+		size_t buflen, linelen;
+		char *buf = NULL;
+		while ((linelen = getline(&buf, &buflen, fp)) != -1) {
+			rmspace_len(buf, linelen);
+			if (!buf[0])
+				continue;
 
-				int fd = openat(portdir_fd, ebuild, O_RDONLY|O_CLOEXEC);
-				if (fd != -1) {
-					ebuildfp = fdopen(fd, "r");
-					if (ebuildfp == NULL) {
-						close(fd);
-						continue;
-					}
-				} else {
-					if (!reinitialize)
-						warnfp("(cache update pending) %s", ebuild);
-					reinitialize = 1;
-					goto no_cache_ebuild_match;
-				}
-
-				char *buf = NULL;
-				size_t buflen;
-				while ((linelen = getline(&buf, &buflen, ebuildfp)) != -1) {
-					if (linelen <= search_len)
-						continue;
-					if (strncmp(buf, search_vars[idx], search_len) != 0)
-						continue;
-					if ((q = strrchr(buf, '"')) != NULL)
-						*q = 0;
-					if (strlen(buf) <= search_len)
-						break;
-					q = buf + search_len + 1;
-					if (!search_all && !search_name && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
-						break;
-					show_it = true;
-					break;
-				}
-
-				if (show_it) {
-					printf("%s%s/%s%s%s %s\n",
-						BOLD, dirname(p), BLUE, basename(p), NORM,
-						(show_name_only ? "" : q ? : "<no DESCRIPTION found>"));
-				}
-
-				free(buf);
-				fclose(ebuildfp);
-			}
-no_cache_ebuild_match:
-			free(str);
-
-			break;
-		} /* case CACHE_EBUILD */
-		} /* switch (search_cache) */
+			search_func(overlay_fd, buf, search_me, last, search_desc,
+				search_all, search_name, show_name_only, show_homepage);
+		}
+		free(buf);
+		close(overlay_fd);
+		fclose(fp);
 	}
-	free(ebuild);
-	close(portdir_fd);
-	fclose(fp);
-	return EXIT_SUCCESS;
+
+	return ret;
 }
 
 #else
