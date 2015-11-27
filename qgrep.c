@@ -259,7 +259,7 @@ int qgrep_main(int argc, char **argv)
 	int need_separator = 0;
 	char status = 1;
 
-	QGREP_STR_FUNC strfunc = (QGREP_STR_FUNC) strstr;
+	QGREP_STR_FUNC strfunc = strstr;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -271,7 +271,7 @@ int qgrep_main(int argc, char **argv)
 		switch (i) {
 		case 'I': invert_match = 1; break;
 		case 'i':
-			strfunc = (QGREP_STR_FUNC) strcasestr;
+			strfunc = strcasestr;
 			reflags |= REG_ICASE;
 			break;
 		case 'c': do_count = 1; break;
@@ -369,203 +369,216 @@ int qgrep_main(int argc, char **argv)
 			xregcomp(&skip_preg, skip_pattern, reflags);
 	}
 
-	/* go look either in ebuilds or eclasses or VDB */
-	if (!do_eclass && !do_installed) {
-		if ((fp = fopen(initialize_ebuild_flat(), "r")) == NULL)
-			return 1;
-		xchdir(portdir);
-	} else if (do_eclass) {
-		xchdir(portdir);
-		if ((eclass_dir = opendir("eclass")) == NULL)
-			errp("opendir(\"%s/eclass\") failed", portdir);
-	} else { /* if (do_install) */
-		char buf[_Q_PATH_MAX];
-		snprintf(buf, sizeof(buf), "%s/%s", portroot, portvdb);
-		xchdir(buf);
-		if ((vdb_dir = opendir(".")) == NULL)
-			errp("could not opendir(%s/%s) for ROOT/VDB", portroot, portvdb);
-	}
-
 	/* allocate a circular buffers list for --before */
 	buf_list = qgrep_buf_list_alloc(num_lines_before + 1);
 
-	/* iteration is either over ebuilds or eclasses */
-	while (do_eclass
-			? ((dentry = readdir(eclass_dir))
-				&& snprintf(ebuild, sizeof(ebuild), "eclass/%s", dentry->d_name))
-			: (do_installed
-				? (get_next_installed_ebuild(ebuild, vdb_dir, &dentry, &cat_dir) != NULL)
-				: (fgets(ebuild, sizeof(ebuild), fp) != NULL))) {
-		FILE *newfp;
+	size_t n;
+	char *overlay;
+	array_for_each(overlays, n, overlay) {
 
-		/* filter badly named files, prepare eclass or package name, etc. */
-		if (do_eclass) {
-			if ((p = strrchr(ebuild, '.')) == NULL)
+		/* go look either in ebuilds or eclasses or VDB */
+		if (!do_eclass && !do_installed) {
+			fp = fopen(initialize_flat(overlay, CACHE_EBUILD, false), "re");
+			if (fp == NULL)
 				continue;
-			if (strcmp(p, ".eclass"))
+			xchdir(overlay);
+		} else if (do_eclass) {
+			xchdir(overlay);
+			if ((eclass_dir = opendir("eclass")) == NULL) {
+				if (errno != ENOENT)
+					warnp("opendir(\"%s/eclass\") failed", overlay);
 				continue;
-			if (show_name || (include_atoms != NULL)) {
-				/* cut ".eclass" */
-				*p = '\0';
-				/* and skip "eclass/" */
-				snprintf(name, sizeof(name), "%s", ebuild + 7);
-				/* restore the filepath */
-				*p = '.';
 			}
-		} else {
-			if ((p = strchr(ebuild, '\n')) != NULL)
-				*p = '\0';
-			if (show_name || (include_atoms != NULL)) {
-				/* cut ".ebuild" */
-				if (p == NULL)
-					p = ebuild + strlen(ebuild);
-				*(p-7) = '\0';
-				/* cut "/foo/" from "cat/foo/foo-x.y" */
-				if ((p = strchr(ebuild, '/')) == NULL)
-					continue;
-				*(p++) = '\0';
-				/* find head of the ebuild basename */
-				if ((p = strchr(p, '/')) == NULL)
-					continue;
-				/* find	start of the pkg name */
-				snprintf(name, sizeof(name), "%s/%s", ebuild, (p+1));
-				/* restore the filepath */
-				*p = '/';
-				*(p + strlen(p)) = '.';
-				ebuild[strlen(ebuild)] = '/';
-			}
+		} else { /* if (do_install) */
+			char buf[_Q_PATH_MAX];
+			snprintf(buf, sizeof(buf), "%s/%s", portroot, portvdb);
+			xchdir(buf);
+			if ((vdb_dir = opendir(".")) == NULL)
+				errp("could not opendir(%s/%s) for ROOT/VDB", portroot, portvdb);
 		}
 
-		/* filter the files we grep when there are extra args */
-		if (include_atoms != NULL)
-			if (!qgrep_name_match(name, (argc - optind - 1), include_atoms))
-				continue;
+		/* iteration is either over ebuilds or eclasses */
+		while (do_eclass
+				? ((dentry = readdir(eclass_dir))
+					&& snprintf(ebuild, sizeof(ebuild), "eclass/%s", dentry->d_name))
+				: (do_installed
+					? (get_next_installed_ebuild(ebuild, vdb_dir, &dentry, &cat_dir) != NULL)
+					: (fgets(ebuild, sizeof(ebuild), fp) != NULL))) {
+			FILE *newfp;
 
-		if ((newfp = fopen(ebuild, "r")) != NULL) {
-			int lineno = 0;
-			char remaining_after_context = 0;
-			count = 0;
-			/* if there have been some matches already, then a separator will be needed */
-			need_separator = (!status) && (num_lines_before || num_lines_after);
-			/* whatever is in the circular buffers list is no more a valid context */
-			qgrep_buf_list_invalidate(buf_list);
-
-			/* reading a new line always happen in the next buffer of the list */
-			while ((buf_list = buf_list->next)
-					&& (fgets(buf_list->buf, sizeof(buf_list->buf), newfp)) != NULL) {
-				lineno++;
-				buf_list->valid = 1;
-
-				/* cleanup EOL */
-				if ((p = strrchr(buf_list->buf, '\n')) != NULL)
-					*p = 0;
-				if ((p = strrchr(buf_list->buf, '\r')) != NULL)
-					*p = 0;
-
-				if (skip_comments) {
-					/* reject comments line ("^[ \t]*#") */
-					p = buf_list->buf;
-					while (*p == ' ' || *p == '\t') p++;
-					if (*p == '#')
-						goto print_after_context;
+			/* filter badly named files, prepare eclass or package name, etc. */
+			if (do_eclass) {
+				if ((p = strrchr(ebuild, '.')) == NULL)
+					continue;
+				if (strcmp(p, ".eclass"))
+					continue;
+				if (show_name || (include_atoms != NULL)) {
+					/* cut ".eclass" */
+					*p = '\0';
+					/* and skip "eclass/" */
+					snprintf(name, sizeof(name), "%s", ebuild + 7);
+					/* restore the filepath */
+					*p = '.';
 				}
-
-				if (skip_pattern) {
-					/* reject some other lines which match an optional pattern */
-					if (!do_regex) {
-						if (strfunc(buf_list->buf, skip_pattern) != NULL)
-							goto print_after_context;
-					} else {
-						if (regexec(&skip_preg, buf_list->buf, 0, NULL, 0) == 0)
-							goto print_after_context;
-					}
-				}
-
-				/* four ways to match a line (with/without inversion and regexp) */
-				if (!invert_match) {
-					if (do_regex == 0) {
-						if (strfunc(buf_list->buf, argv[optind]) == NULL)
-							goto print_after_context;
-					} else {
-						if (regexec(&preg, buf_list->buf, 0, NULL, 0) != 0)
-							goto print_after_context;
-					}
-				} else {
-					if (do_regex == 0) {
-						if (strfunc(buf_list->buf, argv[optind]) != NULL)
-							goto print_after_context;
-					} else {
-						if (regexec(&preg, buf_list->buf, 0, NULL, 0) == 0)
-							goto print_after_context;
-					}
-				}
-
-				count++;
-				status = 0; /* got a match, exit status should be 0 */
-				if (per_file_output)
-					continue; /* matching files are listed out of this loop */
-
-				if ((need_separator > 0)
-						&& (num_lines_before || num_lines_after))
-					printf("--\n");
-				/* "need_separator" is not a flag, but a counter, so that
-				 * adjacent contextes are not separated */
-				need_separator = 0 - num_lines_before;
-				if (!do_list) {
-					/* print the leading context */
-					qgrep_print_before_context(buf_list, num_lines_before, label,
-							((verbose > 1) ? lineno : -1));
-					/* print matching line */
-					if (invert_match || *RED == '\0')
-						qgrep_print_matching_line_nocolor(buf_list, label,
-							((verbose > 1) ? lineno : -1));
-					else if (do_regex)
-						qgrep_print_matching_line_regcolor(buf_list, label,
-							((verbose > 1) ? lineno : -1), &preg);
-					else
-						qgrep_print_matching_line_strcolor(buf_list, label,
-							((verbose > 1) ? lineno : -1), strfunc, argv[optind]);
-				} else {
-					/* in verbose do_list mode, list the file once per match */
-					printf("%s", label);
-					if (verbose > 1)
-						printf(":%d", lineno);
-					putchar('\n');
-				}
-				/* init count down of trailing context lines */
-				remaining_after_context = num_lines_after;
-				continue;
-
-print_after_context:
-				/* print some trailing context lines when needed */
-				if (!remaining_after_context) {
-					if (!status)
-						/* we're getting closer to the need of a separator between
-						 * current match block and the next one */
-						++need_separator;
-				} else {
-					qgrep_print_context_line(buf_list, label,
-							((verbose > 1) ? lineno : -1));
-					--remaining_after_context;
+			} else {
+				if ((p = strchr(ebuild, '\n')) != NULL)
+					*p = '\0';
+				if (show_name || (include_atoms != NULL)) {
+					/* cut ".ebuild" */
+					if (p == NULL)
+						p = ebuild + strlen(ebuild);
+					*(p-7) = '\0';
+					/* cut "/foo/" from "cat/foo/foo-x.y" */
+					if ((p = strchr(ebuild, '/')) == NULL)
+						continue;
+					*(p++) = '\0';
+					/* find head of the ebuild basename */
+					if ((p = strchr(p, '/')) == NULL)
+						continue;
+					/* find	start of the pkg name */
+					snprintf(name, sizeof(name), "%s/%s", ebuild, (p+1));
+					/* restore the filepath */
+					*p = '/';
+					*(p + strlen(p)) = '.';
+					ebuild[strlen(ebuild)] = '/';
 				}
 			}
-			fclose(newfp);
-			if (!per_file_output)
-				continue; /* matches were already displayed, line per line */
-			if (do_count && count) {
-				if (label != NULL)
-					/* -c without -v/-N/-H only outputs
-					 * the matches count of the file */
-					printf("%s:", label);
-				printf("%d\n", count);
-			} else if ((count && !invert_list) || (!count && invert_list))
-				printf("%s\n", label); /* do_list == 1, or we wouldn't be here */
+
+			/* filter the files we grep when there are extra args */
+			if (include_atoms != NULL)
+				if (!qgrep_name_match(name, (argc - optind - 1), include_atoms))
+					continue;
+
+			if ((newfp = fopen(ebuild, "r")) != NULL) {
+				int lineno = 0;
+				char remaining_after_context = 0;
+				count = 0;
+				/* if there have been some matches already, then a separator will be needed */
+				need_separator = (!status) && (num_lines_before || num_lines_after);
+				/* whatever is in the circular buffers list is no more a valid context */
+				qgrep_buf_list_invalidate(buf_list);
+
+				/* reading a new line always happen in the next buffer of the list */
+				while ((buf_list = buf_list->next)
+						&& (fgets(buf_list->buf, sizeof(buf_list->buf), newfp)) != NULL) {
+					lineno++;
+					buf_list->valid = 1;
+
+					/* cleanup EOL */
+					if ((p = strrchr(buf_list->buf, '\n')) != NULL)
+						*p = 0;
+					if ((p = strrchr(buf_list->buf, '\r')) != NULL)
+						*p = 0;
+
+					if (skip_comments) {
+						/* reject comments line ("^[ \t]*#") */
+						p = buf_list->buf;
+						while (*p == ' ' || *p == '\t') p++;
+						if (*p == '#')
+							goto print_after_context;
+					}
+
+					if (skip_pattern) {
+						/* reject some other lines which match an optional pattern */
+						if (!do_regex) {
+							if (strfunc(buf_list->buf, skip_pattern) != NULL)
+								goto print_after_context;
+						} else {
+							if (regexec(&skip_preg, buf_list->buf, 0, NULL, 0) == 0)
+								goto print_after_context;
+						}
+					}
+
+					/* four ways to match a line (with/without inversion and regexp) */
+					if (!invert_match) {
+						if (do_regex == 0) {
+							if (strfunc(buf_list->buf, argv[optind]) == NULL)
+								goto print_after_context;
+						} else {
+							if (regexec(&preg, buf_list->buf, 0, NULL, 0) != 0)
+								goto print_after_context;
+						}
+					} else {
+						if (do_regex == 0) {
+							if (strfunc(buf_list->buf, argv[optind]) != NULL)
+								goto print_after_context;
+						} else {
+							if (regexec(&preg, buf_list->buf, 0, NULL, 0) == 0)
+								goto print_after_context;
+						}
+					}
+
+					count++;
+					status = 0; /* got a match, exit status should be 0 */
+					if (per_file_output)
+						continue; /* matching files are listed out of this loop */
+
+					if ((need_separator > 0)
+							&& (num_lines_before || num_lines_after))
+						printf("--\n");
+					/* "need_separator" is not a flag, but a counter, so that
+					 * adjacent contextes are not separated */
+					need_separator = 0 - num_lines_before;
+					if (!do_list) {
+						/* print the leading context */
+						qgrep_print_before_context(buf_list, num_lines_before, label,
+								((verbose > 1) ? lineno : -1));
+						/* print matching line */
+						if (invert_match || *RED == '\0')
+							qgrep_print_matching_line_nocolor(buf_list, label,
+								((verbose > 1) ? lineno : -1));
+						else if (do_regex)
+							qgrep_print_matching_line_regcolor(buf_list, label,
+								((verbose > 1) ? lineno : -1), &preg);
+						else
+							qgrep_print_matching_line_strcolor(buf_list, label,
+								((verbose > 1) ? lineno : -1), strfunc, argv[optind]);
+					} else {
+						/* in verbose do_list mode, list the file once per match */
+						printf("%s", label);
+						if (verbose > 1)
+							printf(":%d", lineno);
+						putchar('\n');
+					}
+					/* init count down of trailing context lines */
+					remaining_after_context = num_lines_after;
+					continue;
+
+ print_after_context:
+					/* print some trailing context lines when needed */
+					if (!remaining_after_context) {
+						if (!status)
+							/* we're getting closer to the need of a separator between
+							 * current match block and the next one */
+							++need_separator;
+					} else {
+						qgrep_print_context_line(buf_list, label,
+								((verbose > 1) ? lineno : -1));
+						--remaining_after_context;
+					}
+				}
+				fclose(newfp);
+				if (!per_file_output)
+					continue; /* matches were already displayed, line per line */
+				if (do_count && count) {
+					if (label != NULL)
+						/* -c without -v/-N/-H only outputs
+						 * the matches count of the file */
+						printf("%s:", label);
+					printf("%d\n", count);
+				} else if ((count && !invert_list) || (!count && invert_list))
+					printf("%s\n", label); /* do_list == 1, or we wouldn't be here */
+			}
 		}
+		if (do_eclass)
+			closedir(eclass_dir);
+		else if (!do_installed)
+			fclose(fp);
+
+		if (do_installed)
+			break;
 	}
-	if (do_eclass)
-		closedir(eclass_dir);
-	else if (!do_installed)
-		fclose(fp);
+
 	if (do_regex)
 		regfree(&preg);
 	if (do_regex && skip_pattern)
@@ -577,6 +590,7 @@ print_after_context:
 		free(include_atoms);
 	}
 	qgrep_buf_list_free(buf_list);
+
 	return status;
 }
 

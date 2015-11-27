@@ -239,6 +239,8 @@ int quse_main(int argc, char **argv)
 	short quse_all = 0;
 	int regexp_matching = 1, i, idx = 0;
 	size_t search_len;
+	size_t n;
+	const char *overlay;
 
 	DBG("argc=%d argv[0]=%s argv[1]=%s",
 	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
@@ -259,179 +261,187 @@ int quse_main(int argc, char **argv)
 		quse_usage(EXIT_FAILURE);
 
 	if (idx == -1) {
-		size_t n;
-		const char *overlay;
 		array_for_each(overlays, n, overlay)
 			quse_describe_flag(overlay, optind, argc, argv);
 		return 0;
 	}
 
 	if (quse_all) optind = argc;
-	cache_file = initialize_ebuild_flat();
 
 	search_len = strlen(search_vars[idx]);
 	assert(search_len < sizeof(buf0));
 
-	if ((fp = fopen(cache_file, "r")) == NULL) {
-		warnp("could not read cache: %s", cache_file);
-		return 1;
-	}
+	array_for_each(overlays, n, overlay) {
+		cache_file = initialize_flat(overlay, CACHE_EBUILD, false);
 
-	int portdir_fd = open(portdir, O_RDONLY|O_CLOEXEC|O_PATH);
-
-	ebuild = NULL;
-	while ((linelen = getline(&ebuild, &ebuildlen, fp)) != -1) {
-		FILE *newfp;
-		int fd;
-
-		rmspace_len(ebuild, linelen);
-
-		fd = openat(portdir_fd, ebuild, O_RDONLY|O_CLOEXEC);
-		if (fd < 0)
+		if ((fp = fopen(cache_file, "re")) == NULL) {
+			warnp("could not read cache: %s", cache_file);
 			continue;
-		newfp = fdopen(fd, "r");
-		if (newfp != NULL) {
-			unsigned int lineno = 0;
-			char revision[sizeof(buf0)];
-			char date[sizeof(buf0)];
-			char user[sizeof(buf0)];
+		}
 
-			revision[0] = 0;
-			user[0] = 0;
-			date[0] = 0;
-			while (fgets(buf0, sizeof(buf0), newfp) != NULL) {
-				int ok = 0;
-				char warned = 0;
-				lineno++;
+		int overlay_fd = open(overlay, O_RDONLY|O_CLOEXEC|O_PATH);
 
-				if (*buf0 == '#') {
-					if (strncmp(buf0, "# $Header: /", 12) == 0)
-						sscanf(buf0, "%*s %*s %*s %s %s %*s %s %*s %*s", (char *) &revision, (char *) &date, (char *) &user);
-					continue;
-				}
-				if (strncmp(buf0, search_vars[idx], search_len) != 0)
-					continue;
+		ebuild = NULL;
+		while ((linelen = getline(&ebuild, &ebuildlen, fp)) != -1) {
+			FILE *newfp;
+			int fd;
 
-				if ((p = strchr(buf0, '\n')) != NULL)
-					*p = 0;
-				if ((p = strchr(buf0, '#')) != NULL) {
-					if (buf0 != p && p[-1] == ' ')
-						p[-1] = 0;
-					else
-						*p = 0;
-				}
-				if (verbose > 1) {
-					if ((strchr(buf0, '\t') != NULL)
-					    || (strchr(buf0, '$') != NULL)
-					    || (strchr(buf0, '\\') != NULL)
-					    || (strchr(buf0, '\'') != NULL)
-					    || (strstr(buf0, "  ") != NULL)) {
-						warned = 1;
-						warn("# Line %d of %s has an annoying %s", lineno, ebuild, buf0);
-					}
-				}
-#ifdef THIS_SUCKS
-				if ((p = strrchr(&buf0[search_len + 1], '\\')) != NULL) {
+			rmspace_len(ebuild, linelen);
 
-				multiline:
-					*p = ' ';
+			fd = openat(overlay_fd, ebuild, O_RDONLY|O_CLOEXEC);
+			if (fd < 0)
+				continue;
+			newfp = fdopen(fd, "r");
+			if (newfp != NULL) {
+				unsigned int lineno = 0;
+				char revision[sizeof(buf0)];
+				char date[sizeof(buf0)];
+				char user[sizeof(buf0)];
 
-					if (fgets(buf1, sizeof(buf1), newfp) == NULL)
-						continue;
+				revision[0] = 0;
+				user[0] = 0;
+				date[0] = 0;
+				while (fgets(buf0, sizeof(buf0), newfp) != NULL) {
+					int ok = 0;
+					char warned = 0;
 					lineno++;
 
-					if ((p = strchr(buf1, '\n')) != NULL)
-						*p = 0;
-					snprintf(buf2, sizeof(buf2), "%s %s", buf0, buf1);
-					remove_extra_space(buf2);
-					strcpy(buf0, buf2);
-					if ((p = strrchr(buf1, '\\')) != NULL)
-						goto multiline;
-				}
-#else
-				remove_extra_space(buf0);
-#endif
-				while ((p = strrchr(&buf0[search_len + 1], '"')) != NULL)  *p = 0;
-				while ((p = strrchr(&buf0[search_len + 1], '\'')) != NULL) *p = 0;
-				while ((p = strrchr(&buf0[search_len + 1], '\\')) != NULL) *p = ' ';
-
-				if (verbose && warned == 0) {
-					if ((strchr(buf0, '$') != NULL) || (strchr(buf0, '\\') != NULL)) {
-						warned = 1;
-						warn("# Line %d of %s has an annoying %s", lineno, ebuild, buf0);
+					if (*buf0 == '#') {
+						if (strncmp(buf0, "# $Header: /", 12) == 0)
+							sscanf(buf0, "%*s %*s %*s %s %s %*s %s %*s %*s",
+								revision, date, user);
+						continue;
 					}
-				}
+					if (strncmp(buf0, search_vars[idx], search_len) != 0)
+						continue;
 
-				if (strlen(buf0) < search_len + 1) {
-					/* warnf("err '%s'/%zu <= %zu; line %u\n", buf0, strlen(buf0), search_len + 1, lineno); */
-					continue;
-				}
-
-				if ((argc == optind) || (quse_all)) {
-					ok = 1;
-				} else {
-					ok = 0;
-					if (regexp_matching) {
-						for (i = optind; i < argc; ++i) {
-							if (rematch(argv[i], &buf0[search_len + 1], REG_NOSUB) == 0) {
-								ok = 1;
-								break;
-							}
-						}
-					} else {
-						remove_extra_space(buf0);
-						strcpy(buf1, &buf0[search_len + 1]);
-
-						for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
-							if (strcmp(buf1, argv[i]) == 0) {
-								ok = 1;
-								break;
-							}
-						}
-						if (ok == 0) while ((p = strchr(buf1, ' ')) != NULL) {
+					if ((p = strchr(buf0, '\n')) != NULL)
+						*p = 0;
+					if ((p = strchr(buf0, '#')) != NULL) {
+						if (buf0 != p && p[-1] == ' ')
+							p[-1] = 0;
+						else
 							*p = 0;
+					}
+					if (verbose > 1) {
+						if ((strchr(buf0, '\t') != NULL)
+						    || (strchr(buf0, '$') != NULL)
+						    || (strchr(buf0, '\\') != NULL)
+						    || (strchr(buf0, '\'') != NULL)
+						    || (strstr(buf0, "  ") != NULL)) {
+							warned = 1;
+							warn("# Line %d of %s has an annoying %s",
+								lineno, ebuild, buf0);
+						}
+					}
+#ifdef THIS_SUCKS
+					if ((p = strrchr(&buf0[search_len + 1], '\\')) != NULL) {
+
+					multiline:
+						*p = ' ';
+
+						if (fgets(buf1, sizeof(buf1), newfp) == NULL)
+							continue;
+						lineno++;
+
+						if ((p = strchr(buf1, '\n')) != NULL)
+							*p = 0;
+						snprintf(buf2, sizeof(buf2), "%s %s", buf0, buf1);
+						remove_extra_space(buf2);
+						strcpy(buf0, buf2);
+						if ((p = strrchr(buf1, '\\')) != NULL)
+							goto multiline;
+					}
+#else
+					remove_extra_space(buf0);
+#endif
+					while ((p = strrchr(&buf0[search_len + 1], '"')) != NULL)  *p = 0;
+					while ((p = strrchr(&buf0[search_len + 1], '\'')) != NULL) *p = 0;
+					while ((p = strrchr(&buf0[search_len + 1], '\\')) != NULL) *p = ' ';
+
+					if (verbose && warned == 0) {
+						if ((strchr(buf0, '$') != NULL) || (strchr(buf0, '\\') != NULL)) {
+							warned = 1;
+							warn("# Line %d of %s has an annoying %s",
+								lineno, ebuild, buf0);
+						}
+					}
+
+					if (strlen(buf0) < search_len + 1) {
+						/* warnf("err '%s'/%zu <= %zu; line %u\n", buf0, strlen(buf0), search_len + 1, lineno); */
+						continue;
+					}
+
+					if ((argc == optind) || (quse_all)) {
+						ok = 1;
+					} else {
+						ok = 0;
+						if (regexp_matching) {
+							for (i = optind; i < argc; ++i) {
+								if (rematch(argv[i], &buf0[search_len + 1], REG_NOSUB) == 0) {
+									ok = 1;
+									break;
+								}
+							}
+						} else {
+							remove_extra_space(buf0);
+							strcpy(buf1, &buf0[search_len + 1]);
+
 							for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
 								if (strcmp(buf1, argv[i]) == 0) {
 									ok = 1;
 									break;
 								}
 							}
-							strcpy(buf2, p + 1);
-							strcpy(buf1, buf2);
-							if (strchr(buf1, ' ') == NULL)
+							if (ok == 0) while ((p = strchr(buf1, ' ')) != NULL) {
+								*p = 0;
 								for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
-									if (strcmp(buf1, argv[i]) == 0)
+									if (strcmp(buf1, argv[i]) == 0) {
 										ok = 1;
+										break;
+									}
 								}
+								strcpy(buf2, p + 1);
+								strcpy(buf1, buf2);
+								if (strchr(buf1, ' ') == NULL)
+									for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
+										if (strcmp(buf1, argv[i]) == 0)
+											ok = 1;
+									}
+							}
 						}
 					}
-				}
-				if (ok) {
-					if (verbose > 3)
-						printf("%s %s %s ", *user ? user : "MISSING", *revision ? revision : "MISSING", *date ? date : "MISSING");
+					if (ok) {
+						if (verbose > 3)
+							printf("%s %s %s ",
+								*user ? user : "MISSING",
+								*revision ? revision : "MISSING",
+								*date ? date : "MISSING");
 
-					printf("%s%s%s ", CYAN, ebuild, NORM);
-					print_highlighted_use_flags(&buf0[search_len + 1], optind, argc, argv);
-					puts(NORM);
-					if (verbose > 1) {
-						char **ARGV;
-						int ARGC;
-						makeargv(&buf0[search_len + 1], &ARGC, &ARGV);
-						quse_describe_flag(portdir, 1, ARGC, ARGV);
-						freeargv(ARGC, ARGV);
+						printf("%s%s%s ", CYAN, ebuild, NORM);
+						print_highlighted_use_flags(&buf0[search_len + 1], optind, argc, argv);
+						puts(NORM);
+						if (verbose > 1) {
+							char **ARGV;
+							int ARGC;
+							makeargv(&buf0[search_len + 1], &ARGC, &ARGV);
+							quse_describe_flag(overlay, 1, ARGC, ARGV);
+							freeargv(ARGC, ARGV);
+						}
 					}
+					break;
 				}
-				break;
+				fclose(newfp);
+			} else {
+				if (!reinitialize)
+					warnfp("(cache update pending) %s", ebuild);
+				reinitialize = 1;
 			}
-			fclose(newfp);
-		} else {
-			if (!reinitialize)
-				warnfp("(cache update pending) %s", ebuild);
-			reinitialize = 1;
 		}
+		fclose(fp);
+		close(overlay_fd);
 	}
-	fclose(fp);
-	close(portdir_fd);
+
 	return EXIT_SUCCESS;
 }
 
