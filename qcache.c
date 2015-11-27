@@ -735,7 +735,9 @@ void qcache_stats(qcache_data *data)
 
 		printf("+%.*s+\n\n", (int)(arch_longest_len + 46), border);
 
-		printf("Completed in %s%d%s seconds.\n", BLUE, (int)(time(NULL)-runtime), NORM);
+		printf("Completed in ");
+		print_seconds_for_earthlings(time(NULL) - runtime);
+		printf("\n");
 
 		free(packages_stable);
 		free(packages_testing);
