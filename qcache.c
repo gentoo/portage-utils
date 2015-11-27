@@ -537,9 +537,7 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 		/* traverse packages */
 		for (j = 0; j < num_pkg; j++) {
-			len = sizeof(char) * (strlen(portdir) + strlen("/") + strlen(categories[i]->d_name) + strlen("/") + strlen(packages[j]->d_name) + 1);
-			ebuildpath = xzalloc(len);
-			snprintf(ebuildpath, len, "%s/%s/%s", portdir, categories[i]->d_name, packages[j]->d_name);
+			xasprintf(&ebuildpath, "%s/%s/%s", portdir, categories[i]->d_name, packages[j]->d_name);
 
 			if (-1 == (num_ebuild = scandir(ebuildpath, &ebuilds, qcache_ebuild_select, qcache_vercmp))) {
 				warnp("%s", ebuildpath);
@@ -561,10 +559,8 @@ int qcache_traverse(void (*func)(qcache_data*))
 
 			/* traverse ebuilds */
 			for (k = 0; k < num_ebuild; k++) {
-				len = sizeof(char) * (strlen(catpath) + strlen("/") + strlen(categories[i]->d_name) + strlen("/") + strlen(ebuilds[k]->d_name) + 1);
-				cachepath = xzalloc(len);
-				snprintf(cachepath, len, "%s/%s/%s", catpath, categories[i]->d_name, ebuilds[k]->d_name);
-				cachepath[len-8] = '\0'; /* remove ".ebuild" */
+				len = xasprintf(&cachepath, "%s/%s/%s", catpath, categories[i]->d_name, ebuilds[k]->d_name);
+				cachepath[len - 7] = '\0'; /* remove ".ebuild" */
 
 				data.category = categories[i]->d_name;
 				data.package = packages[j]->d_name;
@@ -886,12 +882,9 @@ _q_static
 int qcache_init(void)
 {
 	char *filename;
-	unsigned int len;
+	int len;
 
-	len      = sizeof(char) * (strlen(portdir) + strlen("/profiles/arch.list") + 1);
-	filename = xzalloc(len);
-
-	snprintf(filename, len, "%s/profiles/arch.list", portdir);
+	xasprintf(&filename, "%s/profiles/arch.list", portdir);
 
 	if (NULL == (archlist = qcache_read_lines(filename))) {
 		free(filename);
