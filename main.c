@@ -905,7 +905,10 @@ void initialize_portage_env(void)
 		portroot[var->value_len + 1] = '\0';
 	}
 
+	char *orig_main_overlay = main_overlay;
 	read_repos_conf(configroot, CONFIG_EPREFIX "etc/portage/repos.conf");
+	if (orig_main_overlay != main_overlay)
+		free(orig_main_overlay);
 	if (array_cnt(overlays) == 0)
 		xarraypush_str(overlays, main_overlay);
 
@@ -1380,7 +1383,6 @@ _q_static queue *get_vdb_atoms(int fullcpv)
 void cleanup(void)
 {
 	reinitialize_as_needed();
-	fclose(stderr);
 }
 
 int main(int argc, char **argv)
