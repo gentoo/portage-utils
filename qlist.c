@@ -379,9 +379,6 @@ int qlist_main(int argc, char **argv)
 	};
 	int i, ret;
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
 	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)

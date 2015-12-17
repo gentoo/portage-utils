@@ -140,9 +140,6 @@ int qsearch_main(int argc, char **argv)
 	int i;
 	void (*search_func)(int, const char *, const char *, char *last, bool, bool, bool, bool, bool);
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
 	while ((i = GETOPT_LONG(QSEARCH, qsearch, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsearch)

@@ -107,8 +107,6 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 		pkg = package;
 	}
 
-	DBG("Searching for %s in %s\n", pkg, logfile);
-
 	if ((fp = fopen(logfile, "r")) == NULL) {
 		warnp("Could not open logfile '%s'", logfile);
 		return 1;
@@ -644,9 +642,6 @@ int qlop_main(int argc, char **argv)
 	int i, average = 1;
 	char do_time, do_list, do_unlist, do_sync, do_current, do_human_readable = 0;
 	char *logfile = NULL;
-
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-		argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
 	do_time = do_list = do_unlist = do_sync = do_current = 0;
 

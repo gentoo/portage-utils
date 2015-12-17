@@ -244,9 +244,6 @@ int qtbz2_main(int argc, char **argv)
 	char *heap_tbz2, *heap_xpak, *heap_tarbz2;
 	char *tbz2, *xpak, *tarbz2;
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
 	action = TBZ2_ACT_NONE;
 	dir_fd = AT_FDCWD;
 

@@ -261,9 +261,6 @@ int qgrep_main(int argc, char **argv)
 
 	QGREP_STR_FUNC strfunc = strstr;
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
 	do_count = do_regex = do_eclass = do_installed = do_list = 0;
 	show_filename = skip_comments = invert_list = show_name = 0;
 

@@ -52,9 +52,6 @@ int qsize_main(int argc, char **argv)
 	char filename[_Q_PATH_MAX], *filename_root;
 	queue *ignore_regexp = NULL;
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
 	while ((i = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsize)

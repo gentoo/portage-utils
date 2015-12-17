@@ -285,9 +285,6 @@ int qglsa_main(int argc, char **argv)
 	qglsa_action action = GLSA_FUNKYTOWN;
 	bool all_glsas = false;
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
 	while ((i = GETOPT_LONG(QGLSA, qglsa, "")) != -1) {
 #define set_action(a) { if (action == 0) action = a; else err("cannot specify more than one action at a time"); }
 		switch (i) {

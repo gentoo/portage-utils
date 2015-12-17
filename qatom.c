@@ -109,9 +109,6 @@ int qatom_main(int argc, char **argv)
 	depend_atom *atom;
 	int i;
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
 	while ((i = GETOPT_LONG(QATOM, qatom, "")) != -1) {
 		switch (i) {
 		case 'F': format = optarg; break;

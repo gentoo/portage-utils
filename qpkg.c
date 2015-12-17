@@ -320,8 +320,6 @@ int qpkg_main(int argc, char **argv)
 	depend_atom *atom;
 	int restrict_chmod = 0;
 	int qclean = 0;
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
 	while ((i = GETOPT_LONG(QPKG, qpkg, "")) != -1) {
 		switch (i) {

@@ -411,17 +411,12 @@ _q_static int qdepends_main_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	if (i == state->argc)
 		return 0;
 
-	IF_DEBUG(warn("matched %s/%s", catname, pkgname));
-
 	if (!q_vdb_pkg_eat(pkg_ctx, state->depend_file, &depend, &depend_len))
 		return 0;
 
-	IF_DEBUG(warn("growing tree..."));
 	dep_tree = dep_grow_tree(depend);
 	if (dep_tree == NULL)
 		return 0;
-	IF_DEBUG(puts(depend));
-	IF_DEBUG(dep_dump_tree(dep_tree));
 
 	if (qdep_name_only) {
 		depend_atom *atom = NULL;
@@ -474,17 +469,12 @@ _q_static int qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	static size_t depend_len, use_len;
 	dep_node *dep_tree;
 
-	IF_DEBUG(warn("matched %s/%s for %s", catname, pkgname, state->depend_file));
-
 	if (!q_vdb_pkg_eat(pkg_ctx, state->depend_file, &depend, &depend_len))
 		return 0;
 
-	IF_DEBUG(warn("growing tree..."));
 	dep_tree = dep_grow_tree(depend);
 	if (dep_tree == NULL)
 		return 0;
-	IF_DEBUG(puts(depend));
-	IF_DEBUG(dep_dump_tree(dep_tree));
 
 	if (q_vdb_pkg_eat(pkg_ctx, "USE", &use, &use_len))
 		use[0] = '\0';
@@ -538,9 +528,6 @@ int qdepends_main(int argc, char **argv)
 	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", NULL, NULL };
 
 	depend_file = depend_files[0];
-
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
 
 	while ((i = GETOPT_LONG(QDEPENDS, qdepends, "")) != -1) {
 		switch (i) {

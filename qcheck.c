@@ -373,9 +373,6 @@ int qcheck_main(int argc, char **argv)
 		.exact = false,
 	};
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
 	while ((i = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qcheck)

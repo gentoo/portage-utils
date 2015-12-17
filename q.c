@@ -32,7 +32,6 @@ static APPLET lookup_applet(const char *applet)
 
 	for (i = 0; applets[i].name; ++i) {
 		if (strcmp(applets[i].name, applet) == 0) {
-			DBG("found applet %s at %p", applets[i].name, applets[i].func);
 			argv0 = applets[i].name;
 			if (i && applets[i].desc != NULL) ++argv0; /* chop the leading 'q' */
 			return applets[i].func;
@@ -40,10 +39,8 @@ static APPLET lookup_applet(const char *applet)
 	}
 
 	/* No applet found? Search by shortname then... */
-	DBG("Looking up applet (%s) by short name", applet);
 	for (i = 1; applets[i].desc != NULL; ++i) {
 		if (strcmp(applets[i].name + 1, applet) == 0) {
-			DBG("found applet by short name %s", applets[i].name);
 			argv0 = applets[i].name + 1;
 			return applets[i].func;
 		}

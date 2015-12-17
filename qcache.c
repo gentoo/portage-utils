@@ -912,9 +912,6 @@ int qcache_main(int argc, char **argv)
 {
 	int i, action = 0;
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-		argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
 	while ((i = GETOPT_LONG(QCACHE, qcache, "")) != -1) {
 		switch (i) {
 			case 'p': qcache_matchpkg = optarg; break;

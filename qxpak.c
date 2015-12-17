@@ -379,9 +379,6 @@ int qxpak_main(int argc, char **argv)
 	char *xpak;
 	char action = XPAK_ACT_NONE;
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
 	dir_fd = AT_FDCWD;
 	xpak_stdout = 0;
 

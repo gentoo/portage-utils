@@ -592,7 +592,8 @@ _q_static void read_portage_env_file(const char *configroot, const char *file, e
 	FILE *fp;
 	char *buf, *s, *p;
 
-	IF_DEBUG(fprintf(stderr, "profile %s\n", file));
+	if (getenv("DEBUG"))
+		fprintf(stderr, "profile %s\n", file);
 
 	configroot_len = strlen(configroot);
 	file_len = strlen(file);
@@ -885,7 +886,7 @@ void initialize_portage_env(void)
 		}
 	}
 
-	if (getenv("DEBUG") IF_DEBUG(|| 1)) {
+	if (getenv("DEBUG")) {
 		for (i = 0; vars_to_read[i].name; ++i) {
 			var = &vars_to_read[i];
 			fprintf(stderr, "%s = ", var->name);

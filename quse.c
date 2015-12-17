@@ -242,9 +242,6 @@ int quse_main(int argc, char **argv)
 	size_t n;
 	const char *overlay;
 
-	DBG("argc=%d argv[0]=%s argv[1]=%s",
-	    argc, argv[0], argc > 1 ? argv[1] : "NULL?");
-
 	while ((i = GETOPT_LONG(QUSE, quse, "")) != -1) {
 		switch (i) {
 		case 'e': regexp_matching = 0; break;
