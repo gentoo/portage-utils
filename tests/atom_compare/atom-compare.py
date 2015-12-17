@@ -1,6 +1,12 @@
 #!/usr/bin/python
 
-import sys,portage
+from __future__ import print_function
+
+import sys
+try:
+	import portage
+except ImportError:
+	sys.exit(77)
 
 i = 1
 while i < len(sys.argv):

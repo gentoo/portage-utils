@@ -1,0 +1,20 @@
+# Travis build integration.
+# https://docs.travis-ci.com/
+
+language: c
+compiler:
+  - clang
+  - gcc
+
+sudo: false
+
+os:
+  - linux
+
+addons:
+  apt:
+    packages:
+
+before_install:
+  - ./travis/install-iniparser.sh
+script: ./travis/main.sh

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# TODO: Make these work with local vdb instead of requiring /.
+if [[ -n ${TRAVIS_OS_NAME} ]] ; then
+	echo "TODO: Make it work on non-Gentoo system"
+	exit 0
+fi
+
 . ../init.sh || exit 1
 
 set -e

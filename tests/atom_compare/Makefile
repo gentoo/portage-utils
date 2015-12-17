@@ -4,15 +4,26 @@ include ../subdir.mk
 all: test
 
 test check: static static.q portage
-	diff -u $(s)/static.good $(b)/static
-	diff -u $(s)/static.q.good $(b)/static.q
-	diff -u $(s)/static.good $(b)/portage
 
 t = \
-	set -f && \
+	@set -f && \
 	$(call mkdir,$(b)) && \
-	$(realpath $(lastword $^)) $(1) `sed 's:\#.*::' $<` \
-	> $(@:.tests=)
+	good=`echo $< | sed 's:.tests:.good:'`; \
+	out=$(@:.tests=); \
+	ret=0; \
+	$(realpath $(lastword $^)) $(1) `sed 's:\#.*::' $<` > $$out || ret=$$?; \
+	case $$ret in \
+	0) \
+		if diff -u $$good $$out; then \
+			echo "PASS atom_compare $$out"; \
+		else \
+			echo "FAIL atom_compare $$out"; \
+		fi;; \
+	77) echo "SKIP atom_compare $$out"; ret=0;; \
+	*) echo "FAIL atom_compare $$out";; \
+	esac; \
+	[ $$ret -eq 0 ] && rm -f $$out; \
+	exit $$ret
 
 static: $(s)/static.tests $(atb)/q
 	$(call t,atom -c)

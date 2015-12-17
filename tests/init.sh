@@ -24,7 +24,7 @@ setup_env() {
 	: ${as:=${ats}/tests/${a}}
 
 	if [[ -z ${GOOD} ]] && [[ -d ${ats}/.git ]] ; then
-		eval $(eval_ecolors) 2>/dev/null
+		eval $(eval_ecolors 2>/dev/null)
 	fi
 }
 setup_env

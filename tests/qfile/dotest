@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# TODO: Make these work with local vdb instead of requiring /.
+if [[ -n ${TRAVIS_OS_NAME} ]] ; then
+	echo "TODO: Make it work on non-Gentoo system"
+	exit 0
+fi
+
 . ../init.sh || exit 1
 
 tests=(
@@ -9,10 +15,10 @@ tests=(
 	"q file -Co /bin/bash /bin/XXXXX"
 	"/bin/XXXXX"
 
-	"echo -e \"/bin/bash\n/bin/XXXXX\" | q file -Cq -f -"
+	"printf \"/bin/bash\n/bin/XXXXX\" | q file -Cq -f -"
 	"app-shells/bash"
 
-	"echo -e \"/bin/bash\n/bin/XXXXX\" | q file -Co -f -"
+	"printf \"/bin/bash\n/bin/XXXXX\" | q file -Co -f -"
 	"/bin/XXXXX"
 
 	"q file -Co -x bash /bin/bash"
