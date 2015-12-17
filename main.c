@@ -1071,15 +1071,19 @@ ret:
 void reinitialize_as_needed(void)
 {
 	size_t n;
-	const char *overlay;
+	const char *overlay, *ret = ret;
 
 	if (reinitialize)
-		array_for_each(overlays, n, overlay)
-			initialize_flat(overlay, CACHE_EBUILD, true);
+		array_for_each(overlays, n, overlay) {
+			ret = initialize_flat(overlay, CACHE_EBUILD, true);
+			IF_DEBUG(free((void *)ret));
+		}
 
 	if (reinitialize_metacache)
-		array_for_each(overlays, n, overlay)
-			initialize_flat(overlay, CACHE_METADATA, true);
+		array_for_each(overlays, n, overlay) {
+			ret = initialize_flat(overlay, CACHE_METADATA, true);
+			IF_DEBUG(free((void *)ret));
+		}
 }
 
 typedef struct {
