@@ -37,7 +37,7 @@ static const char * const qcheck_opts_help[] = {
 };
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
 
-#define qcprintf(fmt, args...) if (!state->bad_only) printf(_(fmt), ## args)
+#define qcprintf(fmt, args...) do { if (!state->bad_only) printf(_(fmt), ## args); } while (0)
 
 struct qcheck_opt_state {
 	int argc;
@@ -125,7 +125,10 @@ static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_sta
 		if (fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd, e->name + 1, &st, AT_SYMLINK_NOFOLLOW)) {
 			/* make sure file exists */
 			if (state->chk_afk) {
-				qcprintf(" %sAFK%s: %s\n", RED, NORM, e->name);
+				if (errno == ENOENT)
+					qcprintf(" %sAFK%s: %s\n", RED, NORM, e->name);
+				else
+					qcprintf(" %sERROR (%s)%s: %s\n", RED, strerror(errno), NORM, e->name);
 			} else {
 				--num_files;
 				++num_files_ignored;
