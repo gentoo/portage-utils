@@ -265,6 +265,9 @@ show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
 			continue;
 		*p = 0;
 		q = p + 3;
+		/* Make sure there's leading white space and not a truncated string. #573106 */
+		if (p[1] != ' ' || p[2] != ' ')
+			continue;
 
 		t = (time_t) atol(buf);
 
