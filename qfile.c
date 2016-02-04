@@ -8,16 +8,10 @@
 
 #ifdef APPLET_qfile
 
-#define QFILE_MAX_MAX_ARGS 5000000
-#define QFILE_DEFAULT_MAX_ARGS 5000
-#define QFILE_DEFAULT_MAX_ARGS_STR "5000"
-
-#define QFILE_FLAGS "bef:m:oRx:S" COMMON_FLAGS
+#define QFILE_FLAGS "beoRx:S" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"slots",       no_argument, NULL, 'S'},
 	{"root-prefix", no_argument, NULL, 'R'},
-	{"from",         a_argument, NULL, 'f'},
-	{"max-args",     a_argument, NULL, 'm'},
 	{"basename",    no_argument, NULL, 'b'},
 	{"orphans",     no_argument, NULL, 'o'},
 	{"exclude",      a_argument, NULL, 'x'},
@@ -27,8 +21,6 @@ static struct option const qfile_long_opts[] = {
 static const char * const qfile_opts_help[] = {
 	"Display installed packages with slots",
 	"Assume arguments are already prefixed by $ROOT",
-	"Read arguments from file <arg> (\"-\" for stdin)",
-	"Treat from file arguments by groups of <arg> (defaults to " QFILE_DEFAULT_MAX_ARGS_STR ")",
 	"Match any component of the path",
 	"List orphan files",
 	"Don't look in package <arg> (used with --orphans)",
@@ -402,10 +394,6 @@ int qfile_main(int argc, char **argv)
 	};
 	int i, nb_of_queries, found = 0;
 	char *p;
-	int qargc = 0;
-	char **qargv = NULL;
-	FILE *args_file = NULL;
-	int max_args = QFILE_DEFAULT_MAX_ARGS;
 
 	while ((i = GETOPT_LONG(QFILE, qfile, "")) != -1) {
 		switch (i) {
@@ -413,31 +401,6 @@ int qfile_main(int argc, char **argv)
 			case 'S': state.slotted = true; break;
 			case 'b': state.basename = true; break;
 			case 'e': state.exact = true; break;
-			case 'f':
-				if (args_file)
-					err("Don't use -f twice!");
-				if (strcmp(optarg, "-") == 0)
-					args_file = stdin;
-				else if ((args_file = fopen(optarg, "r")) == NULL) {
-					warnp("%s", optarg);
-					goto exit;
-				}
-				break;
-			case 'm':
-				errno = 0;
-				max_args = strtol(optarg, &p, 10);
-				if (errno != 0) {
-					warnp("%s: not a valid integer", optarg);
-					goto exit;
-				} else if (p == optarg || *p != '\0') {
-					warn("%s: not a valid integer", optarg);
-					goto exit;
-				}
-				if (max_args <= 0 || max_args > QFILE_MAX_MAX_ARGS) {
-					warn("%s: silly value!", optarg);
-					goto exit;
-				}
-				break;
 			case 'o': state.orphans = true; break;
 			case 'R': state.assume_root_prefix = true; break;
 			case 'x':
@@ -454,20 +417,11 @@ int qfile_main(int argc, char **argv)
 	}
 	if (!state.exact && verbose)
 		state.exact = true;
-	if ((argc == optind) && (args_file == NULL))
+	if (argc == optind)
 		qfile_usage(EXIT_FAILURE);
 
-	if ((args_file == NULL) && (max_args != QFILE_DEFAULT_MAX_ARGS))
-		warn("--max-args is only used when reading arguments from a file (with -f)");
-
-	/* Are we using --from ? */
-	if (args_file == NULL) {
-		qargc = argc - optind;
-		qargv = argv + optind;
-	} else {
-		qargc = 0;
-		qargv = xcalloc(max_args, sizeof(char*));
-	}
+	argc -= optind;
+	argv += optind;
 
 	state.buf = xmalloc(state.buflen);
 	if (state.assume_root_prefix) {
@@ -504,62 +458,25 @@ int qfile_main(int argc, char **argv)
 	state.real_root = p;
 	state.real_root_len = strlen(p);
 
-	do { /* This block may be repeated if using --from with a big files list */
-		if (args_file) {
-			/* Read up to max_args files from the input file */
-			for (i = 0; i < qargc; ++i)
-				free(qargv[i]);
-			qargc = 0;
-			size_t linelen;
-			while ((linelen = getline(&state.buf, &state.buflen, args_file)) != -1) {
-				rmspace_len(state.buf, linelen);
-				if (state.buf[0] == '\0')
-					continue;
-				qargv[qargc] = xstrdup(state.buf);
-				if (++qargc >= max_args)
+	/* Prepare the qfile(...) arguments structure */
+	nb_of_queries = prepare_qfile_args(argc, (const char **) argv, &state);
+	/* Now do the actual `qfile` checking */
+	if (nb_of_queries > 0)
+		found += q_vdb_foreach_pkg(qfile_cb, &state, NULL);
+
+	if (state.args.non_orphans) {
+		/* display orphan files */
+		for (i = 0; i < state.args.length; i++) {
+			if (state.args.non_orphans[i])
+				continue;
+			if (state.args.basenames[i]) {
+				found = 0; /* ~inverse return code (as soon as an orphan is found, return non-zero) */
+				if (!quiet)
+					puts(argv[i]);
+				else
 					break;
 			}
 		}
-		if (qargc == 0)
-			break;
-
-		/* Prepare the qfile(...) arguments structure */
-		nb_of_queries = prepare_qfile_args(qargc, (const char **) qargv, &state);
-		if (nb_of_queries < 0)
-			break;
-
-		/* Now do the actual `qfile` checking */
-		if (nb_of_queries)
-			found += q_vdb_foreach_pkg(qfile_cb, &state, NULL);
-
-		if (state.args.non_orphans) {
-			/* display orphan files */
-			for (i = 0; i < state.args.length; i++) {
-				if (state.args.non_orphans[i])
-					continue;
-				if (state.args.basenames[i]) {
-					found = 0; /* ~inverse return code (as soon as an orphan is found, return non-zero) */
-					if (!quiet)
-						puts(qargv[i]);
-					else
-						break;
-				}
-			}
-		}
-
-		destroy_qfile_args(&state.args);
-	} while (args_file && qargc == max_args);
-
- exit:
-	if (args_file) {
-		if (qargv) {
-			for (i = 0; i < qargc; ++i)
-				free(qargv[i]);
-			free(qargv);
-		}
-
-		if (args_file != stdin)
-			fclose(args_file);
 	}
 
 	destroy_qfile_args(&state.args);

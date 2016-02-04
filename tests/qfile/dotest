@@ -15,12 +15,6 @@ tests=(
 	"q file -Co /bin/bash /bin/XXXXX"
 	"/bin/XXXXX"
 
-	"printf \"/bin/bash\n/bin/XXXXX\" | q file -Cq -f -"
-	"app-shells/bash"
-
-	"printf \"/bin/bash\n/bin/XXXXX\" | q file -Co -f -"
-	"/bin/XXXXX"
-
 	"q file -Co -x bash /bin/bash"
 	"/bin/bash"
 
