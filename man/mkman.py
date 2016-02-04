@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 """Generate man pages for the q applets"""
 
@@ -25,7 +26,7 @@ Q = os.path.join(TOPDIR, 'q')
 def FindApplets():
     """Return a list of all supported applets"""
     applets = os.path.join(TOPDIR, 'applets.sh')
-    return subprocess.check_output([applets]).splitlines()
+    return subprocess.check_output([applets]).decode('ascii').splitlines()
 
 
 COMMON_AUTHORS = [
@@ -61,7 +62,7 @@ def MkMan(applets, applet, output):
 
     # Extract the main use string and description:
     # Usage: q <applet> <args>  : invoke a portage utility applet
-    ahelp = subprocess.check_output([Q, applet, '--help'])
+    ahelp = subprocess.check_output([Q, applet, '--help']).decode('ascii')
     lines = ahelp.splitlines()
     m = re.search(r'^Usage: %s (.*) : (.*)' % applet, ahelp)
     usage = m.group(1)
@@ -77,7 +78,7 @@ def MkMan(applets, applet, output):
 
     # Extract all the options
     options = []
-    for line, i in zip(lines, xrange(len(lines))):
+    for line, i in zip(lines, range(len(lines))):
         if not line.startswith('Options: '):
             continue
 
