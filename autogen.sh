@@ -13,6 +13,7 @@ fi
 PATH=/usr/local/src/gnu/gnulib:${PATH}
 mods="
 	alloca
+	dirent
 	faccessat
 	fdopendir
 	fstatat
