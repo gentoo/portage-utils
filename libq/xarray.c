@@ -24,24 +24,37 @@ typedef struct {
 #define array_cnt(arr) (arr)->num
 #define DECLARE_ARRAY(arr) array_t _##arr = array_init_decl, *arr = &_##arr
 
-static void *xarraypush(array_t *arr, const void *ele, size_t ele_len)
+/* Push a pointer to memory we already hold and don't want to release.  Do not
+ * mix xarraypush_ptr usage with the other push funcs which duplicate memory.
+ * The free stage won't know which pointers to release directly.
+ */
+static void *xarraypush_ptr(array_t *arr, void *ele)
 {
-	void *nele;
 	size_t n = arr->num++;
 	arr->eles = xrealloc_array(arr->eles, arr->num, sizeof(ele));
-	arr->eles[n] = nele = xmemdup(ele, ele_len);
-	return nele;
+	arr->eles[n] = ele;
+	return ele;
+}
+static void *xarraypush(array_t *arr, const void *ele, size_t ele_len)
+{
+	return xarraypush_ptr(arr, xmemdup(ele, ele_len));
 }
 #define xarraypush_str(arr, ele) xarraypush(arr, ele, strlen(ele) + 1 /*NUL*/)
+#define xarraypush_struct(arr, ele) xarraypush(arr, ele, sizeof(*(ele)))
 
-static void xarrayfree(array_t *arr)
+/* Useful for people who call xarraypush_ptr as it does not free any of the
+ * pointers in the eles list.
+ */
+static void xarrayfree_int(array_t *arr)
 {
 	array_t blank = array_init_decl;
+	free(arr->eles);
+	*arr = blank;
+}
+static void xarrayfree(array_t *arr)
+{
 	size_t n;
-
 	for (n = 0; n < arr->num; ++n)
 		free(arr->eles[n]);
-	free(arr->eles);
-
-	*arr = blank;
+	xarrayfree_int(arr);
 }

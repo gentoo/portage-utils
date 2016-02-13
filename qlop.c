@@ -235,14 +235,15 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 }
 
 _q_static void
-show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
+show_emerge_history(int listflag, array_t *atoms, const char *logfile)
 {
 	FILE *fp;
 	size_t buflen, linelen;
 	char *buf, merged;
 	char *p, *q;
-	int i;
+	size_t i;
 	time_t t;
+	depend_atom *atom, *logatom;
 
 	if ((fp = fopen(logfile, "r")) == NULL) {
 		warnp("Could not open logfile '%s'", logfile);
@@ -252,12 +253,6 @@ show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
 	buf = NULL;
 	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
 		if (linelen < 30)
-			continue;
-
-		for (i = 0; i < argc; ++i)
-			if (strstr(buf, argv[i]) != NULL)
-				break;
-		if (argc && i == argc)
 			continue;
 
 		rmspace_len(buf, linelen);
@@ -286,18 +281,23 @@ show_emerge_history(char listflag, int argc, char **argv, const char *logfile)
 			q = p + 2;
 		} else
 			continue;
-		if (!quiet)
-			printf("%s %s %s%s%s\n", chop_ctime(t), (merged ? ">>>" : "<<<"), (merged ? GREEN : RED), q, NORM);
-		else {
-			depend_atom *atom;
-			atom = atom_explode(q);
-			if (quiet == 1)
-				printf("%s ", chop_ctime(t));
-			if (quiet <= 2)
-				printf("%s ", (merged ? ">>>" : "<<<"));
-			printf("%s%s/%s%s\n", (merged ? GREEN : RED), atom->CATEGORY, atom->PN, NORM);
-			atom_implode(atom);
+
+		logatom = atom_explode(q);
+		array_for_each(atoms, i, atom) {
+			if (atom_compare(atom, logatom) != EQUAL)
+				continue;
+
+			if (!quiet)
+				printf("%s %s %s%s%s\n", chop_ctime(t), (merged ? ">>>" : "<<<"), (merged ? GREEN : RED), q, NORM);
+			else {
+				if (quiet == 1)
+					printf("%s ", chop_ctime(t));
+				if (quiet <= 2)
+					printf("%s ", (merged ? ">>>" : "<<<"));
+				printf("%s%s/%s%s\n", (merged ? GREEN : RED), logatom->CATEGORY, logatom->PN, NORM);
+			}
 		}
+		atom_implode(logatom);
 	}
 
 	free(buf);
@@ -642,9 +642,13 @@ void show_current_emerge(void)
 
 int qlop_main(int argc, char **argv)
 {
-	int i, average = 1;
+	size_t i;
+	int average = 1;
 	char do_time, do_list, do_unlist, do_sync, do_current, do_human_readable = 0;
 	char *logfile = NULL;
+	int flags;
+	depend_atom *atom;
+	DECLARE_ARRAY(atoms);
 
 	do_time = do_list = do_unlist = do_sync = do_current = 0;
 
@@ -672,13 +676,22 @@ int qlop_main(int argc, char **argv)
 
 	argc -= optind;
 	argv += optind;
+	for (i = 0; i < argc; ++i) {
+		atom = atom_explode(argv[i]);
+		if (!atom)
+			warn("invalid atom: %s", argv[i]);
+		else
+			xarraypush_ptr(atoms, atom);
+	}
 
-	if (do_list && do_unlist)
-		show_emerge_history(QLOP_LIST | QLOP_UNLIST, argc, argv, logfile);
-	else if (do_list)
-		show_emerge_history(QLOP_LIST, argc, argv, logfile);
-	else if (do_unlist)
-		show_emerge_history(QLOP_UNLIST, argc, argv, logfile);
+	flags = 0;
+	if (do_list)
+		flags |= QLOP_LIST;
+	if (do_unlist)
+		flags |= QLOP_UNLIST;
+	if (flags)
+		show_emerge_history(flags, atoms, logfile);
+
 	if (do_current)
 		show_current_emerge();
 	if (do_sync)
@@ -689,6 +702,9 @@ int qlop_main(int argc, char **argv)
 			show_merge_times(argv[i], logfile, average, do_human_readable);
 	}
 
+	array_for_each(atoms, i, atom)
+		atom_implode(atom);
+	xarrayfree_int(atoms);
 	free(logfile);
 
 	return EXIT_SUCCESS;
