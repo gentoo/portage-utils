@@ -25,6 +25,7 @@ mods="
 	readlinkat
 	renameat
 	stat-time
+	stpcpy
 	strcasestr-simple
 	strncat
 	symlinkat
