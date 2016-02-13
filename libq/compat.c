@@ -1,9 +1,6 @@
 /* Solaris compatible code */
 #ifdef __sun__
 
-#include <string.h>
-#include <ctype.h>
-#include <alloca.h>
 #include <sys/dklabel.h>
 
 #define S_BLKSIZE DK_DEVID_BLKSIZE
