@@ -31,9 +31,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <getopt.h>
-#ifndef __INTERIX
 #include <inttypes.h>
-#endif
 #include <libgen.h>
 #include <limits.h>
 #include <regex.h>

@@ -20,6 +20,7 @@ mods="
 	futimens
 	getline
 	getopt-posix
+	inttypes
 	mkdirat
 	openat
 	progname
