@@ -2,7 +2,7 @@
 
 . ../init.sh || exit 1
 
-: ${PORTDIR:=$(portageq envvar PORTDIR)}
+PORTDIR=$(DEBUG=: q -Ch 2>&1 | grep ^PORTDIR | awk '{print $NF}')
 pushd "${PORTDIR}"/metadata/md5-cache >/dev/null || { echo SKIPPED; exit 0 ; }
 
 if [[ $1 == -v ]] ; then
