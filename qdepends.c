@@ -381,8 +381,7 @@ char *dep_flatten_tree(const dep_node *root)
 }
 
 struct qdepends_opt_state {
-	int argc;
-	char **argv;
+	array_t *atoms;
 	const char *depend_file;
 	const char *query;
 };
@@ -392,42 +391,44 @@ _q_static int qdepends_main_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	struct qdepends_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;
 	const char *pkgname = pkg_ctx->name;
-	size_t len;
-	int i;
+	size_t i, len;
+	int ret;
 	char *ptr;
 	char buf[_Q_PATH_MAX];
 	static char *depend, *use;
 	static size_t depend_len, use_len;
+	depend_atom *atom, *datom;
 	dep_node *dep_tree;
 
+	datom = NULL;
+	ret = 0;
+
 	/* see if this cat/pkg is requested */
-	for (i = optind; i < state->argc; ++i) {
+	array_for_each(state->atoms, i, atom) {
+		bool matched = false;
 		snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
-		if (rematch(state->argv[i], buf, REG_EXTENDED) == 0)
-			break;
-		if (rematch(state->argv[i], pkgname, REG_EXTENDED) == 0)
-			break;
+		datom = atom_explode(buf);
+		if (datom) {
+			matched = (atom_compare(atom, datom) == EQUAL);
+			if (matched)
+				goto matched;
+		}
+		atom_implode(datom);
 	}
-	if (i == state->argc)
-		return 0;
+	return ret;
+ matched:
 
 	if (!q_vdb_pkg_eat(pkg_ctx, state->depend_file, &depend, &depend_len))
-		return 0;
+		goto done;
 
 	dep_tree = dep_grow_tree(depend);
 	if (dep_tree == NULL)
-		return 0;
+		goto done;
 
-	if (qdep_name_only) {
-		depend_atom *atom = NULL;
-		snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
-		if ((atom = atom_explode(buf)) != NULL) {
-			printf("%s%s/%s%s%s: ", BOLD, catname, BLUE, atom->PN, NORM);
-			atom_implode(atom);
-		}
-	} else {
+	if (qdep_name_only)
+		printf("%s%s/%s%s%s: ", BOLD, catname, BLUE, atom->PN, NORM);
+	else
 		printf("%s%s/%s%s%s: ", BOLD, catname, BLUE, pkgname, NORM);
-	}
 
 	if (!q_vdb_pkg_eat(pkg_ctx, "USE", &use, &use_len)) {
 		warn("Could not eat_file(%s), you'll prob have incorrect output", buf);
@@ -454,7 +455,11 @@ _q_static int qdepends_main_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 	dep_burn_tree(dep_tree);
 
-	return 1;
+	ret = 1;
+
+ done:
+	atom_implode(datom);
+	return ret;
 }
 
 _q_static int qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
@@ -516,12 +521,14 @@ _q_static int qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 int qdepends_main(int argc, char **argv)
 {
+	depend_atom *atom;
+	DECLARE_ARRAY(atoms);
 	struct qdepends_opt_state state = {
-		.argc = argc,
-		.argv = argv,
+		.atoms = atoms,
 	};
 	q_vdb_pkg_cb *cb;
-	int i, ret;
+	size_t i;
+	int ret;
 	bool do_format = false;
 	const char *query = NULL;
 	const char *depend_file;
@@ -556,9 +563,24 @@ int qdepends_main(int argc, char **argv)
 		return EXIT_SUCCESS;
 	}
 
+	argc -= optind;
+	argv += optind;
+
 	state.depend_file = depend_file;
 	state.query = query;
-	cb = query ? qdepends_vdb_deep_cb : qdepends_main_vdb_cb;
+	if (query)
+		cb = qdepends_vdb_deep_cb;
+	else {
+		cb = qdepends_main_vdb_cb;
+
+		for (i = 0; i < argc; ++i) {
+			atom = atom_explode(argv[i]);
+			if (!atom)
+				warn("invalid atom: %s", argv[i]);
+			else
+				xarraypush_ptr(atoms, atom);
+		}
+	}
 
 	if (!depend_file) {
 		ret = 0;
@@ -569,6 +591,10 @@ int qdepends_main(int argc, char **argv)
 		}
 	} else
 		ret = q_vdb_foreach_pkg(cb, &state, NULL);
+
+	array_for_each(atoms, i, atom)
+		atom_implode(atom);
+	xarrayfree_int(atoms);
 
 	if (!ret && !quiet)
 		warn("no matches found for your query");
