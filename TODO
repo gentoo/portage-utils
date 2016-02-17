@@ -42,7 +42,6 @@
 
 - qdepends:
 	- support querying uninstalled packages (via metadata/md5 cache)
-	- verify version matching works: qdepend =nano-2*
 
 - env vars only get expanded once, so this fails:
 	ACCEPT_LICENSE="foo"
@@ -55,6 +54,3 @@
 	- add a verbose output that describes why a package is cleaned
 		- newer binpkgs available
 		- newer installed version available
-
-- qlop:
-	- support atoms and version qualifiers `qlop '>gnuconfig-2015'`
