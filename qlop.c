@@ -241,6 +241,7 @@ show_emerge_history(int listflag, array_t *atoms, const char *logfile)
 	size_t buflen, linelen;
 	char *buf, merged;
 	char *p, *q;
+	bool showit;
 	size_t i;
 	time_t t;
 	depend_atom *atom, *logatom;
@@ -283,10 +284,17 @@ show_emerge_history(int listflag, array_t *atoms, const char *logfile)
 			continue;
 
 		logatom = atom_explode(q);
-		array_for_each(atoms, i, atom) {
-			if (atom_compare(atom, logatom) != EQUAL)
-				continue;
+		if (array_cnt(atoms)) {
+			showit = false;
+			array_for_each(atoms, i, atom)
+				if (atom_compare(atom, logatom) == EQUAL) {
+					showit = true;
+					break;
+				}
+		} else
+			showit = true;
 
+		if (showit) {
 			if (!quiet)
 				printf("%s %s %s%s%s\n", chop_ctime(t), (merged ? ">>>" : "<<<"), (merged ? GREEN : RED), q, NORM);
 			else {

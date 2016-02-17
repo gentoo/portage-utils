@@ -22,8 +22,20 @@ test() {
 # We output dates, so make sure it matches our logs.
 export LC_TIME="C"
 
-# simple install check
+# simple sync check
 test 01 0 "qlop -s -f ${as}/sync.log"
+
+# check all installed pkgs
+test 02 0 "qlop -l -f ${as}/sync.log"
+
+# check all uninstalled pkgs
+test 03 0 "qlop -u -f ${as}/sync.log"
+
+# verify atom parsing works (and not partial strings)
+test 04 0 "qlop -l gcc -f ${as}/sync.log"
+
+# verify atom version parsing works
+test 05 0 "qlop -l '<gcc-5' -f ${as}/sync.log"
 
 cleantmpdir
 

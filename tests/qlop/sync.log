@@ -1,3 +1,49 @@
+1098946153: Started emerge on: Oct 28, 2004 06:49:13
+1098946153:  *** emerge --buildpkg --usepkg --oneshot --nodeps ccache
+1098946153:  >>> emerge (1 of 1) dev-util/ccache-2.3 to /
+1098946153:  === (1 of 1) Merging Binary (dev-util/ccache-2.3::/usr/portage/packages/All/ccache-2.3.tbz2)
+1098946154:  >>> AUTOCLEAN: dev-util/ccache
+1098946154:  --- AUTOCLEAN: Nothing unmerged.
+1098946154:  ::: completed emerge (1 of 1) dev-util/ccache-2.3 to /
+1098946154:  *** Finished. Cleaning up...
+1098946154:  *** exiting successfully.
+1098946154:  *** terminating.
+
+1106805388: Started emerge on: Jan 27, 2005 05:56:28
+1106805388:  *** emerge  gcc
+1106805388:  >>> emerge (1 of 2) sys-devel/gcc-config-1.3.9 to /
+1106805388:  === (1 of 2) Cleaning (sys-devel/gcc-config-1.3.9::/usr/portage/sys-devel/gcc-config/gcc-config-1.3.9.ebuild)
+1106805388:  === (1 of 2) Compiling/Merging (sys-devel/gcc-config-1.3.9::/usr/portage/sys-devel/gcc-config/gcc-config-1.3.9.ebuild)
+1106805393:  === (1 of 2) Post-Build Cleaning (sys-devel/gcc-config-1.3.9::/usr/portage/sys-devel/gcc-config/gcc-config-1.3.9.ebuild)
+1106805393:  >>> AUTOCLEAN: sys-devel/gcc-config
+1106805398: === Unmerging... (sys-devel/gcc-config-1.3.6-r3)
+1106805399:  >>> unmerge success: sys-devel/gcc-config-1.3.6-r3
+1106805399:  ::: completed emerge (1 of 2) sys-devel/gcc-config-1.3.9 to /
+1106805399:  >>> emerge (2 of 2) sys-devel/gcc-3.4.3-r1 to /
+1106805399:  === (2 of 2) Cleaning (sys-devel/gcc-3.4.3-r1::/usr/portage/sys-devel/gcc/gcc-3.4.3-r1.ebuild)
+1106805399:  === (2 of 2) Compiling/Merging (sys-devel/gcc-3.4.3-r1::/usr/portage/sys-devel/gcc/gcc-3.4.3-r1.ebuild)
+1106805477: Started emerge on: Jan 27, 2005 05:57:57
+1106805477:  *** emerge  unmerge pam pam-login
+1106805482: === Unmerging... (sys-apps/pam-login-3.14)
+1106805484:  >>> unmerge success: sys-apps/pam-login-3.14
+1106805484: === Unmerging... (sys-libs/pam-0.77-r1)
+1106805486:  >>> unmerge success: sys-libs/pam-0.77-r1
+1106805487:  *** exiting successfully.
+1106805487:  *** terminating.
+1106805490: Started emerge on: Jan 27, 2005 05:58:10
+1106805490:  *** emerge  unmerge devfsd
+1106805495: === Unmerging... (sys-fs/devfsd-1.3.25-r8)
+1106805496:  >>> unmerge success: sys-fs/devfsd-1.3.25-r8
+1106805497:  *** exiting successfully.
+1106805497:  *** terminating.
+1106806630:  === (2 of 2) Post-Build Cleaning (sys-devel/gcc-3.4.3-r1::/usr/portage/sys-devel/gcc/gcc-3.4.3-r1.ebuild)
+1106806630:  >>> AUTOCLEAN: sys-devel/gcc
+1106806630:  --- AUTOCLEAN: Nothing unmerged.
+1106806630:  ::: completed emerge (2 of 2) sys-devel/gcc-3.4.3-r1 to /
+1106806630:  *** Finished. Cleaning up...
+1106806630:  *** exiting successfully.
+1106806630:  *** terminating.
+
 1106804103: Started emerge on: Jan 27, 2005 05:35:03
 1106804103:  *** emerge  sync
 1106804103:  === sync
