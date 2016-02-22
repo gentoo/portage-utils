@@ -38,7 +38,7 @@ int qsize_main(int argc, char **argv)
 	q_vdb_ctx *ctx;
 	q_vdb_cat_ctx *cat_ctx;
 	q_vdb_pkg_ctx *pkg_ctx;
-	int i;
+	size_t i;
 	char search_all = 0;
 	struct stat st;
 	char fs_size = 0, summary = 0, summary_only = 0;
@@ -50,7 +50,7 @@ int qsize_main(int argc, char **argv)
 	size_t buflen;
 	char *buf;
 	char filename[_Q_PATH_MAX], *filename_root;
-	queue *ignore_regexp = NULL;
+	DECLARE_ARRAY(ignore_regexp);
 
 	while ((i = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
 		switch (i) {
@@ -62,7 +62,12 @@ int qsize_main(int argc, char **argv)
 		case 'm': disp_units = MEGABYTE; str_disp_units = "MiB"; break;
 		case 'k': disp_units = KILOBYTE; str_disp_units = "KiB"; break;
 		case 'b': disp_units = 1; str_disp_units = "bytes"; break;
-		case 'i': ignore_regexp = add_set(optarg, ignore_regexp); break;
+		case 'i': {
+			regex_t regex;
+			xregcomp(&regex, optarg, REG_EXTENDED|REG_NOSUB);
+			xarraypush(ignore_regexp, &regex, sizeof(regex));
+			break;
+		}
 		}
 	}
 	if ((argc == optind) && !search_all)
@@ -105,19 +110,18 @@ int qsize_main(int argc, char **argv)
 			num_ignored = num_files = num_nonfiles = num_bytes = 0;
 			while (getline(&buf, &buflen, fp) != -1) {
 				contents_entry *e;
-				queue *ll;
+				regex_t *regex;
 				int ok = 0;
 
 				e = contents_parse_line(buf);
 				if (!e)
 					continue;
 
-				for (ll = ignore_regexp; ll != NULL; ll = ll->next) {
-					if (rematch(ll->name, e->name, REG_EXTENDED) == 0) {
+				array_for_each(ignore_regexp, i, regex)
+					if (!regexec(regex, buf, 0, NULL, 0)) {
 						num_ignored += 1;
 						ok = 1;
 					}
-				}
 				if (ok)
 					continue;
 
@@ -174,7 +178,7 @@ int qsize_main(int argc, char **argv)
 			       decimal_point,
 			       (unsigned long)(((num_all_bytes%MEGABYTE)*1000)/MEGABYTE));
 	}
-	free_sets(ignore_regexp);
+	xarrayfree(ignore_regexp);
 	return EXIT_SUCCESS;
 }
 
