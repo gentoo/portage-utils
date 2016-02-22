@@ -8,10 +8,9 @@
 
 #ifdef APPLET_qsize
 
-#define QSIZE_FLAGS "fasSmkbi:" COMMON_FLAGS
+#define QSIZE_FLAGS "fsSmkbi:" COMMON_FLAGS
 static struct option const qsize_long_opts[] = {
 	{"filesystem", no_argument, NULL, 'f'},
-	{"all",        no_argument, NULL, 'a'},
 	{"sum",        no_argument, NULL, 's'},
 	{"sum-only",   no_argument, NULL, 'S'},
 	{"megabytes",  no_argument, NULL, 'm'},
@@ -22,7 +21,6 @@ static struct option const qsize_long_opts[] = {
 };
 static const char * const qsize_opts_help[] = {
 	"Show size used on disk",
-	"Size all installed packages",
 	"Include a summary",
 	"Show just the summary",
 	"Display size in megabytes",
@@ -39,7 +37,6 @@ int qsize_main(int argc, char **argv)
 	q_vdb_cat_ctx *cat_ctx;
 	q_vdb_pkg_ctx *pkg_ctx;
 	size_t i;
-	char search_all = 0;
 	struct stat st;
 	char fs_size = 0, summary = 0, summary_only = 0;
 	size_t num_all_files, num_all_nonfiles, num_all_ignored;
@@ -50,13 +47,14 @@ int qsize_main(int argc, char **argv)
 	size_t buflen;
 	char *buf;
 	char filename[_Q_PATH_MAX], *filename_root;
+	depend_atom *atom;
+	DECLARE_ARRAY(atoms);
 	DECLARE_ARRAY(ignore_regexp);
 
 	while ((i = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsize)
 		case 'f': fs_size = 1; break;
-		case 'a': search_all = 1; break;
 		case 's': summary = 1; break;
 		case 'S': summary = summary_only = 1; break;
 		case 'm': disp_units = MEGABYTE; str_disp_units = "MiB"; break;
@@ -70,8 +68,16 @@ int qsize_main(int argc, char **argv)
 		}
 		}
 	}
-	if ((argc == optind) && !search_all)
-		qsize_usage(EXIT_FAILURE);
+
+	argc -= optind;
+	argv += optind;
+	for (i = 0; i < argc; ++i) {
+		atom = atom_explode(argv[i]);
+		if (!atom)
+			warn("invalid atom: %s", argv[i]);
+		else
+			xarraypush_ptr(atoms, atom);
+	}
 
 	num_all_bytes = num_all_files = num_all_nonfiles = num_all_ignored = 0;
 
@@ -91,18 +97,24 @@ int qsize_main(int argc, char **argv)
 		while ((pkg_ctx = q_vdb_next_pkg(cat_ctx))) {
 			const char *pkgname = pkg_ctx->name;
 			FILE *fp;
+			bool showit = false;
+
 			/* see if this cat/pkg is requested */
-			if (!search_all) {
-				for (i = optind; i < argc; ++i) {
-					snprintf(buf, buflen, "%s/%s", catname, pkgname);
-					if (rematch(argv[i], buf, REG_EXTENDED) == 0)
+			if (array_cnt(atoms)) {
+				depend_atom *qatom;
+
+				snprintf(buf, buflen, "%s/%s", catname, pkgname);
+				qatom = atom_explode(buf);
+				array_for_each(atoms, i, atom)
+					if (atom_compare(atom, qatom) == EQUAL) {
+						showit = true;
 						break;
-					if (rematch(argv[i], pkgname, REG_EXTENDED) == 0)
-						break;
-				}
-				if (i == argc)
-					goto next_pkg;
-			}
+					}
+				atom_implode(qatom);
+			} else
+				showit = true;
+			if (!showit)
+				goto next_pkg;
 
 			if ((fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
 				goto next_pkg;
@@ -178,6 +190,9 @@ int qsize_main(int argc, char **argv)
 			       decimal_point,
 			       (unsigned long)(((num_all_bytes%MEGABYTE)*1000)/MEGABYTE));
 	}
+	array_for_each(atoms, i, atom)
+		atom_implode(atom);
+	xarrayfree_int(atoms);
 	xarrayfree(ignore_regexp);
 	return EXIT_SUCCESS;
 }
