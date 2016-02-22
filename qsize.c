@@ -31,37 +31,143 @@ static const char * const qsize_opts_help[] = {
 };
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
 
-int qsize_main(int argc, char **argv)
-{
-	q_vdb_ctx *ctx;
-	q_vdb_cat_ctx *cat_ctx;
-	q_vdb_pkg_ctx *pkg_ctx;
-	size_t i;
-	char fs_size = 0, summary = 0, summary_only = 0;
-	size_t num_all_files, num_all_nonfiles, num_all_ignored;
-	size_t num_files, num_nonfiles, num_ignored;
-	uint64_t num_all_bytes, num_bytes;
-	size_t disp_units = 0;
-	const char *str_disp_units = NULL;
+struct qsize_opt_state {
+	array_t *atoms;
+	char **argv;
+	char search_all;
+	char fs_size;
+	char summary;
+	char summary_only;
+	size_t disp_units;
+	const char *str_disp_units;
+	array_t *ignore_regexp;
+
 	size_t buflen;
 	char *buf;
+
+	size_t num_all_files, num_all_nonfiles, num_all_ignored;
+	uint64_t num_all_bytes;
+};
+
+_q_static int qsize_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+{
+	struct qsize_opt_state *state = priv;
+	const char *catname = pkg_ctx->cat_ctx->name;
+	const char *pkgname = pkg_ctx->name;
+	size_t i;
+	depend_atom *atom;
+	FILE *fp;
+	size_t num_files, num_nonfiles, num_ignored;
+	uint64_t num_bytes;
+	bool showit = false;
+
+	/* see if this cat/pkg is requested */
+	if (array_cnt(state->atoms)) {
+		depend_atom *qatom;
+
+		snprintf(state->buf, state->buflen, "%s/%s", catname, pkgname);
+		qatom = atom_explode(state->buf);
+		array_for_each(state->atoms, i, atom)
+			if (atom_compare(atom, qatom) == EQUAL) {
+				showit = true;
+				break;
+			}
+		atom_implode(qatom);
+	} else
+		showit = true;
+	if (!showit)
+		return EXIT_SUCCESS;
+
+	if ((fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
+		return EXIT_SUCCESS;
+
+	num_ignored = num_files = num_nonfiles = num_bytes = 0;
+	while (getline(&state->buf, &state->buflen, fp) != -1) {
+		contents_entry *e;
+		regex_t *regex;
+		int ok = 0;
+
+		e = contents_parse_line(state->buf);
+		if (!e)
+			continue;
+
+		array_for_each(state->ignore_regexp, i, regex)
+			if (!regexec(regex, state->buf, 0, NULL, 0)) {
+				num_ignored += 1;
+				ok = 1;
+			}
+		if (ok)
+			continue;
+
+		if (e->type == CONTENTS_OBJ || e->type == CONTENTS_SYM) {
+			struct stat st;
+			++num_files;
+			if (!fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd, e->name + 1, &st, AT_SYMLINK_NOFOLLOW))
+				num_bytes += (state->fs_size ? st.st_blocks * S_BLKSIZE : st.st_size);
+		} else
+			++num_nonfiles;
+	}
+	fclose(fp);
+	state->num_all_bytes += num_bytes;
+	state->num_all_files += num_files;
+	state->num_all_nonfiles += num_nonfiles;
+	state->num_all_ignored += num_ignored;
+
+	if (!state->summary_only) {
+		printf("%s%s/%s%s%s: %'zu files, %'zu non-files, ", BOLD,
+		       catname, BLUE, pkgname, NORM,
+		       num_files, num_nonfiles);
+		if (num_ignored)
+			printf("%'zu names-ignored, ", num_ignored);
+		if (state->disp_units)
+			printf("%s %s\n",
+			       make_human_readable_str(num_bytes, 1, state->disp_units),
+			       state->str_disp_units);
+		else
+			printf("%'"PRIu64"%s%"PRIu64" KiB\n",
+			       num_bytes / KILOBYTE,
+			       decimal_point,
+			       ((num_bytes % KILOBYTE) * 1000) / KILOBYTE);
+	}
+
+	return EXIT_SUCCESS;
+}
+
+int qsize_main(int argc, char **argv)
+{
+	size_t i;
+	int ret;
+	DECLARE_ARRAY(ignore_regexp);
 	depend_atom *atom;
 	DECLARE_ARRAY(atoms);
-	DECLARE_ARRAY(ignore_regexp);
+	struct qsize_opt_state state = {
+		.atoms = atoms,
+		.search_all = 0,
+		.fs_size = 0,
+		.summary = 0,
+		.summary_only = 0,
+		.disp_units = 0,
+		.str_disp_units = NULL,
+		.ignore_regexp = ignore_regexp,
+		.num_all_bytes = 0,
+		.num_all_files = 0,
+		.num_all_nonfiles = 0,
+		.num_all_ignored = 0,
+	};
 
 	while ((i = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsize)
-		case 'f': fs_size = 1; break;
-		case 's': summary = 1; break;
-		case 'S': summary = summary_only = 1; break;
-		case 'm': disp_units = MEGABYTE; str_disp_units = "MiB"; break;
-		case 'k': disp_units = KILOBYTE; str_disp_units = "KiB"; break;
-		case 'b': disp_units = 1; str_disp_units = "bytes"; break;
+		case 'f': state.fs_size = 1; break;
+		case 's': state.summary = 1; break;
+		case 'S': state.summary = state.summary_only = 1; break;
+		case 'm': state.disp_units = MEGABYTE; state.str_disp_units = "MiB"; break;
+		case 'k': state.disp_units = KILOBYTE; state.str_disp_units = "KiB"; break;
+		case 'b': state.disp_units = 1; state.str_disp_units = "bytes"; break;
 		case 'i': {
 			regex_t regex;
 			xregcomp(&regex, optarg, REG_EXTENDED|REG_NOSUB);
-			xarraypush(ignore_regexp, &regex, sizeof(regex));
+			xarraypush(state.ignore_regexp, &regex, sizeof(regex));
 			break;
 		}
 		}
@@ -74,121 +180,37 @@ int qsize_main(int argc, char **argv)
 		if (!atom)
 			warn("invalid atom: %s", argv[i]);
 		else
-			xarraypush_ptr(atoms, atom);
+			xarraypush_ptr(state.atoms, atom);
 	}
 
-	num_all_bytes = num_all_files = num_all_nonfiles = num_all_ignored = 0;
+	state.buflen = _Q_PATH_MAX;
+	state.buf = xmalloc(state.buflen);
 
-	buflen = _Q_PATH_MAX;
-	buf = xmalloc(buflen);
+	ret = q_vdb_foreach_pkg(qsize_cb, &state, NULL);
 
-	ctx = q_vdb_open();
-	if (!ctx)
-		return EXIT_FAILURE;
-
-	/* open /var/db/pkg */
-	while ((cat_ctx = q_vdb_next_cat(ctx))) {
-		/* open the cateogry */
-		const char *catname = cat_ctx->name;
-		while ((pkg_ctx = q_vdb_next_pkg(cat_ctx))) {
-			const char *pkgname = pkg_ctx->name;
-			FILE *fp;
-			bool showit = false;
-
-			/* see if this cat/pkg is requested */
-			if (array_cnt(atoms)) {
-				depend_atom *qatom;
-
-				snprintf(buf, buflen, "%s/%s", catname, pkgname);
-				qatom = atom_explode(buf);
-				array_for_each(atoms, i, atom)
-					if (atom_compare(atom, qatom) == EQUAL) {
-						showit = true;
-						break;
-					}
-				atom_implode(qatom);
-			} else
-				showit = true;
-			if (!showit)
-				goto next_pkg;
-
-			if ((fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
-				goto next_pkg;
-
-			num_ignored = num_files = num_nonfiles = num_bytes = 0;
-			while (getline(&buf, &buflen, fp) != -1) {
-				contents_entry *e;
-				regex_t *regex;
-				int ok = 0;
-
-				e = contents_parse_line(buf);
-				if (!e)
-					continue;
-
-				array_for_each(ignore_regexp, i, regex)
-					if (!regexec(regex, buf, 0, NULL, 0)) {
-						num_ignored += 1;
-						ok = 1;
-					}
-				if (ok)
-					continue;
-
-				if (e->type == CONTENTS_OBJ || e->type == CONTENTS_SYM) {
-					struct stat st;
-					++num_files;
-					if (!fstatat(ctx->portroot_fd, e->name + 1, &st, AT_SYMLINK_NOFOLLOW))
-						num_bytes += (fs_size ? st.st_blocks * S_BLKSIZE : st.st_size);
-				} else
-					++num_nonfiles;
-			}
-			fclose(fp);
-			num_all_bytes += num_bytes;
-			num_all_files += num_files;
-			num_all_nonfiles += num_nonfiles;
-			num_all_ignored += num_ignored;
-
-			if (!summary_only) {
-				printf("%s%s/%s%s%s: %'zu files, %'zu non-files, ", BOLD,
-				       catname, BLUE, pkgname, NORM,
-				       num_files, num_nonfiles);
-				if (num_ignored)
-					printf("%'zu names-ignored, ", num_ignored);
-				if (disp_units)
-					printf("%s %s\n",
-					       make_human_readable_str(num_bytes, 1, disp_units),
-					       str_disp_units);
-				else
-					printf("%'"PRIu64"%s%"PRIu64" KiB\n",
-					       num_bytes / KILOBYTE,
-					       decimal_point,
-					       ((num_bytes % KILOBYTE) * 1000) / KILOBYTE);
-			}
-
- next_pkg:
-			q_vdb_close_pkg(pkg_ctx);
-		}
-	}
-
-	if (summary) {
+	if (state.summary) {
 		printf(" %sTotals%s: %'zu files, %'zu non-files, ", BOLD, NORM,
-		       num_all_files, num_all_nonfiles);
-		if (num_all_ignored)
-			printf("%'zu names-ignored, ", num_all_ignored);
-		if (disp_units)
+		       state.num_all_files, state.num_all_nonfiles);
+		if (state.num_all_ignored)
+			printf("%'zu names-ignored, ", state.num_all_ignored);
+		if (state.disp_units)
 			printf("%s %s\n",
-			       make_human_readable_str(num_all_bytes, 1, disp_units),
-			       str_disp_units);
+			       make_human_readable_str(state.num_all_bytes, 1, state.disp_units),
+			       state.str_disp_units);
 		else
 			printf("%'"PRIu64"%s%"PRIu64" MiB\n",
-			       num_all_bytes / MEGABYTE,
+			       state.num_all_bytes / MEGABYTE,
 			       decimal_point,
-			       ((num_all_bytes % MEGABYTE) * 1000) / MEGABYTE);
+			       ((state.num_all_bytes % MEGABYTE) * 1000) / MEGABYTE);
 	}
-	array_for_each(atoms, i, atom)
+
+	array_for_each(state.atoms, i, atom)
 		atom_implode(atom);
-	xarrayfree_int(atoms);
-	xarrayfree(ignore_regexp);
-	return EXIT_SUCCESS;
+	xarrayfree_int(state.atoms);
+	xarrayfree(state.ignore_regexp);
+	free(state.buf);
+
+	return ret;
 }
 
 #else
