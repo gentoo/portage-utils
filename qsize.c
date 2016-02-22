@@ -37,7 +37,6 @@ int qsize_main(int argc, char **argv)
 	q_vdb_cat_ctx *cat_ctx;
 	q_vdb_pkg_ctx *pkg_ctx;
 	size_t i;
-	struct stat st;
 	char fs_size = 0, summary = 0, summary_only = 0;
 	size_t num_all_files, num_all_nonfiles, num_all_ignored;
 	size_t num_files, num_nonfiles, num_ignored;
@@ -46,7 +45,6 @@ int qsize_main(int argc, char **argv)
 	const char *str_disp_units = NULL;
 	size_t buflen;
 	char *buf;
-	char filename[_Q_PATH_MAX], *filename_root;
 	depend_atom *atom;
 	DECLARE_ARRAY(atoms);
 	DECLARE_ARRAY(ignore_regexp);
@@ -81,8 +79,6 @@ int qsize_main(int argc, char **argv)
 
 	num_all_bytes = num_all_files = num_all_nonfiles = num_all_ignored = 0;
 
-	strcpy(filename, portroot);
-	filename_root = filename + strlen(filename);
 	buflen = _Q_PATH_MAX;
 	buf = xmalloc(buflen);
 
@@ -138,9 +134,9 @@ int qsize_main(int argc, char **argv)
 					continue;
 
 				if (e->type == CONTENTS_OBJ || e->type == CONTENTS_SYM) {
-					strcpy(filename_root, e->name);
+					struct stat st;
 					++num_files;
-					if (!lstat(filename, &st))
+					if (!fstatat(ctx->portroot_fd, e->name + 1, &st, AT_SYMLINK_NOFOLLOW))
 						num_bytes += (fs_size ? st.st_blocks * S_BLKSIZE : st.st_size);
 				} else
 					++num_nonfiles;
