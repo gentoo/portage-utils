@@ -35,19 +35,19 @@ test 01 1 "qcheck a-b/pkg"
 test 02 1 "qcheck a-b/pkg -s ^/missing-dir/.*"
 
 # bad-only check
-test 03 1 "qcheck -Ba"
+test 03 1 "qcheck -B"
 
 # hash mismatch ignore check
-test 04 1 "qcheck -Ha"
+test 04 1 "qcheck -H"
 
 # mtime mismatch ignore check
-test 05 1 "qcheck -Ta"
+test 05 1 "qcheck -T"
 
 # missing ignore check
-test 06 1 "qcheck -Aa"
+test 06 1 "qcheck -A"
 
 # hash+mtime+missing mismatch ignore check
-test 07 0 "qcheck -AHTa"
+test 07 0 "qcheck -AHT"
 
 # verbose check
 test 08 1 "qcheck -v a-b/pkg"

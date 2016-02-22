@@ -1,4 +1,4 @@
-.TH qcheck "1" "Mar 2014" "Gentoo Foundation" "qcheck"
+.TH qcheck "1" "Feb 2016" "Gentoo Foundation" "qcheck"
 .SH NAME
 qcheck \- verify integrity of installed packages
 .SH SYNOPSIS
@@ -7,12 +7,6 @@ qcheck \- verify integrity of installed packages
 .SH DESCRIPTION
 
 .SH OPTIONS
-.TP
-\fB\-a\fR, \fB\-\-all\fR
-List all packages
-.TP
-\fB\-e\fR, \fB\-\-exact\fR
-Exact match (only CAT/PN or PN without PV)
 .TP
 \fB\-s\fR \fI<arg>\fR, \fB\-\-skip\fR \fI<arg>\fR
 Ignore files matching the regular expression <arg>
@@ -32,7 +26,7 @@ Ignore differing/unknown file chksums
 \fB\-T\fR, \fB\-\-nomtime\fR
 Ignore differing file mtimes
 .TP
-\fB\-\-skip\-protected\fR
+\fB\-P\fR, \fB\-\-skip\-protected\fR
 Ignore files in CONFIG_PROTECT-ed paths
 .TP
 \fB\-p\fR, \fB\-\-prelink\fR

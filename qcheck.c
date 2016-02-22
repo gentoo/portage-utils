@@ -8,10 +8,8 @@
 
 #ifdef APPLET_qcheck
 
-#define QCHECK_FLAGS "aes:uABHTPp" COMMON_FLAGS
+#define QCHECK_FLAGS "s:uABHTPp" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
-	{"all",            no_argument, NULL, 'a'},
-	{"exact",          no_argument, NULL, 'e'},
 	{"skip",            a_argument, NULL, 's'},
 	{"update",         no_argument, NULL, 'u'},
 	{"noafk",          no_argument, NULL, 'A'},
@@ -23,8 +21,6 @@ static struct option const qcheck_long_opts[] = {
 	COMMON_LONG_OPTS
 };
 static const char * const qcheck_opts_help[] = {
-	"List all packages",
-	"Exact match (only CAT/PN or PN without PV)",
 	"Ignore files matching the regular expression <arg>",
 	"Update missing files, chksum and mtimes for packages",
 	"Ignore missing files",
@@ -40,18 +36,15 @@ static const char * const qcheck_opts_help[] = {
 #define qcprintf(fmt, args...) do { if (!state->bad_only) printf(_(fmt), ## args); } while (0)
 
 struct qcheck_opt_state {
-	int argc;
-	char **argv;
+	array_t *atoms;
 	array_t *regex_arr;
 	bool bad_only;
-	bool search_all;
 	bool qc_update;
 	bool chk_afk;
 	bool chk_hash;
 	bool chk_mtime;
 	bool chk_config_protect;
 	bool undo_prelink;
-	bool exact;
 };
 
 static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
@@ -317,70 +310,51 @@ _q_static int qcheck_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	struct qcheck_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;
 	const char *pkgname = pkg_ctx->name;
+	bool showit = false;
 
 	/* see if this cat/pkg is requested */
-	if (!state->search_all) {
-		char *buf = NULL;
-		int i;
+	if (array_cnt(state->atoms)) {
+		char *buf;
+		size_t i;
+		depend_atom *qatom, *atom;
 
-		for (i = optind; i < state->argc; ++i) {
-			free(buf);
-			xasprintf(&buf, "%s/%s", catname, pkgname);
-			if (!state->exact) {
-				if (rematch(state->argv[i], buf, REG_EXTENDED) == 0)
-					break;
-				if (rematch(state->argv[i], pkgname, REG_EXTENDED) == 0)
-					break;
-			} else {
-				depend_atom *atom;
-				char swap[_Q_PATH_MAX];
-				if ((atom = atom_explode(buf)) == NULL) {
-					warn("invalid atom %s", buf);
-					continue;
-				}
-				snprintf(swap, sizeof(swap), "%s/%s", atom->CATEGORY, atom->PN);
-				atom_implode(atom);
-				if (strcmp(state->argv[i], swap) == 0 ||
-				    strcmp(state->argv[i], buf) == 0)
-					break;
-				if (strcmp(state->argv[i], strstr(swap, "/") + 1) == 0 ||
-				    strcmp(state->argv[i], strstr(buf, "/") + 1) == 0)
-					break;
+		xasprintf(&buf, "%s/%s", catname, pkgname);
+		qatom = atom_explode(buf);
+		array_for_each(state->atoms, i, atom)
+			if (atom_compare(atom, qatom) == EQUAL) {
+				showit = true;
+				break;
 			}
-		}
+		atom_implode(qatom);
 		free(buf);
+	} else
+		showit = true;
 
-		if (i == state->argc)
-			return 0;
-	}
-
-	return qcheck_process_contents(pkg_ctx, priv);
+	return showit ? qcheck_process_contents(pkg_ctx, priv) : 0;
 }
 
 int qcheck_main(int argc, char **argv)
 {
-	int i, ret;
+	size_t i;
+	int ret;
 	DECLARE_ARRAY(regex_arr);
+	depend_atom *atom;
+	DECLARE_ARRAY(atoms);
 	struct qcheck_opt_state state = {
-		.argc = argc,
-		.argv = argv,
+		.atoms = atoms,
 		.regex_arr = regex_arr,
 		.bad_only = false,
-		.search_all = false,
 		.qc_update = false,
 		.chk_afk = true,
 		.chk_hash = true,
 		.chk_mtime = true,
 		.chk_config_protect = true,
 		.undo_prelink = false,
-		.exact = false,
 	};
 
 	while ((i = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qcheck)
-		case 'a': state.search_all = true; break;
-		case 'e': state.exact = true; break;
 		case 's': {
 			regex_t regex;
 			xregcomp(&regex, optarg, REG_EXTENDED|REG_NOSUB);
@@ -396,11 +370,22 @@ int qcheck_main(int argc, char **argv)
 		case 'p': state.undo_prelink = prelink_available(); break;
 		}
 	}
-	if ((argc == optind) && !state.search_all)
-		qcheck_usage(EXIT_FAILURE);
+
+	argc -= optind;
+	argv += optind;
+	for (i = 0; i < argc; ++i) {
+		atom = atom_explode(argv[i]);
+		if (!atom)
+			warn("invalid atom: %s", argv[i]);
+		else
+			xarraypush_ptr(atoms, atom);
+	}
 
 	ret = q_vdb_foreach_pkg_sorted(qcheck_cb, &state);
 	xarrayfree(regex_arr);
+	array_for_each(atoms, i, atom)
+		atom_implode(atom);
+	xarrayfree_int(atoms);
 	return ret;
 }
 
