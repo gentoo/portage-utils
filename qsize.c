@@ -152,21 +152,20 @@ int qsize_main(int argc, char **argv)
 			num_all_ignored += num_ignored;
 
 			if (!summary_only) {
-				printf("%s%s/%s%s%s: %'lu files, %'lu non-files, ", BOLD,
+				printf("%s%s/%s%s%s: %'zu files, %'zu non-files, ", BOLD,
 				       catname, BLUE, pkgname, NORM,
-				       (unsigned long)num_files,
-				       (unsigned long)num_nonfiles);
+				       num_files, num_nonfiles);
 				if (num_ignored)
-					printf("%'lu names-ignored, ", (unsigned long)num_ignored);
+					printf("%'zu names-ignored, ", num_ignored);
 				if (disp_units)
 					printf("%s %s\n",
 					       make_human_readable_str(num_bytes, 1, disp_units),
 					       str_disp_units);
 				else
-					printf("%'lu%s%lu KiB\n",
-					       (unsigned long)(num_bytes / KILOBYTE),
+					printf("%'"PRIu64"%s%"PRIu64" KiB\n",
+					       num_bytes / KILOBYTE,
 					       decimal_point,
-					       (unsigned long)(((num_bytes%KILOBYTE)*1000)/KILOBYTE));
+					       ((num_bytes % KILOBYTE) * 1000) / KILOBYTE);
 			}
 
  next_pkg:
@@ -175,20 +174,19 @@ int qsize_main(int argc, char **argv)
 	}
 
 	if (summary) {
-		printf(" %sTotals%s: %'lu files, %'lu non-files, ", BOLD, NORM,
-		       (unsigned long)num_all_files,
-		       (unsigned long)num_all_nonfiles);
+		printf(" %sTotals%s: %'zu files, %'zu non-files, ", BOLD, NORM,
+		       num_all_files, num_all_nonfiles);
 		if (num_all_ignored)
-			printf("%'lu names-ignored, ", (unsigned long)num_all_ignored);
+			printf("%'zu names-ignored, ", num_all_ignored);
 		if (disp_units)
 			printf("%s %s\n",
 			       make_human_readable_str(num_all_bytes, 1, disp_units),
 			       str_disp_units);
 		else
-			printf("%'lu%s%lu MiB\n",
-			       (unsigned long)(num_all_bytes / MEGABYTE),
+			printf("%'"PRIu64"%s%"PRIu64" MiB\n",
+			       num_all_bytes / MEGABYTE,
 			       decimal_point,
-			       (unsigned long)(((num_all_bytes%MEGABYTE)*1000)/MEGABYTE));
+			       ((num_all_bytes % MEGABYTE) * 1000) / MEGABYTE);
 	}
 	array_for_each(atoms, i, atom)
 		atom_implode(atom);
