@@ -117,7 +117,11 @@ void no_colors(void)
 static void usage(int status, const char *flags, struct option const opts[],
                   const char * const help[], int blabber)
 {
-	unsigned long i;
+	const char opt_arg[] = "[arg]";
+	const char a_arg[] = "<arg>";
+	size_t a_arg_len = strlen(a_arg) + 1;
+	size_t i, optlen;
+
 	if (status != EXIT_SUCCESS)
 		dup2(STDERR_FILENO, STDOUT_FILENO);
 	if (blabber == 0) {
@@ -140,6 +144,15 @@ static void usage(int status, const char *flags, struct option const opts[],
 	if (module_name != NULL)
 		printf("%sLoaded module:%s\n%s%8s%s %s<args>%s\n", GREEN, NORM, YELLOW, module_name, NORM, DKBLUE, NORM);
 
+	/* Prescan the --long opt length to auto-align. */
+	optlen = 0;
+	for (i = 0; opts[i].name; ++i) {
+		size_t l = strlen(opts[i].name);
+		if (opts[i].has_arg != no_argument)
+			l += a_arg_len;
+		optlen = MAX(l, optlen);
+	}
+
 	printf("\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
 	for (i = 0; opts[i].name; ++i) {
 		/* this assert is a life saver when adding new applets. */
@@ -153,11 +166,14 @@ static void usage(int status, const char *flags, struct option const opts[],
 
 		/* then the long flag + help text */
 		if (opts[i].has_arg == no_argument)
-			printf("--%-15s%s*%s %s\n", opts[i].name,
+			printf("--%-*s %s*%s %s\n", (int)optlen, opts[i].name,
 				RED, NORM, _(help[i]));
 		else
-			printf("--%-8s %s<arg>%s %s*%s %s\n", opts[i].name,
-				DKBLUE, NORM, RED, NORM, _(help[i]));
+			printf("--%s %s%s%s%*s %s*%s %s\n",
+				opts[i].name,
+				DKBLUE, (opts[i].has_arg == a_argument ? a_arg : opt_arg), NORM,
+				(int)(optlen - strlen(opts[i].name) - a_arg_len), "",
+				RED, NORM, _(help[i]));
 	}
 	exit(status);
 }

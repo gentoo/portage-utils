@@ -89,8 +89,8 @@ def MkMan(applets, applet, output):
                 flags += [option[0].rstrip(',')]
                 option.pop(0)
 
-            if option[0] == '<arg>':
-                flags = [r'\fB%s\fR \fI<arg>\fR' % x for x in flags]
+            if option[0] in ('<arg>', '[arg]'):
+                flags = [r'\fB%s\fR \fI%s\fR' % (x, option[0]) for x in flags]
                 option.pop(0)
             else:
                 flags = [r'\fB%s\fR' % x for x in flags]
