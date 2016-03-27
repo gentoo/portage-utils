@@ -976,7 +976,8 @@ initialize_flat(const char *overlay, int cache_type, bool force)
 	}
 
 	if (!quiet)
-		warn("Updating ebuild %scache ... ", cache_type == CACHE_EBUILD ? "" : "meta");
+		warn("Updating ebuild %scache in %s ... ",
+			cache_type == CACHE_EBUILD ? "" : "meta", overlay);
 
 	count = frac = secs = 0;
 

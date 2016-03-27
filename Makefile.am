@@ -2,6 +2,11 @@ ACLOCAL_AMFLAGS = -I autotools/m4
 
 SUBDIRS = autotools/gnulib
 
+portagedir = $(sysconfdir)/portage
+postsyncddir = $(portagedir)/repo.postsync.d
+
+dist_postsyncd_SCRIPTS = repo.postsync/q-reinit
+
 bin_PROGRAMS = q
 q_SOURCES = main.c
 q_CPPFLAGS = \

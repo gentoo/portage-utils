@@ -27,9 +27,11 @@ LIBADD    += $(shell echo | $(CC) -dM -E - | grep -q ' __FreeBSD__' && echo '-lk
 LIBADD    += -liniparser
 DESTDIR   :=
 PREFIX    := $(DESTDIR)/usr
+ETCDIR    := $(DESTDIR)/etc
 STRIP     := strip
 MKDIR     := mkdir -p
 CP        := cp
+INSTALL_EXE := install -m755
 
 ifndef V
 Q = @
@@ -106,12 +108,15 @@ testclean:
 
 install: all
 	$(MKDIR) $(PREFIX)/bin/
-	$(CP) q $(PREFIX)/bin/
+	$(INSTALL_EXE) q $(PREFIX)/bin/
 
 	set -e ; \
 	for applet in $(filter-out q,$(APPLETS)) ; do \
 		ln -sf q $(PREFIX)/bin/$${applet} ; \
 	done
+
+	$(MKDIR) $(ETCDIR)/portage/repo.postsync.d
+	$(INSTALL_EXE) repo.postsync/* $(ETCDIR)/portage/repo.postsync.d/
 
 ifneq ($(wildcard man/*.1),)
 	$(MKDIR) $(PREFIX)/share/man/man1/

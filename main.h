@@ -99,3 +99,4 @@
 	getopt_long(argc, argv, ex A ## _FLAGS, a ## _long_opts, NULL)
 
 #define a_argument required_argument
+#define opt_argument optional_argument

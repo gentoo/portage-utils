@@ -8,10 +8,10 @@
 
 #define Q_FLAGS "irmM:" COMMON_FLAGS
 static struct option const q_long_opts[] = {
-	{"install",      no_argument, NULL, 'i'},
-	{"reinitialize", no_argument, NULL, 'r'},
-	{"metacache",    no_argument, NULL, 'm'},
-	{"modpath",       a_argument, NULL, 'M'},
+	{"install",       no_argument, NULL, 'i'},
+	{"reinitialize", opt_argument, NULL, 'r'},
+	{"metacache",    opt_argument, NULL, 'm'},
+	{"modpath",        a_argument, NULL, 'M'},
 	COMMON_LONG_OPTS
 };
 static const char * const q_opts_help[] = {
@@ -84,8 +84,24 @@ int q_main(int argc, char **argv)
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
 		case 'M': modpath = optarg; break;
-		case 'm': reinitialize_metacache = 1; break;
-		case 'r': reinitialize = 1; break;
+		case 'm':
+			if (optarg) {
+				const char *path = initialize_flat(optarg, CACHE_METADATA, true);
+				if (path) { /* silence warning */ }
+				IF_DEBUG(free((void *)path));
+				reinitialize_metacache = -1;
+			} else
+				reinitialize_metacache = 1;
+			break;
+		case 'r':
+			if (optarg) {
+				const char *path = initialize_flat(optarg, CACHE_EBUILD, true);
+				if (path) { /* silence warning */ }
+				IF_DEBUG(free((void *)path));
+				reinitialize = -1;
+			} else
+				reinitialize = 1;
+			break;
 		case 'i': install = 1; break;
 		}
 	}
@@ -128,8 +144,12 @@ int q_main(int argc, char **argv)
 		return ret;
 	}
 
-	if (reinitialize || reinitialize_metacache)
+	if (reinitialize > 0 || reinitialize_metacache > 0)
 		return 0;
+	if (reinitialize < 0 || reinitialize_metacache < 0) {
+		reinitialize = reinitialize_metacache = 0;
+		return 0;
+	}
 	if (argc == optind)
 		q_usage(EXIT_FAILURE);
 	if ((func = lookup_applet(argv[optind])) == NULL)
