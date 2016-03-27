@@ -54,3 +54,6 @@
 	- add a verbose output that describes why a package is cleaned
 		- newer binpkgs available
 		- newer installed version available
+
+- qsync:
+	- rewrite to use new repos.conf standard
