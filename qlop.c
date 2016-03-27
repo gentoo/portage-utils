@@ -75,10 +75,9 @@ _q_static const char *
 chop_ctime(time_t t)
 {
 	static char ctime_out[50];
-	char *p;
-	snprintf(ctime_out, sizeof(ctime_out), "%s", ctime(&t));
-	if ((p = strchr(ctime_out, '\n')) != NULL)
-		*p = '\0';
+	int ret = snprintf(ctime_out, sizeof(ctime_out), "%s", ctime(&t));
+	/* Assume no error! */
+	ctime_out[ret - 1] = '\0';
 	return ctime_out;
 }
 
