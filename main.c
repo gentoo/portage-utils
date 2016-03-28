@@ -115,7 +115,7 @@ void no_colors(void)
 
 /* display usage and exit */
 static void usage(int status, const char *flags, struct option const opts[],
-                  const char * const help[], int blabber)
+                  const char * const help[], const char *desc, int blabber)
 {
 	const char opt_arg[] = "[arg]";
 	const char a_arg[] = "<arg>";
@@ -136,10 +136,13 @@ static void usage(int status, const char *flags, struct option const opts[],
 					DKBLUE, applets[i].opts, NORM,
 					RED, NORM, _(applets[i].desc));
 	} else if (blabber > 0) {
-			printf("%sUsage:%s %s%s%s <opts> %s%s%s %s:%s %s\n", GREEN, NORM,
-				YELLOW, applets[blabber].name, NORM,
-				DKBLUE, applets[blabber].opts, NORM,
-				RED, NORM, _(applets[blabber].desc));
+		printf("%sUsage:%s %s%s%s [opts] %s%s%s %s:%s %s\n",
+			GREEN, NORM,
+			YELLOW, applets[blabber].name, NORM,
+			DKBLUE, applets[blabber].opts, NORM,
+			RED, NORM, _(applets[blabber].desc));
+		if (desc)
+			printf("\n%s\n", desc);
 	}
 	if (module_name != NULL)
 		printf("%sLoaded module:%s\n%s%8s%s %s<args>%s\n", GREEN, NORM, YELLOW, module_name, NORM, DKBLUE, NORM);

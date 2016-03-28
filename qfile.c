@@ -27,7 +27,7 @@ static const char * const qfile_opts_help[] = {
 	"Exact match (used with --exclude)",
 	COMMON_OPTS_HELP
 };
-#define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, lookup_applet_idx("qfile"))
+#define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, NULL, lookup_applet_idx("qfile"))
 
 #define qfile_is_prefix(path, prefix, prefix_length) \
 	(!prefix_length \

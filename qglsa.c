@@ -27,7 +27,7 @@ static const char * const qglsa_opts_help[] = {
 	"Mark specified GLSAs as fixed",
 	COMMON_OPTS_HELP
 };
-#define qglsa_usage(ret) usage(ret, QGLSA_FLAGS, qglsa_long_opts, qglsa_opts_help, lookup_applet_idx("qglsa"))
+#define qglsa_usage(ret) usage(ret, QGLSA_FLAGS, qglsa_long_opts, qglsa_opts_help, NULL, lookup_applet_idx("qglsa"))
 
 typedef enum {
 	GLSA_FUNKYTOWN, GLSA_LIST, GLSA_DUMP, GLSA_TEST, GLSA_FIX, GLSA_INJECT

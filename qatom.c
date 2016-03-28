@@ -21,7 +21,7 @@ static const char * const qatom_opts_help[] = {
 	"Compare two atoms",
 	COMMON_OPTS_HELP
 };
-#define qatom_usage(ret) usage(ret, QATOM_FLAGS, qatom_long_opts, qatom_opts_help, lookup_applet_idx("qatom"))
+#define qatom_usage(ret) usage(ret, QATOM_FLAGS, qatom_long_opts, qatom_opts_help, NULL, lookup_applet_idx("qatom"))
 
 /* Run printf on an atom!  The format field takes the form:
  *  %{keyword}: Always display the field that matches "keyword"

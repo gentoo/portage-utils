@@ -44,7 +44,7 @@ static const char * const qcache_opts_help[] = {
 	"list packages that aren't keyworded on a given arch.",
 	COMMON_OPTS_HELP
 };
-#define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, lookup_applet_idx("qcache"))
+#define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, NULL, lookup_applet_idx("qcache"))
 
 /********************************************************************/
 /* Structs                                                          */

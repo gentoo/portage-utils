@@ -31,7 +31,7 @@ static const char * const qcheck_opts_help[] = {
 	"Undo prelink when calculating checksums",
 	COMMON_OPTS_HELP
 };
-#define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, lookup_applet_idx("qcheck"))
+#define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, NULL, lookup_applet_idx("qcheck"))
 
 #define qcprintf(fmt, args...) do { if (!state->bad_only) printf(_(fmt), ## args); } while (0)
 

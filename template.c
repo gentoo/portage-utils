@@ -15,7 +15,7 @@ static struct option const qtemp_long_opts[] = {
 static const char * const qtemp_opts_help[] = {
 	COMMON_OPTS_HELP
 };
-#define qtemp_usage(ret) usage(ret, QTEMP_FLAGS, qtemp_long_opts, qtemp_opts_help, lookup_applet_idx("qtemp"))
+#define qtemp_usage(ret) usage(ret, QTEMP_FLAGS, qtemp_long_opts, qtemp_opts_help, NULL, lookup_applet_idx("qtemp"))
 
 int qtemp_main(int argc, char **argv)
 {

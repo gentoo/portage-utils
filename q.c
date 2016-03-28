@@ -21,7 +21,7 @@ static const char * const q_opts_help[] = {
 	"Module path",
 	COMMON_OPTS_HELP
 };
-#define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, lookup_applet_idx("q"))
+#define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, NULL, lookup_applet_idx("q"))
 
 static APPLET lookup_applet(const char *applet)
 {

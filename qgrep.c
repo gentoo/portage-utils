@@ -46,7 +46,7 @@ static const char * const qgrep_opts_help[] = {
 	"Print <arg> lines of trailing context",
 	COMMON_OPTS_HELP
 };
-#define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, lookup_applet_idx("qgrep"))
+#define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, NULL, lookup_applet_idx("qgrep"))
 
 char qgrep_name_match(const char*, const int, depend_atom**);
 char qgrep_name_match(const char* name, const int argc, depend_atom** argv)

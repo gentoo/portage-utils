@@ -31,7 +31,7 @@ static const char * const qdepends_opts_help[] = {
 	"Pretty format specified depend strings",
 	COMMON_OPTS_HELP
 };
-#define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, lookup_applet_idx("qdepends"))
+#define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, NULL, lookup_applet_idx("qdepends"))
 
 static char qdep_name_only = 0;
 

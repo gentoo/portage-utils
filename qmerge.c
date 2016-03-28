@@ -62,7 +62,7 @@ static const char * const qmerge_opts_help[] = {
 	"Run shell funcs with `set -x`",
 	COMMON_OPTS_HELP
 };
-#define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, lookup_applet_idx("qmerge"))
+#define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, NULL, lookup_applet_idx("qmerge"))
 
 char search_pkgs = 0;
 char interactive = 1;

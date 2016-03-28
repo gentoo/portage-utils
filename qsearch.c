@@ -29,7 +29,7 @@ static const char * const qsearch_opts_help[] = {
 	"Show homepage info",
 	COMMON_OPTS_HELP
 };
-#define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, lookup_applet_idx("qsearch"))
+#define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, NULL, lookup_applet_idx("qsearch"))
 
 #define LAST_BUF_SIZE 256
 

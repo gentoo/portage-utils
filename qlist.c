@@ -40,7 +40,7 @@ static const char * const qlist_opts_help[] = {
 	/* "query filename for pkgname", */
 	COMMON_OPTS_HELP
 };
-#define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, lookup_applet_idx("qlist"))
+#define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, NULL, lookup_applet_idx("qlist"))
 
 static char *grab_pkg_umap(q_vdb_pkg_ctx *pkg_ctx)
 {

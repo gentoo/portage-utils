@@ -34,7 +34,7 @@ static const char * const quse_opts_help[] = {
 	"Only show package name",
 	COMMON_OPTS_HELP
 };
-#define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, lookup_applet_idx("quse"))
+#define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, NULL, lookup_applet_idx("quse"))
 
 char quse_name_only = 0;
 

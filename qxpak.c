@@ -45,7 +45,7 @@ static const char * const qxpak_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-#define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, lookup_applet_idx("qxpak"))
+#define qxpak_usage(ret) usage(ret, QXPAK_FLAGS, qxpak_long_opts, qxpak_opts_help, NULL, lookup_applet_idx("qxpak"))
 
 typedef struct {
 	int dir_fd;

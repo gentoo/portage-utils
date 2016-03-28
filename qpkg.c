@@ -25,7 +25,7 @@ static const char * const qpkg_opts_help[] = {
 	"alternate package directory",
 	COMMON_OPTS_HELP
 };
-#define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, lookup_applet_idx("qpkg"))
+#define qpkg_usage(ret) usage(ret, QPKG_FLAGS, qpkg_long_opts, qpkg_opts_help, NULL, lookup_applet_idx("qpkg"))
 
 extern char pretend;
 

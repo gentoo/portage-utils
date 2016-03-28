@@ -45,7 +45,7 @@ static const char * const qtbz2_opts_help[] = {
 	"Write files to stdout",
 	COMMON_OPTS_HELP
 };
-#define qtbz2_usage(ret) usage(ret, QTBZ2_FLAGS, qtbz2_long_opts, qtbz2_opts_help, lookup_applet_idx("qtbz2"))
+#define qtbz2_usage(ret) usage(ret, QTBZ2_FLAGS, qtbz2_long_opts, qtbz2_opts_help, NULL, lookup_applet_idx("qtbz2"))
 
 static char tbz2_stdout = 0;
 

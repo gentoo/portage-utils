@@ -29,7 +29,7 @@ static const char * const qsize_opts_help[] = {
 	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
-#define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, lookup_applet_idx("qsize"))
+#define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, NULL, lookup_applet_idx("qsize"))
 
 struct qsize_opt_state {
 	array_t *atoms;
