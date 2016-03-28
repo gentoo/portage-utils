@@ -10,7 +10,7 @@
 
 #define QLOP_DEFAULT_LOGFILE "emerge.log"
 
-#define QLOP_FLAGS "gtHluscf:" COMMON_FLAGS
+#define QLOP_FLAGS "gtHluscd:f:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
 	{"gauge",     no_argument, NULL, 'g'},
 	{"time",      no_argument, NULL, 't'},
@@ -19,6 +19,7 @@ static struct option const qlop_long_opts[] = {
 	{"unlist",    no_argument, NULL, 'u'},
 	{"sync",      no_argument, NULL, 's'},
 	{"current",   no_argument, NULL, 'c'},
+	{"date",       a_argument, NULL, 'd'},
 	{"logfile",    a_argument, NULL, 'f'},
 	COMMON_LONG_OPTS
 };
@@ -30,6 +31,7 @@ static const char * const qlop_opts_help[] = {
 	"Show unmerge history",
 	"Show sync history",
 	"Show current emerging packages",
+	"Limit selection to this time (1st -d is start, 2nd -d is end)",
 	"Read emerge logfile instead of $EMERGE_LOG_DIR/" QLOP_DEFAULT_LOGFILE,
 	COMMON_OPTS_HELP
 };
@@ -64,7 +66,8 @@ chop_ctime(time_t t)
 }
 
 _q_static unsigned long
-show_merge_times(char *package, const char *logfile, int average, char human_readable)
+show_merge_times(char *package, const char *logfile, int average, char human_readable,
+                 time_t start_time, time_t end_time)
 {
 	FILE *fp;
 	char cat[126], buf[2][BUFSIZ];
@@ -103,6 +106,8 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 			continue;
 		*p = 0;
 		t[0] = atol(buf[0]);
+		if (t[0] < start_time || t[0] > end_time)
+			continue;
 		strcpy(buf[1], p + 1);
 		rmspace(buf[1]);
 		if (strncmp(buf[1], ">>> emerge (", 12) == 0) {
@@ -216,7 +221,8 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 }
 
 _q_static void
-show_emerge_history(int listflag, array_t *atoms, const char *logfile)
+show_emerge_history(int listflag, array_t *atoms, const char *logfile,
+                    time_t start_time, time_t end_time)
 {
 	FILE *fp;
 	size_t buflen, linelen;
@@ -247,6 +253,8 @@ show_emerge_history(int listflag, array_t *atoms, const char *logfile)
 			continue;
 
 		t = (time_t) atol(buf);
+		if (t < start_time || t > end_time)
+			continue;
 
 		if ((listflag & QLOP_LIST) && !strncmp(q, "::: completed emerge (", 22)) {
 			merged = 1;
@@ -313,7 +321,7 @@ New format:
 1431764493:  *** terminating.
 */
 _q_static void
-show_sync_history(const char *logfile)
+show_sync_history(const char *logfile, time_t start_time, time_t end_time)
 {
 	FILE *fp;
 	size_t buflen, linelen;
@@ -344,6 +352,8 @@ show_sync_history(const char *logfile)
 		rmspace_len(buf, linelen);
 
 		t = (time_t)atol(buf);
+		if (t < start_time || t > end_time)
+			continue;
 
 		if (!strncmp(p, "with ", 5))
 			p += 5;
@@ -635,16 +645,112 @@ void show_current_emerge(void)
 }
 #endif
 
+_q_static
+bool parse_date(const char *sdate, time_t *t)
+{
+	struct tm tm;
+	const char *s;
+
+	memset(&tm, 0, sizeof(tm));
+
+	s = strchr(sdate, '|');
+	if (s) {
+		/* Handle custom format like "%Y|2012". */
+		size_t fmtlen = s - sdate;
+		char fmt[fmtlen + 1];
+		memcpy(fmt, sdate, fmtlen);
+		fmt[fmtlen] = '\0';
+		sdate = s + 1;
+		s = strptime(sdate, fmt, &tm);
+		if (s == NULL || s[0] != '\0')
+			return false;
+	} else {
+		/* Handle automatic formats:
+		 * - "12315128"   -> %s
+		 * - "2015-12-24" -> %F (same as %Y-%m-%d
+		 * - human readable format (see below)
+		 */
+		size_t len = strspn(sdate, "0123456789-");
+		if (sdate[len] == '\0') {
+			const char *fmt;
+			if (strchr(sdate, '-') == NULL)
+				fmt = "%s";
+			else
+				fmt = "%F";
+
+			s = strptime(sdate, fmt, &tm);
+			if (s == NULL || s[0] != '\0')
+				return false;
+		} else {
+			/* Handle the formats:
+			 * <#> <day|week|month|year>[s] [ago]
+			 */
+			len = strlen(sdate);
+
+			unsigned long num;
+			char dur[len];
+			char ago[len];
+			int ret = sscanf(sdate, "%lu %s %s", &num, dur, ago);
+
+			if (ret < 2)
+				return false;
+			if (ret == 3 && strcmp(ago, "ago") != 0)
+				return false;
+
+			if (time(t) == -1)
+				return false;
+			if (localtime_r(t, &tm) == NULL)
+				return false;
+
+			/* Chop and trailing "s" sizes. */
+			len = strlen(dur);
+			if (dur[len - 1] == 's')
+				dur[len - 1] = '\0';
+
+			/* Step down the current time. */
+			if (!strcmp(dur, "year")) {
+				tm.tm_year -= num;
+			} else if (!strcmp(dur, "month")) {
+				if (num >= 12) {
+					tm.tm_year -= (num / 12);
+					num %= 12;
+				}
+				tm.tm_mon -= num;
+				if (tm.tm_mon < 0) {
+					tm.tm_mon += 12;
+					tm.tm_year -= 1;
+				}
+			} else if (!strcmp(dur, "week")) {
+				num *= 7;
+				goto days;
+			} else if (!strcmp(dur, "day")) {
+ days:
+				/* This is in seconds, so scale w/that.  */
+				*t -= (num * 24 * 60 * 60);
+				if (localtime_r(t, &tm) == NULL)
+					return false;
+			} else
+				return false;
+		}
+	}
+
+	*t = mktime(&tm);
+	return (*t == -1) ? false : true;
+}
+
 int qlop_main(int argc, char **argv)
 {
 	size_t i;
 	int average = 1;
+	time_t start_time, end_time;
 	char do_time, do_list, do_unlist, do_sync, do_current, do_human_readable = 0;
 	char *logfile = NULL;
 	int flags;
 	depend_atom *atom;
 	DECLARE_ARRAY(atoms);
 
+	start_time = 0;
+	end_time = LONG_MAX;
 	do_time = do_list = do_unlist = do_sync = do_current = 0;
 
 	while ((i = GETOPT_LONG(QLOP, qlop, "")) != -1) {
@@ -658,6 +764,16 @@ int qlop_main(int argc, char **argv)
 			case 'c': do_current = 1; break;
 			case 'g': do_time = 1; average = 0; break;
 			case 'H': do_human_readable = 1; break;
+			case 'd':
+				if (start_time == 0) {
+					if (!parse_date(optarg, &start_time))
+						err("invalid date: %s", optarg);
+				} else if (end_time == LONG_MAX) {
+					if (!parse_date(optarg, &end_time))
+						err("invalid date: %s", optarg);
+				} else
+					err("too many -d options");
+				break;
 			case 'f':
 				if (logfile) err("Only use -f once");
 				logfile = xstrdup(optarg);
@@ -685,16 +801,17 @@ int qlop_main(int argc, char **argv)
 	if (do_unlist)
 		flags |= QLOP_UNLIST;
 	if (flags)
-		show_emerge_history(flags, atoms, logfile);
+		show_emerge_history(flags, atoms, logfile, start_time, end_time);
 
 	if (do_current)
 		show_current_emerge();
 	if (do_sync)
-		show_sync_history(logfile);
+		show_sync_history(logfile, start_time, end_time);
 
 	if (do_time) {
 		for (i = 0; i < argc; ++i)
-			show_merge_times(argv[i], logfile, average, do_human_readable);
+			show_merge_times(argv[i], logfile, average, do_human_readable,
+				start_time, end_time);
 	}
 
 	array_for_each(atoms, i, atom)

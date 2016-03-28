@@ -1,4 +1,4 @@
-.TH qlop "1" "Feb 2016" "Gentoo Foundation" "qlop"
+.TH qlop "1" "Mar 2016" "Gentoo Foundation" "qlop"
 .SH NAME
 qlop \- emerge log analyzer
 .SH SYNOPSIS
@@ -28,6 +28,9 @@ Show sync history
 .TP
 \fB\-c\fR, \fB\-\-current\fR
 Show current emerging packages
+.TP
+\fB\-d\fR \fI<arg>\fR, \fB\-\-date\fR \fI<arg>\fR
+Limit selection to this time (1st -d is start, 2nd -d is end)
 .TP
 \fB\-f\fR \fI<arg>\fR, \fB\-\-logfile\fR \fI<arg>\fR
 Read emerge logfile instead of $EMERGE_LOG_DIR/emerge.log

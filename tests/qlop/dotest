@@ -37,6 +37,11 @@ test 04 0 "qlop -l gcc -f ${as}/sync.log"
 # verify atom version parsing works
 test 05 0 "qlop -l '<gcc-5' -f ${as}/sync.log"
 
+# check date time parser
+test 06 0 "qlop -l -f ${as}/sync.log -d 2005-01-01"
+test 07 0 "qlop -l -f ${as}/sync.log -d '%d%Y%m|01200501'"
+test 08 0 "qlop -l -f ${as}/sync.log -d 1104898893"
+
 cleantmpdir
 
 end
