@@ -8,24 +8,6 @@
 
 #ifdef APPLET_qlop
 
-#ifdef __linux__
-# include <asm/param.h>
-#endif
-
-#ifdef __FreeBSD__
-# include <kvm.h>
-# include <sys/param.h>
-# include <sys/sysctl.h>
-# include <sys/user.h>
-# include <sys/time.h>
-#endif
-
-#ifdef __MACH__
-# include <stdlib.h>
-# include <sys/types.h>
-# include <sys/sysctl.h>
-#endif
-
 #define QLOP_DEFAULT_LOGFILE "emerge.log"
 
 #define QLOP_FLAGS "gtHluscf:" COMMON_FLAGS
@@ -379,7 +361,8 @@ show_sync_history(const char *logfile)
 
 _q_static void show_current_emerge(void);
 #ifdef __linux__
-#include <elf.h>
+# include <asm/param.h>
+# include <elf.h>
 static unsigned long hz = 0;
 static void init_hz(void)
 {
@@ -495,6 +478,10 @@ void show_current_emerge(void)
 		puts("No emerge processes located");
 }
 #elif defined(__FreeBSD__)
+# include <kvm.h>
+# include <sys/param.h>
+# include <sys/sysctl.h>
+# include <sys/user.h>
 void show_current_emerge(void)
 {
 	kvm_t *kd = NULL;
@@ -545,6 +532,7 @@ void show_current_emerge(void)
 		puts("No emerge processes located");
 }
 #elif defined(__MACH__)
+# include <sys/sysctl.h>
 void show_current_emerge(void)
 {
 	int mib[3];
