@@ -119,8 +119,9 @@ qsearch_ebuild_ebuild(int overlay_fd, const char *ebuild, const char *search_me,
 	}
 
 	if (show_it) {
+		const char *pkg = basename(p);
 		printf("%s%s/%s%s%s %s\n",
-			BOLD, dirname(p), BLUE, basename(p), NORM,
+			BOLD, dirname(p), BLUE, pkg, NORM,
 			(show_name_only ? "" : q ? : "<no DESCRIPTION found>"));
 	}
 
