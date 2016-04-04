@@ -507,8 +507,10 @@ static void read_repos_conf(const char *configroot, const char *repos_conf)
 #endif
 			{
 				struct stat st;
-				if (stat(sub_conf, &st) || S_ISREG(st.st_mode))
+				if (stat(sub_conf, &st) || !S_ISREG(st.st_mode)) {
+					free(sub_conf);
 					continue;
+				}
 			}
 
 			read_one_repos_conf(sub_conf);
