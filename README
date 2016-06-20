@@ -25,7 +25,7 @@ Current developer list:
 
 - Fetching via anon git:
 
-  git clone git://git.overlays.gentoo.org/proj/portage-utils.git
+  git clone git://anongit.gentoo.org/proj/portage-utils.git
 
 You can view it online via gitweb:
-	http://git.overlays.gentoo.org/gitweb/?p=proj/portage-utils.git
+	https://gitweb.gentoo.org/proj/portage-utils.git/
