@@ -1,4 +1,4 @@
-.TH qfile "1" "Mar 2016" "Gentoo Foundation" "qfile"
+.TH qfile "1" "Jun 2016" "Gentoo Foundation" "qfile"
 .SH NAME
 qfile \- list all pkgs owning files
 .SH SYNOPSIS
@@ -148,67 +148,6 @@ Sure, the same differences hold when querying for orphan files:
 	$ ROOT=/mnt qfile -Ro /mnt/bin/*
 	/mnt/bin/dostuff.sh
 .fi
-.SH "READING ARGUMENTS FROM A FILE/STDIN"
-.PP
-When you try to launch \fBqfile\fP with a large number of arguments, you may
-hit the following shell error:
-.nf\fI
-	$ qfile -o $(find /usr/lib)
-	bash: ./qfile: Argument list too long
-.fi
-.PP
-To avoid that, you must use the \fB\-\-from\fP (\fB\-f\fP) option, which
-allows reading your arguments list in a file:
-.nf\fI
-	$ find /usr/lib > ~/usr-lib.list
-	$ qfile -o -f ~/usr-lib.list
-	/usr/lib/libMagick-5.5.7-Q16.so.0.0.0
-	/usr/lib/libGL.so
-	...
-.fi
-.PP
-Your arguments list must be formatted with one file per line, and without any
-kind of garbage (no leading or trailing space, no empty line, etc.).  The
-default \fBfind\fP output format is just fine in general.
-.PP
-You can also read the arguments list from standard input with the "\fB\-\fP"
-pseudo filename, which is useful with shell pipes:
-.nf\fI
-	$ find /usr/lib | qfile -o -f -
-	/usr/lib/libMagick-5.5.7-Q16.so.0.0.0
-	/usr/lib/libGL.so
-	...
-.fi
-.PP
-Here is an other example of use.  This script lists some files which may be
-orphan config files left behind by Portage after uninstallation or upgrade of
-some packages:
-.nf\fI
-	#!/bin/bash
-	SEARCH_PATHS="$(portageq envvar CONFIG_PROTECT)"
-	SEARCH_MASK="$(portageq envvar CONFIG_PROTECT_MASK) \\
-		/etc/runlevels /etc/portage \\
-		/etc/ssl/certs /etc/ssh \\
-		/etc/bash_completion.d /etc/cups"
-	for path in ${SEARCH_MASK} ; do
-		EXCLUDE="${EXCLUDE} -not -path ${path}/*"
-	done
-	set -f
-	find ${SEARCH_PATHS} ${EXCLUDE} | qfile -o -f -
-.fi
-.PP
-\fBIMPORTANT:\fP this script is just a quick example.  Do not blindly delete the
-files it will list!
-.PP
-When reading arguments from a file or from stdin, \fBqfile\fP will, for
-performances reasons, treat then by groups of 5000 (search owners of the
-5000 first files, then of the 5000 following ones, etc.).  This magic value
-should be fine in most cases, but you can change it if you really want, using
-the \fB\-\-max\-args\fP option (\fB\-m\fP).  Using a greater value will eat a
-bit more memory, but may be a bit faster for really big queries.  Be careful
-though, using some stupidly high or low value can completly kill the
-performances.  In short, you probably don't want to touch this option.
-.PP
 .SH "SEARCHING FOR FILE COLLISIONS"
 .PP
 A last option of \fBqfile\fP is \fB\-\-exclude\fP (\fB\-x\fP), which will makes
