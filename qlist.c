@@ -183,8 +183,11 @@ qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, b
 	}
 
 	if (uslot) {
-		/* require exact match on SLOTs */
-		if (strncmp(pkg_ctx->slot, uslot, uslot_len) != 0 || pkg_ctx->slot[uslot_len] != '\0')
+		/* Require exact match on SLOTs.  If the user didn't include a subslot,
+		 * then ignore it when checking the package's value. */
+		if (strncmp(pkg_ctx->slot, uslot, uslot_len) != 0 ||
+		    (pkg_ctx->slot[uslot_len] != '\0' &&
+		     pkg_ctx->slot[uslot_len] != '/'))
 			return false;
 	}
 
