@@ -145,11 +145,11 @@ qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, b
 	if (urepo) {
 		if (!pkg_ctx->repo)
 			q_vdb_pkg_eat(pkg_ctx, "repository", &pkg_ctx->repo, &pkg_ctx->repo_len);
-		urepo_len = strlen(urepo);
 		urepo += 2;
+		urepo_len = strlen(urepo);
 
 		if (uslot_len)
-			uslot_len -= urepo_len;
+			uslot_len -= (urepo_len + 2);
 	}
 
 	/* maybe they're using a version range */
