@@ -750,13 +750,31 @@ void qcache_stats(qcache_data *data)
 
 		xasprintf(&catpath, "%s/dep/%s", portedb, data->overlay);
 		dir = opendir(catpath);
-		while ((de = readdir(dir)))
-			if (de->d_type == DT_DIR && de->d_name[0] != '.') {
+		while ((de = readdir(dir))) {
+			/* Look for all the directories in this path. */
+#ifdef DT_UNKNOWN
+			if (de->d_type == DT_UNKNOWN)
+#endif
+			{
+				struct stat s;
+				if (lstat(de->d_name, &s))
+					continue;
+				if (!S_ISDIR(s.st_mode))
+					continue;
+			}
+
+#ifdef DT_DIR
+			if (de->d_type != DT_DIR)
+				continue;
+#endif
+
+			if (de->d_name[0] != '.') {
 				bool ok;
 				allcats = add_set_unique(de->d_name, allcats, &ok);
 				if (ok)
 					++numcat;
 			}
+		}
 		closedir(dir);
 		free(catpath);
 
