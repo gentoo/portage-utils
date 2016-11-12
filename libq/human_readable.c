@@ -13,16 +13,13 @@
  *      representations (say, powers of 1024) and manipulating coefficients.
  *      The base ten "bytes" output could be handled similarly.
  *
- *   2) This routine always outputs a decimal point and a tenths digit when
- *      display_unit != 0.  Hence, it isn't uncommon for the returned string
+ *   2) This routine outputs a decimal point and a tenths digit when
+ *      display_unit == 0.  Hence, it isn't uncommon for the returned string
  *      to have a length of 5 or 6.
  *
- *      It might be nice to add a flag to indicate no decimal digits in
- *      that case.  This could be either an additional parameter, or a
- *      special value of display_unit.  Such a flag would also be nice for du.
+ *      If block_size is also 0, no decimal digits are printed.
  *
- *      Some code to omit the decimal point and tenths digit is sketched out
- *      and "#if 0"'d below.
+ * Licensed under GPLv2, see file LICENSE in this source tree.
  */
 
 #include <stdio.h>
@@ -33,59 +30,59 @@ enum {
 	MEGABYTE = (KILOBYTE*1024),
 	GIGABYTE = (MEGABYTE*1024)
 };
-const char *make_human_readable_str(unsigned long long size,
+
+const char* make_human_readable_str(unsigned long long val,
 	unsigned long block_size, unsigned long display_unit)
 {
-	/* The code will adjust for additional (appended) units. */
-	static const char zero_and_units[] = { '0', 0, 'k', 'M', 'G', 'T' };
-	static const char fmt[] = "%'Lu";
-	static const char fmt_tenths[] = "%'Lu%s%d%c";
+	static const char unit_chars[] = {
+		'\0', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'
+	};
+
+	unsigned frac; /* 0..9 - the fractional digit */
+	const char *u;
+	const char *fmt;
 
 	static char str[21];		/* Sufficient for 64 bit unsigned integers. */
 
-	unsigned long long val;
-	int frac;
-	const char *u;
-	const char *f;
+	if (val == 0)
+		return "0";
 
-	u = zero_and_units;
-	f = fmt;
+	fmt = "%llu";
+	if (block_size > 1)
+		val *= block_size;
 	frac = 0;
-
-	val = size * block_size;
-	if (val == 0) {
-		return u;
-	}
+	u = unit_chars;
 
 	if (display_unit) {
-		val += display_unit/2;	/* Deal with rounding. */
-		val /= display_unit;	/* Don't combine with the line above!!! */
+		val += display_unit/2;  /* Deal with rounding */
+		val /= display_unit;    /* Don't combine with the line above! */
+		/* will just print it as ulonglong (below) */
 	} else {
-		++u;
-		while ((val >= KILOBYTE)
-			   && (u < zero_and_units + sizeof(zero_and_units) - 1)) {
-			f = fmt_tenths;
-			++u;
-			frac = ((((int)(val % KILOBYTE)) * 10) + (KILOBYTE/2)) / KILOBYTE;
-			val /= KILOBYTE;
+		while ((val >= 1024)
+		 /* && (u < unit_chars + sizeof(unit_chars) - 1) - always true */
+		) {
+			fmt = "%llu.%u%c";
+			u++;
+			frac = (((unsigned)val % 1024) * 10 + 1024/2) / 1024;
+			val /= 1024;
 		}
-		if (frac >= 10) {		/* We need to round up here. */
+		if (frac >= 10) { /* we need to round up here */
 			++val;
 			frac = 0;
 		}
-#if 0
-		/* Sample code to omit decimal point and tenths digit. */
-		if (1) { /* no_tenths */
-			if (frac >= 5)
+#if 1
+		/* If block_size is 0, dont print fractional part */
+		if (block_size == 0) {
+			if (frac >= 5) {
 				++val;
-			f = "%Lu%*c"; /* fmt_no_tenths */
+			}
+			fmt = "%llu%*c";
 			frac = 1;
 		}
 #endif
 	}
 
-	/* If f==fmt then 'frac' and 'u' are ignored. */
-	snprintf(str, sizeof(str), f, val, decimal_point, frac, *u);
+	snprintf(str, sizeof(str), fmt, val, frac, *u);
 
 	return str;
 }
