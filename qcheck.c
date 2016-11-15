@@ -382,6 +382,11 @@ int qcheck_main(int argc, char **argv)
 	}
 
 	ret = q_vdb_foreach_pkg_sorted(qcheck_cb, &state);
+	{
+		void *regex;
+		array_for_each(regex_arr, i, regex)
+			regfree(regex);
+	}
 	xarrayfree(regex_arr);
 	array_for_each(atoms, i, atom)
 		atom_implode(atom);
