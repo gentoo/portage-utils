@@ -187,7 +187,7 @@ _q_static void qmerge_initialize(void)
 	}
 
 	char *buf;
-	xasprintf(&buf, "%s/portage", port_tmpdir);
+	xasprintf(&buf, "%s/portage/", port_tmpdir);
 	mkdir_p(buf, 0755);
 	xchdir(buf);
 
@@ -195,13 +195,10 @@ _q_static void qmerge_initialize(void)
 		if (force_download)
 			unlink(Packages);
 
-		if (access(Packages, R_OK) != 0) {
-			xasprintf(&buf, "%s/portage/", port_tmpdir);
-			if (access(Packages, R_OK) != 0)
-				fetch(buf, Packages);
-			free(buf);
-		}
+		if (access(Packages, R_OK) != 0)
+			fetch(buf, Packages);
 	}
+	free(buf);
 }
 
 struct qmerge_bv_state {
@@ -871,12 +868,16 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		return;
 	cat_ctx = q_vdb_open_cat(vdb_ctx, pkg->CATEGORY);
 	if (!cat_ctx) {
-		if (errno != ENOENT)
+		if (errno != ENOENT) {
+			q_vdb_close(vdb_ctx);
 			return;
+		}
 		mkdirat(vdb_ctx->vdb_fd, pkg->CATEGORY, 0755);
 		cat_ctx = q_vdb_open_cat(vdb_ctx, pkg->CATEGORY);
-		if (!cat_ctx)
+		if (!cat_ctx) {
+			q_vdb_close(vdb_ctx);
 			return;
+		}
 	}
 
 	/* Set up our temp dir to unpack this stuff */
@@ -983,13 +984,15 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 				warn("no idea how we reached here.");
 			case ERROR:
 			case NOT_EQUAL:
-				continue;
+				goto next_pkg;
 		}
 
 		qprintf("%s+++%s %s/%s %s %s/%s\n", GREEN, NORM, atom->CATEGORY, pkg->PF,
 			booga[ret], cat_ctx->name, pkg_ctx->name);
 
 		pkg_unmerge(pkg_ctx, objs);
+ next_pkg:
+		q_vdb_close_pkg(pkg_ctx);
 	}
 
 	/* Clean up the package state */
@@ -1020,6 +1023,8 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	rmdir("../qmerge");
 
 	printf("%s>>>%s %s%s%s/%s%s%s\n", YELLOW, NORM, WHITE, atom->CATEGORY, NORM, CYAN, atom->PN, NORM);
+
+	q_vdb_close(vdb_ctx);
 }
 
 _q_static int
@@ -1051,7 +1056,7 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 	/* First get a handle on the things to clean up */
 	fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
 	if (fp == NULL)
-		goto done;
+		return ret;
 
 	portroot_fd = cat_ctx->ctx->portroot_fd;
 
@@ -1199,7 +1204,6 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 	}
 
 	ret = 0;
- done:
 	free(phases);
 	free(buf);
 
