@@ -411,6 +411,9 @@ int qlist_main(int argc, char **argv)
 	state.atoms = xcalloc(argc - optind, sizeof(*state.atoms));
 	ret = q_vdb_foreach_pkg_sorted(qlist_cb, &state);
 	free(state.buf);
+	for (i = optind; i < state.argc; ++i)
+		if (state.atoms[i - optind])
+			atom_implode(state.atoms[i - optind]);
 	free(state.atoms);
 
 	/* The return value is whether we matched anything. */
