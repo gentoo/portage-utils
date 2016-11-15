@@ -588,6 +588,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			/* syntax: obj filename hash mtime */
 			hash = hash_file_at(subfd_src, name, HASH_MD5);
 			fprintf(contents, "obj %s %s %"PRIu64"\n", cpath, hash, (uint64_t)st.st_mtime);
+			free(hash);
 
 			/* Check CONFIG_PROTECT */
 			if (config_protected(cpath, cp_argc, cp_argv, cpm_argc, cpm_argv)) {
@@ -1102,6 +1103,7 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 					/* If the file wasn't modified, unmerge it */
 					unsigned char *hash = hash_file_at(portroot_fd, e->name + 1, HASH_MD5);
 					protected = strcmp(e->digest, (const char *)hash);
+					free(hash);
 				}
 				break;
 
@@ -1232,6 +1234,7 @@ pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *at
 				warn("MD5:  [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->MD5, atom->CATEGORY, pkg->PF);
 			ret++;
 		}
+		free(hash);
 	}
 
 	if (pkg->SHA1[0]) {
@@ -1244,6 +1247,7 @@ pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *at
 				warn("SHA1: [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->SHA1, atom->CATEGORY, pkg->PF);
 			ret++;
 		}
+		free(hash);
 	}
 
 	if (!pkg->SHA1[0] && !pkg->MD5[0])
