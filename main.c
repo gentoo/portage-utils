@@ -1356,6 +1356,7 @@ _q_static queue *get_vdb_atoms(int fullcpv)
 
 	char buf[_Q_PATH_MAX];
 	char slot[_Q_PATH_MAX];
+	char *slotp = slot;
 	size_t slot_len;
 
 	struct dirent **cat;
@@ -1384,7 +1385,7 @@ _q_static queue *get_vdb_atoms(int fullcpv)
 			 * until this is rewritten & merged into libq/vdb.c. */
 			slot_len = sizeof(slot);
 			strncat(buf, "/SLOT", sizeof(buf));
-			eat_file_at(ctx->vdb_fd, buf, (char **)&slot, &slot_len);
+			eat_file_at(ctx->vdb_fd, buf, &slotp, &slot_len);
 			rmspace(slot);
 
 			if (fullcpv) {
