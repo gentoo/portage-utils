@@ -107,7 +107,7 @@ void no_colors(void)
 #define COMMON_GETOPTS_CASES(applet) \
 	case 0x1: portroot = optarg; break; \
 	case 'v': ++verbose; break; \
-	case 'q': ++quiet; warnout = fopen("/dev/null", "we"); break; \
+	case 'q': if (quiet == 0) { warnout = fopen("/dev/null", "we"); } ++quiet; break; \
 	case 'V': version_barf(); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': no_colors(); break; \
