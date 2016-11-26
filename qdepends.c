@@ -596,7 +596,7 @@ int qdepends_main(int argc, char **argv)
 		atom_implode(atom);
 	xarrayfree_int(atoms);
 
-	if (!ret && !quiet)
+	if (!ret)
 		warn("no matches found for your query");
 	return ret ? EXIT_SUCCESS : EXIT_FAILURE;
 }

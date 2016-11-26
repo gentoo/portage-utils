@@ -107,7 +107,7 @@ void no_colors(void)
 #define COMMON_GETOPTS_CASES(applet) \
 	case 0x1: portroot = optarg; break; \
 	case 'v': ++verbose; break; \
-	case 'q': ++quiet; if (freopen("/dev/null", "w", stderr)) { /* ignore errors */ } break; \
+	case 'q': ++quiet; warnout = fopen("/dev/null", "we"); break; \
 	case 'V': version_barf(); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': no_colors(); break; \
@@ -121,31 +121,31 @@ static void usage(int status, const char *flags, struct option const opts[],
 	const char a_arg[] = "<arg>";
 	size_t a_arg_len = strlen(a_arg) + 1;
 	size_t i, optlen;
+	FILE *fp = status == EXIT_SUCCESS ? stdout : warnout;
 
-	if (status != EXIT_SUCCESS)
-		dup2(STDERR_FILENO, STDOUT_FILENO);
 	if (blabber == 0) {
-		printf("%sUsage:%s %sq%s %s<applet> <args>%s  : %s"
+		fprintf(fp, "%sUsage:%s %sq%s %s<applet> <args>%s  : %s"
 			"invoke a portage utility applet\n\n", GREEN,
 			NORM, YELLOW, NORM, DKBLUE, RED, NORM);
-		printf("%sCurrently defined applets:%s\n", GREEN, NORM);
+		fprintf(fp, "%sCurrently defined applets:%s\n", GREEN, NORM);
 		for (i = 0; applets[i].desc; ++i)
 			if (applets[i].func)
-				printf(" %s%8s%s %s%-16s%s%s:%s %s\n",
+				fprintf(fp, " %s%8s%s %s%-16s%s%s:%s %s\n",
 					YELLOW, applets[i].name, NORM,
 					DKBLUE, applets[i].opts, NORM,
 					RED, NORM, _(applets[i].desc));
 	} else if (blabber > 0) {
-		printf("%sUsage:%s %s%s%s [opts] %s%s%s %s:%s %s\n",
+		fprintf(fp, "%sUsage:%s %s%s%s [opts] %s%s%s %s:%s %s\n",
 			GREEN, NORM,
 			YELLOW, applets[blabber].name, NORM,
 			DKBLUE, applets[blabber].opts, NORM,
 			RED, NORM, _(applets[blabber].desc));
 		if (desc)
-			printf("\n%s\n", desc);
+			fprintf(fp, "\n%s\n", desc);
 	}
 	if (module_name != NULL)
-		printf("%sLoaded module:%s\n%s%8s%s %s<args>%s\n", GREEN, NORM, YELLOW, module_name, NORM, DKBLUE, NORM);
+		fprintf(fp, "%sLoaded module:%s\n%s%8s%s %s<args>%s\n",
+			GREEN, NORM, YELLOW, module_name, NORM, DKBLUE, NORM);
 
 	/* Prescan the --long opt length to auto-align. */
 	optlen = 0;
@@ -156,23 +156,23 @@ static void usage(int status, const char *flags, struct option const opts[],
 		optlen = MAX(l, optlen);
 	}
 
-	printf("\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
+	fprintf(fp, "\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
 	for (i = 0; opts[i].name; ++i) {
 		/* this assert is a life saver when adding new applets. */
 		assert(help[i] != NULL);
 
 		/* first output the short flag if it has one */
 		if (opts[i].val > '~' || opts[i].val < ' ')
-			printf("      ");
+			fprintf(fp, "      ");
 		else
-			printf("  -%c, ", opts[i].val);
+			fprintf(fp, "  -%c, ", opts[i].val);
 
 		/* then the long flag + help text */
 		if (opts[i].has_arg == no_argument)
-			printf("--%-*s %s*%s %s\n", (int)optlen, opts[i].name,
+			fprintf(fp, "--%-*s %s*%s %s\n", (int)optlen, opts[i].name,
 				RED, NORM, _(help[i]));
 		else
-			printf("--%s %s%s%s%*s %s*%s %s\n",
+			fprintf(fp, "--%s %s%s%s%*s %s*%s %s\n",
 				opts[i].name,
 				DKBLUE, (opts[i].has_arg == a_argument ? a_arg : opt_arg), NORM,
 				(int)(optlen - strlen(opts[i].name) - a_arg_len), "",
@@ -985,9 +985,8 @@ initialize_flat(const char *overlay, int cache_type, bool force)
 				return cache_file;
 	}
 
-	if (!quiet)
-		warn("Updating ebuild %scache in %s ... ",
-			cache_type == CACHE_EBUILD ? "" : "meta", overlay);
+	warn("Updating ebuild %scache in %s ... ",
+		cache_type == CACHE_EBUILD ? "" : "meta", overlay);
 
 	count = frac = secs = 0;
 
@@ -1421,6 +1420,7 @@ void cleanup(void)
 int main(int argc, char **argv)
 {
 	struct stat st;
+	warnout = stderr;
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
 
