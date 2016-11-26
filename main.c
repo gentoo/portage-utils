@@ -451,6 +451,9 @@ static void read_one_repos_conf(const char *repos_conf)
 	const char *main_repo, *repo, *path;
 	dictionary *dict;
 
+	if (getenv("DEBUG"))
+		fprintf(stderr, "  parse %s\n", repos_conf);
+
 	dict = iniparser_load(repos_conf);
 
 	main_repo = iniparser_getstring(dict, "DEFAULT:main-repo", NULL);
@@ -482,6 +485,8 @@ static void read_repos_conf(const char *configroot, const char *repos_conf)
 	struct dirent **confs;
 
 	xasprintf(&top_conf, "%s%s", configroot, repos_conf);
+	if (getenv("DEBUG"))
+		fprintf(stderr, "repos.conf.d scanner %s\n", top_conf);
 	count = scandir(top_conf, &confs, NULL, alphasort);
 	if (count == -1) {
 		if (errno == ENOTDIR)
