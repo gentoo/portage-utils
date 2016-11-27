@@ -1206,6 +1206,7 @@ portage_cache *cache_read_file_pms(const char *file)
 	return ret;
 
 err:
+	if (f) fclose(f);
 	if (ret) cache_free(ret);
 	return NULL;
 }
