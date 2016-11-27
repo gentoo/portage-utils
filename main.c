@@ -1303,7 +1303,7 @@ portage_cache *cache_read_file_md5(const char *file)
 	return ret;
 
 err:
-	fclose(f);
+	if (f) fclose(f);
 	if (ret) cache_free(ret);
 	return NULL;
 }
