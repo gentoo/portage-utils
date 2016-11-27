@@ -50,7 +50,7 @@ endif
 ifndef PF
 PF        := portage-utils-$(PV)
 endif
-DOCS      := TODO README qsync
+DOCS      := TODO.md README.md qsync
 
 #ifdef PYTHON
 #PYFLAGS   ?= $(shell python-config) -DWANT_PYTHON -ldl -pthread -lutil /usr/lib/libpython2.4.so
