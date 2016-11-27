@@ -178,6 +178,8 @@ EXTRA_DIST += \
 	tests/profile/profile1/etc/portage/make.conf \
 	tests/profile/profile1/etc/portage/subdir/file.conf \
 	tests/profile/profile1/etc/portage/this.level.conf \
+	tests/qatom/Makefile \
+	tests/qatom/dotest \
 	tests/qcheck/Makefile \
 	tests/qcheck/dotest \
 	tests/qcheck/list01.good \
@@ -236,6 +238,7 @@ EXTRA_DIST += \
 	tests/qlist/list13.good \
 	tests/qlist/list14.good \
 	tests/qlist/list15.good \
+	tests/qlist/list16.good \
 	tests/qlist/root/-merge-foo/CONTENTS \
 	tests/qlist/root/a-b/a-0/CONTENTS \
 	tests/qlist/root/a-b/a-0/SLOT \
@@ -258,8 +261,15 @@ EXTRA_DIST += \
 	tests/qlop/Makefile \
 	tests/qlop/dotest \
 	tests/qlop/list01.good \
+	tests/qlop/list02.good \
+	tests/qlop/list03.good \
+	tests/qlop/list04.good \
+	tests/qlop/list05.good \
+	tests/qlop/list06.good \
+	tests/qlop/list07.good \
+	tests/qlop/list08.good \
 	tests/qlop/sync.log \
-	tests/qmerge/.gdb_history \
+	tests/qlop/test04.good \
 	tests/qmerge/Makefile \
 	tests/qmerge/dotest \
 	tests/qmerge/packages/Packages \
@@ -281,6 +291,10 @@ EXTRA_DIST += \
 	tests/qxpak/list02.good \
 	tests/reinitialize/Makefile \
 	tests/reinitialize/dotest \
+	tests/rmspace/.gitignore \
+	tests/rmspace/Makefile \
+	tests/rmspace/dotest \
+	tests/rmspace/test.c \
 	tests/source/Makefile \
 	tests/source/dotest \
 	tests/source/space \
