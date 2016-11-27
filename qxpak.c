@@ -393,6 +393,8 @@ int qxpak_main(int argc, char **argv)
 			if (dir_fd != AT_FDCWD)
 				err("Only use -d once");
 			dir_fd = open(optarg, O_RDONLY|O_CLOEXEC|O_PATH);
+			if (dir_fd < 0)
+				errp("Could not open directory %s", optarg);
 			break;
 		}
 	}
