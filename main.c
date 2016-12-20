@@ -1382,14 +1382,20 @@ _q_static queue *get_vdb_atoms(int fullcpv)
 		if ((dfd = scandirat(ctx->vdb_fd, cat[j]->d_name, &pf, q_vdb_filter_pkg, alphasort)) < 0)
 			continue;
 		for (i = 0; i < dfd; i++) {
-			snprintf(buf, sizeof(buf), "%s/%s", cat[j]->d_name, pf[i]->d_name);
+			int blen = snprintf(buf, sizeof(buf), "%s/%s/SLOT", cat[j]->d_name, pf[i]->d_name);
+			if (blen >= sizeof(buf)) {
+				warnf("unable to parse long package: %s/%s", cat[j]->d_name, pf[i]->d_name);
+				continue;
+			}
+
+			/* Chop the SLOT for the atom parsing. */
+			buf[blen - 5] = '\0';
 			if ((atom = atom_explode(buf)) == NULL)
 				continue;
+			/* Restore the SLOT. */
+			buf[blen - 5] = '/';
 
-			/* XXX: This assumes static slot buf is big enough, but should be fine
-			 * until this is rewritten & merged into libq/vdb.c. */
 			slot_len = sizeof(slot);
-			strncat(buf, "/SLOT", sizeof(buf));
 			eat_file_at(ctx->vdb_fd, buf, &slotp, &slot_len);
 			rmspace(slot);
 
