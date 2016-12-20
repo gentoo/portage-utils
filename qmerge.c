@@ -771,7 +771,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	if (!install || !pkg || !atom)
 		return;
 
-	if (!pkg->PF[0] || !pkg->CATEGORY) {
+	if (!pkg->PF[0] || !pkg->CATEGORY[0]) {
 		if (verbose) warn("CPF is really NULL at level %d", level);
 		return;
 	}
