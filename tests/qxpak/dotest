@@ -10,6 +10,8 @@ files="a b c d e f"
 for l in ${files} ; do
 	echo $l > $l
 done
+mkdir subdir
+cp ${files} subdir
 
 ################
 qxpak -c xpak ${files}
@@ -54,6 +56,12 @@ qxpak -c xpak `echo ${files} | tr ' ' '\n' | tac`
 qxpak -l -v xpak > list
 diff -u list ${as}/list02.good
 tpass "check creation with clobbered output and file order"
+
+################
+qxpak -c xpak subdir
+qxpak -l -v xpak | sort > list
+diff -u list ${as}/list01.good
+tpass "check creation with subdir"
 
 cleantmpdir
 
