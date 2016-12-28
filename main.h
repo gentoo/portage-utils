@@ -95,6 +95,19 @@
 # define IF_DEBUG(x)
 #endif
 
+#undef USE_CLEANUP
+/* LSAN (Leak Sanitizer) will complain about things we leak. */
+#ifdef __SANITIZE_ADDRESS__
+# define USE_CLEANUP 1
+#endif
+/* Coverity catches some things we leak on purpose. */
+#ifdef __COVERITY__
+# define USE_CLEANUP 1
+#endif
+#ifndef USE_CLEANUP
+# define USE_CLEANUP 0
+#endif
+
 #define GETOPT_LONG(A, a, ex) \
 	getopt_long(argc, argv, ex A ## _FLAGS, a ## _long_opts, NULL)
 

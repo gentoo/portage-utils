@@ -12,6 +12,10 @@ FILE *warnout;
 #define warnfp(fmt, args...) warnf(fmt ": %s" , ## args , strerror(errno))
 #define _err(wfunc, fmt, args...) \
 	do { \
+	if (USE_CLEANUP) { \
+		if (warnout != stderr) \
+			fclose(warnout); \
+	} \
 	warnout = stderr; \
 	wfunc(fmt , ## args); \
 	exit(EXIT_FAILURE); \

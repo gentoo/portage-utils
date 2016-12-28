@@ -1102,13 +1102,15 @@ void reinitialize_as_needed(void)
 	if (reinitialize)
 		array_for_each(overlays, n, overlay) {
 			ret = initialize_flat(overlay, CACHE_EBUILD, true);
-			IF_DEBUG(free((void *)ret));
+			if (USE_CLEANUP)
+				free((void *)ret);
 		}
 
 	if (reinitialize_metacache)
 		array_for_each(overlays, n, overlay) {
 			ret = initialize_flat(overlay, CACHE_METADATA, true);
-			IF_DEBUG(free((void *)ret));
+			if (USE_CLEANUP)
+				free((void *)ret);
 		}
 }
 

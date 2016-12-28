@@ -87,8 +87,8 @@ int q_main(int argc, char **argv)
 		case 'm':
 			if (optarg) {
 				const char *path = initialize_flat(optarg, CACHE_METADATA, true);
-				if (path) { /* silence warning */ }
-				IF_DEBUG(free((void *)path));
+				if (USE_CLEANUP)
+					free((void *)path);
 				reinitialize_metacache = -1;
 			} else
 				reinitialize_metacache = 1;
@@ -96,8 +96,8 @@ int q_main(int argc, char **argv)
 		case 'r':
 			if (optarg) {
 				const char *path = initialize_flat(optarg, CACHE_EBUILD, true);
-				if (path) { /* silence warning */ }
-				IF_DEBUG(free((void *)path));
+				if (USE_CLEANUP)
+					free((void *)path);
 				reinitialize = -1;
 			} else
 				reinitialize = 1;
