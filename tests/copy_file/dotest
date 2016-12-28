@@ -1,0 +1,12 @@
+#!/bin/bash
+
+. ../init.sh || exit 1
+
+set -e
+
+m=${ab}/m
+
+${m}
+: $(( tpassed += 1 ))
+
+end

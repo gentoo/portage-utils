@@ -1,5 +1,5 @@
 TESTS = \
-	reinitialize atom_compare atom_explode mkdir rmspace \
+	reinitialize atom_compare atom_explode copy_file mkdir rmspace \
 	qatom qcheck qdepends qfile qlist qlop qmerge qtbz2 quse qxpak \
 	install profile source
 
