@@ -122,10 +122,8 @@ EXTRA_DIST += \
 	libq/xarray.c \
 	libq/xasprintf.c \
 	libq/xchdir.c \
-	libq/xgetcwd.c \
 	libq/xmalloc.c \
 	libq/xmkdir.c \
-	libq/xreadlink.c \
 	libq/xregex.c \
 	libq/xstrdup.c \
 	libq/xsystem.c \
