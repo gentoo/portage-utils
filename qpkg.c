@@ -8,8 +8,6 @@
 
 #ifdef APPLET_qpkg
 
-#include <fnmatch.h>
-
 #define QPKG_FLAGS "cEpP:" COMMON_FLAGS
 static struct option const qpkg_long_opts[] = {
 	{"clean",    no_argument, NULL, 'c'},

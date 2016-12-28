@@ -30,7 +30,10 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <fnmatch.h>
 #include <getopt.h>
+#include <glob.h>
 #include <inttypes.h>
 #include <libgen.h>
 #include <limits.h>

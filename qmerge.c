@@ -8,9 +8,6 @@
 
 #ifdef APPLET_qmerge
 
-#include <fnmatch.h>
-#include <glob.h>
-#include <sys/stat.h>
 /* This is a GNUlib hack, because GNUlib doesn't provide st_mtim members
  * of struct stat, but instead provides wrappers to retrieve the time
  * fields (stat-time module). We just define a macro in case people are
