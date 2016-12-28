@@ -1,7 +1,7 @@
 static int wregcomp(regex_t *preg, const char *regex, int cflags)
 {
 	int ret = regcomp(preg, regex, cflags);
-	if (ret) {
+	if (unlikely(ret)) {
 		char errbuf[256];
 		regerror(ret, preg, errbuf, sizeof(errbuf));
 		warn("invalid regexp: %s -- %s\n", regex, errbuf);
@@ -11,6 +11,6 @@ static int wregcomp(regex_t *preg, const char *regex, int cflags)
 
 static void xregcomp(regex_t *preg, const char *regex, int cflags)
 {
-	if (wregcomp(preg, regex, cflags))
+	if (unlikely(wregcomp(preg, regex, cflags)))
 		exit(EXIT_FAILURE);
 }

@@ -11,7 +11,7 @@ char *xgetcwd(char *buf, size_t size);
 char *xgetcwd(char *buf, size_t size)
 {
 	char *ret = getcwd(buf, size);
-	if (!ret)
+	if (unlikely(ret == NULL))
 		errp("getcwd() failed");
 	return ret;
 }

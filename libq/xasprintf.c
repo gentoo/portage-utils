@@ -25,7 +25,7 @@
 #define xasprintf(strp, fmt, args...) \
 	({ \
 		int _ret = asprintf(strp, fmt , ## args); \
-		if (_ret == -1) \
+		if (unlikely(_ret == -1)) \
 			err("Out of memory"); \
 		_ret; \
 	})

@@ -30,7 +30,7 @@
 static void *xmalloc(size_t size)
 {
 	void *ptr = malloc(size);
-	if (ptr == NULL)
+	if (unlikely(ptr == NULL))
 		err("Out of memory");
 	return ptr;
 }
@@ -38,7 +38,7 @@ static void *xmalloc(size_t size)
 static void *xcalloc(size_t nmemb, size_t size)
 {
 	void *ptr = calloc(nmemb, size);
-	if (ptr == NULL)
+	if (unlikely(ptr == NULL))
 		err("Out of memory");
 	return ptr;
 }
@@ -46,7 +46,7 @@ static void *xcalloc(size_t nmemb, size_t size)
 static void *xzalloc(size_t size)
 {
 	void *ptr = xmalloc(size);
-	if (ptr == NULL)
+	if (unlikely(ptr == NULL))
 		err("Out of memory");
 	memset(ptr, 0x00, size);
 	return ptr;
@@ -55,7 +55,7 @@ static void *xzalloc(size_t size)
 static void *xrealloc(void *optr, size_t size)
 {
 	void *ptr = realloc(optr, size);
-	if (ptr == NULL)
+	if (unlikely(ptr == NULL))
 		err("Out of memory");
 	return ptr;
 }

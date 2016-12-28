@@ -10,6 +10,6 @@
 void xchdir(const char *path);
 void xchdir(const char *path)
 {
-	if (chdir(path))
+	if (unlikely(chdir(path) != 0))
 		errp("chdir(%s) failed", path);
 }

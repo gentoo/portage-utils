@@ -10,7 +10,7 @@
 
 static void xsystem(const char *command)
 {
-	if (system(command))
+	if (unlikely(system(command)))
 		errp("system(%s) failed", command);
 }
 

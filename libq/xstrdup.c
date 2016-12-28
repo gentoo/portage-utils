@@ -35,7 +35,7 @@ static char *xstrdup(const char *s)
 		return NULL;
 
 	t = strdup(s);
-	if (t == NULL)
+	if (unlikely(t == NULL))
 		err("Out of memory");
 
 	return t;

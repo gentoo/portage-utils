@@ -62,7 +62,7 @@ _q_static int rm_rf_at(int dfd, const char *path)
 		if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
 			continue;
 		if (unlinkat(subdfd, de->d_name, 0) == -1) {
-			if (errno != EISDIR)
+			if (unlikely(errno != EISDIR))
 				errp("could not unlink %s", de->d_name);
 			rm_rf_at(subdfd, de->d_name);
 			unlinkat(subdfd, de->d_name, AT_REMOVEDIR);
