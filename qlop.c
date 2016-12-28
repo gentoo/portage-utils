@@ -47,7 +47,7 @@ static const char qlop_desc[] =
 #define QLOP_LIST    0x01
 #define QLOP_UNLIST  0x02
 
-_q_static void
+static void
 print_seconds_for_earthlings(const unsigned long t)
 {
 	unsigned dd, hh, mm, ss;
@@ -62,7 +62,7 @@ print_seconds_for_earthlings(const unsigned long t)
 	printf("%s%u%s second%s", GREEN, ss, NORM, (ss == 1 ? "" : "s"));
 }
 
-_q_static const char *
+static const char *
 chop_ctime(time_t t)
 {
 	static char ctime_out[50];
@@ -72,7 +72,7 @@ chop_ctime(time_t t)
 	return ctime_out;
 }
 
-_q_static unsigned long
+static unsigned long
 show_merge_times(char *package, const char *logfile, int average, char human_readable,
                  time_t start_time, time_t end_time)
 {
@@ -227,7 +227,7 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 	return 0;
 }
 
-_q_static void
+static void
 show_emerge_history(int listflag, array_t *atoms, const char *logfile,
                     time_t start_time, time_t end_time)
 {
@@ -327,7 +327,7 @@ New format:
 1431764460: === Sync completed for gentoo
 1431764493:  *** terminating.
 */
-_q_static void
+static void
 show_sync_history(const char *logfile, time_t start_time, time_t end_time)
 {
 	FILE *fp;
@@ -376,7 +376,7 @@ show_sync_history(const char *logfile, time_t start_time, time_t end_time)
 	fclose(fp);
 }
 
-_q_static void show_current_emerge(void);
+static void show_current_emerge(void);
 #ifdef __linux__
 # include <asm/param.h>
 # include <elf.h>
@@ -401,7 +401,8 @@ static void init_hz(void)
 		hz = 100;
 }
 
-static char *root_readlink(const int pid)
+static char *
+root_readlink(const int pid)
 {
 	static char path[_Q_PATH_MAX];
 	char buf[_Q_PATH_MAX];
@@ -652,8 +653,8 @@ void show_current_emerge(void)
 }
 #endif
 
-_q_static
-bool parse_date(const char *sdate, time_t *t)
+static bool
+parse_date(const char *sdate, time_t *t)
 {
 	struct tm tm;
 	const char *s;

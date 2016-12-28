@@ -24,14 +24,14 @@
 
 #include <stdio.h>
 
-const char *make_human_readable_str(unsigned long long,unsigned long,unsigned long);
 enum {
 	KILOBYTE = 1024,
 	MEGABYTE = (KILOBYTE*1024),
 	GIGABYTE = (MEGABYTE*1024)
 };
 
-const char* make_human_readable_str(unsigned long long val,
+static const char *
+make_human_readable_str(unsigned long long val,
 	unsigned long block_size, unsigned long display_unit)
 {
 	static const char unit_chars[] = {

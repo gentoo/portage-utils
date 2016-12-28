@@ -66,17 +66,15 @@ static const dep_node null_node = {
 #else
 # define dep_dump_tree(r) _dep_print_tree(stdout, r, 0)
 #endif
-_q_static void _dep_print_tree(FILE *fp, const dep_node *root, size_t space);
-void dep_burn_tree(dep_node *root);
-char *dep_flatten_tree(const dep_node *root);
-_q_static void _dep_attach(dep_node *root, dep_node *attach_me, int type);
-_q_static void _dep_burn_node(dep_node *node);
-int qdepends_main_vdb(const char *depend_file, int argc, char **argv);
-int qdepends_vdb_deep(const char *depend_file, const char *query);
+static void _dep_print_tree(FILE *fp, const dep_node *root, size_t space);
+static void dep_burn_tree(dep_node *root);
+static char *dep_flatten_tree(const dep_node *root);
+static void _dep_attach(dep_node *root, dep_node *attach_me, int type);
+static void _dep_burn_node(dep_node *node);
 
 #ifdef EBUG
-void print_word(const char *ptr, size_t num);
-void print_word(const char *ptr, size_t num)
+static void
+print_word(const char *ptr, size_t num)
 {
 	while (num--)
 		printf("%c", *ptr++);
@@ -84,7 +82,7 @@ void print_word(const char *ptr, size_t num)
 }
 #endif
 
-_q_static dep_node *
+static dep_node *
 _dep_grow_node(dep_type type, const char *info, size_t info_len)
 {
 	dep_node *ret;
@@ -112,7 +110,8 @@ _dep_grow_node(dep_type type, const char *info, size_t info_len)
 	return ret;
 }
 
-void _dep_burn_node(dep_node *node)
+static void
+_dep_burn_node(dep_node *node)
 {
 	assert(node);
 	if (node->info_on_heap) free(node->info);
@@ -125,7 +124,8 @@ enum {
 	_DEP_CHILD = 2
 };
 
-void _dep_attach(dep_node *root, dep_node *attach_me, int type)
+static void
+_dep_attach(dep_node *root, dep_node *attach_me, int type)
 {
 	if (type == _DEP_NEIGH) {
 		if (!root->neighbor) {
@@ -142,7 +142,8 @@ void _dep_attach(dep_node *root, dep_node *attach_me, int type)
 	}
 }
 
-_q_static dep_node *dep_grow_tree(const char *depend)
+static dep_node *
+dep_grow_tree(const char *depend)
 {
 	bool saw_whitespace;
 	signed long paren_balanced;
@@ -160,8 +161,6 @@ _q_static dep_node *dep_grow_tree(const char *depend)
 #define _maybe_consume_word(t) \
 	do { \
 	if (!word) break; \
-	/*printf("Found word:%i ", curr_attach);*/ \
-	/*print_word(word, ptr-word);*/ \
 	new_node = _dep_grow_node(t, word, ptr-word); \
 	if (!ret) \
 		ret = curr_node = new_node; \
@@ -269,7 +268,8 @@ error_out:
 	return NULL;
 }
 
-_q_static void _dep_print_tree(FILE *fp, const dep_node *root, size_t space)
+static void
+_dep_print_tree(FILE *fp, const dep_node *root, size_t space)
 {
 	size_t s;
 
@@ -306,7 +306,8 @@ _q_static void _dep_print_tree(FILE *fp, const dep_node *root, size_t space)
 		_dep_print_tree(fp, root->neighbor, space);
 }
 
-_q_static bool dep_print_depend(FILE *fp, const char *depend)
+static bool
+dep_print_depend(FILE *fp, const char *depend)
 {
 	dep_node *dep_tree;
 
@@ -326,7 +327,8 @@ _q_static bool dep_print_depend(FILE *fp, const char *depend)
 	return true;
 }
 
-void dep_burn_tree(dep_node *root)
+static void
+dep_burn_tree(dep_node *root)
 {
 	assert(root);
 	if (root->children) dep_burn_tree(root->children);
@@ -334,7 +336,8 @@ void dep_burn_tree(dep_node *root)
 	_dep_burn_node(root);
 }
 
-_q_static void dep_prune_use(dep_node *root, const char *use)
+static void
+dep_prune_use(dep_node *root, const char *use)
 {
 	if (root->neighbor) dep_prune_use(root->neighbor, use);
 	if (root->type == DEP_USE) {
@@ -351,7 +354,7 @@ _q_static void dep_prune_use(dep_node *root, const char *use)
 	if (root->children) dep_prune_use(root->children, use);
 }
 
-_q_static char *
+static char *
 _dep_flatten_tree(const dep_node *root, char *buf)
 {
 	if (root->type == DEP_NULL) goto this_node_sucks;
@@ -367,7 +370,8 @@ this_node_sucks:
 	return buf;
 }
 
-char *dep_flatten_tree(const dep_node *root)
+static char *
+dep_flatten_tree(const dep_node *root)
 {
 	static char flat[1024 * 1024];
 	char *buf = _dep_flatten_tree(root, flat);
@@ -386,7 +390,8 @@ struct qdepends_opt_state {
 	const char *query;
 };
 
-_q_static int qdepends_main_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+static int
+qdepends_main_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qdepends_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;
@@ -462,7 +467,8 @@ _q_static int qdepends_main_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	return ret;
 }
 
-_q_static int qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+static int
+qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qdepends_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;

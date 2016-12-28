@@ -19,7 +19,7 @@ struct queue_t {
 
 typedef struct queue_t queue;
 
-_q_static queue *
+static queue *
 append_set(queue *q, queue *ll)
 {
 	queue *z;
@@ -36,7 +36,7 @@ append_set(queue *q, queue *ll)
 }
 
 /* add a set to a cache */
-_q_static queue *
+static queue *
 add_set(const char *name, queue *q)
 {
 	queue *ll = xmalloc(sizeof(*ll));
@@ -47,7 +47,7 @@ add_set(const char *name, queue *q)
 }
 
 /* Performance here is terrible.  Should use a hash at some point. */
-_q_static queue *
+static queue *
 add_set_unique(const char *name, queue *q, bool *ok)
 {
 	queue *ll = q;
@@ -63,7 +63,7 @@ add_set_unique(const char *name, queue *q, bool *ok)
 }
 
 /* remove a set from a cache. matches ->name and frees name,item */
-_q_static queue *
+static queue *
 del_set(char *s, queue *q, int *ok)
 {
 	queue *ll, *list, *old;
@@ -96,7 +96,7 @@ del_set(char *s, queue *q, int *ok)
 }
 
 /* clear out a list */
-_q_static void
+static void
 free_sets(queue *list)
 {
 	queue *ll, *q;
@@ -109,10 +109,12 @@ free_sets(queue *list)
 	}
 }
 
-void print_sets(const queue *list);
-void print_sets(const queue *list)
+#ifdef EBUG
+static void
+print_sets(const queue *list)
 {
 	const queue *ll;
 	for (ll = list; ll != NULL; ll = ll->next)
 		puts(ll->name);
 }
+#endif

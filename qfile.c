@@ -65,7 +65,7 @@ struct qfile_opt_state {
  * We assume the people calling us have chdir(/var/db/pkg) and so
  * we use relative paths throughout here.
  */
-_q_static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qfile_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;
@@ -238,7 +238,7 @@ _q_static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	return found;
 }
 
-_q_static void destroy_qfile_args(qfile_args_t *qfile_args)
+static void destroy_qfile_args(qfile_args_t *qfile_args)
 {
 	int i;
 
@@ -259,7 +259,7 @@ _q_static void destroy_qfile_args(qfile_args_t *qfile_args)
 	memset(qfile_args, 0, sizeof(qfile_args_t));
 }
 
-_q_static int
+static int
 prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *state)
 {
 	qfile_args_t *args = &state->args;

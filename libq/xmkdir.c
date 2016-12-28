@@ -1,5 +1,6 @@
 /* Emulate `mkdir -p -m MODE PATH` */
-static int mkdir_p_at(int dfd, const char *path, mode_t mode)
+static int
+mkdir_p_at(int dfd, const char *path, mode_t mode)
 {
 	char *_p, *p, *s;
 
@@ -35,13 +36,15 @@ static int mkdir_p_at(int dfd, const char *path, mode_t mode)
 
 	return 0;
 }
-static int mkdir_p(const char *path, mode_t mode)
+static int
+mkdir_p(const char *path, mode_t mode)
 {
 	return mkdir_p_at(AT_FDCWD, path, mode);
 }
 
 /* Emulate `rm -rf PATH` */
-_q_static int rm_rf_at(int dfd, const char *path)
+static int
+rm_rf_at(int dfd, const char *path)
 {
 	int subdfd;
 	DIR *dir;
@@ -75,7 +78,8 @@ _q_static int rm_rf_at(int dfd, const char *path)
 	return 0;
 }
 
-_q_static int rm_rf(const char *path)
+static int
+rm_rf(const char *path)
 {
 	rm_rf_at(AT_FDCWD, path);
 
@@ -91,7 +95,8 @@ _q_static int rm_rf(const char *path)
 	return -1;
 }
 
-_q_static int rmdir_r_at(int dfd, const char *path)
+static int
+rmdir_r_at(int dfd, const char *path)
 {
 	size_t len;
 	char *p, *e;
@@ -113,7 +118,8 @@ _q_static int rmdir_r_at(int dfd, const char *path)
 }
 
 /*
-_q_static int rmdir_r(const char *path)
+static int
+rmdir_r(const char *path)
 {
 	return rmdir_r_at(AT_FDCWD, path);
 }

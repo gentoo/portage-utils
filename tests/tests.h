@@ -19,6 +19,5 @@
 	} while (0)
 #define err(...) errf(__VA_ARGS__)
 #define errp(...) errf(__VA_ARGS__)
-#define _q_static static
 
 #endif

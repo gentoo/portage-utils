@@ -30,15 +30,9 @@ extern char pretend;
 static char *qpkg_bindir = NULL;
 static int eclean = 0;
 
-/* global functions */
-int filter_tbz2(const struct dirent *);
-uint64_t qpkg_clean_dir(char *, queue *);
-int qpkg_clean(char *);
-const char *qpkg_get_bindir(void);
-int qpkg_make(depend_atom *);
-
 /* checks to make sure this is a .tbz2 file. used by scandir() */
-int filter_tbz2(const struct dirent *dentry)
+static int
+filter_tbz2(const struct dirent *dentry)
 {
 	if (dentry->d_name[0] == '.')
 		return 0;
@@ -48,7 +42,8 @@ int filter_tbz2(const struct dirent *dentry)
 }
 
 /* process a single dir for cleaning. dir can be a $PKGDIR, $PKGDIR/All/, $PKGDIR/$CAT */
-uint64_t qpkg_clean_dir(char *dirp, queue *vdb)
+static uint64_t
+qpkg_clean_dir(char *dirp, queue *vdb)
 {
 	queue *ll;
 	struct dirent **fnames;
@@ -99,7 +94,8 @@ uint64_t qpkg_clean_dir(char *dirp, queue *vdb)
 }
 
 /* figure out what dirs we want to process for cleaning and display results. */
-int qpkg_clean(char *dirp)
+static int
+qpkg_clean(char *dirp)
 {
 	FILE *fp;
 	int i, count;
@@ -178,7 +174,8 @@ int qpkg_clean(char *dirp)
 	return 0;
 }
 
-const char *qpkg_get_bindir(void)
+static const char *
+qpkg_get_bindir(void)
 {
 	if (qpkg_bindir != NULL)
 		return qpkg_bindir;
@@ -191,8 +188,8 @@ const char *qpkg_get_bindir(void)
 	return qpkg_bindir;
 }
 
-int check_pkg_install_mask(char *name);
-int check_pkg_install_mask(char *name)
+static int
+check_pkg_install_mask(char *name)
 {
 	int i, iargc, ret;
 	char **iargv;
@@ -214,7 +211,8 @@ int check_pkg_install_mask(char *name)
 	return ret;
 }
 
-int qpkg_make(depend_atom *atom)
+static int
+qpkg_make(depend_atom *atom)
 {
 	FILE *fp, *out;
 	char tmpdir[BUFSIZE], filelist[BUFSIZE], xpak[BUFSIZE], tbz2[BUFSIZE];

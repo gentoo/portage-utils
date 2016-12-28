@@ -32,8 +32,8 @@ static const char * const qatom_opts_help[] = {
  *  pfx - the version qualifier if set (e.g. > < = !)
  *  sfx - the version qualifier if set (e.g. *)
  */
-_q_static
-void qatom_printf(const char *format, const depend_atom *atom, int pverbose)
+static void
+qatom_printf(const char *format, const depend_atom *atom, int pverbose)
 {
 	char bracket;
 	const char *fmt, *p;

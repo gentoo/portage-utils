@@ -20,7 +20,8 @@
 # define reclen(de) (sizeof(*(de)) + strlen((de)->d_name))
 #endif
 
-static int scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
+static int
+scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
 	int (*filter)(const struct dirent *),
 	int (*compar)(const struct dirent **, const struct dirent **))
 {
@@ -59,7 +60,8 @@ static int scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
 
 #endif
 
-_q_static void scandir_free(struct dirent **de, int cnt)
+static void
+scandir_free(struct dirent **de, int cnt)
 {
 	if (cnt <= 0)
 		return;

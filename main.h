@@ -6,10 +6,6 @@
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#ifndef _q_static
-# define _q_static static
-#endif
-
 /* make sure our buffers are as big as they can be */
 #if PATH_MAX > _POSIX_PATH_MAX  /* _Q_PATH_MAX */
 # define _Q_PATH_MAX PATH_MAX

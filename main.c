@@ -13,16 +13,11 @@
 static bool eat_file(const char *, char **, size_t *);
 static bool eat_file_fd(int, char **, size_t *);
 static bool eat_file_at(int, const char *, char **, size_t *);
-int rematch(const char *, const char *, int);
+static int rematch(const char *, const char *, int);
 static char *rmspace(char *);
 static char *rmspace_len(char *, size_t);
 
-void initialize_portage_env(void);
-void initialize_ebuild_flat(void);
-void reinitialize_ebuild_flat(void);
-void reinitialize_as_needed(void);
-void cleanup(void);
-int lookup_applet_idx(const char *);
+static int lookup_applet_idx(const char *);
 
 /* variables to control runtime behavior */
 char *module_name = NULL;
@@ -60,8 +55,8 @@ static const char *argv0;
 
 #ifdef EBUG
 # include <sys/resource.h>
-void init_coredumps(void);
-void init_coredumps(void)
+static void
+init_coredumps(void)
 {
 	struct rlimit rl;
 	rl.rlim_cur = RLIM_INFINITY;
@@ -75,8 +70,8 @@ void init_coredumps(void)
 
 static DECLARE_ARRAY(overlays);
 
-_q_static
-void no_colors(void)
+static void
+no_colors(void)
 {
 	/* echo $(awk '{print $4,"="}' libq/colors.c  | grep ^* |cut -c 2-| grep ^[A-Z] |tr '\n' ' ') = \"\"\;  */
 	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = DKGREEN = MAGENTA = RED = YELLOW = BRYELLOW = WHITE = "";
@@ -114,8 +109,9 @@ void no_colors(void)
 	default: applet ## _usage(EXIT_FAILURE); break;
 
 /* display usage and exit */
-static void usage(int status, const char *flags, struct option const opts[],
-                  const char * const help[], const char *desc, int blabber)
+static void
+usage(int status, const char *flags, struct option const opts[],
+      const char * const help[], const char *desc, int blabber)
 {
 	const char opt_arg[] = "[arg]";
 	const char a_arg[] = "<arg>";
@@ -181,7 +177,8 @@ static void usage(int status, const char *flags, struct option const opts[],
 	exit(status);
 }
 
-static void version_barf(void)
+static void
+version_barf(void)
 {
 #ifndef VERSION
 # define VERSION "git"
@@ -195,7 +192,8 @@ static void version_barf(void)
 	exit(EXIT_SUCCESS);
 }
 
-static bool eat_file_fd(int fd, char **bufptr, size_t *bufsize)
+static bool
+eat_file_fd(int fd, char **bufptr, size_t *bufsize)
 {
 	bool ret = true;
 	struct stat s;
@@ -243,7 +241,8 @@ static bool eat_file_fd(int fd, char **bufptr, size_t *bufsize)
 	return ret;
 }
 
-static bool eat_file_at(int dfd, const char *file, char **bufptr, size_t *bufsize)
+static bool
+eat_file_at(int dfd, const char *file, char **bufptr, size_t *bufsize)
 {
 	bool ret;
 	int fd;
@@ -256,12 +255,14 @@ static bool eat_file_at(int dfd, const char *file, char **bufptr, size_t *bufsiz
 	return ret;
 }
 
-static bool eat_file(const char *file, char **bufptr, size_t *bufsize)
+static bool
+eat_file(const char *file, char **bufptr, size_t *bufsize)
 {
 	return eat_file_at(AT_FDCWD, file, bufptr, bufsize);
 }
 
-static bool prompt(const char *p)
+static bool
+prompt(const char *p)
 {
 	printf("%s? [Y/n] ", p);
 	fflush(stdout);
@@ -275,7 +276,8 @@ static bool prompt(const char *p)
 	}
 }
 
-int rematch(const char *re, const char *match, int cflags)
+static int
+rematch(const char *re, const char *match, int cflags)
 {
 	regex_t preg;
 	int ret;
@@ -292,8 +294,8 @@ int rematch(const char *re, const char *match, int cflags)
 }
 
 /* removes adjacent extraneous white space */
-static char *remove_extra_space(char *str);
-static char *remove_extra_space(char *str)
+static char *
+remove_extra_space(char *str)
 {
 	char *p, c = ' ';
 	size_t len, pos = 0;
@@ -317,14 +319,16 @@ static char *remove_extra_space(char *str)
 	return str;
 }
 
-static void freeargv(int argc, char **argv)
+static void
+freeargv(int argc, char **argv)
 {
 	while (argc--)
 		free(argv[argc]);
 	free(argv);
 }
 
-static void makeargv(const char *string, int *argc, char ***argv)
+static void
+makeargv(const char *string, int *argc, char ***argv)
 {
 	int curc = 2;
 	char *q, *p, *str;
@@ -369,8 +373,8 @@ typedef struct {
 	long mtime;
 } contents_entry;
 
-contents_entry *contents_parse_line(char *line);
-contents_entry *contents_parse_line(char *line)
+static contents_entry *
+contents_parse_line(char *line)
 {
 	static contents_entry e;
 	char *p;
@@ -444,7 +448,8 @@ contents_entry *contents_parse_line(char *line)
 }
 
 /* Handle a single file in the repos.conf format. */
-static void read_one_repos_conf(const char *repos_conf)
+static void
+read_one_repos_conf(const char *repos_conf)
 {
 	int nsec;
 	char *conf;
@@ -478,7 +483,8 @@ static void read_one_repos_conf(const char *repos_conf)
 }
 
 /* Handle a possible directory of files. */
-static void read_repos_conf(const char *configroot, const char *repos_conf)
+static void
+read_repos_conf(const char *configroot, const char *repos_conf)
 {
 	char *top_conf, *sub_conf;
 	int i, count;
@@ -526,7 +532,8 @@ static void read_repos_conf(const char *configroot, const char *repos_conf)
 	free(top_conf);
 }
 
-static void strincr_var(const char *name, const char *s, char **value, size_t *value_len)
+static void
+strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 {
 	size_t len;
 	char *buf, *p, *nv;
@@ -584,7 +591,8 @@ typedef struct {
 	const char *default_value;
 } env_vars;
 
-_q_static env_vars *get_portage_env_var(env_vars *vars, const char *name)
+static env_vars *
+get_portage_env_var(env_vars *vars, const char *name)
 {
 	size_t i;
 
@@ -595,7 +603,8 @@ _q_static env_vars *get_portage_env_var(env_vars *vars, const char *name)
 	return NULL;
 }
 
-_q_static void set_portage_env_var(env_vars *var, const char *value)
+static void
+set_portage_env_var(env_vars *var, const char *value)
 {
 	switch (var->type) {
 	case _Q_BOOL:
@@ -612,7 +621,8 @@ _q_static void set_portage_env_var(env_vars *var, const char *value)
 }
 
 /* Helper to read a portage env file (e.g. make.conf) */
-_q_static void read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
+static void
+read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 {
 	size_t i, buflen, line, configroot_len, file_len;
 	FILE *fp;
@@ -729,7 +739,8 @@ _q_static void read_portage_env_file(const char *configroot, const char *file, e
 }
 
 /* Helper to recursively read stacked make.defaults in profiles */
-static void read_portage_profile(const char *configroot, const char *profile, env_vars vars[])
+static void
+read_portage_profile(const char *configroot, const char *profile, env_vars vars[])
 {
 	size_t configroot_len, profile_len, sub_len;
 	char *profile_file, *sub_file;
@@ -770,7 +781,8 @@ static void read_portage_profile(const char *configroot, const char *profile, en
 	free(profile_file);
 }
 
-void initialize_portage_env(void)
+static void
+initialize_portage_env(void)
 {
 	size_t i;
 	const char *s;
@@ -955,8 +967,8 @@ enum {
 	CACHE_METADATA_MD5 = 11,
 };
 
-int filter_hidden(const struct dirent *dentry);
-int filter_hidden(const struct dirent *dentry)
+static int
+filter_hidden(const struct dirent *dentry)
 {
 	if (dentry->d_name[0] == '.')
 		return 0;
@@ -1094,7 +1106,8 @@ ret:
 	return cache_file;
 }
 
-void reinitialize_as_needed(void)
+static void
+reinitialize_as_needed(void)
 {
 	size_t n;
 	const char *overlay, *ret = ret;
@@ -1140,12 +1153,12 @@ typedef struct {
 	char *_md5_;
 } portage_cache;
 
-void cache_free(portage_cache *cache);
-portage_cache *cache_read_file_pms(const char *file);
-portage_cache *cache_read_file_md5(const char *file);
-portage_cache *cache_read_file(const char *file);
+static void cache_free(portage_cache *cache);
+static portage_cache *cache_read_file_pms(const char *file);
+static portage_cache *cache_read_file_md5(const char *file);
 
-portage_cache *cache_read_file(const char *file)
+static portage_cache *
+cache_read_file(const char *file)
 {
 	if (portcachedir_type == CACHE_METADATA_MD5)
 		return(cache_read_file_md5(file));
@@ -1155,7 +1168,8 @@ portage_cache *cache_read_file(const char *file)
 	return NULL;
 }
 
-portage_cache *cache_read_file_pms(const char *file)
+static portage_cache *
+cache_read_file_pms(const char *file)
 {
 	struct stat s;
 	char *ptr;
@@ -1213,7 +1227,8 @@ err:
 	return NULL;
 }
 
-portage_cache *cache_read_file_md5(const char *file)
+static portage_cache *
+cache_read_file_md5(const char *file)
 {
 	struct stat s;
 	char *ptr, *endptr;
@@ -1311,8 +1326,9 @@ err:
 	return NULL;
 }
 
-void cache_dump(portage_cache *cache);
-void cache_dump(portage_cache *cache)
+#ifdef EBUG
+static void
+cache_dump(portage_cache *cache)
 {
 	if (!cache)
 		errf("Cache is empty !");
@@ -1339,8 +1355,10 @@ void cache_dump(portage_cache *cache)
 	printf("PV         : %s\n", cache->atom->PV);
 	printf("PVR        : %s\n", cache->atom->PVR);
 }
+#endif
 
-void cache_free(portage_cache *cache)
+static void
+cache_free(portage_cache *cache)
 {
 	if (!cache)
 		errf("Cache is empty !");
@@ -1348,13 +1366,14 @@ void cache_free(portage_cache *cache)
 	free(cache);
 }
 
-char *atom_to_pvr(depend_atom *atom);
-char *atom_to_pvr(depend_atom *atom) {
+static char *
+atom_to_pvr(depend_atom *atom) {
 	return (atom->PR_int == 0 ? atom->P : atom->PVR );
 }
 
 /* TODO: Merge this into libq/vdb.c somehow. */
-_q_static queue *get_vdb_atoms(int fullcpv)
+static queue *
+get_vdb_atoms(int fullcpv)
 {
 	q_vdb_ctx *ctx;
 
@@ -1421,7 +1440,8 @@ _q_static queue *get_vdb_atoms(int fullcpv)
 	return cpf;
 }
 
-void cleanup(void)
+static void
+cleanup(void)
 {
 	reinitialize_as_needed();
 }

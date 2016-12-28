@@ -98,13 +98,14 @@ struct llist_char_t {
 
 typedef struct llist_char_t llist_char;
 
-_q_static void pkg_fetch(int, const depend_atom *, const struct pkg_t *);
-_q_static void pkg_merge(int, const depend_atom *, const struct pkg_t *);
-_q_static int pkg_unmerge(q_vdb_pkg_ctx *, queue *);
-_q_static struct pkg_t *grab_binpkg_info(const char *);
-_q_static char *find_binpkg(const char *);
+static void pkg_fetch(int, const depend_atom *, const struct pkg_t *);
+static void pkg_merge(int, const depend_atom *, const struct pkg_t *);
+static int pkg_unmerge(q_vdb_pkg_ctx *, queue *);
+static struct pkg_t *grab_binpkg_info(const char *);
+static char *find_binpkg(const char *);
 
-_q_static void fetch(const char *destdir, const char *src)
+static void
+fetch(const char *destdir, const char *src)
 {
 	if (!binhost[0])
 		return;
@@ -166,7 +167,8 @@ _q_static void fetch(const char *destdir, const char *src)
 	fflush(stderr);
 }
 
-_q_static void qmerge_initialize(void)
+static void
+qmerge_initialize(void)
 {
 	if (strlen(BUSYBOX))
 		if (access(BUSYBOX, X_OK) != 0)
@@ -205,13 +207,15 @@ struct qmerge_bv_state {
 	char *retbuf;
 };
 
-_q_static int qmerge_filter_cat(q_vdb_cat_ctx *cat_ctx, void *priv)
+static int
+qmerge_filter_cat(q_vdb_cat_ctx *cat_ctx, void *priv)
 {
 	struct qmerge_bv_state *state = priv;
 	return !state->catname || strcmp(cat_ctx->name, state->catname) == 0;
 }
 
-_q_static int qmerge_best_version_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+static int
+qmerge_best_version_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qmerge_bv_state *state = priv;
 	if (qlist_match(pkg_ctx, state->buf, NULL, true))
@@ -220,7 +224,8 @@ _q_static int qmerge_best_version_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	return 0;
 }
 
-_q_static char *best_version(const char *catname, const char *pkgname)
+static char *
+best_version(const char *catname, const char *pkgname)
 {
 	static int vdb_check = 1;
 	static char retbuf[4096];
@@ -255,7 +260,7 @@ _q_static char *best_version(const char *catname, const char *pkgname)
 	return retbuf;
 }
 
-_q_static int
+static int
 config_protected(const char *buf, int cp_argc, char **cp_argv,
                  int cpm_argc, char **cpm_argv)
 {
@@ -281,7 +286,8 @@ config_protected(const char *buf, int cp_argc, char **cp_argv,
 	return 0;
 }
 
-_q_static void crossmount_rm(const char *fname, const struct stat st)
+static void
+crossmount_rm(const char *fname, const struct stat st)
 {
 	struct stat lst;
 
@@ -297,8 +303,8 @@ _q_static void crossmount_rm(const char *fname, const struct stat st)
 	rm_rf(fname);
 }
 
-void install_mask_pwd(int iargc, char **iargv, const struct stat st);
-void install_mask_pwd(int iargc, char **iargv, const struct stat st)
+static void
+install_mask_pwd(int iargc, char **iargv, const struct stat st)
 {
 	char buf[1024];
 	int i;
@@ -329,7 +335,7 @@ void install_mask_pwd(int iargc, char **iargv, const struct stat st)
 	}
 }
 
-_q_static char *
+static char *
 atom2str(const depend_atom *atom, char *buf, size_t size)
 {
 	if (atom->PR_int)
@@ -339,7 +345,7 @@ atom2str(const depend_atom *atom, char *buf, size_t size)
 	return buf;
 }
 
-_q_static char
+static char
 qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
 {
 	char buf[1024];
@@ -407,7 +413,7 @@ qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	return c;
 }
 
-_q_static void
+static void
 pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char *func, const char *D, const char *T)
 {
 	const char *phase;
@@ -481,7 +487,7 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 #define pkg_run_func(...) pkg_run_func_at(AT_FDCWD, __VA_ARGS__)
 
 /* Copy one tree (the single package) to another tree (ROOT) */
-_q_static int
+static int
 merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
               FILE *contents, queue **objs, char **cpathp, int iargc, char **iargv,
               int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
@@ -718,7 +724,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 }
 
 /* Copy one tree (the single package) to another tree (ROOT) */
-_q_static int
+static int
 merge_tree(const char *src, const char *dst, FILE *contents,
            queue **objs, int iargc, char **iargv)
 {
@@ -746,7 +752,7 @@ merge_tree(const char *src, const char *dst, FILE *contents,
 }
 
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
-_q_static void
+static void
 pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 {
 	queue *objs;
@@ -1024,7 +1030,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	q_vdb_close(vdb_ctx);
 }
 
-_q_static int
+static int
 pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 {
 	q_vdb_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
@@ -1207,7 +1213,8 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 	return ret;
 }
 
-_q_static int unlink_empty(const char *buf)
+static int
+unlink_empty(const char *buf)
 {
 	struct stat st;
 	if (stat(buf, &st) != -1)
@@ -1216,7 +1223,7 @@ _q_static int unlink_empty(const char *buf)
 	return -1;
 }
 
-_q_static int
+static int
 pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *atom,
                      int strict, int display)
 {
@@ -1260,7 +1267,7 @@ pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *at
 	return ret;
 }
 
-_q_static void
+static void
 pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 {
 	char buf[_Q_PATH_MAX], str[_Q_PATH_MAX];
@@ -1330,7 +1337,7 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	}
 }
 
-_q_static void
+static void
 print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 {
 	char *p = NULL;
@@ -1380,7 +1387,7 @@ print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 	}
 }
 
-_q_static int
+static int
 qmerge_unmerge_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	queue *todo = priv;
@@ -1394,13 +1401,13 @@ qmerge_unmerge_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	return 0;
 }
 
-_q_static int
+static int
 unmerge_packages(queue *todo)
 {
 	return q_vdb_foreach_pkg(qmerge_unmerge_cb, todo, NULL);
 }
 
-_q_static FILE *
+static FILE *
 open_binpkg_index(void)
 {
 	FILE *fp;
@@ -1451,7 +1458,7 @@ open_binpkg_index(void)
 	return fp;
 }
 
-_q_static struct pkg_t *
+static struct pkg_t *
 grab_binpkg_info(const char *name)
 {
 	FILE *fp;
@@ -1553,7 +1560,7 @@ grab_binpkg_info(const char *name)
 	return rpkg;
 }
 
-_q_static char *
+static char *
 find_binpkg(const char *name)
 {
 	FILE *fp;
@@ -1634,7 +1641,7 @@ find_binpkg(const char *name)
 	return best_match;
 }
 
-_q_static int
+static int
 parse_packages(queue *todo)
 {
 	FILE *fp;
@@ -1766,7 +1773,7 @@ parse_packages(queue *todo)
 	return EXIT_SUCCESS;
 }
 
-_q_static queue *
+static queue *
 qmerge_add_set_file(const char *dir, const char *file, queue *set)
 {
 	FILE *fp;
@@ -1796,7 +1803,7 @@ qmerge_add_set_file(const char *dir, const char *file, queue *set)
 	return set;
 }
 
-_q_static void *
+static void *
 qmerge_add_set_system(void *data, char *buf)
 {
 	queue *set = data;
@@ -1821,7 +1828,7 @@ qmerge_add_set_system(void *data, char *buf)
 /* XXX: note, this doesn't handle more complicated set files like
  *      the portage .ini files in /usr/share/portage/sets/ */
 /* XXX: this code does not combine duplicate dependencies */
-_q_static queue *
+static queue *
 qmerge_add_set(char *buf, queue *set)
 {
 	if (strcmp(buf, "world") == 0)
@@ -1836,7 +1843,7 @@ qmerge_add_set(char *buf, queue *set)
 		return add_set(buf, set);
 }
 
-_q_static int
+static int
 qmerge_run(queue *todo)
 {
 	if (uninstall)

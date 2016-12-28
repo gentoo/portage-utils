@@ -42,7 +42,8 @@ static const char * const qlist_opts_help[] = {
 };
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, NULL, lookup_applet_idx("qlist"))
 
-static char *grab_pkg_umap(q_vdb_pkg_ctx *pkg_ctx)
+static char *
+grab_pkg_umap(q_vdb_pkg_ctx *pkg_ctx)
 {
 	static char umap[BUFSIZ];
 	static char *use, *iuse;
@@ -100,7 +101,8 @@ static char *grab_pkg_umap(q_vdb_pkg_ctx *pkg_ctx)
 	return umap;
 }
 
-static const char *umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
+static const char *
+umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
 {
 	static char buf[BUFSIZ];
 	char *umap = NULL;
@@ -117,7 +119,7 @@ static const char *umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
 	return buf;
 }
 
-_q_static bool
+static bool
 qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, bool exact)
 {
 	const char *catname = pkg_ctx->cat_ctx->name;
@@ -272,7 +274,8 @@ struct qlist_opt_state {
 	size_t buflen;
 };
 
-_q_static int qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+static int
+qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qlist_opt_state *state = priv;
 	int i;

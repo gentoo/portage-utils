@@ -48,8 +48,8 @@ static const char * const qgrep_opts_help[] = {
 };
 #define qgrep_usage(ret) usage(ret, QGREP_FLAGS, qgrep_long_opts, qgrep_opts_help, NULL, lookup_applet_idx("qgrep"))
 
-char qgrep_name_match(const char*, const int, depend_atom**);
-char qgrep_name_match(const char* name, const int argc, depend_atom** argv)
+static char
+qgrep_name_match(const char* name, const int argc, depend_atom** argv)
 {
 	depend_atom* atom;
 	int i;
@@ -89,8 +89,8 @@ typedef struct qgrep_buf {
 
 /* Allocate <length> buffers in a circular list.
  * <length> must be at least 1. */
-qgrep_buf_t* qgrep_buf_list_alloc(const char);
-qgrep_buf_t* qgrep_buf_list_alloc(const char length)
+static qgrep_buf_t *
+qgrep_buf_list_alloc(const char length)
 {
 	char i;
 	qgrep_buf_t *head, *current;
@@ -104,8 +104,8 @@ qgrep_buf_t* qgrep_buf_list_alloc(const char length)
 }
 
 /* Free a circular buffers list. */
-void qgrep_buf_list_free(qgrep_buf_t *);
-void qgrep_buf_list_free(qgrep_buf_t *head)
+static void
+qgrep_buf_list_free(qgrep_buf_t *head)
 {
 	qgrep_buf_t *current, *next;
 	next = head;
@@ -117,8 +117,8 @@ void qgrep_buf_list_free(qgrep_buf_t *head)
 }
 
 /* Set valid=0 in the whole list. */
-void qgrep_buf_list_invalidate(qgrep_buf_t *);
-void qgrep_buf_list_invalidate(qgrep_buf_t *head)
+static void
+qgrep_buf_list_invalidate(qgrep_buf_t *head)
 {
 	qgrep_buf_t *current;
 	current = head;
@@ -132,11 +132,10 @@ void qgrep_buf_list_invalidate(qgrep_buf_t *head)
 typedef char *(*QGREP_STR_FUNC) (const char *, const char *);
 
 /* Display a buffer, with an optionnal prefix. */
-void qgrep_print_line(qgrep_buf_t *, const char *, const int, const char,
-		const regex_t*, const QGREP_STR_FUNC, const char*);
-void qgrep_print_line(qgrep_buf_t *current, const char *label,
-		const int line_number, const char zig, const regex_t* preg,
-		const QGREP_STR_FUNC searchfunc, const char* searchstr)
+static void
+qgrep_print_line(qgrep_buf_t *current, const char *label,
+	const int line_number, const char zig, const regex_t* preg,
+	const QGREP_STR_FUNC searchfunc, const char* searchstr)
 {
 	char *p = current->buf;
 	/* Print line prefix, when in verbose mode */
@@ -191,9 +190,9 @@ void qgrep_print_line(qgrep_buf_t *current, const char *label,
 	qgrep_print_line(buf, label, lineno, ':', NULL, searchfunc, searchstr)
 
 /* Display a leading context (valid lines of the buffers list, but the matching one). */
-void qgrep_print_before_context(qgrep_buf_t *, const char, const char *, const int);
-void qgrep_print_before_context(qgrep_buf_t *current, const char num_lines_before,
-		const char *label, const int match_line_number)
+static void
+qgrep_print_before_context(qgrep_buf_t *current, const char num_lines_before,
+	const char *label, const int match_line_number)
 {
 	int line_number;
 	line_number = match_line_number - num_lines_before;
@@ -206,8 +205,8 @@ void qgrep_print_before_context(qgrep_buf_t *current, const char num_lines_befor
 }
 
 /* Yield the path of one of the installed ebuilds (from VDB). */
-char *get_next_installed_ebuild(char *, DIR *, struct dirent **, DIR **);
-char *get_next_installed_ebuild(char *ebuild_path, DIR *vdb_dir, struct dirent **cat_dirent_pt, DIR **cat_dir_pt)
+static char *
+get_next_installed_ebuild(char *ebuild_path, DIR *vdb_dir, struct dirent **cat_dirent_pt, DIR **cat_dir_pt)
 {
 	struct dirent *pkg_dirent = NULL;
 	if (*cat_dirent_pt == NULL || *cat_dir_pt == NULL)

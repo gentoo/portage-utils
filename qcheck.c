@@ -47,7 +47,8 @@ struct qcheck_opt_state {
 	bool undo_prelink;
 };
 
-static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
+static int
+qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 {
 	int fd;
 	FILE *fp, *fpx;
@@ -305,7 +306,8 @@ static int qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_sta
 		return EXIT_SUCCESS;
 }
 
-_q_static int qcheck_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+static int
+qcheck_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qcheck_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;

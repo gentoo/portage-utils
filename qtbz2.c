@@ -49,8 +49,8 @@ static const char * const qtbz2_opts_help[] = {
 
 static char tbz2_stdout = 0;
 
-unsigned char *tbz2_encode_int(int enc);
-unsigned char *tbz2_encode_int(int enc)
+static unsigned char *
+tbz2_encode_int(int enc)
 {
 	static unsigned char ret[4];
 	ret[0] = (enc & 0xff000000) >> 24;
@@ -59,8 +59,8 @@ unsigned char *tbz2_encode_int(int enc)
 	ret[3] = (enc & 0x000000ff);
 	return ret;
 }
-int tbz2_decode_int(unsigned char *buf);
-int tbz2_decode_int(unsigned char *buf)
+static int
+tbz2_decode_int(unsigned char *buf)
 {
 	int ret;
 	ret = 0;
@@ -71,8 +71,8 @@ int tbz2_decode_int(unsigned char *buf)
 	return ret;
 }
 
-void _tbz2_copy_file(FILE *src, FILE *dst);
-void _tbz2_copy_file(FILE *src, FILE *dst)
+static void
+_tbz2_copy_file(FILE *src, FILE *dst)
 {
 	int count = 1;
 	unsigned char buffer[BUFSIZE*32];

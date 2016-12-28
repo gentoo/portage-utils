@@ -7,8 +7,8 @@
 
 #include <stdio.h>
 
-size_t safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
-size_t safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
+static size_t
+safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
 	size_t ret = 0, this_ret;
 

@@ -49,7 +49,8 @@ struct qsize_opt_state {
 	uint64_t num_all_bytes;
 };
 
-_q_static int qsize_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+static int
+qsize_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qsize_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;

@@ -33,8 +33,8 @@ typedef enum {
 	GLSA_FUNKYTOWN, GLSA_LIST, GLSA_DUMP, GLSA_TEST, GLSA_FIX, GLSA_INJECT
 } qglsa_action;
 
-static char *qglsa_load_list(void);
-static char *qglsa_load_list(void)
+static char *
+qglsa_load_list(void)
 {
 	char *file, *ret = NULL;
 	size_t size = 0;
@@ -43,8 +43,8 @@ static char *qglsa_load_list(void)
 	free(file);
 	return ret;
 }
-static void qglsa_append_to_list(const char *glsa);
-static void qglsa_append_to_list(const char *glsa)
+static void
+qglsa_append_to_list(const char *glsa)
 {
 	char *file;
 	FILE *f;
@@ -57,8 +57,8 @@ static void qglsa_append_to_list(const char *glsa)
 	free(file);
 }
 
-static void qglsa_decode_entities(char *xml_buf, size_t len);
-static void qglsa_decode_entities(char *xml_buf, size_t len)
+static void
+qglsa_decode_entities(char *xml_buf, size_t len)
 {
 	const char const *encoded[] = { "&lt;", "&gt;", "&quot;", "&amp;"};
 	const char const *decoded[] = {  "<",    ">",    "\"",     "&"};
@@ -80,7 +80,8 @@ static void qglsa_decode_entities(char *xml_buf, size_t len)
 	}
 }
 
-static char *qglsa_get_xml_tag_attribute(const char *xml_buf, const char *tag, const char *attribute)
+static char *
+qglsa_get_xml_tag_attribute(const char *xml_buf, const char *tag, const char *attribute)
 {
 	static char tmp_buf[BUFSIZE];
 	char *start, *end, *start_attr, *end_attr;
@@ -114,7 +115,8 @@ static char *qglsa_get_xml_tag_attribute(const char *xml_buf, const char *tag, c
 	qglsa_decode_entities(tmp_buf, end-start);
 	return tmp_buf;
 }
-static char *qglsa_get_xml_tag(const char *xml_buf, const char *tag)
+static char *
+qglsa_get_xml_tag(const char *xml_buf, const char *tag)
 {
 	static char tmp_buf[BUFSIZE];
 	char *start, *end;

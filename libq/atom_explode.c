@@ -40,8 +40,9 @@ typedef struct {
 	char *P, *SLOT, *REPO;
 } depend_atom;
 
-void atom_print(const depend_atom *atom);
-void atom_print(const depend_atom *atom)
+#ifdef EBUG
+static void
+atom_print(const depend_atom *atom)
 {
 	if (atom->CATEGORY)
 		printf("%s/", atom->CATEGORY);
@@ -53,14 +54,15 @@ void atom_print(const depend_atom *atom)
 	if (atom->REPO)
 		printf("::%s", atom->REPO);
 }
+#endif
 
 #ifdef _USE_CACHE
 static depend_atom *_atom_cache = NULL;
 static size_t _atom_cache_len = 0;
 #endif
 
-depend_atom *atom_explode(const char *atom);
-depend_atom *atom_explode(const char *atom)
+static depend_atom *
+atom_explode(const char *atom)
 {
 	depend_atom *ret;
 	char *ptr;
@@ -245,8 +247,8 @@ depend_atom *atom_explode(const char *atom)
 	return ret;
 }
 
-void atom_implode(depend_atom *atom);
-void atom_implode(depend_atom *atom)
+static void
+atom_implode(depend_atom *atom)
 {
 	if (!atom)
 		errf("Atom is empty !");

@@ -45,8 +45,8 @@ static cpairtype color_pairs[] = {
 	{"eol",       COLOR("00", "00") },
 };
 
-void color_remap(void);
-void color_remap(void)
+static void
+color_remap(void)
 {
 	FILE *fp;
 	unsigned int i;

@@ -7,8 +7,8 @@
 
 #include <unistd.h>
 
-void xchdir(const char *path);
-void xchdir(const char *path)
+static void
+xchdir(const char *path)
 {
 	if (unlikely(chdir(path) != 0))
 		errp("chdir(%s) failed", path);

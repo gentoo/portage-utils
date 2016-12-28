@@ -1,6 +1,6 @@
 typedef void *(q_profile_callback_t)(void *, char *);
 
-_q_static void *
+static void *
 q_profile_walk_at(int dir_fd, const char *dir, const char *file,
                   q_profile_callback_t callback, void *data)
 {
@@ -69,7 +69,7 @@ q_profile_walk_at(int dir_fd, const char *dir, const char *file,
 	return data;
 }
 
-_q_static void *
+static void *
 q_profile_walk(const char *file, q_profile_callback_t callback, void *data)
 {
 	/* Walk the profiles and read the file in question */

@@ -1,4 +1,5 @@
-_q_static struct dirent *q_vdb_get_next_dir(DIR *dir)
+static struct dirent *
+q_vdb_get_next_dir(DIR *dir)
 {
 	/* search for a category directory */
 	struct dirent *ret;

@@ -81,8 +81,8 @@ enum { none = 0, testing, stable, minus };
  * OUT:
  *  int - one of the following enum { none = 0, testing, stable, minus };
  */
-_q_static
-int decode_status(char c)
+static int
+decode_status(char c)
 {
 	switch (c) {
 		case '-': return minus;
@@ -101,8 +101,8 @@ int decode_status(char c)
  * OUT:
  *  int pos - location of arch in archlist[]
  */
-_q_static
-int decode_arch(const char *arch)
+static int
+decode_arch(const char *arch)
 {
 	queue *q = arches;
 	int a;
@@ -132,8 +132,8 @@ int decode_arch(const char *arch)
  *  char *category - current category of the current package
  *  int *keywords - an array of keywords that coincides with archlist
  */
-_q_static
-void print_keywords(const char *category, const char *ebuild, int *keywords)
+static void
+print_keywords(const char *category, const char *ebuild, int *keywords)
 {
 	queue *arch = arches;
 	int a;
@@ -170,8 +170,8 @@ void print_keywords(const char *category, const char *ebuild, int *keywords)
  * ERR:
  *  int rc - -1 is returned on error (if !s || !keywords)
  */
-_q_static
-int read_keywords(char *s, int *keywords)
+static int
+read_keywords(char *s, int *keywords)
 {
 	char *arch, delim[2] = { ' ', '\0' };
 	size_t slen;
@@ -213,8 +213,8 @@ int read_keywords(char *s, int *keywords)
  * ERR:
  *  NULL is returned when an error occurs.
  */
-_q_static
-portage_cache *qcache_read_cache_file(const char *filename)
+static portage_cache *
+qcache_read_cache_file(const char *filename)
 {
 	struct stat s;
 	char *buf;
@@ -297,8 +297,8 @@ portage_cache *qcache_read_cache_file(const char *filename)
  * IN:
  *  portage_cache *cache - the portage_cache to be free()'d
  */
-_q_static
-void qcache_free_data(portage_cache *cache)
+static void
+qcache_free_data(portage_cache *cache)
 {
 	int i;
 	char **c;
@@ -331,8 +331,8 @@ void qcache_free_data(portage_cache *cache)
  *   1 (OLDER)
  *   0 (SAME)
  */
-_q_static
-int qcache_vercmp(const struct dirent **x, const struct dirent **y)
+static int
+qcache_vercmp(const struct dirent **x, const struct dirent **y)
 {
 	switch (atom_compare_str((*x)->d_name, (*y)->d_name)) {
 		case NEWER: return -1;
@@ -356,8 +356,8 @@ int qcache_vercmp(const struct dirent **x, const struct dirent **y)
  * OUT:
  *  int - 0 if filename begins with '.' or is "metadata.xml", otherwise 1
  */
-_q_static
-int qcache_file_select(const struct dirent *entry)
+static int
+qcache_file_select(const struct dirent *entry)
 {
 	return !(entry->d_name[0] == '.' || (strcmp(entry->d_name, "metadata.xml") == 0) || (strstr(entry->d_name, ".cpickle") != 0));
 }
@@ -372,8 +372,8 @@ int qcache_file_select(const struct dirent *entry)
  * OUT:
  *  int - 1 if the filename ends in ".ebuild", otherwise 0
  */
-_q_static
-int qcache_ebuild_select(const struct dirent *entry)
+static int
+qcache_ebuild_select(const struct dirent *entry)
 {
 	return ((strlen(entry->d_name) > 7) && !strcmp(entry->d_name+strlen(entry->d_name)-7, ".ebuild"));
 }
@@ -382,7 +382,7 @@ int qcache_ebuild_select(const struct dirent *entry)
 /* Traversal function                                               */
 /********************************************************************/
 
-_q_static void qcache_load_arches(const char *overlay);
+static void qcache_load_arches(const char *overlay);
 
 /*
  * int qcache_traverse(void (*func)(qcache_data*));
@@ -396,8 +396,8 @@ _q_static void qcache_load_arches(const char *overlay);
  * ERR:
  *  exit or return -1 on failure.
  */
-_q_static
-int qcache_traverse_overlay(void (*func)(qcache_data*), const char *overlay)
+static int
+qcache_traverse_overlay(void (*func)(qcache_data*), const char *overlay)
 {
 	qcache_data data = {
 		.overlay = overlay,
@@ -507,8 +507,8 @@ int qcache_traverse_overlay(void (*func)(qcache_data*), const char *overlay)
 	return 0;
 }
 
-_q_static
-int qcache_traverse(void (*func)(qcache_data*))
+static int
+qcache_traverse(void (*func)(qcache_data*))
 {
 	int ret;
 	size_t n;
@@ -532,8 +532,8 @@ int qcache_traverse(void (*func)(qcache_data*))
 /* functors                                                         */
 /********************************************************************/
 
-_q_static
-void qcache_imlate(qcache_data *data)
+static void
+qcache_imlate(qcache_data *data)
 {
 	int *keywords;
 	int a;
@@ -569,8 +569,8 @@ void qcache_imlate(qcache_data *data)
 	free(keywords);
 }
 
-_q_static
-void qcache_not(qcache_data *data)
+static void
+qcache_not(qcache_data *data)
 {
 	int *keywords;
 
@@ -596,8 +596,8 @@ void qcache_not(qcache_data *data)
 	free(keywords);
 }
 
-_q_static
-void qcache_all(qcache_data *data)
+static void
+qcache_all(qcache_data *data)
 {
 	int *keywords;
 
@@ -622,8 +622,8 @@ void qcache_all(qcache_data *data)
 	free(keywords);
 }
 
-_q_static
-void qcache_dropped(qcache_data *data)
+static void
+qcache_dropped(qcache_data *data)
 {
 	static int possible = 0;
 	int *keywords, i;
@@ -668,8 +668,8 @@ void qcache_dropped(qcache_data *data)
 	free(keywords);
 }
 
-_q_static
-void qcache_stats(qcache_data *data)
+static void
+qcache_stats(qcache_data *data)
 {
 	static time_t runtime;
 	static queue *allcats;
@@ -820,8 +820,8 @@ void qcache_stats(qcache_data *data)
 	}
 }
 
-_q_static
-void qcache_testing_only(qcache_data *data)
+static void
+qcache_testing_only(qcache_data *data)
 {
 	static int possible = 0;
 	int *keywords;
@@ -863,8 +863,8 @@ void qcache_testing_only(qcache_data *data)
 /* Misc functions                                                   */
 /********************************************************************/
 
-_q_static
-void qcache_load_arches(const char *overlay)
+static void
+qcache_load_arches(const char *overlay)
 {
 	FILE *fp;
 	char *filename, *s;
@@ -906,8 +906,8 @@ void qcache_load_arches(const char *overlay)
  *
  * Deallocate variables (archlist)
  */
-_q_static
-void qcache_free(void)
+static void
+qcache_free(void)
 {
 	free_sets(arches);
 }

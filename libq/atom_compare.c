@@ -6,10 +6,11 @@
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-const char * const booga[] = {"!!!", "!=", "==", ">", "<"};
+static const char * const booga[] = {"!!!", "!=", "==", ">", "<"};
 enum { ERROR=0, NOT_EQUAL, EQUAL, NEWER, OLDER };
 
-static int _atom_compare_match(int ret, atom_operator op)
+static int
+_atom_compare_match(int ret, atom_operator op)
 {
 	if (op == ATOM_OP_NONE)
 		return ret;
@@ -39,7 +40,8 @@ static int _atom_compare_match(int ret, atom_operator op)
  * foo-1 <OLDER> foo-2
  * foo-1 <NOT_EQUAL> bar-1
  */
-static int atom_compare(const depend_atom *a1, const depend_atom *a2)
+static int
+atom_compare(const depend_atom *a1, const depend_atom *a2)
 {
 	/* sanity check that at most one has operators */
 	if (a1->pfx_op != ATOM_OP_NONE || a1->sfx_op != ATOM_OP_NONE) {
@@ -189,8 +191,8 @@ static int atom_compare(const depend_atom *a1, const depend_atom *a2)
 		return _atom_compare_match(NEWER, pfx_op);
 }
 
-int atom_compare_str(const char * const s1, const char * const s2);
-int atom_compare_str(const char * const s1, const char * const s2)
+static int
+atom_compare_str(const char * const s1, const char * const s2)
 {
 	depend_atom *a1, *a2;
 	int ret = ERROR;
