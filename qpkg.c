@@ -324,6 +324,7 @@ int qpkg_main(int argc, char **argv)
 		case 'p': pretend = 1; break;
 		case 'P':
 			restrict_chmod = 1;
+			free(qpkg_bindir);
 			qpkg_bindir = xstrdup(optarg);
 			if (access(qpkg_bindir, W_OK) != 0)
 				errp("%s", qpkg_bindir);
