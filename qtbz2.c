@@ -353,9 +353,14 @@ int qtbz2_main(int argc, char **argv)
 			warn("Could not decompose '%s'", tbz2);
 	}
 
+	/* We have to cleanup all resources as we're used indirectly
+	 * (e.g. via qmerge).
+	 */
 	free(heap_tbz2);
 	free(heap_xpak);
 	free(heap_tarbz2);
+	if (dir_fd != AT_FDCWD)
+		close(dir_fd);
 
 	return EXIT_SUCCESS;
 }
