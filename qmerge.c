@@ -287,7 +287,7 @@ config_protected(const char *buf, int cp_argc, char **cp_argv,
 }
 
 static void
-crossmount_rm(const char *fname, const struct stat st)
+crossmount_rm(const char *fname, const struct stat * const st)
 {
 	struct stat lst;
 
@@ -295,7 +295,7 @@ crossmount_rm(const char *fname, const struct stat st)
 
 	if (lstat(fname, &lst) == -1)
 		return;
-	if (lst.st_dev != st.st_dev) {
+	if (lst.st_dev != st->st_dev) {
 		warn("skipping crossmount install masking: %s", fname);
 		return;
 	}
@@ -304,7 +304,7 @@ crossmount_rm(const char *fname, const struct stat st)
 }
 
 static void
-install_mask_pwd(int iargc, char **iargv, const struct stat st)
+install_mask_pwd(int iargc, char **iargv, const struct stat * const st)
 {
 	char buf[1024];
 	int i;
@@ -931,7 +931,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	makeargv(install_mask, &iargc, &iargv);
 	/* XXX: Would be better if INSTALL_MASK deleted from image/
 	 *      so we didn't have to parse it while doing merge_tree() */
-	install_mask_pwd(iargc, iargv, st);
+	install_mask_pwd(iargc, iargv, &st);
 
 	if (strstr(features, "noinfo")) rm_rf("./usr/share/info");
 	if (strstr(features, "noman" )) rm_rf("./usr/share/man");
