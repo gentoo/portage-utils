@@ -1215,6 +1215,10 @@ cache_read_file_pms(const char *file)
 	next_line(EAPI, PROPERTIES)
 #undef next_line
 	ptr = strchr(ptr+1, '\n');
+	if (ptr == NULL) {
+		warn("Invalid cache file '%s' - could not find end of cache data", file);
+		goto err;
+	}
 	*ptr = '\0';
 
 	fclose(f);
