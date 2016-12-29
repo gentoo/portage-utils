@@ -252,13 +252,15 @@ int qtbz2_main(int argc, char **argv)
 		COMMON_GETOPTS_CASES(qtbz2)
 		case 'j': action = TBZ2_ACT_JOIN; break;
 		case 's': action = TBZ2_ACT_SPLIT; break;
-		case 't': split_xpak = 0; break;
-		case 'x': split_tarbz2 = 0; break;
+		case 't': action = TBZ2_ACT_SPLIT; split_xpak = 0; break;
+		case 'x': action = TBZ2_ACT_SPLIT; split_tarbz2 = 0; break;
 		case 'O': tbz2_stdout = 1; break;
 		case 'd':
 			if (dir_fd != AT_FDCWD)
-				err("Only use -d once");
+				close(dir_fd);
 			dir_fd = open(optarg, O_RDONLY|O_CLOEXEC|O_PATH);
+			if (unlikely(dir_fd == -1))
+				errp("could not open dir: %s", optarg);
 			break;
 		}
 	}
@@ -279,7 +281,8 @@ int qtbz2_main(int argc, char **argv)
 		else if (strstr(argv[optind], ".tbz2") != NULL)
 			action = TBZ2_ACT_SPLIT;
 		else
-			qtbz2_usage(EXIT_FAILURE);
+			err("%s: need to use -j or -s, or file must end in .tar.bz2 or .tbz2 to autodetect",
+				argv[optind]);
 	}
 
 	/* tbz2tool join .tar.bz2 .xpak .tbz2 */
