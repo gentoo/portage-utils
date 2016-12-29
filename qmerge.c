@@ -1869,7 +1869,9 @@ int qmerge_main(int argc, char **argv)
 			case 'K': install = 1; break;
 			case 'U': uninstall = 1; break;
 			case 'p': pretend = 1; break;
-			case 'u': update_only = 1;
+			case 'u':
+				update_only = 1;
+				/* fall through */
 			case 'y': interactive = 0; break;
 			case 'O': follow_rdepends = 0; break;
 			case 128: debug = true; break;
