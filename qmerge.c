@@ -902,11 +902,13 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	/* split the tbz and xpak data */
 	xasprintf(&tbz2, "%s/%s/%s.tbz2", pkgdir, pkg->CATEGORY, pkg->PF);
-	assert(run_applet_l("qtbz2", "-s", tbz2, NULL) == 0);
+	if (run_applet_l("qtbz2", "-s", tbz2, NULL) != 0)
+		err("`qtbz2 -s %s` failed", tbz2);
 
 	mkdir("vdb", 0755);
 	sprintf(tbz2, "%s.xpak", pkg->PF);
-	assert(run_applet_l("qxpak", "-d", "vdb", "-x", tbz2, NULL) == 0);
+	if (run_applet_l("qxpak", "-d", "vdb", "-x", tbz2, NULL) != 0)
+		err("`qxpak -d vdb -x %s` failed", tbz2);
 
 	free(tbz2);
 

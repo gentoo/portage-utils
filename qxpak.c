@@ -154,6 +154,7 @@ xpak_list(int dir_fd, const char *file, int argc, char **argv)
 {
 	_xpak_archive *x;
 	char buf[BUFSIZE];
+	size_t ret;
 
 	x = _xpak_open(file);
 	if (!x)
@@ -162,7 +163,8 @@ xpak_list(int dir_fd, const char *file, int argc, char **argv)
 	x->dir_fd = dir_fd;
 	x->index = buf;
 	assert((size_t)x->index_len < sizeof(buf));
-	assert(fread(x->index, 1, x->index_len, x->fp) == (size_t)x->index_len);
+	ret = fread(x->index, 1, x->index_len, x->fp);
+	assert(ret == (size_t)x->index_len);
 	_xpak_walk_index(x, argc, argv, &_xpak_list_callback);
 
 	_xpak_close(x);
