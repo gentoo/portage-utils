@@ -382,6 +382,8 @@ show_sync_history(const char *logfile, time_t start_time, time_t end_time)
 static void show_current_emerge(void);
 #ifdef __linux__
 # include <asm/param.h>
+#endif
+#if defined __linux__ || defined __GNU__
 # include <elf.h>
 static unsigned long hz = 0;
 static void init_hz(void)
