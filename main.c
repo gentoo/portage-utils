@@ -78,6 +78,15 @@ no_colors(void)
 	setenv("NOCOLOR", "true", 1);
 }
 
+static void
+setup_quiet(void)
+{
+	/* "e" for FD_CLOEXEC */
+	if (quiet == 0)
+		warnout = fopen("/dev/null", "we");
+	++quiet;
+}
+
 /* include common applet defs */
 #include "applets.h"
 
@@ -102,7 +111,7 @@ no_colors(void)
 #define COMMON_GETOPTS_CASES(applet) \
 	case 0x1: portroot = optarg; break; \
 	case 'v': ++verbose; break; \
-	case 'q': if (quiet == 0) { warnout = fopen("/dev/null", "we"); } ++quiet; break; \
+	case 'q': setup_quiet(); break; \
 	case 'V': version_barf(); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': no_colors(); break; \
@@ -952,7 +961,7 @@ initialize_portage_env(void)
 		xarraypush_str(overlays, main_overlay);
 
 	if (getenv("PORTAGE_QUIET") != NULL)
-		quiet = 1;
+		setup_quiet();
 
 	if (nocolor)
 		no_colors();
