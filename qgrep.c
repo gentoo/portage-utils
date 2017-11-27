@@ -242,7 +242,7 @@ int qgrep_main(int argc, char **argv)
 	DIR *eclass_dir = NULL;
 	DIR *vdb_dir = NULL;
 	DIR *cat_dir = NULL;
-	struct dirent *dentry;
+	struct dirent *dentry = NULL;
 	char ebuild[_Q_PATH_MAX];
 	char name[_Q_PATH_MAX];
 	char *label;
