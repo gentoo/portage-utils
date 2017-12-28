@@ -40,5 +40,6 @@ test f08 "123-r4"     -F '%{PVR}'      "cat/pkg-123-r4:5"
 test f09 "pkg-123-r4" -F '%{PF}'       "cat/pkg-123-r4:5"
 test f10 "r4"         -F '%{PR}'       "cat/pkg-123-r4:5"
 test f11 ":5"         -F '%{SLOT}'     "cat/pkg-123-r4:5"
+test f12 "pkg-c"      -F '%{PN}'       "cat/pkg-c"  # bug #638816
 
 end
