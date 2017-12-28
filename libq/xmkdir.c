@@ -65,8 +65,14 @@ rm_rf_at(int dfd, const char *path)
 		if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
 			continue;
 		if (unlinkat(subdfd, de->d_name, 0) == -1) {
-			if (unlikely(errno != EISDIR))
-				errp("could not unlink %s", de->d_name);
+			if (unlikely(errno != EISDIR)) {
+				struct stat st;
+				/* above is a linux short-cut, we really just want to
+				 * know whether we're really with a directory or not */
+				if (fstatat(subdfd, de->d_name, &st, 0) != 0 ||
+						!(st.st_mode & S_IFDIR))
+					errp("could not unlink %s", de->d_name);
+			}
 			rm_rf_at(subdfd, de->d_name);
 			unlinkat(subdfd, de->d_name, AT_REMOVEDIR);
 		}
