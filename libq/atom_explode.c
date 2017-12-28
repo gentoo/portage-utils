@@ -218,9 +218,12 @@ atom_explode(const char *atom)
 		ret->suffixes[idx] = t;
 	}
 
-	/* allow for 1 optional suffix letter */
+	/* allow for 1 optional suffix letter, must be following a number
+	 * otherwise we eat stuff like -c, see bug #639978 */
 	ptr = ret->PN + strlen(ret->PN);
-	if (ptr[-1] >= 'a' && ptr[-1] <= 'z') {
+	if (ptr[-1] >= 'a' && ptr[-1] <= 'z' &&
+			ptr - 2 > ret->PN && ptr[-2] >= '0' && ptr[-2] <= '9')
+	{
 		ret->letter = ptr[-1];
 		--ptr;
 	}
