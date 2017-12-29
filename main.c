@@ -844,16 +844,16 @@ initialize_portage_env(void)
 	/* figure out where to find our config files */
 	const char *configroot = getenv("PORTAGE_CONFIGROOT");
 	if (!configroot)
-		configroot = "/";
+		configroot = CONFIG_EPREFIX "/";
 
 	/* walk all the stacked profiles */
-	read_portage_profile(configroot, CONFIG_EPREFIX "etc/make.profile", vars_to_read);
-	read_portage_profile(configroot, CONFIG_EPREFIX "etc/portage/make.profile", vars_to_read);
+	read_portage_profile(configroot, "/etc/make.profile", vars_to_read);
+	read_portage_profile(configroot, "/etc/portage/make.profile", vars_to_read);
 
 	/* now read all the config files */
 	read_portage_env_file("", CONFIG_EPREFIX "usr/share/portage/config/make.globals", vars_to_read);
-	read_portage_env_file(configroot, CONFIG_EPREFIX "etc/make.conf", vars_to_read);
-	read_portage_env_file(configroot, CONFIG_EPREFIX "etc/portage/make.conf", vars_to_read);
+	read_portage_env_file(configroot, "/etc/make.conf", vars_to_read);
+	read_portage_env_file(configroot, "/etc/portage/make.conf", vars_to_read);
 
 	/* finally, check the env */
 	for (i = 0; vars_to_read[i].name; ++i) {
