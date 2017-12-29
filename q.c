@@ -6,6 +6,10 @@
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
+#if defined(__MACH__)
+#include <libproc.h>
+#endif
+
 #define Q_FLAGS "irmM:" COMMON_FLAGS
 static struct option const q_long_opts[] = {
 	{"install",       no_argument, NULL, 'i'},
@@ -115,7 +119,21 @@ int q_main(int argc, char **argv)
 		if (!quiet)
 			printf("Installing symlinks:\n");
 
+#if defined(__MACH__)
+		rret = proc_pidpath(getpid(), buf, sizeof(buf));
+		if (rret != -1)
+			rret = strlen(buf);
+#elif defined(__sun) && defined(__SVR4)
+		prog = getexecname();
+		rret = strlen(prog);
+		if (rret > sizeof(buf) - 1) {
+			rret = -1;
+		} else {
+			strncpy(buf, prog, rret);
+		}
+#else
 		rret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+#endif
 		if (rret == -1) {
 			warnfp("haha no symlink love for you");
 			return 1;
