@@ -13,7 +13,8 @@ of information.  The focus is on size and speed, so everything is in C.
 
 ## Building
 
-Just run `make`.  This should work on any recent POSIX compliant system.
+Just run `make`.  This should work on any recent Linux system.
+Alternatively, run `configure` followed by `make`.
 
 ## Helping out
 
