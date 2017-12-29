@@ -96,11 +96,11 @@ APPLETS += \
 	qxpak
 EXTRA_DIST += \
 	applets.h \
+	config.h \
 	include_applets.h \
 	libq/atom_compare.c \
 	libq/atom_explode.c \
 	libq/basename.c \
-	libq/binpackages.c \
 	libq/busybox.h \
 	libq/colors.c \
 	libq/compat.c \
@@ -162,6 +162,10 @@ EXTRA_DIST += \
 	tests/atom_explode/basic.tests \
 	tests/atom_explode/dotest \
 	tests/atom_explode/test.c \
+	tests/copy_file/.gitignore \
+	tests/copy_file/Makefile \
+	tests/copy_file/dotest \
+	tests/copy_file/test.c \
 	tests/init.sh \
 	tests/install/.gitignore \
 	tests/install/Makefile \
