@@ -513,6 +513,10 @@ read_repos_conf(const char *configroot, const char *repos_conf)
 			if (name[0] == '.')
 				continue;
 
+			/* Exclude backup files (aka files with ~ as postfix). */
+			if (name[0] != '\0' && name[strlen(name) - 1] == '~')
+				continue;
+
 #ifdef DT_UNKNOWN
 			if (confs[i]->d_type != DT_UNKNOWN &&
 			    confs[i]->d_type != DT_REG &&
