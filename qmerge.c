@@ -190,8 +190,8 @@ qmerge_initialize(void)
 	mkdir_p(buf, 0755);
 	xchdir(buf);
 
-	if (force_download != 2) {
-		if (force_download)
+	if (force_download) {
+		if (force_download == 2)
 			unlink(Packages);
 
 		if (access(Packages, R_OK) != 0)
