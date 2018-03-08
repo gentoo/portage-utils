@@ -466,9 +466,9 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		"FILESDIR=/.does/not/exist/anywhere\n"
 		"MERGE_TYPE=binary\n"
 		"ROOT='%4$s'\n"
-		"EROOT=\"${EPREFIX%%/}/${ROOT#/}\"\n"
+		"EROOT=\"${EPREFIX%%/}/${ROOT#/}/\"\n"
 		"D=\"%5$s\"\n"
-		"ED=\"${EPREFIX%%/}/${D#/}\"\n"
+		"ED=\"${EPREFIX%%/}/${D#/}/\"\n"
 		"T=\"%6$s\"\n"
 		/* Finally run the func */
 		"%7$s%2$s\n"
