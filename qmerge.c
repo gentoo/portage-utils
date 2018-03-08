@@ -203,6 +203,7 @@ qmerge_initialize(void)
 struct qmerge_bv_state {
 	const char *catname;
 	const char *pkgname;
+	const char *slot;
 	char buf[4096];
 	char *retbuf;
 };
@@ -219,19 +220,20 @@ qmerge_best_version_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qmerge_bv_state *state = priv;
 	if (qlist_match(pkg_ctx, state->buf, NULL, true))
-		snprintf(state->retbuf, sizeof(state->buf), "%s/%s",
-			pkg_ctx->cat_ctx->name, pkg_ctx->name);
+		snprintf(state->retbuf, sizeof(state->buf), "%s/%s:%s",
+			 pkg_ctx->cat_ctx->name, pkg_ctx->name, state->slot);
 	return 0;
 }
 
 static char *
-best_version(const char *catname, const char *pkgname)
+best_version(const char *catname, const char *pkgname, const char *slot)
 {
 	static int vdb_check = 1;
 	static char retbuf[4096];
 	struct qmerge_bv_state state = {
 		.catname = catname,
 		.pkgname = pkgname,
+		.slot = slot,
 		.retbuf = retbuf,
 	};
 
@@ -252,8 +254,8 @@ best_version(const char *catname, const char *pkgname)
 	}
 
 	retbuf[0] = '\0';
-	snprintf(state.buf, sizeof(state.buf), "%s%s%s",
-		catname ? : "", catname ? "/" : "", pkgname);
+	snprintf(state.buf, sizeof(state.buf), "%s%s%s:%s",
+		 catname ? : "", catname ? "/" : "", pkgname, slot);
 	q_vdb_foreach_pkg(qmerge_best_version_cb, &state, qmerge_filter_cat);
 
  done:
@@ -359,7 +361,8 @@ qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	if (!pretend)
 		return 0;
 
-	p = best_version(pkg->CATEGORY, atom->PN);
+	p = best_version(pkg->CATEGORY, atom->PN, pkg->SLOT);
+
 	if (strlen(p) < 1) {
 		c = 'N';
 		snprintf(buf, sizeof(buf), "%sN%s", GREEN, NORM);
@@ -844,7 +847,8 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 						ratom = atom_explode(buf);
 
-						p = best_version(subpkg->CATEGORY, subpkg->PF);
+						p = best_version(subpkg->CATEGORY, subpkg->PF, subpkg->SLOT);
+
 						/* we dont want to remerge equal versions here */
 						IF_DEBUG(fprintf(stderr, "+Installed: %s\n", p));
 						if (strlen(p) < 1)
@@ -1373,7 +1377,7 @@ print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 		if (strcmp(pkg->REPO, "gentoo") != 0)
 			printf(" %sRepo%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->REPO);
 
-	if ((p = best_version(pkg->CATEGORY, atom->PN)) != NULL) {
+	if ((p = best_version(pkg->CATEGORY, atom->PN, pkg->SLOT)) != NULL) {
 		if (*p) {
 			int ret;
 			const char *icolor = RED;
@@ -1475,6 +1479,7 @@ grab_binpkg_info(const char *name)
 	static char best_match[sizeof(Pkg.PF)+2+sizeof(Pkg.CATEGORY)];
 
 	best_match[0] = 0;
+	strcpy(pkg->SLOT,"0");
 
 	fp = open_binpkg_index();
 
@@ -1511,6 +1516,7 @@ grab_binpkg_info(const char *name)
 					atom_implode(atom);
 				}
 				memset(pkg, 0, sizeof(struct pkg_t));
+				strcpy(pkg->SLOT,"0");
 			}
 			continue;
 		}
