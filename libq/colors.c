@@ -50,7 +50,8 @@ color_remap(void)
 {
 	FILE *fp;
 	unsigned int i;
-	size_t buflen, linelen;
+	int linelen;
+	size_t buflen;
 	char *buf;
 	char *p;
 	unsigned int lineno = 0;
@@ -59,13 +60,13 @@ color_remap(void)
 		return;
 
 	buf = NULL;
-	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
+	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
 		lineno++;
 		/* eat comments */
 		if ((p = strchr(buf, '#')) != NULL)
 			*p = '\0';
 
-		rmspace_len(buf, linelen);
+		rmspace_len(buf, (size_t)linelen);
 
 		p = strchr(buf, '=');
 		if (p == NULL)
