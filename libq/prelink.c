@@ -104,6 +104,9 @@ static bool is_prelink_elf(int fd, const char *filename)
 #else
 static bool is_prelink_elf(int fd, const char *filename)
 {
+	(void) fd;
+	(void) filename;
+
 	return false;
 }
 #endif
