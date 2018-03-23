@@ -153,9 +153,10 @@ qgrep_print_line(qgrep_buf_t *current, const char *label,
 		int regexec_flags = 0;
 		while ((*p != '\0') && !regexec(preg, p, 1, &match, regexec_flags)) {
 			if (match.rm_so > 0)
-				printf("%.*s", match.rm_so, p);
+				printf("%.*s", (int)match.rm_so, p);
 			if (match.rm_eo > match.rm_so) {
-				printf("%s%.*s%s", RED, match.rm_eo - match.rm_so, p + match.rm_so, NORM);
+				printf("%s%.*s%s", RED, (int)(match.rm_eo - match.rm_so),
+						p + match.rm_so, NORM);
 				p += match.rm_eo;
 			} else {
 				p += match.rm_eo;

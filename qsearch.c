@@ -104,7 +104,7 @@ qsearch_ebuild_ebuild(int overlay_fd, const char *ebuild, const char *search_me,
 	int linelen;
 	size_t buflen;
 	while ((linelen = getline(&buf, &buflen, ebuildfp)) >= 0) {
-		if (linelen <= search_len)
+		if ((size_t)linelen <= search_len)
 			continue;
 		if (strncmp(buf, search_var, search_len) != 0)
 			continue;

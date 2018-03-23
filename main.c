@@ -1420,9 +1420,11 @@ get_vdb_atoms(int fullcpv)
 		if ((dfd = scandirat(ctx->vdb_fd, cat[j]->d_name, &pf, q_vdb_filter_pkg, alphasort)) < 0)
 			continue;
 		for (i = 0; i < dfd; i++) {
-			int blen = snprintf(buf, sizeof(buf), "%s/%s/SLOT", cat[j]->d_name, pf[i]->d_name);
-			if (blen >= sizeof(buf)) {
-				warnf("unable to parse long package: %s/%s", cat[j]->d_name, pf[i]->d_name);
+			int blen = snprintf(buf, sizeof(buf), "%s/%s/SLOT",
+					cat[j]->d_name, pf[i]->d_name);
+			if (blen < 0 || (size_t)blen >= sizeof(buf)) {
+				warnf("unable to parse long package: %s/%s",
+						cat[j]->d_name, pf[i]->d_name);
 				continue;
 			}
 

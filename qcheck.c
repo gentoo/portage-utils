@@ -375,7 +375,7 @@ int qcheck_main(int argc, char **argv)
 
 	argc -= optind;
 	argv += optind;
-	for (i = 0; i < argc; ++i) {
+	for (i = 0; i < (size_t)argc; ++i) {
 		atom = atom_explode(argv[i]);
 		if (!atom)
 			warn("invalid atom: %s", argv[i]);

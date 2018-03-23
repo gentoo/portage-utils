@@ -341,9 +341,11 @@ xpak_create(int dir_fd, const char *file, int argc, char **argv)
 			if ((numfiles = scandir(argv[i], &dir, filter_hidden, alphasort)) < 0)
 				warn("Directory '%s' is empty; skipping", argv[i]);
 			for (fidx = 0; fidx < numfiles; ++fidx) {
-				int ret = snprintf(path, sizeof(path), "%s/%s", argv[i], dir[fidx]->d_name);
-				if (ret >= sizeof(path)) {
-					warn("skipping path too long: %s/%s", argv[i], dir[fidx]->d_name);
+				int ret = snprintf(path, sizeof(path), "%s/%s",
+						argv[i], dir[fidx]->d_name);
+				if (ret < 0 || (size_t)ret >= sizeof(path)) {
+					warn("skipping path too long: %s/%s",
+							argv[i], dir[fidx]->d_name);
 					continue;
 				}
 				if (stat(path, &st) < 0) {

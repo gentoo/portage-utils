@@ -580,7 +580,8 @@ void show_current_emerge(void)
 			raip = realloc(ip, sizeof(struct kinfo_proc) * size);
 			if (raip == NULL) {
 				free(ip);
-				warnp("Could not extend allocated block to %d bytes for process information",
+				warnp("Could not extend allocated block to "
+						"%zd bytes for process information",
 						sizeof(struct kinfo_proc) * size);
 				return;
 			}
@@ -798,7 +799,7 @@ int qlop_main(int argc, char **argv)
 
 	argc -= optind;
 	argv += optind;
-	for (i = 0; i < argc; ++i) {
+	for (i = 0; i < (size_t)argc; ++i) {
 		atom = atom_explode(argv[i]);
 		if (!atom)
 			warn("invalid atom: %s", argv[i]);
@@ -820,7 +821,7 @@ int qlop_main(int argc, char **argv)
 		show_sync_history(logfile, start_time, end_time);
 
 	if (do_time) {
-		for (i = 0; i < argc; ++i)
+		for (i = 0; i < (size_t)argc; ++i)
 			show_merge_times(argv[i], logfile, average, do_human_readable,
 				start_time, end_time);
 	}

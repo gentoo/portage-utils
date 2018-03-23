@@ -579,7 +579,7 @@ int qdepends_main(int argc, char **argv)
 	else {
 		cb = qdepends_main_vdb_cb;
 
-		for (i = 0; i < argc; ++i) {
+		for (i = 0; i < (size_t)argc; ++i) {
 			atom = atom_explode(argv[i]);
 			if (!atom)
 				warn("invalid atom: %s", argv[i]);
