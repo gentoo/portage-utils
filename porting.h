@@ -32,7 +32,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fnmatch.h>
-#include <getopt.h>
 #include <glob.h>
 #include <inttypes.h>
 #include <libgen.h>
@@ -51,6 +50,24 @@
 #include <sys/types.h>
 
 #include <iniparser.h>
+
+#if defined(__sun) && defined(__SVR4)
+/* workaround non-const defined name in option struct, such that we
+ * don't get a zillion of warnings */
+#define	no_argument		0
+#define	required_argument	1
+#define	optional_argument	2
+struct option {
+	const char *name;
+	int has_arg;
+	int *flag;
+	int val;
+};
+extern int	getopt_long(int, char * const *, const char *,
+		    const struct option *, int *);
+#else
+#include <getopt.h>
+#endif
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*(arr)))
 
