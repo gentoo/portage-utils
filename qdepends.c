@@ -479,6 +479,9 @@ qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	static char *depend, *use;
 	static size_t depend_len, use_len;
 	dep_node *dep_tree;
+	int ret;
+	regex_t preg;
+	regmatch_t match;
 
 	if (!q_vdb_pkg_eat(pkg_ctx, state->depend_file, &depend, &depend_len))
 		return 0;
@@ -506,7 +509,14 @@ qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	dep_prune_use(dep_tree, use);
 
 	ptr = dep_flatten_tree(dep_tree);
-	if (ptr && rematch(state->query, ptr, REG_EXTENDED) == 0) {
+
+	ret = -2;
+	if (ptr && wregcomp(&preg, state->query, REG_EXTENDED) == 0)
+		ret = regexec(&preg, ptr, 1, &match, 0);
+	if (ret > -2)
+		regfree(&preg);
+
+	if (ptr && ret == 0) {
 		if (qdep_name_only) {
 			depend_atom *atom = NULL;
 			snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
@@ -517,8 +527,16 @@ qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		} else {
 			printf("%s%s/%s%s%s%c", BOLD, catname, BLUE, pkgname, NORM, verbose ? ':' : '\n');
 		}
-		if (verbose)
-			printf(" %s\n", ptr);
+		if (verbose) {
+			/* find the boundaries for this atom */
+			while (match.rm_so > 0 && !isspace(ptr[match.rm_so - 1]))
+				match.rm_so--;
+			while (ptr[match.rm_eo] != '\0' && !isspace(ptr[match.rm_eo]))
+				match.rm_eo++;
+			printf(" %.*s\n",
+					(int)(match.rm_eo - match.rm_so),
+					ptr + match.rm_so);
+		}
 	}
 	dep_burn_tree(dep_tree);
 
