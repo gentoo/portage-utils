@@ -220,7 +220,8 @@ qcache_read_cache_file(const char *filename)
 	char *buf;
 	FILE *f;
 	portage_cache *ret = NULL;
-	size_t len, buflen, linelen;
+	int linelen;
+	size_t len, buflen;
 
 	if ((f = fopen(filename, "r")) == NULL)
 		goto err;
@@ -234,8 +235,8 @@ qcache_read_cache_file(const char *filename)
 	len = sizeof(*ret) + s.st_size + 1;
 	ret = xzalloc(len);
 
-	while ((linelen = getline(&buf, &buflen, f)) != -1) {
-		rmspace_len(buf, linelen);
+	while ((linelen = getline(&buf, &buflen, f)) >= 0) {
+		rmspace_len(buf, (size_t)linelen);
 
 		if (strncmp(buf, "DEPEND=", 7) == 0)
 			ret->DEPEND = xstrdup(buf + 7);
@@ -868,7 +869,8 @@ qcache_load_arches(const char *overlay)
 {
 	FILE *fp;
 	char *filename, *s;
-	size_t buflen, linelen;
+	int linelen;
+	size_t buflen;
 	char *buf;
 
 	xasprintf(&filename, "%s/profiles/arch.list", overlay);
@@ -879,8 +881,8 @@ qcache_load_arches(const char *overlay)
 	archlist_count = 0;
 	arch_longest_len = 0;
 	buf = NULL;
-	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
-		rmspace_len(buf, linelen);
+	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
+		rmspace_len(buf, (size_t)linelen);
 
 		if ((s = strchr(buf, '#')) != NULL)
 			*s = '\0';

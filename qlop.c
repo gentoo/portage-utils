@@ -232,7 +232,8 @@ show_emerge_history(int listflag, array_t *atoms, const char *logfile,
                     time_t start_time, time_t end_time)
 {
 	FILE *fp;
-	size_t buflen, linelen;
+	int linelen;
+	size_t buflen;
 	char *buf, merged;
 	char *p, *q;
 	bool showit;
@@ -246,16 +247,17 @@ show_emerge_history(int listflag, array_t *atoms, const char *logfile,
 	}
 
 	buf = NULL;
-	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
+	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
 		if (linelen < 30)
 			continue;
 
-		rmspace_len(buf, linelen);
+		rmspace_len(buf, (size_t)linelen);
 		if ((p = strchr(buf, ':')) == NULL)
 			continue;
 		*p = 0;
 		q = p + 3;
-		/* Make sure there's leading white space and not a truncated string. #573106 */
+		/* Make sure there's leading white space and not a truncated
+		 * string. #573106 */
 		if (p[1] != ' ' || p[2] != ' ')
 			continue;
 
@@ -331,7 +333,8 @@ static void
 show_sync_history(const char *logfile, time_t start_time, time_t end_time)
 {
 	FILE *fp;
-	size_t buflen, linelen;
+	int linelen;
+	size_t buflen;
 	char *buf, *p;
 	time_t t;
 
@@ -342,7 +345,7 @@ show_sync_history(const char *logfile, time_t start_time, time_t end_time)
 
 	buf = NULL;
 	/* Just find the finish lines. */
-	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
+	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
 		/* This cuts out like ~10% of the log. */
 		if (linelen < 35)
 			continue;
@@ -356,7 +359,7 @@ show_sync_history(const char *logfile, time_t start_time, time_t end_time)
 			continue;
 		p += 19;
 
-		rmspace_len(buf, linelen);
+		rmspace_len(buf, (size_t)linelen);
 
 		t = (time_t)atol(buf);
 		if (t < start_time || t > end_time)

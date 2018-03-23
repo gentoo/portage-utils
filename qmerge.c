@@ -1653,7 +1653,8 @@ static int
 parse_packages(queue *todo)
 {
 	FILE *fp;
-	size_t buflen, linelen;
+	int linelen;
+	size_t buflen;
 	char *buf, *p;
 	struct pkg_t Pkg;
 	depend_atom *pkg_atom;
@@ -1665,8 +1666,8 @@ parse_packages(queue *todo)
 	repo[0] = '\0';
 
 	/* First consume the header with the common data. */
-	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
-		rmspace_len(buf, linelen);
+	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
+		rmspace_len(buf, (size_t)linelen);
 		if (buf[0] == '\0')
 			break;
 
@@ -1785,7 +1786,8 @@ static queue *
 qmerge_add_set_file(const char *dir, const char *file, queue *set)
 {
 	FILE *fp;
-	size_t buflen, linelen;
+	int linelen;
+	size_t buflen;
 	char *buf, *fname;
 
 	/* Find the file to read */
@@ -1800,8 +1802,8 @@ qmerge_add_set_file(const char *dir, const char *file, queue *set)
 
 	/* Load each entry */
 	buf = NULL;
-	while ((linelen = getline(&buf, &buflen, fp)) != -1) {
-		rmspace_len(buf, linelen);
+	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
+		rmspace_len(buf, (size_t)linelen);
 		set = add_set(buf, set);
 	}
 	free(buf);

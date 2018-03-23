@@ -82,7 +82,8 @@ static void
 quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, char **argv)
 {
 #define NUM_SEARCH_FILES ARRAY_SIZE(search_files)
-	size_t buflen, linelen;
+	int linelen;
+	size_t buflen;
 	char *buf, *p;
 	unsigned int i, f;
 	size_t s;
@@ -110,8 +111,8 @@ quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, cha
 			if (fp[f] == NULL)
 				continue;
 
-			while ((linelen = getline(&buf, &buflen, fp[f])) != -1) {
-				rmspace_len(buf, linelen);
+			while ((linelen = getline(&buf, &buflen, fp[f])) >= 0) {
+				rmspace_len(buf, (size_t)linelen);
 				if (buf[0] == '#' || buf[0] == '\0')
 					continue;
 
@@ -119,7 +120,9 @@ quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, cha
 					case 0: /* Global use.desc */
 						if (!strncmp(buf, argv[i], s))
 							if (buf[s] == ' ' && buf[s + 1] == '-') {
-								printf(" %sglobal%s:%s%s%s: %s\n", BOLD, NORM, BLUE, argv[i], NORM, buf + s + 3);
+								printf(" %sglobal%s:%s%s%s: %s\n",
+										BOLD, NORM, BLUE, argv[i], NORM,
+										buf + s + 3);
 								goto skip_file;
 							}
 						break;
@@ -131,14 +134,17 @@ quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, cha
 						if (!strncmp(p, argv[i], s)) {
 							if (p[s] == ' ' && p[s + 1] == '-') {
 								*p = '\0';
-								printf(" %slocal%s:%s%s%s:%s%s%s %s\n", BOLD, NORM, BLUE, argv[i], NORM, BOLD, buf, NORM, p + s + 3);
+								printf(" %slocal%s:%s%s%s:%s%s%s %s\n",
+										BOLD, NORM, BLUE, argv[i], NORM,
+										BOLD, buf, NORM, p + s + 3);
 							}
 						}
 						break;
 
 					case 2: /* Architectures arch.list */
 						if (!strcmp(buf, argv[i])) {
-							printf(" %sarch%s:%s%s%s: %s architecture\n", BOLD, NORM, BLUE, argv[i], NORM, argv[i]);
+							printf(" %sarch%s:%s%s%s: %s architecture\n",
+									BOLD, NORM, BLUE, argv[i], NORM, argv[i]);
 							goto skip_file;
 						}
 						break;
@@ -191,8 +197,8 @@ quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, cha
 		/* Chop the trailing .desc for better display */
 		*p = '\0';
 
-		while ((linelen = getline(&buf, &buflen, fp[0])) != -1) {
-			rmspace_len(buf, linelen);
+		while ((linelen = getline(&buf, &buflen, fp[0])) >= 0) {
+			rmspace_len(buf, (size_t)linelen);
 			if (buf[0] == '#' || buf[0] == '\0')
 				continue;
 
@@ -231,7 +237,8 @@ int quse_main(int argc, char **argv)
 	char buf1[_Q_PATH_MAX];
 	char buf2[_Q_PATH_MAX];
 
-	size_t ebuildlen, linelen;
+	int linelen;
+	size_t ebuildlen;
 	char *ebuild;
 
 	const char *search_var = NULL;
@@ -279,11 +286,11 @@ int quse_main(int argc, char **argv)
 		int overlay_fd = open(overlay, O_RDONLY|O_CLOEXEC|O_PATH);
 
 		ebuild = NULL;
-		while ((linelen = getline(&ebuild, &ebuildlen, fp)) != -1) {
+		while ((linelen = getline(&ebuild, &ebuildlen, fp)) >= 0) {
 			FILE *newfp;
 			int fd;
 
-			rmspace_len(ebuild, linelen);
+			rmspace_len(ebuild, (size_t)linelen);
 
 			fd = openat(overlay_fd, ebuild, O_RDONLY|O_CLOEXEC);
 			if (fd < 0)

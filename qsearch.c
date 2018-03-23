@@ -101,8 +101,9 @@ qsearch_ebuild_ebuild(int overlay_fd, const char *ebuild, const char *search_me,
 	}
 
 	char *buf = NULL;
-	size_t buflen, linelen;
-	while ((linelen = getline(&buf, &buflen, ebuildfp)) != -1) {
+	int linelen;
+	size_t buflen;
+	while ((linelen = getline(&buf, &buflen, ebuildfp)) >= 0) {
 		if (linelen <= search_len)
 			continue;
 		if (strncmp(buf, search_var, search_len) != 0)
@@ -194,10 +195,11 @@ int qsearch_main(int argc, char **argv)
 			continue;
 		}
 
-		size_t buflen, linelen;
+		int linelen;
+		size_t buflen;
 		char *buf = NULL;
-		while ((linelen = getline(&buf, &buflen, fp)) != -1) {
-			rmspace_len(buf, linelen);
+		while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
+			rmspace_len(buf, (size_t)linelen);
 			if (!buf[0])
 				continue;
 
