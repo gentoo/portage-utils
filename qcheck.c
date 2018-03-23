@@ -354,8 +354,8 @@ int qcheck_main(int argc, char **argv)
 		.undo_prelink = false,
 	};
 
-	while ((i = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
-		switch (i) {
+	while ((ret = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
+		switch (ret) {
 		COMMON_GETOPTS_CASES(qcheck)
 		case 's': {
 			regex_t regex;

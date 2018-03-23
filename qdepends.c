@@ -560,8 +560,8 @@ int qdepends_main(int argc, char **argv)
 
 	depend_file = depend_files[0];
 
-	while ((i = GETOPT_LONG(QDEPENDS, qdepends, "")) != -1) {
-		switch (i) {
+	while ((ret = GETOPT_LONG(QDEPENDS, qdepends, "")) != -1) {
+		switch (ret) {
 		COMMON_GETOPTS_CASES(qdepends)
 
 		case 'd': depend_file = depend_files[0]; break;

@@ -753,6 +753,7 @@ parse_date(const char *sdate, time_t *t)
 int qlop_main(int argc, char **argv)
 {
 	size_t i;
+	int ret;
 	int average = 1;
 	time_t start_time, end_time;
 	char do_time, do_list, do_unlist, do_sync, do_current, do_human_readable = 0;
@@ -765,8 +766,8 @@ int qlop_main(int argc, char **argv)
 	end_time = LONG_MAX;
 	do_time = do_list = do_unlist = do_sync = do_current = 0;
 
-	while ((i = GETOPT_LONG(QLOP, qlop, "")) != -1) {
-		switch (i) {
+	while ((ret = GETOPT_LONG(QLOP, qlop, "")) != -1) {
+		switch (ret) {
 			COMMON_GETOPTS_CASES(qlop)
 
 			case 't': do_time = 1; break;

@@ -156,8 +156,8 @@ int qsize_main(int argc, char **argv)
 		.num_all_ignored = 0,
 	};
 
-	while ((i = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
-		switch (i) {
+	while ((ret = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
+		switch (ret) {
 		COMMON_GETOPTS_CASES(qsize)
 		case 'f': state.fs_size = 1; break;
 		case 's': state.summary = 1; break;

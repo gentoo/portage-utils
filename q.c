@@ -126,7 +126,7 @@ int q_main(int argc, char **argv)
 #elif defined(__sun) && defined(__SVR4)
 		prog = getexecname();
 		rret = strlen(prog);
-		if (rret > sizeof(buf) - 1) {
+		if ((size_t)rret > sizeof(buf) - 1) {
 			rret = -1;
 		} else {
 			strncpy(buf, prog, rret);
