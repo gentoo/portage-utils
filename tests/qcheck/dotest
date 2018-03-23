@@ -54,7 +54,7 @@ test 08 1 "qcheck -v a-b/pkg"
 
 # update check
 (
-cp -a "${ROOT}" mod
+cp -PR --preserve=mode,timestamps "${ROOT}" mod
 ROOT=${PWD}/mod
 test 09 0 "qcheck -u a-b/pkg && qcheck a-b/pkg"
 )
