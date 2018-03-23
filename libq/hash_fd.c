@@ -31,7 +31,17 @@
 #ifdef HAVE_SYS_PARAM_H
 # include <sys/param.h>
 # ifndef __BYTE_ORDER
-#  define __BYTE_ORDER BYTE_ORDER
+#  ifdef BYTE_ORDER
+#   define __BYTE_ORDER BYTE_ORDER
+#  elif defined(_LITTLE_ENDIAN)
+#   define __LITTLE_ENDIAN 1234
+#   define __BIG_ENDIAN 4321
+#   define __BYTE_ORDER __LITTLE_ENDIAN
+#  elif defined(_BIG_ENDIAN)
+#   define __LITTLE_ENDIAN 1234
+#   define __BIG_ENDIAN 4321
+#   define __BYTE_ORDER __BIG_ENDIAN
+#  endif
 # endif
 # ifndef __BIG_ENDIAN
 #  define __BIG_ENDIAN BIG_ENDIAN
