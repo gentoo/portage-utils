@@ -135,9 +135,9 @@ atom_explode(const char *atom)
 			++atom;
 			if (atom[0] == '=') {
 				++atom;
-				ret->pfx_op = ATOM_OP_NEWER_EQUAL;
-			} else
 				ret->pfx_op = ATOM_OP_NEWER;
+			} else
+				ret->pfx_op = ATOM_OP_NEWER_EQUAL;
 			break;
 		default:
 			ret->pfx_op = ATOM_OP_BLOCK;
