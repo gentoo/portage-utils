@@ -475,13 +475,17 @@ qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	const char *pkgname = pkg_ctx->name;
 	size_t len;
 	char *ptr;
-	char buf[_Q_PATH_MAX];
+	char qbuf[_Q_PATH_MAX];
 	static char *depend, *use;
 	static size_t depend_len, use_len;
 	dep_node *dep_tree;
 	int ret;
 	regex_t preg;
 	regmatch_t match;
+	depend_atom *aq;
+	depend_atom *as;
+	depend_atom *ac;
+	char firstmatch = 0;
 
 	if (!q_vdb_pkg_eat(pkg_ctx, state->depend_file, &depend, &depend_len))
 		return 0;
@@ -508,36 +512,104 @@ qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 	dep_prune_use(dep_tree, use);
 
-	ptr = dep_flatten_tree(dep_tree);
+	if ((ptr = dep_flatten_tree(dep_tree)) == NULL) {
+		dep_burn_tree(dep_tree);
+		return 1;
+	}
 
-	ret = -2;
-	if (ptr && wregcomp(&preg, state->query, REG_EXTENDED) == 0)
-		ret = regexec(&preg, ptr, 1, &match, 0);
-	if (ret > -2)
-		regfree(&preg);
+	snprintf(qbuf, sizeof(qbuf), "%s/%s", catname, pkgname);
+	as = atom_explode(qbuf);
+	if (!as) {
+		dep_burn_tree(dep_tree);
+		return 1;
+	}
 
-	if (ptr && ret == 0) {
-		if (qdep_name_only) {
-			depend_atom *atom = NULL;
-			snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
-			if ((atom = atom_explode(buf)) != NULL) {
-				printf("%s%s/%s%s%s%c", BOLD, catname, BLUE, atom->PN, NORM, verbose ? ':' : '\n');
-				atom_implode(atom);
-			}
-		} else {
-			printf("%s%s/%s%s%s%c", BOLD, catname, BLUE, pkgname, NORM, verbose ? ':' : '\n');
-		}
-		if (verbose) {
-			/* find the boundaries for this atom */
-			while (match.rm_so > 0 && !isspace(ptr[match.rm_so - 1]))
-				match.rm_so--;
-			while (ptr[match.rm_eo] != '\0' && !isspace(ptr[match.rm_eo]))
-				match.rm_eo++;
-			printf(" %.*s\n",
-					(int)(match.rm_eo - match.rm_so),
-					ptr + match.rm_so);
+	aq = atom_explode(state->query);
+	if (!aq) {
+		/* "fall" back to old behaviour of just performing an extended
+		 * regular expression match */
+		if (wregcomp(&preg, state->query, REG_EXTENDED) != 0) {
+			dep_burn_tree(dep_tree);
+			return 1;
 		}
 	}
+
+	match.rm_eo = 0;
+	firstmatch = 1;
+	do {  /* find all matches */
+		if (!aq) {
+			ret = regexec(&preg, ptr + match.rm_eo, 1, &match, 0);
+		} else {
+			char *loc;
+			ret = -1;
+			snprintf(qbuf, sizeof(qbuf), "%s%s%s",
+					aq->CATEGORY ? aq->CATEGORY : "",
+					aq->CATEGORY ? "/" : "",
+					aq->PN);
+			if ((loc = strstr(ptr + match.rm_eo, qbuf)) != NULL) {
+				ret = 0;
+				match.rm_so = loc - ptr;
+				match.rm_eo = match.rm_so + strlen(qbuf);
+			}
+		}
+		if (ret != 0)
+			break;
+
+		/* find the boundaries for matched atom */
+		while (match.rm_so > 0 && !isspace(ptr[match.rm_so - 1]))
+			match.rm_so--;
+		while (ptr[match.rm_eo] != '\0' && !isspace(ptr[match.rm_eo]))
+			match.rm_eo++;
+
+		snprintf(qbuf, sizeof(qbuf), "%.*s",
+					(int)(match.rm_eo - match.rm_so),
+					ptr + match.rm_so);
+		ac = atom_explode(qbuf);
+
+		ret = atom_compare(ac, aq);
+		if (ret != EQUAL) {
+			atom_implode(ac);
+			break;
+		}
+
+		if (firstmatch == 1) {
+			firstmatch = 0;
+			printf("%s%s/%s%s%s%c", BOLD, catname, BLUE,
+					qdep_name_only ? as->PN : pkgname, NORM,
+					verbose ? ':' : '\n');
+		}
+
+		if (verbose) {
+			printf(" ");
+			if (ac) {
+				printf("%s", atom_op_str[ac->pfx_op]);
+				if (ac->CATEGORY)
+					printf("%s/", ac->CATEGORY);
+				printf("%s", ac->P);
+				if (ac->PR_int)
+					printf("-r%i", ac->PR_int);
+				printf("%s", atom_op_str[ac->sfx_op]);
+				if (ac->SLOT)
+					printf(":%s", ac->SLOT);
+				atom_implode(ac);
+			} else {
+				printf("%s", qbuf);
+			}
+		} else {
+			/* if not verbose, we don't care about any extra matches */
+			atom_implode(ac);
+			break;
+		}
+	} while (1);
+	if (verbose && firstmatch == 0)
+		printf("\n");
+
+	if (!aq) {
+		regfree(&preg);
+	} else {
+		atom_implode(aq);
+	}
+	atom_implode(as);
 	dep_burn_tree(dep_tree);
 
 	return 1;
