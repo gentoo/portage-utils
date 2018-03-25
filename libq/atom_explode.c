@@ -118,11 +118,31 @@ atom_explode(const char *atom)
 		break;
 	case '!':
 		++atom;
-		if (atom[0] == '!') {
+		switch (atom[0]) {
+		case '!':
 			++atom;
 			ret->pfx_op = ATOM_OP_BLOCK_HARD;
-		} else
+			break;
+		case '>':
+			++atom;
+			if (atom[0] == '=') {
+				++atom;
+				ret->pfx_op = ATOM_OP_OLDER;
+			} else
+				ret->pfx_op = ATOM_OP_OLDER_EQUAL;
+			break;
+		case '<':
+			++atom;
+			if (atom[0] == '=') {
+				++atom;
+				ret->pfx_op = ATOM_OP_NEWER_EQUAL;
+			} else
+				ret->pfx_op = ATOM_OP_NEWER;
+			break;
+		default:
 			ret->pfx_op = ATOM_OP_BLOCK;
+			break;
+		}
 		break;
 	}
 	strcpy(ret->CATEGORY, atom);
