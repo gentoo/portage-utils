@@ -21,29 +21,34 @@ static const char *WHITE = _MAKE_COLOR("01", "38");
 static const char *COLOR_MAP = CONFIG_EPREFIX "etc/portage/color.map";
 
 #define COLOR _MAKE_COLOR
+#define CPAIR_VALUE_LEN 16
 
 typedef struct {
 	const char *name;
-	char value[16];
+	char value[CPAIR_VALUE_LEN];
+	char origval[CPAIR_VALUE_LEN];
 } cpairtype;
 
+#define X2(X) X, X
 static cpairtype color_pairs[] = {
-	{"blue",      COLOR("34", "01") },
-	{"brown",     COLOR("00", "33") },
-	{"darkblue",  COLOR("00", "34") },
-	{"darkgreen", COLOR("00", "32") },
-	{"darkred",   COLOR("00", "31") },
-	{"faint",     COLOR("00", "02") },
-	{"fuchsia",   COLOR("35", "01") },
-	{"green",     COLOR("32", "01") },
-	{"purple",    COLOR("00", "35") },
-	{"red",       COLOR("31", "01") },
-	{"teal",      COLOR("00", "36") },
-	{"turquoise", COLOR("36", "01") },
-	{"yellow",    COLOR("01", "33") },
-	{"white",     COLOR("01", "38") },
-	{"eol",       COLOR("00", "00") },
+	{"blue",      X2(COLOR("34", "01")) },
+	{"brown",     X2(COLOR("00", "33")) },
+	{"darkblue",  X2(COLOR("00", "34")) },
+	{"darkgreen", X2(COLOR("00", "32")) },
+	{"darkred",   X2(COLOR("00", "31")) },
+	{"faint",     X2(COLOR("00", "02")) },
+	{"fuchsia",   X2(COLOR("35", "01")) },
+	{"green",     X2(COLOR("32", "01")) },
+	{"purple",    X2(COLOR("00", "35")) },
+	{"red",       X2(COLOR("31", "01")) },
+	{"teal",      X2(COLOR("00", "36")) },
+	{"turquoise", X2(COLOR("36", "01")) },
+	{"yellow",    X2(COLOR("01", "33")) },
+	{"white",     X2(COLOR("01", "38")) },
+	{"lightgray", X2(COLOR("00", "37")) },
+	{"eol",       X2(COLOR("00", "00")) },
 };
+#undef X2
 
 static void
 color_remap(void)
@@ -73,13 +78,31 @@ color_remap(void)
 			continue;
 
 		*p++ = 0; /* split the pair */
-		for (i = 0; i < ARRAY_SIZE(color_pairs); ++i)
+		for (i = 0; i < ARRAY_SIZE(color_pairs); ++i) {
 			if (strcmp(buf, color_pairs[i].name) == 0) {
-				if (strncmp(p, "0x", 2) == 0)
-					warn("[%s=%s] RGB values in color map are not supported on line %d of %s", buf, p, lineno, COLOR_MAP);
-				else
-					snprintf(color_pairs[i].value, sizeof(color_pairs[i].value), "\e[%s", p);
+				if (strncmp(p, "0x", 2) == 0) {
+					warn("[%s=%s] RGB values in color map are not "
+							"supported on line %d of %s",
+							buf, p, lineno, COLOR_MAP);
+				} else {
+					/* color=color format support */
+					size_t n;
+					int found = 0;
+					for (n = 0; n < ARRAY_SIZE(color_pairs); n++) {
+						if (strcmp(color_pairs[n].name, p) == 0) {
+							strncpy(color_pairs[i].value,
+									color_pairs[n].origval, CPAIR_VALUE_LEN);
+							found = 1;
+							break;
+						}
+					}
+
+					if (!found)
+						snprintf(color_pairs[i].value,
+								sizeof(color_pairs[i].origval), "\e[%s", p);
+				}
 			}
+		}
 	}
 
 	free(buf);
