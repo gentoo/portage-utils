@@ -335,8 +335,9 @@ qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 			continue;
 
 		if (!state->show_dbg) {
-			if (!strncmp(e->name, "/usr/lib/debug", 14) &&
-			    (e->name[14] == '/' || e->name[14] == '\0'))
+			if ((strncmp(e->name, "/usr/lib/debug", 14) == 0
+						|| strncmp(e->name, "/usr/src/debug", 14) == 0)
+					&& (e->name[14] == '/' || e->name[14] == '\0'))
 				continue;
 		}
 
