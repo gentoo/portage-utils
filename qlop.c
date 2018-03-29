@@ -448,7 +448,9 @@ void show_current_emerge(void)
 		if (!eat_file(path, &cmdline, &cmdline_len))
 			continue;
 
-		if (cmdline[0] == '[' && (p = strchr(cmdline, ']')) != NULL && strstr(cmdline, "sandbox") != NULL) {
+		if (cmdline[0] == '[' && (p = strchr(cmdline, ']')) != NULL &&
+				strstr(cmdline, "sandbox") != NULL)
+		{
 			*p = '\0';
 			p = cmdline + 1;
 			q = p + strlen(p) + 1;
@@ -511,7 +513,9 @@ void show_current_emerge(void)
 	char *p, *q;
 	time_t start_date = 0;
 
-	if (! (kd = kvm_open("/dev/null", "/dev/null", "/dev/null", O_RDONLY, "kvm_open"))) {
+	if (! (kd = kvm_open("/dev/null", "/dev/null", "/dev/null",
+					O_RDONLY, "kvm_open")))
+	{
 		warnp("Could not open kvm: %s", kvm_geterr(kd));
 		return;
 	}
