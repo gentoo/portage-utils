@@ -34,11 +34,10 @@ main() {
 	m
 	m check
 
+	# LSan needs sudo, which we don't use at the moment
 	# Debug build w/ASAN and such enabled.
-	export LSAN_OPTIONS=verbosity=1:log_threads=1
-	m debug
-	m check
-	unset LSAN_OPTIONS
+	#m debug
+	#m check
 
 	# Do scans last as they like to dirty the tree and some tests
 	# expect a clean tree (like code style checks).
