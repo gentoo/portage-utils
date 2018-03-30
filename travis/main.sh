@@ -35,8 +35,10 @@ main() {
 	m check
 
 	# Debug build w/ASAN and such enabled.
+	export LSAN_OPTIONS=verbosity=1:log_threads=1
 	m debug
-	m check LSAN_OPTIONS=verbosity=1:log_threads=1
+	m check
+	unset LSAN_OPTIONS
 
 	# Do scans last as they like to dirty the tree and some tests
 	# expect a clean tree (like code style checks).
