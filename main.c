@@ -943,18 +943,6 @@ initialize_portage_env(void)
 		}
 	}
 
-	if (getenv("DEBUG")) {
-		for (i = 0; vars_to_read[i].name; ++i) {
-			var = &vars_to_read[i];
-			fprintf(stderr, "%s = ", var->name);
-			switch (var->type) {
-			case _Q_BOOL: fprintf(stderr, "%i\n", *var->value.b); break;
-			case _Q_STR:
-			case _Q_ISTR: fprintf(stderr, "%s\n", *var->value.s); break;
-			}
-		}
-	}
-
 	/* Make sure ROOT always ends in a slash */
 	var = &vars_to_read[0];
 	if ((*var->value.s)[var->value_len - 1] != '/') {
@@ -969,6 +957,18 @@ initialize_portage_env(void)
 		free(orig_main_overlay);
 	if (array_cnt(overlays) == 0)
 		xarraypush_str(overlays, main_overlay);
+
+	if (getenv("DEBUG")) {
+		for (i = 0; vars_to_read[i].name; ++i) {
+			var = &vars_to_read[i];
+			fprintf(stderr, "%s = ", var->name);
+			switch (var->type) {
+			case _Q_BOOL: fprintf(stderr, "%i\n", *var->value.b); break;
+			case _Q_STR:
+			case _Q_ISTR: fprintf(stderr, "%s\n", *var->value.s); break;
+			}
+		}
+	}
 
 	if (getenv("PORTAGE_QUIET") != NULL)
 		setup_quiet();
