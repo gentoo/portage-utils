@@ -648,7 +648,7 @@ read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 	char *buf, *s, *p;
 
 	if (getenv("DEBUG"))
-		fprintf(stderr, "profile %s\n", file);
+		fprintf(stderr, "profile %s/%s\n", configroot, file);
 
 	configroot_len = strlen(configroot);
 	file_len = strlen(file);
