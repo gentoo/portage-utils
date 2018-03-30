@@ -14,7 +14,7 @@ if [[ $1 == -v ]] ; then
 fi
 
 # split the disk i/o out so both tests are CPU bound only
-files=$(find . -mindepth 2 -type f -printf '%P\n%f\n')
+files=$(find . -mindepth 2 -type f ! -name "Manifest.*" -printf '%P\n%f\n')
 popd >/dev/null
 
 printf "atom_explode():"

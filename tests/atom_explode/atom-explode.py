@@ -5,6 +5,9 @@ import sys,portage
 def doit(a):
 	# ['x11-terms', 'wterm', '6.2.9', 'r2']
 	cpv = portage.catpkgsplit(a)
+	if not cpv:
+		print("Portage could not match " + a + " to a package")
+		return
 	# input -> CATEGORY / [P] PN - PVR [PV] [PR_int]
 	CATEGORY = cpv[0]
 	PN = cpv[1]
