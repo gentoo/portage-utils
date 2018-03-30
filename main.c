@@ -964,7 +964,7 @@ initialize_portage_env(void)
 	}
 
 	char *orig_main_overlay = main_overlay;
-	read_repos_conf(configroot, CONFIG_EPREFIX "etc/portage/repos.conf");
+	read_repos_conf(configroot, "/etc/portage/repos.conf");
 	if (orig_main_overlay != main_overlay)
 		free(orig_main_overlay);
 	if (array_cnt(overlays) == 0)
