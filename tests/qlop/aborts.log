@@ -1,0 +1,71 @@
+1364819649:  >>> emerge (6 of 12) sys-devel/automake-1.11.6 to /
+1364819649:  === (6 of 12) Cleaning (sys-devel/automake-1.11.6::/usr/portage/sys-devel/automake/automake-1.11.6.ebuild)
+1364819649:  === (6 of 12) Compiling/Merging (sys-devel/automake-1.11.6::/usr/portage/sys-devel/automake/automake-1.11.6.ebuild)
+1364822878:  === (6 of 12) Merging (sys-devel/automake-1.11.6::/usr/portage/sys-devel/automake/automake-1.11.6.ebuild)
+1364822879:  >>> AUTOCLEAN: sys-devel/automake:1.11
+1364822879:  === Unmerging... (sys-devel/automake-1.11.6)
+1364822879:  >>> unmerge success: sys-devel/automake-1.11.6
+1364822881:  === (6 of 12) Post-Build Cleaning (sys-devel/automake-1.11.6::/usr/portage/sys-devel/automake/automake-1.11.6.ebuild)
+1364822881:  ::: completed emerge (6 of 12) sys-devel/automake-1.11.6 to /
+1364822881:  >>> emerge (7 of 12) sys-devel/automake-1.9.6-r3 to /
+1364822881:  === (7 of 12) Cleaning (sys-devel/automake-1.9.6-r3::/usr/portage/sys-devel/automake/automake-1.9.6-r3.ebuild)
+1364822881:  === (7 of 12) Compiling/Merging (sys-devel/automake-1.9.6-r3::/usr/portage/sys-devel/automake/automake-1.9.6-r3.ebuild)
+1364823762: Started emerge on: Apr 01, 2013 15:42:41
+1364823762:  *** emerge --update --verbose --rebuild-if-new-rev --newuse --complete-graph --with-bdeps=y --deep world
+1364823859:  >>> emerge (1 of 3) app-arch/libarchive-3.1.2-r1 to /
+1364823859:  === (1 of 3) Cleaning (app-arch/libarchive-3.1.2-r1::/usr/portage/app-arch/libarchive/libarchive-3.1.2-r1.ebuild)
+1364823860:  === (1 of 3) Compiling/Merging (app-arch/libarchive-3.1.2-r1::/usr/portage/app-arch/libarchive/libarchive-3.1.2-r1.ebuild)
+1364823988:  === (1 of 3) Merging (app-arch/libarchive-3.1.2-r1::/usr/portage/app-arch/libarchive/libarchive-3.1.2-r1.ebuild)
+1364823989:  >>> AUTOCLEAN: app-arch/libarchive:0
+1364823989:  === Unmerging... (app-arch/libarchive-3.0.4-r1)
+1364823991:  >>> unmerge success: app-arch/libarchive-3.0.4-r1
+1364823992:  === (1 of 3) Post-Build Cleaning (app-arch/libarchive-3.1.2-r1::/usr/portage/app-arch/libarchive/libarchive-3.1.2-r1.ebuild)
+1364823992:  ::: completed emerge (1 of 3) app-arch/libarchive-3.1.2-r1 to /
+1364823992:  >>> emerge (2 of 3) app-emulation/winetricks-947 to /
+1364823992:  === (2 of 3) Cleaning (app-emulation/winetricks-947::/usr/portage/app-emulation/winetricks/winetricks-947.ebuild)
+1364823992:  === (2 of 3) Compiling/Merging (app-emulation/winetricks-947::/usr/portage/app-emulation/winetricks/winetricks-947.ebuild)
+1364823995:  === (2 of 3) Merging (app-emulation/winetricks-947::/usr/portage/app-emulation/winetricks/winetricks-947.ebuild)
+1364823996:  >>> AUTOCLEAN: app-emulation/winetricks:0
+1364823996:  === Unmerging... (app-emulation/winetricks-941)
+1364823996:  >>> unmerge success: app-emulation/winetricks-941
+1364823997:  === (2 of 3) Post-Build Cleaning (app-emulation/winetricks-947::/usr/portage/app-emulation/winetricks/winetricks-947.ebuild)
+1364823997:  ::: completed emerge (2 of 3) app-emulation/winetricks-947 to /
+1364823997:  >>> emerge (3 of 3) dev-util/cmake-2.8.9 to /
+1364823997:  === (3 of 3) Cleaning (dev-util/cmake-2.8.9::/usr/portage/dev-util/cmake/cmake-2.8.9.ebuild)
+1364823997:  === (3 of 3) Compiling/Merging (dev-util/cmake-2.8.9::/usr/portage/dev-util/cmake/cmake-2.8.9.ebuild)
+1364824573:  === (3 of 3) Merging (dev-util/cmake-2.8.9::/usr/portage/dev-util/cmake/cmake-2.8.9.ebuild)
+1364824576:  >>> AUTOCLEAN: dev-util/cmake:0
+1364824576:  === Unmerging... (dev-util/cmake-2.8.9)
+1364824577:  >>> unmerge success: dev-util/cmake-2.8.9
+1364824578:  === (3 of 3) Post-Build Cleaning (dev-util/cmake-2.8.9::/usr/portage/dev-util/cmake/cmake-2.8.9.ebuild)
+1364824578:  ::: completed emerge (3 of 3) dev-util/cmake-2.8.9 to /
+1364824578:  *** Finished. Cleaning up...
+1364824580:  *** exiting successfully.
+1364824580:  *** terminating.
+1368795479: Started emerge on: May 17, 2013 14:57:59
+1368795479:  *** emerge --update --verbose --rebuild-if-new-rev --newuse --complete-graph --with-bdeps=y --deep world
+1368795519:  >>> emerge (1 of 2) sys-devel/automake-1.9.6-r3 to /
+1368795519:  === (1 of 2) Cleaning (sys-devel/automake-1.9.6-r3::/usr/portage/sys-devel/automake/automake-1.9.6-r3.ebuild)
+1368795519:  === (1 of 2) Compiling/Merging (sys-devel/automake-1.9.6-r3::/usr/portage/sys-devel/automake/automake-1.9.6-r3.ebuild)
+1368796964:  === (1 of 2) Merging (sys-devel/automake-1.9.6-r3::/usr/portage/sys-devel/automake/automake-1.9.6-r3.ebuild)
+1368796965:  >>> AUTOCLEAN: sys-devel/automake:1.9
+1368796966:  === (1 of 2) Post-Build Cleaning (sys-devel/automake-1.9.6-r3::/usr/portage/sys-devel/automake/automake-1.9.6-r3.ebuild)
+1368796966:  ::: completed emerge (1 of 2) sys-devel/automake-1.9.6-r3 to /
+1368796966:  >>> emerge (2 of 2) app-mobilephone/obexftp-0.23-r1 to /
+1368796966:  === (2 of 2) Cleaning (app-mobilephone/obexftp-0.23-r1::/usr/portage/app-mobilephone/obexftp/obexftp-0.23-r1.ebuild)
+1368796966:  === (2 of 2) Compiling/Merging (app-mobilephone/obexftp-0.23-r1::/usr/portage/app-mobilephone/obexftp/obexftp-0.23-r1.ebuild)
+1368796985:  === (2 of 2) Merging (app-mobilephone/obexftp-0.23-r1::/usr/portage/app-mobilephone/obexftp/obexftp-0.23-r1.ebuild)
+1368796986:  >>> AUTOCLEAN: app-mobilephone/obexftp:0
+1368796986:  === Unmerging... (app-mobilephone/obexftp-0.23-r1)
+1368796987:  >>> unmerge success: app-mobilephone/obexftp-0.23-r1
+1368796988:  === (2 of 2) Post-Build Cleaning (app-mobilephone/obexftp-0.23-r1::/usr/portage/app-mobilephone/obexftp/obexftp-0.23-r1.ebuild)
+1368796988:  ::: completed emerge (2 of 2) app-mobilephone/obexftp-0.23-r1 to /
+1368796988:  *** Finished. Cleaning up...
+1368796990:  *** exiting successfully.
+1368796990:  *** terminating.
+1368799175: Started emerge on: May 17, 2013 15:59:35
+1368799175:  *** emerge --oneshot automake:1.12 automake:1.11 automake:1.9 libtool:2 binutils glibc:2.2 gcc:4.6
+1368799182:  >>> emerge (1 of 7) sys-devel/automake-1.12.6 to /
+1368799182:  === (1 of 7) Cleaning (sys-devel/automake-1.12.6::/usr/portage/sys-devel/automake/automake-1.12.6.ebuild)
+1368799183:  === (1 of 7) Compiling/Merging (sys-devel/automake-1.12.6::/usr/portage/sys-devel/automake/automake-1.12.6.ebuild)
+1368799266:  *** terminating.

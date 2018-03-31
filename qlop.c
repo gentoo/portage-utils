@@ -89,6 +89,7 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 	count = merge_time = 0;
 	cat[0] = 0;
 
+	/* setup cat and pkg vars */
 	if ((p = strchr(package, '/')) != NULL) {
 		pkg = p + 1;
 		strncpy(cat, package, sizeof(cat));
@@ -103,51 +104,62 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 		return 1;
 	}
 
+	/* loop over lines searching for cat/pkg */
 	while (fgets(buf[0], sizeof(buf[0]), fp) != NULL) {
-		if (strstr(buf[0], pkg) == NULL)
-			continue;
-
 		if ((p = strchr(buf[0], '\n')) != NULL)
-			*p = 0;
+			*p = '\0';
 		if ((p = strchr(buf[0], ':')) == NULL)
 			continue;
-		*p = 0;
+		*p++ = '\0';
+		if (strstr(p, pkg) == NULL)
+			continue;
+
 		t[0] = atol(buf[0]);
 		if (t[0] < start_time || t[0] > end_time)
 			continue;
-		strcpy(buf[1], p + 1);
+
+		/* copy message (stripping timestamp) */
+		strncpy(buf[1], p, BUFSIZ);
 		rmspace(buf[1]);
 		if (strncmp(buf[1], ">>> emerge (", 12) == 0) {
+			/* construct the matching end marker */
 			snprintf(ep, BUFSIZ, "completed %s", &buf[1][4]);
 
-			char matched = 0;
-			if ((p = strchr(buf[1], ')')) == NULL)
+			/* skip over "(X of Y)" */
+			if ((p = strchr(buf[1], ')')) == NULL) {
+				*ep = '\0';
 				continue;
-			*p = 0;
-			strcpy(buf[0], p + 1);
+			}
+			*p++ = '\0';
+
+			/* get the package as atom */
+			strncpy(buf[0], p, BUFSIZ);
 			rmspace(buf[0]);
-			if ((p = strchr(buf[0], ' ')) == NULL)
+			if ((p = strchr(buf[0], ' ')) == NULL) {
+				*ep = '\0';
 				continue;
-			*p = 0;
-			if ((atom = atom_explode(buf[0])) == NULL)
+			}
+			*p = '\0';
+			if ((atom = atom_explode(buf[0])) == NULL) {
+				*ep = '\0';
 				continue;
+			}
 
-			if (*cat) {
-				if ((strcmp(cat, atom->CATEGORY) == 0) && (strcmp(pkg, atom->PN) == 0))
-					matched = 1;
-			} else if (strcmp(pkg, atom->PN) == 0)
-				matched = 1;
-
-			if (matched) {
+			/* match atom against our search */
+			if ((*cat && ((strcmp(cat, atom->CATEGORY) == 0) &&
+							(strcmp(pkg, atom->PN) == 0))) ||
+					(strcmp(pkg, atom->PN) == 0))
+			{
 				parallel_emerge = 0;
 				while (fgets(buf[0], sizeof(buf[0]), fp) != NULL) {
 					if ((p = strchr(buf[0], '\n')) != NULL)
-						*p = 0;
+						*p = '\0';
 					if ((p = strchr(buf[0], ':')) == NULL)
 						continue;
-					*p = 0;
+					*p++ = '\0';
+
 					t[1] = atol(buf[0]);
-					strcpy(buf[1], p + 1);
+					strcpy(buf[1], p);
 					rmspace(buf[1]);
 
 					if (strncmp(buf[1], "Started emerge on:", 18) == 0) {
@@ -166,19 +178,25 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 							break;
 					}
 
-					/*
-					 * pay attention to malformed log files (when the end of an emerge process
-					 * is not indicated by the line '*** terminating'). We assume than the log is
-					 * malformed when we find a parallel emerge process which is trying to
-					 * emerge the same package
+					/* pay attention to malformed log files (when the
+					 * end of an emerge process is not indicated by the
+					 * line '*** terminating'). We assume than the log
+					 * is malformed when we find a parallel emerge
+					 * process which is trying to emerge the same
+					 * package
 					 */
-					if (strncmp(buf[1], ">>> emerge (", 12) == 0 && parallel_emerge > 0) {
+					if (strncmp(buf[1], ">>> emerge (", 12) == 0 &&
+							parallel_emerge > 0)
+					{
+						/* find package name */
 						p = strchr(buf[1], ')');
 						q = strchr(ep, ')');
 						if (!p || !q)
 							continue;
 
-						if (!strcmp(p, q)) {
+						/* is this emerge doing the same thing as we're
+						 * looking for? that means we failed */
+						if (strcmp(p, q) == 0) {
 							parallel_emerge--;
 							/* update the main emerge reference data */
 							snprintf(ep, BUFSIZ, "completed %s", &buf[1][4]);
@@ -186,21 +204,28 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 						}
 					}
 
-					if (strncmp(&buf[1][4], ep, BUFSIZ) == 0) {
+					/* if this line matches "completed emerge (X of Y) ..."
+					 * we're finally somewhere */
+					if (strncmp(&buf[1][4], ep, BUFSIZ - 4) == 0) {
 						if (!average) {
-							strcpy(buf[1], "");
+							buf[1][0] = '\0';
 							if (verbose) {
 								if (atom->PR_int)
-									snprintf(buf[1], sizeof(buf[1]), "-%s-r%i", atom->PV,  atom->PR_int);
+									snprintf(buf[1], sizeof(buf[1]),
+											"-%s-r%i", atom->PV,  atom->PR_int);
 								else
-									snprintf(buf[1], sizeof(buf[1]), "-%s", atom->PV);
+									snprintf(buf[1], sizeof(buf[1]),
+											"-%s", atom->PV);
 							}
-							printf("%s%s%s%s: %s: ", BLUE, atom->PN, buf[1], NORM, chop_ctime(t[0]));
+							printf("%s%s%s%s: %s: ",
+									BLUE, atom->PN, buf[1], NORM,
+									chop_ctime(t[0]));
 							if (human_readable)
 								print_seconds_for_earthlings(t[1] - t[0]);
 							else
-								printf("%s%"PRIu64"%s seconds", GREEN, (uint64_t)(t[1] - t[0]), NORM);
-							puts("");
+								printf("%s%"PRIu64"%s seconds",
+										GREEN, (uint64_t)(t[1] - t[0]), NORM);
+							printf("\n");
 						}
 						merge_time += (t[1] - t[0]);
 						count++;
