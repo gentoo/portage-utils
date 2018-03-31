@@ -639,12 +639,15 @@ set_portage_env_var(env_vars *var, const char *value)
 	}
 }
 
-/* Helper to read a portage env file (e.g. make.conf) */
+/* Helper to read a portage env file (e.g. make.conf), or recursively if
+ * it points to a directory */
 static void
 read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 {
 	size_t i, buflen, line, configroot_len, file_len;
 	FILE *fp;
+	struct dirent **dents;
+	int dentslen;
 	char *buf, *s, *p;
 
 	if (getenv("DEBUG"))
@@ -658,6 +661,23 @@ read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 	memcpy(buf, configroot, configroot_len);
 	memcpy(buf + configroot_len, file, file_len);
 	buf[buflen - 1] = '\0';
+
+	if ((dentslen = scandir(buf, &dents, NULL, alphasort)) > 0) {
+		int di;
+		struct dirent *d;
+		char npath[_Q_PATH_MAX];
+
+		/* recurse through all files */
+		for (di = 0; di < dentslen; di++) {
+			d = dents[di];
+			if (d->d_name[0] == '.' || d->d_name[0] == '~')
+				continue;
+			snprintf(npath, sizeof(npath), "%s/%s", file, d->d_name);
+			read_portage_env_file(configroot, npath, vars);
+		}
+		scandir_free(dents, dentslen);
+		goto done;
+	}
 
 	fp = fopen(buf, "r");
 	if (fp == NULL)
