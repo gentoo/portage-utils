@@ -43,6 +43,9 @@ test 06 0 "qlop -l -f ${as}/sync.log -d 2005-01-01"
 test 07 0 "qlop -l -f ${as}/sync.log -d '%d %Y %m|01 2005 01'"
 test 08 0 "qlop -l -f ${as}/sync.log -d 1104898893"
 
+# deal with aborted merges
+test 09 0 "qlop -Htgv automake -f ${as}/aborts.log"
+
 cleantmpdir
 
 end

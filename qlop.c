@@ -200,6 +200,7 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 							parallel_emerge--;
 							/* update the main emerge reference data */
 							snprintf(ep, BUFSIZ, "completed %s", &buf[1][4]);
+							t[0] = t[1];
 							continue;
 						}
 					}
