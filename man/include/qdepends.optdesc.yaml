@@ -1,0 +1,29 @@
+all: |
+    Show *DEPEND, alias for \fB\-drp\fR.
+key: |
+    Advanced option to allow querying the VDB.  This option overrides
+    \fB\-d\fR, \fB\-r\fR, \fB\-p\fR or \fB\-a\fR.  \fI<arg>\fR can be
+    any key from Portage's VDB, e.g.\ any file from
+    var/db/pkg/<cat>/<pkg>/.
+query: |
+    Query reverse deps.  This basically reverses the search to any
+    package that references \fI<arg>\fR in DEPEND, RDEPEND or PDEPEND.
+    This can be useful to find consumers of a given package, e.g.\ to
+    search for packages that have \fIlogwatch\fR in their DEPEND.
+name-only: |
+    Only show category/package, instead of category/package-version.
+format: |
+    Pretty-print DEPEND declaration to be used in an ebuild.  This
+    option initiates a very different mode of operation.  Instead of
+    printing searching through packages, it constructs a multi-line
+    statement in with shell syntax, to be used in an ebuild.  Each
+    argument is turned into a separate DEPEND variable declaration.  You
+    need to quote dependency strings in order for them to be printed as
+    a single dependency declaration.  When used with the \fB\-q\fR
+    option, only the pretty-printed dependency declaration is printed,
+    e.g.\ the DEPEND= part is skipped.
+verbose: |
+    When in reverse dep mode, print the package or packages that matched
+    the query from the dependency line being searched.  This includes
+    specifiers and versions.
+quiet: Suppress DEPEND= output for \fB\-f\fR.
