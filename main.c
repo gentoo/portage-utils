@@ -670,7 +670,8 @@ read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 		/* recurse through all files */
 		for (di = 0; di < dentslen; di++) {
 			d = dents[di];
-			if (d->d_name[0] == '.' || d->d_name[0] == '~')
+			if (d->d_name[0] == '.' || d->d_name[0] == '\0' ||
+					d->d_name[strlen(d->d_name) - 1] == '~')
 				continue;
 			snprintf(npath, sizeof(npath), "%s/%s", file, d->d_name);
 			read_portage_env_file(configroot, npath, vars);
