@@ -516,11 +516,11 @@ read_repos_conf(const char *configroot, const char *repos_conf)
 		for (i = 0; i < count; ++i) {
 			const char *name = confs[i]->d_name;
 
-			if (name[0] == '.')
+			if (name[0] == '.' || name[0] == '\0')
 				continue;
 
 			/* Exclude backup files (aka files with ~ as postfix). */
-			if (name[0] != '\0' && name[strlen(name) - 1] == '~')
+			if (name[strlen(name) - 1] == '~')
 				continue;
 
 #ifdef DT_UNKNOWN
