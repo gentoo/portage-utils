@@ -1,0 +1,15 @@
+gauge: |
+    Gauge number of times a package has been merged.  This shows the
+    merge time for each individual merge of package.
+time: |
+    Calculate merge time for a specific package.  This is the average
+    time for all merges of package.
+human: |
+    Print seconds in human readable format (needs \fB\-t\fR), using
+    minutes, hours and days instead of just seconds.
+current: |
+    Show current emerging packages.  This relies on
+    .I FEATURES=sandbox
+    in order to detect running merges.
+verbose: |
+    Print package versions and revisions.

@@ -1,0 +1,4 @@
+.I qlop
+reads from $EMERGE_LOG_DIR/emerge.log and tries to extract
+information about merges, unmerges and syncs.  For packages, it can
+calculate average merge times or just list them.
