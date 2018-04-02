@@ -1,0 +1,7 @@
+verbose: |
+    Print package versions to matches, warn about problems with
+    resolving symlinks or positioning packages under an alternative
+    root.
+quiet: |
+    Don't print matching file for matches, just the package.  Don't
+    report about orphan files.

@@ -1,0 +1,4 @@
+\fIqfile\fR searches packages for files they provide.  The searched
+packages must be installed, thus the search is for any file on the
+filesystem, to what package that file belongs.  It allows to identify
+which package installed a certain file.
