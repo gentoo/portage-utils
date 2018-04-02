@@ -87,6 +87,9 @@ qatom_printf(const char *format, const depend_atom *atom, int pverbose)
 				} else if (!strncmp("SLOT", fmt, len)) {
 					if (showit || atom->SLOT)
 						printf(":%s", atom->SLOT ? atom->SLOT : "-");
+				} else if (!strncmp("REPO", fmt, len)) {
+					if (showit || atom->REPO)
+						printf("::%s", HN(atom->REPO));
 				} else if (!strncmp("pfx", fmt, len)) {
 					if (showit || atom->pfx_op != ATOM_OP_NONE)
 						fputs(atom->pfx_op == ATOM_OP_NONE ?
