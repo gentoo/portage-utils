@@ -1,0 +1,15 @@
+\fIqatom\fR parses strings into atoms and optionally compares them.  The
+parsing into atoms results in CATEGORY, PN (package name), PV (package
+version), PR (package revision), SLOT and REPO.  Next to these version
+qualifiers (e.g.\ >, <, or =) and optional * suffix are extracted.  All
+but PN are optional.
+
+Comparison of atoms returns the relationship between two parsed atoms.
+\fIqatom\fR does not allow to test conditions.  It is possible to
+perform multiple comparisons by simply adding more arguments.
+Comparisons are, however, always performed two by two, so there must be
+an even count of arguments to the compare function.
+
+The \fIqatom\fR applet is a direct wrapper around the atom parsing
+functionalities used by various other applets.  As such this applet
+allows easy testing or atom parsing and comparison behaviour.
