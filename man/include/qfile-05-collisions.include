@@ -9,7 +9,7 @@ takes one argument, which can be a package name (\fBbash\fP or
 packages (ie., comparing the contents of one package with the contents of all 
 the others).
 .PP
-For example, the following script will search collisions beetween all your 
+For example, the following script will search collisions between all your
 installed packages. Be careful, this will takes time:
 .nf\fI
 	#!/bin/bash
