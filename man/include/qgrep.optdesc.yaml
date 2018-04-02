@@ -1,0 +1,5 @@
+verbose: |
+    Print multiple matches per files.  When this option is given
+    multiple times, also linenumber are printed for matches next to file
+    names.
+quiet: Ignored for compatibility with other qapplets.

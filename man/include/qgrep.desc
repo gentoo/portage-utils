@@ -1,0 +1,3 @@
+\fIqgrep\fR searches for a given pattern in all ebuilds of the current
+portage tree.  Optionally the search is in all eclasses, or just in the
+ebuilds that are currently installed.
