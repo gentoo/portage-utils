@@ -59,21 +59,22 @@ qatom_printf(const char *format, const depend_atom *atom, int pverbose)
 			if (p) {
 				size_t len = p - fmt;
 				bool showit = (bracket == '{') || pverbose;
+#define HN(X) (X ? X : "<unset>")
 				if (!strncmp("CATEGORY", fmt, len)) {
 					if (showit || atom->CATEGORY)
-						printf("%s", atom->CATEGORY);
+						printf("%s", HN(atom->CATEGORY));
 				} else if (!strncmp("P", fmt, len)) {
 					if (showit || atom->P)
-						printf("%s", atom->P);
+						printf("%s", HN(atom->P));
 				} else if (!strncmp("PN", fmt, len)) {
 					if (showit || atom->PN)
-						printf("%s", atom->PN);
+						printf("%s", HN(atom->PN));
 				} else if (!strncmp("PV", fmt, len)) {
 					if (showit || atom->PV)
-						printf("%s", atom->PV);
+						printf("%s", HN(atom->PV));
 				} else if (!strncmp("PVR", fmt, len)) {
 					if (showit || atom->PVR)
-						printf("%s", atom->PVR);
+						printf("%s", HN(atom->PVR));
 				} else if (!strncmp("PF", fmt, len)) {
 					printf("%s", atom->PN);
 					if (atom->PV)
@@ -85,16 +86,19 @@ qatom_printf(const char *format, const depend_atom *atom, int pverbose)
 						printf("r%i", atom->PR_int);
 				} else if (!strncmp("SLOT", fmt, len)) {
 					if (showit || atom->SLOT)
-						printf(":%s", atom->SLOT ? : "-");
+						printf(":%s", atom->SLOT ? atom->SLOT : "-");
 				} else if (!strncmp("pfx", fmt, len)) {
 					if (showit || atom->pfx_op != ATOM_OP_NONE)
-						fputs(atom->pfx_op == ATOM_OP_NONE ? "-" : atom_op_str[atom->pfx_op], stdout);
+						fputs(atom->pfx_op == ATOM_OP_NONE ?
+								"-" : atom_op_str[atom->pfx_op], stdout);
 				} else if (!strncmp("sfx", fmt, len)) {
 					if (showit || atom->sfx_op != ATOM_OP_NONE)
-						fputs(atom->sfx_op == ATOM_OP_NONE ? "-" : atom_op_str[atom->sfx_op], stdout);
+						fputs(atom->sfx_op == ATOM_OP_NONE ?
+								"-" : atom_op_str[atom->sfx_op], stdout);
 				} else
 					printf("<BAD:%.*s>", (int)len, fmt);
 				++p;
+#undef HN
 			} else
 				p = fmt + 1;
 		} else

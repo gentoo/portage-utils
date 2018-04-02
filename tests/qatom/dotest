@@ -19,8 +19,8 @@ test() {
 }
 
 # Legacy format.
-test l01 "(null) pkg (null)" "pkg"
-test l02 "cat pkg (null)" "cat/pkg"
+test l01 "<unset> pkg <unset>" "pkg"
+test l02 "cat pkg <unset>" "cat/pkg"
 test l03 "cat pkg 123" "cat/pkg-123"
 test l04 "cat pkg 123 r4" "cat/pkg-123-r4"
 test l05 "cat pkg 123 r4 :5" "cat/pkg-123-r4:5"
@@ -30,7 +30,7 @@ test l07 "cat pkg 123 = *" "=cat/pkg-123*"
 
 # Explicit format.
 test f01 "cat"    -F '%{CATEGORY}' "cat/pkg"
-test f02 "(null)" -F '%{CATEGORY}' "pkg"
+test f02 "<unset>" -F '%{CATEGORY}' "pkg"
 test f03 ""       -F '%[CATEGORY]' "pkg"
 test f04 "cat"        -F '%{CATEGORY}' "cat/pkg-123-r4:5"
 test f05 "pkg-123"    -F '%{P}'        "cat/pkg-123-r4:5"
