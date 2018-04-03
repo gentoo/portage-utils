@@ -1,0 +1,6 @@
+\fIqmerge\fR retrieves and installs Gentoo binary packages.  Simple
+dependency checking is performed, after which \fIqmerge\fR just unpacks
+the binpkg onto the filesystem and registers the package in the VDB.
+
+Retrieval of packages from a remote binhost is currently performed using
+\fBwget\fR(1).  More specifically, \fIFETCHCOMMAND\fR is ignored.
