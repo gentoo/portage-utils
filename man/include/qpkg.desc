@@ -1,0 +1,4 @@
+\fIqpkg\fR creates or cleans up Gentoo binary packages.  The default
+action is to create a new binpkg for the given package names and store
+them in pkgdir, which can be set explicitly using the \fB\-\-pkgdir\fR
+option.

@@ -1,0 +1,2 @@
+verbose: Check and report MD5 hash mismatches during install.
+quiet: Ignored for compatability with other qapplets.
