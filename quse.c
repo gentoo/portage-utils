@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2014 Gentoo Foundation
+ * Copyright 2005-2018 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -26,7 +26,7 @@ static struct option const quse_long_opts[] = {
 };
 static const char * const quse_opts_help[] = {
 	"Show exact non regexp matching using strcmp",
-	"Show annoying things in IUSE",
+	"List all ebuilds, don't match anything",
 	"Use the KEYWORDS vs IUSE",
 	"Use the LICENSE vs IUSE",
 	"Describe the USE flag",

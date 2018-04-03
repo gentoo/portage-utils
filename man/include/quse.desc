@@ -1,0 +1,2 @@
+\fIquse\fR searches in ebuilds for a match in IUSE, KEYWORDS or LICENSE.
+It can also search for USE-flags and show their descriptions.
