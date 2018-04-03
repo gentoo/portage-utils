@@ -23,9 +23,9 @@ static const char * const qsize_opts_help[] = {
 	"Show size used on disk",
 	"Include a summary",
 	"Show just the summary",
-	"Display size in megabytes",
-	"Display size in kilobytes",
-	"Display size in bytes",
+	"Display all sizes in megabytes",
+	"Display all sizes in kilobytes",
+	"Display all sizes in bytes",
 	"Ignore regexp string",
 	COMMON_OPTS_HELP
 };
