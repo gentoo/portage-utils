@@ -462,7 +462,7 @@ int qfile_main(int argc, char **argv)
 	nb_of_queries = prepare_qfile_args(argc, (const char **) argv, &state);
 	/* Now do the actual `qfile` checking */
 	if (nb_of_queries > 0)
-		found += q_vdb_foreach_pkg(qfile_cb, &state, NULL);
+		found += q_vdb_foreach_pkg_sorted(qfile_cb, &state);
 
 	if (state.args.non_orphans) {
 		/* display orphan files */
