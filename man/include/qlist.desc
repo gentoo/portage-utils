@@ -1,0 +1,6 @@
+\fIqlist\fR shows the contents, or a subset thereof, of an installed
+package.  Alternatively, lists whether a package is installed,
+optionally with version, USE-flag, SLOT or REPO information.  The
+\fIpkgname\fR to query for does not have to be an exact match, it may be
+part of it, e.g.\ an entire category, or any package with some string in
+its name.

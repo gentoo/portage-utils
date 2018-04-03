@@ -1,0 +1,24 @@
+installed: |
+    Instead of listing the contents of a package, just print the package
+    name if the package is currently installed.
+umap: |
+    List USE-flags enabled when the package was installed.  This flag
+    implies \fB\-I\fR.
+slot: |
+    Display installed packages with slots (use twice for subslots).
+    This flag implies \fB\-I\fR.
+repo: |
+    Display installed packages with repository the ebuild originated from.
+    This flag implies \fB\-I\fR.
+columns: |
+    Like \fB\-Iv\fR, but package name and version are separated by a
+    space for easy consumption by e.g.\ shell scripts which can read
+    space-separated columns.
+verbose: |
+    When used with \fB\-I\fR, print the package version next to name.
+    When listing the package contents, a single \fB\-v\fR displays
+    symlinks with an arrow (\->) to their target.  Two or more \fB\-v\fR
+    adds colour to the entries and prints like \fB\-I\fR before the
+    listing.
+quiet: |
+    Suppresses the parenthesis around the USE-flags when used with \fB\-U\fR.

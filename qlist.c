@@ -31,7 +31,7 @@ static const char * const qlist_opts_help[] = {
 	"Display installed packages with repository",
 	"Display installed packages with flags used",
 	"Display column view",
-	"Show /usr/lib/debug files",
+	"Show /usr/lib/debug and /usr/src/debug files",
 	"Exact match (only CAT/PN or PN without PV)",
 	"Show every installed package",
 	"Only show directories",
