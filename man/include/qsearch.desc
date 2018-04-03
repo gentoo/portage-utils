@@ -1,0 +1,3 @@
+\fIqsearch\fR performs a search over the name and/or description of
+packages.  By default, a search over all package names is performed over
+all ebuilds in the tree.

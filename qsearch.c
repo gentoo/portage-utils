@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2014 Gentoo Foundation
+ * Copyright 2005-2018 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -21,8 +21,8 @@ static struct option const qsearch_long_opts[] = {
 };
 static const char * const qsearch_opts_help[] = {
 	"List the descriptions of every package in the cache",
-	"Use the portage cache (default)",
-	"Use the portage ebuild tree",
+	"Use the portage cache",
+	"Use the portage ebuild tree (default)",
 	"Regex search package basenames",
 	"Regex search package descriptions",
 	"Only show package name",
