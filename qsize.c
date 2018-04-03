@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2014 Gentoo Foundation
+ * Copyright 2005-2018 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -120,15 +120,9 @@ qsize_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		       num_files, num_nonfiles);
 		if (num_ignored)
 			printf("%'zu names-ignored, ", num_ignored);
-		if (state->disp_units)
-			printf("%s %s\n",
-			       make_human_readable_str(num_bytes, 1, state->disp_units),
-			       state->str_disp_units);
-		else
-			printf("%'"PRIu64"%s%"PRIu64" KiB\n",
-			       num_bytes / KILOBYTE,
-			       decimal_point,
-			       ((num_bytes % KILOBYTE) * 1000) / KILOBYTE);
+		printf("%s %s\n",
+			   make_human_readable_str(num_bytes, 1, state->disp_units),
+			   state->disp_units ? state->str_disp_units : "");
 	}
 
 	return EXIT_SUCCESS;
@@ -194,15 +188,10 @@ int qsize_main(int argc, char **argv)
 		       state.num_all_files, state.num_all_nonfiles);
 		if (state.num_all_ignored)
 			printf("%'zu names-ignored, ", state.num_all_ignored);
-		if (state.disp_units)
-			printf("%s %s\n",
-			       make_human_readable_str(state.num_all_bytes, 1, state.disp_units),
-			       state.str_disp_units);
-		else
-			printf("%'"PRIu64"%s%"PRIu64" MiB\n",
-			       state.num_all_bytes / MEGABYTE,
-			       decimal_point,
-			       ((state.num_all_bytes % MEGABYTE) * 1000) / MEGABYTE);
+		printf("%s %s\n",
+			   make_human_readable_str(
+				   state.num_all_bytes, 1, state.disp_units),
+			   state.disp_units ? state.str_disp_units : "");
 	}
 
 	array_for_each(state.atoms, i, atom)
