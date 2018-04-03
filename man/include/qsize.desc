@@ -1,0 +1,3 @@
+\fIqsize\fR calculates the storage size taken by an installed package.
+The reported sizes can be the recorded exact sizes of all files, or the
+storage space they consume given the underlying filesystem.

@@ -1,0 +1,2 @@
+verbose: Print some files and sizes while joining and splitting.
+quiet: Ignored for compatibility with other qapplets.

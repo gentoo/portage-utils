@@ -1,0 +1,5 @@
+ignore: |
+    Filter out entries matching \fI<arg>\fR, which is a regular
+    expression, before calculating size.
+verbose: Ignored for compatibility with other qapplets.
+quiet: Ignored for compatibility with other qapplets.
