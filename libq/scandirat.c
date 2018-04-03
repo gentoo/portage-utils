@@ -14,20 +14,17 @@
 
 #if !defined(HAVE_SCANDIRAT)
 
-#if defined(_DIRENT_HAVE_D_RECLEN)
-# define reclen(de) ((de)->d_reclen)
-#else
-# define reclen(de) (sizeof(*(de)) + strlen((de)->d_name))
-#endif
-
 static int
 scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
 	int (*filter)(const struct dirent *),
 	int (*compar)(const struct dirent **, const struct dirent **))
 {
-	int fd, cnt;
+	int fd;
 	DIR *dirp;
 	struct dirent *de, **ret;
+	size_t retlen = 0;
+	size_t retsize = 0;
+#define INCRSZ 64
 
 	/* Cannot use O_PATH as we want to use fdopendir() */
 	fd = openat(dir_fd, dir, O_RDONLY|O_CLOEXEC);
@@ -40,22 +37,32 @@ scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
 	}
 
 	ret = NULL;
-	cnt = 0;
 	while ((de = readdir(dirp))) {
+		size_t sdesz;
+		size_t sdenamelen;
+
 		if (filter(de) == 0)
 			continue;
 
-		ret = realloc(ret, sizeof(*ret) * (cnt + 1));
-		ret[cnt++] = xmemdup(de, reclen(de));
+		if (retlen == retsize) {
+			retsize += INCRSZ;
+			ret = xrealloc(ret, sizeof(*ret) * retsize);
+		}
+		sdesz = (void *)de->d_name - (void *)de;
+		sdenamelen = strlen(de->d_name) + 1;
+		ret[retlen] = xmalloc(sdesz + sdenamelen);
+		memcpy(ret[retlen], de, sdesz);
+		strncpy(ret[retlen]->d_name, de->d_name, sdenamelen);
+		retlen++;
 	}
 	*dirlist = ret;
 
-	qsort(ret, cnt, sizeof(*ret), (void *)compar);
+	qsort(ret, retlen, sizeof(*ret), (void *)compar);
 
 	/* closes underlying fd */
 	closedir(dirp);
 
-	return cnt;
+	return (int)retlen;
 }
 
 #endif
