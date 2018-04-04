@@ -105,6 +105,7 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 	}
 
 	/* loop over lines searching for cat/pkg */
+	parallel_emerge = 0;
 	while (fgets(buf[0], sizeof(buf[0]), fp) != NULL) {
 		if ((p = strchr(buf[0], '\n')) != NULL)
 			*p = '\0';
@@ -121,6 +122,25 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 		/* copy message (stripping timestamp) */
 		strncpy(buf[1], p, BUFSIZ);
 		rmspace(buf[1]);
+
+		if (strncmp(buf[1], "Started emerge on:", 18) == 0) {
+			/* a parallel emerge was launched */
+			parallel_emerge++;
+			continue;
+		}
+
+		if (strncmp(buf[1], "*** terminating.", 16) == 0) {
+			if (parallel_emerge > 0) {
+				/* a parallel emerge has finished */
+				parallel_emerge--;
+				continue;
+			} else {
+				/* the main emerge was stopped? if there's more lines
+				 * this file is just corrupt or truncated at the front */
+				continue;
+			}
+		}
+
 		if (strncmp(buf[1], ">>> emerge (", 12) == 0) {
 			/* construct the matching end marker */
 			snprintf(ep, BUFSIZ, "completed %s", &buf[1][4]);
@@ -150,7 +170,6 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 							(strcmp(pkg, atom->PN) == 0))) ||
 					(strcmp(pkg, atom->PN) == 0))
 			{
-				parallel_emerge = 0;
 				while (fgets(buf[0], sizeof(buf[0]), fp) != NULL) {
 					if ((p = strchr(buf[0], '\n')) != NULL)
 						*p = '\0';
@@ -173,14 +192,17 @@ show_merge_times(char *package, const char *logfile, int average, char human_rea
 							/* a parallel emerge has finished */
 							parallel_emerge--;
 							continue;
-						} else
-							/* the main emerge was stopped */
+						} else {
+							/* the main emerge was stopped? if there's
+							 * more lines this file is just corrupt or
+							 * truncated at the front */
 							break;
+						}
 					}
 
 					/* pay attention to malformed log files (when the
 					 * end of an emerge process is not indicated by the
-					 * line '*** terminating'). We assume than the log
+					 * line '*** terminating'). We assume that the log
 					 * is malformed when we find a parallel emerge
 					 * process which is trying to emerge the same
 					 * package
