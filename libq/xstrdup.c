@@ -29,16 +29,16 @@
 
 static char *xstrdup(const char *s)
 {
-	char *t;
+	void *t;
 
 	if (s == NULL)
 		return NULL;
 
-	t = strdup(s);
+	t = (void *)strdup(s);
 	if (unlikely(t == NULL))
 		err("Out of memory");
 
-	return t;
+	return (char *)t;
 }
 
 static char *xstrdup_len(const char *s, size_t *len)
