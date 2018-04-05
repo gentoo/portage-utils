@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2016 Gentoo Foundation
+ * Copyright 2005-2018 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -61,4 +61,6 @@ int main(int argc, char *argv[])
 	assert(buf != NULL);
 	memset(buf, 0xaf, len);
 	testone(buf, len);
+
+	return 0;
 }
