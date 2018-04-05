@@ -8,7 +8,7 @@ test check: static static.q portage
 t = \
 	@set -f && \
 	$(call mkdir,$(b)) && \
-	good=`echo $< | sed 's:.tests:.good:'`; \
+	good=`echo $< | sed 's:.tests$$:.good:'`; \
 	out=$(@:.tests=); \
 	ret=0; \
 	$(realpath $(lastword $^)) $(1) `sed 's:\#.*::' $<` > $$out || ret=$$?; \
@@ -18,6 +18,7 @@ t = \
 			echo "PASS atom_compare $$out"; \
 		else \
 			echo "FAIL atom_compare $$out"; \
+			ret=1; \
 		fi;; \
 	77) echo "SKIP atom_compare $$out"; ret=0;; \
 	*) echo "FAIL atom_compare $$out";; \
