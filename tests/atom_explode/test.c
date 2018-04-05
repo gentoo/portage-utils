@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2014 Gentoo Foundation
+ * Copyright 2005-2018 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -22,6 +22,10 @@ int main(int argc, char *argv[])
 {
 	int i;
 	depend_atom *a;
+
+	(void)xcalloc;
+	(void)xmemdup;
+
 	/* printf("input -> CATEGORY / [P] PN - PVR [PV] [PR_int]\n"); */
 	for (i = 1; i < argc; ++i) {
 		a = atom_explode(argv[i]);
