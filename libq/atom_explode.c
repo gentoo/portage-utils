@@ -147,7 +147,7 @@ atom_explode(const char *atom)
 	}
 	strcpy(ret->CATEGORY, atom);
 
-	/* eat file name crap */
+	/* eat file name crap when given an (autocompleted) path */
 	if ((ptr = strstr(ret->CATEGORY, ".ebuild")) != NULL)
 		*ptr = '\0';
 
@@ -172,11 +172,12 @@ atom_explode(const char *atom)
 		}
 	}
 
-	/* break up the CATEOGRY and PVR */
+	/* break up the CATEGORY and PVR */
 	if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL) {
 		ret->PN = ptr + 1;
 		*ptr = '\0';
-		/* eat extra crap in case it exists */
+		/* eat extra crap in case it exists, this is a feature to allow
+		 * /path/to/pkg.ebuild */
 		if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL)
 			ret->CATEGORY = ptr + 1;
 	} else {
@@ -184,9 +185,28 @@ atom_explode(const char *atom)
 		ret->CATEGORY = NULL;
 	}
 
+	/* CATEGORY should be all set here, PN contains everything up to
+	 * SLOT, REPO or '*'
+	 * PN must not end in a hyphen followed by anything matching version
+	 * syntax, version syntax starts with a number, so "-[0-9]" is a
+	 * separator from PN to PV* */
+
+	ptr = ret->PN;
+	while ((ptr = strchr(ptr, '-')) != NULL) {
+		ptr++;
+		if (*ptr >= '0' && *ptr <= '9')
+			break;
+	}
+
+	if (ptr == NULL) {
+		/* atom has no version, this is it */
+		return ret;
+	}
+	ret->PV = ptr;
+
 	/* find -r# */
-	ptr = ret->PN + strlen(ret->PN) - 1;
-	while (*ptr && ptr > ret->PN) {
+	ptr = ret->PV + strlen(ret->PV) - 1;
+	while (*ptr && ptr > ret->PV) {
 		if (!isdigit(*ptr)) {
 			if (ptr[0] == 'r' && ptr[-1] == '-') {
 				ret->PR_int = atoi(ptr + 1);
@@ -197,39 +217,35 @@ atom_explode(const char *atom)
 		--ptr;
 	}
 	strcpy(ret->P, ret->PN);
+	ret->PV[-1] = '\0';
 
 	/* break out all the suffixes */
 	sidx = 0;
 	ret->suffixes = xrealloc(ret->suffixes, sizeof(atom_suffix) * (sidx + 1));
 	ret->suffixes[sidx].sint = 0;
 	ret->suffixes[sidx].suffix = VER_NORM;
-	while ((ptr = strrchr(ret->PN, '_')) != NULL) {
+	ptr = ret->PV + strlen(ret->PV) - 1;
+	while (ptr-- > ret->PV) {
+		if (*ptr != '_')
+			continue;
 		for (idx = 0; idx < ARRAY_SIZE(atom_suffixes_str); ++idx) {
-			if (strncmp(ptr, atom_suffixes_str[idx], strlen(atom_suffixes_str[idx])))
+			if (strncmp(ptr, atom_suffixes_str[idx],
+						strlen(atom_suffixes_str[idx])))
 				continue;
 
-			/* check this is a real suffix and not _p hitting mod_perl */
-			char *tmp_ptr = ptr;
-			tmp_ptr += strlen(atom_suffixes_str[idx]);
-			ret->suffixes[sidx].sint = atoll(tmp_ptr);
-			while (isdigit(*tmp_ptr))
-				++tmp_ptr;
-			if (*tmp_ptr)
-				goto no_more_suffixes;
+			ret->suffixes[sidx].sint =
+				atoll(ptr + strlen(atom_suffixes_str[idx]));
 			ret->suffixes[sidx].suffix = idx;
 
 			++sidx;
-			*ptr = '\0';
 
-			ret->suffixes = xrealloc(ret->suffixes, sizeof(atom_suffix) * (sidx + 1));
+			ret->suffixes = xrealloc(ret->suffixes,
+					sizeof(atom_suffix) * (sidx + 1));
 			ret->suffixes[sidx].sint = 0;
 			ret->suffixes[sidx].suffix = VER_NORM;
 			break;
 		}
-		if (*ptr)
-			break;
 	}
- no_more_suffixes:
 	if (sidx)
 		--sidx;
 	for (idx = 0; idx < sidx; ++idx, --sidx) {
@@ -238,34 +254,26 @@ atom_explode(const char *atom)
 		ret->suffixes[idx] = t;
 	}
 
-	/* allow for 1 optional suffix letter, must be following a number
-	 * otherwise we eat stuff like -c, see bug #639978 */
-	ptr = ret->PN + strlen(ret->PN);
+	/* allow for 1 optional suffix letter, must be following a number */
+	ptr = ret->PV + strlen(ret->PV);
 	if (ptr[-1] >= 'a' && ptr[-1] <= 'z' &&
-			ptr - 2 > ret->PN && ptr[-2] >= '0' && ptr[-2] <= '9')
+			ptr - 2 > ret->PV && ptr[-2] >= '0' && ptr[-2] <= '9')
 	{
 		ret->letter = ptr[-1];
 		--ptr;
 	}
 
 	/* eat the trailing version number [-.0-9]+ */
-	bool has_pv = false;
-	while (--ptr > ret->PN)
+	while (--ptr > ret->PV) {
 		if (*ptr == '-') {
-			has_pv = true;
 			*ptr = '\0';
 			break;
 		} else if (*ptr != '.' && !isdigit(*ptr))
 			break;
-	if (has_pv) {
-		ret->PV = ret->P + (ptr - ret->PN) + 1;
-		ptr = stpcpy(ret->PVR, ret->PV);
-		sprintf(ptr, "-r%i", ret->PR_int);
-	} else {
-		/* atom has no version */
-		ret->PV = ret->PVR = NULL;
-		ret->letter = 0;
 	}
+
+	ptr = stpcpy(ret->PVR, ret->PV);
+	sprintf(ptr, "-r%i", ret->PR_int);
 
 	return ret;
 }
