@@ -256,26 +256,29 @@ atom_explode(const char *atom)
 		ret->suffixes[idx] = t;
 	}
 
-	/* allow for 1 optional suffix letter, must be following a number */
-	ptr = ret->PV + strlen(ret->PV);
-	if (ptr[-1] >= 'a' && ptr[-1] <= 'z' &&
-			ptr - 2 > ret->PV && ptr[-2] >= '0' && ptr[-2] <= '9')
-	{
-		ret->letter = ptr[-1];
-		--ptr;
+	/* skip back to the "end" */
+	for (ptr = ret->PV; *ptr != '\0' && *ptr != '_'; ptr++)
+		;
+	ptr--;
+
+	/* allow for 1 optional suffix letter */
+	if (*ptr >= 'a' && *ptr <= 'z')
+		ret->letter = *ptr--;
+
+	/* eat the trailing version number [.0-9]+ */
+	while (ptr > ret->PV) {
+		if (*ptr != '.' && !isdigit(*ptr))
+			break;
+		ptr--;
 	}
 
-	/* eat the trailing version number [-.0-9]+ */
-	while (--ptr > ret->PV) {
-		if (*ptr == '-') {
-			*ptr = '\0';
-			break;
-		} else if (*ptr != '.' && !isdigit(*ptr))
-			break;
+	if (ptr != ret->PV) {
+		/* PV isn't exactly a number */
+		ret->PV = ret->PVR = NULL;
+	} else {
+		ptr = stpcpy(ret->PVR, ret->PV);
+		sprintf(ptr, "-r%i", ret->PR_int);
 	}
-
-	ptr = stpcpy(ret->PVR, ret->PV);
-	sprintf(ptr, "-r%i", ret->PR_int);
 
 	return ret;
 }
