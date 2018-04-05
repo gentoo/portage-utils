@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2014 Gentoo Foundation
+ * Copyright 2003-2018 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2003-2007 Ned Ludd        - <solar@gentoo.org>
