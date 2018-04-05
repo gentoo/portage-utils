@@ -200,6 +200,8 @@ atom_explode(const char *atom)
 
 	if (ptr == NULL) {
 		/* atom has no version, this is it */
+		strcpy(ret->P, ret->PN);
+		ret->PVR = NULL;
 		return ret;
 	}
 	ret->PV = ptr;
