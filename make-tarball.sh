@@ -43,7 +43,7 @@ rm -rf autom4te.cache
 cd ..
 
 einfo "Generating tarball ..."
-tar cf - "${p}" | xz > "${p}".tar.xz
+tar --numeric-owner -cf - "${p}" | xz > "${p}".tar.xz
 rm -r "${p}"
 du -b "${p}".tar.*
 
