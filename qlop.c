@@ -39,7 +39,7 @@ static const char qlop_desc[] =
 	"The --date option can take a few forms:\n"
 	"  -d '# <day|week|month|year>[s] [ago]'  (e.g. '3 days ago')\n"
 	"Or using strptime(3) formats:\n"
-	"  -d '2015-12-25'           (detected as %F)\n"
+	"  -d '2015-12-25'           (detected as %Y-%m-%d)\n"
 	"  -d '1459101740'           (detected as %s)\n"
 	"  -d '%d.%m.%Y|25.12.2015'  (format is specified)";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, qlop_desc, lookup_applet_idx("qlop"))
@@ -733,7 +733,7 @@ parse_date(const char *sdate, time_t *t)
 	} else {
 		/* Handle automatic formats:
 		 * - "12315128"   -> %s
-		 * - "2015-12-24" -> %F (same as %Y-%m-%d
+		 * - "2015-12-24" -> %Y-%m-%d
 		 * - human readable format (see below)
 		 */
 		size_t len = strspn(sdate, "0123456789-");
@@ -742,7 +742,7 @@ parse_date(const char *sdate, time_t *t)
 			if (strchr(sdate, '-') == NULL)
 				fmt = "%s";
 			else
-				fmt = "%F";
+				fmt = "%Y-%m-%d";
 
 			s = strptime(sdate, fmt, &tm);
 			if (s == NULL || s[0] != '\0')

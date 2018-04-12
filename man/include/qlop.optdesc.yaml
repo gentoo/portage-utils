@@ -1,3 +1,19 @@
+date: |
+    Limit the selection of packages to the date given, or to the range
+    of dates if this argument is given twice.  The \fB--date\fR option
+    can take a few forms.
+    .RS
+    .IP "NUMBER <day|week|month|year>[s] [ago]"
+    Relative time, specifying \fINUMBER\fR \fIdays\fR, \fIweeks\fR,
+    \fImonths\fR or \fIyears\fR, for example \fI3 days ago\fR.
+    .IP YYYY-MM-DD
+    Big-endian date, with components separated by hyphens, starting with
+    year, followed by month and day of month.
+    .IP SSSSSSSSS
+    Seconds since 1970-01-01 00:00:00 +0000 (UTC), the UNIX epoch.
+    .IP FORMAT|DATE
+    Use \fIFORMAT\fR as input for \fBstrptime\fR(3) to parse \fIDATE\fR.
+    .RE
 gauge: |
     Gauge number of times a package has been merged.  This shows the
     merge time for each individual merge of package.
