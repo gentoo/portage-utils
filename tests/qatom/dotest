@@ -48,5 +48,8 @@ test f14 "foo-r1"     -F '%{PN}'       "foo-r1"     # bug #526596
 test f15 "app-emacs diff-mode-" \
                       -F '%{CATEGORY} %{PN}' \
                                        "app-emacs/diff-mode-"
+test f16 "media-fonts font-adobe-100dpi 1.0.3 r1" \
+                      -F '%{CATEGORY} %{PN} %{PV} %{PR}' \
+                                       "media-fonts/font-adobe-100dpi-1.0.3-r1"
 
 end

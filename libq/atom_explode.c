@@ -189,13 +189,31 @@ atom_explode(const char *atom)
 	 * SLOT, REPO or '*'
 	 * PN must not end in a hyphen followed by anything matching version
 	 * syntax, version syntax starts with a number, so "-[0-9]" is a
-	 * separator from PN to PV* */
+	 * separator from PN to PV* -- except it doesn't when the thing
+	 * doesn't validate as version :( */
 
 	ptr = ret->PN;
 	while ((ptr = strchr(ptr, '-')) != NULL) {
+		char *pv;
 		ptr++;
-		if (*ptr >= '0' && *ptr <= '9')
-			break;
+		if (!isdigit(*ptr))
+			continue;
+
+		/* so we should have something like "-2" here, see if this
+		 * checks out as valid version string */
+		pv = ptr;
+		while (*++ptr != '\0') {
+			if (*ptr != '.' && !isdigit(*ptr))
+				break;
+		}
+		/* allow for 1 optional suffix letter */
+		if (*ptr >= 'a' && *ptr <= 'z')
+			ret->letter = *ptr++;
+		if (*ptr == '_' || *ptr == '\0' || *ptr == '-') {
+			ptr = pv;
+			break;  /* valid */
+		}
+		ret->letter = '\0';
 	}
 
 	if (ptr == NULL) {
@@ -216,7 +234,7 @@ atom_explode(const char *atom)
 			}
 			break;
 		}
-		--ptr;
+		ptr--;
 	}
 	strcpy(ret->P, ret->PN);
 	ret->PV[-1] = '\0';
@@ -256,29 +274,8 @@ atom_explode(const char *atom)
 		ret->suffixes[idx] = t;
 	}
 
-	/* skip back to the "end" */
-	for (ptr = ret->PV; *ptr != '\0' && *ptr != '_'; ptr++)
-		;
-	ptr--;
-
-	/* allow for 1 optional suffix letter */
-	if (*ptr >= 'a' && *ptr <= 'z')
-		ret->letter = *ptr--;
-
-	/* eat the trailing version number [.0-9]+ */
-	while (ptr > ret->PV) {
-		if (*ptr != '.' && !isdigit(*ptr))
-			break;
-		ptr--;
-	}
-
-	if (ptr != ret->PV) {
-		/* PV isn't exactly a number */
-		ret->PV = ret->PVR = NULL;
-	} else {
-		ptr = stpcpy(ret->PVR, ret->PV);
-		sprintf(ptr, "-r%i", ret->PR_int);
-	}
+	ptr = stpcpy(ret->PVR, ret->PV);
+	sprintf(ptr, "-r%i", ret->PR_int);
 
 	return ret;
 }
