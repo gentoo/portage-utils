@@ -758,8 +758,17 @@ parse_date(const char *sdate, time_t *t)
 			char ago[len];
 			int ret = sscanf(sdate, "%lu %s %s", &num, dur, ago);
 
-			if (ret < 2)
-				return false;
+			if (ret < 2) {
+				if (strcmp(sdate, "today") == 0) {
+					num = 0;
+					snprintf(dur, len, "%s", "day");
+				} else if (strcmp(sdate, "yesterday") == 0) {
+					num = 1;
+					snprintf(dur, len, "%s", "day");
+				} else {
+					return false;
+				}
+			}
 			if (ret == 3 && strcmp(ago, "ago") != 0)
 				return false;
 

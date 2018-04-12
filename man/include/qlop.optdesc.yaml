@@ -6,6 +6,10 @@ date: |
     .IP "NUMBER <day|week|month|year>[s] [ago]"
     Relative time, specifying \fINUMBER\fR \fIdays\fR, \fIweeks\fR,
     \fImonths\fR or \fIyears\fR, for example \fI3 days ago\fR.
+    .IP today
+    Alias for \fI0 days ago\fR.
+    .IP yesterday
+    Alias for \fI1 day ago\fR.
     .IP YYYY-MM-DD
     Big-endian date, with components separated by hyphens, starting with
     year, followed by month and day of month.
