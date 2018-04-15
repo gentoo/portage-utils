@@ -118,14 +118,26 @@ static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		goto qlist_done;
 
 	while (getline(&state->buf, &state->buflen, fp) != -1) {
+		size_t dirname_len;
 		contents_entry *e;
+
 		e = contents_parse_line(state->buf);
 		if (!e)
 			continue;
 
-		/* assume sane basename() -- doesnt modify argument */
-		if ((base = basename(e->name)) == NULL)
+		/* basename(3) possibly modifies e->name (if it has trailing
+		 * slashes) but this is not likely since it comes from VDB which
+		 * has normalised everything, so effectively e->name isn't
+		 * touched, however, it /can/ return a pointer to a private
+		 * allocation */
+		base = basename(e->name);
+		if (base < e->name || base > (e->name + strlen(e->name)))
 			continue;
+
+		/* basename(/usr)     = usr, dirname(/usr)     = /
+		 * basename(/usr/bin) = bin, dirname(/usr/bin) = /usr */
+		if ((dirname_len = (base - e->name - 1)) == 0)
+			dirname_len = 1;
 
 		for (i = 0; i < args->length; i++) {
 			if (base_names[i] == NULL)
@@ -133,51 +145,46 @@ static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 			if (non_orphans && non_orphans[i])
 				continue;
 
-			/* For optimization of qfile(), we also give it an array of the first char
-			 * of each basename.  This way we avoid numerous strcmp() calls.
-			*/
-			if (base[0] != base_names[i][0] || strcmp(base, base_names[i]))
+			/* For optimization of qfile(), we also give it an array of
+			 * the first char of each basename.  This way we avoid
+			 * numerous strcmp() calls. */
+			if (base[0] != base_names[i][0] || strcmp(base, base_names[i]) != 0)
 				continue;
 
 			path_ok = false;
 
-			/* check the full filepath ... */
-			size_t dirname_len = (base - e->name - 1);
-			/* basename(/usr)     = usr, dirname(/usr)     = /
-			 * basename(/usr/bin) = bin, dirname(/usr/bin) = /usr
-			 */
-			if (dirname_len == 0)
-				dirname_len = 1;
-
 			if (dir_names[i] &&
 			    strncmp(e->name, dir_names[i], dirname_len) == 0 &&
-			    dir_names[i][dirname_len] == '\0') {
+				dir_names[i][dirname_len] == '\0')
+			{
 				/* dir_name == dirname(CONTENTS) */
 				path_ok = true;
-
 			} else if (real_dir_names[i] &&
-			         strncmp(e->name, real_dir_names[i], dirname_len) == 0 &&
-			         real_dir_names[i][dirname_len] == '\0') {
+					strncmp(e->name, real_dir_names[i], dirname_len) == 0 &&
+					real_dir_names[i][dirname_len] == '\0')
+			{
 				/* real_dir_name == dirname(CONTENTS) */
 				path_ok = true;
-
 			} else if (real_root[0]) {
-				char rpath[_Q_PATH_MAX + 1], *_rpath;
-				char *fullpath;
+				char rpath[_Q_PATH_MAX + 1];
+				char *_rpath;
+				char fullpath[_Q_PATH_MAX + 1];
 				size_t real_root_len = state->real_root_len;
 
-				xasprintf(&fullpath, "%s%s", real_root, e->name);
-				fullpath[real_root_len + dirname_len] = '\0';
+				snprintf(fullpath, sizeof(fullpath), "%s%s",
+						real_root, e->name);
 				_rpath = rpath + real_root_len;
 				if (realpath(fullpath, rpath) == NULL) {
 					if (verbose) {
-						warnp("Could not read real path of \"%s\" (from %s)", fullpath, pkg);
-						warn("We'll never know whether \"%s\" was a result for your query...",
-								e->name);
+						warnp("Could not read real path of \"%s\" (from %s)",
+								fullpath, pkg);
+						warn("We'll never know whether \"%s\" was a result "
+								"for your query...", e->name);
 					}
 				} else if (!qfile_is_prefix(rpath, real_root, real_root_len)) {
 					if (verbose)
-						warn("Real path of \"%s\" is not under ROOT: %s", fullpath, rpath);
+						warn("Real path of \"%s\" is not under ROOT: %s",
+								fullpath, rpath);
 				} else if (dir_names[i] &&
 				           strcmp(_rpath, dir_names[i]) == 0) {
 					/* dir_name == realpath(dirname(CONTENTS)) */
@@ -187,11 +194,12 @@ static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 					/* real_dir_name == realpath(dirname(CONTENTS)) */
 					path_ok = true;
 				}
-				free(fullpath);
 			} else if (state->basename) {
 				path_ok = true;
-			} else if (state->pwd) {
-				if (!strncmp(e->name, state->pwd, dirname_len))
+			} else if (state->pwd && dir_names[i] == NULL) {
+				/* try to match file in current directory */
+				if (strncmp(e->name, state->pwd, dirname_len) == 0 &&
+						state->pwd[dirname_len] == '\0')
 					path_ok = true;
 			}
 			if (!path_ok)
@@ -222,7 +230,6 @@ static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 					puts("");
 				else
 					printf(" (%s%s)\n", state->root ? : "", e->name);
-
 			} else {
 				non_orphans[i] = 1;
 			}
@@ -285,7 +292,8 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 
 	for (i = 0; i < argc; ++i) {
 		/* Record basename, but if it is ".", ".." or "/" */
-		strncpy(abspath, argv[i], _Q_PATH_MAX); /* strncopy so that "argv" can be "const" */
+		/* strncopy so that "argv" can be "const" */
+		strncpy(abspath, argv[i], _Q_PATH_MAX);
 		strncpy(tmppath, basename(abspath), _Q_PATH_MAX);
 		if ((strlen(tmppath) > 2) ||
 		    (strncmp(tmppath, "..", strlen(tmppath))
@@ -299,7 +307,8 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 				continue;
 		}
 
-		/* Make sure we have an absolute path available (with "realpath(ROOT)" prefix) */
+		/* Make sure we have an absolute path available (with
+		 * "realpath(ROOT)" prefix) */
 		if (argv[i][0] == '/') {
 			if (state->assume_root_prefix)
 				strncpy(abspath, argv[i], _Q_PATH_MAX);
@@ -309,9 +318,11 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 			if (state->assume_root_prefix)
 				snprintf(abspath, _Q_PATH_MAX, "%s/%s", pwd, argv[i]);
 			else
-				snprintf(abspath, _Q_PATH_MAX, "%s%s/%s", real_root, pwd, argv[i]);
+				snprintf(abspath, _Q_PATH_MAX, "%s%s/%s",
+						real_root, pwd, argv[i]);
 		} else {
-			warn("$PWD was not found in environment, or is not an absolute path");
+			warn("$PWD was not found in environment, "
+					"or is not an absolute path");
 			goto skip_query_item;
 		}
 
@@ -328,12 +339,14 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 			if (realpath(abspath, tmppath) == NULL) {
 				if (verbose) {
 					warnp("Could not read real path of \"%s\"", abspath);
-					warn("Results for query item \"%s\" may be inaccurate.", argv[i]);
+					warn("Results for query item \"%s\" may be inaccurate.",
+							argv[i]);
 				}
 				continue;
 			}
 			if (!qfile_is_prefix(tmppath, real_root, real_root_len)) {
-				warn("Real path of \"%s\" is not under ROOT: %s", abspath, tmppath);
+				warn("Real path of \"%s\" is not under ROOT: %s",
+						abspath, tmppath);
 				goto skip_query_item;
 			}
 			if (tmppath[real_root_len] == '\0')
@@ -350,7 +363,8 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 				goto skip_query_item;
 			}
 			if (!qfile_is_prefix(tmppath, real_root, real_root_len)) {
-				warn("Real path of \"%s\" is not under ROOT: %s", abspath, tmppath);
+				warn("Real path of \"%s\" is not under ROOT: %s",
+						abspath, tmppath);
 				goto skip_query_item;
 			}
 			strncpy(abspath, tmppath, _Q_PATH_MAX);
@@ -470,7 +484,9 @@ int qfile_main(int argc, char **argv)
 			if (state.args.non_orphans[i])
 				continue;
 			if (state.args.basenames[i]) {
-				found = 0; /* ~inverse return code (as soon as an orphan is found, return non-zero) */
+				/* inverse return code (as soon as an orphan is found,
+				 * return non-zero) */
+				found = 0;
 				if (!quiet)
 					puts(argv[i]);
 				else

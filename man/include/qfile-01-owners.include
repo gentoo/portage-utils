@@ -1,13 +1,14 @@
-.SH "FINDING FILES OWNERS"
+.SH "FINDING FILE OWNERS"
 .PP
 This is the default behavior of \fBqfile\fP.  It will list the packages which
 own the files (or directories, or symlinks, or anything else Portage can 
-install) you are querying.  Query items may be file paths or simple file names.
+install) you are querying.  Query items may be file paths or simple file
+names when the \fB\-b\fP option is used.
 By default, output includes packages names and the complete paths to
 the matching files.  If using \fB\-\-exact\fP, versions of the packages will 
 also be shown.  At the contrary, when using \fB\-\-quiet\fP, only package 
 names are listed, without files paths.  Finally, \fB\-\-verbose\fP is similar
-to \fB\-\-exact\fP, but may adds a few warnings.  The return status of 
+to \fB\-\-exact\fP, but may add a few warnings.  The return status of 
 \fBqfile\fP will be \fI0\fP as soon as an owning package has been found for 
 one of the query items.
 .PP
@@ -19,7 +20,7 @@ Find names of package(s) owning "/bin/bash":
 .PP
 Find package(s) owning any file named "bash", and show paths of this files:
 .nf\fI
-	$ qfile bash
+	$ qfile -b bash
 	app-shells/bash (/bin/bash)
 	app-shells/bash (/etc/bash)
 .fi
