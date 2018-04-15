@@ -760,10 +760,10 @@ parse_date(const char *sdate, time_t *t)
 
 			if (ret < 2) {
 				if (strcmp(sdate, "today") == 0) {
-					num = 0;
+					num = 1;
 					snprintf(dur, len, "%s", "day");
 				} else if (strcmp(sdate, "yesterday") == 0) {
-					num = 1;
+					num = 2;
 					snprintf(dur, len, "%s", "day");
 				} else {
 					return false;
