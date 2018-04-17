@@ -1037,7 +1037,7 @@ initialize_flat(const char *overlay, int cache_type, bool force)
 				return cache_file;
 	}
 
-	warn("Updating ebuild %scache in %s ... ",
+	warn("Updating ebuild %scache for %s ... ",
 		cache_type == CACHE_EBUILD ? "" : "meta", overlay);
 
 	count = frac = secs = 0;
@@ -1048,7 +1048,8 @@ initialize_flat(const char *overlay, int cache_type, bool force)
 	if (cache_type == CACHE_METADATA) {
 		subdir_fd = openat(overlay_fd, portcachedir_md5, O_RDONLY|O_CLOEXEC);
 		if (subdir_fd == -1) {
-			subdir_fd = openat(overlay_fd, portcachedir_pms, O_RDONLY|O_CLOEXEC);
+			subdir_fd = openat(overlay_fd, portcachedir_pms,
+					O_RDONLY|O_CLOEXEC);
 			if (subdir_fd == -1) {
 				warnp("could not read md5 or pms cache dirs in %s", overlay);
 				goto ret;
@@ -1084,13 +1085,15 @@ initialize_flat(const char *overlay, int cache_type, bool force)
 				continue;
 
 		int c, pkg_cnt;
-		pkg_cnt = scandirat(subdir_fd, category[i]->d_name, &pn, q_vdb_filter_pkg, alphasort);
+		pkg_cnt = scandirat(subdir_fd, category[i]->d_name, &pn,
+				q_vdb_filter_pkg, alphasort);
 		if (pkg_cnt < 0)
 			continue;
 		for (c = 0; c < pkg_cnt; c++) {
 			char de[_Q_PATH_MAX];
 
-			snprintf(de, sizeof(de), "%s/%s", category[i]->d_name, pn[c]->d_name);
+			snprintf(de, sizeof(de), "%s/%s",
+					category[i]->d_name, pn[c]->d_name);
 
 			if (fstatat(subdir_fd, de, &st, 0) < 0)
 				continue;
@@ -1107,7 +1110,8 @@ initialize_flat(const char *overlay, int cache_type, bool force)
 			}
 
 			int e, ebuild_cnt;
-			ebuild_cnt = scandirat(subdir_fd, de, &eb, filter_hidden, alphasort);
+			ebuild_cnt = scandirat(subdir_fd, de, &eb,
+					filter_hidden, alphasort);
 			if (ebuild_cnt < 0)
 				continue;
 			for (e = 0; e < ebuild_cnt; ++e) {

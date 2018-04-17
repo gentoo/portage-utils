@@ -407,9 +407,11 @@ qcache_traverse_overlay(void (*func)(qcache_data*), const char *overlay)
 	int i, j, k, len, num_cat, num_pkg, num_ebuild;
 	struct dirent **categories, **packages, **ebuilds;
 
-	xasprintf(&catpath, "%s/dep/%s", portedb, overlay);
+	xasprintf(&catpath, "%s/metadata/md5-cache", overlay);
 
-	if (-1 == (num_cat = scandir(catpath, &categories, qcache_file_select, alphasort))) {
+	if (-1 == (num_cat = scandir(catpath, &categories,
+					qcache_file_select, alphasort)))
+	{
 		errp("%s", catpath);
 		free(catpath);
 	}
@@ -421,7 +423,9 @@ qcache_traverse_overlay(void (*func)(qcache_data*), const char *overlay)
 	for (i = 0; i < num_cat; i++) {
 		xasprintf(&pkgpath, "%s/%s", overlay, categories[i]->d_name);
 
-		if (-1 == (num_pkg = scandir(pkgpath, &packages, qcache_file_select, alphasort))) {
+		if (-1 == (num_pkg = scandir(pkgpath, &packages,
+						qcache_file_select, alphasort)))
+		{
 			if (errno != ENOENT)
 				warnp("Found a cache dir, but unable to process %s", pkgpath);
 			free(categories[i]);
@@ -440,9 +444,12 @@ qcache_traverse_overlay(void (*func)(qcache_data*), const char *overlay)
 
 		/* traverse packages */
 		for (j = 0; j < num_pkg; j++) {
-			xasprintf(&ebuildpath, "%s/%s/%s", overlay, categories[i]->d_name, packages[j]->d_name);
+			xasprintf(&ebuildpath, "%s/%s/%s",
+					overlay, categories[i]->d_name, packages[j]->d_name);
 
-			if (-1 == (num_ebuild = scandir(ebuildpath, &ebuilds, qcache_ebuild_select, qcache_vercmp))) {
+			if (-1 == (num_ebuild = scandir(ebuildpath, &ebuilds,
+							qcache_ebuild_select, qcache_vercmp)))
+			{
 				/* Do not complain about spurious files */
 				if (errno != ENOTDIR)
 					warnp("%s", ebuildpath);
@@ -465,7 +472,8 @@ qcache_traverse_overlay(void (*func)(qcache_data*), const char *overlay)
 			/* traverse ebuilds */
 			data.num = num_ebuild;
 			for (k = 0; k < num_ebuild; k++) {
-				len = xasprintf(&cachepath, "%s/%s/%s", catpath, categories[i]->d_name, ebuilds[k]->d_name);
+				len = xasprintf(&cachepath, "%s/%s/%s",
+						catpath, categories[i]->d_name, ebuilds[k]->d_name);
 				cachepath[len - 7] = '\0'; /* remove ".ebuild" */
 
 				data.category = categories[i]->d_name;
@@ -484,7 +492,7 @@ qcache_traverse_overlay(void (*func)(qcache_data*), const char *overlay)
 					if (!warned) {
 						warned = true;
 						warnp("unable to read cache '%s'\n"
-						      "\tperhaps you need to `egencache -j 4` ?", cachepath);
+						      "\tperhaps you need to `egencache`?", cachepath);
 					}
 				}
 
