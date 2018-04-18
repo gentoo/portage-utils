@@ -747,23 +747,24 @@ qcache_stats(qcache_data *data)
 
 		runtime = time(NULL);
 
-		xasprintf(&catpath, "%s/dep/%s", portedb, data->overlay);
+		xasprintf(&catpath, "%s/metadata/md5-cache", data->overlay);
 		dir = opendir(catpath);
 		while ((de = readdir(dir))) {
 			/* Look for all the directories in this path. */
-#ifdef DT_UNKNOWN
+#if defined(DT_UNKNOWN) && defined(DT_DIR)
 			if (de->d_type == DT_UNKNOWN)
 #endif
 			{
 				struct stat s;
-				if (lstat(de->d_name, &s))
+				char spath[_Q_PATH_MAX];
+				snprintf(spath, sizeof(spath), "%s/%s", catpath, de->d_name);
+				if (lstat(spath, &s) != 0)
 					continue;
 				if (!S_ISDIR(s.st_mode))
 					continue;
 			}
-
-#ifdef DT_DIR
-			if (de->d_type != DT_DIR)
+#if defined(DT_UNKNOWN) && defined(DT_DIR)
+			else if (de->d_type != DT_DIR)
 				continue;
 #endif
 
