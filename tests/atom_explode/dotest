@@ -3,26 +3,30 @@
 . ../init.sh || exit 1
 
 PORTDIR=$(DEBUG=: q -Ch 2>&1 | grep ^PORTDIR | awk '{print $NF}')
-pushd "${PORTDIR}"/metadata/md5-cache >/dev/null || { echo SKIPPED; exit 0 ; }
+if [[ -d "${PORTDIR}"/metadata/md5-cache ]] ; then
+	pushd "${PORTDIR}"/metadata/md5-cache >/dev/null || exit $?
 
-if [[ $1 == -v ]] ; then
-	find . -mindepth 2 -type f -printf '%P\n%f\n' | while read line ; do
-		echo "TESTING $line: "
-		"$b"/e "${line}"
-	done
-	exit 0
+	if [[ $1 == -v ]] ; then
+		find . -mindepth 2 -type f -printf '%P\n%f\n' | while read line ; do
+			echo "TESTING $line: "
+			"$b"/e "${line}"
+		done
+		exit 0
+	fi
+
+	# split the disk i/o out so both tests are CPU bound only
+	files=$(find . -mindepth 2 -type f ! -name "Manifest.*" -printf '%P\n%f\n')
+	popd >/dev/null
+else
+	files=$(xzcat ebuildlist.xz)
 fi
-
-# split the disk i/o out so both tests are CPU bound only
-files=$(find . -mindepth 2 -type f ! -name "Manifest.*" -printf '%P\n%f\n')
-popd >/dev/null
 
 printf "atom_explode():"
 time echo "${files}" | "$b"/e > "$b"/me || exit $?
 echo
 
 printf "portage:"
-time echo "${files}" | "$s"/atom-explode.py > "$b"/py || exit $?
+time echo "${files}" | "$s"/atom-explode.py > "$b"/py || xzcat portageatoms.xz > "$b"/py
 echo
 
 diff -U 0 "$b"/me "$b"/py
