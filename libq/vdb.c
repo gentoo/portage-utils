@@ -103,6 +103,7 @@ q_vdb_filter_cat(const struct dirent *de)
 				case '-':
 					if (i)
 						break;
+					/* fall through */
 				default:
 					return 0;
 			}

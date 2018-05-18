@@ -389,7 +389,7 @@ int qlist_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)
-		case 'a': state.all = true;
+		case 'a': state.all = true; /* fall through */
 		case 'I': state.just_pkgname = true; break;
 		case 'S': state.just_pkgname = true; ++state.show_slots; break;
 		case 'R': state.just_pkgname = state.show_repo = true; break;
