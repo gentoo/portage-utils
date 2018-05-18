@@ -1,0 +1,8 @@
+The default behavior of \fBqtegrity\fP is to verify digests of performed
+executables to a list of known good digests. This requires an IMA-enabled
+linux kernel, which records digests of performed executables and exports them
+through securityfs. Using \fB\-\-ignore-non-existent\fP suppresses messages
+about recorded files that can't be accessed (assuming they got removed).
+By using \fB\-\-add\fP, the program behaves differently. No verification is
+performed, instead a digest is made of the provided file and appended to
+the list of known good digests.

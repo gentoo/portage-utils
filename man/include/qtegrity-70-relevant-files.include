@@ -1,0 +1,9 @@
+.SH RELEVANT FILES
+.PP
+Central list of known good digests
+.nf\fI
+	/var/db/QTEGRITY\fi
+.PP
+Linux kernel's recorded digests
+.nf\fI
+	/sys/kernel/security/ima/ascii_runtime_measurements\fi

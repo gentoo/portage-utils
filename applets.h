@@ -31,6 +31,7 @@ DECLARE_APPLET(qatom)
 DECLARE_APPLET(qmerge)
 DECLARE_APPLET(qcache)
 DECLARE_APPLET(qglsa) /* disable */
+DECLARE_APPLET(qtegrity)
 #undef DECLARE_APPLET
 
 #define DEFINE_APPLET_STUB(applet) \
@@ -62,8 +63,9 @@ static const struct applet_t {
 	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
 	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
 	{"qxpak",     qxpak_main,     "<misc args>",     "manipulate xpak archives"},
+	{"qtegrity",  qtegrity_main,  "<misc args>",     "verify files with IMA"},
 
-	/* aliases for equery capatability */
+	/* aliases for equery compatibility */
 	{"belongs",   qfile_main,     NULL, NULL},
 	/*"changes"*/
 	{"check",     qcheck_main,    NULL, NULL},
@@ -81,6 +83,9 @@ static const struct applet_t {
 	/* alias for quickpkg */
 	{"uickpkg",   qpkg_main,      NULL, NULL},
 	/* {"glsa",      qglsa_main,     NULL, NULL}, */
+
+	/* alias for qtegrity */
+	{"integrity", qtegrity_main,  NULL, NULL},
 
 	{NULL, NULL, NULL, NULL}
 };
