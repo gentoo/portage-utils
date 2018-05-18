@@ -189,21 +189,24 @@ usage(int status, const char *flags, struct option const opts[],
 static void
 version_barf(void)
 {
+	const char *vcsid = "";
 	const char *eprefixid = "";
 
 #ifndef VERSION
 # define VERSION "git"
 #endif
-#ifndef VCSID
-# define VCSID "<unknown>"
+
+#ifdef VCSID
+	vcsid = " (" VCSID ")";
 #endif
 
 	if (strlen(CONFIG_EPREFIX) > 1)
 		eprefixid = "configured for " CONFIG_EPREFIX "\n";
-	printf("portage-utils-%s: %s\n"
+
+	printf("portage-utils-%s%s\n"
 	       "%s"
-	       "%s written for Gentoo by <solar and vapier @ gentoo.org>\n",
-	       VERSION, VCSID, eprefixid, argv0);
+	       "written for Gentoo by solar, vapier and grobian\n",
+	       VERSION, vcsid, eprefixid);
 	exit(EXIT_SUCCESS);
 }
 
