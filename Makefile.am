@@ -58,6 +58,7 @@ q_CPPFLAGS += \
 	-DAPPLET_qsearch \
 	-DAPPLET_qsize \
 	-DAPPLET_qtbz2 \
+	-DAPPLET_qtegrity \
 	-DAPPLET_quse \
 	-DAPPLET_qxpak
 dist_man_MANS += \
@@ -92,6 +93,7 @@ APPLETS += \
 	qsearch \
 	qsize \
 	qtbz2 \
+	qtegrity \
 	quse \
 	qxpak
 EXTRA_DIST += \
@@ -145,6 +147,7 @@ EXTRA_DIST += \
 	qsearch.c \
 	qsize.c \
 	qtbz2.c \
+	qtegrity.c \
 	quse.c \
 	qxpak.c \
 	tests/Makefile \
@@ -261,6 +264,7 @@ EXTRA_DIST += \
 	tests/qlist/root/sys-fs/mtools-4.0.13/SLOT \
 	tests/qlist/root/sys-fs/mtools-4.0.13/repository \
 	tests/qlop/Makefile \
+	tests/qlop/aborts.log \
 	tests/qlop/dotest \
 	tests/qlop/list01.good \
 	tests/qlop/list02.good \
@@ -270,6 +274,7 @@ EXTRA_DIST += \
 	tests/qlop/list06.good \
 	tests/qlop/list07.good \
 	tests/qlop/list08.good \
+	tests/qlop/list09.good \
 	tests/qlop/sync.log \
 	tests/qlop/test04.good \
 	tests/qmerge/Makefile \

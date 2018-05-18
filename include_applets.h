@@ -15,3 +15,4 @@
 #include "qmerge.c"
 #include "qcache.c"
 #include "qglsa.c"
+#include "qtegrity.c"

@@ -7,4 +7,4 @@ main.o: main.c porting.h main.h libq/libq.c libq/busybox.h libq/i18n.h \
  libq/prelink.c libq/profile.c libq/vdb.c libq/vdb_get_next_dir.c \
  libq/virtuals.c applets.h include_applets.h q.c qcheck.c qdepends.c \
  qfile.c qlist.c qlop.c qsearch.c qsize.c qtbz2.c quse.c qxpak.c qpkg.c \
- qgrep.c qatom.c qmerge.c qcache.c qglsa.c
+ qgrep.c qatom.c qmerge.c qcache.c qglsa.c qtegrity.c
