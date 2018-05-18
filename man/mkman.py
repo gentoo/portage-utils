@@ -139,7 +139,10 @@ def MkMan(applets, applet, output):
     # Handle any fragments this applet has available
     for frag in sorted(glob.glob(os.path.join(FRAGS_DIR, '%s-*.include' % applet))):
         with open(frag) as f:
-            extra_sections += [x.rstrip() for x in f.readlines()]
+            if "-authors." in frag:
+                authors += [x.rstrip() for x in f.readlines()]
+            else:
+                extra_sections += [x.rstrip() for x in f.readlines()]
 
     data = {
         'applet': applet,
