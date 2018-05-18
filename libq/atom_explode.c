@@ -193,27 +193,32 @@ atom_explode(const char *atom)
 	 * doesn't validate as version :( */
 
 	ptr = ret->PN;
-	while ((ptr = strchr(ptr, '-')) != NULL) {
+	{
+		char *lastpv = NULL;
 		char *pv;
-		ptr++;
-		if (!isdigit(*ptr))
-			continue;
 
-		/* so we should have something like "-2" here, see if this
-		 * checks out as valid version string */
-		pv = ptr;
-		while (*++ptr != '\0') {
-			if (*ptr != '.' && !isdigit(*ptr))
-				break;
+		while ((ptr = strchr(ptr, '-')) != NULL) {
+			ptr++;
+			if (!isdigit(*ptr))
+				continue;
+
+			/* so we should have something like "-2" here, see if this
+			 * checks out as valid version string */
+			pv = ptr;
+			while (*++ptr != '\0') {
+				if (*ptr != '.' && !isdigit(*ptr))
+					break;
+			}
+			/* allow for 1 optional suffix letter */
+			if (*ptr >= 'a' && *ptr <= 'z')
+				ret->letter = *ptr++;
+			if (*ptr == '_' || *ptr == '\0' || *ptr == '-') {
+				lastpv = pv;
+				continue;  /* valid, keep searching */
+			}
+			ret->letter = '\0';
 		}
-		/* allow for 1 optional suffix letter */
-		if (*ptr >= 'a' && *ptr <= 'z')
-			ret->letter = *ptr++;
-		if (*ptr == '_' || *ptr == '\0' || *ptr == '-') {
-			ptr = pv;
-			break;  /* valid */
-		}
-		ret->letter = '\0';
+		ptr = lastpv;
 	}
 
 	if (ptr == NULL) {
