@@ -1,0 +1,12 @@
+certificate version 0.1
+pusher 0x5F75F607C5C74E89 1526646001 +0200
+pushee git+ssh://git.gentoo.org/proj/portage-utils.git
+nonce 1526646001-c7fd1f9d848649040d9a
+
+0000000000000000000000000000000000000000 c1deada5ab2f1f66d5e1dd684569f74cd9d1f35d refs/tags/v0.71
+-----BEGIN PGP SIGNATURE-----
+
+iF0EABEKAB0WIQSDHIpHdkhfn9Ptmh5fdfYHxcdOiQUCWv7E8QAKCRBfdfYHxcdO
+iXRvAKCXVPHYLNjldqQTYNtRYKRouUIz+QCdF8Y06KAjup8oHVUFLhRa92JHUgU=
+=snGh
+-----END PGP SIGNATURE-----
