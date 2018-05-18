@@ -138,7 +138,7 @@ static void get_digest_from_line(char * line, char * ret, int digest_size, int o
 {
 	size_t dlenstr = strlen(line);
 	/* Skip first chars to get to digest depends on digest_func in IMA */
-	int skip = ((digest_size == SHA256_DIGEST_LENGTH) ||
+	size_t skip = ((digest_size == SHA256_DIGEST_LENGTH) ||
 			(digest_size == SHA512_DIGEST_LENGTH)) ?
 		offset+8 : offset+6;
 
