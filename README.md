@@ -61,13 +61,14 @@ Having your PORTDIR and VDB on the right file system helps dramatically
 
 IDE raid with PORTDIR on reiserfs:
 
-```
+```sh
 $ q -r
 q: Finished 20655 entries in 1.990951 seconds
+```
 
 IDE raid with PORTDIR on ext3:
 
-```
+```sh
 $ q -r
 q: Finished 20655 entries in 203.664252 seconds
 ```
