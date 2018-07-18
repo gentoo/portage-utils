@@ -969,7 +969,7 @@ initialize_portage_env(void)
 
 	/* Make sure ROOT always ends in a slash */
 	var = &vars_to_read[0];
-	if ((*var->value.s)[var->value_len - 1] != '/') {
+	if (var->value_len == 0 || (*var->value.s)[var->value_len - 1] != '/') {
 		portroot = xrealloc(portroot, var->value_len + 2);
 		portroot[var->value_len] = '/';
 		portroot[var->value_len + 1] = '\0';
