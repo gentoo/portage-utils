@@ -773,6 +773,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	char **iargv;
 	char c;
 	int iargc;
+	const char *compr;
 
 	if (!install || !pkg || !atom)
 		return;
@@ -914,11 +915,54 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	if (run_applet_l("qxpak", "-d", "vdb", "-x", tbz2, NULL) != 0)
 		err("`qxpak -d vdb -x %s` failed", tbz2);
 
+	/* figure out if the data is compressed differently from what the
+	 * name suggests, bug #660508, usage of BINPKG_COMPRESS,
+	 * due to the minimal nature of where we run, we cannot rely on file
+	 * or GNU tar, so have to do some laymans MAGIC hunting ourselves */
+	compr = "j";  /* default: bzip2 */
+	{
+		/* bz2: 2-byte: 'B' 'Z'                  at byte 0
+		 * gz:  4-byte:  1f  8b                  at byte 0
+		 * xz:  4-byte: '7' 'z' 'X' 'Z'          at byte 1
+		 * tar: 6-byte: 'u' 's' 't' 'a' 'r' \0   at byte 257 */
+		unsigned char magic[257+6];
+		FILE *mfd;
+
+		sprintf(tbz2, "%s.tar.bz2", pkg->PF);
+		mfd = fopen(tbz2, "r");
+		if (mfd != NULL) {
+			size_t mlen = fread(magic, 1, sizeof(magic), mfd);
+			fclose(mfd);
+
+			if (mlen >= 2 && magic[0] == 'B' && magic[1] == 'Z') {
+				compr = "j";
+			} else if (mlen >= 4 &&
+					magic[0] == 037 && magic[1] == 0213 &&
+					magic[2] == 010 && magic[3] == 00)
+			{
+				compr = "z";
+			} else if (mlen >= 5 &&
+					magic[1] == '7' && magic[2] == 'z' &&
+					magic[3] == 'X' && magic[4] == 'Z')
+			{
+				compr = "J";
+			} else if (mlen == 257+6 &&
+					magic[257] == 'u' && magic[258] == 's' &&
+					magic[259] == 't' && magic[260] == 'a' &&
+					magic[261] == 'r' && magic[262] == '\0')
+			{
+				compr = "";
+			}
+		}
+	}
+
 	free(tbz2);
 
-	/* extrct the binary package data */
+	/* extract the binary package data */
 	mkdir("image", 0755);
-	snprintf(buf, sizeof(buf), BUSYBOX " tar -jx%sf %s.tar.bz2 -C image/", ((verbose > 1) ? "v" : ""), pkg->PF);
+	snprintf(buf, sizeof(buf),
+			BUSYBOX " tar -%sx%sf %s.tar.bz2 -C image/",
+			compr, ((verbose > 1) ? "v" : ""), pkg->PF);
 	xsystem(buf);
 	fflush(stdout);
 
