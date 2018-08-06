@@ -919,12 +919,17 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	 * name suggests, bug #660508, usage of BINPKG_COMPRESS,
 	 * due to the minimal nature of where we run, we cannot rely on file
 	 * or GNU tar, so have to do some laymans MAGIC hunting ourselves */
-	compr = "j";  /* default: bzip2 */
+	compr = "I brotli"; /* default: brotli; has no magic header */
 	{
-		/* bz2: 2-byte: 'B' 'Z'                  at byte 0
-		 * gz:  4-byte:  1f  8b                  at byte 0
+		/* bz2: 3-byte: 'B' 'Z' 'h'              at byte 0
+		 * gz:  2-byte:  1f  8b                  at byte 0
 		 * xz:  4-byte: '7' 'z' 'X' 'Z'          at byte 1
-		 * tar: 6-byte: 'u' 's' 't' 'a' 'r' \0   at byte 257 */
+		 * tar: 6-byte: 'u' 's' 't' 'a' 'r' \0   at byte 257
+		 * lz4: 4-byte:   4  22  4d  18          at byte 0
+		 * zst: 4-byte: 22-28 b5 2f  fd          at byte 0
+		 * lz:  4-byte: 'L' 'Z' 'I' 'P'          at byte 0
+		 * lzo: 9-byte:  89 'L' 'Z' 'O' 0 d a 1a a at byte 0
+		 * br:  anything else */
 		unsigned char magic[257+6];
 		FILE *mfd;
 
@@ -934,11 +939,12 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 			size_t mlen = fread(magic, 1, sizeof(magic), mfd);
 			fclose(mfd);
 
-			if (mlen >= 2 && magic[0] == 'B' && magic[1] == 'Z') {
+			if (mlen >= 3 && magic[0] == 'B' && magic[1] == 'Z' &&
+					magic[2] == 'h')
+			{
 				compr = "j";
-			} else if (mlen >= 4 &&
-					magic[0] == 037 && magic[1] == 0213 &&
-					magic[2] == 010 && magic[3] == 00)
+			} else if (mlen >= 2 &&
+					magic[0] == 037 && magic[1] == 0213)
 			{
 				compr = "z";
 			} else if (mlen >= 5 &&
@@ -952,6 +958,40 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 					magic[261] == 'r' && magic[262] == '\0')
 			{
 				compr = "";
+			} else if (mlen >= 4 &&
+					magic[0] == 0x04 && magic[1] == 0x22 &&
+					magic[2] == 0x4D && magic[3] == 0x18)
+			{
+				compr = "I lz4";
+			} else if (mlen >= 4 &&
+					magic[0] >= 0x22 && magic[0] <= 0x28 &&
+					magic[1] == 0xB5 && magic[2] == 0x2F &&
+					magic[3] == 0xFD)
+			{
+				/*
+				 * --long=31 is needed to uncompress files compressed with
+				 * --long=xx where xx>27. The option is "safe" in the sense
+				 * that not more memory is allocated than what is really
+				 * needed to decompress the file. See
+				 * https://bugs.gentoo.org/show_bug.cgi?id=634980 */
+				compr = "I zstd --long=31";
+				/*
+				 * If really tar -I would be used we would have to quote:
+				 * compr = "I \"zstd --long=31\"";
+				 * But actually we use a pipe (see below) */
+			} else if (mlen >= 4 &&
+					magic[0] == 'L' && magic[1] == 'Z' &&
+					magic[2] == 'I' && magic[3] == 'P')
+			{
+				compr = "I lzip";
+			} else if (mlen >= 9 &&
+					magic[0] == 0x89 && magic[1] == 'L' &&
+					magic[2] == 'Z' && magic[3] == 'O' &&
+					magic[4] == 0x00 && magic[5] == 0x0D &&
+					magic[6] == 0x0A && magic[7] == 0x1A &&
+					magic[8] == 0x0A)
+			{
+				compr = "I lzop";
 			}
 		}
 	}
@@ -960,9 +1000,23 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	/* extract the binary package data */
 	mkdir("image", 0755);
-	snprintf(buf, sizeof(buf),
-			BUSYBOX " tar -%sx%sf %s.tar.bz2 -C image/",
-			compr, ((verbose > 1) ? "v" : ""), pkg->PF);
+	if (compr[0] != 'I')
+	{
+		snprintf(buf, sizeof(buf),
+			BUSYBOX " tar -x%s%s -f %s.tar.bz2 -C image/",
+			((verbose > 1) ? "v" : ""), compr, pkg->PF);
+	} else
+	{
+		/* busybox's tar has no -I option. Thus, although we possibly
+		 * use busybox's shell and tar, we thus pipe, expecting the
+		 * corresponding (de)compression tool to be in PATH; if not,
+		 * a failure will occur.
+		 * Since some tools (e.g. zstd) complain about the .bz2
+		 * extension, we feed the tool by input redirection. */
+		snprintf(buf, sizeof(buf),
+			BUSYBOX " sh -c '%s -dc <%s.tar.bz2 | tar -x%sf - -C image/'",
+			compr + 2, pkg->PF, ((verbose > 1) ? "v" : ""));
+	}
 	xsystem(buf);
 	fflush(stdout);
 
