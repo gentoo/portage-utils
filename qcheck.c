@@ -50,8 +50,8 @@ struct qcheck_opt_state {
 static int
 qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 {
-	int fd;
-	FILE *fp, *fpx;
+	int fd_contents;
+	FILE *fp_contents, *fp_contents_update;
 	const char *catname = pkg_ctx->cat_ctx->name;
 	const char *pkgname = pkg_ctx->name;
 	size_t num_files, num_files_ok, num_files_unknown, num_files_ignored;
@@ -61,28 +61,30 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	int cp_argc, cpm_argc;
 	char **cp_argv, **cpm_argv;
 
-	fpx = NULL;
+	fp_contents_update = NULL;
 
-	fd = q_vdb_pkg_openat(pkg_ctx, "CONTENTS", O_RDONLY|O_CLOEXEC, 0);
-	if (fd == -1)
+	/* Open contents */
+	fd_contents = q_vdb_pkg_openat(pkg_ctx, "CONTENTS", O_RDONLY|O_CLOEXEC, 0);
+	if (fd_contents == -1)
 		return EXIT_SUCCESS;
-	if (fstat(fd, &cst)) {
-		close(fd);
+	if (fstat(fd_contents, &cst)) {
+		close(fd_contents);
 		return EXIT_SUCCESS;
 	}
-	if ((fp = fdopen(fd, "r")) == NULL) {
-		close(fd);
+	if ((fp_contents = fdopen(fd_contents, "r")) == NULL) {
+		close(fd_contents);
 		return EXIT_SUCCESS;
 	}
 
+	/* Open contents_update, if needed */
 	num_files = num_files_ok = num_files_unknown = num_files_ignored = 0;
 	qcprintf("%sing %s%s/%s%s ...\n",
 		(state->qc_update ? "Updat" : "Check"),
 		GREEN, catname, pkgname, NORM);
 	if (state->qc_update) {
-		fpx = q_vdb_pkg_fopenat_rw(pkg_ctx, "CONTENTS~");
-		if (fpx == NULL) {
-			fclose(fp);
+		fp_contents_update = q_vdb_pkg_fopenat_rw(pkg_ctx, "CONTENTS~");
+		if (fp_contents_update == NULL) {
+			fclose(fp_contents);
 			warnp("unable to fopen(%s/%s, w)", pkgname, "CONTENTS~");
 			return EXIT_FAILURE;
 		}
@@ -94,21 +96,23 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	}
 
 	buffer = line = NULL;
-	while (getline(&line, &linelen, fp) != -1) {
-		contents_entry *e;
+	while (getline(&line, &linelen, fp_contents) != -1) {
+		contents_entry *entry;
 		free(buffer);
 		buffer = xstrdup(line);
-		e = contents_parse_line(line);
-		if (!e)
+
+		entry = contents_parse_line(line);
+
+		if (!entry)
 			continue;
 
-		/* run our little checks */
+		/* run initial checks */
 		++num_files;
 		if (array_cnt(state->regex_arr)) {
 			size_t n;
 			regex_t *regex;
 			array_for_each(state->regex_arr, n, regex)
-				if (!regexec(regex, e->name, 0, NULL, 0))
+				if (!regexec(regex, entry->name, 0, NULL, 0))
 					break;
 			if (n < array_cnt(state->regex_arr)) {
 				--num_files;
@@ -116,142 +120,159 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 				continue;
 			}
 		}
-		if (fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd, e->name + 1, &st, AT_SYMLINK_NOFOLLOW)) {
+		if (fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd, entry->name + 1, &st, AT_SYMLINK_NOFOLLOW)) {
 			/* make sure file exists */
 			if (state->chk_afk) {
 				if (errno == ENOENT)
-					qcprintf(" %sAFK%s: %s\n", RED, NORM, e->name);
+					qcprintf(" %sAFK%s: %s\n", RED, NORM, entry->name);
 				else
-					qcprintf(" %sERROR (%s)%s: %s\n", RED, strerror(errno), NORM, e->name);
+					qcprintf(" %sERROR (%s)%s: %s\n", RED, strerror(errno), NORM, entry->name);
 			} else {
 				--num_files;
 				++num_files_ignored;
 				if (state->qc_update)
-					fputs(buffer, fpx);
+					fputs(buffer, fp_contents_update);
 			}
 			continue;
 		}
-		if (e->digest && S_ISREG(st.st_mode)) {
-			if (!state->chk_config_protect) {
-				/* handle CONFIG_PROTECT-ed files */
-				int i;
-				/* if it's in CONFIG_PROTECT_MASK, check it like normal */
-				for (i = 1; i < cpm_argc; ++i)
-					if (strncmp(cpm_argv[i], e->name, strlen(cpm_argv[i])) == 0)
-						break;
-				if (i == cpm_argc) {
-					/* not explicitly masked, so if it's protected */
-					for (i = 1; i < cp_argc; ++i)
-						if (strncmp(cp_argv[i], e->name, strlen(cp_argv[i])) == 0)
-							goto cfg_protected;
-				}
-			}
 
-			/* validate digest (handles MD5 / SHA1) */
+		/* Handle CONFIG_PROTECT-ed files */
+		if (!state->chk_config_protect) {
+			int i;
+			/* If in CONFIG_PROTECT_MASK, handle like normal */
+			for (i = 1; i < cpm_argc; ++i)
+				if (strncmp(cpm_argv[i], entry->name, strlen(cpm_argv[i])) == 0)
+					break;
+			if (i == cpm_argc) {
+				/* Not explicitly masked, so it's protected */
+				for (i = 1; i < cp_argc; ++i)
+					if (strncmp(cp_argv[i], entry->name, strlen(cp_argv[i])) == 0) {
+						num_files_ok++;
+						continue;
+					}
+			}
+		}
+
+		/* For certain combinations of flags and filetypes, a file
+		 * won't get checks and should be ignored */
+		if (!state->chk_mtime && entry->type == CONTENTS_SYM) {
+			--num_files;
+			++num_files_ignored;
+			if (state->qc_update)
+				fputs(buffer, fp_contents_update);
+
+			continue;
+		}
+
+		/* Digest checks only work on regular files
+		 * Note: We don't check for state->chk_hash when entering
+		 * but rather in digest-check #3, because we only succeed
+		 * tests/qcheck/list04.good if when chk_hash is false, we
+		 * do check hashes, but only print mismatched digests as
+		 * 'ignored file'. */
+		if (entry->digest && S_ISREG(st.st_mode)) {
+			/* Validate digest (handles MD5 / SHA1)
+			 * Digest-check 1/3:
+			 * Should we check digests? */
+			char *f_digest;
 			uint8_t hash_algo;
-			char *hashed_file;
-			hash_cb_t hash_cb = state->undo_prelink ? hash_cb_prelink_undo : hash_cb_default;
-			switch (strlen(e->digest)) {
+			switch (strlen(entry->digest)) {
 				case 32: hash_algo = HASH_MD5; break;
 				case 40: hash_algo = HASH_SHA1; break;
 				default: hash_algo = 0; break;
 			}
+
 			if (!hash_algo) {
 				if (state->chk_hash) {
-					qcprintf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n", RED, NORM, e->digest, e->name);
+					qcprintf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n", RED, NORM, entry->digest, entry->name);
 					++num_files_unknown;
 				} else {
 					--num_files;
 					++num_files_ignored;
 					if (state->qc_update)
-						fputs(buffer, fpx);
+						fputs(buffer, fp_contents_update);
 				}
 				continue;
 			}
-			hashed_file = (char *)hash_file_at_cb(pkg_ctx->cat_ctx->ctx->portroot_fd, e->name + 1, hash_algo, hash_cb);
-			if (!hashed_file) {
+
+			hash_cb_t hash_cb = state->undo_prelink ? hash_cb_prelink_undo : hash_cb_default;
+			f_digest = (char *)hash_file_at_cb(pkg_ctx->cat_ctx->ctx->portroot_fd, entry->name + 1, hash_algo, hash_cb);
+
+			/* Digest-check 2/3:
+			 * Can we get a digest of the file? */
+			if (!f_digest) {
 				++num_files_unknown;
-				free(hashed_file);
-				if (state->qc_update) {
-					fputs(buffer, fpx);
-					if (!verbose)
-						continue;
-				}
-				qcprintf(" %sPERM %4o%s: %s\n", RED, (unsigned int)(st.st_mode & 07777), NORM, e->name);
-				continue;
-			} else if (strcmp(e->digest, hashed_file)) {
-				if (state->chk_hash) {
-					const char *digest_disp;
-					if (state->qc_update)
-						fprintf(fpx, "obj %s %s %"PRIu64"\n", e->name, hashed_file, (uint64_t)st.st_mtime);
-					switch (hash_algo) {
-						case HASH_MD5:  digest_disp = "MD5"; break;
-						case HASH_SHA1: digest_disp = "SHA1"; break;
-						default:        digest_disp = "UNK"; break;
-					}
-					qcprintf(" %s%s-DIGEST%s: %s", RED, digest_disp, NORM, e->name);
-					if (verbose)
-						qcprintf(" (recorded '%s' != actual '%s')", e->digest, hashed_file);
-					qcprintf("\n");
-				} else {
-					--num_files;
-					++num_files_ignored;
-					if (state->qc_update)
-						fputs(buffer, fpx);
-				}
-				free(hashed_file);
-				continue;
-			} else if (e->mtime && e->mtime != st.st_mtime) {
-				if (state->chk_mtime) {
-					qcprintf(" %sMTIME%s: %s", RED, NORM, e->name);
-					if (verbose)
-						qcprintf(" (recorded '%"PRIu64"' != actual '%"PRIu64"')", (uint64_t)e->mtime, (uint64_t)st.st_mtime);
-					qcprintf("\n");
+				free(f_digest);
 
-					/* This can only be an obj, dir and sym have no digest */
-					if (state->qc_update)
-						fprintf(fpx, "obj %s %s %"PRIu64"\n", e->name, e->digest, (uint64_t)st.st_mtime);
-				} else {
-					--num_files;
-					++num_files_ignored;
-					if (state->qc_update)
-						fputs(buffer, fpx);
-				}
-				free(hashed_file);
-				continue;
-			} else {
 				if (state->qc_update)
-					fputs(buffer, fpx);
-				free(hashed_file);
-			}
-		} else if (e->mtime && e->mtime != st.st_mtime) {
-			if (state->chk_mtime) {
-				qcprintf(" %sMTIME%s: %s", RED, NORM, e->name);
+					fputs(buffer, fp_contents_update);
+
 				if (verbose)
-					qcprintf(" (recorded '%"PRIu64"' != actual '%"PRIu64"')",
-						(uint64_t)e->mtime, (uint64_t)st.st_mtime);
-				qcprintf("\n");
+					qcprintf(" %sPERM %4o%s: %s\n", RED, (unsigned int)(st.st_mode & 07777), NORM, entry->name);
 
-				/* This can only be a sym */
-				if (state->qc_update)
-					fprintf(fpx, "sym %s -> %s %"PRIu64"\n", e->name, e->sym_target, (uint64_t)st.st_mtime);
-			} else {
-				--num_files;
-				++num_files_ignored;
-				if (state->qc_update)
-					fputs(buffer, fpx);
+				continue;
 			}
-			continue;
-		} else {
-			if (state->qc_update)
-				fputs(buffer, fpx);
+
+			/* Digest-check 3/3:
+			 * Does the digest equal what portage recorded? */
+			if (strcmp(entry->digest, f_digest) != 0) {
+				if (state->chk_hash) {
+					if (state->qc_update)
+						fprintf(fp_contents_update, "obj %s %s %"PRIu64"\n", entry->name, f_digest, (uint64_t)st.st_mtime);
+
+					const char *digest_disp;
+					switch (hash_algo) {
+						case HASH_MD5:	digest_disp = "MD5"; break;
+						case HASH_SHA1:	digest_disp = "SHA1"; break;
+						default: digest_disp = "UNK"; break;
+					}
+
+					qcprintf(" %s%s-DIGEST%s: %s", RED, digest_disp, NORM, entry->name);
+					if (verbose)
+						qcprintf(" (recorded '%s' != actual '%s')", entry->digest, f_digest);
+					qcprintf("\n");
+				} else {
+					--num_files;
+					++num_files_ignored;
+					if (state->qc_update)
+						fputs(buffer, fp_contents_update);
+				}
+
+				free(f_digest);
+				continue;
+			}
+
+			free(f_digest);
 		}
- cfg_protected:
-		++num_files_ok;
+
+		/* Validate mtimes */
+		if (state->chk_mtime && entry->mtime && entry->mtime != st.st_mtime) {
+			qcprintf(" %sMTIME%s: %s", RED, NORM, entry->name);
+			if (verbose)
+				qcprintf(" (recorded '%"PRIu64"' != actual '%"PRIu64"')", (uint64_t)entry->mtime, (uint64_t)st.st_mtime);
+			qcprintf("\n");
+
+			/* Update mtime */
+			if (state->qc_update) {
+				if (entry->type == CONTENTS_SYM) {
+					fprintf(fp_contents_update, "sym %s -> %s %"PRIu64"\n", entry->name, entry->sym_target, (uint64_t)st.st_mtime);
+				} else {
+					fprintf(fp_contents_update, "obj %s %s %"PRIu64"\n", entry->name, entry->digest, (uint64_t)st.st_mtime);
+				}
+			}
+
+			continue;
+		}
+
+		/* Success! */
+		if (state->qc_update)
+			fputs(buffer, fp_contents_update);
+
+		num_files_ok++;
 	}
 	free(line);
 	free(buffer);
-	fclose(fp);
+	fclose(fp_contents);
 
 	if (!state->chk_config_protect) {
 		freeargv(cp_argc, cp_argv);
@@ -259,13 +280,13 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	}
 
 	if (state->qc_update) {
-		if (fchown(fd, cst.st_uid, cst.st_gid)) {
+		if (fchown(fd_contents, cst.st_uid, cst.st_gid)) {
 			/* meh */;
 		}
-		if (fchmod(fd, cst.st_mode)) {
+		if (fchmod(fd_contents, cst.st_mode)) {
 			/* meh */;
 		}
-		fclose(fpx);
+		fclose(fp_contents_update);
 		if (renameat(pkg_ctx->fd, "CONTENTS~", pkg_ctx->fd, "CONTENTS"))
 			unlinkat(pkg_ctx->fd, "CONTENTS~", 0);
 		if (!verbose)
