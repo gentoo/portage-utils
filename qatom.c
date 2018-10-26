@@ -133,7 +133,8 @@ int qatom_main(int argc, char **argv)
 	for (i = optind; i < argc; ++i) {
 		switch (action) {
 		case _COMPARE:
-			printf("%s %s %s\n", argv[i], booga[atom_compare_str(argv[i], argv[i+1])], argv[i+1]);
+			printf("%s %s %s\n", argv[i],
+					booga[atom_compare_str(argv[i], argv[i+1])], argv[i+1]);
 			++i;
 			break;
 		case _EXPLODE:
