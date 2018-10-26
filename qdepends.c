@@ -555,10 +555,13 @@ qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		if (ret != 0)
 			break;
 
-		/* find the boundaries for matched atom */
+		/* find the boundaries for matched atom, dep specifications can
+		 * include built-with-use deps using [xxx] notation, so ensure
+		 * we exclude that as part of the atom */
 		while (match.rm_so > 0 && !isspace(ptr[match.rm_so - 1]))
 			match.rm_so--;
-		while (ptr[match.rm_eo] != '\0' && !isspace(ptr[match.rm_eo]))
+		while (ptr[match.rm_eo] != '\0' && ptr[match.rm_eo] != '[' &&
+				!isspace(ptr[match.rm_eo]))
 			match.rm_eo++;
 
 		snprintf(qbuf, sizeof(qbuf), "%.*s",
