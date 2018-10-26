@@ -30,7 +30,7 @@ DECLARE_APPLET(qgrep)
 DECLARE_APPLET(qatom)
 DECLARE_APPLET(qmerge)
 DECLARE_APPLET(qcache)
-DECLARE_APPLET(qglsa) /* disable */
+/*DECLARE_APPLET(qglsa) disable */
 DECLARE_APPLET(qtegrity)
 #undef DECLARE_APPLET
 
@@ -52,7 +52,9 @@ static const struct applet_t {
 	{"qcheck",    qcheck_main,    "<pkgname>",       "verify integrity of installed packages"},
 	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
 	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},
+	/*
 	{"qglsa",     qglsa_main,     "<action> <list>", "check GLSAs against system"},
+	*/
 	{"qgrep",     qgrep_main,     "<misc args>",     "grep in ebuilds"},
 	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
