@@ -76,6 +76,7 @@ dist_man_MANS += \
 	man/qsearch.1 \
 	man/qsize.1 \
 	man/qtbz2.1 \
+	man/qtegrity.1 \
 	man/quse.1 \
 	man/qxpak.1
 APPLETS += \
@@ -164,6 +165,8 @@ EXTRA_DIST += \
 	tests/atom_explode/basic.good \
 	tests/atom_explode/basic.tests \
 	tests/atom_explode/dotest \
+	tests/atom_explode/ebuildlist.xz \
+	tests/atom_explode/portageatoms.xz \
 	tests/atom_explode/test.c \
 	tests/copy_file/.gitignore \
 	tests/copy_file/Makefile \
