@@ -1,9 +1,10 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2018 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #ifdef APPLET_qdepends
@@ -486,6 +487,7 @@ qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	depend_atom *as;
 	depend_atom *ac;
 	char firstmatch = 0;
+	char *sslot;
 
 	if (!q_vdb_pkg_eat(pkg_ctx, state->depend_file, &depend, &depend_len))
 		return 0;
@@ -569,7 +571,13 @@ qdepends_vdb_deep_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 					ptr + match.rm_so);
 		ac = atom_explode(qbuf);
 
+		/* drop SLOT when not present in aq so we can match atoms
+		 * regardless */
+		sslot = ac->SLOT;
+		if (aq->SLOT == NULL && ac->SLOT != NULL)
+			ac->SLOT = NULL;
 		ret = atom_compare(ac, aq);
+		ac->SLOT = sslot;
 		if (ret != EQUAL) {
 			atom_implode(ac);
 			break;
