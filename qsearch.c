@@ -1,9 +1,10 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2018 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org
  */
 
 #ifdef APPLET_qsearch
@@ -50,8 +51,9 @@ qsearch_ebuild_metadata(_q_unused_ int overlay_fd, const char *ebuild, const cha
 	if (strcmp(pcache->atom->PN, last) != 0) {
 		strncpy(last, pcache->atom->PN, LAST_BUF_SIZE);
 		if (search_all || rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE) == 0)
-			printf("%s%s/%s%s%s %s\n", BOLD, pcache->atom->CATEGORY, BLUE,
+			printf("%s%s/%s%s%s%s%s\n", BOLD, pcache->atom->CATEGORY, BLUE,
 			       pcache->atom->PN, NORM,
+				   (show_name_only ? "" : " "),
 			       (show_name_only ? "" :
 			        (show_homepage ? pcache->HOMEPAGE : pcache->DESCRIPTION)));
 	}
@@ -121,8 +123,9 @@ qsearch_ebuild_ebuild(int overlay_fd, const char *ebuild, const char *search_me,
 
 	if (show_it) {
 		const char *pkg = basename(p);
-		printf("%s%s/%s%s%s %s\n",
+		printf("%s%s/%s%s%s%s%s\n",
 			BOLD, dirname(p), BLUE, pkg, NORM,
+			(show_name_only ? "" : " "),
 			(show_name_only ? "" : q ? : "<no DESCRIPTION found>"));
 	}
 
