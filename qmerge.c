@@ -1,9 +1,10 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2018 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #ifdef APPLET_qmerge
@@ -100,7 +101,7 @@ typedef struct llist_char_t llist_char;
 
 static void pkg_fetch(int, const depend_atom *, const struct pkg_t *);
 static void pkg_merge(int, const depend_atom *, const struct pkg_t *);
-static int pkg_unmerge(q_vdb_pkg_ctx *, queue *);
+static int pkg_unmerge(q_vdb_pkg_ctx *, queue *, int, char **, int, char **);
 static struct pkg_t *grab_binpkg_info(const char *);
 static char *find_binpkg(const char *);
 
@@ -289,52 +290,252 @@ config_protected(const char *buf, int cp_argc, char **cp_argv,
 }
 
 static void
-crossmount_rm(const char *fname, const struct stat * const st)
+crossmount_rm(const char *fname, const struct stat * const st,
+		int fd, char *qpth)
 {
 	struct stat lst;
 
-	assert(pretend == 0);
-
-	if (lstat(fname, &lst) == -1)
+	if (fstatat(fd, fname, &lst, AT_SYMLINK_NOFOLLOW) == -1)
 		return;
 	if (lst.st_dev != st->st_dev) {
 		warn("skipping crossmount install masking: %s", fname);
 		return;
 	}
-	qprintf("%s<<<%s %s\n", YELLOW, NORM, fname);
-	rm_rf(fname);
+	qprintf("%s<<<%s %s/%s (INSTALL_MASK)\n", YELLOW, NORM, qpth, fname);
+	rm_rf_at(fd, fname);
+}
+
+static int
+q_merge_filter_self_parent(const struct dirent *de)
+{
+	if (de->d_name[0] == '.' && (de->d_name[1] == '\0' ||
+			 (de->d_name[1] == '.' && de->d_name[2] == '\0')))
+		return 0;
+
+	return 1;
+}
+
+enum inc_exc { INCLUDE = 1, EXCLUDE = 2 };
+
+static void
+install_mask_check_dir(
+		char ***maskv,
+		int maskc,
+		const struct stat * const st,
+		int fd,
+		ssize_t level,
+		enum inc_exc parent_mode,
+		char *qpth)
+{
+	struct dirent **files;
+	int cnt;
+	int i;
+	int j;
+	enum inc_exc mode;
+	enum inc_exc child_mode;
+#ifndef DT_DIR
+	struct stat s;
+#endif
+	char *npth = qpth + strlen(qpth);
+
+	cnt = scandirat(fd, ".", &files, q_merge_filter_self_parent, alphasort);
+	for (j = 0; j < cnt; j++) {
+		mode = child_mode = parent_mode;
+		for (i = 0; i < maskc; i++) {
+			if ((ssize_t)maskv[i][0] < 0) {
+				/* relative matches need to be a "file", as the Portage
+				 * implementation suggests, so that's easy for us here,
+				 * since we can just match it against each component in
+				 * the path */
+				if ((ssize_t)maskv[i][0] < -1)
+					continue;  /* this is unsupported, so skip it */
+				/* this also works if maskv happens to be a glob */
+				if (fnmatch(maskv[i][1], files[j]->d_name, FNM_PERIOD) != 0)
+					continue;
+				mode = child_mode = maskv[i][2] ? INCLUDE : EXCLUDE;
+			} else if ((ssize_t)maskv[i][0] < level) {
+				/* either this is a mask that didn't match, or it
+				 * matched, but a negative match exists for a deeper
+				 * level, parent_mode should reflect this */
+				continue;
+			} else {
+				if (fnmatch(maskv[i][level], files[j]->d_name, FNM_PERIOD) != 0)
+					continue;
+
+				if ((ssize_t)maskv[i][0] == level)  /* full mask match */
+					mode = child_mode =
+						(ssize_t)maskv[i][level + 1] ? INCLUDE : EXCLUDE;
+				else if (maskv[i][(ssize_t)maskv[i][0] + 1])
+					/* partial include mask */
+					mode = INCLUDE;
+			}
+		}
+
+		DBG("%s/%s: %s/%s", qpth, files[j]->d_name,
+				mode == EXCLUDE       ? "EXCLUDE" : "INCLUDE",
+				child_mode == EXCLUDE ? "EXCLUDE" : "INCLUDE");
+		if (mode == EXCLUDE) {
+			crossmount_rm(files[j]->d_name, st, fd, qpth);
+			continue;
+		}
+
+#ifdef DT_DIR
+		if (files[j]->d_type == DT_DIR) {
+#else
+		if (fstatat(fd, files[j]->d_name, &s, AT_SYMLINK_NOFOLLOW) != 0)
+			continue;
+		if (S_ISDIR(s.st_mode)) {
+#endif
+			int subfd = openat(fd, files[j]->d_name, O_RDONLY);
+			if (subfd < 0)
+				continue;
+			snprintf(npth, _Q_PATH_MAX - (npth - qpth),
+					"/%s", files[j]->d_name);
+			install_mask_check_dir(maskv, maskc, st, subfd,
+					level + 1, child_mode, qpth);
+			close(subfd);
+			*npth = '\0';
+		}
+	}
 }
 
 static void
-install_mask_pwd(int iargc, char **iargv, const struct stat * const st)
+install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 {
-	char buf[1024];
+	char *p;
 	int i;
+	size_t cnt;
+	size_t maxdirs;
+	char **masks;
+	size_t masksc;
+	char ***masksv;
+	char qpth[_Q_PATH_MAX];
 
+	/* we have to deal with "negative" masks, see
+	 * https://archives.gentoo.org/gentoo-portage-dev/message/29e128a9f41122fa0420c1140f7b7f94
+	 * which means we'll need to see what thing matches last
+	 * (inclusion or exclusion) for *every* file :( */
+
+   /*
+	example package contents:
+	/e/t1
+    /u/b/t1
+	/u/b/t2
+	/u/l/lt1
+	/u/s/d/t1
+	/u/s/m/m1/t1
+	/u/s/m/m5/t2
+
+	masking rules:     array encoding:
+	 /u/s              2 u s 0          relative=0 include=0
+	-/u/s/m/m1         4 u s m m1 1     relative=0 include=1
+	 e                -1 e 0            relative=1 include=0
+
+	should result in:
+	/u/b/t1
+	/u/b/t2
+	/u/l/lt1
+	/u/s/m/m1/t1
+	strategy:
+	- for each dir level
+	  - find if there is a match on that level in rules
+	  - if the last match is the full mask
+	    - if the mask is negated, do not remove entry
+	    - else, remove entry
+	  - if the last match is negated, partial and a full mask matched before
+	    - do not remove entry
+	practice:
+	/e | matches "e" -> remove
+	/u | matches partial last negated -> continue
+	  /b | doesn't match -> leave subtree
+	  /l | doesn't match -> leave subtree
+	  /s | match, partial last negated match -> remember match, continue
+	    /d | doesn't match -> remembered match, remove subtree
+		/m | partial match negated -> continue
+		  /m1 | match negated -> leave subtree
+		  /m5 | doesn't match -> remembered match, remove subtree
+	*/
+
+	/* find the longest path so we can allocate a matrix */
+	maxdirs = 0;
 	for (i = 1; i < iargc; i++) {
+		char lastc = '/';
 
-		if (iargv[i][0] != '/')
-			continue;
-
-		snprintf(buf, sizeof(buf), ".%s", iargv[i]);
-
-		if ((strchr(iargv[i], '*') != NULL) || (strchr(iargv[i], '{') != NULL)) {
-			int g;
-			glob_t globbuf;
-
-			globbuf.gl_offs = 0;
-			if (glob(buf, GLOB_DOOFFS|GLOB_BRACE, NULL, &globbuf) == 0) {
-				for (g = 0; g < (int)globbuf.gl_pathc; g++) {
-					strncpy(buf, globbuf.gl_pathv[g], sizeof(buf));
-					/* qprintf("globbed: %s\n", globbuf.gl_pathv[g]); */
-					crossmount_rm(globbuf.gl_pathv[g], st);
-				}
-				globfree(&globbuf);
-			}
-			continue;
+		cnt = 1; /* we always have "something", right? */
+		p = iargv[i];
+		if (*p == '-')
+			p++;
+		for (; *p != '\0'; p++) {
+			/* eliminate duplicate /-es, also ignore the leading / in
+			 * the count */
+			if (*p == '/' && *p != lastc)
+				cnt++;
+			lastc = *p;
 		}
-		crossmount_rm(iargv[i], st);
+		if (cnt > maxdirs)
+			maxdirs = cnt;
 	}
+	maxdirs += 2;  /* allocate plus relative and include elements */
+
+	/* allocate and populate matrix */
+	masksc = iargc - 1;
+	masks = xmalloc(sizeof(char *) * (maxdirs * masksc));
+	masksv = xmalloc(sizeof(char **) * (masksc));
+	for (i = 1; i < iargc; i++) {
+		masksv[i - 1] = &masks[(i - 1) * maxdirs];
+		p = iargv[i];
+		cnt = 1;  /* start after count */
+		/* ignore include marker */
+		if (*p == '-')
+			p++;
+		/* strip of leading slash(es) */
+		while (*p == '/')
+			p++;
+		masks[((i - 1) * maxdirs) + cnt] = p;
+		for (; *p != '\0'; p++) {
+			if (*p == '/') {
+				/* fold duplicate slashes */
+				do {
+					*p++ = '\0';
+				} while (*p == '/');
+				cnt++;
+				masks[((i - 1) * maxdirs) + cnt] = p;
+			}
+		}
+		/* brute force cast below values, a pointer basically is size_t,
+		 * which is large enough to store what we need here */
+		p = iargv[i];
+		/* set include bit */
+		if (*p == '-') {
+			masks[((i - 1) * maxdirs) + cnt + 1] = (char *)1;
+			p++;
+		} else {
+			masks[((i - 1) * maxdirs) + cnt + 1] = (char *)0;
+		}
+		/* set count */
+		masks[((i - 1) * maxdirs) + 0] =
+			(char *)((*p == '/' ? 1 : -1) * cnt);
+	}
+
+#if EBUG
+	printf("applying install masks:\n");
+	for (cnt = 0; cnt < masksc; cnt++) {
+		ssize_t plen = (ssize_t)masksv[cnt][0];
+		printf("%3zd  ", plen);
+		if (plen < 0)
+			plen = -plen;
+		for (i = 1; i <= plen; i++)
+			printf("%s ", masksv[cnt][i]);
+		printf(" %zd\n", (size_t)masksv[cnt][i]);
+	}
+#endif
+
+	cnt = snprintf(qpth, _Q_PATH_MAX, "%s", CONFIG_EPREFIX);
+	cnt--;
+	if (qpth[cnt] == '/')
+		qpth[cnt] = '\0';
+
+	install_mask_check_dir(masksv, masksc, st, fd, 1, INCLUDE, qpth);
 }
 
 static char *
@@ -492,7 +693,7 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 /* Copy one tree (the single package) to another tree (ROOT) */
 static int
 merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
-              FILE *contents, queue **objs, char **cpathp, int iargc, char **iargv,
+              FILE *contents, queue **objs, char **cpathp,
               int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
 	int i, ret, subfd_src, subfd_dst;
@@ -538,15 +739,6 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 		}
 		strcpy(cpath + clen + 1, name);
 
-		/* Check INSTALL_MASK */
-		for (i = 1; i < iargc; ++i) {
-			if (fnmatch(iargv[i], cpath, 0) == 0) {
-				unlinkat(subfd_src, name, 0);
-				unlinkat(subfd_dst, name, 0);
-				continue;
-			}
-		}
-
 		/* Find out what the source path is */
 		if (fstatat(subfd_src, name, &st, AT_SYMLINK_NOFOLLOW)) {
 			warnp("could not read %s", cpath);
@@ -555,34 +747,32 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 
 		/* Migrate a directory */
 		if (S_ISDIR(st.st_mode)) {
-			if (mkdirat(subfd_dst, name, st.st_mode)) {
+			if (!pretend && mkdirat(subfd_dst, name, st.st_mode)) {
 				if (errno != EEXIST) {
-					warnp("could not read %s", cpath);
+					warnp("could not create %s", cpath);
 					continue;
 				}
 
 				/* XXX: update times of dir ? */
 			}
 
-#if 0		/* We filter out "dir" as it's generally unnecessary cruft */
 			/* syntax: dir dirname */
-			fprintf(contents, "dir %s\n", cpath);
+			if (!pretend)
+				fprintf(contents, "dir %s\n", cpath);
 			*objs = add_set(cpath, *objs);
 			qprintf("%s>>>%s %s%s%s/\n", GREEN, NORM, DKBLUE, cpath, NORM);
-#endif
 
 			/* Copy all of these contents */
-			merge_tree_at(subfd_src, name, subfd_dst, name, contents, objs, cpathp,
-				iargc, iargv, cp_argc, cp_argv, cpm_argc, cpm_argv);
+			merge_tree_at(subfd_src, name, subfd_dst, name, contents, objs,
+					cpathp, cp_argc, cp_argv, cpm_argc, cpm_argv);
 			cpath = *cpathp;
 			mnlen = 0;
 
 			/* In case we didn't install anything, prune the empty dir */
-			unlinkat(subfd_dst, name, AT_REMOVEDIR);
-		}
-
-		/* Migrate a file */
-		else if (S_ISREG(st.st_mode)) {
+			if (!pretend)
+				unlinkat(subfd_dst, name, AT_REMOVEDIR);
+		} else if (S_ISREG(st.st_mode)) {
+			/* Migrate a file */
 			struct timespec times[2];
 			int fd_srcf, fd_dstf;
 			unsigned char *hash;
@@ -590,7 +780,9 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 
 			/* syntax: obj filename hash mtime */
 			hash = hash_file_at(subfd_src, name, HASH_MD5);
-			fprintf(contents, "obj %s %s %"PRIu64"\n", cpath, hash, (uint64_t)st.st_mtime);
+			if (!pretend)
+				fprintf(contents, "obj %s %s %"PRIu64"\n",
+						cpath, hash, (uint64_t)st.st_mtime);
 			free(hash);
 
 			/* Check CONFIG_PROTECT */
@@ -617,6 +809,9 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			}
 			*objs = add_set(cpath, *objs);
 
+			if (pretend)
+				continue;
+
 			/* First try fast path -- src/dst are same device */
 			if (renameat(subfd_src, dname, subfd_dst, name) == 0)
 				continue;
@@ -633,7 +828,8 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			 * XXX: Should we make this random ?
 			 */
 			tmpname = ".qmerge.update";
-			fd_dstf = openat(subfd_dst, tmpname, O_WRONLY|O_CLOEXEC|O_CREAT|O_TRUNC, st.st_mode);
+			fd_dstf = openat(subfd_dst, tmpname,
+					O_WRONLY|O_CLOEXEC|O_CREAT|O_TRUNC, st.st_mode);
 			if (fd_dstf < 0) {
 				warnp("could not write %s", cpath);
 				close(fd_srcf);
@@ -674,10 +870,8 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 				warnp("could not rename %s to %s", tmpname, cpath);
 				continue;
 			}
-		}
-
-		/* Migrate a symlink */
-		else if (S_ISLNK(st.st_mode)) {
+		} else if (S_ISLNK(st.st_mode)) {
+			/* Migrate a symlink */
 			size_t len = st.st_size;
 			char *sym = alloca(len + 1);
 
@@ -689,9 +883,15 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			sym[len] = '\0';
 
 			/* syntax: sym src -> dst mtime */
-			fprintf(contents, "sym %s -> %s %"PRIu64"\n", cpath, sym, (uint64_t)st.st_mtime);
-			qprintf("%s>>>%s %s%s -> %s%s\n", GREEN, NORM, CYAN, cpath, sym, NORM);
+			if (!pretend)
+				fprintf(contents, "sym %s -> %s %"PRIu64"\n",
+						cpath, sym, (uint64_t)st.st_mtime);
+			qprintf("%s>>>%s %s%s -> %s%s\n", GREEN, NORM,
+					CYAN, cpath, sym, NORM);
 			*objs = add_set(cpath, *objs);
+
+			if (pretend)
+				continue;
 
 			/* Make it in the dest tree */
 			if (symlinkat(sym, subfd_dst, name)) {
@@ -708,10 +908,8 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			times[0] = get_stat_mtime(&st);
 			times[1] = get_stat_mtime(&st);
 			utimensat(subfd_dst, name, times, AT_SYMLINK_NOFOLLOW);
-		}
-
-		/* WTF is this !? */
-		else {
+		} else {
+			/* WTF is this !? */
 			warnp("unknown file type %s", cpath);
 			continue;
 		}
@@ -722,34 +920,6 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
  done:
 	close(subfd_src);
 	close(subfd_dst);
-
-	return ret;
-}
-
-/* Copy one tree (the single package) to another tree (ROOT) */
-static int
-merge_tree(const char *src, const char *dst, FILE *contents,
-           queue **objs, int iargc, char **iargv)
-{
-	int ret;
-	int cp_argc, cpm_argc;
-	char **cp_argv, **cpm_argv;
-	char *cpath;
-
-	/* XXX: be nice to pull this out of the current func
-	 *      so we don't keep reparsing the same env var
-	 *      when unmerging multiple packages.
-	 */
-	makeargv(config_protect, &cp_argc, &cp_argv);
-	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
-
-	cpath = xstrdup("");
-	ret = merge_tree_at(AT_FDCWD, src, AT_FDCWD, dst, contents, objs, &cpath,
-		iargc, iargv, cp_argc, cp_argv, cpm_argc, cpm_argv);
-	free(cpath);
-
-	freeargv(cp_argc, cp_argv);
-	freeargv(cpm_argc, cpm_argv);
 
 	return ret;
 }
@@ -774,6 +944,10 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	char c;
 	int iargc;
 	const char *compr;
+	int cp_argc;
+	int cpm_argc;
+	char **cp_argv;
+	char **cpm_argv;
 
 	if (!install || !pkg || !atom)
 		return;
@@ -830,30 +1004,39 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 						resolved = find_binpkg(name);
 
-						IF_DEBUG(fprintf(stderr, "+Atom: argv0(%s) resolved(%s)\n", name, resolved));
+						IF_DEBUG(fprintf(stderr,
+									"+Atom: argv0(%s) resolved(%s)\n",
+									name, resolved));
 
 						if (strlen(resolved) < 1) {
-							warn("Cant find a binpkg for %s from rdepend(%s)", name, pkg->RDEPEND);
+							warn("Cant find a binpkg for %s from rdepend(%s)",
+									name, pkg->RDEPEND);
 							continue;
 						}
 
 						/* ratom = atom_explode(resolved); */
-						subpkg = grab_binpkg_info(resolved);	/* free me later */
+						subpkg = grab_binpkg_info(resolved); /* free me later */
 
 						assert(subpkg != NULL);
-						IF_DEBUG(fprintf(stderr, "+Subpkg: %s/%s\n", subpkg->CATEGORY, subpkg->PF));
+						IF_DEBUG(fprintf(stderr, "+Subpkg: %s/%s\n",
+									subpkg->CATEGORY, subpkg->PF));
 
-						/* look at installed versions now. If NULL or < merge this pkg */
-						snprintf(buf, sizeof(buf), "%s/%s", subpkg->CATEGORY, subpkg->PF);
+						/* look at installed versions now.
+						 * If NULL or < merge this pkg */
+						snprintf(buf, sizeof(buf), "%s/%s",
+								subpkg->CATEGORY, subpkg->PF);
 
 						ratom = atom_explode(buf);
 
-						p = best_version(subpkg->CATEGORY, subpkg->PF, subpkg->SLOT);
+						p = best_version(subpkg->CATEGORY,
+								subpkg->PF, subpkg->SLOT);
 
 						/* we dont want to remerge equal versions here */
 						IF_DEBUG(fprintf(stderr, "+Installed: %s\n", p));
 						if (strlen(p) < 1)
-							if (!((strcmp(pkg->PF, subpkg->PF) == 0) && (strcmp(pkg->CATEGORY, subpkg->CATEGORY) == 0)))
+							if (!((strcmp(pkg->PF, subpkg->PF) == 0) &&
+										(strcmp(pkg->CATEGORY,
+												subpkg->CATEGORY) == 0)))
 								pkg_fetch(level+1, ratom, subpkg);
 
 						atom_implode(subatom);
@@ -867,8 +1050,6 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		}
 		freeargv(ARGC, ARGV);
 	}
-	if (pretend)
-		return;
 
 	/* Get a handle on the main vdb repo */
 	vdb_ctx = q_vdb_open();
@@ -1000,13 +1181,11 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	/* extract the binary package data */
 	mkdir("image", 0755);
-	if (compr[0] != 'I')
-	{
+	if (compr[0] != 'I') {
 		snprintf(buf, sizeof(buf),
 			BUSYBOX " tar -x%s%s -f %s.tar.bz2 -C image/",
 			((verbose > 1) ? "v" : ""), compr, pkg->PF);
-	} else
-	{
+	} else {
 		/* busybox's tar has no -I option. Thus, although we possibly
 		 * use busybox's shell and tar, we thus pipe, expecting the
 		 * corresponding (de)compression tool to be in PATH; if not,
@@ -1025,48 +1204,75 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	pkg_run_func("vdb", phases, "pkg_setup", D, T);
 	pkg_run_func("vdb", phases, "pkg_preinst", D, T);
 
-	/* XXX: kill this off */
-	xchdir("image");
+	{
+		int imagefd = open("image" CONFIG_EPREFIX, O_RDONLY);
+		size_t masklen = strlen(install_mask) + 1 +
+				15 + 1 + 14 + 1 + 14 + 1 + 1;  /* worst case scenario */
+		char *imask = xmalloc(masklen);
+		size_t maskp;
 
-	if (stat(".", &st) == -1)
-		err("Cant stat pwd");
+		if (fstat(imagefd, &st) == -1) {
+			close(imagefd);
+			err("Cannot stat image dirfd");
+		}
 
-	/* Initialize INSTALL_MASK and common stuff */
-	makeargv(install_mask, &iargc, &iargv);
-	/* XXX: Would be better if INSTALL_MASK deleted from image/
-	 *      so we didn't have to parse it while doing merge_tree() */
-	install_mask_pwd(iargc, iargv, &st);
+		/* rely on INSTALL_MASK code to remove optional dirs */
+		maskp = snprintf(imask, masklen, "%s ", install_mask);
+		if (strstr(features, "noinfo") != NULL)
+			maskp += snprintf(imask + maskp, masklen - maskp,
+					"/usr/share/info ");
+		if (strstr(features, "noman" ) != NULL)
+			maskp += snprintf(imask + maskp, masklen - maskp,
+					"/usr/share/man ");
+		if (strstr(features, "nodoc" ) != NULL)
+			maskp += snprintf(imask + maskp, masklen - maskp,
+					"/usr/share/doc ");
 
-	if (strstr(features, "noinfo")) rm_rf("./usr/share/info");
-	if (strstr(features, "noman" )) rm_rf("./usr/share/man");
-	if (strstr(features, "nodoc" )) rm_rf("./usr/share/doc");
+		/* Initialize INSTALL_MASK and common stuff */
+		makeargv(imask, &iargc, &iargv);
+		free(imask);
+		install_mask_pwd(iargc, iargv, &st, imagefd);
+		freeargv(iargc, iargv);
 
-	/* we dont care about the return code */
-	rmdir("./usr/share");
+		/* we dont care about the return code, if it's empty, we want it
+		 * gone */
+		unlinkat(imagefd, "./usr/share", AT_REMOVEDIR);
 
-	/* XXX: Once we kill xchdir(image), this can die too */
-	xchdir("..");
+		close(imagefd);
+	}
+
+	makeargv(config_protect, &cp_argc, &cp_argv);
+	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
 	if ((contents = fopen("vdb/CONTENTS", "w")) == NULL)
 		errf("come on wtf?");
 	objs = NULL;
-	if (merge_tree("image", portroot, contents, &objs, iargc, iargv))
-		errp("failed to merge to %s", portroot);
+	{
+		char *cpath;
+		int ret;
+
+		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
+
+		ret = merge_tree_at(AT_FDCWD, "image", AT_FDCWD, portroot, contents,
+					&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv);
+
+		free(cpath);
+
+		if (ret != 0)
+			errp("failed to merge to %s", portroot);
+	}
 	fclose(contents);
 
-	freeargv(iargc, iargv);
-
 	/* run postinst */
-	pkg_run_func("vdb", phases, "pkg_postinst", D, T);
+	if (!pretend)
+		pkg_run_func("vdb", phases, "pkg_postinst", D, T);
 
 	/* XXX: hmm, maybe we'll want to strip more ? */
 	unlink("vdb/environment");
 
-	/* FIXME */ /* move unmerging to around here ? */
-	/* check for an already installed pkg */
-
-	/* Unmerge any stray pieces from the older version which we didn't replace */
-	/* XXX: Should see about merging with unmerge_packages() */
+	/* Unmerge any stray pieces from the older version which we didn't
+	 * replace */
+	/* TODO: Should see about merging with unmerge_packages() */
 	while (1) {
 		int ret;
 		q_vdb_pkg_ctx *pkg_ctx;
@@ -1085,7 +1291,8 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 			case NEWER:
 			case OLDER:
 			case EQUAL:
-				/* We need to really set this unmerge pending after we look at contents of the new pkg */
+				/* We need to really set this unmerge pending after we
+				 * look at contents of the new pkg */
 				break;
 			default:
 				warn("no idea how we reached here.");
@@ -1094,13 +1301,17 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 				goto next_pkg;
 		}
 
-		qprintf("%s+++%s %s/%s %s %s/%s\n", GREEN, NORM, atom->CATEGORY, pkg->PF,
-			booga[ret], cat_ctx->name, pkg_ctx->name);
+		qprintf("%s+++%s %s/%s %s %s/%s\n",
+				GREEN, NORM, atom->CATEGORY, pkg->PF,
+				booga[ret], cat_ctx->name, pkg_ctx->name);
 
-		pkg_unmerge(pkg_ctx, objs);
+		pkg_unmerge(pkg_ctx, objs, cp_argc, cp_argv, cpm_argc, cpm_argv);
  next_pkg:
 		q_vdb_close_pkg(pkg_ctx);
 	}
+
+	freeargv(cp_argc, cp_argv);
+	freeargv(cpm_argc, cpm_argv);
 
 	/* Clean up the package state */
 	free_sets(objs);
@@ -1113,14 +1324,17 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		fclose(fp);
 	}
 
-	/* move the local vdb copy to the final place */
-	snprintf(buf, sizeof(buf), "%s%s/%s/", portroot, portvdb, pkg->CATEGORY);
-	mkdir_p(buf, 0755);
-	strcat(buf, pkg->PF);
-	if (rename("vdb", buf)) {
-		xasprintf(&p, "mv vdb '%s'", buf);
-		xsystem(p);
-		free(p);
+	if (!pretend) {
+		/* move the local vdb copy to the final place */
+		snprintf(buf, sizeof(buf), "%s%s/%s/",
+				portroot, portvdb, pkg->CATEGORY);
+		mkdir_p(buf, 0755);
+		strcat(buf, pkg->PF);
+		if (rename("vdb", buf)) {
+			xasprintf(&p, "mv vdb '%s'", buf);
+			xsystem(p);
+			free(p);
+		}
 	}
 
 	/* clean up our local temp dir */
@@ -1129,13 +1343,15 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	/* don't care about return */
 	rmdir("../qmerge");
 
-	printf("%s>>>%s %s%s%s/%s%s%s\n", YELLOW, NORM, WHITE, atom->CATEGORY, NORM, CYAN, atom->PN, NORM);
+	printf("%s>>>%s %s%s%s/%s%s%s\n",
+			YELLOW, NORM, WHITE, atom->CATEGORY, NORM, CYAN, atom->PN, NORM);
 
 	q_vdb_close(vdb_ctx);
 }
 
 static int
-pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
+pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep,
+		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
 	q_vdb_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
 	const char *cat = cat_ctx->name;
@@ -1147,15 +1363,15 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 	char *buf;
 	FILE *fp;
 	int ret, portroot_fd;
-	int cp_argc, cpm_argc;
-	char **cp_argv, **cpm_argv;
 	llist_char *dirs = NULL;
+	bool unmerge_config_protected;
 
 	ret = 1;
 	buf = phases = NULL;
 	T = "${PWD}/temp";
 
-	printf("%s<<<%s %s%s%s/%s%s%s\n", YELLOW, NORM, WHITE, cat, NORM, CYAN, pkgname, NORM);
+	printf("%s<<<%s %s%s%s/%s%s%s\n",
+			YELLOW, NORM, WHITE, cat, NORM, CYAN, pkgname, NORM);
 
 	if (pretend == 100)
 		return 0;
@@ -1174,14 +1390,8 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 		pkg_run_func_at(pkg_ctx->fd, ".", phases, "pkg_prerm", T, T);
 	}
 
-	/* XXX: be nice to pull this out of the current func
-	 *      so we don't keep reparsing the same env var
-	 *      when unmerging multiple packages.
-	 */
-	makeargv(config_protect, &cp_argc, &cp_argv);
-	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
-
-	bool unmerge_config_protected = !!strstr(features, "config-protect-if-modified");
+	unmerge_config_protected =
+		strstr(features, "config-protect-if-modified") != NULL;
 
 	while (getline(&buf, &buflen, fp) != -1) {
 		queue *q;
@@ -1194,7 +1404,8 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 		if (!e)
 			continue;
 
-		protected = config_protected(e->name, cp_argc, cp_argv, cpm_argc, cpm_argv);
+		protected = config_protected(e->name,
+				cp_argc, cp_argv, cpm_argc, cpm_argv);
 
 		/* This should never happen ... */
 		assert(e->name[0] == '/' && e->name[1] != '/');
@@ -1213,16 +1424,19 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 			case CONTENTS_OBJ:
 				if (protected && unmerge_config_protected) {
 					/* If the file wasn't modified, unmerge it */
-					unsigned char *hash = hash_file_at(portroot_fd, e->name + 1, HASH_MD5);
+					unsigned char *hash = hash_file_at(portroot_fd,
+							e->name + 1, HASH_MD5);
 					protected = strcmp(e->digest, (const char *)hash);
 					free(hash);
 				}
 				break;
 
 			case CONTENTS_SYM:
-				if (fstatat(portroot_fd, e->name + 1, &st, AT_SYMLINK_NOFOLLOW)) {
+				if (fstatat(portroot_fd,
+							e->name + 1, &st, AT_SYMLINK_NOFOLLOW)) {
 					if (errno != ENOENT) {
-						warnp("stat failed for %s -> '%s'", e->name, e->sym_target);
+						warnp("stat failed for %s -> '%s'",
+								e->name, e->sym_target);
 						continue;
 					} else
 						break;
@@ -1235,11 +1449,14 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 				break;
 
 			default:
-				warn("%s???%s %s%s%s (%d)", RED, NORM, WHITE, e->name, NORM, e->type);
+				warn("%s???%s %s%s%s (%d)", RED, NORM,
+						WHITE, e->name, NORM, e->type);
 				continue;
 		}
 
-		snprintf(zing, sizeof(zing), "%s%s%s", protected ? YELLOW : GREEN, protected ? "***" : "<<<" , NORM);
+		snprintf(zing, sizeof(zing), "%s%s%s",
+				protected ? YELLOW : GREEN,
+				protected ? "***" : "<<<" , NORM);
 
 		if (protected) {
 			qprintf("%s %s\n", zing, e->name);
@@ -1264,7 +1481,7 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 		if (!keep || q) {
 			char *p;
 
-			if (unlinkat(portroot_fd, e->name + 1, 0)) {
+			if (!pretend && unlinkat(portroot_fd, e->name + 1, 0)) {
 				/* If a file was already deleted, ignore the error */
 				if (errno != ENOENT)
 					errp("could not unlink: %s%s", portroot, e->name + 1);
@@ -1273,7 +1490,8 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 			p = strrchr(e->name, '/');
 			if (p) {
 				*p = '\0';
-				rmdir_r_at(portroot_fd, e->name + 1);
+				if (!pretend)
+					rmdir_r_at(portroot_fd, e->name + 1);
 			}
 		}
 	}
@@ -1294,9 +1512,6 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep)
 		free(list->data);
 		free(list);
 	}
-
-	freeargv(cp_argc, cp_argv);
-	freeargv(cpm_argc, cpm_argv);
 
 	if (!pretend) {
 		/* Then execute the pkg_postrm step */
@@ -1495,12 +1710,22 @@ static int
 qmerge_unmerge_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	queue *todo = priv;
+	int cp_argc;
+	int cpm_argc;
+	char **cp_argv;
+	char **cpm_argv;
+
+	makeargv(config_protect, &cp_argc, &cp_argv);
+	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
 	while (todo) {
 		if (qlist_match(pkg_ctx, todo->name, NULL, true))
-			pkg_unmerge(pkg_ctx, NULL);
+			pkg_unmerge(pkg_ctx, NULL, cp_argc, cp_argv, cpm_argc, cpm_argv);
 		todo = todo->next;
 	}
+
+	freeargv(cp_argc, cp_argv);
+	freeargv(cpm_argc, cpm_argv);
 
 	return 0;
 }
