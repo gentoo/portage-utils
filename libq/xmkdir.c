@@ -58,7 +58,7 @@ rm_rf_at(int dfd, const char *path)
 	dir = fdopendir(subdfd);
 	if (!dir) {
 		close(subdfd);
-		return -1;
+		return unlinkat(dfd, path, 0);
 	}
 
 	while ((de = readdir(dir)) != NULL) {
@@ -77,6 +77,8 @@ rm_rf_at(int dfd, const char *path)
 			unlinkat(subdfd, de->d_name, AT_REMOVEDIR);
 		}
 	}
+
+	unlinkat(dfd, path, AT_REMOVEDIR);
 
 	/* this also does close(subdfd); */
 	closedir(dir);
