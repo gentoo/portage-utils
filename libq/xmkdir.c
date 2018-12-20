@@ -89,18 +89,7 @@ rm_rf_at(int dfd, const char *path)
 static int
 rm_rf(const char *path)
 {
-	rm_rf_at(AT_FDCWD, path);
-
-	if (rmdir(path) == 0)
-		return 0;
-
-	/* if path is a symlink, unlink it */
-	if (unlink(path) == 0)
-		return 0;
-
-	/* XXX: we don't handle:
-	 *      trailing slashes: `rm -rf a/b/c/` -> need to change to a/b/c */
-	return -1;
+	return rm_rf_at(AT_FDCWD, path);
 }
 
 static int
