@@ -43,12 +43,10 @@ m="${_m} rm"
 
 mkdir -p a/b/c/d
 $m a/b/
-rmdir a
 tpass "rm a/b/"
 
 mkdir -p a/b/c/d
 $m a/b
-rmdir a
 tpass "rm a/b"
 
 mkdir -p a/b/c/d
