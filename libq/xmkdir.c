@@ -49,6 +49,7 @@ rm_rf_at(int dfd, const char *path)
 	int subdfd;
 	DIR *dir;
 	struct dirent *de;
+	int ret = 0;
 
 	/* Cannot use O_PATH as we want to use fdopendir() */
 	subdfd = openat(dfd, path, O_RDONLY|O_CLOEXEC|O_NOFOLLOW);
@@ -73,17 +74,16 @@ rm_rf_at(int dfd, const char *path)
 						!(st.st_mode & S_IFDIR))
 					errp("could not unlink %s", de->d_name);
 			}
-			rm_rf_at(subdfd, de->d_name);
-			unlinkat(subdfd, de->d_name, AT_REMOVEDIR);
+			ret |= rm_rf_at(subdfd, de->d_name);
 		}
 	}
 
-	unlinkat(dfd, path, AT_REMOVEDIR);
+	ret |= unlinkat(dfd, path, AT_REMOVEDIR);
 
 	/* this also does close(subdfd); */
 	closedir(dir);
 
-	return 0;
+	return ret;
 }
 
 static int
