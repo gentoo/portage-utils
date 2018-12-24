@@ -1,9 +1,9 @@
 # Common
 
 - unify match behavior:
-	- default *foo*
+	- default \*foo\*
 	- -e foo
-	- -r (-R ?) regexp foo.*
+	- -r (-R ?) regexp foo.\*
 
 - disable color when tty = NULL; may break less?
 
@@ -25,10 +25,9 @@
 
 - only 32bit values are supported for revision (-r#)
 - only 64bit values are supported in any individual version component
-  foo-(1234)_alpha(56789)
+  foo-(1234)\_alpha(56789)
 - these limits should not be an issue for all practical purposes
 - need to handle USE deps like: cat/pkg-123[foo(+)]
-- show support slots like: qmerge -U automake:1.12
 
 # qmerge
 
@@ -40,20 +39,13 @@
 - gpg sign the packages file (before compression)
 - binary vdb (sqlite) ... talk to zmedico
 - remote vdb
-- don't bother emitting any "DIR" entries to CONTENTS ?
-	- auto rmdir any empty dirs
-- avoid Packages fetching all the damned time
 - parallel fetch tbz2s
-- check order of pkg_{pre,post}{inst,rm} during install, unmerge, and upgrade
-- env is not saved/restored between pkg_{pre,post}inst (see portage and REPO_LAYOUT_CONF_WARN)
+- check order of pkg\_{pre,post}{inst,rm} during install, unmerge, and upgrade
+- env is not saved/restored between pkg\_{pre,post}inst (see portage and REPO\_LAYOUT\_CONF\_WARN)
 - support installing via path to tbz2 package
 - support TTL field in binpkgs file
 - merge duplicate atoms on the CLI (`qmerge -Uq nano nano nano`)
 - unmerging should clean out @world set
-
-# qcache
-
-- need to convert it to new metadata/md5 style
 
 # qdepends
 
@@ -71,7 +63,3 @@
 # qsync
 
 - rewrite to use new repos.conf standard
-
-# qlist
-
-- support atoms instead of exact matches
