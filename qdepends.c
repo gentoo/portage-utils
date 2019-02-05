@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2018 Gentoo Authors
+ * Copyright 2005-2019 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -9,11 +9,12 @@
 
 #ifdef APPLET_qdepends
 
-#define QDEPENDS_FLAGS "drpafNk:Q:" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpbafNk:Q:" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
 	{"depend",    no_argument, NULL, 'd'},
 	{"rdepend",   no_argument, NULL, 'r'},
 	{"pdepend",   no_argument, NULL, 'p'},
+	{"bdepend",   no_argument, NULL, 'b'},
 	{"key",        a_argument, NULL, 'k'},
 	{"query",      a_argument, NULL, 'Q'},
 	{"name-only", no_argument, NULL, 'N'},
@@ -25,6 +26,7 @@ static const char * const qdepends_opts_help[] = {
 	"Show DEPEND info (default)",
 	"Show RDEPEND info",
 	"Show PDEPEND info",
+	"Show BDEPEND info",
 	"User defined vdb key",
 	"Query reverse deps",
 	"Only show package name",
@@ -639,7 +641,13 @@ int qdepends_main(int argc, char **argv)
 	bool do_format = false;
 	const char *query = NULL;
 	const char *depend_file;
-	const char *depend_files[] = { "DEPEND", "RDEPEND", "PDEPEND", NULL, NULL };
+	const char *depend_files[] = {
+		/* 0 */ "DEPEND",
+		/* 1 */ "RDEPEND",
+		/* 2 */ "PDEPEND",
+		/* 3 */ "BDEPEND",
+		/* 4 */ NULL
+	};
 
 	depend_file = depend_files[0];
 
@@ -650,6 +658,7 @@ int qdepends_main(int argc, char **argv)
 		case 'd': depend_file = depend_files[0]; break;
 		case 'r': depend_file = depend_files[1]; break;
 		case 'p': depend_file = depend_files[2]; break;
+		case 'b': depend_file = depend_files[3]; break;
 		case 'k': depend_file = optarg; break;
 		case 'a': depend_file = NULL; break;
 		case 'Q': query = optarg; break;

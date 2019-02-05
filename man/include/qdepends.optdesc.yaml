@@ -1,13 +1,13 @@
 all: |
-    Show *DEPEND, alias for \fB\-drp\fR.
+    Show *DEPEND, alias for \fB\-drpb\fR.
 key: |
     Advanced option to allow querying the VDB.  This option overrides
-    \fB\-d\fR, \fB\-r\fR, \fB\-p\fR or \fB\-a\fR.  \fI<arg>\fR can be
-    any key from Portage's VDB, e.g.\ any file from
+    \fB\-d\fR, \fB\-r\fR, \fB\-p\fR, \fB\-b\fR or \fB\-a\fR.
+    \fI<arg>\fR can be any key from Portage's VDB, e.g.\ any file from
     var/db/pkg/<cat>/<pkg>/.
 query: |
     Query reverse deps.  This basically reverses the search to any
-    package that references \fI<arg>\fR in DEPEND, RDEPEND or PDEPEND.
+    package that references \fI<arg>\fR in DEPEND, RDEPEND, PDEPEND or BDEPEND.
     This can be useful to find consumers of a given package, e.g.\ to
     search for packages that have \fIlogwatch\fR in their DEPEND.
 name-only: |
