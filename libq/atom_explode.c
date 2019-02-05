@@ -1,9 +1,10 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 typedef enum { VER_ALPHA=0, VER_BETA, VER_PRE, VER_RC, VER_NORM, VER_P } atom_suffixes;
@@ -161,6 +162,10 @@ atom_explode(const char *atom)
 	if ((ptr = strrchr(ret->CATEGORY, ':')) != NULL) {
 		ret->SLOT = ptr + 1;
 		*ptr = '\0';
+
+		/* ignore slots that are about package matching */
+		if (ret->SLOT[0] == '=' || ret->SLOT[0] == '*')
+			ret->SLOT = NULL;
 	}
 
 	/* see if we have any suffix operators */
