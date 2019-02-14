@@ -8,7 +8,7 @@
 
 #ifdef APPLET_qfile
 
-#define QFILE_FLAGS "beoRx:S" COMMON_FLAGS
+#define QFILE_FLAGS "beoRx:SP" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"slots",       no_argument, NULL, 'S'},
 	{"root-prefix", no_argument, NULL, 'R'},
@@ -16,6 +16,7 @@ static struct option const qfile_long_opts[] = {
 	{"orphans",     no_argument, NULL, 'o'},
 	{"exclude",      a_argument, NULL, 'x'},
 	{"exact",       no_argument, NULL, 'e'},
+	{"skip-plibreg",no_argument, NULL, 'P'},
 	COMMON_LONG_OPTS
 };
 static const char * const qfile_opts_help[] = {
@@ -25,6 +26,7 @@ static const char * const qfile_opts_help[] = {
 	"List orphan files",
 	"Don't look in package <arg> (used with --orphans)",
 	"Exact match (used with --exclude)",
+	"Don't look in the prunelib registry",
 	COMMON_OPTS_HELP
 };
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, NULL, lookup_applet_idx("qfile"))
@@ -41,7 +43,7 @@ typedef struct {
 	char **dirnames;
 	char **realdirnames;
 	short *non_orphans;
-//	int *results;
+	int *results;
 } qfile_args_t;
 
 struct qfile_opt_state {
@@ -58,6 +60,7 @@ struct qfile_opt_state {
 	bool slotted;
 	bool basename;
 	bool exact;
+	bool skip_plibreg;
 	bool orphans;
 	bool assume_root_prefix;
 };
@@ -91,6 +94,7 @@ static int qfile_check_plibreg(void *priv)
         char **base_names = args->basenames;
         char **dir_names = args->dirnames;
         short *non_orphans = args->non_orphans;
+        int *results = args->results;
 	char file[_Q_PATH_MAX];
 	char *line = NULL;
 	size_t len = 0;
@@ -100,6 +104,8 @@ static int qfile_check_plibreg(void *priv)
 		if (base_names[i] == NULL)
 			continue;
 		if (non_orphans && non_orphans[i])
+			continue;
+		if (results[i] == 1)
 			continue;
 
 		snprintf(file, sizeof(file), "%s/%s", dir_names[i], base_names[i]);
@@ -141,6 +147,7 @@ static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	char **dir_names = args->dirnames;
 	char **real_dir_names = args->realdirnames;
 	short *non_orphans = args->non_orphans;
+	int *results = args->results;
 	int found = 0;
 
 	snprintf(pkg, sizeof(pkg), "%s/%s", catname, pkgname);
@@ -292,7 +299,10 @@ static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 			} else {
 				non_orphans[i] = 1;
 			}
-			found++; //TODO @SAM, maybe this should actually be stored? e.g. state->results[i] = 1
+
+			/* Success */
+			results[i] = 1;
+			found++;
 		}
 	}
 	fclose(fp);
@@ -321,7 +331,7 @@ static void destroy_qfile_args(qfile_args_t *qfile_args)
 	free(qfile_args->dirnames);
 	free(qfile_args->realdirnames);
 	free(qfile_args->non_orphans);
-//	free(qfile_args->results);
+	free(qfile_args->results);
 
 	memset(qfile_args, 0, sizeof(qfile_args_t));
 }
@@ -338,7 +348,7 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	char **basenames = NULL;
 	char **dirnames = NULL;
 	char **realdirnames = NULL;
-//	int *results = NULL;
+	int *results = NULL;
 	char tmppath[_Q_PATH_MAX+1];
 	char abspath[_Q_PATH_MAX+1];
 
@@ -350,11 +360,9 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	basenames = xcalloc(argc, sizeof(char*));
 	dirnames = xcalloc(argc, sizeof(char*));
 	realdirnames = xcalloc(argc, sizeof(char*));
-//	results = xcalloc(argc, sizeof(int));
+	results = xcalloc(argc, sizeof(int));
 
 	for (i = 0; i < argc; ++i) {
-//		results[i] = 0;
-
 		/* Record basename, but if it is ".", ".." or "/" */
 		/* strncopy so that "argv" can be "const" */
 		strncpy(abspath, argv[i], _Q_PATH_MAX);
@@ -453,7 +461,7 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	args->dirnames = dirnames;
 	args->realdirnames = realdirnames;
 	args->length = argc;
-//	args->results = results;
+	args->results = results;
 
 	if (state->orphans)
 		args->non_orphans = xcalloc(argc, sizeof(short));
@@ -468,6 +476,7 @@ int qfile_main(int argc, char **argv)
 		.slotted = false,
 		.basename = false,
 		.exact = false,
+		.skip_plibreg = false,
 		.orphans = false,
 		.assume_root_prefix = false,
 	};
@@ -482,6 +491,7 @@ int qfile_main(int argc, char **argv)
 			case 'e': state.exact = true; break;
 			case 'o': state.orphans = true; break;
 			case 'R': state.assume_root_prefix = true; break;
+			case 'P': state.skip_plibreg = true; break;
 			case 'x':
 				if (state.exclude_pkg)
 					err("--exclude can only be used once.");
@@ -545,7 +555,7 @@ int qfile_main(int argc, char **argv)
 		found += q_vdb_foreach_pkg_sorted(qfile_cb, &state);
 
 	/* Also check plib_reg */
-	if (nb_of_queries > 0)
+	if (nb_of_queries > 0 && !state.skip_plibreg)
 		found += qfile_check_plibreg(&state);
 
 	if (state.args.non_orphans) {
