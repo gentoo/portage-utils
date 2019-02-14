@@ -245,9 +245,7 @@ static int get_size_digest(char * line)
 
 static int check_file(char * filename)
 {
-	/* TODO, this is 4096 too low, because this variable also holds
-	 * path; for linux path is max 4096 chars */
-	if (strlen(filename) > 255)
+	if (strlen(filename) > _Q_PATH_MAX)
 		err("Filename too long");
 
 	if (filename[0] != '/') {
