@@ -73,6 +73,64 @@ struct qfile_opt_state {
 	bool need_full_atom;
 };
 
+/*
+ * As a final step, check if file is in the plib_reg
+ */
+static int qfile_check_plibreg(void *priv)
+{
+	struct qfile_opt_state *state = priv;
+
+	int fd_plibreg;
+        FILE *fp_plibreg;
+	struct stat cst;
+
+	/* Open plibreg */
+        fp_plibreg = NULL;
+	fd_plibreg = open("/var/lib/portage/preserved_libs_registry", O_RDONLY|O_CLOEXEC, 0);
+	if (fd_plibreg == -1)
+		return 0;
+	if (fstat(fd_plibreg, &cst)) {
+		close(fd_plibreg);
+		return 0;
+	}
+	if ((fp_plibreg = fdopen(fd_plibreg, "r")) == NULL) {
+		close(fd_plibreg);
+		return 0;
+	}
+
+        qfile_args_t *args = &state->args;
+        char **base_names = args->basenames;
+        char **dir_names = args->dirnames;
+        short *non_orphans = args->non_orphans;
+	char file[_Q_PATH_MAX];
+	char *line = NULL;
+	size_t len = 0;
+	int found = 0;
+
+	for (int i = 0; i < args->length; i++) {
+		if (base_names[i] == NULL)
+			continue;
+		if (non_orphans && non_orphans[i])
+			continue;
+
+		snprintf(file, sizeof(file), "%s/%s", dir_names[i], base_names[i]);
+
+		while (getline(&line, &len, fp_plibreg) != -1)
+			if (strstr(line, file) != NULL) {
+				found++;
+				if (quiet)
+					puts("");
+				else
+					printf("%s%splib_registry%s (%s)\n", BOLD, BLUE, NORM, file);
+			}
+	}
+
+	if (line)
+		free(line);
+
+	return found;
+}
+
 static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qfile_opt_state *state = priv;
@@ -479,6 +537,10 @@ int qfile_main(int argc, char **argv)
 			tree_close(vdb);
 		}
 	}
+
+	/* Also check plib_reg */
+	if (nb_of_queries > 0)
+		found += qfile_check_plibreg(&state);
 
 	if (state.args.non_orphans) {
 		/* display orphan files */
