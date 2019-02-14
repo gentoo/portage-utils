@@ -138,6 +138,14 @@ static int qfile_check_plibreg(void *priv)
 	return found;
 }
 
+/*
+ * 1. Do package exclusion tests
+ * 2. Run through CONTENTS file, perform tests and fail-by-continue
+ * 3. On success bump and return retvalue 'found'
+ *
+ * We assume the people calling us have chdir(/var/db/pkg) and so
+ * we use relative paths throughout here.
+ */
 static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qfile_opt_state *state = priv;
@@ -182,6 +190,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (fp == NULL)
 		goto qlist_done;
 
+	/* Run through CONTENTS file */
 	while (getline(&state->buf, &state->buflen, fp) != -1) {
 		size_t dirname_len;
 		contents_entry *e;
@@ -546,7 +555,8 @@ int qfile_main(int argc, char **argv)
 
 	/* Prepare the qfile(...) arguments structure */
 	nb_of_queries = prepare_qfile_args(argc, (const char **) argv, &state);
-	/* Now do the actual `qfile` checking */
+	
+	/* Now do the actual `qfile` checking by looking at CONTENTS of all pkgs */
 	if (nb_of_queries > 0) {
 		tree_ctx *vdb = tree_open_vdb(portroot, portvdb);
 		if (vdb != NULL) {
@@ -555,7 +565,11 @@ int qfile_main(int argc, char **argv)
 		}
 	}
 
-	/* Also check plib_reg */
+	/* Also check the prune lib registry.
+	 * But only for files we otherwise couldn't account for. If we'd check
+	 * plib_reg for all files, we would get duplicate messages for files that were
+	 * re-added to CONTENTS files after a version upgrade (which are also recorded
+	 * in plib_reg). */
 	if (nb_of_queries > 0 && !state.skip_plibreg)
 		found += qfile_check_plibreg(&state);
 
