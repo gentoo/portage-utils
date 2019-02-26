@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
@@ -675,6 +675,21 @@ qcache_dropped(qcache_data *data)
 	}
 
 	free(keywords);
+}
+
+static void
+print_seconds_for_earthlings(const unsigned long t)
+{
+	unsigned dd, hh, mm, ss;
+	unsigned long tt = t;
+	ss = tt % 60; tt /= 60;
+	mm = tt % 60; tt /= 60;
+	hh = tt % 24; tt /= 24;
+	dd = tt;
+	if (dd) printf("%s%u%s day%s, ", GREEN, dd, NORM, (dd == 1 ? "" : "s"));
+	if (hh) printf("%s%u%s hour%s, ", GREEN, hh, NORM, (hh == 1 ? "" : "s"));
+	if (mm) printf("%s%u%s minute%s, ", GREEN, mm, NORM, (mm == 1 ? "" : "s"));
+	printf("%s%u%s second%s", GREEN, ss, NORM, (ss == 1 ? "" : "s"));
 }
 
 static void
