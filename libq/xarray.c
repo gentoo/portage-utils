@@ -1,14 +1,16 @@
 /*
- * Copyright 2003-2018 Gentoo Foundation
+ * Copyright 2003-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2003-2007 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2004-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 typedef struct {
 	void **eles;
 	size_t num;
+	size_t len;
 } array_t;
 
 #define xrealloc_array(ptr, size, ele_size) xrealloc(ptr, (size) * (ele_size))
@@ -23,6 +25,7 @@ typedef struct {
 #define array_init_decl { .eles = NULL, .num = 0, }
 #define array_cnt(arr) (arr)->num
 #define DECLARE_ARRAY(arr) array_t _##arr = array_init_decl, *arr = &_##arr
+#define ARRAY_INC_SIZE 32
 
 /* Push a pointer to memory we already hold and don't want to release.  Do not
  * mix xarraypush_ptr usage with the other push funcs which duplicate memory.
@@ -31,7 +34,10 @@ typedef struct {
 static void *xarraypush_ptr(array_t *arr, void *ele)
 {
 	size_t n = arr->num++;
-	arr->eles = xrealloc_array(arr->eles, arr->num, sizeof(ele));
+	if (arr->num > arr->len) {
+		arr->len += ARRAY_INC_SIZE;
+		arr->eles = xrealloc_array(arr->eles, arr->len, sizeof(ele));
+	}
 	arr->eles[n] = ele;
 	return ele;
 }
@@ -41,6 +47,18 @@ static void *xarraypush(array_t *arr, const void *ele, size_t ele_len)
 }
 #define xarraypush_str(arr, ele) xarraypush(arr, ele, strlen(ele) + 1 /*NUL*/)
 #define xarraypush_struct(arr, ele) xarraypush(arr, ele, sizeof(*(ele)))
+
+static void xarraydelete_ptr(array_t *arr, size_t elem)
+{
+	arr->num--;
+	memmove(&arr->eles[elem], &arr->eles[elem + 1], arr->num - elem);
+}
+
+static void xarraydelete(array_t *arr, size_t elem)
+{
+	free(arr->eles[elem]);
+	xarraydelete_ptr(arr, elem);
+}
 
 /* Useful for people who call xarraypush_ptr as it does not free any of the
  * pointers in the eles list.
