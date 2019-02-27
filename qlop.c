@@ -714,17 +714,29 @@ static int do_emerge_log(
 				pkg = NULL;
 			}
 
+			/* extract (X of Y) from id, bug #442406 */
+			if ((p = strchr(pkgw->id, '(')) != NULL) {
+				if ((q = strchr(p, ')')) != NULL) {
+					q[1] = '\0';
+					p--;
+				} else {
+					p = NULL;
+				}
+			}
+
 			if (flags->do_time) {
-				printf("%s >>> %s%s%s: %s... ETA: %s\n",
+				printf("%s >>> %s%s%s: %s...%s ETA: %s\n",
 						fmt_date(flags, pkgw->tbegin, 0),
 						YELLOW, fmt_atom(flags, pkgw->atom), NORM,
 						fmt_elapsedtime(flags, elapsed),
+						p == NULL ? "" : p,
 						maxtime == 0 ? "unknown" :
 							fmt_elapsedtime(flags, maxtime - elapsed));
 			} else {
-				printf("%s >>> %s%s%s... ETA: %s\n",
+				printf("%s >>> %s%s%s...%s ETA: %s\n",
 						fmt_date(flags, pkgw->tbegin, 0),
 						YELLOW, fmt_atom(flags, pkgw->atom), NORM,
+						p == NULL ? "" : p,
 						maxtime == 0 ? "unknown" :
 							fmt_elapsedtime(flags, maxtime - elapsed));
 			}
