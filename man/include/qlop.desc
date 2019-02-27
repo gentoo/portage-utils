@@ -1,4 +1,25 @@
 .I qlop
 reads from $EMERGE_LOG_DIR/emerge.log and tries to extract
-information about merges, unmerges and syncs.  For packages, it can
-calculate average merge times or just list them.
+information about merges, unmerges and syncs.  It can
+calculate average merge times or just list them.  When given no
+arguments or just \fB-v\fR, \fIqlop\fR acts as if \fB-must\fR was given
+and thus lists the time taken for all occurrances of merges, unmerges
+and sync operations found in the log.
+.P
+By default, packages are printed as CATEGORY/PN.  Use \fB-v\fR to print
+the package version and revision numbers, e.g\. CATEGORY/PF.  Note that
+when using this option, averages (\fB-a\fR) are reported per version
+instead of per package.
+.P
+The non-option arguments to \fIqlop\fR can be any valid atoms.  Multiple
+can be given to match.  Since all of these are treated as atoms, version
+specifications can be used such as \fB<bash-5\fR.  This allows to zoom
+in further on specific packages.
+.P
+After version \fB0.74\fR of portage-utils, \fIqlop\fR was changed
+considerably to be more consistent and more advanced.  Most notably,
+this has changed default date output and commmand line flags.  Instead
+of reporting the time the operation finished, \fIqlop\fR now reports the
+time the operation started.  The behaviour of the old \fB-q\fR flag is
+best matched by the new \fB-t\fR flag.  Similar, the old \fB-t\fR flag
+is matched by the new \fB-a\fR flag.

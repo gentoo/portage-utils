@@ -8,35 +8,68 @@ qlop \- emerge log analyzer
 .SH DESCRIPTION
 .I qlop
 reads from $EMERGE_LOG_DIR/emerge.log and tries to extract
-information about merges, unmerges and syncs.  For packages, it can
-calculate average merge times or just list them.
+information about merges, unmerges and syncs.  It can
+calculate average merge times or just list them.  When given no
+arguments or just \fB-v\fR, \fIqlop\fR acts as if \fB-must\fR was given
+and thus lists the time taken for all occurrances of merges, unmerges
+and sync operations found in the log.
+.P
+By default, packages are printed as CATEGORY/PN.  Use \fB-v\fR to print
+the package version and revision numbers, e.g\. CATEGORY/PF.  Note that
+when using this option, averages (\fB-a\fR) are reported per version
+instead of per package.
+.P
+The non-option arguments to \fIqlop\fR can be any valid atoms.  Multiple
+can be given to match.  Since all of these are treated as atoms, version
+specifications can be used such as \fB<bash-5\fR.  This allows to zoom
+in further on specific packages.
+.P
+After version \fB0.74\fR of portage-utils, \fIqlop\fR was changed
+considerably to be more consistent and more advanced.  Most notably,
+this has changed default date output and commmand line flags.  Instead
+of reporting the time the operation finished, \fIqlop\fR now reports the
+time the operation started.  The behaviour of the old \fB-q\fR flag is
+best matched by the new \fB-t\fR flag.  Similar, the old \fB-t\fR flag
+is matched by the new \fB-a\fR flag.
 .SH OPTIONS
 .TP
-\fB\-g\fR, \fB\-\-gauge\fR
-Gauge number of times a package has been merged.  This shows the
-merge time for each individual merge of package.
+\fB\-c\fR, \fB\-\-summary\fR
+Show a grand total for averages.  This option implies \fB-a\fR.
+Useful to compute time it takes to recompile all packages or a set
+of packages (e.g\. world).
 .TP
 \fB\-t\fR, \fB\-\-time\fR
-Calculate merge time for a specific package.  This is the average
-time for all merges of package.
+Show the time it took to merge, unmerge or sync.
+.TP
+\fB\-a\fR, \fB\-\-average\fR
+Calculate average merge, unmerge or sync time.  This is the average
+time for all occurrences found respecting any date limits.
 .TP
 \fB\-H\fR, \fB\-\-human\fR
-Print seconds in human readable format (needs \fB\-t\fR), using
+Print elaspsed time in human readable format.  This form uses
 minutes, hours and days instead of just seconds.
 .TP
-\fB\-l\fR, \fB\-\-list\fR
+\fB\-m\fR, \fB\-\-merge\fR
 Show merge history.
 .TP
-\fB\-u\fR, \fB\-\-unlist\fR
+\fB\-u\fR, \fB\-\-unmerge\fR
 Show unmerge history.
+.TP
+\fB\-U\fR, \fB\-\-autoclean\fR
+Show autoclean unmerge history.
 .TP
 \fB\-s\fR, \fB\-\-sync\fR
 Show sync history.
 .TP
-\fB\-c\fR, \fB\-\-current\fR
-Show current emerging packages.  This relies on
-.I FEATURES=sandbox
-in order to detect running merges.
+\fB\-e\fR, \fB\-\-endtime\fR
+Report time at which the operation finished (iso started).
+.TP
+\fB\-r\fR, \fB\-\-running\fR
+Print operations currently in progress.  An ETA is calculated based
+on the average for the operation.  If the elapsed exceeds the
+average, the ETA is calculated against the longest time observed for
+the operation.  If the elapsed time exceeds this too, or no previous
+occurrences for the operation exist, \fIunknown\fR is printed.
 .TP
 \fB\-d\fR \fI<arg>\fR, \fB\-\-date\fR \fI<arg>\fR
 Limit the selection of packages to the date given, or to the range
@@ -62,11 +95,14 @@ Use \fIFORMAT\fR as input for \fBstrptime\fR(3) to parse \fIDATE\fR.
 \fB\-f\fR \fI<arg>\fR, \fB\-\-logfile\fR \fI<arg>\fR
 Read emerge logfile instead of $EMERGE_LOG_DIR/emerge.log.
 .TP
+\fB\-w\fR \fI<arg>\fR, \fB\-\-atoms\fR \fI<arg>\fR
+Read package atoms to report from file.
+.TP
 \fB\-\-root\fR \fI<arg>\fR
 Set the ROOT env var.
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
-Print package versions and revisions.
+Print package versions and revisions (PF) instead of package (PN).
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
 Tighter output; suppress warnings.

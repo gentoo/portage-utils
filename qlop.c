@@ -1,38 +1,47 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #ifdef APPLET_qlop
 
 #define QLOP_DEFAULT_LOGFILE "emerge.log"
 
-#define QLOP_FLAGS "gtHluscd:f:" COMMON_FLAGS
+#define QLOP_FLAGS "ctaHmuUserd:f:w:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
-	{"gauge",     no_argument, NULL, 'g'},
+	{"summary",   no_argument, NULL, 'c'},
 	{"time",      no_argument, NULL, 't'},
+	{"average",   no_argument, NULL, 'a'},
 	{"human",     no_argument, NULL, 'H'},
-	{"list",      no_argument, NULL, 'l'},
-	{"unlist",    no_argument, NULL, 'u'},
+	{"merge",     no_argument, NULL, 'm'},
+	{"unmerge",   no_argument, NULL, 'u'},
+	{"autoclean", no_argument, NULL, 'U'},
 	{"sync",      no_argument, NULL, 's'},
-	{"current",   no_argument, NULL, 'c'},
+	{"endtime",   no_argument, NULL, 'e'},
+	{"running",   no_argument, NULL, 'r'},
 	{"date",       a_argument, NULL, 'd'},
 	{"logfile",    a_argument, NULL, 'f'},
+	{"atoms",      a_argument, NULL, 'w'},
 	COMMON_LONG_OPTS
 };
 static const char * const qlop_opts_help[] = {
-	"Gauge number of times a package has been merged",
-	"Calculate merge time for a specific package",
-	"Print seconds in human readable format (needs -t)",
+	"Print summary of average merges (implies -a)",
+	"Print time taken to complete action",
+	"Print average time taken to complete action",
+	"Print elapsed time in human readable format (use with -t or -a)",
 	"Show merge history",
 	"Show unmerge history",
+	"Show autoclean unmerge history",
 	"Show sync history",
+	"Report time at which the operation finished (iso started)",
 	"Show current emerging packages",
 	"Limit selection to this time (1st -d is start, 2nd -d is end)",
 	"Read emerge logfile instead of $EMERGE_LOG_DIR/" QLOP_DEFAULT_LOGFILE,
+	"Read package atoms to report from file",
 	COMMON_OPTS_HELP
 };
 static const char qlop_desc[] =
@@ -44,672 +53,18 @@ static const char qlop_desc[] =
 	"  -d '%d.%m.%Y|25.12.2015'  (format is specified)";
 #define qlop_usage(ret) usage(ret, QLOP_FLAGS, qlop_long_opts, qlop_opts_help, qlop_desc, lookup_applet_idx("qlop"))
 
-#define QLOP_LIST    0x01
-#define QLOP_UNLIST  0x02
-
-static void
-print_seconds_for_earthlings(const unsigned long t)
-{
-	unsigned dd, hh, mm, ss;
-	unsigned long tt = t;
-	ss = tt % 60; tt /= 60;
-	mm = tt % 60; tt /= 60;
-	hh = tt % 24; tt /= 24;
-	dd = tt;
-	if (dd) printf("%s%u%s day%s, ", GREEN, dd, NORM, (dd == 1 ? "" : "s"));
-	if (hh) printf("%s%u%s hour%s, ", GREEN, hh, NORM, (hh == 1 ? "" : "s"));
-	if (mm) printf("%s%u%s minute%s, ", GREEN, mm, NORM, (mm == 1 ? "" : "s"));
-	printf("%s%u%s second%s", GREEN, ss, NORM, (ss == 1 ? "" : "s"));
-}
-
-static const char *
-chop_ctime(time_t t)
-{
-	static char ctime_out[50];
-	int ret = snprintf(ctime_out, sizeof(ctime_out), "%s", ctime(&t));
-	/* Assume no error! */
-	ctime_out[ret - 1] = '\0';
-	return ctime_out;
-}
-
-static unsigned long
-show_merge_times(char *package, const char *logfile, int average, char human_readable,
-                 time_t start_time, time_t end_time)
-{
-	FILE *fp;
-	char cat[126], buf[2][BUFSIZ];
-	char *pkg, *p, *q;
-	char ep[BUFSIZ];
-	unsigned long count, merge_time;
-	time_t t[2];
-	depend_atom *atom;
-	unsigned int parallel_emerge;
-
-	t[0] = t[1] = 0UL;
-	count = merge_time = 0;
-	cat[0] = 0;
-
-	/* setup cat and pkg vars */
-	if ((p = strchr(package, '/')) != NULL) {
-		pkg = p + 1;
-		strncpy(cat, package, sizeof(cat));
-		if ((p = strchr(cat, '/')) != NULL)
-			*p = 0;
-	} else {
-		pkg = package;
-	}
-
-	if ((fp = fopen(logfile, "r")) == NULL) {
-		warnp("Could not open logfile '%s'", logfile);
-		return 1;
-	}
-
-	/* loop over lines searching for cat/pkg */
-	parallel_emerge = 0;
-	while (fgets(buf[0], sizeof(buf[0]), fp) != NULL) {
-		if ((p = strchr(buf[0], '\n')) != NULL)
-			*p = '\0';
-		if ((p = strchr(buf[0], ':')) == NULL)
-			continue;
-		*p++ = '\0';
-		if (strstr(p, pkg) == NULL)
-			continue;
-
-		t[0] = atol(buf[0]);
-		if (t[0] < start_time || t[0] > end_time)
-			continue;
-
-		/* copy message (stripping timestamp) */
-		strncpy(buf[1], p, BUFSIZ);
-		rmspace(buf[1]);
-
-		if (strncmp(buf[1], "Started emerge on:", 18) == 0) {
-			/* a parallel emerge was launched */
-			parallel_emerge++;
-			continue;
-		}
-
-		if (strncmp(buf[1], "*** terminating.", 16) == 0) {
-			if (parallel_emerge > 0) {
-				/* a parallel emerge has finished */
-				parallel_emerge--;
-				continue;
-			} else {
-				/* the main emerge was stopped? if there's more lines
-				 * this file is just corrupt or truncated at the front */
-				continue;
-			}
-		}
-
-		if (strncmp(buf[1], ">>> emerge (", 12) == 0) {
-			/* construct the matching end marker */
-			snprintf(ep, BUFSIZ, "completed %s", &buf[1][4]);
-
-			/* skip over "(X of Y)" */
-			if ((p = strchr(buf[1], ')')) == NULL) {
-				*ep = '\0';
-				continue;
-			}
-			*p++ = '\0';
-
-			/* get the package as atom */
-			strncpy(buf[0], p, BUFSIZ);
-			rmspace(buf[0]);
-			if ((p = strchr(buf[0], ' ')) == NULL) {
-				*ep = '\0';
-				continue;
-			}
-			*p = '\0';
-			if ((atom = atom_explode(buf[0])) == NULL) {
-				*ep = '\0';
-				continue;
-			}
-
-			/* match atom against our search */
-			if ((*cat && ((strcmp(cat, atom->CATEGORY) == 0) &&
-							(strcmp(pkg, atom->PN) == 0))) ||
-					(strcmp(pkg, atom->PN) == 0))
-			{
-				while (fgets(buf[0], sizeof(buf[0]), fp) != NULL) {
-					if ((p = strchr(buf[0], '\n')) != NULL)
-						*p = '\0';
-					if ((p = strchr(buf[0], ':')) == NULL)
-						continue;
-					*p++ = '\0';
-
-					t[1] = atol(buf[0]);
-					strcpy(buf[1], p);
-					rmspace(buf[1]);
-
-					if (strncmp(buf[1], "Started emerge on:", 18) == 0) {
-						/* a parallel emerge was launched */
-						parallel_emerge++;
-						continue;
-					}
-
-					if (strncmp(buf[1], "*** terminating.", 16) == 0) {
-						if (parallel_emerge > 0) {
-							/* a parallel emerge has finished */
-							parallel_emerge--;
-							continue;
-						} else {
-							/* the main emerge was stopped? if there's
-							 * more lines this file is just corrupt or
-							 * truncated at the front */
-							break;
-						}
-					}
-
-					/* pay attention to malformed log files (when the
-					 * end of an emerge process is not indicated by the
-					 * line '*** terminating'). We assume that the log
-					 * is malformed when we find a parallel emerge
-					 * process which is trying to emerge the same
-					 * package
-					 */
-					if (strncmp(buf[1], ">>> emerge (", 12) == 0 &&
-							parallel_emerge > 0)
-					{
-						/* find package name */
-						p = strchr(buf[1], ')');
-						q = strchr(ep, ')');
-						if (!p || !q)
-							continue;
-
-						/* is this emerge doing the same thing as we're
-						 * looking for? that means we failed */
-						if (strcmp(p, q) == 0) {
-							parallel_emerge--;
-							/* update the main emerge reference data */
-							snprintf(ep, BUFSIZ, "completed %s", &buf[1][4]);
-							t[0] = t[1];
-							continue;
-						}
-					}
-
-					/* if this line matches "completed emerge (X of Y) ..."
-					 * we're finally somewhere */
-					if (strncmp(&buf[1][4], ep, BUFSIZ - 4) == 0) {
-						if (!average) {
-							buf[1][0] = '\0';
-							if (verbose) {
-								if (atom->PR_int)
-									snprintf(buf[1], sizeof(buf[1]),
-											"-%s-r%i", atom->PV,  atom->PR_int);
-								else
-									snprintf(buf[1], sizeof(buf[1]),
-											"-%s", atom->PV);
-							}
-							printf("%s%s%s%s: %s: ",
-									BLUE, atom->PN, buf[1], NORM,
-									chop_ctime(t[0]));
-							if (human_readable)
-								print_seconds_for_earthlings(t[1] - t[0]);
-							else
-								printf("%s%"PRIu64"%s seconds",
-										GREEN, (uint64_t)(t[1] - t[0]), NORM);
-							printf("\n");
-						}
-						merge_time += (t[1] - t[0]);
-						count++;
-						break;
-					}
-				}
-			}
-			atom_implode(atom);
-		}
-	}
-	fclose(fp);
-	if (count == 0)
-		return 0;
-	if (average == 1) {
-		printf("%s%s%s: ", BLUE, pkg, NORM);
-		if (human_readable)
-			print_seconds_for_earthlings(merge_time / count);
-		else
-			printf("%s%lu%s seconds average", GREEN, merge_time / count, NORM);
-		printf(" for %s%lu%s merges\n", GREEN, count, NORM);
-	} else {
-		printf("%s%s%s: %s%lu%s times\n", BLUE, pkg, NORM, GREEN, count, NORM);
-	}
-	return 0;
-}
-
-static void
-show_emerge_history(int listflag, array_t *atoms, const char *logfile,
-                    time_t start_time, time_t end_time)
-{
-	FILE *fp;
-	int linelen;
-	size_t buflen;
-	char *buf, merged;
-	char *p, *q;
-	bool showit;
-	size_t i;
-	time_t t;
-	depend_atom *atom, *logatom;
-
-	if ((fp = fopen(logfile, "r")) == NULL) {
-		warnp("Could not open logfile '%s'", logfile);
-		return;
-	}
-
-	buf = NULL;
-	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
-		if (linelen < 30)
-			continue;
-
-		rmspace_len(buf, (size_t)linelen);
-		if ((p = strchr(buf, ':')) == NULL)
-			continue;
-		*p = 0;
-		q = p + 3;
-		/* Make sure there's leading white space and not a truncated
-		 * string. #573106 */
-		if (p[1] != ' ' || p[2] != ' ')
-			continue;
-
-		t = (time_t) atol(buf);
-		if (t < start_time || t > end_time)
-			continue;
-
-		if ((listflag & QLOP_LIST) && !strncmp(q, "::: completed emerge (", 22)) {
-			merged = 1;
-			if ((p = strchr(q, ')')) == NULL)
-				continue;
-			q = p + 2;
-			if ((p = strchr(q, ' ')) == NULL)
-				continue;
-			*p = 0;
-		} else if ((listflag & QLOP_UNLIST) && !strncmp(q, ">>> unmerge success: ", 21)) {
-			merged = 0;
-			if ((p = strchr(q, ':')) == NULL)
-				continue;
-			q = p + 2;
-		} else
-			continue;
-
-		logatom = atom_explode(q);
-		if (array_cnt(atoms)) {
-			showit = false;
-			array_for_each(atoms, i, atom)
-				if (atom_compare(atom, logatom) == EQUAL) {
-					showit = true;
-					break;
-				}
-		} else
-			showit = true;
-
-		if (showit) {
-			if (!quiet)
-				printf("%s %s %s%s%s\n", chop_ctime(t), (merged ? ">>>" : "<<<"), (merged ? GREEN : RED), q, NORM);
-			else {
-				if (quiet == 1)
-					printf("%s ", chop_ctime(t));
-				if (quiet <= 2)
-					printf("%s ", (merged ? ">>>" : "<<<"));
-				printf("%s%s/%s%s\n", (merged ? GREEN : RED), logatom->CATEGORY, logatom->PN, NORM);
-			}
-		}
-		atom_implode(logatom);
-	}
-
-	free(buf);
-	fclose(fp);
-}
-
-/* The format of the sync log has changed over time.
-
-Old format:
-1106804103: Started emerge on: Jan 27, 2005 05:35:03
-1106804103:  *** emerge  sync
-1106804103:  === sync
-1106804103: >>> starting rsync with rsync://192.168.0.5/gentoo-portage
-1106804537: === Sync completed with rsync://192.168.0.5/gentoo-portage
-1106804538:  *** terminating.
-
-New format:
-1431764402: Started emerge on: May 16, 2015 04:20:01
-1431764402:  *** emerge --quiet --keep-going --verbose --nospinner --oneshot --quiet-build=n --sync
-1431764402:  === sync
-1431764402: >>> Syncing repository 'gentoo' into '/usr/portage'...
-1431764402: >>> Starting rsync with rsync://[2a01:90:200:10::1a]/gentoo-portage
-1431764460: === Sync completed for gentoo
-1431764493:  *** terminating.
-*/
-static void
-show_sync_history(const char *logfile, time_t start_time, time_t end_time)
-{
-	FILE *fp;
-	int linelen;
-	size_t buflen;
-	char *buf, *p;
-	time_t t;
-
-	if ((fp = fopen(logfile, "r")) == NULL) {
-		warnp("Could not open logfile '%s'", logfile);
-		return;
-	}
-
-	buf = NULL;
-	/* Just find the finish lines. */
-	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
-		/* This cuts out like ~10% of the log. */
-		if (linelen < 35)
-			continue;
-
-		/* Make sure there's a timestamp in here. */
-		if ((p = strchr(buf, ':')) == NULL)
-			continue;
-		p += 2;
-
-		if (strncmp(p, "=== Sync completed ", 19) != 0)
-			continue;
-		p += 19;
-
-		rmspace_len(buf, (size_t)linelen);
-
-		t = (time_t)atol(buf);
-		if (t < start_time || t > end_time)
-			continue;
-
-		if (!strncmp(p, "with ", 5))
-			p += 5;
-		else if (!strncmp(p, "for ", 4))
-			/* This shows just the repo name not the remote host ... */
-			p += 4;
-		else
-			continue;
-		printf("%s >>> %s%s%s\n", chop_ctime(t), GREEN, p, NORM);
-	}
-
-	free(buf);
-	fclose(fp);
-}
-
-static void show_current_emerge(void);
-#ifdef __linux__
-# include <asm/param.h>
-#endif
-#if defined __linux__ || defined __GNU__
-# include <elf.h>
-static unsigned long hz = 0;
-static void init_hz(void)
-{
-#ifdef HZ
-	hz = HZ;
-#endif
-	/* kernel pushes elf notes onto stack */
-	unsigned long *elf_note = (unsigned long *)environ;
-	while (!*elf_note++)
-		continue;
-	while (elf_note[0]) {
-		if (elf_note[0] == AT_CLKTCK) {
-			hz = elf_note[1];
-			break;
-		}
-		elf_note += 2;
-	}
-	if (!hz)
-		hz = 100;
-}
-
-static char *
-root_readlink(const int pid)
-{
-	static char path[_Q_PATH_MAX];
-	char buf[_Q_PATH_MAX];
-	memset(&path, 0, sizeof(path));
-	snprintf(buf, sizeof(buf), "/proc/%d/root", pid);
-	if (readlink(buf, path, sizeof(path) - 1) == -1)
-		return NULL;
-	else
-		return path;
-}
-
-void show_current_emerge(void)
-{
-	DIR *proc;
-	struct dirent *de;
-	pid_t pid;
-	static char *cmdline, *bufstat;
-	static size_t cmdline_len, bufstat_len;
-	char path[50];
-	char *p, *q;
-	unsigned long long start_time = 0;
-	double uptime_secs;
-	time_t start_date;
-
-	if ((proc = opendir("/proc")) == NULL) {
-		warnp("Could not open /proc");
-		return;
-	}
-
-	if (!hz)
-		init_hz();
-
-	while ((de = readdir(proc)) != NULL) {
-
-		if ((pid = (pid_t)atol(de->d_name)) == 0)
-			continue;
-
-		/* portage renames the cmdline so the package name is first */
-		snprintf(path, sizeof(path), "/proc/%i/cmdline", pid);
-		if (!eat_file(path, &cmdline, &cmdline_len))
-			continue;
-
-		if (cmdline[0] == '[' && (p = strchr(cmdline, ']')) != NULL &&
-				strstr(cmdline, "sandbox") != NULL)
-		{
-			*p = '\0';
-			p = cmdline + 1;
-			q = p + strlen(p) + 1;
-
-			/* open the stat file to figure out how long we have been running */
-			snprintf(path, sizeof(path), "/proc/%i/stat", pid);
-			if (!eat_file(path, &bufstat, &bufstat_len))
-				continue;
-
-			/* ripped from procps/proc/readproc.c */
-			if ((q = strchr(bufstat, ')')) == NULL)
-				continue;
-			/* grab the start time */
-			sscanf(q + 2,
-				"%*c "
-				"%*d %*d %*d %*d %*d "
-				"%*u %*u %*u %*u %*u "
-				"%*u %*u %*u %*u "
-				"%*d %*d "
-				"%*d "
-				"%*d "
-				"%llu ",
-				&start_time);
-			/* get uptime */
-			if (!eat_file("/proc/uptime", &bufstat, &bufstat_len))
-				continue;
-			sscanf(bufstat, "%lf", &uptime_secs);
-
-			/* figure out when this thing started and then show it */
-			start_date = time(0) - (uptime_secs - (start_time / hz));
-			printf(
-				" %s*%s %s%s%s\n"
-				"     started: %s%s%s\n"
-				"     elapsed: ", /*%s%llu%s seconds\n",*/
-				BOLD, NORM, BLUE, p, NORM,
-				GREEN, chop_ctime(start_date), NORM);
-			print_seconds_for_earthlings(uptime_secs - (start_time / hz));
-			puts(NORM);
-			p = root_readlink(pid);
-			if (p && strcmp(p, "/"))
-				printf("     chroot:  %s%s%s\n", GREEN, p, NORM);
-		}
-	}
-
-	closedir(proc);
-
-	if (start_time == 0 && verbose)
-		puts("No emerge processes located");
-}
-#elif defined(__FreeBSD__)
-# include <kvm.h>
-# include <sys/param.h>
-# include <sys/sysctl.h>
-# include <sys/user.h>
-void show_current_emerge(void)
-{
-	kvm_t *kd = NULL;
-	struct kinfo_proc *ip;
-	int i; int total_processes;
-	char *p, *q;
-	time_t start_date = 0;
-
-	if (! (kd = kvm_open("/dev/null", "/dev/null", "/dev/null",
-					O_RDONLY, "kvm_open")))
-	{
-		warnp("Could not open kvm: %s", kvm_geterr(kd));
-		return;
-	}
-
-	ip = kvm_getprocs(kd, KERN_PROC_PROC, 0, &total_processes);
-
-	for (i = 0; i < total_processes; i++) {
-		char **proc_argv = NULL;
-		char *buf = NULL;
-
-		if (strcmp(ip[i].ki_comm, "sandbox") != 0)
-			continue;
-
-		proc_argv = kvm_getargv(kd, &(ip[i]), 0);
-
-		if (!proc_argv || (buf = xstrdup(proc_argv[0])) == NULL ||
-		    buf[0] != '[' || (p = strchr(buf, ']')) == NULL) {
-			free(buf);
-			continue;
-		}
-
-		*p = '\0';
-		p = buf+1;
-		q = p + strlen(p) + 1;
-
-		printf(
-			" %s*%s %s%s%s\n"
-			"     started: %s%s%s\n"
-			"     elapsed: ", /*%s%llu%s seconds\n",*/
-			BOLD, NORM, BLUE, p, NORM,
-			GREEN, chop_ctime(ip[i].ki_start.tv_sec), NORM);
-		print_seconds_for_earthlings(time(0) - ip[i].ki_start.tv_sec);
-		puts(NORM);
-
-		free(buf);
-	}
-
-	if (start_date == 0 && verbose)
-		puts("No emerge processes located");
-}
-#elif defined(__MACH__)
-# include <sys/sysctl.h>
-void show_current_emerge(void)
-{
-	int mib[3];
-	size_t size = 0;
-	struct kinfo_proc *ip, *raip;
-	int ret, total_processes, i;
-	char *p, *q;
-	time_t start_date = 0;
-	char args[512];
-
-	mib[0] = CTL_KERN;
-	mib[1] = KERN_PROC;
-	mib[2] = KERN_PROC_ALL; /* could restrict to _UID (effective uid) */
-
-	/* probe once to get the current size; estimate only, but OS tries
-	 * to round up if it can predict a sudden growth, so optimise below
-	 * for the optimistic case */
-	ret = sysctl(mib, 3, NULL, &size, NULL, 0);
-	ip = xmalloc(sizeof(*ip) * size);
-	while (1) {
-		ret = sysctl(mib, 3, ip, &size, NULL, 0);
-		if (ret >= 0 && errno == ENOMEM) {
-			size += size / 10; /* may be a bit overdone... */
-			raip = realloc(ip, sizeof(struct kinfo_proc) * size);
-			if (raip == NULL) {
-				free(ip);
-				warnp("Could not extend allocated block to "
-						"%zd bytes for process information",
-						sizeof(struct kinfo_proc) * size);
-				return;
-			}
-			ip = raip;
-		} else if (ret < 0) {
-			free(ip);
-			warnp("Could not retrieve process information");
-			return;
-		} else {
-			break;
-		}
-	}
-
-	total_processes = size / sizeof(struct kinfo_proc);
-
-	/* initialise mib for argv retrieval calls */
-	mib[0] = CTL_KERN;
-	mib[1] = KERN_PROCARGS;
-
-	for (i = 0; i < total_processes; i++) {
-		char *buf = NULL;
-		size_t argssize = sizeof(args);
-
-		if (strcmp(ip[i].kp_proc.p_comm, "sandbox") != 0)
-			continue;
-
-		mib[2] = ip[i].kp_proc.p_pid;
-		if (sysctl(mib, 3, args, &argssize, NULL, 0) != 0) {
-			free(ip);
-			return;
-		}
-
-		/* this is magic to get back up in the stack where the arguments
-		 * start */
-		for (buf = args; buf < &args[argssize]; buf++)
-			if (*buf == '\0')
-				break;
-		if (buf == &args[argssize]) {
-			free(ip);
-			continue;
-		}
-		if ((buf = xstrdup(buf)) == NULL ||
-		    buf[0] != '[' || (p = strchr(buf, ']')) == NULL) {
-			free(buf);
-			continue;
-		}
-
-		*p = '\0';
-		p = buf+1;
-		q = p + strlen(p) + 1;
-
-		printf(
-			" %s*%s %s%s%s\n"
-			"     started: %s%s%s\n"
-			"     elapsed: ", /*%s%llu%s seconds\n",*/
-			BOLD, NORM, BLUE, p, NORM,
-			GREEN, chop_ctime(ip[i].kp_proc.p_starttime.tv_sec), NORM);
-		print_seconds_for_earthlings(time(0) - ip[i].kp_proc.p_starttime.tv_sec);
-		puts(NORM);
-
-		free(buf);
-	}
-
-	free(ip);
-
-	if (start_date == 0 && verbose)
-		puts("No emerge processes located");
-}
-#else
-void show_current_emerge(void)
-{
-	errf("not supported on your OS");
-}
-#endif
+struct qlop_mode {
+	char do_time:1;
+	char do_merge:1;
+	char do_unmerge:1;
+	char do_autoclean:1;
+	char do_sync:1;
+	char do_running:1;
+	char do_average:1;
+	char do_summary:1;
+	char do_human:1;
+	char do_endtime:1;
+};
 
 static bool
 parse_date(const char *sdate, time_t *t)
@@ -813,33 +168,688 @@ parse_date(const char *sdate, time_t *t)
 	return (*t == -1) ? false : true;
 }
 
+static char _date_buf[48];
+static char *fmt_date(struct qlop_mode *flags, time_t ts, time_t te)
+{
+	time_t t;
+
+	t = flags->do_endtime ? te : ts;
+	strftime(_date_buf, sizeof(_date_buf), "%Y-%m-%dT%H:%M:%S", localtime(&t));
+	return _date_buf;
+}
+
+static char _elapsed_buf[256];
+static char *fmt_elapsedtime(struct qlop_mode *flags, time_t e)
+{
+	if (flags->do_human) {
+		time_t dd;
+		time_t hh;
+		time_t mm;
+		time_t ss;
+		size_t bufpos = 0;
+
+		ss = e % 60;
+		e /= 60;
+		mm = e % 60;
+		e /= 60;
+		hh = e % 24;
+		e /= 24;
+		dd = e;
+
+		if (dd > 0)
+			bufpos += snprintf(_elapsed_buf + bufpos,
+					sizeof(_elapsed_buf) - bufpos,
+					"%s%zd%s day%s",
+					GREEN, (size_t)dd, NORM, dd == 1 ? "" : "s");
+		if (hh > 0)
+			bufpos += snprintf(_elapsed_buf + bufpos,
+					sizeof(_elapsed_buf) - bufpos,
+					"%s%s%zd%s hour%s",
+					bufpos == 0 ? "" : ", ",
+					GREEN, (size_t)hh, NORM, hh == 1 ? "" : "s");
+		if (mm > 0)
+			bufpos += snprintf(_elapsed_buf + bufpos,
+					sizeof(_elapsed_buf) - bufpos,
+					"%s%s%zd%s minute%s",
+					bufpos == 0 ? "" : ", ",
+					GREEN, (size_t)mm, NORM, mm == 1 ? "" : "s");
+		if (ss > 0 || (mm + hh + dd) == 0)
+			bufpos += snprintf(_elapsed_buf + bufpos,
+					sizeof(_elapsed_buf) - bufpos,
+					"%s%s%zd%s second%s",
+					bufpos == 0 ? "" : ", ",
+					GREEN, (size_t)ss, NORM, ss == 1 ? "" : "s");
+	} else {
+		snprintf(_elapsed_buf, sizeof(_elapsed_buf), "%s%zd%s seconds",
+				GREEN, (size_t)e, NORM);
+	}
+
+	return _elapsed_buf;
+}
+
+static char _atom_buf[BUFSIZ];
+static char *fmt_atom(struct qlop_mode *flags, depend_atom *atom)
+{
+	(void)flags;
+
+	if (verbose) {
+		size_t len = snprintf(_atom_buf, sizeof(_atom_buf), "%s/%s-%s",
+				atom->CATEGORY, atom->PN, atom->PV);
+		if (atom->PR_int > 0)
+			snprintf(_atom_buf + len, sizeof(_atom_buf) - len, "-r%d",
+				atom->PR_int);
+	} else {
+		snprintf(_atom_buf, sizeof(_atom_buf), "%s/%s",
+				atom->CATEGORY, atom->PN);
+	}
+
+	return _atom_buf;
+}
+
+/* The format of the sync log has changed over time.
+
+Old format:
+1106804103: Started emerge on: Jan 27, 2005 05:35:03
+1106804103:  *** emerge  sync
+1106804103:  === sync
+1106804103: >>> starting rsync with rsync://192.168.0.5/gentoo-portage
+1106804537: === Sync completed with rsync://192.168.0.5/gentoo-portage
+1106804538:  *** terminating.
+
+New format:
+1431764402: Started emerge on: May 16, 2015 04:20:01
+1431764402:  *** emerge --quiet --keep-going --verbose --nospinner --oneshot --quiet-build=n --sync
+1431764402:  === sync
+1431764402: >>> Syncing repository 'gentoo' into '/usr/portage'...
+1431764402: >>> Starting rsync with rsync://[2a01:90:200:10::1a]/gentoo-portage
+1431764460: === Sync completed for gentoo
+1431764493:  *** terminating.
+
+*** packages
+
+1547475773:  >>> emerge (53 of 74) app-shells/bash-5.0 to /gentoo/prefix64/
+1547475774:  === (53 of 74) Cleaning (app-shells/bash-5.0::/path/to/app-shells/bash/bash-5.0.ebuild)
+1547475774:  === (53 of 74) Compiling/Merging (app-shells/bash-5.0::/path/to/app-shells/bash/bash-5.0.ebuild)
+1547475913:  === (53 of 74) Merging (app-shells/bash-5.0::/path/to/app-shells/bash/bash-5.0.ebuild)
+1547475916:  >>> AUTOCLEAN: app-shells/bash:0
+1547475916:  === Unmerging... (app-shells/bash-4.4_p23)
+1547475918:  >>> unmerge success: app-shells/bash-4.4_p23
+1547475921:  === (53 of 74) Post-Build Cleaning (app-shells/bash-5.0::/path/to/app-shells/bash/bash-5.0.ebuild)
+1547475921:  ::: completed emerge (53 of 74) app-shells/bash-5.0 to /gentoo/prefix64/
+
+1550953093: Started emerge on: Feb 23, 2019 21:18:12
+1550953093:  *** emerge --ask --verbose --depclean pwgen
+1550953093:  >>> depclean
+1550953118: === Unmerging... (app-admin/pwgen-2.08)
+1550953125:  >>> unmerge success: app-admin/pwgen-2.08
+1550953125:  *** exiting successfully.
+1550953125:  *** terminating.
+*/
+static int do_emerge_log(
+		const char *log,
+		struct qlop_mode *flags,
+		array_t *atoms,
+		time_t tbegin,
+		time_t tend)
+{
+	FILE *fp;
+	char buf[BUFSIZ];
+	char *p;
+	char *q;
+	time_t tstart;
+	time_t sync_start = 0;
+	time_t sync_time = 0;
+	size_t sync_cnt = 0;
+	time_t elapsed;
+	depend_atom *atom;
+	depend_atom *atomw;
+	DECLARE_ARRAY(merge_matches);
+	DECLARE_ARRAY(merge_averages);
+	DECLARE_ARRAY(unmerge_matches);
+	DECLARE_ARRAY(unmerge_averages);
+	size_t i;
+	size_t parallel_emerge = 0;
+
+	struct pkg_match {
+		char id[BUFSIZ];
+		depend_atom *atom;
+		time_t tbegin;
+		time_t time;
+		size_t cnt;
+	};
+	struct pkg_match *pkg;
+	struct pkg_match *pkgw;
+
+	if ((fp = fopen(log, "r")) == NULL) {
+		warnp("Could not open logfile '%s'", log);
+		return 1;
+	}
+
+	if (array_cnt(atoms) == 0) {
+		/* assemble list of atoms */
+		while (fgets(buf, sizeof(buf), fp) != NULL) {
+			if ((p = strchr(buf, ':')) == NULL)
+				continue;
+			*p++ = '\0';
+
+			tstart = atol(buf);
+			if (tstart < tbegin || tstart > tend)
+				continue;
+
+			atom = NULL;
+			if (strncmp(p, "  >>> emerge ", 13) == 0 &&
+					(p = strchr(p + 13, ')')) != NULL)
+			{
+				p += 2;
+				q = strchr(p, ' ');
+				if (q != NULL) {
+					*q = '\0';
+					atom = atom_explode(p);
+				}
+			} else if (strncmp(p, "  === Unmerging... (", 20) == 0 ||
+					strncmp(p, " === Unmerging... (", 19) == 0)
+			{
+				if (p[1] == ' ')
+					p++;
+				p += 19;
+				q = strchr(p, ')');
+				if (q != NULL) {
+					*q = '\0';
+					atom = atom_explode(p);
+				}
+			}
+			if (atom != NULL) {
+				/* strip off version info, if we generate a list
+				 * ourselves, we will always print everything, so as
+				 * well can keep memory footprint a bit lower by only
+				 * having package matches */
+				atom->PV = NULL;
+				atom->PVR = NULL;
+				atom->PR_int = 0;
+
+				atomw = NULL;
+				array_for_each(atoms, i, atomw) {
+					if (atom_compare(atom, atomw) == EQUAL)
+						break;
+					atomw = NULL;
+				}
+				if (atomw == NULL) {
+					xarraypush_ptr(atoms, atom);
+				} else {
+					atom_implode(atom);
+				}
+			}
+		}
+
+		rewind(fp);
+	}
+
+	/* loop over lines searching for atoms */
+	while (fgets(buf, sizeof(buf), fp) != NULL) {
+		if ((p = strchr(buf, ':')) == NULL)
+			continue;
+		*p++ = '\0';
+
+		/* keeping track of parallel merges needs to be done before
+		 * applying dates, for a subset of the log might show emerge
+		 * finished without knowledge of another instance */
+		if (flags->do_running &&
+				(strncmp(p, "  *** emerge ", 13) == 0 ||
+				 strncmp(p, "  *** terminating.", 18) == 0 ||
+				 strncmp(p, "  *** exiting ", 14) == 0))
+		{
+			if (p[7] == 'm') {
+				parallel_emerge++;
+			} else if (parallel_emerge > 0) {
+				parallel_emerge--;
+				if (parallel_emerge == 0) {
+					/* we just finished the only emerge we found to be
+					 * running, so if there were "running" (unfinished)
+					 * merges, they must have been terminated */
+					sync_start = 0;
+					while ((i = array_cnt(merge_matches)) > 0) {
+						i--;
+						pkgw = xarrayget(merge_matches, i);
+						atom_implode(pkgw->atom);
+						xarraydelete(merge_matches, i);
+					}
+					while ((i = array_cnt(unmerge_matches)) > 0) {
+						i--;
+						pkgw = xarrayget(unmerge_matches, i);
+						atom_implode(pkgw->atom);
+						xarraydelete(unmerge_matches, i);
+					}
+				}
+			}
+		}
+
+		tstart = atol(buf);
+		if (tstart < tbegin || tstart > tend)
+			continue;
+
+		/* are we interested in this line? */
+		if (flags->do_sync && (
+					strncmp(p, " === Sync completed ", 20) == 0 ||
+					strcmp(p, "  === sync\n") == 0))
+		{
+			/* sync start or stop, we have nothing to detect parallel
+			 * syncs with, so don't bother and assume this doesn't
+			 * happen */
+			if (p[6] == 's') {
+				sync_start = tstart;
+			} else {
+				if (sync_start == 0)
+					continue;  /* sync without start, exclude */
+				elapsed = tstart - sync_start;
+
+				p += 20;
+				if (strncmp(p, "for ", 4) == 0) {
+					p += 4;
+				} else {  /* "with " */
+					p += 5;
+				}
+				if ((q = strchr(p, '\n')) != NULL)
+					*q = '\0';
+
+				if (flags->do_average || flags->do_running)
+				{
+					sync_cnt++;
+					sync_time += elapsed;
+					sync_start = 0;  /* reset */
+					continue;
+				}
+				if (flags->do_time) {
+					printf("%s *** %s%s%s: %s\n",
+							fmt_date(flags, sync_start, tstart),
+							GREEN, p, NORM, fmt_elapsedtime(flags, elapsed));
+				} else {
+					printf("%s *** %s%s%s\n",
+							fmt_date(flags, sync_start, tstart),
+							GREEN, p, NORM);
+				}
+				sync_start = 0;  /* reset */
+			}
+		} else if (flags->do_merge && (
+					strncmp(p, "  >>> emerge (", 14) == 0 ||
+					strncmp(p, "  ::: completed emerge (", 24) == 0))
+		{
+			/* merge start/stop (including potential unmerge of old pkg) */
+			if (p[3] == '>') {  /* >>> emerge */
+				char *id;
+
+				q = strchr(p + 14, ')');
+				if (q == NULL)
+					continue;
+
+				/* keep a copy of the relevant string in case we need to
+				 * match this */
+				id = p + 6;
+
+				q += 2;  /* ") " */
+				p = strchr(q, ' ');
+				if (p == NULL)
+					continue;
+
+				*p = '\0';
+				atom = atom_explode(q);
+				*p = ' ';
+				if (atom == NULL)
+					continue;
+
+				/* see if we need this atom */
+				atomw = NULL;
+				array_for_each(atoms, i, atomw) {
+					if (atom_compare(atom, atomw) == EQUAL)
+						break;
+					atomw = NULL;
+				}
+				if (atomw == NULL) {
+					atom_implode(atom);
+					continue;
+				}
+
+				pkg = xmalloc(sizeof(struct pkg_match));
+				snprintf(pkg->id, sizeof(pkg->id), "%s", id);
+				pkg->atom = atom;
+				pkg->tbegin = tstart;
+				pkg->time = (time_t)0;
+				pkg->cnt = 0;
+				xarraypush_ptr(merge_matches, pkg);
+			} else {  /* ::: completed */
+				array_for_each_rev(merge_matches, i, pkgw) {
+					if (strcmp(p + 16, pkgw->id) != 0)
+						continue;
+
+					/* found, do report */
+					elapsed = tstart - pkgw->tbegin;
+
+					if (flags->do_average || flags->do_running)
+					{
+						/* find in list of averages */
+						size_t n;
+
+						pkg = NULL;
+						array_for_each(merge_averages, n, pkg) {
+							if (atom_compare(pkg->atom, pkgw->atom) == EQUAL) {
+								pkg->cnt++;
+								pkg->time += elapsed;
+								/* store max time for do_running */
+								if (elapsed > pkg->tbegin)
+									pkg->tbegin = elapsed;
+								atom_implode(pkgw->atom);
+								xarraydelete(merge_matches, i);
+								break;
+							}
+							pkg = NULL;
+						}
+						if (pkg == NULL) {  /* push new entry */
+							if (!verbose || flags->do_running) {
+								/* strip off version info */
+								pkgw->atom->PV = NULL;
+								pkgw->atom->PVR = NULL;
+								pkgw->atom->PR_int = 0;
+							}
+							pkgw->id[0] = '\0';
+							pkgw->cnt = 1;
+							pkgw->time = elapsed;
+							pkgw->tbegin = elapsed;
+							xarraypush_ptr(merge_averages, pkgw);
+							xarraydelete_ptr(merge_matches, i);
+						}
+						break;
+					}
+					if (flags->do_time) {
+						printf("%s >>> %s%s%s: %s\n",
+								fmt_date(flags, pkgw->tbegin, tstart),
+								BLUE, fmt_atom(flags, pkgw->atom), NORM,
+								fmt_elapsedtime(flags, elapsed));
+					} else if (!flags->do_average) {
+						printf("%s >>> %s%s%s\n",
+								fmt_date(flags, pkgw->tbegin, tstart),
+								BLUE, fmt_atom(flags, pkgw->atom), NORM);
+					}
+					atom_implode(pkgw->atom);
+					xarraydelete(merge_matches, i);
+					break;
+				}
+			}
+		} else if (
+				(flags->do_unmerge &&
+				 strncmp(p, " === Unmerging... (", 19) == 0) ||
+				(flags->do_autoclean &&
+				 strncmp(p, "  === Unmerging... (", 20) == 0) ||
+				((flags->do_unmerge || flags->do_autoclean) &&
+				 strncmp(p, "  >>> unmerge success: ", 23) == 0))
+		{
+			/* unmerge action */
+			if (p[2] == '=') {
+				if (p[1] == ' ')
+					p++;
+				p += 19;
+
+				if ((q = strchr(p, ')')) == NULL)
+					continue;
+
+				*q = '\0';
+				atom = atom_explode(p);
+				if (atom == NULL)
+					continue;
+
+				/* see if we need this atom */
+				atomw = NULL;
+				array_for_each(atoms, i, atomw) {
+					if (atom_compare(atom, atomw) == EQUAL)
+						break;
+					atomw = NULL;
+				}
+				if (atomw == NULL) {
+					atom_implode(atom);
+					continue;
+				}
+
+				pkg = xmalloc(sizeof(struct pkg_match));
+				snprintf(pkg->id, sizeof(pkg->id), "%s\n", p);  /* \n !!! */
+				pkg->atom = atom;
+				pkg->tbegin = tstart;
+				pkg->time = (time_t)0;
+				pkg->cnt = 0;
+				xarraypush_ptr(unmerge_matches, pkg);
+			} else {
+				array_for_each_rev(unmerge_matches, i, pkgw) {
+					if (strcmp(p + 23, pkgw->id) != 0)
+						continue;
+
+					/* found, do report */
+					elapsed = tstart - pkgw->tbegin;
+
+					if (flags->do_average || flags->do_running)
+					{
+						/* find in list of averages */
+						size_t n;
+
+						pkg = NULL;
+						array_for_each(unmerge_averages, n, pkg) {
+							if (atom_compare(pkg->atom, pkgw->atom) == EQUAL) {
+								pkg->cnt++;
+								pkg->time += elapsed;
+								/* store max time for do_running */
+								if (elapsed > pkg->tbegin)
+									pkg->tbegin = elapsed;
+								atom_implode(pkgw->atom);
+								xarraydelete(unmerge_matches, i);
+								break;
+							}
+							pkg = NULL;
+						}
+						if (pkg == NULL) {  /* push new entry */
+							if (!verbose || flags->do_running) {
+								/* strip off version info */
+								pkgw->atom->PV = NULL;
+								pkgw->atom->PVR = NULL;
+								pkgw->atom->PR_int = 0;
+							}
+							pkgw->id[0] = '\0';
+							pkgw->cnt = 1;
+							pkgw->time = elapsed;
+							pkgw->tbegin = elapsed;
+							xarraypush_ptr(unmerge_averages, pkgw);
+							xarraydelete_ptr(unmerge_matches, i);
+						}
+						break;
+					}
+					if (flags->do_time) {
+						printf("%s <<< %s%s%s: %s\n",
+								fmt_date(flags, pkgw->tbegin, tstart),
+								BLUE, fmt_atom(flags, pkgw->atom), NORM,
+								fmt_elapsedtime(flags, elapsed));
+					} else if (!flags->do_average) {
+						printf("%s <<< %s%s%s\n",
+								fmt_date(flags, pkgw->tbegin, tstart),
+								BLUE, fmt_atom(flags, pkgw->atom), NORM);
+					}
+					atom_implode(pkgw->atom);
+					xarraydelete(unmerge_matches, i);
+					break;
+				}
+			}
+		}
+	}
+	fclose(fp);
+	if (flags->do_running) {
+		/* can't report endtime for non-finished operations */
+		flags->do_endtime = 0;
+		tstart = time(NULL);
+		sync_time /= sync_cnt;
+		if (sync_start > 0) {
+			if (elapsed >= sync_time)
+				sync_time = 0;
+			if (flags->do_time) {
+				elapsed = tstart - sync_start;
+				printf("%s *** %s%s%s: %s... ETA: %s\n",
+						fmt_date(flags, sync_start, 0),
+						YELLOW, "sync", NORM, fmt_elapsedtime(flags, elapsed),
+						sync_time == 0 ? "unknown" :
+							fmt_elapsedtime(flags, sync_time - elapsed));
+			} else {
+				printf("%s *** %s%s%s... ETA: %s\n",
+						fmt_date(flags, sync_start, 0),
+						YELLOW, "sync", NORM,
+						sync_time == 0 ? "unknown" :
+							fmt_elapsedtime(flags, sync_time - elapsed));
+			}
+		}
+		array_for_each(merge_matches, i, pkgw) {
+			size_t j;
+			time_t maxtime = 0;
+
+			elapsed = tstart - pkgw->tbegin;
+			pkg = NULL;
+			array_for_each(merge_averages, j, pkg) {
+				if (atom_compare(pkg->atom, pkgw->atom) == EQUAL) {
+					maxtime = pkg->time / pkg->cnt;
+					if (elapsed >= maxtime)
+						maxtime = elapsed >= pkg->tbegin ? 0 : pkg->tbegin;
+					break;
+				}
+				pkg = NULL;
+			}
+
+			if (flags->do_time) {
+				printf("%s >>> %s%s%s: %s... ETA: %s\n",
+						fmt_date(flags, pkgw->tbegin, 0),
+						YELLOW, fmt_atom(flags, pkgw->atom), NORM,
+						fmt_elapsedtime(flags, elapsed),
+						maxtime == 0 ? "unknown" :
+							fmt_elapsedtime(flags, maxtime - elapsed));
+			} else {
+				printf("%s >>> %s%s%s... ETA: %s\n",
+						fmt_date(flags, pkgw->tbegin, 0),
+						YELLOW, fmt_atom(flags, pkgw->atom), NORM,
+						maxtime == 0 ? "unknown" :
+							fmt_elapsedtime(flags, maxtime - elapsed));
+			}
+		}
+		array_for_each(unmerge_matches, i, pkgw) {
+			size_t j;
+			time_t maxtime = 0;
+
+			elapsed = tstart - pkgw->tbegin;
+			pkg = NULL;
+			array_for_each(unmerge_averages, j, pkg) {
+				if (atom_compare(pkg->atom, pkgw->atom) == EQUAL) {
+					maxtime = pkg->time / pkg->cnt;
+					if (elapsed >= maxtime)
+						maxtime = elapsed >= pkg->tbegin ? 0 : pkg->tbegin;
+					break;
+				}
+				pkg = NULL;
+			}
+
+			if (flags->do_time) {
+				printf("%s <<< %s%s%s: %s... ETA: %s\n",
+						fmt_date(flags, pkgw->tbegin, 0),
+						YELLOW, fmt_atom(flags, pkgw->atom), NORM,
+						fmt_elapsedtime(flags, elapsed),
+						maxtime == 0 ? "unknown" :
+							fmt_elapsedtime(flags, maxtime - elapsed));
+			} else {
+				printf("%s <<< %s%s%s... ETA: %s\n",
+						fmt_date(flags, pkgw->tbegin, 0),
+						YELLOW, fmt_atom(flags, pkgw->atom), NORM,
+						maxtime == 0 ? "unknown" :
+							fmt_elapsedtime(flags, maxtime - elapsed));
+			}
+		}
+	} else if (flags->do_average) {
+		size_t total_merges = 0;
+		size_t total_unmerges = 0;
+		time_t total_time = (time_t)0;
+
+		array_for_each(merge_averages, i, pkg) {
+			printf("%s%s%s: %s average for %s%zd%s merge%s\n",
+					BLUE, fmt_atom(flags, pkg->atom), NORM,
+					fmt_elapsedtime(flags, pkg->time / pkg->cnt),
+					GREEN, pkg->cnt, NORM, pkg->cnt == 1 ? "" : "s");
+			total_merges += pkg->cnt;
+			total_time += pkg->time;
+		}
+		array_for_each(unmerge_averages, i, pkg) {
+			printf("%s%s%s: %s average for %s%zd%s unmerge%s\n",
+					BLUE, fmt_atom(flags, pkg->atom), NORM,
+					fmt_elapsedtime(flags, pkg->time / pkg->cnt),
+					GREEN, pkg->cnt, NORM, pkg->cnt == 1 ? "" : "s");
+			total_unmerges += pkg->cnt;
+			total_time += pkg->time;
+		}
+		if (sync_cnt > 0) {
+			printf("%ssync%s: %s average for %s%zd%s sync%s\n",
+					BLUE, NORM, fmt_elapsedtime(flags, sync_time / sync_cnt),
+					GREEN, sync_cnt, NORM, sync_cnt == 1 ? "" : "s");
+			total_time += sync_time;
+		}
+		if (flags->do_summary) {
+			/* 123 seconds for 5 merges, 3 unmerges, 1 sync */
+			printf("%stotal%s: %s for ",
+					BLUE, NORM, fmt_elapsedtime(flags, total_time));
+			if (total_merges > 0)
+				printf("%s%zd%s merge%s",
+					GREEN, total_merges, NORM, total_merges == 1 ? "" : "s");
+			if (total_unmerges > 0)
+				printf("%s%s%zd%s unmerge%s",
+						total_merges == 0 ? "" : ", ",
+						GREEN, total_unmerges, NORM,
+						total_unmerges == 1 ? "" : "s");
+			if (sync_cnt > 0)
+				printf("%s%s%zd%s sync%s",
+						total_merges + total_unmerges == 0 ? "" : ", ",
+						GREEN, sync_cnt, NORM, sync_cnt == 1 ? "" : "s");
+			printf("\n");
+		}
+	}
+	return 0;
+}
+
 int qlop_main(int argc, char **argv)
 {
 	size_t i;
 	int ret;
-	int average = 1;
-	time_t start_time, end_time;
-	char do_time, do_list, do_unlist, do_sync, do_current, do_human_readable = 0;
+	time_t start_time;
+	time_t end_time;
+	struct qlop_mode m;
 	char *logfile = NULL;
-	int flags;
+	char *atomfile = NULL;
+	char *p;
+	char *q;
 	depend_atom *atom;
 	DECLARE_ARRAY(atoms);
 
 	start_time = 0;
 	end_time = LONG_MAX;
-	do_time = do_list = do_unlist = do_sync = do_current = 0;
+	m.do_time = 0;
+	m.do_merge = 0;
+	m.do_unmerge = 0;
+	m.do_autoclean = 0;
+	m.do_sync = 0;
+	m.do_running = 0;
+	m.do_average = 0;
+	m.do_summary = 0;
+	m.do_human = 0;
+	m.do_endtime = 0;
 
 	while ((ret = GETOPT_LONG(QLOP, qlop, "")) != -1) {
 		switch (ret) {
 			COMMON_GETOPTS_CASES(qlop)
 
-			case 't': do_time = 1; break;
-			case 'l': do_list = 1; break;
-			case 'u': do_unlist = 1; break;
-			case 's': do_sync = 1; break;
-			case 'c': do_current = 1; break;
-			case 'g': do_time = 1; average = 0; break;
-			case 'H': do_human_readable = 1; break;
+			case 't': m.do_time = 1;      break;
+			case 'm': m.do_merge = 1;     break;
+			case 'u': m.do_unmerge = 1;   break;
+			case 'U': m.do_autoclean = 1; break;
+			case 's': m.do_sync = 1;      break;
+			case 'r': m.do_running = 1;   break;
+			case 'a': m.do_average = 1;   break;
+			case 'c': m.do_summary = 1;   break;
+			case 'H': m.do_human = 1;     break;
+			case 'e': m.do_endtime = 1;   break;
 			case 'd':
 				if (start_time == 0) {
 					if (!parse_date(optarg, &start_time))
@@ -851,13 +861,19 @@ int qlop_main(int argc, char **argv)
 					err("too many -d options");
 				break;
 			case 'f':
-				if (logfile) err("Only use -f once");
+				if (logfile != NULL)
+					err("Only use -f once");
 				logfile = xstrdup(optarg);
+				break;
+			case 'w':
+				if (atomfile != NULL)
+					err("Only use -w once");
+				if (!eat_file(optarg, &atomfile, &i))
+					err("failed to open file %s", optarg);
 				break;
 		}
 	}
-	if (!do_list && !do_unlist && !do_time && !do_sync && !do_current)
-		qlop_usage(EXIT_FAILURE);
+
 	if (logfile == NULL)
 		xasprintf(&logfile, "%s/%s", portlogdir, QLOP_DEFAULT_LOGFILE);
 
@@ -870,25 +886,74 @@ int qlop_main(int argc, char **argv)
 		else
 			xarraypush_ptr(atoms, atom);
 	}
-
-	flags = 0;
-	if (do_list)
-		flags |= QLOP_LIST;
-	if (do_unlist)
-		flags |= QLOP_UNLIST;
-	if (flags)
-		show_emerge_history(flags, atoms, logfile, start_time, end_time);
-
-	if (do_current)
-		show_current_emerge();
-	if (do_sync)
-		show_sync_history(logfile, start_time, end_time);
-
-	if (do_time) {
-		for (i = 0; i < (size_t)argc; ++i)
-			show_merge_times(argv[i], logfile, average, do_human_readable,
-				start_time, end_time);
+	for (p = atomfile; p != NULL && *p != '\0'; p = q) {
+		while (isspace((int)(*p)))
+			p++;
+		q = strchr(p, '\n');
+		if (q != NULL) {
+			*q = '\0';
+			q++;
+		}
+		atom = atom_explode(p);
+		if (!atom)
+			warn("invalid atom: %s", p);
+		else
+			xarraypush_ptr(atoms, atom);
 	}
+	if (atomfile)
+		free(atomfile);
+
+	/* default operation: -must */
+	if (
+			m.do_time == 0 &&
+			m.do_merge == 0 &&
+			m.do_unmerge == 0 &&
+			m.do_autoclean == 0 &&
+			m.do_sync == 0 &&
+			m.do_running == 0 &&
+			m.do_average == 0 &&
+			m.do_summary == 0 &&
+			m.do_human == 0
+		)
+	{
+		m.do_merge = 1;
+		m.do_unmerge = 1;
+		m.do_sync = 1;
+		m.do_time = 1;
+	}
+
+	/* handle deps */
+	if (m.do_summary)
+		m.do_average = 1;
+
+	/* handle -a / -t conflict */
+	if (m.do_average && m.do_time) {
+		warn("-a (or -c) and -t cannot be used together, dropping -t");
+		m.do_time = 0;
+	}
+
+	/* handle -a / -r conflict */
+	if (m.do_average && m.do_running) {
+		warn("-a (or -c) and -r cannot be used together, dropping -a");
+		m.do_average = 0;
+	}
+
+	if (m.do_sync && array_cnt(atoms) > 0) {
+		warn("-s cannot be used when specifying atoms, dropping -s");
+		m.do_sync = 0;
+	}
+
+	/* set default for -t, -a or -r */
+	if ((m.do_average || m.do_time || m.do_running) &&
+			!(m.do_merge || m.do_unmerge || m.do_sync))
+	{
+		m.do_merge = 1;
+		m.do_unmerge = 1;
+		if (array_cnt(atoms) == 0)
+			m.do_sync = 1;
+	}
+
+	do_emerge_log(logfile, &m, atoms, start_time, end_time);
 
 	array_for_each(atoms, i, atom)
 		atom_implode(atom);

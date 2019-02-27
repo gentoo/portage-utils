@@ -1,3 +1,3 @@
-automake-1.11.6: Mon Apr  1 12:34:09 2013: 53 minutes, 52 seconds
-automake-1.9.6-r3: Fri May 17 12:58:39 2013: 24 minutes, 7 seconds
-automake: 2 times
+sys-devel/automake-1.11.6: 53 minutes, 52 seconds average for 1 merge
+sys-devel/automake-1.9.6-r3: 24 minutes, 7 seconds average for 1 merge
+total: 1 hour, 17 minutes, 59 seconds for 2 merges

@@ -18,18 +18,27 @@ date: |
     .IP FORMAT|DATE
     Use \fIFORMAT\fR as input for \fBstrptime\fR(3) to parse \fIDATE\fR.
     .RE
-gauge: |
-    Gauge number of times a package has been merged.  This shows the
-    merge time for each individual merge of package.
 time: |
-    Calculate merge time for a specific package.  This is the average
-    time for all merges of package.
+    Show the time it took to merge, unmerge or sync.
+average: |
+    Calculate average merge, unmerge or sync time.  This is the average
+    time for all occurrences found respecting any date limits.
+summary: |
+    Show a grand total for averages.  This option implies \fB-a\fR.
+    Useful to compute time it takes to recompile all packages or a set
+    of packages (e.g\. world).
 human: |
-    Print seconds in human readable format (needs \fB\-t\fR), using
+    Print elapssed time in human readable format.  This form uses
     minutes, hours and days instead of just seconds.
 current: |
     Show current emerging packages.  This relies on
     .I FEATURES=sandbox
     in order to detect running merges.
 verbose: |
-    Print package versions and revisions.
+    Print package versions and revisions (PF) instead of package (PN).
+running: |
+    Print operations currently in progress.  An ETA is calculated based
+    on the average for the operation.  If the elapsed exceeds the
+    average, the ETA is calculated against the longest time observed for
+    the operation.  If the elapsed time exceeds this too, or no previous
+    occurrences for the operation exist, \fIunknown\fR is printed.
