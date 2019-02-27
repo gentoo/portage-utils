@@ -18,14 +18,23 @@ typedef struct {
  * already do not permit pushing of NULL pointers), but we can't put it in the
  * increment phase as that will cause a load beyond the bounds of valid memory.
  */
+/* TODO: remove ele = NULL after checking all consumers don't rely on this */
 #define array_for_each(arr, n, ele) \
-	for (n = 0, ele = array_cnt(arr) ? arr->eles[n] : NULL; \
-	     n < array_cnt(arr) && (ele = arr->eles[n]); \
-	     ++n)
+	for (n = 0, ele = NULL; n < array_cnt(arr) && (ele = arr->eles[n]); n++)
+#define array_for_each_rev(arr, n, ele) \
+	for (n = array_cnt(arr); n-- > 0 && (ele = arr->eles[n]); /*nothing*/)
+#define array_get_elem(arr, n) (arr->eles[n])
 #define array_init_decl { .eles = NULL, .num = 0, }
 #define array_cnt(arr) (arr)->num
 #define DECLARE_ARRAY(arr) array_t _##arr = array_init_decl, *arr = &_##arr
 #define ARRAY_INC_SIZE 32
+
+static void *xarrayget(array_t *arr, size_t idx)
+{
+	if (idx >= arr->num)
+		return NULL;
+	return arr->eles[idx];
+}
 
 /* Push a pointer to memory we already hold and don't want to release.  Do not
  * mix xarraypush_ptr usage with the other push funcs which duplicate memory.
@@ -51,7 +60,10 @@ static void *xarraypush(array_t *arr, const void *ele, size_t ele_len)
 static void xarraydelete_ptr(array_t *arr, size_t elem)
 {
 	arr->num--;
-	memmove(&arr->eles[elem], &arr->eles[elem + 1], arr->num - elem);
+	if (elem < arr->num)
+		memmove(&arr->eles[elem], &arr->eles[elem + 1],
+				sizeof(arr->eles[0]) * (arr->num - elem));
+	arr->eles[arr->num] = NULL;
 }
 
 static void xarraydelete(array_t *arr, size_t elem)
