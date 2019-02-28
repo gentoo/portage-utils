@@ -11,12 +11,13 @@
 
 #define QLOP_DEFAULT_LOGFILE "emerge.log"
 
-#define QLOP_FLAGS "ctaHmuUserd:f:w:" COMMON_FLAGS
+#define QLOP_FLAGS "ctaHMmuUserd:f:w:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
 	{"summary",   no_argument, NULL, 'c'},
 	{"time",      no_argument, NULL, 't'},
 	{"average",   no_argument, NULL, 'a'},
 	{"human",     no_argument, NULL, 'H'},
+	{"machine",   no_argument, NULL, 'M'},
 	{"merge",     no_argument, NULL, 'm'},
 	{"unmerge",   no_argument, NULL, 'u'},
 	{"autoclean", no_argument, NULL, 'U'},
@@ -33,6 +34,7 @@ static const char * const qlop_opts_help[] = {
 	"Print time taken to complete action",
 	"Print average time taken to complete action",
 	"Print elapsed time in human readable format (use with -t or -a)",
+	"Print elapsed time as seconds with no formatting",
 	"Show merge history",
 	"Show unmerge history",
 	"Show autoclean unmerge history",
@@ -63,6 +65,7 @@ struct qlop_mode {
 	char do_average:1;
 	char do_summary:1;
 	char do_human:1;
+	char do_machine:1;
 	char do_endtime:1;
 };
 
@@ -181,21 +184,28 @@ static char *fmt_date(struct qlop_mode *flags, time_t ts, time_t te)
 static char _elapsed_buf[256];
 static char *fmt_elapsedtime(struct qlop_mode *flags, time_t e)
 {
+	time_t dd;
+	time_t hh;
+	time_t mm;
+	time_t ss;
+	size_t bufpos = 0;
+
+	if (flags->do_machine) {
+		snprintf(_elapsed_buf, sizeof(_elapsed_buf),
+				"%s%zd%s",
+				GREEN, (size_t)e, NORM);
+		return _elapsed_buf;
+	}
+
+	ss = e % 60;
+	e /= 60;
+	mm = e % 60;
+	e /= 60;
+	hh = e % 24;
+	e /= 24;
+	dd = e;
+
 	if (flags->do_human) {
-		time_t dd;
-		time_t hh;
-		time_t mm;
-		time_t ss;
-		size_t bufpos = 0;
-
-		ss = e % 60;
-		e /= 60;
-		mm = e % 60;
-		e /= 60;
-		hh = e % 24;
-		e /= 24;
-		dd = e;
-
 		if (dd > 0)
 			bufpos += snprintf(_elapsed_buf + bufpos,
 					sizeof(_elapsed_buf) - bufpos,
@@ -220,8 +230,23 @@ static char *fmt_elapsedtime(struct qlop_mode *flags, time_t e)
 					bufpos == 0 ? "" : ", ",
 					GREEN, (size_t)ss, NORM, ss == 1 ? "" : "s");
 	} else {
-		snprintf(_elapsed_buf, sizeof(_elapsed_buf), "%s%zd%s seconds",
-				GREEN, (size_t)e, NORM);
+		hh += 24 * dd;
+		if (hh > 0) {
+			snprintf(_elapsed_buf, sizeof(_elapsed_buf),
+					"%s%zd%s:%s%02zd%s:%s%02zd%s",
+					GREEN, (size_t)hh, NORM,
+					GREEN, (size_t)mm, NORM,
+					GREEN, (size_t)ss, NORM);
+		} else if (mm > 0) {
+			snprintf(_elapsed_buf, sizeof(_elapsed_buf),
+					"%s%zd%s′%s%02zd%s″",
+					GREEN, (size_t)mm, NORM,
+					GREEN, (size_t)ss, NORM);
+		} else {
+			snprintf(_elapsed_buf, sizeof(_elapsed_buf),
+					"%s%zd%ss",
+					GREEN, (size_t)ss, NORM);
+		}
 	}
 
 	return _elapsed_buf;
@@ -461,7 +486,8 @@ static int do_emerge_log(
 				if (flags->do_time) {
 					printf("%s *** %s%s%s: %s\n",
 							fmt_date(flags, sync_start, tstart),
-							GREEN, p, NORM, fmt_elapsedtime(flags, elapsed));
+							GREEN, p, NORM,
+							fmt_elapsedtime(flags, elapsed));
 				} else {
 					printf("%s *** %s%s%s\n",
 							fmt_date(flags, sync_start, tstart),
@@ -846,6 +872,7 @@ int qlop_main(int argc, char **argv)
 	m.do_average = 0;
 	m.do_summary = 0;
 	m.do_human = 0;
+	m.do_machine = 0;
 	m.do_endtime = 0;
 
 	while ((ret = GETOPT_LONG(QLOP, qlop, "")) != -1) {
@@ -861,6 +888,7 @@ int qlop_main(int argc, char **argv)
 			case 'a': m.do_average = 1;   break;
 			case 'c': m.do_summary = 1;   break;
 			case 'H': m.do_human = 1;     break;
+			case 'M': m.do_machine = 1;   break;
 			case 'e': m.do_endtime = 1;   break;
 			case 'd':
 				if (start_time == 0) {
@@ -924,8 +952,7 @@ int qlop_main(int argc, char **argv)
 			m.do_sync == 0 &&
 			m.do_running == 0 &&
 			m.do_average == 0 &&
-			m.do_summary == 0 &&
-			m.do_human == 0
+			m.do_summary == 0
 		)
 	{
 		m.do_merge = 1;
@@ -949,6 +976,13 @@ int qlop_main(int argc, char **argv)
 	if (m.do_average && m.do_running) {
 		warn("-a (or -c) and -r cannot be used together, dropping -a");
 		m.do_average = 0;
+	}
+
+	/* handle -H / -M conflict */
+	if (m.do_human && m.do_machine) {
+		warn("-H and -M cannot be used together, dropping -M: "
+				"only humans make mistakes");
+		m.do_machine = 0;
 	}
 
 	if (m.do_sync && array_cnt(atoms) > 0) {
