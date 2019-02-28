@@ -8,14 +8,13 @@
 
 #ifdef APPLET_qfile
 
-#define QFILE_FLAGS "beoRx:S" COMMON_FLAGS
+#define QFILE_FLAGS "boRx:S" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"slots",       no_argument, NULL, 'S'},
 	{"root-prefix", no_argument, NULL, 'R'},
 	{"basename",    no_argument, NULL, 'b'},
 	{"orphans",     no_argument, NULL, 'o'},
 	{"exclude",      a_argument, NULL, 'x'},
-	{"exact",       no_argument, NULL, 'e'},
 	COMMON_LONG_OPTS
 };
 static const char * const qfile_opts_help[] = {
@@ -24,7 +23,6 @@ static const char * const qfile_opts_help[] = {
 	"Match any component of the path",
 	"List orphan files",
 	"Don't look in package <arg> (used with --orphans)",
-	"Exact match (used with --exclude)",
 	COMMON_OPTS_HELP
 };
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, NULL, lookup_applet_idx("qfile"))
@@ -56,7 +54,6 @@ struct qfile_opt_state {
 	depend_atom *exclude_atom;
 	bool slotted;
 	bool basename;
-	bool exact;
 	bool orphans;
 	bool assume_root_prefix;
 };
@@ -224,7 +221,7 @@ static int qfile_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 				} else
 					slot[0] = '\0';
 				printf("%s%s/%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
-					(state->exact ? pkg_ctx->name : atom->PN),
+					(verbose ? pkg_ctx->name : atom->PN),
 					slot, NORM);
 				if (quiet)
 					puts("");
@@ -402,7 +399,6 @@ int qfile_main(int argc, char **argv)
 		.buflen = _Q_PATH_MAX,
 		.slotted = false,
 		.basename = false,
-		.exact = false,
 		.orphans = false,
 		.assume_root_prefix = false,
 	};
@@ -414,7 +410,6 @@ int qfile_main(int argc, char **argv)
 			COMMON_GETOPTS_CASES(qfile)
 			case 'S': state.slotted = true; break;
 			case 'b': state.basename = true; break;
-			case 'e': state.exact = true; break;
 			case 'o': state.orphans = true; break;
 			case 'R': state.assume_root_prefix = true; break;
 			case 'x':
@@ -429,8 +424,6 @@ int qfile_main(int argc, char **argv)
 				break;
 		}
 	}
-	if (!state.exact && verbose)
-		state.exact = true;
 	if (argc == optind)
 		qfile_usage(EXIT_FAILURE);
 
