@@ -1,9 +1,10 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #ifdef APPLET_quse
@@ -50,12 +51,12 @@ print_highlighted_use_flags(char *string, int ind, int argc, char **argv)
 	if (quse_name_only)
 		return;
 
-	strncpy(buf, string, sizeof(buf));
+	snprintf(buf, sizeof(buf), "%.*s", (int)sizeof(buf) - 1, string);
 	str = buf;
 	remove_extra_space(str);
 	rmspace(str);
 
-	if (*WHITE != '\e') {
+	if (*WHITE == '\0') {
 		printf("%s", str);
 		return;
 	}

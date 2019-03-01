@@ -1,10 +1,11 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
+ * Copyright 2005      Petteri Räty    - <betelgeuse@gentoo.org>
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
- * Copyright 2005 Petteri Räty    - <betelgeuse@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #ifdef APPLET_qgrep
@@ -245,7 +246,7 @@ int qgrep_main(int argc, char **argv)
 	DIR *cat_dir = NULL;
 	struct dirent *dentry = NULL;
 	char ebuild[_Q_PATH_MAX];
-	char name[_Q_PATH_MAX];
+	char name[_Q_PATH_MAX * 2];
 	char *label;
 	int reflags = 0;
 	char invert_match = 0;

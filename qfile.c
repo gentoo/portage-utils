@@ -270,13 +270,15 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	int i;
 	int nb_of_queries = argc;
 	char *pwd = state->pwd;
+	const char *p;
 	size_t real_root_len = state->real_root_len;
+	size_t len;
 	char *real_root = state->real_root;
 	char **basenames = NULL;
 	char **dirnames = NULL;
 	char **realdirnames = NULL;
-	char tmppath[_Q_PATH_MAX+1];
-	char abspath[_Q_PATH_MAX+1];
+	char tmppath[_Q_PATH_MAX];
+	char abspath[_Q_PATH_MAX];
 
 	/* For each argument, we store its basename, its absolute dirname,
 	 * and the realpath of its dirname.  Dirnames and their realpaths
@@ -289,17 +291,17 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 
 	for (i = 0; i < argc; ++i) {
 		/* Record basename, but if it is ".", ".." or "/" */
-		/* strncopy so that "argv" can be "const" */
-		strncpy(abspath, argv[i], _Q_PATH_MAX);
-		strncpy(tmppath, basename(abspath), _Q_PATH_MAX);
-		if ((strlen(tmppath) > 2) ||
-		    (strncmp(tmppath, "..", strlen(tmppath))
-		     && strncmp(tmppath, "/", strlen(tmppath))))
+		/* copy so that "argv" can be "const" */
+		snprintf(tmppath, sizeof(tmppath), "%s", argv[i]);
+		p = basename(tmppath);
+		len = strlen(p);
+		if ((len > 2) ||
+		    (strncmp(tmppath, "..", len) != 0 &&
+		     strncmp(tmppath, "/", len) != 0))
 		{
-			basenames[i] = xstrdup(tmppath);
+			basenames[i] = xstrdup(p);
 			/* If there is no "/" in the argument, then it's over.
-			 * (we are searching a simple file name)
-			 */
+			 * (we are searching a simple file name) */
 			if (strchr(argv[i], '/') == NULL)
 				continue;
 		}
@@ -307,15 +309,13 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 		/* Make sure we have an absolute path available (with
 		 * "realpath(ROOT)" prefix) */
 		if (argv[i][0] == '/') {
-			if (state->assume_root_prefix)
-				strncpy(abspath, argv[i], _Q_PATH_MAX);
-			else
-				snprintf(abspath, _Q_PATH_MAX, "%s%s", real_root, argv[i]);
+			snprintf(abspath, sizeof(abspath), "%s%s",
+					state->assume_root_prefix ? real_root : "", argv[i]);
 		} else if (pwd) {
 			if (state->assume_root_prefix)
-				snprintf(abspath, _Q_PATH_MAX, "%s/%s", pwd, argv[i]);
+				snprintf(abspath, sizeof(abspath), "%s/%s", pwd, argv[i]);
 			else
-				snprintf(abspath, _Q_PATH_MAX, "%s%s/%s",
+				snprintf(abspath, sizeof(abspath), "%s%s/%s",
 						real_root, pwd, argv[i]);
 		} else {
 			warn("$PWD was not found in environment, "
@@ -323,38 +323,36 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 			goto skip_query_item;
 		}
 
-		if (basenames[i]) {
-			/* Get both the dirname and its realpath.  This paths will
-			 * have no trailing slash, but if it is the only char (ie.,
-			 * when searching for "/foobar").
-			 */
-			strncpy(tmppath, abspath, _Q_PATH_MAX);
-			strncpy(abspath, dirname(tmppath), _Q_PATH_MAX);
-			if (abspath[real_root_len] == '\0')
-				strncat(abspath, "/", 1);
-			dirnames[i] = xstrdup(abspath + real_root_len);
-			if (realpath(abspath, tmppath) == NULL) {
+		if (basenames[i] != NULL) {
+			/* Get both the dirname and its realpath.  These paths will
+			 * have no trailing slash, except if it is the only char (ie.,
+			 * when searching for "/foobar"). */
+			snprintf(tmppath, sizeof(tmppath), "%s%s",
+					dirname(abspath),
+					abspath[real_root_len] == '\0' ? "/" : "");
+			dirnames[i] = xstrdup(tmppath + real_root_len);
+			if (realpath(tmppath, abspath) == NULL) {
 				if (verbose) {
-					warnp("Could not read real path of \"%s\"", abspath);
+					warnp("Could not read real path of \"%s\"", tmppath);
 					warn("Results for query item \"%s\" may be inaccurate.",
 							argv[i]);
 				}
 				continue;
 			}
-			if (!qfile_is_prefix(tmppath, real_root, real_root_len)) {
+			if (!qfile_is_prefix(abspath, real_root, real_root_len)) {
 				warn("Real path of \"%s\" is not under ROOT: %s",
-						abspath, tmppath);
+						tmppath, abspath);
 				goto skip_query_item;
 			}
-			if (tmppath[real_root_len] == '\0')
-				strncat(tmppath, "/", 1);
+			snprintf(tmppath, sizeof(tmppath), "%s%s",
+					dirname(abspath),
+					abspath[real_root_len] == '\0' ? "/" : "");
 			if (strcmp(dirnames[i], tmppath + real_root_len))
 				realdirnames[i] = xstrdup(tmppath + real_root_len);
 		} else {
 			/* No basename means we are looking for something like "/foo/bar/.."
 			 * Dirname is meaningless here, we can only get realpath of the full
-			 * path and then split it.
-			 */
+			 * path and then split it. */
 			if (realpath(abspath, tmppath) == NULL) {
 				warnp("Could not read real path of \"%s\"", abspath);
 				goto skip_query_item;
@@ -364,11 +362,11 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 						abspath, tmppath);
 				goto skip_query_item;
 			}
-			strncpy(abspath, tmppath, _Q_PATH_MAX);
+			snprintf(abspath, sizeof(abspath), "%s", tmppath);
 			basenames[i] = xstrdup(basename(abspath));
-			strncpy(abspath, dirname(tmppath), _Q_PATH_MAX);
-			if (tmppath[real_root_len] == '\0')
-				strncat(tmppath, "/", 1);
+			snprintf(abspath, sizeof(abspath), "%s%s",
+					dirname(tmppath),
+					tmppath[real_root_len] == '\0' ? "/" : "");
 			realdirnames[i] = xstrdup(abspath + real_root_len);
 		}
 		continue;

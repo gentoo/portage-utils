@@ -1,14 +1,11 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2017-     Fabian Groffen  - <grobian@gentoo.org>
  */
-
-#if defined(__MACH__)
-#include <libproc.h>
-#endif
 
 #define Q_FLAGS "irmM:" COMMON_FLAGS
 static struct option const q_long_opts[] = {
@@ -129,7 +126,7 @@ int q_main(int argc, char **argv)
 		if ((size_t)rret > sizeof(buf) - 1) {
 			rret = -1;
 		} else {
-			strncpy(buf, prog, rret);
+			snprintf(buf, sizeof(buf), "%s", prog);
 		}
 #else
 		rret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);

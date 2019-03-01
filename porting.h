@@ -51,6 +51,10 @@
 
 #include <iniparser.h>
 
+#if defined(__MACH__)
+#include <libproc.h>
+#endif
+
 #if defined(__sun) && defined(__SVR4)
 /* workaround non-const defined name in option struct, such that we
  * don't get a zillion of warnings */

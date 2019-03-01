@@ -1,9 +1,10 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
- * Copyright 2005-2010 Ned Ludd	- <solar@gentoo.org>
+ * Copyright 2005-2010 Ned Ludd	       - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #ifdef APPLET_qpkg
@@ -215,7 +216,10 @@ static int
 qpkg_make(depend_atom *atom)
 {
 	FILE *fp, *out;
-	char tmpdir[BUFSIZE], filelist[BUFSIZE], xpak[BUFSIZE], tbz2[BUFSIZE];
+	char tmpdir[BUFSIZE];
+	char filelist[BUFSIZE + 32];
+	char xpak[BUFSIZE + 32];
+	char tbz2[BUFSIZE + 32];
 	size_t buflen;
 	char *buf;
 	int i;
@@ -230,7 +234,8 @@ qpkg_make(depend_atom *atom)
 	buflen = _Q_PATH_MAX;
 	buf = xmalloc(buflen);
 
-	snprintf(buf, buflen, "%s/%s/%s/CONTENTS", portvdb, atom->CATEGORY, atom_to_pvr(atom));
+	snprintf(buf, buflen, "%s/%s/%s/CONTENTS",
+			portvdb, atom->CATEGORY, atom_to_pvr(atom));
 	if ((fp = fopen(buf, "r")) == NULL)
 		return -1;
 
@@ -258,7 +263,8 @@ qpkg_make(depend_atom *atom)
 			char *hash = (char *)hash_file(e->name, HASH_MD5);
 			if (hash != NULL) {
 				if (strcmp(e->digest, hash) != 0)
-					warn("MD5: mismatch expected %s got %s for %s", e->digest, hash, e->name);
+					warn("MD5: mismatch expected %s got %s for %s",
+							e->digest, hash, e->name);
 				free(hash);
 			}
 		}
@@ -271,13 +277,16 @@ qpkg_make(depend_atom *atom)
 	fflush(stdout);
 
 	snprintf(tbz2, sizeof(tbz2), "%s/bin.tar.bz2", tmpdir);
-	snprintf(buf, buflen, "tar jcf '%s' --files-from='%s' --no-recursion >/dev/null 2>&1", tbz2, filelist);
+	if (snprintf(buf, buflen, "tar jcf '%s' --files-from='%s' "
+			"--no-recursion >/dev/null 2>&1", tbz2, filelist) > (int)buflen)
+		return 2;
 	if ((fp = popen(buf, "r")) == NULL)
 		return 2;
 	pclose(fp);
 
 	snprintf(xpak, sizeof(xpak), "%s/inf.xpak", tmpdir);
-	snprintf(buf, buflen, "%s/%s/%s", portvdb, atom->CATEGORY, atom_to_pvr(atom));
+	snprintf(buf, buflen, "%s/%s/%s",
+			portvdb, atom->CATEGORY, atom_to_pvr(atom));
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
 	xpak_create(AT_FDCWD, xpak, 1, xpak_argv);
@@ -289,7 +298,8 @@ qpkg_make(depend_atom *atom)
 	unlink(xpak);
 	unlink(tbz2);
 
-	snprintf(tbz2, sizeof(tbz2), "%s/%s.tbz2", qpkg_get_bindir(), atom_to_pvr(atom));
+	snprintf(tbz2, sizeof(tbz2), "%s/%s.tbz2",
+			qpkg_get_bindir(), atom_to_pvr(atom));
 	if (rename(buf, tbz2)) {
 		warnp("could not move '%s' to '%s'", buf, tbz2);
 		return 1;
@@ -298,7 +308,8 @@ qpkg_make(depend_atom *atom)
 	rmdir(tmpdir);
 
 	stat(tbz2, &st);
-	printf("%s%s%s kB\n", RED, make_human_readable_str(st.st_size, 1, KILOBYTE), NORM);
+	printf("%s%s%s kB\n",
+			RED, make_human_readable_str(st.st_size, 1, KILOBYTE), NORM);
 
 	return 0;
 }

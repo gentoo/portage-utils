@@ -1,10 +1,11 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
+ * Copyright 2005 Martin Schlemmer     - <azarah@gentoo.org>
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
- * Copyright 2005 Martin Schlemmer - <azarah@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #ifdef APPLET_qlist
@@ -115,7 +116,10 @@ umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
 	rmspace(umap);
 	if (!strlen(umap))
 		return buf;
-	snprintf(buf, sizeof(buf), " %s%s%s%s%s", quiet ? "": "(", RED, umap, NORM, quiet ? "": ")");
+	snprintf(buf, sizeof(buf), " %s%s%.*s%s%s",
+			quiet ? "": "(", RED,
+			(int)(sizeof(buf) - (quiet ? 3 : 1) - sizeof(RED) - sizeof(NORM)),
+			umap, NORM, quiet ? "": ")");
 	return buf;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2018 Gentoo Authors
+ * Copyright 2005-2019 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -538,16 +538,6 @@ install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 	install_mask_check_dir(masksv, masksc, st, fd, 1, INCLUDE, qpth);
 }
 
-static char *
-atom2str(const depend_atom *atom, char *buf, size_t size)
-{
-	if (atom->PR_int)
-		snprintf(buf, size, "%s-%s-r%i", atom->PN, atom->PV, atom->PR_int);
-	else
-		snprintf(buf, size, "%s-%s", atom->PN, atom->PV);
-	return buf;
-}
-
 static char
 qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
 {
@@ -570,17 +560,18 @@ qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	} else {
 		depend_atom *subatom = atom_explode(p);
 		if (subatom != NULL) {
-			atom2str(subatom, buf, sizeof(buf));
-			atom2str(atom, install_ver, sizeof(install_ver));
-			ret = atom_compare_str(install_ver, buf);
+			ret = atom_compare(atom, subatom);
 			switch (ret) {
 				case EQUAL: c = 'R'; break;
 				case NEWER: c = 'U'; break;
 				case OLDER: c = 'D'; break;
 				default: c = '?'; break;
 			}
-			strncpy(buf, subatom->P, sizeof(buf));
-			snprintf(install_ver, sizeof(install_ver), "[%s%s%s] ", DKBLUE, buf, NORM);
+			snprintf(install_ver, sizeof(install_ver), "[%s%.*s%s] ",
+					DKBLUE,
+					(int)(sizeof(install_ver) - 4 -
+						sizeof(DKBLUE) - sizeof(NORM)),
+					subatom->P, NORM);
 			atom_implode(subatom);
 		}
 		if (update_only && c != 'U')
@@ -1814,23 +1805,38 @@ grab_binpkg_info(const char *name)
 				snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
 				if (strstr(buf, name) != NULL) {
 					if (!best_match[0])
-						strncpy(best_match, buf, sizeof(best_match));
+						snprintf(best_match, sizeof(best_match), "%.*s",
+								(int)sizeof(best_match) - 1, buf);
 
 					atom = atom_explode(buf);
-					snprintf(buf, sizeof(buf), "%s/%s-%s", atom->CATEGORY, atom->PN, atom->PV);
-					if (atom->PR_int)
-						snprintf(buf, sizeof(buf), "%s/%s-%s-r%i", atom->CATEGORY, atom->PN, atom->PV, atom->PR_int);
+					if (atom->PR_int) {
+						snprintf(buf, sizeof(buf), "%s/%s-%s-r%i",
+								atom->CATEGORY, atom->PN,
+								atom->PV, atom->PR_int);
+					} else {
+						snprintf(buf, sizeof(buf), "%s/%s-%s",
+								atom->CATEGORY, atom->PN, atom->PV);
+					}
 					ret = atom_compare_str(name, buf);
-					IF_DEBUG(fprintf(stderr, "=== atom_compare(%s, %s) = %d %s\n", name, buf, ret, booga[ret])); /* buf(%s) depend(%s)\n", ret, pkg->CATEGORY, pkg->PF, name, pkg->RDEPEND); */
+					IF_DEBUG(fprintf(stderr,
+								"=== atom_compare(%s, %s) = %d %s\n",
+								name, buf, ret, booga[ret]));
+					/* buf(%s) depend(%s)\n", ret, pkg->CATEGORY,
+					 * pkg->PF, name, pkg->RDEPEND); */
 					switch (ret) {
 						case EQUAL:
 						case NEWER:
-							snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
+							snprintf(buf, sizeof(buf), "%s/%s",
+									pkg->CATEGORY, pkg->PF);
 							ret = atom_compare_str(buf, best_match);
 							if (ret == NEWER || ret == EQUAL) {
-								strncpy(best_match, buf, sizeof(best_match));
+								snprintf(best_match, sizeof(best_match), "%.*s",
+										(int)sizeof(best_match) - 1, buf);
 								memcpy(rpkg, pkg, sizeof(struct pkg_t));
-								IF_DEBUG(fprintf(stderr, "--- %s/%s depend(%s)\n", rpkg->CATEGORY, rpkg->PF, rpkg->RDEPEND));
+								IF_DEBUG(fprintf(stderr,
+											"--- %s/%s depend(%s)\n",
+											rpkg->CATEGORY, rpkg->PF,
+											rpkg->RDEPEND));
 							}
 						case OLDER: break;
 						default:
@@ -1856,34 +1862,46 @@ grab_binpkg_info(const char *name)
 		if (*buf) {
 			/* we dont need all the info */
 			if (strcmp(buf, "RDEPEND") == 0)
-				strncpy(pkg->RDEPEND, p, sizeof(Pkg.RDEPEND));
+				snprintf(pkg->RDEPEND, sizeof(Pkg.RDEPEND), "%.*s",
+						(int)sizeof(Pkg.RDEPEND) - 1, p);
 			if (strcmp(buf, "PF") == 0)
-				strncpy(pkg->PF, p, sizeof(Pkg.PF));
+				snprintf(pkg->PF, sizeof(Pkg.PF), "%.*s",
+						(int)sizeof(Pkg.PF) - 1, p);
 			if (strcmp(buf, "CATEGORY") == 0)
-				strncpy(pkg->CATEGORY, p, sizeof(Pkg.CATEGORY));
+				snprintf(pkg->CATEGORY, sizeof(Pkg.CATEGORY), "%.*s",
+						(int)sizeof(Pkg.CATEGORY) - 1, p);
 			if (strcmp(buf, "REPO") == 0)
-				strncpy(pkg->REPO, p, sizeof(Pkg.REPO));
+				snprintf(pkg->REPO, sizeof(Pkg.REPO), "%.*s",
+						(int)sizeof(Pkg.REPO) - 1, p);
 
 			if (strcmp(buf, "CPV") == 0) {
 				if ((atom = atom_explode(p)) != NULL) {
-					snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
-					if (atom->PR_int)
-						snprintf(buf, sizeof(buf), "%s-%s-r%i", atom->PN, atom->PV, atom->PR_int);
-					strncpy(pkg->PF, buf, sizeof(Pkg.PF));
-					strncpy(pkg->CATEGORY, atom->CATEGORY, sizeof(Pkg.CATEGORY));
+					if (atom->PR_int) {
+						snprintf(buf, sizeof(buf), "%s-%s-r%i",
+								atom->PN, atom->PV, atom->PR_int);
+					} else {
+						snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
+					}
+					snprintf(pkg->PF, sizeof(Pkg.PF), "%.*s",
+							(int)sizeof(Pkg.PF) - 1, buf);
+					snprintf(pkg->CATEGORY, sizeof(Pkg.CATEGORY), "%.*s",
+							(int)sizeof(Pkg.CATEGORY) - 1, atom->CATEGORY);
 					atom_implode(atom);
 				}
 			}
 			if (strcmp(buf, "SLOT") == 0)
-				strncpy(pkg->SLOT, p, sizeof(Pkg.SLOT));
+				snprintf(pkg->SLOT, sizeof(Pkg.SLOT), "%.*s",
+						(int)sizeof(Pkg.SLOT) - 1, p);
 			if (strcmp(buf, "USE") == 0)
-				strncpy(pkg->USE, p, sizeof(Pkg.USE));
-
+				snprintf(pkg->USE, sizeof(Pkg.USE), "%.*s",
+						(int)sizeof(Pkg.USE) - 1, p);
 			/* checksums. We must have 1 or the other unless --*/
 			if (strcmp(buf, "MD5") == 0)
-				strncpy(pkg->MD5, p, sizeof(Pkg.MD5));
+				snprintf(pkg->MD5, sizeof(Pkg.MD5), "%.*s",
+						(int)sizeof(Pkg.MD5) - 1, p);
 			if (strcmp(buf, "SHA1") == 0)
-				strncpy(pkg->SHA1, p, sizeof(Pkg.SHA1));
+				snprintf(pkg->SHA1, sizeof(Pkg.SHA1), "%.*s",
+						(int)sizeof(Pkg.SHA1) - 1, p);
 		}
 	}
 	fclose(fp);
@@ -1918,10 +1936,12 @@ find_binpkg(const char *name)
 					depend_atom *atom;
 
 					if (!best_match[0])
-						strncpy(best_match, buf, sizeof(best_match));
+						snprintf(best_match, sizeof(best_match), "%.*s",
+								(int)sizeof(best_match) - 1, buf);
 
 					atom = atom_explode(buf);
-					snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
+					snprintf(buf, sizeof(buf), "%s/%s",
+							atom->CATEGORY, atom->PN);
 					ret = atom_compare_str(name, buf);
 					switch (ret) {
 						case OLDER: break;
@@ -1930,8 +1950,10 @@ find_binpkg(const char *name)
 							snprintf(buf, sizeof(buf), "%s/%s", CATEGORY, PF);
 							ret = atom_compare_str(buf, best_match);
 							if (ret == NEWER || ret == EQUAL)
-								strncpy(best_match, buf, sizeof(best_match));
-							/* printf("[%s == %s] = %d; %s/%s\n", name, buf, ret, CATEGORY, PF); */
+								snprintf(best_match, sizeof(best_match), "%.*s",
+										(int)sizeof(best_match) - 1, buf);
+							/* printf("[%s == %s] = %d; %s/%s\n",
+							 * name, buf, ret, CATEGORY, PF); */
 						default:
 							break;
 					}
@@ -1954,18 +1976,23 @@ find_binpkg(const char *name)
 			if (strcmp(buf, "CPV") == 0) {
 				depend_atom *atom;
 				if ((atom = atom_explode(p)) != NULL) {
-					snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
-					if (atom->PR_int)
-						snprintf(buf, sizeof(buf), "%s-%s-r%i", atom->PN, atom->PV, atom->PR_int);
-					strncpy(PF, buf, sizeof(PF));
-					strncpy(CATEGORY, atom->CATEGORY, sizeof(CATEGORY));
+					if (atom->PR_int) {
+						snprintf(buf, sizeof(buf), "%s-%s-r%i",
+								atom->PN, atom->PV, atom->PR_int);
+					} else {
+						snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
+					}
+					snprintf(PF, sizeof(PF), "%.*s", (int)sizeof(PF) - 1, buf);
+					snprintf(CATEGORY, sizeof(CATEGORY), "%.*s",
+							(int)sizeof(CATEGORY) - 1, atom->CATEGORY);
 					atom_implode(atom);
 				}
 			}
 			if (strcmp(buf, "PF") == 0)
-				strncpy(PF, p, sizeof(PF));
+				snprintf(PF, sizeof(PF), "%.*s", (int)sizeof(PF) - 1, p);
 			if (strcmp(buf, "CATEGORY") == 0)
-				strncpy(CATEGORY, p, sizeof(CATEGORY));
+				snprintf(CATEGORY, sizeof(CATEGORY), "%.*s",
+						(int)sizeof(CATEGORY) - 1, p);
 		}
 	}
 	fclose(fp);
@@ -2004,7 +2031,7 @@ parse_packages(queue *todo)
 		switch (*buf) {
 		case 'R':
 			if (!strcmp(buf, "REPO"))
-				strncpy(repo, p, sizeof(repo));
+				snprintf(repo, sizeof(repo), "%.*s", (int)sizeof(repo) - 1, p);
 			break;
 		}
 	}
@@ -2057,40 +2084,66 @@ parse_packages(queue *todo)
 
 		switch (*buf) {
 			case 'U':
-				if (strcmp(buf, "USE") == 0) strncpy(Pkg.USE, p, sizeof(Pkg.USE));
+				if (strcmp(buf, "USE") == 0)
+					snprintf(Pkg.USE, sizeof(Pkg.USE), "%.*s",
+							(int)sizeof(Pkg.USE) - 1, p);
 				break;
 			case 'P':
-				if (strcmp(buf, "PF") == 0) strncpy(Pkg.PF, p, sizeof(Pkg.PF));
+				if (strcmp(buf, "PF") == 0)
+					snprintf(Pkg.PF, sizeof(Pkg.PF), "%.*s",
+							(int)sizeof(Pkg.PF) - 1, p);
 				break;
 			case 'S':
-				if (strcmp(buf, "SIZE") == 0) Pkg.SIZE = atol(p);
-				if (strcmp(buf, "SLOT") == 0) strncpy(Pkg.SLOT, p, sizeof(Pkg.SLOT));
-				if (strcmp(buf, "SHA1") == 0) strncpy(Pkg.SHA1, p, sizeof(Pkg.SHA1));
+				if (strcmp(buf, "SIZE") == 0)
+					Pkg.SIZE = atol(p);
+				if (strcmp(buf, "SLOT") == 0)
+					snprintf(Pkg.SLOT, sizeof(Pkg.SLOT), "%.*s",
+							(int)sizeof(Pkg.SLOT) - 1, p);
+				if (strcmp(buf, "SHA1") == 0)
+					snprintf(Pkg.SHA1, sizeof(Pkg.SHA1), "%.*s",
+							(int)sizeof(Pkg.SHA1) - 1, p);
 				break;
 			case 'M':
-				if (strcmp(buf, "MD5") == 0) strncpy(Pkg.MD5, p, sizeof(Pkg.MD5));
+				if (strcmp(buf, "MD5") == 0)
+					snprintf(Pkg.MD5, sizeof(Pkg.MD5), "%.*s",
+							(int)sizeof(Pkg.MD5) - 1, p);
 				break;
 			case 'R':
-				if (strcmp(buf, "REPO") == 0) strncpy(Pkg.REPO, p, sizeof(Pkg.REPO));
-				if (strcmp(buf, "RDEPEND") == 0) strncpy(Pkg.RDEPEND, p, sizeof(Pkg.RDEPEND));
+				if (strcmp(buf, "REPO") == 0)
+					snprintf(Pkg.REPO, sizeof(Pkg.REPO), "%.*s",
+							(int)sizeof(Pkg.REPO) - 1, p);
+				if (strcmp(buf, "RDEPEND") == 0)
+					snprintf(Pkg.RDEPEND, sizeof(Pkg.RDEPEND), "%.*s",
+							(int)sizeof(Pkg.RDEPEND) - 1, p);
 				break;
 			case 'L':
-				if (strcmp(buf, "LICENSE") == 0) strncpy(Pkg.LICENSE, p, sizeof(Pkg.LICENSE));
+				if (strcmp(buf, "LICENSE") == 0)
+					snprintf(Pkg.LICENSE, sizeof(Pkg.LICENSE), "%.*s",
+							(int)sizeof(Pkg.LICENSE) - 1, p);
 				break;
 			case 'C':
-				if (strcmp(buf, "CATEGORY") == 0) strncpy(Pkg.CATEGORY, p, sizeof(Pkg.CATEGORY));
+				if (strcmp(buf, "CATEGORY") == 0)
+					snprintf(Pkg.CATEGORY, sizeof(Pkg.CATEGORY), "%.*s",
+							(int)sizeof(Pkg.CATEGORY) - 1, p);
 				if (strcmp(buf, "CPV") == 0) {
 					if ((pkg_atom = atom_explode(p)) != NULL) {
 						if (pkg_atom->PR_int)
-							snprintf(Pkg.PF, sizeof(Pkg.PF), "%s-%s-r%i", pkg_atom->PN, pkg_atom->PV, pkg_atom->PR_int);
+							snprintf(Pkg.PF, sizeof(Pkg.PF), "%s-%s-r%i",
+									pkg_atom->PN, pkg_atom->PV,
+									pkg_atom->PR_int);
 						else
-							snprintf(Pkg.PF, sizeof(Pkg.PF), "%s-%s", pkg_atom->PN, pkg_atom->PV);
-						strncpy(Pkg.CATEGORY, pkg_atom->CATEGORY, sizeof(Pkg.CATEGORY));
+							snprintf(Pkg.PF, sizeof(Pkg.PF), "%s-%s",
+									pkg_atom->PN, pkg_atom->PV);
+						snprintf(Pkg.CATEGORY, sizeof(Pkg.CATEGORY),
+								"%.*s", (int)sizeof(Pkg.CATEGORY) - 1,
+								pkg_atom->CATEGORY);
 					}
 				}
 				break;
 			case 'D':
-				if (strcmp(buf, "DESC") == 0) strncpy(Pkg.DESC, p, sizeof(Pkg.DESC));
+				if (strcmp(buf, "DESC") == 0)
+					snprintf(Pkg.DESC, sizeof(Pkg.DESC), "%.*s",
+							(int)sizeof(Pkg.DESC) - 1, p);
 				break;
 			default:
 				break;
