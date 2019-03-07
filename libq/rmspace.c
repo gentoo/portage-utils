@@ -1,5 +1,14 @@
+/*
+ * Copyright 2005-2019 Gentoo Foundation
+ * Distributed under the terms of the GNU General Public License v2
+ *
+ * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2019-     Fabian Groffen  - <grobian@gentoo.org>
+ */
 
-/* removed leading/trailing extraneous white space */
+
+/* remove leading/trailing extraneous white space */
 static char *rmspace_len(char *s, size_t len)
 {
 	char *p;
