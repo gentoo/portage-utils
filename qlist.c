@@ -43,84 +43,124 @@ static const char * const qlist_opts_help[] = {
 };
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, NULL, lookup_applet_idx("qlist"))
 
-static char *
-grab_pkg_umap(q_vdb_pkg_ctx *pkg_ctx)
+static int
+cmpstringp(const void *p1, const void *p2)
 {
-	static char umap[BUFSIZ];
-	static char *use, *iuse;
-	static size_t use_len, iuse_len;
-	int use_argc = 0, iuse_argc = 0;
-	char **use_argv = NULL, **iuse_argv = NULL;
-	queue *ll = NULL;
-	queue *sets = NULL;
-	int i, u;
-
-	q_vdb_pkg_eat(pkg_ctx, "USE", &use, &use_len);
-	if (!use[0])
-		return NULL;
-	q_vdb_pkg_eat(pkg_ctx, "IUSE", &iuse, &iuse_len);
-	if (!iuse[0])
-		return NULL;
-
-	umap[0] = '\0'; /* reset the buffer */
-
-	makeargv(use, &use_argc, &use_argv);
-	/* strip out possible leading +/- flags in IUSE */
-	for (i = 0; i < (int)strlen(iuse); i++)
-		if (iuse[i] == '+' || iuse[i] == '-')
-			if (i == 0 || iuse[i - 1] == ' ')
-				iuse[i] = ' ';
-	makeargv(iuse, &iuse_argc, &iuse_argv);
-	for (u = 1; u < use_argc; u++) {
-		for (i = 1; i < iuse_argc; i++) {
-			if (strcmp(use_argv[u], iuse_argv[i]) == 0) {
-				strncat(umap, use_argv[u], sizeof(umap)-strlen(umap)-1);
-				strncat(umap, " ", sizeof(umap)-strlen(umap)-1);
-			}
-		}
-	}
-	freeargv(iuse_argc, iuse_argv);
-	freeargv(use_argc, use_argv);
-
-	/* filter out the dup use flags */
-	use_argc = 0; use_argv = NULL;
-	makeargv(umap, &use_argc, &use_argv);
-	for (i = 1; i < use_argc; i++) {
-		int ok = 0;
-		sets = del_set(use_argv[i], sets, &ok);
-		sets = add_set(use_argv[i], sets);
-	}
-	umap[0] = '\0'; /* reset the buffer */
-	for (ll = sets; ll != NULL; ll = ll->next) {
-		strncat(umap, ll->name, sizeof(umap)-strlen(umap)-1);
-		strncat(umap, " ", sizeof(umap)-strlen(umap)-1);
-	}
-	freeargv(use_argc, use_argv);
-	free_sets(sets);
-	/* end filter */
-
-	return umap;
+	/* case insensitive comparator */
+	return strcasecmp(*((char * const *)p1), *((char * const *)p2));
 }
 
+/*
+ * ==> /var/db/pkg/mail-mta/exim-4.92/IUSE <==
+ * arc dane dcc +dkim dlfunc dmarc +dnsdb doc dovecot-sasl dsn
+ * elibc_glibc exiscan-acl gnutls idn ipv6 ldap libressl lmtp maildir
+ * mbx mysql nis pam perl pkcs11 postgres +prdr proxy radius redis sasl
+ * selinux spf sqlite srs ssl syslog tcpd +tpda X
+ *
+ * ==> /var/db/pkg/mail-mta/exim-4.92/PKGUSE <==
+ * -X dkim dmarc exiscan-acl ipv6 -ldap lmtp maildir -mbox pam -perl spf
+ * ssl tcpd
+ *
+ * ==> /var/db/pkg/mail-mta/exim-4.92/USE <==
+ * abi_x86_64 amd64 dkim dmarc dnsdb elibc_glibc exiscan-acl ipv6
+ * kernel_linux lmtp maildir pam prdr spf ssl tcpd tpda userland_GNU
+ *
+ * % emerge -pv exim
+ *
+ * These are the packages that would be merged, in order:
+ *
+ * Calculating dependencies... done!
+ * [ebuild   R   ~] mail-mta/exim-4.92::gentoo  USE="dkim dmarc dnsdb
+ * exiscan-acl ipv6 lmtp maildir pam prdr spf ssl tcpd tpda -X -arc
+ * -dane -dcc -dlfunc -doc -dovecot-sasl -dsn -gnutls -idn -ldap
+ * -libressl -mbx -mysql -nis -perl -pkcs11 -postgres -proxy -radius
+ * -redis -sasl (-selinux) -sqlite -srs -syslog" 0 KiB
+ *
+ * % qlist -IUv exim
+ * mail-mta/exim-4.92 (-arc -dane -dcc dkim -dlfunc dmarc dnsdb -doc
+ * -dovecot-sasl -dsn exiscan-acl -gnutls -idn ipv6 -ldap -libressl lmtp
+ * maildir -mbx -mysql -nis pam -perl -pkcs11 -postgres prdr -proxy
+ * -radius -redis -sasl -selinux spf -sqlite -srs ssl -syslog tcpd tpda
+ * -X)
+ */
+static char _umapstr_buf[BUFSIZ];
 static const char *
 umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
 {
-	static char buf[BUFSIZ];
-	char *umap = NULL;
+	char *bufp = _umapstr_buf;
+	char *use = NULL;
+	char *iuse = NULL;
+	size_t use_len;
+	size_t iuse_len;
+	int use_argc = 0;
+	int iuse_argc = 0;
+	char **use_argv = NULL;
+	char **iuse_argv = NULL;
+	int i;
+	int u;
+	int d;
 
-	buf[0] = '\0';
+	*bufp = '\0';
 	if (!display)
-		return buf;
-	if ((umap = grab_pkg_umap(pkg_ctx)) == NULL)
-		return buf;
-	rmspace(umap);
-	if (!strlen(umap))
-		return buf;
-	snprintf(buf, sizeof(buf), " %s%s%.*s%s%s",
-			quiet ? "": "(", RED,
-			(int)(sizeof(buf) - (quiet ? 3 : 1) - sizeof(RED) - sizeof(NORM)),
-			umap, NORM, quiet ? "": ")");
-	return buf;
+		return bufp;
+
+	q_vdb_pkg_eat(pkg_ctx, "USE", &use, &use_len);
+	if (!use[0])
+		return bufp;
+	q_vdb_pkg_eat(pkg_ctx, "IUSE", &iuse, &iuse_len);
+	if (!iuse[0])
+		return bufp;
+
+	/* strip out possible leading +/- flags in IUSE */
+	u = (int)strlen(iuse);
+	for (i = 0; i < u; i++)
+		if (iuse[i] == '+' || iuse[i] == '-')
+			if (i == 0 || iuse[i - 1] == ' ')
+				iuse[i] = ' ';
+
+	makeargv(use, &use_argc, &use_argv);
+	makeargv(iuse, &iuse_argc, &iuse_argv);
+
+#define add_to_buf(fmt, Cb, use, Ce) \
+	bufp += snprintf(bufp, sizeof(_umapstr_buf) - (bufp - _umapstr_buf), \
+			" %s%s" fmt "%s", \
+			bufp == _umapstr_buf && !quiet ? "(" : "", Cb, use, Ce);
+
+	/* merge join, ensure inputs are sorted (Portage does this, but just
+	 * to be sure) */
+	qsort(&use_argv[1], use_argc - 1, sizeof(char *), cmpstringp);
+	qsort(&iuse_argv[1], iuse_argc - 1, sizeof(char *), cmpstringp);
+	for (i = 1, u = 1; i < iuse_argc; i++) {
+		/* filter out implicits */
+		if (strncmp(iuse_argv[i], "elibc_", 6) == 0 ||
+				strncmp(iuse_argv[i], "kernel_", 7) == 0 ||
+				strncmp(iuse_argv[i], "userland_", 9) == 0)
+			continue;
+
+		/* ensure USE is in IUSE */
+		for (d = 1; u < use_argc; u++) {
+			d = strcmp(use_argv[u], iuse_argv[i]);
+			if (d >= 0)
+				break;
+		}
+
+		if (d == 0) {
+			add_to_buf("%s", RED, iuse_argv[i], NORM);
+			u++;
+		} else if (verbose) {
+			add_to_buf("-%s", DKBLUE, iuse_argv[i], NORM);
+		}
+	}
+
+	bufp += snprintf(bufp, sizeof(_umapstr_buf) - (bufp - _umapstr_buf),
+			"%s", bufp == _umapstr_buf || quiet ? "" : ")");
+
+	freeargv(iuse_argc, iuse_argv);
+	freeargv(use_argc, use_argv);
+	free(iuse);
+	free(use);
+
+	return _umapstr_buf;
 }
 
 static bool
@@ -308,14 +348,23 @@ qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 				}
 			}
 			if (state->show_repo && !pkg_ctx->repo)
-				q_vdb_pkg_eat(pkg_ctx, "repository", &pkg_ctx->repo, &pkg_ctx->repo_len);
+				q_vdb_pkg_eat(pkg_ctx, "repository",
+						&pkg_ctx->repo, &pkg_ctx->repo_len);
 			/* display it */
-			printf("%s%s/%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", BOLD, catname, BLUE,
-				(!state->columns ? (atom ? atom->PN : pkgname) : atom->PN),
-				(state->columns ? " " : ""), (state->columns ? atom->PV : ""),
-				NORM, YELLOW, state->show_slots ? ":" : "", state->show_slots ? pkg_ctx->slot : "", NORM,
-				NORM, GREEN, state->show_repo ? "::" : "", state->show_repo ? pkg_ctx->repo : "", NORM,
-				umapstr(state->show_umap, pkg_ctx));
+			printf("%s%s/%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+					BOLD, catname, BLUE,
+					(!state->columns ? (atom ? atom->PN : pkgname) : atom->PN),
+					(state->columns ? " " : ""),
+					(state->columns ? atom->PV : ""),
+					NORM, YELLOW,
+					state->show_slots ? ":" : "",
+					state->show_slots ? pkg_ctx->slot : "",
+					NORM,
+					NORM, GREEN,
+					state->show_repo ? "::" : "",
+					state->show_repo ? pkg_ctx->repo : "",
+					NORM,
+					umapstr(state->show_umap, pkg_ctx));
 		}
 		if (atom)
 			atom_implode(atom);
