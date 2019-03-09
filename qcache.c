@@ -54,7 +54,8 @@ typedef struct {
 /* Global Variables                                                 */
 /********************************************************************/
 
-static queue *arches;
+static set *archs;
+static char **archlist;
 static int archlist_count;
 static size_t arch_longest_len;
 const char status[3] = {'-', '~', '+'};
@@ -99,12 +100,12 @@ decode_status(char c)
  * IN:
  *  const char *arch - name of an arch (alpha, amd64, ...)
  * OUT:
- *  int pos - location of arch in archlist[]
+ *  int - position in keywords, or -1 if not found
  */
 static int
 decode_arch(const char *arch)
 {
-	queue *q = arches;
+	char **q;
 	int a;
 	const char *p;
 
@@ -112,12 +113,9 @@ decode_arch(const char *arch)
 	if (*p == '~' || *p == '-')
 		p++;
 
-	a = 0;
-	while (q) {
-		if (strcmp(q->name, p) == 0)
+	for (q = archlist, a = 0; *q != NULL; q++, a++) {
+		if (strcmp(*q, p) == 0)
 			return a;
-		++a;
-		q = q->next;
 	}
 
 	return -1;
@@ -135,7 +133,7 @@ decode_arch(const char *arch)
 static void
 print_keywords(const char *category, const char *ebuild, int *keywords)
 {
-	queue *arch = arches;
+	char **arch = archlist;
 	int a;
 	char *package;
 
@@ -143,16 +141,15 @@ print_keywords(const char *category, const char *ebuild, int *keywords)
 	package[strlen(ebuild)-7] = '\0';
 
 	printf("%s%s/%s%s%s ", BOLD, category, BLUE, package, NORM);
-	for (a = 0; a < archlist_count; ++a) {
+	for (a = 0; a < archlist_count; a++) {
 		switch (keywords[a]) {
 			case stable:
-				printf("%s%c%s%s ", GREEN, status[keywords[a]], arch->name, NORM);
+				printf("%s%c%s%s ", GREEN, status[keywords[a]], arch[a], NORM);
 				break;
 			case testing:
-				printf("%s%c%s%s ", YELLOW, status[keywords[a]], arch->name, NORM);
+				printf("%s%c%s%s ", YELLOW, status[keywords[a]], arch[0], NORM);
 				break;
 		}
-		arch = arch->next;
 	}
 
 	printf("\n");
@@ -182,6 +179,7 @@ read_keywords(char *s, int *keywords)
 
 	memset(keywords, 0, sizeof(*keywords) * archlist_count);
 
+	/* handle -* */
 	slen = strlen(s);
 	if (slen >= 2 && s[0] == '-' && s[1] == '*')
 		for (a = 0; a < archlist_count; ++a)
@@ -696,7 +694,7 @@ static void
 qcache_stats(qcache_data *data)
 {
 	static time_t runtime;
-	static queue *allcats;
+	static set *allcats;
 	static const char *last_overlay;
 	static int numpkg  = 0;
 	static int numebld = 0;
@@ -709,15 +707,20 @@ qcache_stats(qcache_data *data)
 
 	/* Is this the last time we'll be called? */
 	if (!data) {
+		char **arch;
 		const char border[] = "------------------------------------------------------------------";
 
 		printf("+%.*s+\n", 25, border);
 		printf("|   general statistics    |\n");
 		printf("+%.*s+\n", 25, border);
-		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "architectures", NORM, BLUE, archlist_count, NORM);
-		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "categories", NORM, BLUE, numcat, NORM);
-		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "packages", NORM, BLUE, numpkg, NORM);
-		printf("| %s%13s%s | %s%7d%s |\n", GREEN, "ebuilds", NORM, BLUE, numebld, NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",
+				GREEN, "architectures", NORM, BLUE, archlist_count, NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",
+				GREEN, "categories", NORM, BLUE, numcat, NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",
+				GREEN, "packages", NORM, BLUE, numpkg, NORM);
+		printf("| %s%13s%s | %s%7d%s |\n",
+				GREEN, "ebuilds", NORM, BLUE, numebld, NORM);
 		printf("+%.*s+\n\n", 25, border);
 
 		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
@@ -725,20 +728,23 @@ qcache_stats(qcache_data *data)
 			(int)arch_longest_len, "");
 		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
 		printf("| %s%*s%s |%s%8s%s |%s%8s%s |%s%8s%s | %s%8s%s |\n",
-			RED, (int)arch_longest_len, "architecture", NORM, RED, "stable", NORM,
+			RED, (int)arch_longest_len, "architecture", NORM,
+			RED, "stable", NORM,
 			RED, "~arch", NORM, RED, "total", NORM, RED, "total/#pkgs", NORM);
 		printf("| %*s |         |%s%8s%s |         |             |\n",
 			(int)arch_longest_len, "", RED, "only", NORM);
 		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
 
-		queue *arch = arches;
-		for (a = 0; a < archlist_count; ++a) {
-			printf("| %s%*s%s |", GREEN, (int)arch_longest_len, arch->name, NORM);
+		arch = archlist;
+		for (a = 0; a < archlist_count; a++) {
+			printf("| %s%*s%s |", GREEN, (int)arch_longest_len, arch[a], NORM);
 			printf("%s%8d%s |", BLUE, packages_stable[a], NORM);
 			printf("%s%8d%s |", BLUE, packages_testing[a], NORM);
-			printf("%s%8d%s |", BLUE, packages_testing[a]+packages_stable[a], NORM);
-			printf("%s%11.2f%s%% |\n", BLUE, (100.0*(packages_testing[a]+packages_stable[a]))/numpkg, NORM);
-			arch = arch->next;
+			printf("%s%8d%s |",
+					BLUE, packages_testing[a] + packages_stable[a], NORM);
+			printf("%s%11.2f%s%% |\n", BLUE,
+					(100.0*(packages_testing[a]+packages_stable[a]))/numpkg,
+					NORM);
 		}
 
 		printf("+%.*s+\n\n", (int)(arch_longest_len + 46), border);
@@ -751,7 +757,7 @@ qcache_stats(qcache_data *data)
 		free(packages_testing);
 		free(keywords);
 		free(current_package_keywords);
-		free_sets(allcats);
+		free_set(allcats);
 		return;
 	}
 
@@ -797,15 +803,20 @@ qcache_stats(qcache_data *data)
 	}
 
 	if (!numpkg) {
-		packages_stable          = xcalloc(archlist_count, sizeof(*packages_stable));
-		packages_testing         = xcalloc(archlist_count, sizeof(*packages_testing));
-		keywords                 = xcalloc(archlist_count, sizeof(*keywords));
-		current_package_keywords = xcalloc(archlist_count, sizeof(*current_package_keywords));
+		packages_stable          =
+			xcalloc(archlist_count, sizeof(*packages_stable));
+		packages_testing         =
+			xcalloc(archlist_count, sizeof(*packages_testing));
+		keywords                 =
+			xcalloc(archlist_count, sizeof(*keywords));
+		current_package_keywords =
+			xcalloc(archlist_count, sizeof(*current_package_keywords));
 	}
 
 	if (data->cur == 1) {
 		numpkg++;
-		memset(current_package_keywords, 0, archlist_count * sizeof(*current_package_keywords));
+		memset(current_package_keywords, 0,
+				archlist_count * sizeof(*current_package_keywords));
 	}
 	++numebld;
 
@@ -914,13 +925,16 @@ qcache_load_arches(const char *overlay)
 			continue;
 
 		bool ok;
-		arches = add_set_unique(buf, arches, &ok);
+		archs = add_set_unique(buf, archs, &ok);
 		if (ok) {
 			++archlist_count;
 			arch_longest_len = MAX(arch_longest_len, strlen(buf));
 		}
 	}
 	free(buf);
+
+	/* materialise into a list */
+	list_set(archs, &archlist);
 
 	fclose(fp);
  done:
@@ -935,7 +949,8 @@ qcache_load_arches(const char *overlay)
 static void
 qcache_free(void)
 {
-	free_sets(arches);
+	free(archlist);
+	free_set(archs);
 }
 
 /********************************************************************/

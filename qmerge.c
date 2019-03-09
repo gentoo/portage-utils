@@ -101,7 +101,7 @@ typedef struct llist_char_t llist_char;
 
 static void pkg_fetch(int, const depend_atom *, const struct pkg_t *);
 static void pkg_merge(int, const depend_atom *, const struct pkg_t *);
-static int pkg_unmerge(q_vdb_pkg_ctx *, queue *, int, char **, int, char **);
+static int pkg_unmerge(q_vdb_pkg_ctx *, set *, int, char **, int, char **);
 static struct pkg_t *grab_binpkg_info(const char *);
 static char *find_binpkg(const char *);
 
@@ -684,7 +684,7 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 /* Copy one tree (the single package) to another tree (ROOT) */
 static int
 merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
-              FILE *contents, queue **objs, char **cpathp,
+              FILE *contents, set **objs, char **cpathp,
               int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
 	int i, ret, subfd_src, subfd_dst;
@@ -919,7 +919,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 static void
 pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 {
-	queue *objs;
+	set *objs;
 	q_vdb_ctx *vdb_ctx;
 	q_vdb_cat_ctx *cat_ctx;
 	FILE *fp, *contents;
@@ -1305,7 +1305,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	freeargv(cpm_argc, cpm_argv);
 
 	/* Clean up the package state */
-	free_sets(objs);
+	free_set(objs);
 	free(D);
 	free(T);
 
@@ -1341,7 +1341,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 }
 
 static int
-pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep,
+pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, set *keep,
 		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
 	q_vdb_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
@@ -1385,7 +1385,7 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep,
 		strstr(features, "config-protect-if-modified") != NULL;
 
 	while (getline(&buf, &buflen, fp) != -1) {
-		queue *q;
+		bool del;
 		contents_entry *e;
 		char zing[20];
 		int protected = 0;
@@ -1455,21 +1455,16 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, queue *keep,
 		}
 
 		/* See if this was updated */
-		q = keep;
-		while (q) {
-			if (!strcmp(q->name, e->name)) {
-				/* XXX: could remove this from the queue */
-				strcpy(zing, "---");
-				q = NULL;
-				break;
-			}
-			q = q->next;
-		}
+		del = false;
+		if (keep != NULL)
+			(void)del_set(e->name, keep, &del);
+		if (del)
+			strcpy(zing, "---");
 
 		/* No match, so unmerge it */
 		if (!quiet)
 			printf("%s %s\n", zing, e->name);
-		if (!keep || q) {
+		if (!keep || !del) {
 			char *p;
 
 			if (!pretend && unlinkat(portroot_fd, e->name + 1, 0)) {
@@ -1599,7 +1594,9 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	/* XXX: should do a size check here for partial downloads */
 
-	if (force_download && (access(buf, R_OK) == 0) && (pkg->SHA1[0] || pkg->MD5[0])) {
+	if (force_download && (access(buf, R_OK) == 0) &&
+			(pkg->SHA1[0] || pkg->MD5[0]))
+	{
 		if (pkg_verify_checksums(buf, pkg, atom, 0, 0) != 0)
 			unlink(buf);
 	}
@@ -1608,7 +1605,9 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 			warn("No checksum data for %s (try `emaint binhost --fix`)", buf);
 			return;
 		} else {
-			if (pkg_verify_checksums(buf, pkg, atom, qmerge_strict, !quiet) == 0) {
+			if (pkg_verify_checksums(buf, pkg, atom, qmerge_strict, !quiet)
+					== 0)
+			{
 				pkg_merge(0, atom, pkg);
 				return;
 			}
@@ -1700,21 +1699,23 @@ print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 static int
 qmerge_unmerge_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
-	queue *todo = priv;
 	int cp_argc;
 	int cpm_argc;
 	char **cp_argv;
 	char **cpm_argv;
+	char **todo;
+	char **p;
 
 	makeargv(config_protect, &cp_argc, &cp_argv);
 	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
-	while (todo) {
-		if (qlist_match(pkg_ctx, todo->name, NULL, true))
+	(void)list_set(priv, &todo);
+	for (p = todo; *p != NULL; p++) {
+		if (qlist_match(pkg_ctx, *p, NULL, true))
 			pkg_unmerge(pkg_ctx, NULL, cp_argc, cp_argv, cpm_argc, cpm_argv);
-		todo = todo->next;
 	}
 
+	free(todo);
 	freeargv(cp_argc, cp_argv);
 	freeargv(cpm_argc, cpm_argv);
 
@@ -1722,7 +1723,7 @@ qmerge_unmerge_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-unmerge_packages(queue *todo)
+unmerge_packages(set *todo)
 {
 	return q_vdb_foreach_pkg(qmerge_unmerge_cb, todo, NULL);
 }
@@ -2000,7 +2001,7 @@ find_binpkg(const char *name)
 }
 
 static int
-parse_packages(queue *todo)
+parse_packages(set *todo)
 {
 	FILE *fp;
 	int linelen;
@@ -2009,10 +2010,16 @@ parse_packages(queue *todo)
 	struct pkg_t Pkg;
 	depend_atom *pkg_atom;
 	char repo[sizeof(Pkg.REPO)];
+	depend_atom **todo_atoms;
+	size_t todo_cnt;
+	size_t i;
 
 	fp = open_binpkg_index();
+	if (fp == NULL)
+		return EXIT_FAILURE;
 
 	buf = NULL;
+	buflen = 0;  /* make getline allocate */
 	repo[0] = '\0';
 
 	/* First consume the header with the common data. */
@@ -2040,6 +2047,16 @@ parse_packages(queue *todo)
 	memset(&Pkg, 0, sizeof(Pkg));
 	strcpy(Pkg.SLOT, "0");
 
+	/* build list with exploded atoms for each access below */
+	{
+		char **todo_strs;
+		todo_cnt = list_set(todo, &todo_strs);
+		todo_atoms = xmalloc(sizeof(*todo_atoms) * todo_cnt);
+		for (i = 0; i < todo_cnt; i++)
+			todo_atoms[i] = atom_explode(todo_strs[i]);
+		free(todo_strs);
+	}
+
 	/* Then walk all the package entries. */
 	while (getline(&buf, &buflen, fp) != -1) {
 		if (*buf == '\n') {
@@ -2047,20 +2064,15 @@ parse_packages(queue *todo)
 				if (search_pkgs && !todo) {
 					print_Pkg(verbose, pkg_atom, &Pkg);
 				} else {
-					const queue *ll = todo;
-					depend_atom *todo_atom;
-					while (ll) {
-						todo_atom = atom_explode(ll->name);
-						pkg_atom->REPO = todo_atom->REPO ? Pkg.REPO : NULL;
-						pkg_atom->SLOT = todo_atom->SLOT ? Pkg.SLOT : NULL;
-						if (atom_compare(todo_atom, pkg_atom) == EQUAL) {
+					for (i = 0; i < todo_cnt; i++) {
+						pkg_atom->REPO = todo_atoms[i]->REPO ? Pkg.REPO : NULL;
+						pkg_atom->SLOT = todo_atoms[i]->SLOT ? Pkg.SLOT : NULL;
+						if (atom_compare(todo_atoms[i], pkg_atom) == EQUAL) {
 							if (search_pkgs)
 								print_Pkg(verbose, pkg_atom, &Pkg);
 							else
 								pkg_fetch(0, pkg_atom, &Pkg);
 						}
-						atom_implode(todo_atom);
-						ll = ll->next;
 					}
 				}
 
@@ -2155,11 +2167,15 @@ parse_packages(queue *todo)
 	if (pkg_atom)
 		atom_implode(pkg_atom);
 
+	for (i = 0; i < todo_cnt; i++)
+		atom_implode(todo_atoms[i]);
+	free(todo_atoms);
+
 	return EXIT_SUCCESS;
 }
 
-static queue *
-qmerge_add_set_file(const char *dir, const char *file, queue *set)
+static set *
+qmerge_add_set_file(const char *dir, const char *file, set *q)
 {
 	FILE *fp;
 	int linelen;
@@ -2180,19 +2196,19 @@ qmerge_add_set_file(const char *dir, const char *file, queue *set)
 	buf = NULL;
 	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
 		rmspace_len(buf, (size_t)linelen);
-		set = add_set(buf, set);
+		q = add_set(buf, q);
 	}
 	free(buf);
 
 	fclose(fp);
 
-	return set;
+	return q;
 }
 
 static void *
 qmerge_add_set_system(void *data, char *buf)
 {
-	queue *set = data;
+	set *q = data;
 	char *s;
 
 	s = strchr(buf, '#');
@@ -2202,35 +2218,35 @@ qmerge_add_set_system(void *data, char *buf)
 
 	s = buf;
 	if (*s == '*')
-		set = add_set(s + 1, set);
+		q = add_set(s + 1, q);
 	else if (s[0] == '-' && s[1] == '*') {
-		int ok;
-		set = del_set(s + 2, set, &ok);
+		bool ok;
+		q = del_set(s + 2, q, &ok);
 	}
 
-	return set;
+	return q;
 }
 
 /* XXX: note, this doesn't handle more complicated set files like
  *      the portage .ini files in /usr/share/portage/sets/ */
 /* XXX: this code does not combine duplicate dependencies */
-static queue *
-qmerge_add_set(char *buf, queue *set)
+static set *
+qmerge_add_set(char *buf, set *q)
 {
 	if (strcmp(buf, "world") == 0)
-		return qmerge_add_set_file("/var/lib/portage", "world", set);
+		return qmerge_add_set_file("/var/lib/portage", "world", q);
 	else if (strcmp(buf, "all") == 0)
 		return get_vdb_atoms(0);
 	else if (strcmp(buf, "system") == 0)
-		return q_profile_walk("packages", qmerge_add_set_system, set);
+		return q_profile_walk("packages", qmerge_add_set_system, q);
 	else if (buf[0] == '@')
-		return qmerge_add_set_file("/etc/portage", buf+1, set);
+		return qmerge_add_set_file("/etc/portage", buf+1, q);
 	else
-		return add_set(buf, set);
+		return add_set(buf, q);
 }
 
 static int
-qmerge_run(queue *todo)
+qmerge_run(set *todo)
 {
 	if (uninstall)
 		return unmerge_packages(todo);
@@ -2241,7 +2257,7 @@ qmerge_run(queue *todo)
 int qmerge_main(int argc, char **argv)
 {
 	int i, ret;
-	queue *todo;
+	set *todo;
 
 	if (argc < 2)
 		qmerge_usage(EXIT_FAILURE);
@@ -2310,7 +2326,7 @@ int qmerge_main(int argc, char **argv)
 	}
 
 	ret = qmerge_run(todo);
-	free_sets(todo);
+	free_set(todo);
 	return ret;
 }
 

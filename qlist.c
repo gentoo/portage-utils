@@ -313,7 +313,6 @@ struct qlist_opt_state {
 	bool show_umap;
 	bool show_dbg;
 	bool columns;
-	queue *sets;
 	char *buf;
 	size_t buflen;
 };
@@ -434,7 +433,6 @@ int qlist_main(int argc, char **argv)
 		.show_umap = false,
 		.show_dbg = false,
 		.columns = false,
-		.sets = NULL,
 		.buflen = _Q_PATH_MAX,
 	};
 	int i, ret;

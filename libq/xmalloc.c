@@ -3,6 +3,7 @@
  * Utility routines.
  *
  * Copyright (C) 1999-2004 by Erik Andersen <andersen@codepoet.org>
+ * Copyright (C) 2019-        Fabian Groffen <grobian@gentoo.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,13 +20,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 static void *xmalloc(size_t size)
 {
@@ -46,8 +43,6 @@ static void *xcalloc(size_t nmemb, size_t size)
 static void *xzalloc(size_t size)
 {
 	void *ptr = xmalloc(size);
-	if (unlikely(ptr == NULL))
-		err("Out of memory");
 	memset(ptr, 0x00, size);
 	return ptr;
 }
@@ -65,4 +60,21 @@ static void *xmemdup(const void *src, size_t n)
 	void *ret = xmalloc(n);
 	memcpy(ret, src, n);
 	return ret;
+}
+
+static char *xstrdup_len(const char *s, size_t *len)
+{
+
+	if (s == NULL)
+		return NULL;
+
+	*len = strlen(s);
+	return xmemdup(s, *len + 1);
+}
+
+static char *xstrdup(const char *s)
+{
+	size_t len;
+
+	return xstrdup_len(s, &len);
 }

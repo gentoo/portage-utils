@@ -11,7 +11,8 @@
 
 - standardize/unify/clean up misc handling of colors
 
-- speed up queue structure ... append walks the whole list
+- remove odd rmspace for each string in libq/set.c (allows a lot less
+  malloc/frees)
 
 - equiv of `equery m` (metadata)
 

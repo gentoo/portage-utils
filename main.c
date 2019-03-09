@@ -1423,7 +1423,7 @@ atom_to_pvr(depend_atom *atom) {
 }
 
 /* TODO: Merge this into libq/vdb.c somehow. */
-static queue *
+static set *
 get_vdb_atoms(int fullcpv)
 {
 	q_vdb_ctx *ctx;
@@ -1440,18 +1440,21 @@ get_vdb_atoms(int fullcpv)
 	struct dirent **pf;
 
 	depend_atom *atom = NULL;
-	queue *cpf = NULL;
+	set *cpf = NULL;
 
 	ctx = q_vdb_open();
 	if (!ctx)
 		return NULL;
 
 	/* scan the cat first */
-	if ((cfd = scandirat(ctx->vdb_fd, ".", &cat, q_vdb_filter_cat, alphasort)) < 0)
+	cfd = scandirat(ctx->vdb_fd, ".", &cat, q_vdb_filter_cat, alphasort);
+	if (cfd < 0)
 		goto fuckit;
 
 	for (j = 0; j < cfd; j++) {
-		if ((dfd = scandirat(ctx->vdb_fd, cat[j]->d_name, &pf, q_vdb_filter_pkg, alphasort)) < 0)
+		dfd = scandirat(ctx->vdb_fd, cat[j]->d_name,
+				&pf, q_vdb_filter_pkg, alphasort);
+		if (dfd < 0)
 			continue;
 		for (i = 0; i < dfd; i++) {
 			int blen = snprintf(buf, sizeof(buf), "%s/%s/SLOT",
@@ -1475,9 +1478,11 @@ get_vdb_atoms(int fullcpv)
 
 			if (fullcpv) {
 				if (atom->PR_int)
-					snprintf(buf, sizeof(buf), "%s/%s-%s-r%i", atom->CATEGORY, atom->PN, atom->PV, atom->PR_int);
+					snprintf(buf, sizeof(buf), "%s/%s-%s-r%i",
+							atom->CATEGORY, atom->PN, atom->PV, atom->PR_int);
 				else
-					snprintf(buf, sizeof(buf), "%s/%s-%s", atom->CATEGORY, atom->PN, atom->PV);
+					snprintf(buf, sizeof(buf), "%s/%s-%s",
+							atom->CATEGORY, atom->PN, atom->PV);
 			} else {
 				snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
 			}

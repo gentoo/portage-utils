@@ -7,7 +7,6 @@
  * Copyright 2019-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-
 /* remove leading/trailing extraneous white space */
 static char *rmspace_len(char *s, size_t len)
 {

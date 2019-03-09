@@ -119,16 +119,15 @@ EXTRA_DIST += \
 	libq/rmspace.c \
 	libq/safe_io.c \
 	libq/scandirat.c \
+	libq/set.c \
 	libq/vdb.c \
 	libq/vdb_get_next_dir.c \
-	libq/virtuals.c \
 	libq/xarray.c \
 	libq/xasprintf.c \
 	libq/xchdir.c \
 	libq/xmalloc.c \
 	libq/xmkdir.c \
 	libq/xregex.c \
-	libq/xstrdup.c \
 	libq/xsystem.c \
 	main.c \
 	main.h \

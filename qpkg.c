@@ -44,15 +44,17 @@ filter_tbz2(const struct dirent *dentry)
 
 /* process a single dir for cleaning. dir can be a $PKGDIR, $PKGDIR/All/, $PKGDIR/$CAT */
 static uint64_t
-qpkg_clean_dir(char *dirp, queue *vdb)
+qpkg_clean_dir(char *dirp, set *vdb)
 {
-	queue *ll;
+	set *ll = NULL;
 	struct dirent **fnames;
 	int i, count;
 	char buf[_Q_PATH_MAX];
 	struct stat st;
 	uint64_t num_all_bytes = 0;
 	size_t disp_units = 0;
+	char **t;
+	bool ignore;
 
 	if (dirp == NULL)
 		return 0;
@@ -61,18 +63,13 @@ qpkg_clean_dir(char *dirp, queue *vdb)
 	if ((count = scandir(".", &fnames, filter_tbz2, alphasort)) < 0)
 		return 0;
 
+	/* create copy of vdb with only basenames */
+	for ((void)list_set(vdb, &t); *t != NULL; t++)
+		ll = add_set_unique(basename(*t), ll, &ignore);
+
 	for (i = 0; i < count; i++) {
-		int del = 1;
 		fnames[i]->d_name[strlen(fnames[i]->d_name)-5] = 0;
-		for (ll = vdb; ll != NULL; ll = ll->next) {
-			if (1) {
-				if (strcmp(fnames[i]->d_name, basename(ll->name)) == 0) {
-					del = 0;
-					break;
-				}
-			}
-		}
-		if (!del)
+		if (contains_set(fnames[i]->d_name, ll))
 			continue;
 		snprintf(buf, sizeof(buf), "%s.tbz2", fnames[i]->d_name);
 		if (lstat(buf, &st) != -1) {
@@ -81,14 +78,19 @@ qpkg_clean_dir(char *dirp, queue *vdb)
 				if ((st.st_size / KILOBYTE) > 1000)
 					disp_units = MEGABYTE;
 				num_all_bytes += st.st_size;
-				qprintf(" %s[%s%s %3s %s %s%s]%s %s%s/%s%s\n", DKBLUE, NORM, GREEN, make_human_readable_str(st.st_size, 1, disp_units),
-					disp_units == MEGABYTE ? "M" : "K", NORM, DKBLUE, NORM, CYAN, basename(dirp), fnames[i]->d_name, NORM);
+				qprintf(" %s[%s%s %3s %s %s%s]%s %s%s/%s%s\n",
+						DKBLUE, NORM, GREEN,
+						make_human_readable_str(st.st_size, 1, disp_units),
+						disp_units == MEGABYTE ? "M" : "K",
+						NORM, DKBLUE, NORM, CYAN,
+						basename(dirp), fnames[i]->d_name, NORM);
 			}
 			if (!pretend)
 				unlink(buf);
 		}
 	}
 
+	free_set(ll);
 	scandir_free(fnames, count);
 
 	return num_all_bytes;
@@ -103,18 +105,14 @@ qpkg_clean(char *dirp)
 	size_t disp_units = 0;
 	uint64_t num_all_bytes;
 	struct dirent **dnames;
-	queue *vdb;
+	set *vdb;
+
+	if (chdir(dirp) != 0)
+		return 1;
+	if ((count = scandir(".", &dnames, filter_hidden, alphasort)) < 0)
+		return 1;
 
 	vdb = get_vdb_atoms(1);
-
-	if (chdir(dirp) != 0) {
-		free_sets(vdb);
-		return 1;
-	}
-	if ((count = scandir(".", &dnames, filter_hidden, alphasort)) < 0) {
-		free_sets(vdb);
-		return 1;
-	}
 
 	if (eclean) {
 		size_t n;
@@ -141,11 +139,13 @@ qpkg_clean(char *dirp)
 				if ((p = strrchr(buf, '/')) == NULL)
 					continue;
 				*p = 0;
-				/* these strcat() are safe. the name is extracted from buf already. */
+				/* these strcat() are safe. the name is extracted from
+				 * buf already. */
 				strcat(buf, "/");
 				strcat(buf, name);
 
-				/* num_all_bytes will be off when pretend and eclean are enabled together */
+				/* num_all_bytes will be off when pretend and eclean are
+				 * enabled together */
 				/* vdb = del_set(buf, vdb, &i); */
 				vdb = add_set(buf, vdb);
 			}
@@ -164,13 +164,15 @@ qpkg_clean(char *dirp)
 	}
 	scandir_free(dnames, count);
 
-	free_sets(vdb);
+	free_set(vdb);
 
 	disp_units = KILOBYTE;
 	if ((num_all_bytes / KILOBYTE) > 1000)
 		disp_units = MEGABYTE;
-	qprintf(" %s*%s Total space that would be freed in packages directory: %s%s %c%s\n", GREEN, NORM, RED,
-		make_human_readable_str(num_all_bytes, 1, disp_units), disp_units == MEGABYTE ? 'M' : 'K', NORM);
+	qprintf(" %s*%s Total space that would be freed in packages "
+			"directory: %s%s %c%s\n", GREEN, NORM, RED,
+			make_human_readable_str(num_all_bytes, 1, disp_units),
+			disp_units == MEGABYTE ? 'M' : 'K', NORM);
 
 	return 0;
 }

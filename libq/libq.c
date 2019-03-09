@@ -1,3 +1,12 @@
+/*
+ * Copyright 2005-2018 Gentoo Foundation
+ * Distributed under the terms of the GNU General Public License v2
+ *
+ * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
+ */
+
 #if defined(__linux__)
 # include <endian.h>
 # include <byteswap.h>
@@ -11,7 +20,6 @@
 #include "libq.h"
 #include "colors.c"
 #include "xmalloc.c"
-#include "xstrdup.c"
 #include "xasprintf.c"
 #include "hash_fd.c"
 #include "md5_sha1_sum.c"
@@ -38,5 +46,5 @@
 # include "profile.c"
 # include "vdb.c"
 # include "vdb_get_next_dir.c"
-# include "virtuals.c"
+# include "set.c"
 #endif
