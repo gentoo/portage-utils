@@ -1,9 +1,10 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #ifdef APPLET_qcheck
@@ -120,13 +121,16 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 				continue;
 			}
 		}
-		if (fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd, entry->name + 1, &st, AT_SYMLINK_NOFOLLOW)) {
+		if (fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd, entry->name + 1,
+					&st, AT_SYMLINK_NOFOLLOW))
+		{
 			/* make sure file exists */
 			if (state->chk_afk) {
 				if (errno == ENOENT)
 					qcprintf(" %sAFK%s: %s\n", RED, NORM, entry->name);
 				else
-					qcprintf(" %sERROR (%s)%s: %s\n", RED, strerror(errno), NORM, entry->name);
+					qcprintf(" %sERROR (%s)%s: %s\n", RED,
+							strerror(errno), NORM, entry->name);
 			} else {
 				--num_files;
 				++num_files_ignored;
@@ -146,7 +150,9 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 			if (i == cpm_argc) {
 				/* Not explicitly masked, so it's protected */
 				for (i = 1; i < cp_argc; ++i)
-					if (strncmp(cp_argv[i], entry->name, strlen(cp_argv[i])) == 0) {
+					if (strncmp(cp_argv[i], entry->name,
+								strlen(cp_argv[i])) == 0)
+					{
 						num_files_ok++;
 						continue;
 					}
@@ -184,7 +190,8 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 
 			if (!hash_algo) {
 				if (state->chk_hash) {
-					qcprintf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n", RED, NORM, entry->digest, entry->name);
+					qcprintf(" %sUNKNOWN DIGEST%s: '%s' for '%s'\n",
+							RED, NORM, entry->digest, entry->name);
 					++num_files_unknown;
 				} else {
 					--num_files;
@@ -195,8 +202,11 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 				continue;
 			}
 
-			hash_cb_t hash_cb = state->undo_prelink ? hash_cb_prelink_undo : hash_cb_default;
-			f_digest = (char *)hash_file_at_cb(pkg_ctx->cat_ctx->ctx->portroot_fd, entry->name + 1, hash_algo, hash_cb);
+			hash_cb_t hash_cb =
+				state->undo_prelink ? hash_cb_prelink_undo : hash_cb_default;
+			f_digest = (char *)hash_file_at_cb(
+					pkg_ctx->cat_ctx->ctx->portroot_fd,
+					entry->name + 1, hash_algo, hash_cb);
 
 			/* Digest-check 2/3:
 			 * Can we get a digest of the file? */
@@ -208,7 +218,9 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 					fputs(buffer, fp_contents_update);
 
 				if (verbose)
-					qcprintf(" %sPERM %4o%s: %s\n", RED, (unsigned int)(st.st_mode & 07777), NORM, entry->name);
+					qcprintf(" %sPERM %4o%s: %s\n",
+							RED, (unsigned int)(st.st_mode & 07777),
+							NORM, entry->name);
 
 				continue;
 			}
@@ -218,7 +230,8 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 			if (strcmp(entry->digest, f_digest) != 0) {
 				if (state->chk_hash) {
 					if (state->qc_update)
-						fprintf(fp_contents_update, "obj %s %s %"PRIu64"\n", entry->name, f_digest, (uint64_t)st.st_mtime);
+						fprintf(fp_contents_update, "obj %s %s %"PRIu64"\n",
+								entry->name, f_digest, (uint64_t)st.st_mtime);
 
 					const char *digest_disp;
 					switch (hash_algo) {
@@ -227,9 +240,11 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 						default: digest_disp = "UNK"; break;
 					}
 
-					qcprintf(" %s%s-DIGEST%s: %s", RED, digest_disp, NORM, entry->name);
+					qcprintf(" %s%s-DIGEST%s: %s",
+							RED, digest_disp, NORM, entry->name);
 					if (verbose)
-						qcprintf(" (recorded '%s' != actual '%s')", entry->digest, f_digest);
+						qcprintf(" (recorded '%s' != actual '%s')",
+								entry->digest, f_digest);
 					qcprintf("\n");
 				} else {
 					--num_files;
@@ -249,15 +264,19 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 		if (state->chk_mtime && entry->mtime && entry->mtime != st.st_mtime) {
 			qcprintf(" %sMTIME%s: %s", RED, NORM, entry->name);
 			if (verbose)
-				qcprintf(" (recorded '%"PRIu64"' != actual '%"PRIu64"')", (uint64_t)entry->mtime, (uint64_t)st.st_mtime);
+				qcprintf(" (recorded '%"PRIu64"' != actual '%"PRIu64"')",
+						(uint64_t)entry->mtime, (uint64_t)st.st_mtime);
 			qcprintf("\n");
 
 			/* Update mtime */
 			if (state->qc_update) {
 				if (entry->type == CONTENTS_SYM) {
-					fprintf(fp_contents_update, "sym %s -> %s %"PRIu64"\n", entry->name, entry->sym_target, (uint64_t)st.st_mtime);
+					fprintf(fp_contents_update, "sym %s -> %s %"PRIu64"\n",
+							entry->name, entry->sym_target,
+							(uint64_t)st.st_mtime);
 				} else {
-					fprintf(fp_contents_update, "obj %s %s %"PRIu64"\n", entry->name, entry->digest, (uint64_t)st.st_mtime);
+					fprintf(fp_contents_update, "obj %s %s %"PRIu64"\n",
+							entry->name, entry->digest, (uint64_t)st.st_mtime);
 				}
 			}
 

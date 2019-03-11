@@ -9,7 +9,6 @@
 #include "tests/tests.h"
 
 #include "libq/xmalloc.c"
-#include "libq/xstrdup.c"
 #include "libq/xmkdir.c"
 
 int main(int argc, char *argv[])
