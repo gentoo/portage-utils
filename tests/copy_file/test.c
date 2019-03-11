@@ -5,6 +5,7 @@
 
 #include "tests/tests.h"
 
+#include "libq/safe_io.c"
 #include "libq/copy_file.c"
 
 static int src_fd, dst_fd;

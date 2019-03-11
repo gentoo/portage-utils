@@ -7,15 +7,21 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-typedef enum { VER_ALPHA=0, VER_BETA, VER_PRE, VER_RC, VER_NORM, VER_P } atom_suffixes;
-const char * const atom_suffixes_str[] = { "_alpha", "_beta", "_pre", "_rc", "_/*bogus*/", "_p" };
+typedef enum {
+	VER_ALPHA=0, VER_BETA, VER_PRE, VER_RC, VER_NORM, VER_P
+} atom_suffixes;
+const char * const atom_suffixes_str[] = {
+	"_alpha", "_beta", "_pre", "_rc", "_/*bogus*/", "_p"
+};
 
 typedef struct {
 	atom_suffixes suffix;
 	uint64_t sint;
 } atom_suffix;
 
-const char * const atom_op_str[] = { "", ">", ">=", "=", "<=", "<", "~", "!", "!!", "*" };
+const char * const atom_op_str[] = {
+	"", ">", ">=", "=", "<=", "<", "~", "!", "!!", "*"
+};
 typedef enum {
 	/*    */ ATOM_OP_NONE = 0,
 	/* >  */ ATOM_OP_NEWER,

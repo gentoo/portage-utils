@@ -1,9 +1,10 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  *
  * All the junk in one trunk!
  */
@@ -55,6 +56,46 @@
 #include <libproc.h>
 #endif
 
+#if defined(__linux__)
+# include <endian.h>
+# include <byteswap.h>
+#elif defined(__FreeBSD__)
+# include <sys/endian.h>
+#endif
+
+/* Solaris */
+#if defined(__sun) && defined(__SVR4)
+# include <sys/dklabel.h>
+# define S_BLKSIZE DK_DEVID_BLKSIZE
+#elif defined(__hpux__) || defined(__MINT__)
+/* must not include both dir.h and dirent.h on hpux11..11 & FreeMiNT */
+#elif defined(__linux__)
+/* Linux systems do not need sys/dir.h as they are generally POSIX sane */
+#else
+# include <sys/dir.h>
+#endif
+
+/* AIX */
+#ifdef _AIX
+# include <sys/stat.h>
+# define S_BLKSIZE DEV_BSIZE
+#endif
+
+/* Windows Interix */
+#ifdef __INTERIX
+# define S_BLKSIZE S_BLOCK_SIZE
+#endif
+
+/* HP-UX */
+#ifdef __hpux
+# define S_BLKSIZE st.st_blksize
+#endif
+
+/* Everyone else */
+#ifndef S_BLKSIZE
+# define S_BLKSIZE 512
+#endif
+
 #if defined(__sun) && defined(__SVR4)
 /* workaround non-const defined name in option struct, such that we
  * don't get a zillion of warnings */
@@ -70,7 +111,7 @@ struct option {
 extern int	getopt_long(int, char * const *, const char *,
 		    const struct option *, int *);
 #else
-#include <getopt.h>
+# include <getopt.h>
 #endif
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*(arr)))
@@ -80,22 +121,22 @@ extern int	getopt_long(int, char * const *, const char *,
 #endif
 
 #ifndef MIN
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
+# define MIN(x, y) ((x) < (y) ? (x) : (y))
 #endif
 #ifndef MAX
-#define MAX(x, y) ((x) < (y) ? (y) : (x))
+# define MAX(x, y) ((x) < (y) ? (y) : (x))
 #endif
 
 /* Easy enough to glue to older versions */
 #ifndef O_CLOEXEC
-#define O_CLOEXEC 0
+# define O_CLOEXEC 0
 #endif
 #ifndef O_PATH
-#define O_PATH 0
+# define O_PATH 0
 #endif
 
 #ifndef CONFIG_EPREFIX
-#define CONFIG_EPREFIX "/"
+# define CONFIG_EPREFIX "/"
 #endif
 
 #define likely(x) __builtin_expect((x), 1)

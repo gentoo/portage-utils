@@ -106,7 +106,6 @@ EXTRA_DIST += \
 	libq/basename.c \
 	libq/busybox.h \
 	libq/colors.c \
-	libq/compat.c \
 	libq/copy_file.c \
 	libq/hash_fd.c \
 	libq/human_readable.c \
