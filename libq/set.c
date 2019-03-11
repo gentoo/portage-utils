@@ -77,7 +77,7 @@ static set *
 add_set_unique(const char *name, set *q, bool *unique)
 {
 	char *mname = xstrdup(name);
-	int hash;
+	unsigned int hash;
 	int pos;
 	elem *ll;
 	elem *w;
@@ -123,7 +123,7 @@ static bool
 contains_set(char *s, set *q)
 {
 	char *mname = xstrdup(s);
-	int hash;
+	unsigned int hash;
 	int pos;
 	elem *w;
 	bool found;
