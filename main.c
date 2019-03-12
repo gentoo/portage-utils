@@ -1143,9 +1143,10 @@ initialize_flat(const char *overlay, int cache_type, bool force)
 	if (secs < 0) secs = 0;
 	if (frac < 0) frac = 0;
 
-	warn("Finished %u entries in %d.%06d seconds", count, secs, frac);
+	warn("Finished %u entries in %d.%02d seconds", count, secs, frac);
 	if (secs > 120)
-		warn("You should consider using the noatime mount option for '%s' if it's not already enabled", overlay);
+		warn("You should consider using the noatime mount option "
+				"for '%s' if it's not already enabled", overlay);
 ret:
 	close(subdir_fd);
 	if (subdir_fd != overlay_fd)
