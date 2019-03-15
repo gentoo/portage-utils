@@ -50,8 +50,6 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
-#include <iniparser.h>
-
 #if defined(__MACH__)
 #include <libproc.h>
 #endif

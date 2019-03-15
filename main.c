@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -8,6 +8,8 @@
 
 #include "porting.h"
 #include "main.h"
+
+#include <iniparser.h>
 
 /* prototypes and such */
 static bool eat_file(const char *, char **, size_t *);
