@@ -87,7 +87,8 @@ int q_main(int argc, char **argv)
 		case 'M': modpath = optarg; break;
 		case 'm':
 			if (optarg) {
-				const char *path = initialize_flat(optarg, CACHE_METADATA, true);
+				const char *path =
+					initialize_flat(optarg, CACHE_METADATA, true);
 				if (USE_CLEANUP)
 					free((void *)path);
 				reinitialize_metacache = -1;
@@ -149,7 +150,8 @@ int q_main(int argc, char **argv)
 		for (i = 1; applets[i].desc; ++i) {
 			int r = symlinkat(prog, fd, applets[i].name);
 			if (!quiet)
-				printf(" %s ...\t[%s]\n", applets[i].name, r ? strerror(errno) : "OK");
+				printf(" %s ...\t[%s]\n",
+						applets[i].name, r ? strerror(errno) : "OK");
 			if (r && errno != EEXIST)
 				ret = 1;
 		}
@@ -184,42 +186,3 @@ int q_main(int argc, char **argv)
 	return (func)(argc - 1, argv);
 }
 
-static int run_applet_l(const char *arg, ...)
-{
-	int (*applet)(int, char **);
-	va_list ap;
-	int ret, optind_saved, argc;
-	char **argv;
-	const char *argv0_saved;
-
-	optind_saved = optind;
-	argv0_saved = argv0;
-
-	applet = lookup_applet(arg);
-	if (!applet)
-		return -1;
-
-	/* This doesn't NULL terminate argv, but you should be using argc */
-	va_start(ap, arg);
-	argc = 0;
-	argv = NULL;
-	while (arg) {
-		argv = xrealloc(argv, sizeof(*argv) * ++argc);
-		argv[argc - 1] = xstrdup(arg);
-		arg = va_arg(ap, const char *);
-	}
-	va_end(ap);
-
-	optind = 0;
-	argv0 = argv[0];
-	ret = applet(argc, argv);
-
-	while (argc--)
-		free(argv[argc]);
-	free(argv);
-
-	optind = optind_saved;
-	argv0 = argv0_saved;
-
-	return ret;
-}
