@@ -4,6 +4,13 @@
  */
 
 #include <signal.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#include "main.h"
+#include "xasprintf.h"
+#include "prelink.h"
 
 static const char prelink_bin[] = "prelink";
 
@@ -26,7 +33,7 @@ static int prelink_in_current_path(bool quiet_missing)
 			warnp("Error redirecting output");
 			_exit(2);
 		}
-		execlp(prelink_bin, prelink_bin, "--version", NULL);
+		execlp(prelink_bin, prelink_bin, "--version", (char *)NULL);
 		if (!quiet_missing || errno != ENOENT)
 			warnp("error executing %s", prelink_bin);
 		_exit(errno == ENOENT ? 1 : 2);
@@ -43,7 +50,7 @@ static int prelink_in_current_path(bool quiet_missing)
 	}
 }
 
-static bool prelink_available(void)
+bool prelink_available(void)
 {
 	int status = prelink_in_current_path(true);
 
@@ -192,7 +199,7 @@ static int _hash_cb_prelink(int fd, const char *filename, const char * const arg
 	return fd;
 }
 
-static int hash_cb_prelink_undo(int fd, const char *filename)
+int hash_cb_prelink_undo(int fd, const char *filename)
 {
 	static const char * const argv[] = {
 		prelink_bin,

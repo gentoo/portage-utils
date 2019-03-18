@@ -703,10 +703,10 @@ int qdepends_main(int argc, char **argv)
 		for (i = 0; depend_files[i]; ++i) {
 			printf(" %s*%s %s\n", GREEN, NORM, depend_files[i]);
 			state.depend_file = depend_files[i];
-			ret |= q_vdb_foreach_pkg(cb, &state, NULL);
+			ret |= q_vdb_foreach_pkg(portroot, portvdb, cb, &state, NULL);
 		}
 	} else
-		ret = q_vdb_foreach_pkg(cb, &state, NULL);
+		ret = q_vdb_foreach_pkg(portroot, portvdb, cb, &state, NULL);
 
 	array_for_each(atoms, i, atom)
 		atom_implode(atom);

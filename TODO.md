@@ -14,6 +14,8 @@
 - remove odd rmspace for each string in libq/set.c (allows a lot less
   malloc/frees)
 
+- make set.c to array (xarray) instead of C-array (list)
+
 - equiv of `equery m` (metadata)
 
 - env vars only get expanded once, so this fails:<br>

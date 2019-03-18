@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I autotools/m4
 
-SUBDIRS = autotools/gnulib
+SUBDIRS = autotools/gnulib libq
 
 portagedir = $(sysconfdir)/portage
 postsyncddir = $(portagedir)/repo.postsync.d
@@ -11,9 +11,11 @@ bin_PROGRAMS = q
 q_SOURCES = main.c
 q_CPPFLAGS = \
 	-I$(top_builddir)/autotools/gnulib \
-	-I$(top_srcdir)/autotools/gnulib
+	-I$(top_srcdir)/autotools/gnulib \
+	-I$(top_srcdir)/libq
 q_LDADD = \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
+	$(top_builddir)/libq/libq.la \
 	-liniparser \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS)

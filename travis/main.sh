@@ -17,7 +17,7 @@ coverity_scan() {
 	fi
 
 	export COVERITY_SCAN_PROJECT_NAME="${TRAVIS_REPO_SLUG}"
-	export COVERITY_SCAN_NOTIFICATION_EMAIL="vapier@gentoo.org"
+	export COVERITY_SCAN_NOTIFICATION_EMAIL="grobian@gentoo.org"
 	export COVERITY_SCAN_BUILD_COMMAND="make -j${ncpus}"
 	export COVERITY_SCAN_BUILD_COMMAND_PREPEND="git clean -q -x -d -f; git checkout -f"
 	export COVERITY_SCAN_BRANCH_PATTERN="master"
@@ -29,6 +29,8 @@ main() {
 	# For local deps like iniparser.
 	export CPPFLAGS="-I${PWD}/../sysroot"
 	export LDFLAGS="-L${PWD}/../sysroot"
+
+	v ./configure
 
 	# Standard optimized build.
 	m

@@ -423,7 +423,7 @@ int qcheck_main(int argc, char **argv)
 			xarraypush_ptr(atoms, atom);
 	}
 
-	ret = q_vdb_foreach_pkg_sorted(qcheck_cb, &state);
+	ret = q_vdb_foreach_pkg_sorted(portroot, portvdb, qcheck_cb, &state);
 	{
 		void *regex;
 		array_for_each(regex_arr, i, regex)

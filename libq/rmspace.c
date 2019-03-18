@@ -7,8 +7,14 @@
  * Copyright 2019-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#include "rmspace.h"
+
 /* remove leading/trailing extraneous white space */
-static char *rmspace_len(char *s, size_t len)
+char *rmspace_len(char *s, size_t len)
 {
 	char *p;
 	/* find the start of trailing space and set it to \0 */
@@ -25,7 +31,7 @@ static char *rmspace_len(char *s, size_t len)
 	return s;
 }
 
-static char *rmspace(char *s)
+char *rmspace(char *s)
 {
 	return rmspace_len(s, strlen(s));
 }

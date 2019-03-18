@@ -24,13 +24,9 @@
 
 #include <stdio.h>
 
-enum {
-	KILOBYTE = 1024,
-	MEGABYTE = (KILOBYTE*1024),
-	GIGABYTE = (MEGABYTE*1024)
-};
+#include "human_readable.h"
 
-static const char *
+const char *
 make_human_readable_str(unsigned long long val,
 	unsigned long block_size, unsigned long display_unit)
 {

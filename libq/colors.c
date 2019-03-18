@@ -7,24 +7,28 @@
  * Copyright 2019-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
+#include "main.h"
+#include "colors.h"
+#include "rmspace.h"
+
 /* color constants */
 #ifdef OPTIMIZE_FOR_SIZE
 # define _MAKE_COLOR(c,b) ""
 #else
 # define _MAKE_COLOR(c,b) "\e[" c ";" b "m"
 #endif
-static const char *BOLD = _MAKE_COLOR("00", "01");
-static const char *NORM = _MAKE_COLOR("00", "00");
-static const char *BLUE = _MAKE_COLOR("36", "01");
-static const char *DKBLUE = _MAKE_COLOR("34", "01");
-static const char *CYAN = _MAKE_COLOR("00", "36");
-static const char *GREEN = _MAKE_COLOR("32", "01");
-static const char *DKGREEN = _MAKE_COLOR("00", "32");
-static const char *MAGENTA = _MAKE_COLOR("00", "35");
-static const char *RED = _MAKE_COLOR("31", "01");
-static const char *YELLOW = _MAKE_COLOR("33", "01");
-static const char *BRYELLOW = _MAKE_COLOR("01", "33");
-static const char *WHITE = _MAKE_COLOR("01", "38");
+const char *BOLD = _MAKE_COLOR("00", "01");
+const char *NORM = _MAKE_COLOR("00", "00");
+const char *BLUE = _MAKE_COLOR("36", "01");
+const char *DKBLUE = _MAKE_COLOR("34", "01");
+const char *CYAN = _MAKE_COLOR("00", "36");
+const char *GREEN = _MAKE_COLOR("32", "01");
+const char *DKGREEN = _MAKE_COLOR("00", "32");
+const char *MAGENTA = _MAKE_COLOR("00", "35");
+const char *RED = _MAKE_COLOR("31", "01");
+const char *YELLOW = _MAKE_COLOR("33", "01");
+const char *BRYELLOW = _MAKE_COLOR("01", "33");
+const char *WHITE = _MAKE_COLOR("01", "38");
 
 static const char *COLOR_MAP = CONFIG_EPREFIX "etc/portage/color.map";
 
@@ -58,7 +62,7 @@ static cpairtype color_pairs[] = {
 };
 #undef X2
 
-static void
+void
 color_remap(void)
 {
 	FILE *fp;

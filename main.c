@@ -8,17 +8,34 @@
 
 #include "porting.h"
 #include "main.h"
+#include "atom.h"
+#include "basename.h"
+#include "busybox.h"
+#include "colors.h"
+#include "copy_file.h"
+#include "eat_file.h"
+#include "hash_fd.h"
+#include "human_readable.h"
+#include "i18n.h"
+#include "md5_sha1_sum.h"
+#include "prelink.h"
+#include "profile.h"
+#include "rmspace.h"
+#include "safe_io.h"
+#include "scandirat.h"
+#include "set.h"
+#include "vdb.h"
+#include "xarray.h"
+#include "xasprintf.h"
+#include "xchdir.h"
+#include "xmalloc.h"
+#include "xmkdir.h"
+#include "xregex.h"
+#include "xsystem.h"
 
 #include <iniparser.h>
 
 /* prototypes and such */
-static bool eat_file(const char *, char **, size_t *);
-static bool eat_file_fd(int, char **, size_t *);
-static bool eat_file_at(int, const char *, char **, size_t *);
-static int rematch(const char *, const char *, int);
-static char *rmspace(char *);
-static char *rmspace_len(char *, size_t);
-
 static int lookup_applet_idx(const char *);
 
 /* variables to control runtime behavior */
@@ -53,7 +70,7 @@ static char *pkg_install_mask;
 const char err_noapplet[] = "Sorry this applet was disabled at compile time";
 
 /* helper functions for showing errors */
-static const char *argv0;
+const char *argv0;
 
 #ifdef EBUG
 # include <sys/resource.h>
@@ -66,9 +83,6 @@ init_coredumps(void)
 	setrlimit(RLIMIT_CORE, &rl);
 }
 #endif
-
-/* include common library code */
-#include "libq/libq.c"
 
 static DECLARE_ARRAY(overlays);
 
@@ -213,75 +227,6 @@ version_barf(void)
 }
 
 static bool
-eat_file_fd(int fd, char **bufptr, size_t *bufsize)
-{
-	bool ret = true;
-	struct stat s;
-	char *buf;
-	size_t read_size;
-
-	/* First figure out how much data we should read from the fd. */
-	if (fd == -1 || fstat(fd, &s) != 0) {
-		ret = false;
-		read_size = 0;
-		/* Fall through so we set the first byte 0 */
-	} else if (!s.st_size) {
-		/* We might be trying to eat a virtual file like in /proc, so
-		 * read an arbitrary size that should be "enough". */
-		read_size = BUFSIZE;
-	} else
-		read_size = (size_t)s.st_size;
-
-	/* Now allocate enough space (at least 1 byte). */
-	if (!*bufptr || *bufsize < read_size) {
-		/* We assume a min allocation size so that repeat calls don't
-		 * hit ugly ramp ups -- if you read a file that is 1 byte, then
-		 * 5 bytes, then 10 bytes, then 20 bytes, ... you'll allocate
-		 * constantly.  So we round up a few pages as wasiting virtual
-		 * memory is cheap when it is unused.  */
-		*bufsize = ((read_size + 1) + BUFSIZE - 1) & -BUFSIZE;
-		*bufptr = xrealloc(*bufptr, *bufsize);
-	}
-	buf = *bufptr;
-
-	/* Finally do the actual read. */
-	buf[0] = '\0';
-	if (read_size) {
-		if (s.st_size) {
-			if (read(fd, buf, read_size) != (ssize_t)read_size)
-				return false;
-			buf[read_size] = '\0';
-		} else {
-			if (read(fd, buf, read_size) == 0)
-				return false;
-			buf[read_size - 1] = '\0';
-		}
-	}
-
-	return ret;
-}
-
-static bool
-eat_file_at(int dfd, const char *file, char **bufptr, size_t *bufsize)
-{
-	bool ret;
-	int fd;
-
-	fd = openat(dfd, file, O_CLOEXEC|O_RDONLY);
-	ret = eat_file_fd(fd, bufptr, bufsize);
-	if (fd != -1)
-		close(fd);
-
-	return ret;
-}
-
-static bool
-eat_file(const char *file, char **bufptr, size_t *bufsize)
-{
-	return eat_file_at(AT_FDCWD, file, bufptr, bufsize);
-}
-
-static bool
 prompt(const char *p)
 {
 	printf("%s? [Y/n] ", p);
@@ -296,7 +241,7 @@ prompt(const char *p)
 	}
 }
 
-static int
+int
 rematch(const char *re, const char *match, int cflags)
 {
 	regex_t preg;
@@ -1445,7 +1390,7 @@ get_vdb_atoms(int fullcpv)
 	depend_atom *atom = NULL;
 	set *cpf = NULL;
 
-	ctx = q_vdb_open();
+	ctx = q_vdb_open(portroot, portvdb);
 	if (!ctx)
 		return NULL;
 

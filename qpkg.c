@@ -401,7 +401,7 @@ retry_mkdir:
 	}
 
 	/* now try to run through vdb and locate matches for user inputs */
-	ctx = q_vdb_open();
+	ctx = q_vdb_open(portroot, portvdb);
 	if (!ctx)
 		return EXIT_FAILURE;
 

@@ -1,37 +1,30 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-/*
- * VDB context
- */
+#include "main.h"
+#include "porting.h"
+#include "xmalloc.h"
+#include "rmspace.h"
+#include "scandirat.h"
+#include "eat_file.h"
+#include "vdb.h"
 
-typedef struct {
-	int portroot_fd, vdb_fd;
-	DIR *dir;
-} q_vdb_ctx;
-
-static q_vdb_ctx *
-q_vdb_open(/*const char *sroot, const char *svdb*/void)
+q_vdb_ctx *
+q_vdb_open(const char *sroot, const char *svdb)
 {
 	q_vdb_ctx *ctx = xmalloc(sizeof(*ctx));
-	const char *sroot = NULL;
-	const char *svdb = NULL;
 
-	if (!sroot)
-		sroot = portroot;
 	ctx->portroot_fd = open(sroot, O_RDONLY|O_CLOEXEC|O_PATH);
 	if (ctx->portroot_fd == -1) {
 		warnp("could not open root: %s", sroot);
 		goto f_error;
 	}
 
-	if (!svdb)
-		svdb = portvdb;
 	/* Skip the leading slash */
 	svdb++;
 	if (*svdb == '\0')
@@ -58,7 +51,7 @@ q_vdb_open(/*const char *sroot, const char *svdb*/void)
 	return NULL;
 }
 
-static void
+void
 q_vdb_close(q_vdb_ctx *ctx)
 {
 	closedir(ctx->dir);
@@ -68,18 +61,7 @@ q_vdb_close(q_vdb_ctx *ctx)
 	free(ctx);
 }
 
-/*
- * Category context
- */
-
-typedef struct {
-	const char *name;
-	int fd;
-	DIR *dir;
-	const q_vdb_ctx *ctx;
-} q_vdb_cat_ctx;
-
-static int
+int
 q_vdb_filter_cat(const struct dirent *de)
 {
 	int i;
@@ -112,7 +94,7 @@ q_vdb_filter_cat(const struct dirent *de)
 	return i;
 }
 
-static q_vdb_cat_ctx *
+q_vdb_cat_ctx *
 q_vdb_open_cat(q_vdb_ctx *ctx, const char *name)
 {
 	q_vdb_cat_ctx *cat_ctx;
@@ -138,7 +120,7 @@ q_vdb_open_cat(q_vdb_ctx *ctx, const char *name)
 	return cat_ctx;
 }
 
-static q_vdb_cat_ctx *
+q_vdb_cat_ctx *
 q_vdb_next_cat(q_vdb_ctx *ctx)
 {
 	/* search for a category directory */
@@ -162,7 +144,7 @@ q_vdb_next_cat(q_vdb_ctx *ctx)
 	return cat_ctx;
 }
 
-static void
+void
 q_vdb_close_cat(q_vdb_cat_ctx *cat_ctx)
 {
 	closedir(cat_ctx->dir);
@@ -171,19 +153,7 @@ q_vdb_close_cat(q_vdb_cat_ctx *cat_ctx)
 	free(cat_ctx);
 }
 
-/*
- * Package context
- */
-
-typedef struct {
-	const char *name;
-	char *slot, *repo;
-	size_t slot_len, repo_len;
-	int fd;
-	q_vdb_cat_ctx *cat_ctx;
-} q_vdb_pkg_ctx;
-
-static int
+int
 q_vdb_filter_pkg(const struct dirent *de)
 {
 #ifdef DT_UNKNOWN
@@ -199,7 +169,7 @@ q_vdb_filter_pkg(const struct dirent *de)
 	return 1;
 }
 
-static q_vdb_pkg_ctx *
+q_vdb_pkg_ctx *
 q_vdb_open_pkg(q_vdb_cat_ctx *cat_ctx, const char *name)
 {
 	q_vdb_pkg_ctx *pkg_ctx = xmalloc(sizeof(*pkg_ctx));
@@ -211,7 +181,7 @@ q_vdb_open_pkg(q_vdb_cat_ctx *cat_ctx, const char *name)
 	return pkg_ctx;
 }
 
-static q_vdb_pkg_ctx *
+q_vdb_pkg_ctx *
 q_vdb_next_pkg(q_vdb_cat_ctx *cat_ctx)
 {
 	q_vdb_pkg_ctx *pkg_ctx;
@@ -234,7 +204,7 @@ q_vdb_next_pkg(q_vdb_cat_ctx *cat_ctx)
 	return pkg_ctx;
 }
 
-static int
+int
 q_vdb_pkg_openat(q_vdb_pkg_ctx *pkg_ctx, const char *file, int flags, mode_t mode)
 {
 	if (pkg_ctx->fd == -1) {
@@ -246,7 +216,7 @@ q_vdb_pkg_openat(q_vdb_pkg_ctx *pkg_ctx, const char *file, int flags, mode_t mod
 	return openat(pkg_ctx->fd, file, flags|O_CLOEXEC, mode);
 }
 
-static FILE *
+FILE *
 q_vdb_pkg_fopenat(q_vdb_pkg_ctx *pkg_ctx, const char *file,
 	int flags, mode_t mode, const char *fmode)
 {
@@ -263,10 +233,8 @@ q_vdb_pkg_fopenat(q_vdb_pkg_ctx *pkg_ctx, const char *file,
 
 	return fp;
 }
-#define q_vdb_pkg_fopenat_ro(pkg_ctx, file) q_vdb_pkg_fopenat(pkg_ctx, file, O_RDONLY, 0, "r")
-#define q_vdb_pkg_fopenat_rw(pkg_ctx, file) q_vdb_pkg_fopenat(pkg_ctx, file, O_RDWR|O_CREAT|O_TRUNC, 0644, "w")
 
-static bool
+bool
 q_vdb_pkg_eat(q_vdb_pkg_ctx *pkg_ctx, const char *file, char **bufptr, size_t *buflen)
 {
 	int fd = q_vdb_pkg_openat(pkg_ctx, file, O_RDONLY, 0);
@@ -277,7 +245,7 @@ q_vdb_pkg_eat(q_vdb_pkg_ctx *pkg_ctx, const char *file, char **bufptr, size_t *b
 	return ret;
 }
 
-static void
+void
 q_vdb_close_pkg(q_vdb_pkg_ctx *pkg_ctx)
 {
 	if (pkg_ctx->fd != -1)
@@ -287,22 +255,16 @@ q_vdb_close_pkg(q_vdb_pkg_ctx *pkg_ctx)
 	free(pkg_ctx);
 }
 
-/*
- * Global helpers
- */
-
-typedef int (q_vdb_pkg_cb)(q_vdb_pkg_ctx *, void *priv);
-typedef int (q_vdb_cat_filter)(q_vdb_cat_ctx *, void *priv);
-
-static int
-q_vdb_foreach_pkg(q_vdb_pkg_cb callback, void *priv, q_vdb_cat_filter filter)
+int
+q_vdb_foreach_pkg(const char *sroot, const char *svdb,
+		q_vdb_pkg_cb callback, void *priv, q_vdb_cat_filter filter)
 {
 	q_vdb_ctx *ctx;
 	q_vdb_cat_ctx *cat_ctx;
 	q_vdb_pkg_ctx *pkg_ctx;
 	int ret;
 
-	ctx = q_vdb_open();
+	ctx = q_vdb_open(sroot, svdb);
 	if (!ctx)
 		return EXIT_FAILURE;
 
@@ -319,8 +281,9 @@ q_vdb_foreach_pkg(q_vdb_pkg_cb callback, void *priv, q_vdb_cat_filter filter)
 	return ret;
 }
 
-static int
-q_vdb_foreach_pkg_sorted(q_vdb_pkg_cb callback, void *priv)
+int
+q_vdb_foreach_pkg_sorted(const char *sroot, const char *svdb,
+		q_vdb_pkg_cb callback, void *priv)
 {
 	q_vdb_ctx *ctx;
 	q_vdb_cat_ctx *cat_ctx;
@@ -329,7 +292,7 @@ q_vdb_foreach_pkg_sorted(q_vdb_pkg_cb callback, void *priv)
 	int c, p, cat_cnt, pkg_cnt;
 	struct dirent **cat_de, **pkg_de;
 
-	ctx = q_vdb_open();
+	ctx = q_vdb_open(sroot, svdb);
 	if (!ctx)
 		return EXIT_FAILURE;
 
@@ -359,5 +322,24 @@ q_vdb_foreach_pkg_sorted(q_vdb_pkg_cb callback, void *priv)
 	scandir_free(cat_de, cat_cnt);
 
 	q_vdb_close(ctx);
+	return ret;
+}
+
+struct dirent *
+q_vdb_get_next_dir(DIR *dir)
+{
+	/* search for a category directory */
+	struct dirent *ret;
+
+next_entry:
+	ret = readdir(dir);
+	if (ret == NULL) {
+		closedir(dir);
+		return NULL;
+	}
+
+	if (q_vdb_filter_cat(ret) == 0)
+		goto next_entry;
+
 	return ret;
 }

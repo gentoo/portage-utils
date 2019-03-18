@@ -61,6 +61,13 @@
 # include <sys/endian.h>
 #endif
 
+/* make sure our buffers are as big as they can be */
+#if PATH_MAX > _POSIX_PATH_MAX  /* _Q_PATH_MAX */
+# define _Q_PATH_MAX PATH_MAX
+#else
+# define _Q_PATH_MAX _POSIX_PATH_MAX
+#endif
+
 /* Solaris */
 #if defined(__sun) && defined(__SVR4)
 # include <sys/dklabel.h>
@@ -131,10 +138,6 @@ extern int	getopt_long(int, char * const *, const char *,
 #endif
 #ifndef O_PATH
 # define O_PATH 0
-#endif
-
-#ifndef CONFIG_EPREFIX
-# define CONFIG_EPREFIX "/"
 #endif
 
 #define likely(x) __builtin_expect((x), 1)

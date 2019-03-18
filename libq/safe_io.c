@@ -6,8 +6,12 @@
  */
 
 #include <stdio.h>
+#include <errno.h>
 
-static size_t
+#include "main.h"
+#include "safe_io.h"
+
+size_t
 safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
 	size_t ret = 0, this_ret;
@@ -33,9 +37,8 @@ safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 
 	return ret;
 }
-#define fwrite safe_fwrite
 
-static ssize_t safe_read(int fd, void *buf, size_t len)
+ssize_t safe_read(int fd, void *buf, size_t len)
 {
 	ssize_t ret;
 
@@ -50,9 +53,9 @@ static ssize_t safe_read(int fd, void *buf, size_t len)
 	return ret;
 }
 
-static ssize_t safe_write(int fd, const void *buf, size_t len)
+ssize_t safe_write(int fd, const void *buf, size_t len)
 {
-	ssize_t ret;
+	ssize_t ret = 0;
 
 	while (len) {
 		ret = write(fd, buf, len);

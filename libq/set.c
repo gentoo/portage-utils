@@ -12,20 +12,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct elem_t elem;
-typedef struct set_t set;
-
-struct elem_t {
-	char *name;
-	unsigned int hash;  /* FNV1a32 */
-	elem *next;
-};
-
-#define _SET_HASH_SIZE 128
-struct set_t {
-	elem *buckets[_SET_HASH_SIZE];
-	size_t len;
-};
+#include "porting.h"
+#include "rmspace.h"
+#include "xmalloc.h"
+#include "set.h"
 
 static unsigned int
 fnv1a32(char *s)
@@ -37,14 +27,14 @@ fnv1a32(char *s)
 }
 
 /* create a set */
-static set *
+set *
 create_set(void)
 {
 	return xzalloc(sizeof(set));
 }
 
 /* add elem to a set (unpure: could add duplicates) */
-static set *
+set *
 add_set(const char *name, set *q)
 {
 	int pos;
@@ -73,7 +63,7 @@ add_set(const char *name, set *q)
 }
 
 /* add elem to set if it doesn't exist yet (pure definition of set) */
-static set *
+set *
 add_set_unique(const char *name, set *q, bool *unique)
 {
 	char *mname = xstrdup(name);
@@ -119,7 +109,7 @@ add_set_unique(const char *name, set *q, bool *unique)
 }
 
 /* returns whether s is in set */
-static bool
+bool
 contains_set(char *s, set *q)
 {
 	char *mname = xstrdup(s);
@@ -147,7 +137,7 @@ contains_set(char *s, set *q)
 }
 
 /* remove elem from a set. matches ->name and frees name,item */
-static set *
+set *
 del_set(char *s, set *q, bool *removed)
 {
 	char *mname = xstrdup(s);
@@ -188,7 +178,7 @@ del_set(char *s, set *q, bool *removed)
  * the length of the list is returned, and the array is terminated with
  * a NULL (not included in returned length)
  * the caller should free l, but not the strings within */
-static size_t
+size_t
 list_set(set *q, char ***l)
 {
 	int i;
@@ -207,7 +197,7 @@ list_set(set *q, char ***l)
 }
 
 /* clear out a set */
-static void
+void
 free_set(set *q)
 {
 	int i;

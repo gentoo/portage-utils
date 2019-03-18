@@ -181,7 +181,7 @@ int qsize_main(int argc, char **argv)
 	state.buflen = _Q_PATH_MAX;
 	state.buf = xmalloc(state.buflen);
 
-	ret = q_vdb_foreach_pkg(qsize_cb, &state, NULL);
+	ret = q_vdb_foreach_pkg(portroot, portvdb, qsize_cb, &state, NULL);
 
 	if (state.summary) {
 		printf(" %sTotals%s: %'zu files, %'zu non-files, ", BOLD, NORM,

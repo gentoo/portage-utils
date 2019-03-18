@@ -1,4 +1,14 @@
-static int copy_file_fd(int fd_src, int fd_dst)
+/*
+ * Copyright 2005-2019 Gentoo Foundation
+ * Distributed under the terms of the GNU General Public License v2
+ *
+ * Copyright 2011-2016 Mike Frysinger  - <vapier@gentoo.org>
+ */
+
+#include "safe_io.h"
+#include "copy_file.h"
+
+int copy_file_fd(int fd_src, int fd_dst)
 {
 	ssize_t rcnt, wcnt;
 	char buf[64 * 1024];

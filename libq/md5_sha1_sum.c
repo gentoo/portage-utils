@@ -26,11 +26,15 @@
 #include <unistd.h>
 
 #include "busybox.h"
+#include "xmalloc.h"
+#include "hash_fd.h"
+#include "md5_sha1_sum.h"
 
-/* pass in a fd and get back a fd; filename is for display only */
-typedef int (*hash_cb_t) (int, const char *);
+int hash_cb_default(int fd, const char *filename) {
+	(void)filename;
 
-static int hash_cb_default(int fd, _q_unused_ const char *filename) { return fd; }
+	return fd;
+}
 
 /* This might be useful elsewhere */
 static unsigned char *hash_bin_to_hex(unsigned char *hash_value,
@@ -42,12 +46,17 @@ static unsigned char *hash_bin_to_hex(unsigned char *hash_value,
 	max = (hash_length * 2) + 2;
 	hex_value = xmalloc(max);
 	for (x = len = 0; x < hash_length; x++) {
-		len += snprintf((char*)(hex_value + len), max - len, "%02x", hash_value[x]);
+		len += snprintf((char*)(hex_value + len), max - len,
+				"%02x", hash_value[x]);
 	}
 	return (hex_value);
 }
 
-static unsigned char *hash_file_at_cb(int dfd, const char *filename, uint8_t hash_algo, hash_cb_t cb)
+unsigned char *hash_file_at_cb(
+		int dfd,
+		const char *filename,
+		uint8_t hash_algo,
+		hash_cb_t cb)
 {
 	int fd;
 	fd = openat(dfd, filename, O_RDONLY|O_CLOEXEC);
@@ -56,7 +65,8 @@ static unsigned char *hash_file_at_cb(int dfd, const char *filename, uint8_t has
 		static unsigned char *hash_value;
 		fd = cb(fd, filename);
 		if (hash_fd(fd, -1, hash_algo, hash_value_bin) != -2)
-			hash_value = hash_bin_to_hex(hash_value_bin, hash_algo == HASH_MD5 ? 16 : 20);
+			hash_value = hash_bin_to_hex(hash_value_bin,
+					hash_algo == HASH_MD5 ? 16 : 20);
 		else
 			hash_value = NULL;
 		close(fd);
@@ -65,7 +75,7 @@ static unsigned char *hash_file_at_cb(int dfd, const char *filename, uint8_t has
 	return NULL;
 }
 
-static unsigned char *hash_file_at(int dfd, const char *filename, uint8_t hash_algo)
+unsigned char *hash_file_at(int dfd, const char *filename, uint8_t hash_algo)
 {
 	return hash_file_at_cb(dfd, filename, hash_algo, hash_cb_default);
 }
@@ -75,7 +85,7 @@ static unsigned char *hash_file_cb(const char *filename, uint8_t hash_algo, hash
 	return hash_file_at_cb(AT_FDCWD, filename, hash_algo, cb);
 }
 
-static unsigned char *hash_file(const char *filename, uint8_t hash_algo)
+unsigned char *hash_file(const char *filename, uint8_t hash_algo)
 {
 	return hash_file_cb(filename, hash_algo, hash_cb_default);
 }

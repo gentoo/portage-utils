@@ -1,20 +1,25 @@
 /*
- * utility funcs
- *
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2010-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
+ *
+ * Copyright 2010-2016 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #include <stdlib.h>
 #include <sys/wait.h>
 
-static void xsystem(const char *command)
+#include "main.h"
+#include "porting.h"
+#include "xasprintf.h"
+#include "xsystem.h"
+
+void xsystem(const char *command)
 {
 	if (unlikely(system(command)))
 		errp("system(%s) failed", command);
 }
 
-static void xsystembash(const char *command, int cwd)
+void xsystembash(const char *command, int cwd)
 {
 	pid_t p = vfork();
 	int status;
@@ -32,9 +37,10 @@ static void xsystembash(const char *command, int cwd)
 				} else
 					errp("fchdir(%i) failed", cwd);
 			}
-		execl("/bin/bash", "bash", "--norc", "--noprofile", "-c", command, NULL);
+		execl(CONFIG_EPREFIX "bin/bash", "bash",
+				"--norc", "--noprofile", "-c", command, (char *)NULL);
 		/* Hrm, still here ?  Maybe no bash ... */
-		_exit(execl("/bin/sh", "sh", "-c", command, NULL));
+		_exit(execl("/bin/sh", "sh", "-c", command, (char *)NULL));
 
 	default: /* parent */
 		waitpid(p, &status, 0);

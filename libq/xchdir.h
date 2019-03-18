@@ -5,14 +5,9 @@
  * Copyright 2010-2016 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#include <unistd.h>
+#ifndef _XCHDIR_H
+#define _XCHDIR_H 1
 
-#include "main.h"
-#include "xchdir.h"
+void xchdir(const char *path);
 
-void
-xchdir(const char *path)
-{
-	if (unlikely(chdir(path) != 0))
-		errp("chdir(%s) failed", path);
-}
+#endif

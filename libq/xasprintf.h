@@ -1,4 +1,3 @@
-/* vi: set sw=4 ts=4: */
 /*
  * Utility routines.
  *
@@ -19,7 +18,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+#ifndef _XASPRINTF_H
+#define _XASPRINTF_H 1
+
 #include <stdio.h>
+#include "main.h"
 
 /* asprintf(char **strp, const char *fmt, ...); */
 #define xasprintf(strp, fmt, args...) \
@@ -29,3 +32,5 @@
 			err("Out of memory"); \
 		_ret; \
 	})
+
+#endif

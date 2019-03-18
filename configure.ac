@@ -13,10 +13,14 @@ AC_USE_SYSTEM_EXTENSIONS
 gl_EARLY
 gl_INIT
 
+AM_PROG_AR
+LT_INIT
+AC_SUBST([LIBTOOL_DEPS])
+
 AC_CHECK_LIB([kvm], [kvm_open])
 
 AC_CHECK_FUNCS_ONCE(m4_flatten([
-	scandirat
+       scandirat
 ]))
 
 AC_ARG_WITH([eprefix], [AS_HELP_STRING([--with-eprefix], [path for Gentoo/Prefix project])])
@@ -53,6 +57,7 @@ m4_foreach_w([flag], [
 
 AC_CONFIG_FILES([
 	Makefile
+	libq/Makefile
 	autotools/gnulib/Makefile
 ])
 AC_OUTPUT

@@ -1,4 +1,22 @@
-typedef void *(q_profile_callback_t)(void *, char *);
+/*
+ * Copyright 2011-2019 Gentoo Foundation
+ * Distributed under the terms of the GNU General Public License v2
+ *
+ * Copyright 2011-2016 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include "porting.h"
+#include "rmspace.h"
+#include "profile.h"
 
 static void *
 q_profile_walk_at(int dir_fd, const char *dir, const char *file,
@@ -70,7 +88,7 @@ q_profile_walk_at(int dir_fd, const char *dir, const char *file,
 	return data;
 }
 
-static void *
+void *
 q_profile_walk(const char *file, q_profile_callback_t callback, void *data)
 {
 	/* Walk the profiles and read the file in question */

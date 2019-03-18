@@ -1,20 +1,25 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#if !defined(HAVE_SCANDIRAT)
-# if defined(__GLIBC__) && (__GLIBC__ << 8 | __GLIBC_MINOR__) > (2 << 8 | 14)
-#  define HAVE_SCANDIRAT
-# endif
-#endif
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "xmalloc.h"
+#include "scandirat.h"
 
 #if !defined(HAVE_SCANDIRAT)
 
-static int
+int
 scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
 	int (*filter)(const struct dirent *),
 	int (*compar)(const struct dirent **, const struct dirent **))
@@ -67,7 +72,7 @@ scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
 
 #endif
 
-static void
+void
 scandir_free(struct dirent **de, int cnt)
 {
 	if (cnt <= 0)

@@ -1,4 +1,3 @@
-/* vi: set sw=4 ts=4: */
 /*
  * Utility routines.
  *
@@ -20,11 +19,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include "main.h"
+#include "xmalloc.h"
 
-static void *xmalloc(size_t size)
+void *xmalloc(size_t size)
 {
 	void *ptr = malloc(size);
 	if (unlikely(ptr == NULL))
@@ -32,7 +30,7 @@ static void *xmalloc(size_t size)
 	return ptr;
 }
 
-static void *xcalloc(size_t nmemb, size_t size)
+void *xcalloc(size_t nmemb, size_t size)
 {
 	void *ptr = calloc(nmemb, size);
 	if (unlikely(ptr == NULL))
@@ -40,14 +38,14 @@ static void *xcalloc(size_t nmemb, size_t size)
 	return ptr;
 }
 
-static void *xzalloc(size_t size)
+void *xzalloc(size_t size)
 {
 	void *ptr = xmalloc(size);
 	memset(ptr, 0x00, size);
 	return ptr;
 }
 
-static void *xrealloc(void *optr, size_t size)
+void *xrealloc(void *optr, size_t size)
 {
 	void *ptr = realloc(optr, size);
 	if (unlikely(ptr == NULL))
@@ -55,16 +53,15 @@ static void *xrealloc(void *optr, size_t size)
 	return ptr;
 }
 
-static void *xmemdup(const void *src, size_t n)
+void *xmemdup(const void *src, size_t n)
 {
 	void *ret = xmalloc(n);
 	memcpy(ret, src, n);
 	return ret;
 }
 
-static char *xstrdup_len(const char *s, size_t *len)
+char *xstrdup_len(const char *s, size_t *len)
 {
-
 	if (s == NULL)
 		return NULL;
 
@@ -72,7 +69,7 @@ static char *xstrdup_len(const char *s, size_t *len)
 	return xmemdup(s, *len + 1);
 }
 
-static char *xstrdup(const char *s)
+char *xstrdup(const char *s)
 {
 	size_t len;
 

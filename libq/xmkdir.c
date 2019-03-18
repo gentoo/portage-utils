@@ -1,5 +1,17 @@
+/*
+ * Copyright 2011-2019 Gentoo Foundation
+ * Distributed under the terms of the GNU General Public License v2
+ *
+ * Copyright 2011-2016 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2017-     Fabian Groffen  - <grobian@gentoo.org>
+ */
+
+#include "main.h"
+#include "xmalloc.h"
+#include "xmkdir.h"
+
 /* Emulate `mkdir -p -m MODE PATH` */
-static int
+int
 mkdir_p_at(int dfd, const char *path, mode_t mode)
 {
 	char *_p, *p, *s;
@@ -36,14 +48,15 @@ mkdir_p_at(int dfd, const char *path, mode_t mode)
 
 	return 0;
 }
-static int
+
+int
 mkdir_p(const char *path, mode_t mode)
 {
 	return mkdir_p_at(AT_FDCWD, path, mode);
 }
 
 /* Emulate `rm -rf PATH` */
-static int
+int
 rm_rf_at(int dfd, const char *path)
 {
 	int subdfd;
@@ -86,13 +99,13 @@ rm_rf_at(int dfd, const char *path)
 	return ret;
 }
 
-static int
+int
 rm_rf(const char *path)
 {
 	return rm_rf_at(AT_FDCWD, path);
 }
 
-static int
+int
 rmdir_r_at(int dfd, const char *path)
 {
 	size_t len;
@@ -114,10 +127,8 @@ rmdir_r_at(int dfd, const char *path)
 	return 0;
 }
 
-/*
-static int
+int
 rmdir_r(const char *path)
 {
 	return rmdir_r_at(AT_FDCWD, path);
 }
-*/

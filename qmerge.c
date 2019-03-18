@@ -297,7 +297,8 @@ best_version(const char *catname, const char *pkgname, const char *slot)
 	retbuf[0] = '\0';
 	snprintf(state.buf, sizeof(state.buf), "%s%s%s:%s",
 		 catname ? : "", catname ? "/" : "", pkgname, slot);
-	q_vdb_foreach_pkg(qmerge_best_version_cb, &state, qmerge_filter_cat);
+	q_vdb_foreach_pkg(portroot, portvdb,
+			qmerge_best_version_cb, &state, qmerge_filter_cat);
 
  done:
 	return retbuf;
@@ -1083,7 +1084,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	}
 
 	/* Get a handle on the main vdb repo */
-	vdb_ctx = q_vdb_open();
+	vdb_ctx = q_vdb_open(portroot, portvdb);
 	if (!vdb_ctx)
 		return;
 	cat_ctx = q_vdb_open_cat(vdb_ctx, pkg->CATEGORY);
@@ -1765,7 +1766,7 @@ qmerge_unmerge_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 static int
 unmerge_packages(set *todo)
 {
-	return q_vdb_foreach_pkg(qmerge_unmerge_cb, todo, NULL);
+	return q_vdb_foreach_pkg(portroot, portvdb, qmerge_unmerge_cb, todo, NULL);
 }
 
 static FILE *

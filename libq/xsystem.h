@@ -5,14 +5,10 @@
  * Copyright 2010-2016 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#include <unistd.h>
+#ifndef _XSYSTEM_H
+#define _XSYSTEM_H 1
 
-#include "main.h"
-#include "xchdir.h"
+void xsystem(const char *command);
+void xsystembash(const char *command, int cwd);
 
-void
-xchdir(const char *path)
-{
-	if (unlikely(chdir(path) != 0))
-		errp("chdir(%s) failed", path);
-}
+#endif
