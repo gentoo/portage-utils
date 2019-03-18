@@ -5,9 +5,6 @@ v() { echo "$@"; "$@"; }
 m4dir="autotools/m4"
 
 v rm -rf autotools
-if [[ $1 != "--from=make" ]] ; then
-	v ${MAKE:-make} autotools-update
-fi
 
 # reload the gnulib code if possible
 PATH=/usr/local/src/gnu/gnulib:${PATH}
@@ -50,7 +47,3 @@ done
 
 export AUTOMAKE="automake --foreign"
 v autoreconf -i -f
-
-if [[ -x ./test.sh ]] ; then
-	exec ./test.sh "$@"
-fi
