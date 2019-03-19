@@ -5,6 +5,8 @@
  * Copyright 2010-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
+#include "main.h"
+
 #include <string.h>
 
 #include "basename.h"

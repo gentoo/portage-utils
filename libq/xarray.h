@@ -11,7 +11,7 @@
 #define _XARRAY_H 1
 
 #include <stdlib.h>
-#include "xmalloc.h"
+#include <xalloc.h>
 
 typedef struct {
 	void **eles;

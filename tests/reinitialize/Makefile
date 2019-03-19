@@ -1,5 +1,5 @@
-thisdir = reinitialize
-include ../subdir.mk
+this_subdir = tests/reinitialize
+s = $(abs_top_srcdir)/$(this_subdir)
 
 all: check
 

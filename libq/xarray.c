@@ -7,10 +7,12 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
+#include "main.h"
+
 #include <stdlib.h>
 #include <string.h>
+#include <xalloc.h>
 
-#include "xmalloc.h"
 #include "xarray.h"
 
 #define ARRAY_INC_SIZE 32

@@ -5,13 +5,13 @@
  * Copyright 2010-2016 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#include <stdlib.h>
-#include <sys/wait.h>
-
 #include "main.h"
-#include "porting.h"
 #include "xasprintf.h"
 #include "xsystem.h"
+
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <fcntl.h>
 
 void xsystem(const char *command)
 {

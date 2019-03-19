@@ -6,6 +6,8 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
+#include "main.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,7 +16,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "porting.h"
 #include "rmspace.h"
 #include "profile.h"
 

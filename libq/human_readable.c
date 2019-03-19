@@ -22,6 +22,8 @@
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
 
+#include "main.h"
+
 #include <stdio.h>
 
 #include "human_readable.h"

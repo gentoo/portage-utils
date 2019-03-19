@@ -7,10 +7,12 @@
 #define _SAFE_IO_H 1
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <unistd.h>
 
 size_t safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
-#define fwrite safe_fwrite
+#ifndef _IN_SAFE_IO
+# define fwrite safe_fwrite
+#endif
 
 ssize_t safe_read(int fd, void *buf, size_t len);
 ssize_t safe_write(int fd, const void *buf, size_t len);

@@ -8,8 +8,12 @@
  */
 
 #include "main.h"
-#include "xmalloc.h"
 #include "atom.h"
+
+#include <unistd.h>
+#include <string.h>
+#include <ctype.h>
+#include <xalloc.h>
 
 const char * const booga[] = {"!!!", "!=", "==", ">", "<"};
 
@@ -264,8 +268,8 @@ atom_explode(const char *atom)
 		ret->suffixes[idx] = t;
 	}
 
-	ptr = stpcpy(ret->PVR, ret->PV);
-	sprintf(ptr, "-r%i", ret->PR_int);
+	/* size is malloced above with the required space in mind */
+	sprintf(ret->PVR, "%s-r%i", ret->PV, ret->PR_int);
 
 	return ret;
 }

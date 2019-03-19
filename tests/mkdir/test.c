@@ -1,25 +1,23 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#include "tests/tests.h"
+#include "main.h"
+#include "xmkdir.h"
 
-#include "libq/xmalloc.c"
-#include "libq/xmkdir.c"
+#include <string.h>
+
+const char *argv0;
 
 int main(int argc, char *argv[])
 {
 	int i, ret;
 
-	(void)xcalloc;
-	(void)xzalloc;
-	(void)xrealloc;
-	(void)xmemdup;
-	(void)rmdir_r_at;
+	argv0 = argv[0];
 
 	if (argc <= 1)
 		return 1;

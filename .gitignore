@@ -28,7 +28,6 @@ config.h
 config.h.in
 config.log
 config.status
-autotools
 libtool
 stamp-h1
 

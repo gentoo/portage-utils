@@ -1,15 +1,18 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
- * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2005-2015 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#include "tests/tests.h"
+#include "main.h"
+#include "atom.h"
 
-#include "libq/xmalloc.c"
-#include "libq/atom_explode.c"
+#include <xalloc.h>
+
+const char *argv0;
 
 static inline void boom(depend_atom *a, char *s)
 {
@@ -23,8 +26,7 @@ int main(int argc, char *argv[])
 	int i;
 	depend_atom *a;
 
-	(void)xcalloc;
-	(void)xmemdup;
+	argv0 = argv[0];
 
 	/* printf("input -> CATEGORY / [P] PN - PVR [PV] [PR_int]\n"); */
 	for (i = 1; i < argc; ++i) {

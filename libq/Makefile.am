@@ -20,7 +20,6 @@ QFILES = \
 	xarray.c xarray.h \
 	xasprintf.h \
 	xchdir.c xchdir.h \
-	xmalloc.c xmalloc.h \
 	xmkdir.c xmkdir.h \
 	xregex.c xregex.h \
 	xsystem.c xsystem.h \
@@ -28,3 +27,6 @@ QFILES = \
 
 noinst_LTLIBRARIES = libq.la
 libq_la_SOURCES = $(QFILES)
+libq_la_CPPFLAGS = \
+	-I$(top_builddir)/autotools/gnulib \
+	-I$(top_srcdir)/autotools/gnulib

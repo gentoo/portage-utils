@@ -6758,7 +6758,6 @@ fi
 
 
   # Code from module absolute-header:
-  # Code from module alloca:
   # Code from module alloca-opt:
   # Code from module assure:
   # Code from module at-internal:
@@ -6844,7 +6843,6 @@ fi
   # Code from module printf-frexp:
   # Code from module printf-frexpl:
   # Code from module printf-safe:
-  # Code from module progname:
   # Code from module readlink:
   # Code from module readlinkat:
   # Code from module realloc-posix:
@@ -6870,7 +6868,6 @@ fi
   # Code from module stdint:
   # Code from module stdio:
   # Code from module stdlib:
-  # Code from module stpcpy:
   # Code from module strcase:
   # Code from module strcasestr-simple:
   # Code from module strdup-posix:
@@ -6899,6 +6896,8 @@ fi
   # Code from module vasprintf-posix:
   # Code from module verify:
   # Code from module wchar:
+  # Code from module xalloc:
+  # Code from module xalloc-die:
   # Code from module xalloc-oversized:
   # Code from module xsize:
 
@@ -22068,30 +22067,6 @@ fi
   fi
 
 
-  ac_fn_c_check_decl "$LINENO" "program_invocation_name" "ac_cv_have_decl_program_invocation_name" "#include <errno.h>
-"
-if test "x$ac_cv_have_decl_program_invocation_name" = xyes; then :
-  ac_have_decl=1
-else
-  ac_have_decl=0
-fi
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_DECL_PROGRAM_INVOCATION_NAME $ac_have_decl
-_ACEOF
-
-  ac_fn_c_check_decl "$LINENO" "program_invocation_short_name" "ac_cv_have_decl_program_invocation_short_name" "#include <errno.h>
-"
-if test "x$ac_cv_have_decl_program_invocation_short_name" = xyes; then :
-  ac_have_decl=1
-else
-  ac_have_decl=0
-fi
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_DECL_PROGRAM_INVOCATION_SHORT_NAME $ac_have_decl
-_ACEOF
-
 
 
 
@@ -24458,57 +24433,6 @@ $as_echo "$gl_cv_next_stdlib_h" >&6; }
 
 
 
-
-
-
-  for ac_func in stpcpy
-do :
-  ac_fn_c_check_func "$LINENO" "stpcpy" "ac_cv_func_stpcpy"
-if test "x$ac_cv_func_stpcpy" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_STPCPY 1
-_ACEOF
-
-fi
-done
-
-  if test $ac_cv_func_stpcpy = no; then
-    HAVE_STPCPY=0
-  fi
-
-  if test $HAVE_STPCPY = 0; then
-
-
-
-
-
-
-
-
-  gl_LIBOBJS="$gl_LIBOBJS stpcpy.$ac_objext"
-
-
-  :
-
-  fi
-
-
-
-
-
-          GNULIB_STPCPY=1
-
-
-
-
-
-$as_echo "#define GNULIB_TEST_STPCPY 1" >>confdefs.h
-
-
-
-
-
-
   for ac_func in strcasecmp
 do :
   ac_fn_c_check_func "$LINENO" "strcasecmp" "ac_cv_func_strcasecmp"
@@ -26513,6 +26437,7 @@ $as_echo "$gl_cv_next_wchar_h" >&6; }
 
 
 
+  :
 
 
   for ac_header in stdint.h
@@ -35123,7 +35048,7 @@ fi
 
 
 
-ac_config_files="$ac_config_files Makefile libq/Makefile autotools/gnulib/Makefile"
+ac_config_files="$ac_config_files Makefile libq/Makefile autotools/gnulib/Makefile tests/atom_explode/Makefile tests/copy_file/Makefile tests/mkdir/Makefile tests/rmspace/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -36213,6 +36138,10 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "libq/Makefile") CONFIG_FILES="$CONFIG_FILES libq/Makefile" ;;
     "autotools/gnulib/Makefile") CONFIG_FILES="$CONFIG_FILES autotools/gnulib/Makefile" ;;
+    "tests/atom_explode/Makefile") CONFIG_FILES="$CONFIG_FILES tests/atom_explode/Makefile" ;;
+    "tests/copy_file/Makefile") CONFIG_FILES="$CONFIG_FILES tests/copy_file/Makefile" ;;
+    "tests/mkdir/Makefile") CONFIG_FILES="$CONFIG_FILES tests/mkdir/Makefile" ;;
+    "tests/rmspace/Makefile") CONFIG_FILES="$CONFIG_FILES tests/rmspace/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

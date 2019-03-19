@@ -6,7 +6,6 @@
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#include "porting.h"
 #include "main.h"
 #include "atom.h"
 #include "basename.h"
@@ -28,12 +27,32 @@
 #include "xarray.h"
 #include "xasprintf.h"
 #include "xchdir.h"
-#include "xmalloc.h"
 #include "xmkdir.h"
 #include "xregex.h"
 #include "xsystem.h"
 
 #include <iniparser.h>
+#include <xalloc.h>
+#include <assert.h>
+#include <ctype.h>
+
+#if defined(__sun) && defined(__SVR4)
+/* workaround non-const defined name in option struct, such that we
+ * don't get a zillion of warnings */
+#define	no_argument		0
+#define	required_argument	1
+#define	optional_argument	2
+struct option {
+	const char *name;
+	int has_arg;
+	int *flag;
+	int val;
+};
+extern int	getopt_long(int, char * const *, const char *,
+		    const struct option *, int *);
+#else
+# include <getopt.h>
+#endif
 
 /* prototypes and such */
 static int lookup_applet_idx(const char *);
@@ -505,7 +524,8 @@ static void
 strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 {
 	size_t len;
-	char *buf, *p, *nv;
+	char *p, *nv;
+	char brace;
 
 	len = strlen(s);
 	*value = xrealloc(*value, *value_len + len + 2);
@@ -532,15 +552,23 @@ strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 	*/
 
 	len = strlen(name);
-	buf = alloca(len + 3 + 1);
-
-	sprintf(buf, "${%s}", name);
-	if ((p = strstr(nv, buf)) != NULL)
-		memset(p, ' ', len + 3);
-
-	sprintf(buf, "$%s", name);
-	if ((p = strstr(nv, buf)) != NULL)
-		memset(p, ' ', len + 1);
+	p = nv;
+	while ((p = strchr(p, '$')) != NULL) {
+		nv = p;
+		p++;  /* skip $ */
+		brace = *p == '{';
+		if (brace)
+			p++;
+		if (strncmp(p, name, len) == 0) {
+			p += len;
+			if (brace && *p == '}') {
+				p++;
+				memset(nv, ' ', p - nv);
+			} else if (!brace && (*p == '\0' || isspace((int)*p))) {
+				memset(nv, ' ', p - nv);
+			}
+		}
+	}
 
 	remove_extra_space(*value);
 	*value_len = strlen(*value);
@@ -581,7 +609,8 @@ set_portage_env_var(env_vars *var, const char *value)
 		break;
 	case _Q_STR:
 		free(*var->value.s);
-		*var->value.s = xstrdup_len(value, &var->value_len);
+		*var->value.s = xstrdup(value);
+		var->value_len = strlen(value);
 		break;
 	case _Q_ISTR:
 		strincr_var(var->name, value, var->value.s, &var->value_len);

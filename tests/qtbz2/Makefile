@@ -1,5 +1,5 @@
-thisdir = qtbz2
-include ../subdir.mk
+this_subdir = tests/qtbz2
+s = $(abs_top_srcdir)/$(this_subdir)
 
 all: check
 

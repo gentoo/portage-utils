@@ -6,7 +6,8 @@
 #ifndef _EAT_FILE_H
 #define _EAT_FILE_H 1
 
-#include "porting.h"
+#include <unistd.h>
+#include <stdbool.h>
 
 bool eat_file_fd(int, char **, size_t *);
 bool eat_file(const char *, char **, size_t *);

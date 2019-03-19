@@ -17,6 +17,8 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+#include "main.h"
+
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
@@ -26,7 +28,7 @@
 #include <unistd.h>
 
 #include "busybox.h"
-#include "xmalloc.h"
+#include "xalloc.h"
 #include "hash_fd.h"
 #include "md5_sha1_sum.h"
 

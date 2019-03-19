@@ -7,14 +7,16 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
+#include "main.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
+#include <xalloc.h>
 
-#include "xmalloc.h"
 #include "scandirat.h"
 
 #if !defined(HAVE_SCANDIRAT)

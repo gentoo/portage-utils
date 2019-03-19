@@ -8,6 +8,39 @@
 
 #ifdef APPLET_qsize
 
+/* Solaris */
+#if defined(__sun) && defined(__SVR4)
+# include <sys/dklabel.h>
+# define S_BLKSIZE DK_DEVID_BLKSIZE
+#elif defined(__hpux__) || defined(__MINT__)
+/* must not include both dir.h and dirent.h on hpux11..11 & FreeMiNT */
+#elif defined(__linux__)
+/* Linux systems do not need sys/dir.h as they are generally POSIX sane */
+#else
+# include <sys/dir.h>
+#endif
+
+/* AIX */
+#ifdef _AIX
+# include <sys/stat.h>
+# define S_BLKSIZE DEV_BSIZE
+#endif
+
+/* Windows Interix */
+#ifdef __INTERIX
+# define S_BLKSIZE S_BLOCK_SIZE
+#endif
+
+/* HP-UX */
+#ifdef __hpux
+# define S_BLKSIZE st.st_blksize
+#endif
+
+/* Everyone else */
+#ifndef S_BLKSIZE
+# define S_BLKSIZE 512
+#endif
+
 #define QSIZE_FLAGS "fsSmkbi:" COMMON_FLAGS
 static struct option const qsize_long_opts[] = {
 	{"filesystem", no_argument, NULL, 'f'},

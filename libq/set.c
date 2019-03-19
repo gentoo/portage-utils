@@ -7,14 +7,15 @@
  * Copyright 2019-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
+#include "main.h"
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <xalloc.h>
 
-#include "porting.h"
 #include "rmspace.h"
-#include "xmalloc.h"
 #include "set.h"
 
 static unsigned int

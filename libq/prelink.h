@@ -6,7 +6,7 @@
 #ifndef _PRELINK_H
 #define _PRELINK_H 1
 
-#include "porting.h"
+#include <stdbool.h>
 
 bool prelink_available(void);
 int hash_cb_prelink_undo(int fd, const char *filename);

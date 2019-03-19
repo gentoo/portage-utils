@@ -8,6 +8,8 @@
 #ifndef _XREGEX_H
 #define _XREGEX_H 1
 
+#include <regex.h>
+
 int wregcomp(regex_t *preg, const char *regex, int cflags);
 void xregcomp(regex_t *preg, const char *regex, int cflags);
 

@@ -1,5 +1,6 @@
-thisdir = install
-include ../subdir.mk
+this_subdir = tests/install
+b = $(abs_top_builddir)/$(this_subdir)
+s = $(abs_top_srcdir)/$(this_subdir)
 
 all: check
 

@@ -10,12 +10,12 @@ dist_postsyncd_SCRIPTS = repo.postsync/q-reinit
 bin_PROGRAMS = q
 q_SOURCES = main.c
 q_CPPFLAGS = \
+	-I$(top_srcdir)/libq \
 	-I$(top_builddir)/autotools/gnulib \
-	-I$(top_srcdir)/autotools/gnulib \
-	-I$(top_srcdir)/libq
+	-I$(top_srcdir)/autotools/gnulib
 q_LDADD = \
-	$(top_builddir)/autotools/gnulib/libgnu.a \
 	$(top_builddir)/libq/libq.la \
+	$(top_builddir)/autotools/gnulib/libgnu.a \
 	-liniparser \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS)
@@ -28,14 +28,12 @@ install-exec-hook:
 
 TMAKE = \
 	$(MAKE) -C $(abs_top_srcdir)/tests \
-		AUTOTOOLS=true \
 		abs_top_builddir="$(abs_top_builddir)" \
 		abs_top_srcdir="$(abs_top_srcdir)"
 check-hook:
 	$(TMAKE) check
 clean-local:
 	$(TMAKE) clean
-	-rmdir tests/*/ tests/
 	rm -f $(APPLETS)
 check: check-hook
 

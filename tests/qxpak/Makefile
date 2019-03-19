@@ -1,5 +1,5 @@
-thisdir = qxpak
-include ../subdir.mk
+this_subdir = tests/qxpak
+s = $(abs_top_srcdir)/$(this_subdir)
 
 all: check
 

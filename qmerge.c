@@ -9,15 +9,8 @@
 
 #ifdef APPLET_qmerge
 
-/* This is a GNUlib hack, because GNUlib doesn't provide st_mtim members
- * of struct stat, but instead provides wrappers to retrieve the time
- * fields (stat-time module). We just define a macro in case people are
- * building without autoconf. */
-#ifdef _GL_SYS_STAT_H
-# include "stat-time.h"
-#else
-# define get_stat_mtime(X) ((X)->st_mtim)
-#endif
+#include <fnmatch.h>
+#include "stat-time.h"
 
 #ifndef GLOB_BRACE
 # define GLOB_BRACE     (1 << 10)	/* Expand "{a,b}" to "a" "b".  */
@@ -809,6 +802,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			int fd_srcf, fd_dstf;
 			unsigned char *hash;
 			const char *tmpname, *dname;
+			char buf[_Q_PATH_MAX];
 
 			/* syntax: obj filename hash mtime */
 			hash = hash_file_at(subfd_src, name, HASH_MD5);
@@ -821,13 +815,9 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			if (config_protected(cpath, cp_argc, cp_argv, cpm_argc, cpm_argv)) {
 				/* ._cfg####_ */
 				char *num;
-				dname = num = alloca(nlen + 10 + 1);
-				*num++ = '.';
-				*num++ = '_';
-				*num++ = 'c';
-				*num++ = 'f';
-				*num++ = 'g';
-				strcpy(num + 5, name);
+				dname = buf;
+				snprintf(buf, sizeof(buf), "._cfg####_%s", name);
+				num = buf + 5;
 				for (i = 0; i < 10000; ++i) {
 					sprintf(num, "%04i", i);
 					num[4] = '_';
@@ -905,14 +895,14 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 		} else if (S_ISLNK(st.st_mode)) {
 			/* Migrate a symlink */
 			size_t len = st.st_size;
-			char *sym = alloca(len + 1);
+			char sym[_Q_PATH_MAX];
 
 			/* Find out what we're pointing to */
-			if (readlinkat(subfd_src, name, sym, len) == -1) {
+			if (readlinkat(subfd_src, name, sym, sizeof(sym)) == -1) {
 				warnp("could not read link %s", cpath);
 				continue;
 			}
-			sym[len] = '\0';
+			sym[len < _Q_PATH_MAX ? len : _Q_PATH_MAX - 1] = '\0';
 
 			/* syntax: sym src -> dst mtime */
 			if (!pretend)

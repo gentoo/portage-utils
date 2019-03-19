@@ -5,6 +5,7 @@
  * Copyright 2011-2016 Mike Frysinger  - <vapier@gentoo.org>
  */
 
+#include "main.h"
 #include "safe_io.h"
 #include "copy_file.h"
 

@@ -6,8 +6,9 @@
 #ifndef _SET_H
 #define _SET_H 1
 
-#include "porting.h"
 #include <stdlib.h>
+#include <stdbool.h>
+#include <unistd.h>
 
 typedef struct elem_t elem;
 typedef struct set_t set;

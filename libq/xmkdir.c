@@ -7,7 +7,13 @@
  */
 
 #include "main.h"
-#include "xmalloc.h"
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <xalloc.h>
+
 #include "xmkdir.h"
 
 /* Emulate `mkdir -p -m MODE PATH` */
@@ -111,7 +117,8 @@ rmdir_r_at(int dfd, const char *path)
 	size_t len;
 	char *p, *e;
 
-	p = xstrdup_len(path, &len);
+	p = xstrdup(path);
+	len = strlen(p);
 	e = p + len;
 
 	while (e != p) {

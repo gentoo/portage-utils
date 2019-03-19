@@ -1,18 +1,22 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
-#include "tests/tests.h"
+#include "main.h"
+#include "safe_io.h"
+#include "copy_file.h"
 
-#include "libq/safe_io.c"
-#include "libq/copy_file.c"
+#include <assert.h>
+
+const char *argv0;
 
 static int src_fd, dst_fd;
 
 static void testone(const char *src_buf, size_t len)
 {
 	int ret;
+	size_t sret;
 	static char dst_buf[50 * 1024 * 1024];
 
 	assert(len <= sizeof(dst_buf));
@@ -26,8 +30,8 @@ static void testone(const char *src_buf, size_t len)
 	ret = lseek(dst_fd, 0, SEEK_SET);
 	assert(ret == 0);
 
-	ret = write(src_fd, src_buf, len);
-	assert(ret == len);
+	sret = write(src_fd, src_buf, len);
+	assert(sret == len);
 	ret = lseek(src_fd, 0, SEEK_SET);
 	assert(ret == 0);
 	ret = copy_file_fd(src_fd, dst_fd);
@@ -35,8 +39,8 @@ static void testone(const char *src_buf, size_t len)
 
 	ret = lseek(dst_fd, 0, SEEK_SET);
 	assert(ret == 0);
-	ret = read(dst_fd, dst_buf, len);
-	assert(ret == len);
+	sret = read(dst_fd, dst_buf, len);
+	assert(sret == len);
 
 	assert(memcmp(dst_buf, src_buf, len) == 0);
 }
@@ -47,6 +51,9 @@ int main(int argc, char *argv[])
 	char *buf;
 	char src_path[] = "portage-utils.src.XXXXXX";
 	char dst_path[] = "portage-utils.dst.XXXXXX";
+
+	(void)argc;
+	argv0 = argv[0];
 
 	src_fd = mkstemp(src_path);
 	assert(src_fd != -1);

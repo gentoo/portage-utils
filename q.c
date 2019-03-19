@@ -185,4 +185,3 @@ int q_main(int argc, char **argv)
 
 	return (func)(argc - 1, argv);
 }
-

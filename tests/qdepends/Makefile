@@ -1,5 +1,5 @@
-thisdir = qdepends
-include ../subdir.mk
+this_subdir = tests/qdepends
+s = $(abs_top_srcdir)/$(this_subdir)
 
 all: check
 

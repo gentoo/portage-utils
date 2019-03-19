@@ -9,7 +9,6 @@ v rm -rf autotools
 # reload the gnulib code if possible
 PATH=/usr/local/src/gnu/gnulib:${PATH}
 mods="
-	alloca
 	dirent
 	faccessat
 	fdopendir
@@ -20,11 +19,9 @@ mods="
 	inttypes
 	mkdirat
 	openat
-	progname
 	readlinkat
 	renameat
 	stat-time
-	stpcpy
 	strcasestr-simple
 	strncat
 	symlinkat
@@ -32,10 +29,12 @@ mods="
 	unlinkat
 	utimensat
 	vasprintf-posix
+	xalloc
 "
 v gnulib-tool \
 	--source-base=autotools/gnulib --m4-base=autotools/m4 \
 	--import \
+	--no-vc-files \
 	${mods}
 
 # not everyone has sys-devel/autoconf-archive installed

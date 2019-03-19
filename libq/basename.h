@@ -8,6 +8,8 @@
 #ifndef _BASENAME_H
 #define _BASENAME_H 1
 
+#include <libgen.h>
+
 const char *_basename(const char *filename);
 
 /* Avoid issues with clobbering C library def */

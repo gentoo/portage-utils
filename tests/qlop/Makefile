@@ -1,5 +1,5 @@
-thisdir = qlop
-include ../subdir.mk
+this_subdir = tests/qlop
+s = $(abs_top_srcdir)/$(this_subdir)
 
 all: check
 

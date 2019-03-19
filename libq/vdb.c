@@ -7,12 +7,13 @@
  */
 
 #include "main.h"
-#include "porting.h"
-#include "xmalloc.h"
 #include "rmspace.h"
 #include "scandirat.h"
 #include "eat_file.h"
 #include "vdb.h"
+
+#include <ctype.h>
+#include <xalloc.h>
 
 q_vdb_ctx *
 q_vdb_open(const char *sroot, const char *svdb)
@@ -208,7 +209,8 @@ int
 q_vdb_pkg_openat(q_vdb_pkg_ctx *pkg_ctx, const char *file, int flags, mode_t mode)
 {
 	if (pkg_ctx->fd == -1) {
-		pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name, O_RDONLY|O_CLOEXEC|O_PATH);
+		pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name,
+				O_RDONLY|O_CLOEXEC|O_PATH);
 		if (pkg_ctx->fd == -1)
 			return -1;
 	}

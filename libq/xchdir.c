@@ -5,9 +5,10 @@
  * Copyright 2010-2016 Mike Frysinger  - <vapier@gentoo.org>
  */
 
+#include "main.h"
+
 #include <unistd.h>
 
-#include "main.h"
 #include "xchdir.h"
 
 void

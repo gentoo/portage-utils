@@ -1,5 +1,5 @@
-thisdir = qfile
-include ../subdir.mk
+this_subdir = tests/qfile
+s = $(abs_top_srcdir)/$(this_subdir)
 
 all: check
 

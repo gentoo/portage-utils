@@ -3,12 +3,15 @@
  * Distributed under the terms of the GNU General Public License v2
  */
 
+#include "main.h"
+
 #include <signal.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
-#include "main.h"
 #include "xasprintf.h"
 #include "prelink.h"
 

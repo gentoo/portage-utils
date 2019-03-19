@@ -6,13 +6,13 @@
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
+#include "main.h"
+
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "main.h"
-#include "porting.h"
-#include "xmalloc.h"
+#include "xalloc.h"
 #include "eat_file.h"
 
 bool
@@ -83,4 +83,3 @@ eat_file(const char *file, char **bufptr, size_t *bufsize)
 {
 	return eat_file_at(AT_FDCWD, file, bufptr, bufsize);
 }
-

@@ -201,7 +201,6 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/stdint_h.m4 \
 	$(top_srcdir)/autotools/m4/stdio_h.m4 \
 	$(top_srcdir)/autotools/m4/stdlib_h.m4 \
-	$(top_srcdir)/autotools/m4/stpcpy.m4 \
 	$(top_srcdir)/autotools/m4/strcase.m4 \
 	$(top_srcdir)/autotools/m4/strcasestr.m4 \
 	$(top_srcdir)/autotools/m4/strdup.m4 \
@@ -233,6 +232,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/wchar_h.m4 \
 	$(top_srcdir)/autotools/m4/wchar_t.m4 \
 	$(top_srcdir)/autotools/m4/wint_t.m4 \
+	$(top_srcdir)/autotools/m4/xalloc.m4 \
 	$(top_srcdir)/autotools/m4/xsize.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -251,9 +251,9 @@ PROGRAMS = $(bin_PROGRAMS)
 am_q_OBJECTS = q-main.$(OBJEXT)
 q_OBJECTS = $(am_q_OBJECTS)
 am__DEPENDENCIES_1 =
-q_DEPENDENCIES = $(top_builddir)/autotools/gnulib/libgnu.a \
-	$(top_builddir)/libq/libq.la $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+q_DEPENDENCIES = $(top_builddir)/libq/libq.la \
+	$(top_builddir)/autotools/gnulib/libgnu.a \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -1545,23 +1545,21 @@ dist_postsyncd_SCRIPTS = repo.postsync/q-reinit
 q_SOURCES = main.c
 
 # @@@ GEN START @@@ #
-q_CPPFLAGS = -I$(top_builddir)/autotools/gnulib \
-	-I$(top_srcdir)/autotools/gnulib -I$(top_srcdir)/libq \
-	-DAPPLET_q -DAPPLET_qatom -DAPPLET_qcache -DAPPLET_qcheck \
-	-DAPPLET_qdepends -DAPPLET_qfile -DAPPLET_qgrep -DAPPLET_qlist \
-	-DAPPLET_qlop -DAPPLET_qmerge -DAPPLET_qpkg -DAPPLET_qsearch \
-	-DAPPLET_qsize -DAPPLET_qtbz2 -DAPPLET_qtegrity -DAPPLET_quse \
-	-DAPPLET_qxpak
+q_CPPFLAGS = -I$(top_srcdir)/libq -I$(top_builddir)/autotools/gnulib \
+	-I$(top_srcdir)/autotools/gnulib -DAPPLET_q -DAPPLET_qatom \
+	-DAPPLET_qcache -DAPPLET_qcheck -DAPPLET_qdepends \
+	-DAPPLET_qfile -DAPPLET_qgrep -DAPPLET_qlist -DAPPLET_qlop \
+	-DAPPLET_qmerge -DAPPLET_qpkg -DAPPLET_qsearch -DAPPLET_qsize \
+	-DAPPLET_qtbz2 -DAPPLET_qtegrity -DAPPLET_quse -DAPPLET_qxpak
 q_LDADD = \
-	$(top_builddir)/autotools/gnulib/libgnu.a \
 	$(top_builddir)/libq/libq.la \
+	$(top_builddir)/autotools/gnulib/libgnu.a \
 	-liniparser \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS)
 
 TMAKE = \
 	$(MAKE) -C $(abs_top_srcdir)/tests \
-		AUTOTOOLS=true \
 		abs_top_builddir="$(abs_top_builddir)" \
 		abs_top_srcdir="$(abs_top_srcdir)"
 
@@ -2365,7 +2363,6 @@ check-hook:
 	$(TMAKE) check
 clean-local:
 	$(TMAKE) clean
-	-rmdir tests/*/ tests/
 	rm -f $(APPLETS)
 check: check-hook
 # @@@ GEN START @@@ #

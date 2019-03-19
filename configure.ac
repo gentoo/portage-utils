@@ -58,5 +58,9 @@ AC_CONFIG_FILES([
 	Makefile
 	libq/Makefile
 	autotools/gnulib/Makefile
+	tests/atom_explode/Makefile
+	tests/copy_file/Makefile
+	tests/mkdir/Makefile
+	tests/rmspace/Makefile
 ])
 AC_OUTPUT

@@ -1,7 +1,7 @@
-thisdir = qmerge
-include ../subdir.mk
+this_subdir = tests/qmerge
+s = $(abs_top_srcdir)/$(this_subdir)
 
-PKGDIR = $(srcdir)/packages
+PKGDIR = $(s)/packages
 PACKAGES = $(PKGDIR)/Packages
 
 all: test

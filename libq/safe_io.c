@@ -5,10 +5,12 @@
  * Distributed under the terms of the GNU General Public License v2
  */
 
+#include "main.h"
+
 #include <stdio.h>
 #include <errno.h>
 
-#include "main.h"
+#define _IN_SAFE_IO 1
 #include "safe_io.h"
 
 size_t

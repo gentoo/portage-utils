@@ -88,7 +88,7 @@ static void external_check_sha(char * ret_digest, char * filepath, char * algo) 
 		close(pipefd[0]);
 		dup2(pipefd[1], STDOUT_FILENO);
 		dup2(pipefd[1], STDERR_FILENO);
-		execlp(cmd, cmd, filepath, NULL);
+		execlp(cmd, cmd, filepath, (char *)NULL);
 		perror("Executing shasum failed\n");
 		exit(1);
 	}

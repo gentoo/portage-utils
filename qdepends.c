@@ -360,14 +360,12 @@ dep_prune_use(dep_node *root, const char *use)
 static char *
 _dep_flatten_tree(const dep_node *root, char *buf)
 {
-	if (root->type == DEP_NULL) goto this_node_sucks;
-	if (root->type == DEP_NORM) {
-		buf[0] = ' ';
-		buf = stpcpy(buf + 1, root->info);
+	if (root->type != DEP_NULL) {
+		if (root->type == DEP_NORM)
+			buf += sprintf(buf, " %s", root->info);
+		if (root->children)
+			buf = _dep_flatten_tree(root->children, buf);
 	}
-	if (root->children)
-		buf = _dep_flatten_tree(root->children, buf);
-this_node_sucks:
 	if (root->neighbor)
 		buf = _dep_flatten_tree(root->neighbor, buf);
 	return buf;

@@ -1,5 +1,5 @@
-thisdir = source
-include ../subdir.mk
+this_subdir = tests/source
+s = $(abs_top_srcdir)/$(this_subdir)
 
 all: check
 
