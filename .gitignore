@@ -25,7 +25,6 @@ autom4te.cache
 build
 config.cache
 config.h
-config.h.in
 config.log
 config.status
 libtool

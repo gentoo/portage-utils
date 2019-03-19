@@ -8,8 +8,10 @@
 #include "copy_file.h"
 
 #include <assert.h>
+#include <stdio.h>
 
 const char *argv0;
+FILE *warnout;
 
 static int src_fd, dst_fd;
 
@@ -54,6 +56,7 @@ int main(int argc, char *argv[])
 
 	(void)argc;
 	argv0 = argv[0];
+	warnout = stderr;
 
 	src_fd = mkstemp(src_path);
 	assert(src_fd != -1);

@@ -11,8 +11,11 @@
 #include "atom.h"
 
 #include <xalloc.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 const char *argv0;
+FILE *warnout;
 
 static inline void boom(depend_atom *a, char *s)
 {
@@ -27,6 +30,7 @@ int main(int argc, char *argv[])
 	depend_atom *a;
 
 	argv0 = argv[0];
+	warnout = stderr;
 
 	/* printf("input -> CATEGORY / [P] PN - PVR [PV] [PR_int]\n"); */
 	for (i = 1; i < argc; ++i) {

@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 
 #include "i18n.h"
 #include "colors.h"
@@ -95,7 +96,7 @@ extern const char *argv0;
 #define opt_argument optional_argument
 
 /* we need the space before the last comma or we trigger a bug in gcc-2 :( */
-FILE *warnout;
+extern FILE *warnout;
 #if defined OPTIMIZE_FOR_SIZE && (OPTIMIZE_FOR_SIZE > 1)
 #define warn(fmt, args...)
 #else

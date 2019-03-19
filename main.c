@@ -35,6 +35,7 @@
 #include <xalloc.h>
 #include <assert.h>
 #include <ctype.h>
+#include <sys/time.h>
 
 #if defined(__sun) && defined(__SVR4)
 /* workaround non-const defined name in option struct, such that we
@@ -90,6 +91,8 @@ const char err_noapplet[] = "Sorry this applet was disabled at compile time";
 
 /* helper functions for showing errors */
 const char *argv0;
+
+FILE *warnout;
 
 #ifdef EBUG
 # include <sys/resource.h>

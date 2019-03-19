@@ -9,6 +9,8 @@
 
 #ifdef APPLET_qcheck
 
+#include <inttypes.h>
+
 #define QCHECK_FLAGS "s:uABHTPp" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
 	{"skip",            a_argument, NULL, 's'},

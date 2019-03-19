@@ -10,14 +10,17 @@
 #include "xmkdir.h"
 
 #include <string.h>
+#include <stdio.h>
 
 const char *argv0;
+FILE *warnout;
 
 int main(int argc, char *argv[])
 {
 	int i, ret;
 
 	argv0 = argv[0];
+	warnout = stderr;
 
 	if (argc <= 1)
 		return 1;

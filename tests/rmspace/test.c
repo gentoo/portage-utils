@@ -14,6 +14,7 @@
 #include <ctype.h>
 
 const char *argv0;
+FILE *warnout;
 
 int main(int argc, char *argv[])
 {
@@ -22,6 +23,7 @@ int main(int argc, char *argv[])
 	size_t len;
 
 	argv0 = argv[0];
+	warnout = stderr;
 
 	if (argc <= 1)
 		return 1;

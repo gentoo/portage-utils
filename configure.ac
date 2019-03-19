@@ -16,8 +16,6 @@ AM_PROG_AR
 LT_INIT
 AC_SUBST([LIBTOOL_DEPS])
 
-AC_CHECK_LIB([kvm], [kvm_open])
-
 AC_CHECK_FUNCS_ONCE(m4_flatten([
        scandirat
 ]))
