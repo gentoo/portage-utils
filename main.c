@@ -36,6 +36,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <sys/time.h>
+#include <limits.h>
 
 #if defined(__sun) && defined(__SVR4)
 /* workaround non-const defined name in option struct, such that we

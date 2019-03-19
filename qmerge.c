@@ -10,6 +10,8 @@
 #ifdef APPLET_qmerge
 
 #include <fnmatch.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "stat-time.h"
 
 #ifndef GLOB_BRACE

@@ -48,6 +48,7 @@ m4_foreach_w([flag], [
 	-Wsequence-point
 	-Wold-style-definition
 	-Wextra
+	-Wno-expansion-to-defined
 ], [
 	AX_CHECK_COMPILE_FLAG(flag, AS_VAR_APPEND([CFLAGS], " flag"))
 ])

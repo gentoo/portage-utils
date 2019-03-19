@@ -8,6 +8,7 @@
 #include "main.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 
 #define _IN_SAFE_IO 1
