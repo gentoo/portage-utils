@@ -30,6 +30,8 @@ main() {
 	export CPPFLAGS="-I${PWD}/../sysroot"
 	export LDFLAGS="-L${PWD}/../sysroot"
 
+	# get timestamps in order
+	v touch configure.ac Makefile.am aclocal.m4 configure Makefile.in config.h.in
 	v ./configure
 
 	# Standard optimized build.
