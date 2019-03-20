@@ -35,6 +35,7 @@ export PORTAGE_CONFIGROOT="${ab}/not/a/real/path"
 # Always use UTC for timestamps to keep tests stable. #551806
 export TZ='UTC 0'
 
+# create symlinks for applets
 q -i -q
 
 tret=0
