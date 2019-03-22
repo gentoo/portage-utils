@@ -7,9 +7,12 @@
  * Copyright 2019-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
+#include "main.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <xalloc.h>
 
 #include "rmspace.h"
 
@@ -34,4 +37,35 @@ char *rmspace_len(char *s, size_t len)
 char *rmspace(char *s)
 {
 	return rmspace_len(s, strlen(s));
+}
+
+/* removes adjacent extraneous white space */
+char *
+remove_extra_space(char *str)
+{
+	char *p, c = ' ';
+	size_t len, pos = 0;
+	char *buf;
+
+	if (str == NULL)
+		return NULL;
+	len = strlen(str);
+	buf = xmalloc(len+1);
+	for (p = str; *p != 0; ++p) {
+		if (!isspace(*p)) {
+			c = *p;
+		} else {
+			if (c == ' ')
+				continue;
+			c = ' ';
+		}
+		buf[pos] = c;
+		pos++;
+	}
+	buf[pos] = '\0';
+	if (pos > 0 && buf[pos-1] == ' ')
+		buf[pos-1] = '\0';
+	strcpy(str, buf);
+	free(buf);
+	return str;
 }

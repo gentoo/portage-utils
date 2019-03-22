@@ -4,6 +4,7 @@
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #include "main.h"
@@ -112,8 +113,8 @@ static DECLARE_ARRAY(overlays);
 static void
 no_colors(void)
 {
-	/* echo $(awk '{print $4,"="}' libq/colors.c  | grep ^* |cut -c 2-| grep ^[A-Z] |tr '\n' ' ') = \"\"\;  */
-	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = DKGREEN = MAGENTA = RED = YELLOW = BRYELLOW = WHITE = "";
+	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = DKGREEN = \
+		   MAGENTA = RED = YELLOW = BRYELLOW = WHITE = "";
 	setenv("NOCOLOR", "true", 1);
 }
 
@@ -279,32 +280,6 @@ rematch(const char *re, const char *match, int cflags)
 	regfree(&preg);
 
 	return ret;
-}
-
-/* removes adjacent extraneous white space */
-static char *
-remove_extra_space(char *str)
-{
-	char *p, c = ' ';
-	size_t len, pos = 0;
-	char *buf;
-
-	if (str == NULL)
-		return NULL;
-	len = strlen(str);
-	buf = xzalloc(len+1);
-	for (p = str; *p != 0; ++p) {
-		if (!isspace(*p)) c = *p; else {
-			if (c == ' ') continue;
-			c = ' ';
-		}
-		buf[pos] = c;
-		pos++;
-	}
-	if (pos > 0 && buf[pos-1] == ' ') buf[pos-1] = '\0';
-	strcpy(str, buf);
-	free(buf);
-	return str;
 }
 
 static void

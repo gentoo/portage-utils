@@ -10,5 +10,6 @@
 
 char *rmspace_len(char *s, size_t len);
 char *rmspace(char *s);
+char *remove_extra_space(char *s);
 
 #endif
