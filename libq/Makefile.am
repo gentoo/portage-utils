@@ -3,6 +3,7 @@ QFILES = \
 	atom.c atom.h \
 	basename.c basename.h \
 	busybox.h \
+	cache.c cache.h \
 	colors.c colors.h \
 	copy_file.c copy_file.h \
 	eat_file.c eat_file.h \
