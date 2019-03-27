@@ -1,12 +1,24 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#ifdef APPLET_qfile
+#include "main.h"
+#include "applets.h"
+
+#include <xalloc.h>
+#include <sys/types.h>
+#include <fcntl.h>
+
+#include "atom.h"
+#include "basename.h"
+#include "contents.h"
+#include "rmspace.h"
+#include "vdb.h"
 
 #define QFILE_FLAGS "boRx:S" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
@@ -499,7 +511,3 @@ int qfile_main(int argc, char **argv)
 
 	return (found ? EXIT_SUCCESS : EXIT_FAILURE);
 }
-
-#else
-DEFINE_APPLET_STUB(qfile)
-#endif

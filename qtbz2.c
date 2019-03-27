@@ -1,12 +1,25 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#ifdef APPLET_qtbz2
+#include "main.h"
+#include "applets.h"
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+
+#include "basename.h"
+#include "copy_file.h"
+#include "human_readable.h"
+#include "safe_io.h"
 
 /*
 # The format for a tbz2/xpak:
@@ -48,40 +61,6 @@ static const char * const qtbz2_opts_help[] = {
 #define qtbz2_usage(ret) usage(ret, QTBZ2_FLAGS, qtbz2_long_opts, qtbz2_opts_help, NULL, lookup_applet_idx("qtbz2"))
 
 static char tbz2_stdout = 0;
-
-static unsigned char *
-tbz2_encode_int(int enc)
-{
-	static unsigned char ret[4];
-	ret[0] = (enc & 0xff000000) >> 24;
-	ret[1] = (enc & 0x00ff0000) >> 16;
-	ret[2] = (enc & 0x0000ff00) >> 8;
-	ret[3] = (enc & 0x000000ff);
-	return ret;
-}
-static int
-tbz2_decode_int(unsigned char *buf)
-{
-	int ret;
-	ret = 0;
-	ret += (buf[0] << 24);
-	ret += (buf[1] << 16);
-	ret += (buf[2] << 8);
-	ret += (buf[3]);
-	return ret;
-}
-
-static void
-_tbz2_copy_file(FILE *src, FILE *dst)
-{
-	int count = 1;
-	unsigned char buffer[BUFSIZE*32];
-	while (count) {
-		count = fread(buffer, 1, sizeof(buffer), src);
-		if (!count) return;
-		fwrite(buffer, 1, count, dst);
-	}
-}
 
 static int
 tbz2_compose(int dir_fd, const char *tarbz2, const char *xpak, const char *tbz2)
@@ -136,14 +115,15 @@ tbz2_compose(int dir_fd, const char *tarbz2, const char *xpak, const char *tbz2)
 	}
 
 	/* save [tarball] */
-	_tbz2_copy_file(in_tarbz2, out);
+	copy_file(in_tarbz2, out);
 	fclose(in_tarbz2);
 	/* save [xpak] */
-	_tbz2_copy_file(in_xpak, out);
+	copy_file(in_xpak, out);
 	fclose(in_xpak);
 
 	/* save tbz2 tail: OOOOSTOP */
-	fwrite(tbz2_encode_int(st.st_size), 1, 4, out);
+	WRITE_BE_INT32(buf, st.st_size);
+	fwrite(buf, 1, 4, out);
 	fwrite(TBZ2_END_MSG, 1, TBZ2_END_MSG_LEN, out);
 
 	fclose(out);
@@ -202,7 +182,8 @@ tbz2_decompose(int dir_fd, const char *tbz2, const char *tarbz2, const char *xpa
 		goto close_in_and_ret;
 
 	if (verbose)
-		printf("input tbz2: %s (%s)\n", tbz2, make_human_readable_str(st.st_size, 1, 0));
+		printf("input tbz2: %s (%s)\n", tbz2,
+				make_human_readable_str(st.st_size, 1, 0));
 
 	/* verify the tail signature */
 	if (fseek(in, -TBZ2_END_LEN, SEEK_END) != 0)
@@ -215,7 +196,7 @@ tbz2_decompose(int dir_fd, const char *tbz2, const char *tarbz2, const char *xpa
 	}
 
 	/* calculate xpak's size */
-	xpak_size = tbz2_decode_int(tbz2_tail);
+	xpak_size = READ_BE_INT32(tbz2_tail);
 	/* calculate tarbz2's size */
 	tarbz2_size = st.st_size - xpak_size - TBZ2_END_LEN;
 
@@ -223,11 +204,13 @@ tbz2_decompose(int dir_fd, const char *tbz2, const char *tarbz2, const char *xpa
 	rewind(in);
 	/* dump the tar.bz2 */
 	if (verbose)
-		printf("output tar.bz2: %s (%s)\n", tarbz2, make_human_readable_str(tarbz2_size, 1, 0));
+		printf("output tar.bz2: %s (%s)\n", tarbz2,
+				make_human_readable_str(tarbz2_size, 1, 0));
 	_tbz2_write_file(in, dir_fd, tarbz2, tarbz2_size);
 	/* dump the xpak */
 	if (verbose)
-		printf("output xpak: %s (%s)\n", xpak, make_human_readable_str(xpak_size, 1, 0));
+		printf("output xpak: %s (%s)\n", xpak,
+				make_human_readable_str(xpak_size, 1, 0));
 	_tbz2_write_file(in, dir_fd, xpak, xpak_size);
 
 	ret = 0;
@@ -266,9 +249,12 @@ int qtbz2_main(int argc, char **argv)
 	}
 	if (optind == argc) {
 		switch (action) {
-		case TBZ2_ACT_JOIN:  err("Join usage: <input tar.bz2> <input xpak> [<output tbz2>]");
-		case TBZ2_ACT_SPLIT: err("Split usage: <input tbz2> [<output tar.bz2> <output xpak>]");
-		default:             qtbz2_usage(EXIT_FAILURE);
+		case TBZ2_ACT_JOIN:
+			err("Join usage: <input tar.bz2> <input xpak> [<output tbz2>]");
+		case TBZ2_ACT_SPLIT:
+			err("Split usage: <input tbz2> [<output tar.bz2> <output xpak>]");
+		default:
+			qtbz2_usage(EXIT_FAILURE);
 		}
 	}
 
@@ -281,8 +267,8 @@ int qtbz2_main(int argc, char **argv)
 		else if (strstr(argv[optind], ".tbz2") != NULL)
 			action = TBZ2_ACT_SPLIT;
 		else
-			err("%s: need to use -j or -s, or file must end in .tar.bz2 or .tbz2 to autodetect",
-				argv[optind]);
+			err("%s: need to use -j or -s, or file must end "
+					"in .tar.bz2 or .tbz2 to autodetect", argv[optind]);
 	}
 
 	/* tbz2tool join .tar.bz2 .xpak .tbz2 */
@@ -357,8 +343,7 @@ int qtbz2_main(int argc, char **argv)
 	}
 
 	/* We have to cleanup all resources as we're used indirectly
-	 * (e.g. via qmerge).
-	 */
+	 * (e.g. via qmerge). */
 	free(heap_tbz2);
 	free(heap_xpak);
 	free(heap_tarbz2);
@@ -367,7 +352,3 @@ int qtbz2_main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
-
-#else
-DEFINE_APPLET_STUB(qtbz2)
-#endif

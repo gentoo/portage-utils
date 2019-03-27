@@ -8,7 +8,22 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#ifdef APPLET_qgrep
+#include "main.h"
+#include "applets.h"
+
+#include <stdio.h>
+#include <xalloc.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include "atom.h"
+#include "cache.h"
+#include "vdb.h"
+#include "xarray.h"
+#include "xchdir.h"
+#include "xregex.h"
 
 #define QGREP_FLAGS "IiHNclLexJEsS:B:A:" COMMON_FLAGS
 static struct option const qgrep_long_opts[] = {
@@ -314,7 +329,8 @@ int qgrep_main(int argc, char **argv)
 	}
 
 	if (show_name && show_filename) {
-		warn("--with-name and --with-filename are incompatible options. The former wins.");
+		warn("--with-name and --with-filename are incompatible options. "
+				"The former wins.");
 		show_filename = 0;
 	}
 
@@ -341,14 +357,16 @@ int qgrep_main(int argc, char **argv)
 	}
 
 	if (do_installed && do_eclass) {
-		warn("--installed and --eclass are incompatible options. The former wins.");
+		warn("--installed and --eclass are incompatible options. "
+				"The former wins.");
 		do_eclass = 0;
 	}
 
 	/* do we report results once per file or per line ? */
 	per_file_output = do_count || (do_list && (!verbose || invert_list));
 	/* label for prefixing matching lines or listing matching files */
-	label = (show_name ? name : ((verbose || show_filename || do_list) ? ebuild : NULL));
+	label = (show_name ? name :
+			((verbose || show_filename || do_list) ? ebuild : NULL));
 
 	if (argc > (optind + 1)) {
 		include_atoms = xcalloc(sizeof(depend_atom*), (argc - optind - 1));
@@ -392,16 +410,20 @@ int qgrep_main(int argc, char **argv)
 			snprintf(buf, sizeof(buf), "%s/%s", portroot, portvdb);
 			xchdir(buf);
 			if ((vdb_dir = opendir(".")) == NULL)
-				errp("could not opendir(%s/%s) for ROOT/VDB", portroot, portvdb);
+				errp("could not opendir(%s/%s) for ROOT/VDB",
+						portroot, portvdb);
 		}
 
 		/* iteration is either over ebuilds or eclasses */
 		while (do_eclass
 				? ((dentry = readdir(eclass_dir))
-					&& snprintf(ebuild, sizeof(ebuild), "eclass/%s", dentry->d_name))
+					&& snprintf(ebuild, sizeof(ebuild),
+						"eclass/%s", dentry->d_name))
 				: (do_installed
-					? (get_next_installed_ebuild(ebuild, vdb_dir, &dentry, &cat_dir) != NULL)
-					: (fgets(ebuild, sizeof(ebuild), fp) != NULL))) {
+					? (get_next_installed_ebuild(ebuild, vdb_dir,
+							&dentry, &cat_dir) != NULL)
+					: (fgets(ebuild, sizeof(ebuild), fp) != NULL)))
+		{
 			FILE *newfp;
 
 			/* filter badly named files, prepare eclass or package name, etc. */
@@ -451,14 +473,19 @@ int qgrep_main(int argc, char **argv)
 				int lineno = 0;
 				char remaining_after_context = 0;
 				count = 0;
-				/* if there have been some matches already, then a separator will be needed */
-				need_separator = (!status) && (num_lines_before || num_lines_after);
-				/* whatever is in the circular buffers list is no more a valid context */
+				/* if there have been some matches already, then a
+				 * separator will be needed */
+				need_separator =
+					!status && (num_lines_before || num_lines_after);
+				/* whatever is in the circular buffers list is no more a
+				 * valid context */
 				qgrep_buf_list_invalidate(buf_list);
 
-				/* reading a new line always happen in the next buffer of the list */
-				while ((buf_list = buf_list->next)
-						&& (fgets(buf_list->buf, sizeof(buf_list->buf), newfp)) != NULL) {
+				/* reading a new line always happen in the next buffer
+				 * of the list */
+				while ((buf_list = buf_list->next) &&
+						fgets(buf_list->buf, sizeof(buf_list->buf), newfp))
+				{
 					lineno++;
 					buf_list->valid = 1;
 
@@ -477,17 +504,20 @@ int qgrep_main(int argc, char **argv)
 					}
 
 					if (skip_pattern) {
-						/* reject some other lines which match an optional pattern */
+						/* reject some other lines which match an
+						 * optional pattern */
 						if (!do_regex) {
 							if (strfunc(buf_list->buf, skip_pattern) != NULL)
 								goto print_after_context;
 						} else {
-							if (regexec(&skip_preg, buf_list->buf, 0, NULL, 0) == 0)
+							if (regexec(&skip_preg, buf_list->buf,
+										0, NULL, 0) == 0)
 								goto print_after_context;
 						}
 					}
 
-					/* four ways to match a line (with/without inversion and regexp) */
+					/* four ways to match a line (with/without inversion
+					 * and regexp) */
 					if (!invert_match) {
 						if (do_regex == 0) {
 							if (strfunc(buf_list->buf, argv[optind]) == NULL)
@@ -509,7 +539,8 @@ int qgrep_main(int argc, char **argv)
 					count++;
 					status = 0; /* got a match, exit status should be 0 */
 					if (per_file_output)
-						continue; /* matching files are listed out of this loop */
+						continue;
+						/* matching files are listed out of this loop */
 
 					if ((need_separator > 0)
 							&& (num_lines_before || num_lines_after))
@@ -519,7 +550,8 @@ int qgrep_main(int argc, char **argv)
 					need_separator = 0 - num_lines_before;
 					if (!do_list) {
 						/* print the leading context */
-						qgrep_print_before_context(buf_list, num_lines_before, label,
+						qgrep_print_before_context(buf_list,
+								num_lines_before, label,
 								((verbose > 1) ? lineno : -1));
 						/* print matching line */
 						if (invert_match || *RED == '\0')
@@ -530,9 +562,11 @@ int qgrep_main(int argc, char **argv)
 								((verbose > 1) ? lineno : -1), &preg);
 						else
 							qgrep_print_matching_line_strcolor(buf_list, label,
-								((verbose > 1) ? lineno : -1), strfunc, argv[optind]);
+								((verbose > 1) ? lineno : -1), strfunc,
+								argv[optind]);
 					} else {
-						/* in verbose do_list mode, list the file once per match */
+						/* in verbose do_list mode, list the file once
+						 * per match */
 						printf("%s", label);
 						if (verbose > 1)
 							printf(":%d", lineno);
@@ -546,8 +580,9 @@ int qgrep_main(int argc, char **argv)
 					/* print some trailing context lines when needed */
 					if (!remaining_after_context) {
 						if (!status)
-							/* we're getting closer to the need of a separator between
-							 * current match block and the next one */
+							/* we're getting closer to the need of a
+							 * separator between current match block and
+							 * the next one */
 							++need_separator;
 					} else {
 						qgrep_print_context_line(buf_list, label,
@@ -557,7 +592,8 @@ int qgrep_main(int argc, char **argv)
 				}
 				fclose(newfp);
 				if (!per_file_output)
-					continue; /* matches were already displayed, line per line */
+					continue;
+					/* matches were already displayed, line per line */
 				if (do_count && count) {
 					if (label != NULL)
 						/* -c without -v/-N/-H only outputs
@@ -565,7 +601,8 @@ int qgrep_main(int argc, char **argv)
 						printf("%s:", label);
 					printf("%d\n", count);
 				} else if ((count && !invert_list) || (!count && invert_list))
-					printf("%s\n", label); /* do_list == 1, or we wouldn't be here */
+					printf("%s\n", label);
+					/* do_list == 1, or we wouldn't be here */
 			}
 		}
 		if (do_eclass)
@@ -591,7 +628,3 @@ int qgrep_main(int argc, char **argv)
 
 	return status;
 }
-
-#else
-DEFINE_APPLET_STUB(qgrep)
-#endif

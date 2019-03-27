@@ -8,7 +8,18 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#ifdef APPLET_qlist
+#include "main.h"
+#include "applets.h"
+
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <xalloc.h>
+
+#include "atom.h"
+#include "contents.h"
+#include "vdb.h"
+#include "xregex.h"
 
 #define QLIST_FLAGS "ISRUcDeados" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
@@ -163,8 +174,19 @@ umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
 	return _umapstr_buf;
 }
 
-static bool
-qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, bool exact)
+/* forward declaration necessary for misuse from qmerge.c, see HACK there */
+bool
+qlist_match(
+		q_vdb_pkg_ctx *pkg_ctx,
+		const char *name,
+		depend_atom **name_atom,
+		bool exact);
+bool
+qlist_match(
+		q_vdb_pkg_ctx *pkg_ctx,
+		const char *name,
+		depend_atom **name_atom,
+		bool exact)
 {
 	const char *catname = pkg_ctx->cat_ctx->name;
 	const char *pkgname = pkg_ctx->name;
@@ -182,7 +204,8 @@ qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, b
 			uslot = NULL;
 		else {
 			if (!pkg_ctx->slot)
-				q_vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot, &pkg_ctx->slot_len);
+				q_vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot,
+						&pkg_ctx->slot_len);
 			uslot_len = strlen(uslot);
 		}
 	}
@@ -190,7 +213,8 @@ qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, b
 	urepo = strstr(name, "::");
 	if (urepo) {
 		if (!pkg_ctx->repo)
-			q_vdb_pkg_eat(pkg_ctx, "repository", &pkg_ctx->repo, &pkg_ctx->repo_len);
+			q_vdb_pkg_eat(pkg_ctx, "repository", &pkg_ctx->repo,
+					&pkg_ctx->repo_len);
 		urepo += 2;
 		urepo_len = strlen(urepo);
 
@@ -229,8 +253,8 @@ qlist_match(q_vdb_pkg_ctx *pkg_ctx, const char *name, depend_atom **name_atom, b
 	}
 
 	if (uslot) {
-		/* Require exact match on SLOTs.  If the user didn't include a subslot,
-		 * then ignore it when checking the package's value. */
+		/* Require exact match on SLOTs.  If the user didn't include a
+		 * subslot, then ignore it when checking the package's value. */
 		if (strncmp(pkg_ctx->slot, uslot, uslot_len) != 0 ||
 		    (pkg_ctx->slot[uslot_len] != '\0' &&
 		     pkg_ctx->slot[uslot_len] != '/'))
@@ -474,7 +498,3 @@ int qlist_main(int argc, char **argv)
 	/* The return value is whether we matched anything. */
 	return ret ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-
-#else
-DEFINE_APPLET_STUB(qlist)
-#endif

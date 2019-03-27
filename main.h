@@ -52,6 +52,16 @@ extern const char *argv0;
 # define MAX(x, y) ((x) < (y) ? (y) : (x))
 #endif
 
+#define READ_BE_INT32(P) \
+	(((P)[0] << 24) | ((P)[1] << 16) | ((P)[2] << 8 ) | (P)[3])
+#define WRITE_BE_INT32(P,I) \
+{ \
+	(P)[0] = (I & 0xff000000) >> 24; \
+	(P)[1] = (I & 0x00ff0000) >> 16; \
+	(P)[2] = (I & 0x0000ff00) >> 8; \
+	(P)[3] = (I & 0x000000ff); \
+}
+
 /* Easy enough to glue to older versions */
 #ifndef O_CLOEXEC
 # define O_CLOEXEC 0
@@ -121,7 +131,5 @@ extern FILE *warnout;
 #define errf(fmt, args...) _err(warnf, fmt , ## args)
 #define errp(fmt, args...) _err(warnp, fmt , ## args)
 #define errfp(fmt, args...) _err(warnfp, fmt, ## args)
-
-int rematch(const char *, const char *, int);
 
 #endif

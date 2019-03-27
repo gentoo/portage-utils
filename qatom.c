@@ -1,12 +1,18 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#ifdef APPLET_qatom
+#include "main.h"
+
+#include <stdlib.h>
+#include <stdbool.h>
+
+#include "atom.h"
+#include "applets.h"
 
 #define QATOM_FORMAT "%{CATEGORY} %{PN} %{PV} %[PR] %[SLOT] %[pfx] %[sfx]"
 
@@ -148,7 +154,3 @@ int qatom_main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
-
-#else
-DEFINE_APPLET_STUB(qatom)
-#endif

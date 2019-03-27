@@ -7,7 +7,19 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#ifdef APPLET_qdepends
+#include "main.h"
+#include "applets.h"
+
+#include <ctype.h>
+#include <xalloc.h>
+#include <assert.h>
+
+#include "atom.h"
+#include "set.h"
+#include "vdb.h"
+#include "xarray.h"
+#include "xasprintf.h"
+#include "xregex.h"
 
 #define QDEPENDS_FLAGS "drpbafNk:Q:" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
@@ -714,7 +726,3 @@ int qdepends_main(int argc, char **argv)
 		warn("no matches found for your query");
 	return ret ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-
-#else
-DEFINE_APPLET_STUB(qdepends)
-#endif

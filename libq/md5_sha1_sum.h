@@ -6,6 +6,9 @@
 #ifndef _MD5_SHA1_SUM_H
 #define _MD5_SHA1_SUM_H 1
 
+/* for HASH_MD5/HASH_SHA1 */
+#include "busybox.h"
+
 /* pass in a fd and get back a fd; filename is for display only */
 typedef int (*hash_cb_t) (int, const char *);
 

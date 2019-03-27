@@ -5,6 +5,7 @@ QFILES = \
 	busybox.h \
 	cache.c cache.h \
 	colors.c colors.h \
+	contents.c contents.h \
 	copy_file.c copy_file.h \
 	eat_file.c eat_file.h \
 	hash_fd.c hash_fd.h \
@@ -22,6 +23,7 @@ QFILES = \
 	xasprintf.h \
 	xchdir.c xchdir.h \
 	xmkdir.c xmkdir.h \
+	xpak.c xpak.h \
 	xregex.c xregex.h \
 	xsystem.c xsystem.h \
 	$(NULL)

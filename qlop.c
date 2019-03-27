@@ -7,7 +7,19 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#ifdef APPLET_qlop
+#include "main.h"
+#include "applets.h"
+
+#include <string.h>
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "atom.h"
+#include "eat_file.h"
+#include "xarray.h"
+#include "xasprintf.h"
 
 #define QLOP_DEFAULT_LOGFILE "emerge.log"
 
@@ -1009,7 +1021,3 @@ int qlop_main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
-
-#else
-DEFINE_APPLET_STUB(qlop)
-#endif

@@ -26,3 +26,21 @@ int copy_file_fd(int fd_src, int fd_dst)
 			return -1;
 	}
 }
+
+int copy_file(FILE *src, FILE *dst)
+{
+	ssize_t rcnt, wcnt;
+	char buf[64 * 1024];
+
+	while (1) {
+		rcnt = fread(buf, 1, sizeof(buf), src);
+		if (rcnt < 0)
+			return -1;
+		else if (rcnt == 0)
+			return 0;
+
+		wcnt = fwrite(buf, 1, rcnt, dst);
+		if (wcnt == -1 || wcnt != rcnt)
+			return -1;
+	}
+}

@@ -8,9 +8,19 @@
  */
 
 #include "main.h"
+#include "applets.h"
+
+#include <iniparser.h>
+#include <xalloc.h>
+#include <assert.h>
+#include <ctype.h>
+#include <sys/time.h>
+#include <limits.h>
+
 #include "atom.h"
 #include "basename.h"
 #include "busybox.h"
+#include "cache.h"
 #include "colors.h"
 #include "copy_file.h"
 #include "eat_file.h"
@@ -32,34 +42,6 @@
 #include "xregex.h"
 #include "xsystem.h"
 
-#include <iniparser.h>
-#include <xalloc.h>
-#include <assert.h>
-#include <ctype.h>
-#include <sys/time.h>
-#include <limits.h>
-
-#if defined(__sun) && defined(__SVR4)
-/* workaround non-const defined name in option struct, such that we
- * don't get a zillion of warnings */
-#define	no_argument		0
-#define	required_argument	1
-#define	optional_argument	2
-struct option {
-	const char *name;
-	int has_arg;
-	int *flag;
-	int val;
-};
-extern int	getopt_long(int, char * const *, const char *,
-		    const struct option *, int *);
-#else
-# include <getopt.h>
-#endif
-
-/* prototypes and such */
-static int lookup_applet_idx(const char *);
-
 /* variables to control runtime behavior */
 char *module_name = NULL;
 char *modpath = NULL;
@@ -67,29 +49,26 @@ int verbose = 0;
 int quiet = 0;
 int portcachedir_type = 0;
 char pretend = 0;
-static int reinitialize = 0;
-static int reinitialize_metacache = 0;
-static char *portlogdir;
+char *portroot;
+char *config_protect;
+char *config_protect_mask;
+char *portvdb;
+char *portlogdir;
+char *pkg_install_mask;
+char *binhost;
+char *pkgdir;
+char *port_tmpdir;
+char *features;
+char *install_mask;
+DECLARE_ARRAY(overlays);
+
 static char *main_overlay;
 static char *portarch;
-static char *portvdb;
 static char *portedb;
 const char portcachedir_pms[] = "metadata/cache";
 const char portcachedir_md5[] = "metadata/md5-cache";
-static char *portroot;
 static char *eprefix;
-static char *config_protect, *config_protect_mask;
-
-static char *pkgdir;
-static char *port_tmpdir;
-
-static char *binhost;
-static char *features;
 static char *accept_license;
-static char *install_mask;
-static char *pkg_install_mask;
-
-const char err_noapplet[] = "Sorry this applet was disabled at compile time";
 
 /* helper functions for showing errors */
 const char *argv0;
@@ -108,9 +87,7 @@ init_coredumps(void)
 }
 #endif
 
-static DECLARE_ARRAY(overlays);
-
-static void
+void
 no_colors(void)
 {
 	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = DKGREEN = \
@@ -118,7 +95,7 @@ no_colors(void)
 	setenv("NOCOLOR", "true", 1);
 }
 
-static void
+void
 setup_quiet(void)
 {
 	/* "e" for FD_CLOEXEC */
@@ -127,38 +104,8 @@ setup_quiet(void)
 	++quiet;
 }
 
-/* include common applet defs */
-#include "applets.h"
-
-/* Common usage for all applets */
-#define COMMON_FLAGS "vqChV"
-#define COMMON_LONG_OPTS \
-	{"root",       a_argument, NULL, 0x1}, \
-	{"verbose",   no_argument, NULL, 'v'}, \
-	{"quiet",     no_argument, NULL, 'q'}, \
-	{"nocolor",   no_argument, NULL, 'C'}, \
-	{"help",      no_argument, NULL, 'h'}, \
-	{"version",   no_argument, NULL, 'V'}, \
-	{NULL,        no_argument, NULL, 0x0}
-#define COMMON_OPTS_HELP \
-	"Set the ROOT env var", \
-	"Make a lot of noise", \
-	"Tighter output; suppress warnings", \
-	"Don't output color", \
-	"Print this help and exit", \
-	"Print version and exit", \
-	NULL
-#define COMMON_GETOPTS_CASES(applet) \
-	case 0x1: portroot = optarg; break; \
-	case 'v': ++verbose; break; \
-	case 'q': setup_quiet(); break; \
-	case 'V': version_barf(); break; \
-	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
-	case 'C': no_colors(); break; \
-	default: applet ## _usage(EXIT_FAILURE); break;
-
 /* display usage and exit */
-static void
+void
 usage(int status, const char *flags, struct option const opts[],
       const char * const help[], const char *desc, int blabber)
 {
@@ -226,7 +173,7 @@ usage(int status, const char *flags, struct option const opts[],
 	exit(status);
 }
 
-static void
+void
 version_barf(void)
 {
 	const char *vcsid = "";
@@ -250,39 +197,7 @@ version_barf(void)
 	exit(EXIT_SUCCESS);
 }
 
-static bool
-prompt(const char *p)
-{
-	printf("%s? [Y/n] ", p);
-	fflush(stdout);
-	switch (getc(stdin)) {
-	case '\n':
-	case 'y':
-	case 'Y':
-		return true;
-	default:
-		return false;
-	}
-}
-
-int
-rematch(const char *re, const char *match, int cflags)
-{
-	regex_t preg;
-	int ret;
-
-	if ((match == NULL) || (re == NULL))
-		return EXIT_FAILURE;
-
-	if (wregcomp(&preg, re, cflags))
-		return EXIT_FAILURE;
-	ret = regexec(&preg, match, 0, NULL, 0);
-	regfree(&preg);
-
-	return ret;
-}
-
-static void
+void
 freeargv(int argc, char **argv)
 {
 	while (argc--)
@@ -290,7 +205,7 @@ freeargv(int argc, char **argv)
 	free(argv);
 }
 
-static void
+void
 makeargv(const char *string, int *argc, char ***argv)
 {
 	int curc = 2;
@@ -318,96 +233,6 @@ makeargv(const char *string, int *argc, char ***argv)
 		str = p;
 	}
 	free(q);
-}
-
-/*
- * Parse a line of CONTENTS file and provide access to the individual fields
- */
-typedef enum {
-	CONTENTS_DIR, CONTENTS_OBJ, CONTENTS_SYM
-} contents_type;
-typedef struct {
-	contents_type type;
-	char *_data;
-	char *name;
-	char *sym_target;
-	char *digest;
-	char *mtime_str;
-	long mtime;
-} contents_entry;
-
-static contents_entry *
-contents_parse_line(char *line)
-{
-	static contents_entry e;
-	char *p;
-
-	if (!line || !*line || *line == '\n')
-		return NULL;
-
-	/* chop trailing newline */
-	if ((p = strrchr(line, '\n')) != NULL)
-		*p = '\0';
-
-	/* ferringb wants to break portage/vdb by using tabs vs spaces
-	 * so filenames can have lame ass spaces in them..
-	 * (I smell Windows near by)
-	 * Anyway we just convert that crap to a space so we can still
-	 * parse quickly */
-	p = line;
-	while ((p = strchr(p, '\t')) != NULL)
-		*p = ' ';
-
-	memset(&e, 0x00, sizeof(e));
-	e._data = line;
-
-	if (!strncmp(e._data, "obj ", 4))
-		e.type = CONTENTS_OBJ;
-	else if (!strncmp(e._data, "dir ", 4))
-		e.type = CONTENTS_DIR;
-	else if (!strncmp(e._data, "sym ", 4))
-		e.type = CONTENTS_SYM;
-	else
-		return NULL;
-
-	e.name = e._data + 4;
-
-	switch (e.type) {
-		/* dir /bin */
-		case CONTENTS_DIR:
-			break;
-
-		/* obj /bin/bash 62ed51c8b23866777552643ec57614b0 1120707577 */
-		case CONTENTS_OBJ:
-			if ((e.mtime_str = strrchr(e.name, ' ')) == NULL)
-				return NULL;
-			*e.mtime_str++ = '\0';
-			if ((e.digest = strrchr(e.name, ' ')) == NULL)
-				return NULL;
-			*e.digest++ = '\0';
-			break;
-
-		/* sym /bin/sh -> bash 1120707577 */
-		case CONTENTS_SYM:
-			if ((e.mtime_str = strrchr(e.name, ' ')) == NULL)
-				return NULL;
-			*e.mtime_str++ = '\0';
-			if ((e.sym_target = strstr(e.name, " -> ")) == NULL)
-				return NULL;
-			*e.sym_target = '\0';
-			e.sym_target += 4;
-			break;
-	}
-
-	if (e.mtime_str) {
-		e.mtime = strtol(e.mtime_str, NULL, 10);
-		if (e.mtime == LONG_MAX) {
-			e.mtime = 0;
-			e.mtime_str = NULL;
-		}
-	}
-
-	return &e;
 }
 
 /* Handle a single file in the repos.conf format. */
@@ -958,22 +783,7 @@ initialize_portage_env(void)
 		color_remap();
 }
 
-enum {
-	CACHE_EBUILD = 1,
-	CACHE_METADATA = 2,
-	CACHE_METADATA_PMS = 10,
-	CACHE_METADATA_MD5 = 11,
-};
-
-static int
-filter_hidden(const struct dirent *dentry)
-{
-	if (dentry->d_name[0] == '.')
-		return 0;
-	return 1;
-}
-
-static const char *
+const char *
 initialize_flat(const char *overlay, int cache_type, bool force)
 {
 	struct dirent **category, **pn, **eb;
@@ -1109,357 +919,6 @@ ret:
 	return cache_file;
 }
 
-static void
-reinitialize_as_needed(void)
-{
-	size_t n;
-	const char *overlay, *ret = ret;
-
-	if (reinitialize)
-		array_for_each(overlays, n, overlay) {
-			ret = initialize_flat(overlay, CACHE_EBUILD, true);
-			if (USE_CLEANUP)
-				free((void *)ret);
-		}
-
-	if (reinitialize_metacache)
-		array_for_each(overlays, n, overlay) {
-			ret = initialize_flat(overlay, CACHE_METADATA, true);
-			if (USE_CLEANUP)
-				free((void *)ret);
-		}
-}
-
-typedef struct {
-	char *_data;
-	char *DEPEND;        /* line 1 */
-	char *RDEPEND;
-	char *SLOT;
-	char *SRC_URI;
-	char *RESTRICT;      /* line 5 */
-	char *HOMEPAGE;
-	char *LICENSE;
-	char *DESCRIPTION;
-	char *KEYWORDS;
-	char *INHERITED;     /* line 10 */
-	char *IUSE;
-	char *CDEPEND;
-	char *PDEPEND;
-	char *PROVIDE;       /* line 14 */
-	char *EAPI;
-	char *PROPERTIES;
-	depend_atom *atom;
-	/* These are MD5-Cache only */
-	char *DEFINED_PHASES;
-	char *REQUIRED_USE;
-	char *_eclasses_;
-	char *_md5_;
-} portage_cache;
-
-static void cache_free(portage_cache *cache);
-static portage_cache *cache_read_file_pms(const char *file);
-static portage_cache *cache_read_file_md5(const char *file);
-
-static portage_cache *
-cache_read_file(const char *file)
-{
-	if (portcachedir_type == CACHE_METADATA_MD5)
-		return(cache_read_file_md5(file));
-	else if (portcachedir_type == CACHE_METADATA_PMS)
-		return(cache_read_file_pms(file));
-	warn("Unknown metadata cache type!");
-	return NULL;
-}
-
-static portage_cache *
-cache_read_file_pms(const char *file)
-{
-	struct stat s;
-	char *ptr;
-	FILE *f;
-	portage_cache *ret = NULL;
-	size_t len;
-
-	if ((f = fopen(file, "r")) == NULL)
-		goto err;
-
-	if (fstat(fileno(f), &s) != 0)
-		goto err;
-	len = sizeof(*ret) + s.st_size + 1;
-	ret = xzalloc(len);
-	ptr = (char*)ret;
-	ret->_data = ptr + sizeof(*ret);
-	if ((off_t)fread(ret->_data, 1, s.st_size, f) != s.st_size)
-		goto err;
-
-	ret->atom = atom_explode(file);
-	ret->DEPEND = ret->_data;
-#define next_line(curr, next) \
-	if ((ptr = strchr(ret->curr, '\n')) == NULL) { \
-		warn("Invalid cache file '%s'", file); \
-		goto err; \
-	} \
-	ret->next = ptr+1; \
-	*ptr = '\0';
-	next_line(DEPEND, RDEPEND)
-	next_line(RDEPEND, SLOT)
-	next_line(SLOT, SRC_URI)
-	next_line(SRC_URI, RESTRICT)
-	next_line(RESTRICT, HOMEPAGE)
-	next_line(HOMEPAGE, LICENSE)
-	next_line(LICENSE, DESCRIPTION)
-	next_line(DESCRIPTION, KEYWORDS)
-	next_line(KEYWORDS, INHERITED)
-	next_line(INHERITED, IUSE)
-	next_line(IUSE, CDEPEND)
-	next_line(CDEPEND, PDEPEND)
-	next_line(PDEPEND, PROVIDE)
-	next_line(PROVIDE, EAPI)
-	next_line(EAPI, PROPERTIES)
-#undef next_line
-	ptr = strchr(ptr+1, '\n');
-	if (ptr == NULL) {
-		warn("Invalid cache file '%s' - could not find end of cache data", file);
-		goto err;
-	}
-	*ptr = '\0';
-
-	fclose(f);
-
-	return ret;
-
-err:
-	if (f) fclose(f);
-	if (ret) cache_free(ret);
-	return NULL;
-}
-
-static portage_cache *
-cache_read_file_md5(const char *file)
-{
-	struct stat s;
-	char *ptr, *endptr;
-	FILE *f;
-	portage_cache *ret = NULL;
-	size_t len;
-
-	if ((f = fopen(file, "r")) == NULL)
-		goto err;
-
-	if (fstat(fileno(f), &s) != 0)
-		goto err;
-	len = sizeof(*ret) + s.st_size + 1;
-	ret = xzalloc(len);
-	ptr = (char*)ret;
-	ret->_data = ptr + sizeof(*ret);
-	if ((off_t)fread(ret->_data, 1, s.st_size, f) != s.st_size)
-		goto err;
-
-	ret->atom = atom_explode(file);
-
-	/* We have a block of key=value\n data.
-	 * KEY=VALUE\n
-	 * Where KEY does NOT contain:
-	 * \0 \n =
-	 * And VALUE does NOT contain:
-	 * \0 \n
-	 * */
-#define assign_var_cmp(keyname, cmpkey) \
-	if (strncmp(keyptr, cmpkey, strlen(cmpkey)) == 0) { \
-		ret->keyname = valptr; \
-		continue; \
-	}
-#define assign_var(keyname) \
-	assign_var_cmp(keyname, #keyname);
-
-	ptr = ret->_data;
-	endptr = strchr(ptr, '\0');
-	if (endptr == NULL) {
-			warn("Invalid cache file '%s' - could not find end of cache data", file);
-			goto err;
-	}
-
-	while (ptr != NULL && ptr != endptr) {
-		char *keyptr;
-		char *valptr;
-		keyptr = ptr;
-		valptr = strchr(ptr, '=');
-		if (valptr == NULL) {
-			warn("Invalid cache file '%s' val", file);
-			goto err;
-		}
-		*valptr = '\0';
-		valptr++;
-		ptr = strchr(valptr, '\n');
-		if (ptr == NULL) {
-			warn("Invalid cache file '%s' key", file);
-			goto err;
-		}
-		*ptr = '\0';
-		ptr++;
-
-		assign_var(CDEPEND);
-		assign_var(DEPEND);
-		assign_var(DESCRIPTION);
-		assign_var(EAPI);
-		assign_var(HOMEPAGE);
-		assign_var(INHERITED);
-		assign_var(IUSE);
-		assign_var(KEYWORDS);
-		assign_var(LICENSE);
-		assign_var(PDEPEND);
-		assign_var(PROPERTIES);
-		assign_var(PROVIDE);
-		assign_var(RDEPEND);
-		assign_var(RESTRICT);
-		assign_var(SLOT);
-		assign_var(SRC_URI);
-		assign_var(DEFINED_PHASES);
-		assign_var(REQUIRED_USE);
-		assign_var(_eclasses_);
-		assign_var(_md5_);
-		warn("Cache file '%s' with unknown key %s", file, keyptr);
-	}
-#undef assign_var
-#undef assign_var_cmp
-
-	fclose(f);
-
-	return ret;
-
-err:
-	if (f) fclose(f);
-	if (ret) cache_free(ret);
-	return NULL;
-}
-
-#ifdef EBUG
-static void
-cache_dump(portage_cache *cache)
-{
-	if (!cache)
-		errf("Cache is empty !");
-
-	printf("DEPEND     : %s\n", cache->DEPEND);
-	printf("RDEPEND    : %s\n", cache->RDEPEND);
-	printf("SLOT       : %s\n", cache->SLOT);
-	printf("SRC_URI    : %s\n", cache->SRC_URI);
-	printf("RESTRICT   : %s\n", cache->RESTRICT);
-	printf("HOMEPAGE   : %s\n", cache->HOMEPAGE);
-	printf("LICENSE    : %s\n", cache->LICENSE);
-	printf("DESCRIPTION: %s\n", cache->DESCRIPTION);
-	printf("KEYWORDS   : %s\n", cache->KEYWORDS);
-	printf("INHERITED  : %s\n", cache->INHERITED);
-	printf("IUSE       : %s\n", cache->IUSE);
-	printf("CDEPEND    : %s\n", cache->CDEPEND);
-	printf("PDEPEND    : %s\n", cache->PDEPEND);
-	printf("PROVIDE    : %s\n", cache->PROVIDE);
-	printf("EAPI       : %s\n", cache->EAPI);
-	printf("PROPERTIES : %s\n", cache->PROPERTIES);
-	if (!cache->atom) return;
-	printf("CATEGORY   : %s\n", cache->atom->CATEGORY);
-	printf("PN         : %s\n", cache->atom->PN);
-	printf("PV         : %s\n", cache->atom->PV);
-	printf("PVR        : %s\n", cache->atom->PVR);
-}
-#endif
-
-static void
-cache_free(portage_cache *cache)
-{
-	if (!cache)
-		errf("Cache is empty !");
-	atom_implode(cache->atom);
-	free(cache);
-}
-
-static char *
-atom_to_pvr(depend_atom *atom) {
-	return (atom->PR_int == 0 ? atom->P : atom->PVR );
-}
-
-/* TODO: Merge this into libq/vdb.c somehow. */
-static set *
-get_vdb_atoms(int fullcpv)
-{
-	q_vdb_ctx *ctx;
-
-	int cfd, j;
-	int dfd, i;
-
-	char buf[_Q_PATH_MAX];
-	char slot[_Q_PATH_MAX];
-	char *slotp = slot;
-	size_t slot_len;
-
-	struct dirent **cat;
-	struct dirent **pf;
-
-	depend_atom *atom = NULL;
-	set *cpf = NULL;
-
-	ctx = q_vdb_open(portroot, portvdb);
-	if (!ctx)
-		return NULL;
-
-	/* scan the cat first */
-	cfd = scandirat(ctx->vdb_fd, ".", &cat, q_vdb_filter_cat, alphasort);
-	if (cfd < 0)
-		goto fuckit;
-
-	for (j = 0; j < cfd; j++) {
-		dfd = scandirat(ctx->vdb_fd, cat[j]->d_name,
-				&pf, q_vdb_filter_pkg, alphasort);
-		if (dfd < 0)
-			continue;
-		for (i = 0; i < dfd; i++) {
-			int blen = snprintf(buf, sizeof(buf), "%s/%s/SLOT",
-					cat[j]->d_name, pf[i]->d_name);
-			if (blen < 0 || (size_t)blen >= sizeof(buf)) {
-				warnf("unable to parse long package: %s/%s",
-						cat[j]->d_name, pf[i]->d_name);
-				continue;
-			}
-
-			/* Chop the SLOT for the atom parsing. */
-			buf[blen - 5] = '\0';
-			if ((atom = atom_explode(buf)) == NULL)
-				continue;
-			/* Restore the SLOT. */
-			buf[blen - 5] = '/';
-
-			slot_len = sizeof(slot);
-			eat_file_at(ctx->vdb_fd, buf, &slotp, &slot_len);
-			rmspace(slot);
-
-			if (fullcpv) {
-				if (atom->PR_int)
-					snprintf(buf, sizeof(buf), "%s/%s-%s-r%i",
-							atom->CATEGORY, atom->PN, atom->PV, atom->PR_int);
-				else
-					snprintf(buf, sizeof(buf), "%s/%s-%s",
-							atom->CATEGORY, atom->PN, atom->PV);
-			} else {
-				snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
-			}
-			atom_implode(atom);
-			cpf = add_set(buf, cpf);
-		}
-		scandir_free(pf, dfd);
-	}
-	scandir_free(cat, cfd);
-
- fuckit:
-	q_vdb_close(ctx);
-	return cpf;
-}
-
-static void
-cleanup(void)
-{
-	reinitialize_as_needed();
-}
-
 int main(int argc, char **argv)
 {
 	struct stat st;
@@ -1478,9 +937,6 @@ int main(int argc, char **argv)
 		no_colors();
 
 	initialize_portage_env();
-	atexit(cleanup);
 	optind = 0;
 	return q_main(argc, argv);
 }
-
-#include "include_applets.h"

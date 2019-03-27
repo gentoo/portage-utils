@@ -84,3 +84,11 @@ scandir_free(struct dirent **de, int cnt)
 		free(de[cnt]);
 	free(de);
 }
+
+int
+filter_hidden(const struct dirent *dentry)
+{
+	if (dentry->d_name[0] == '.')
+		return 0;
+	return 1;
+}

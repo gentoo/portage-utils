@@ -1,12 +1,14 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#ifdef APPLET_qsize
+#include "main.h"
+#include "applets.h"
 
 /* Solaris */
 #if defined(__sun) && defined(__SVR4)
@@ -40,6 +42,18 @@
 #ifndef S_BLKSIZE
 # define S_BLKSIZE 512
 #endif
+
+#include <stdio.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include "atom.h"
+#include "contents.h"
+#include "human_readable.h"
+#include "vdb.h"
+#include "xarray.h"
+#include "xregex.h"
 
 #define QSIZE_FLAGS "fsSmkbi:" COMMON_FLAGS
 static struct option const qsize_long_opts[] = {
@@ -136,8 +150,10 @@ qsize_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		if (e->type == CONTENTS_OBJ || e->type == CONTENTS_SYM) {
 			struct stat st;
 			++num_files;
-			if (!fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd, e->name + 1, &st, AT_SYMLINK_NOFOLLOW))
-				num_bytes += (state->fs_size ? st.st_blocks * S_BLKSIZE : st.st_size);
+			if (!fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd,
+						e->name + 1, &st, AT_SYMLINK_NOFOLLOW))
+				num_bytes +=
+					state->fs_size ? st.st_blocks * S_BLKSIZE : st.st_size;
 		} else
 			++num_nonfiles;
 	}
@@ -235,7 +251,3 @@ int qsize_main(int argc, char **argv)
 
 	return ret;
 }
-
-#else
-DEFINE_APPLET_STUB(qsize)
-#endif

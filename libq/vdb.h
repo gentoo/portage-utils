@@ -6,6 +6,10 @@
 #ifndef _VDB_H
 #define _VDB_H 1
 
+#include <dirent.h>
+
+#include "set.h"
+
 /* VDB context */
 typedef struct {
 	int portroot_fd, vdb_fd;
@@ -56,5 +60,6 @@ int q_vdb_foreach_pkg(const char *sroot, const char *svdb,
 int q_vdb_foreach_pkg_sorted(const char *sroot, const char *svdb,
 		q_vdb_pkg_cb callback, void *priv);
 struct dirent *q_vdb_get_next_dir(DIR *dir);
+set *get_vdb_atoms(const char *sroot, const char *svdb, int fullcpv);
 
 #endif

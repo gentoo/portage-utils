@@ -7,9 +7,30 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#ifdef APPLET_qpkg
+#include "main.h"
+#include "applets.h"
 
+#include <stdio.h>
+#include <string.h>
 #include <fnmatch.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include "atom.h"
+#include "basename.h"
+#include "cache.h"
+#include "contents.h"
+#include "human_readable.h"
+#include "md5_sha1_sum.h"
+#include "scandirat.h"
+#include "set.h"
+#include "vdb.h"
+#include "xarray.h"
+#include "xasprintf.h"
+#include "xchdir.h"
+#include "xpak.h"
 
 #define QPKG_FLAGS "cEpP:" COMMON_FLAGS
 static struct option const qpkg_long_opts[] = {
@@ -32,6 +53,11 @@ extern char pretend;
 
 static char *qpkg_bindir = NULL;
 static int eclean = 0;
+
+static char *
+atom_to_pvr(depend_atom *atom) {
+	return (atom->PR_int == 0 ? atom->P : atom->PVR );
+}
 
 /* checks to make sure this is a .tbz2 file. used by scandir() */
 static int
@@ -114,7 +140,7 @@ qpkg_clean(char *dirp)
 	if ((count = scandir(".", &dnames, filter_hidden, alphasort)) < 0)
 		return 1;
 
-	vdb = get_vdb_atoms(1);
+	vdb = get_vdb_atoms(portroot, portvdb, 1);
 
 	if (eclean) {
 		size_t n;
@@ -222,7 +248,6 @@ qpkg_make(depend_atom *atom)
 	FILE *fp, *out;
 	char tmpdir[BUFSIZE];
 	char filelist[BUFSIZE + 32];
-	char xpak[BUFSIZE + 32];
 	char tbz2[BUFSIZE + 32];
 	size_t buflen;
 	char *buf;
@@ -231,7 +256,8 @@ qpkg_make(depend_atom *atom)
 	struct stat st;
 
 	if (pretend) {
-		printf(" %s-%s %s/%s:\n", GREEN, NORM, atom->CATEGORY, atom_to_pvr(atom));
+		printf(" %s-%s %s/%s:\n",
+				GREEN, NORM, atom->CATEGORY, atom_to_pvr(atom));
 		return 0;
 	}
 
@@ -240,20 +266,28 @@ qpkg_make(depend_atom *atom)
 
 	snprintf(buf, buflen, "%s/%s/%s/CONTENTS",
 			portvdb, atom->CATEGORY, atom_to_pvr(atom));
-	if ((fp = fopen(buf, "r")) == NULL)
+	if ((fp = fopen(buf, "r")) == NULL) {
+		free(buf);
 		return -1;
+	}
 
 	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", qpkg_get_bindir());
-	if ((i = mkstemp(tmpdir)) == -1)
+	if ((i = mkstemp(tmpdir)) == -1) {
+		free(buf);
 		return -2;
+	}
 	close(i);
 	unlink(tmpdir);
-	if (mkdir(tmpdir, 0750))
+	if (mkdir(tmpdir, 0750)) {
+		free(buf);
 		return -3;
+	}
 
 	snprintf(filelist, sizeof(filelist), "%s/filelist", tmpdir);
-	if ((out = fopen(filelist, "w")) == NULL)
+	if ((out = fopen(filelist, "w")) == NULL) {
+		free(buf);
 		return -4;
+	}
 
 	while (getline(&buf, &buflen, fp) != -1) {
 		contents_entry *e;
@@ -280,41 +314,38 @@ qpkg_make(depend_atom *atom)
 	printf(" %s-%s %s/%s: ", GREEN, NORM, atom->CATEGORY, atom_to_pvr(atom));
 	fflush(stdout);
 
-	snprintf(tbz2, sizeof(tbz2), "%s/bin.tar.bz2", tmpdir);
+	snprintf(tbz2, sizeof(tbz2), "%s/bin.tbz2", tmpdir);
 	if (snprintf(buf, buflen, "tar jcf '%s' --files-from='%s' "
-			"--no-recursion >/dev/null 2>&1", tbz2, filelist) > (int)buflen)
+			"--no-recursion >/dev/null 2>&1", tbz2, filelist) > (int)buflen ||
+			(fp = popen(buf, "r")) == NULL)
+	{
+		free(buf);
 		return 2;
-	if ((fp = popen(buf, "r")) == NULL)
-		return 2;
+	}
 	pclose(fp);
 
-	snprintf(xpak, sizeof(xpak), "%s/inf.xpak", tmpdir);
 	snprintf(buf, buflen, "%s/%s/%s",
 			portvdb, atom->CATEGORY, atom_to_pvr(atom));
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
-	xpak_create(AT_FDCWD, xpak, 1, xpak_argv);
-
-	snprintf(buf, buflen, "%s/binpkg.tbz2", tmpdir);
-	tbz2_compose(AT_FDCWD, tbz2, xpak, buf);
+	xpak_create(AT_FDCWD, tbz2, 1, xpak_argv, 1, verbose);
 
 	unlink(filelist);
-	unlink(xpak);
-	unlink(tbz2);
 
-	snprintf(tbz2, sizeof(tbz2), "%s/%s.tbz2",
-			qpkg_get_bindir(), atom_to_pvr(atom));
-	if (rename(buf, tbz2)) {
-		warnp("could not move '%s' to '%s'", buf, tbz2);
+	snprintf(buf, buflen, "%s/%s.tbz2", qpkg_get_bindir(), atom_to_pvr(atom));
+	if (rename(tbz2, buf)) {
+		warnp("could not move '%s' to '%s'", tbz2, buf);
+		free(buf);
 		return 1;
 	}
 
 	rmdir(tmpdir);
 
-	stat(tbz2, &st);
+	stat(buf, &st);
 	printf("%s%s%s kB\n",
 			RED, make_human_readable_str(st.st_size, 1, KILOBYTE), NORM);
 
+	free(buf);
 	return 0;
 }
 
@@ -425,8 +456,12 @@ retry_mkdir:
 			for (i = optind; i < argc; ++i) {
 				if (!argv[i]) continue;
 
-				if (!strcmp(argv[i], atom->PN) || !strcmp(argv[i], atom->P) || !strcmp(argv[i], buf) || !strcmp(argv[i], "world"))
-					if (!qpkg_make(atom)) ++pkgs_made;
+				if (!strcmp(argv[i], atom->PN) ||
+						!strcmp(argv[i], atom->P) ||
+						!strcmp(argv[i], buf) ||
+						!strcmp(argv[i], "world"))
+					if (!qpkg_make(atom))
+						++pkgs_made;
 			}
 			atom_implode(atom);
 
@@ -437,13 +472,10 @@ retry_mkdir:
 
 	s = (argc - optind) - pkgs_made;
 	if (s && !pretend)
-		printf(" %s*%s %i package%s could not be matched :/\n", RED, NORM, (int)s, (s > 1 ? "s" : ""));
+		printf(" %s*%s %i package%s could not be matched :/\n",
+				RED, NORM, (int)s, (s > 1 ? "s" : ""));
 	if (pkgs_made)
 		qprintf(" %s*%s Packages can be found in %s\n", GREEN, NORM, bindir);
 
 	return (pkgs_made ? EXIT_SUCCESS : EXIT_FAILURE);
 }
-
-#else
-DEFINE_APPLET_STUB(qpkg)
-#endif

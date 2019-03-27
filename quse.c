@@ -7,7 +7,22 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#ifdef APPLET_quse
+#include "main.h"
+#include "applets.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <xalloc.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <assert.h>
+
+#include "cache.h"
+#include "rmspace.h"
+#include "xarray.h"
+#include "xregex.h"
 
 /*
  quse -CKe -- '-*' {'~',-,}{alpha,amd64,hppa,ia64,ppc,ppc64,sparc,x86}
@@ -88,7 +103,11 @@ quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, cha
 	char *buf, *p;
 	unsigned int i, f;
 	size_t s;
-	const char * const search_files[] = { "use.desc", "use.local.desc", "arch.list", };
+	const char * const search_files[] = {
+		"use.desc",
+		"use.local.desc",
+		"arch.list"
+	};
 	FILE *fp[NUM_SEARCH_FILES];
 	int dfd, fd;
 	DIR *d;
@@ -218,7 +237,8 @@ quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, cha
 
 			for (i = ind; i < argc; i++)
 				if (!strcmp(argv[i], buf))
-					printf(" %s%s%s:%s%s%s: %s\n", BOLD, de->d_name, NORM, BLUE, argv[i], NORM, p);
+					printf(" %s%s%s:%s%s%s: %s\n",
+							BOLD, de->d_name, NORM, BLUE, argv[i], NORM, p);
 		}
 		fclose(fp[0]);
 	}
@@ -243,7 +263,12 @@ int quse_main(int argc, char **argv)
 	char *ebuild;
 
 	const char *search_var = NULL;
-	const char *search_vars[] = { "IUSE=", "KEYWORDS=", "LICENSE=", search_var };
+	const char *search_vars[] = {
+		"IUSE=",
+		"KEYWORDS=",
+		"LICENSE=",
+		search_var
+	};
 	short quse_all = 0;
 	int regexp_matching = 1, i, idx = 0;
 	size_t search_len;
@@ -277,6 +302,8 @@ int quse_main(int argc, char **argv)
 	assert(search_len < sizeof(buf0));
 
 	array_for_each(overlays, n, overlay) {
+		int overlay_fd;
+
 		cache_file = initialize_flat(overlay, CACHE_EBUILD, false);
 
 		if ((fp = fopen(cache_file, "re")) == NULL) {
@@ -284,7 +311,7 @@ int quse_main(int argc, char **argv)
 			continue;
 		}
 
-		int overlay_fd = open(overlay, O_RDONLY|O_CLOEXEC|O_PATH);
+		overlay_fd = open(overlay, O_RDONLY|O_CLOEXEC|O_PATH);
 
 		ebuild = NULL;
 		while ((linelen = getline(&ebuild, &ebuildlen, fp)) >= 0) {
@@ -299,24 +326,12 @@ int quse_main(int argc, char **argv)
 			newfp = fdopen(fd, "r");
 			if (newfp != NULL) {
 				unsigned int lineno = 0;
-				char revision[sizeof(buf0)];
-				char date[sizeof(buf0)];
-				char user[sizeof(buf0)];
 
-				revision[0] = 0;
-				user[0] = 0;
-				date[0] = 0;
 				while (fgets(buf0, sizeof(buf0), newfp) != NULL) {
 					int ok = 0;
 					char warned = 0;
 					lineno++;
 
-					if (*buf0 == '#') {
-						if (strncmp(buf0, "# $Header: /", 12) == 0)
-							sscanf(buf0, "%*s %*s %*s %s %s %*s %s %*s %*s",
-								revision, date, user);
-						continue;
-					}
 					if (strncmp(buf0, search_vars[idx], search_len) != 0)
 						continue;
 
@@ -417,14 +432,9 @@ int quse_main(int argc, char **argv)
 						}
 					}
 					if (ok) {
-						if (verbose > 3)
-							printf("%s %s %s ",
-								*user ? user : "MISSING",
-								*revision ? revision : "MISSING",
-								*date ? date : "MISSING");
-
 						printf("%s%s%s ", CYAN, ebuild, NORM);
-						print_highlighted_use_flags(&buf0[search_len + 1], optind, argc, argv);
+						print_highlighted_use_flags(&buf0[search_len + 1],
+								optind, argc, argv);
 						puts(NORM);
 						if (verbose > 1) {
 							char **ARGV;
@@ -438,9 +448,7 @@ int quse_main(int argc, char **argv)
 				}
 				fclose(newfp);
 			} else {
-				if (!reinitialize)
-					warnfp("(cache update pending) %s", ebuild);
-				reinitialize = 1;
+				warnf("missing cache, please (re)generate");
 			}
 		}
 		fclose(fp);
@@ -449,7 +457,3 @@ int quse_main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
-
-#else
-DEFINE_APPLET_STUB(quse)
-#endif

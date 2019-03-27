@@ -19,5 +19,6 @@ int scandirat(
 #endif
 
 void scandir_free(struct dirent **de, int cnt);
+int filter_hidden(const struct dirent *dentry);
 
 #endif

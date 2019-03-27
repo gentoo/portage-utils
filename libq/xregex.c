@@ -26,3 +26,20 @@ void xregcomp(regex_t *preg, const char *regex, int cflags)
 	if (unlikely(wregcomp(preg, regex, cflags)))
 		exit(EXIT_FAILURE);
 }
+
+int
+rematch(const char *re, const char *match, int cflags)
+{
+	regex_t preg;
+	int ret;
+
+	if ((match == NULL) || (re == NULL))
+		return EXIT_FAILURE;
+
+	if (wregcomp(&preg, re, cflags))
+		return EXIT_FAILURE;
+	ret = regexec(&preg, match, 0, NULL, 0);
+	regfree(&preg);
+
+	return ret;
+}

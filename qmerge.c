@@ -7,12 +7,34 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#ifdef APPLET_qmerge
+#include "main.h"
+#include "applets.h"
 
+#include <stdio.h>
+#include <xalloc.h>
 #include <fnmatch.h>
+#include <dirent.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <assert.h>
 #include "stat-time.h"
+
+#include "atom.h"
+#include "copy_file.h"
+#include "contents.h"
+#include "eat_file.h"
+#include "human_readable.h"
+#include "md5_sha1_sum.h"
+#include "profile.h"
+#include "rmspace.h"
+#include "scandirat.h"
+#include "set.h"
+#include "vdb.h"
+#include "xasprintf.h"
+#include "xchdir.h"
+#include "xmkdir.h"
+#include "xsystem.h"
 
 #ifndef GLOB_BRACE
 # define GLOB_BRACE     (1 << 10)	/* Expand "{a,b}" to "a" "b".  */
@@ -99,6 +121,21 @@ static void pkg_merge(int, const depend_atom *, const struct pkg_t *);
 static int pkg_unmerge(q_vdb_pkg_ctx *, set *, int, char **, int, char **);
 static struct pkg_t *grab_binpkg_info(const char *);
 static char *find_binpkg(const char *);
+
+static bool
+prompt(const char *p)
+{
+	printf("%s? [Y/n] ", p);
+	fflush(stdout);
+	switch (getc(stdin)) {
+	case '\n':
+	case 'y':
+	case 'Y':
+		return true;
+	default:
+		return false;
+	}
+}
 
 static int run_applet_l(const char *arg, ...)
 {
@@ -250,6 +287,15 @@ qmerge_filter_cat(q_vdb_cat_ctx *cat_ctx, void *priv)
 	struct qmerge_bv_state *state = priv;
 	return !state->catname || strcmp(cat_ctx->name, state->catname) == 0;
 }
+
+/* HACK: pull this in, knowing that qlist will be in the final link, we
+ * should however figure out how to do what match does here from e.g.
+ * atom */
+extern bool qlist_match(
+		q_vdb_pkg_ctx *pkg_ctx,
+		const char *name,
+		depend_atom **name_atom,
+		bool exact);
 
 static int
 qmerge_best_version_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
@@ -2269,7 +2315,7 @@ qmerge_add_set(char *buf, set *q)
 	if (strcmp(buf, "world") == 0)
 		return qmerge_add_set_file("/var/lib/portage", "world", q);
 	else if (strcmp(buf, "all") == 0)
-		return get_vdb_atoms(0);
+		return get_vdb_atoms(portroot, portvdb, 0);
 	else if (strcmp(buf, "system") == 0)
 		return q_profile_walk("packages", qmerge_add_set_system, q);
 	else if (buf[0] == '@')
@@ -2362,7 +2408,3 @@ int qmerge_main(int argc, char **argv)
 	free_set(todo);
 	return ret;
 }
-
-#else
-DEFINE_APPLET_STUB(qmerge)
-#endif

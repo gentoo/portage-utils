@@ -5,7 +5,23 @@
  * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
  */
 
-#ifdef APPLET_qcache
+#include "main.h"
+#include "applets.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#include <xalloc.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include "atom.h"
+#include "cache.h"
+#include "scandirat.h"
+#include "rmspace.h"
+#include "set.h"
+#include "xasprintf.h"
 
 /********************************************************************/
 /* Required portage-utils stuff                                     */
@@ -358,7 +374,9 @@ qcache_vercmp(const struct dirent **x, const struct dirent **y)
 static int
 qcache_file_select(const struct dirent *entry)
 {
-	return !(entry->d_name[0] == '.' || (strcmp(entry->d_name, "metadata.xml") == 0) || (strstr(entry->d_name, ".cpickle") != 0));
+	return !(entry->d_name[0] == '.' ||
+			(strcmp(entry->d_name, "metadata.xml") == 0) ||
+			(strstr(entry->d_name, ".cpickle") != 0));
 }
 
 /*
@@ -374,7 +392,8 @@ qcache_file_select(const struct dirent *entry)
 static int
 qcache_ebuild_select(const struct dirent *entry)
 {
-	return ((strlen(entry->d_name) > 7) && !strcmp(entry->d_name+strlen(entry->d_name)-7, ".ebuild"));
+	return ((strlen(entry->d_name) > 7) &&
+			!strcmp(entry->d_name+strlen(entry->d_name)-7, ".ebuild"));
 }
 
 /********************************************************************/
@@ -594,10 +613,13 @@ qcache_not(qcache_data *data)
 		return;
 	}
 
-	if (keywords[qcache_test_arch] == testing || keywords[qcache_test_arch] == stable) {
+	if (keywords[qcache_test_arch] == testing ||
+			keywords[qcache_test_arch] == stable)
+	{
 		qcache_skip = 1;
 	} else if (data->cur == data->num) {
-		printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE, data->package, NORM);
+		printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE,
+				data->package, NORM);
 	}
 
 	free(keywords);
@@ -621,9 +643,12 @@ qcache_all(qcache_data *data)
 		return;
 	}
 
-	if (keywords[qcache_test_arch] == stable || keywords[qcache_test_arch] == testing) {
+	if (keywords[qcache_test_arch] == stable ||
+			keywords[qcache_test_arch] == testing)
+	{
 		qcache_skip = 1;
-		printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE, data->package, NORM);
+		printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE,
+				data->package, NORM);
 	}
 
 	free(keywords);
@@ -651,11 +676,14 @@ qcache_dropped(qcache_data *data)
 		return;
 	}
 
-	if (keywords[qcache_test_arch] == testing || keywords[qcache_test_arch] == stable) {
+	if (keywords[qcache_test_arch] == testing ||
+			keywords[qcache_test_arch] == stable)
+	{
 		qcache_skip = 1;
 
 		if (possible) {
-			printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE, data->package, NORM);
+			printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE,
+					data->package, NORM);
 		}
 
 		free(keywords);
@@ -889,7 +917,8 @@ qcache_testing_only(qcache_data *data)
 		possible = 1;
 
 	if (data->cur == data->num && possible) {
-		printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE, data->package, NORM);
+		printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE,
+				data->package, NORM);
 	}
 
 	free(keywords);
@@ -972,7 +1001,8 @@ int qcache_main(int argc, char **argv)
 			case 'a':
 			case 'n':
 				if (action)
-					qcache_usage(EXIT_FAILURE); /* trying to use more than 1 action */
+					qcache_usage(EXIT_FAILURE);
+					/* trying to use more than 1 action */
 				action = i;
 				break;
 
@@ -999,7 +1029,3 @@ int qcache_main(int argc, char **argv)
 	qcache_usage(EXIT_FAILURE);
 	return EXIT_FAILURE;
 }
-
-#else
-DEFINE_APPLET_STUB(qcache)
-#endif

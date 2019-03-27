@@ -12,5 +12,6 @@
 
 int wregcomp(regex_t *preg, const char *regex, int cflags);
 void xregcomp(regex_t *preg, const char *regex, int cflags);
+int rematch(const char *, const char *, int);
 
 #endif

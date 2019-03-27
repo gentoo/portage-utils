@@ -10,6 +10,8 @@
 #include "rmspace.h"
 #include "scandirat.h"
 #include "eat_file.h"
+#include "set.h"
+#include "atom.h"
 #include "vdb.h"
 
 #include <ctype.h>
@@ -344,4 +346,79 @@ next_entry:
 		goto next_entry;
 
 	return ret;
+}
+
+set *
+get_vdb_atoms(const char *sroot, const char *svdb, int fullcpv)
+{
+	q_vdb_ctx *ctx;
+
+	int cfd, j;
+	int dfd, i;
+
+	char buf[_Q_PATH_MAX];
+	char slot[_Q_PATH_MAX];
+	char *slotp = slot;
+	size_t slot_len;
+
+	struct dirent **cat;
+	struct dirent **pf;
+
+	depend_atom *atom = NULL;
+	set *cpf = NULL;
+
+	ctx = q_vdb_open(sroot, svdb);
+	if (!ctx)
+		return NULL;
+
+	/* scan the cat first */
+	cfd = scandirat(ctx->vdb_fd, ".", &cat, q_vdb_filter_cat, alphasort);
+	if (cfd < 0)
+		goto fuckit;
+
+	for (j = 0; j < cfd; j++) {
+		dfd = scandirat(ctx->vdb_fd, cat[j]->d_name,
+				&pf, q_vdb_filter_pkg, alphasort);
+		if (dfd < 0)
+			continue;
+		for (i = 0; i < dfd; i++) {
+			int blen = snprintf(buf, sizeof(buf), "%s/%s/SLOT",
+					cat[j]->d_name, pf[i]->d_name);
+			if (blen < 0 || (size_t)blen >= sizeof(buf)) {
+				warnf("unable to parse long package: %s/%s",
+						cat[j]->d_name, pf[i]->d_name);
+				continue;
+			}
+
+			/* Chop the SLOT for the atom parsing. */
+			buf[blen - 5] = '\0';
+			if ((atom = atom_explode(buf)) == NULL)
+				continue;
+			/* Restore the SLOT. */
+			buf[blen - 5] = '/';
+
+			slot_len = sizeof(slot);
+			eat_file_at(ctx->vdb_fd, buf, &slotp, &slot_len);
+			rmspace(slot);
+
+			if (fullcpv) {
+				if (atom->PR_int)
+					snprintf(buf, sizeof(buf), "%s/%s-%s-r%i",
+							atom->CATEGORY, atom->PN, atom->PV, atom->PR_int);
+				else
+					snprintf(buf, sizeof(buf), "%s/%s-%s",
+							atom->CATEGORY, atom->PN, atom->PV);
+			} else {
+				snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
+			}
+			atom_implode(atom);
+			cpf = add_set(buf, cpf);
+		}
+		scandir_free(pf, dfd);
+	}
+	scandir_free(cat, cfd);
+
+ fuckit:
+	q_vdb_close(ctx);
+	return cpf;
 }

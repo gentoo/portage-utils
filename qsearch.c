@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2018 Gentoo Authors
+ * Copyright 2005-2019 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -7,7 +7,22 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org
  */
 
-#ifdef APPLET_qsearch
+#include "main.h"
+#include "applets.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <xalloc.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include "atom.h"
+#include "basename.h"
+#include "cache.h"
+#include "rmspace.h"
+#include "xarray.h"
+#include "xregex.h"
 
 #define QSEARCH_FLAGS "acesSNH" COMMON_FLAGS
 static struct option const qsearch_long_opts[] = {
@@ -36,21 +51,32 @@ static const char * const qsearch_opts_help[] = {
 
 /* Search an ebuild's details via the metadata cache. */
 static void
-qsearch_ebuild_metadata(_q_unused_ int overlay_fd, const char *ebuild, const char *search_me, char *last,
-                        bool search_desc, bool search_all, _q_unused_ bool search_name, bool show_name_only, bool show_homepage)
+qsearch_ebuild_metadata(
+		int overlay_fd,
+		const char *ebuild,
+		const char *search_me,
+		char *last,
+		bool search_desc,
+		bool search_all,
+		bool search_name,
+		bool show_name_only,
+		bool show_homepage)
 {
-	portage_cache *pcache = cache_read_file(ebuild);
+	(void)overlay_fd;
+	(void)search_name;
+
+	portage_cache *pcache = cache_read_file(portcachedir_type, ebuild);
 
 	if (pcache == NULL) {
-		if (!reinitialize)
-			warnf("(cache update pending) %s", ebuild);
-		reinitialize = 1;
+		warnf("missing cache, please (re)generate");
 		return;
 	}
 
 	if (strcmp(pcache->atom->PN, last) != 0) {
 		strncpy(last, pcache->atom->PN, LAST_BUF_SIZE);
-		if (search_all || rematch(search_me, (search_desc ? pcache->DESCRIPTION : ebuild), REG_EXTENDED | REG_ICASE) == 0)
+		if (search_all || rematch(search_me,
+					(search_desc ? pcache->DESCRIPTION : ebuild),
+					REG_EXTENDED | REG_ICASE) == 0)
 			printf("%s%s/%s%s%s%s%s\n", BOLD, pcache->atom->CATEGORY, BLUE,
 			       pcache->atom->PN, NORM,
 				   (show_name_only ? "" : " "),
@@ -62,22 +88,37 @@ qsearch_ebuild_metadata(_q_unused_ int overlay_fd, const char *ebuild, const cha
 
 /* Search an ebuild's details via the ebuild cache. */
 static void
-qsearch_ebuild_ebuild(int overlay_fd, const char *ebuild, const char *search_me, char *last,
-                      _q_unused_ bool search_desc, bool search_all, bool search_name, bool show_name_only, _q_unused_ bool show_homepage)
+qsearch_ebuild_ebuild(
+		int overlay_fd,
+		const char *ebuild,
+		const char *search_me,
+		char *last,
+		bool search_desc,
+		bool search_all,
+		bool search_name,
+		bool show_name_only,
+		bool show_homepage)
 {
 	const char * const search_vars[] = { "DESCRIPTION=", "HOMEPAGE=" };
 	const char *search_var = search_vars[show_homepage ? 1 : 0];
 	size_t search_len = strlen(search_var);
 	char *p, *q, *str;
-
+	char *buf = NULL;
+	int linelen;
+	size_t buflen;
+	bool show_it = false;
 	FILE *ebuildfp;
+	int fd;
+
 	str = xstrdup(ebuild);
 	p = dirname(str);
+
+	(void)search_desc;
+	(void)show_homepage;
 
 	if (strcmp(p, last) == 0)
 		goto no_cache_ebuild_match;
 
-	bool show_it = false;
 	strncpy(last, p, LAST_BUF_SIZE);
 	if (search_name) {
 		if (rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE) != 0) {
@@ -88,7 +129,7 @@ qsearch_ebuild_ebuild(int overlay_fd, const char *ebuild, const char *search_me,
 		}
 	}
 
-	int fd = openat(overlay_fd, ebuild, O_RDONLY|O_CLOEXEC);
+	fd = openat(overlay_fd, ebuild, O_RDONLY|O_CLOEXEC);
 	if (fd != -1) {
 		ebuildfp = fdopen(fd, "r");
 		if (ebuildfp == NULL) {
@@ -96,15 +137,10 @@ qsearch_ebuild_ebuild(int overlay_fd, const char *ebuild, const char *search_me,
 			goto no_cache_ebuild_match;
 		}
 	} else {
-		if (!reinitialize)
-			warnfp("(cache update pending) %s", ebuild);
-		reinitialize = 1;
+		warnf("missing cache, please (re)generate");
 		goto no_cache_ebuild_match;
 	}
 
-	char *buf = NULL;
-	int linelen;
-	size_t buflen;
 	while ((linelen = getline(&buf, &buflen, ebuildfp)) >= 0) {
 		if ((size_t)linelen <= search_len)
 			continue;
@@ -115,7 +151,8 @@ qsearch_ebuild_ebuild(int overlay_fd, const char *ebuild, const char *search_me,
 		if (strlen(buf) <= search_len)
 			break;
 		q = buf + search_len + 1;
-		if (!search_all && !search_name && rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
+		if (!search_all && !search_name &&
+				rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
 			break;
 		show_it = true;
 		break;
@@ -216,7 +253,3 @@ int qsearch_main(int argc, char **argv)
 
 	return ret;
 }
-
-#else
-DEFINE_APPLET_STUB(qsearch)
-#endif

@@ -36,7 +36,6 @@ m4_foreach_w([flag], [
 	-Wshadow
 	-Wformat=2
 	-Wmissing-declarations
-	-Wno-missing-prototypes
 	-Wwrite-strings
 	-Wbad-function-cast
 	-Wnested-externs
@@ -44,11 +43,9 @@ m4_foreach_w([flag], [
 	-Winline
 	-Wchar-subscripts
 	-Wcast-align
-	-Wno-format-nonliteral
 	-Wsequence-point
 	-Wold-style-definition
 	-Wextra
-	-Wno-expansion-to-defined
 ], [
 	AX_CHECK_COMPILE_FLAG(flag, AS_VAR_APPEND([CFLAGS], " flag"))
 ])

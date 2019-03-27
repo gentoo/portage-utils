@@ -242,12 +242,13 @@ CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libq_la_LIBADD =
 am__objects_1 = libq_la-atom.lo libq_la-basename.lo libq_la-cache.lo \
-	libq_la-colors.lo libq_la-copy_file.lo libq_la-eat_file.lo \
-	libq_la-hash_fd.lo libq_la-human_readable.lo \
-	libq_la-md5_sha1_sum.lo libq_la-prelink.lo libq_la-profile.lo \
-	libq_la-rmspace.lo libq_la-safe_io.lo libq_la-scandirat.lo \
-	libq_la-set.lo libq_la-vdb.lo libq_la-xarray.lo \
-	libq_la-xchdir.lo libq_la-xmkdir.lo libq_la-xregex.lo \
+	libq_la-colors.lo libq_la-contents.lo libq_la-copy_file.lo \
+	libq_la-eat_file.lo libq_la-hash_fd.lo \
+	libq_la-human_readable.lo libq_la-md5_sha1_sum.lo \
+	libq_la-prelink.lo libq_la-profile.lo libq_la-rmspace.lo \
+	libq_la-safe_io.lo libq_la-scandirat.lo libq_la-set.lo \
+	libq_la-vdb.lo libq_la-xarray.lo libq_la-xchdir.lo \
+	libq_la-xmkdir.lo libq_la-xpak.lo libq_la-xregex.lo \
 	libq_la-xsystem.lo
 am_libq_la_OBJECTS = $(am__objects_1)
 libq_la_OBJECTS = $(am_libq_la_OBJECTS)
@@ -1447,6 +1448,7 @@ QFILES = \
 	busybox.h \
 	cache.c cache.h \
 	colors.c colors.h \
+	contents.c contents.h \
 	copy_file.c copy_file.h \
 	eat_file.c eat_file.h \
 	hash_fd.c hash_fd.h \
@@ -1464,6 +1466,7 @@ QFILES = \
 	xasprintf.h \
 	xchdir.c xchdir.h \
 	xmkdir.c xmkdir.h \
+	xpak.c xpak.h \
 	xregex.c xregex.h \
 	xsystem.c xsystem.h \
 	$(NULL)
@@ -1532,6 +1535,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-basename.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-cache.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-colors.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-contents.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-copy_file.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-eat_file.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-hash_fd.Plo@am__quote@
@@ -1547,6 +1551,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-xarray.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-xchdir.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-xmkdir.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-xpak.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-xregex.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-xsystem.Plo@am__quote@
 
@@ -1598,6 +1603,13 @@ libq_la-colors.lo: colors.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='colors.c' object='libq_la-colors.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-colors.lo `test -f 'colors.c' || echo '$(srcdir)/'`colors.c
+
+libq_la-contents.lo: contents.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-contents.lo -MD -MP -MF $(DEPDIR)/libq_la-contents.Tpo -c -o libq_la-contents.lo `test -f 'contents.c' || echo '$(srcdir)/'`contents.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_la-contents.Tpo $(DEPDIR)/libq_la-contents.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='contents.c' object='libq_la-contents.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-contents.lo `test -f 'contents.c' || echo '$(srcdir)/'`contents.c
 
 libq_la-copy_file.lo: copy_file.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-copy_file.lo -MD -MP -MF $(DEPDIR)/libq_la-copy_file.Tpo -c -o libq_la-copy_file.lo `test -f 'copy_file.c' || echo '$(srcdir)/'`copy_file.c
@@ -1703,6 +1715,13 @@ libq_la-xmkdir.lo: xmkdir.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xmkdir.c' object='libq_la-xmkdir.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-xmkdir.lo `test -f 'xmkdir.c' || echo '$(srcdir)/'`xmkdir.c
+
+libq_la-xpak.lo: xpak.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-xpak.lo -MD -MP -MF $(DEPDIR)/libq_la-xpak.Tpo -c -o libq_la-xpak.lo `test -f 'xpak.c' || echo '$(srcdir)/'`xpak.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_la-xpak.Tpo $(DEPDIR)/libq_la-xpak.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xpak.c' object='libq_la-xpak.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-xpak.lo `test -f 'xpak.c' || echo '$(srcdir)/'`xpak.c
 
 libq_la-xregex.lo: xregex.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-xregex.lo -MD -MP -MF $(DEPDIR)/libq_la-xregex.Tpo -c -o libq_la-xregex.lo `test -f 'xregex.c' || echo '$(srcdir)/'`xregex.c

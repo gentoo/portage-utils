@@ -7,10 +7,13 @@
  * Copyright 2017-2018 Sam Besselink
  */
 
-#ifdef APPLET_qtegrity
+#include "main.h"
+#include "applets.h"
 
+#include <string.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <fcntl.h>
 
 #define QTEGRITY_FLAGS "a:is" COMMON_FLAGS
 static struct option const qtegrity_long_opts[] = {
@@ -56,6 +59,9 @@ struct qtegrity_opt_state {
 
 static void external_check_sha(char * ret_digest, char * filepath, char * algo) {
 	size_t size_digest = 1;
+	char cmd[11];
+	int pipefd[2];
+	pid_t pid;
 
 	if (strcmp(algo, "sha256") == 0) {
 		size_digest = 64;
@@ -67,11 +73,7 @@ static void external_check_sha(char * ret_digest, char * filepath, char * algo) 
 		return;
 	}
 
-	char cmd[11];
 	snprintf(cmd, 10, "%ssum", algo);
-
-	int pipefd[2];
-	pid_t pid;
 
 	if (pipe(pipefd) == -1) {
 		perror("Couldn't create pipe to shasum\n");
@@ -504,7 +506,3 @@ int qtegrity_main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
-
-#else
-DEFINE_APPLET_STUB(qtegrity)
-#endif

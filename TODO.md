@@ -49,6 +49,7 @@
 - support TTL field in binpkgs file
 - merge duplicate atoms on the CLI (`qmerge -Uq nano nano nano`)
 - unmerging should clean out @world set
+- test should work on local vdb (so TRAVIS can test it too)
 
 # qdepends
 
@@ -66,3 +67,7 @@
 # qsync
 
 - rewrite to use new repos.conf standard
+
+# qgrep
+
+- make it use standard xarray instead of its own buf\_list

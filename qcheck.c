@@ -7,9 +7,23 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#ifdef APPLET_qcheck
+#include "main.h"
+#include "applets.h"
 
+#include <sys/types.h>
 #include <inttypes.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include "atom.h"
+#include "contents.h"
+#include "md5_sha1_sum.h"
+#include "prelink.h"
+#include "set.h"
+#include "vdb.h"
+#include "xarray.h"
+#include "xasprintf.h"
+#include "xregex.h"
 
 #define QCHECK_FLAGS "s:uABHTPp" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
@@ -437,7 +451,3 @@ int qcheck_main(int argc, char **argv)
 	xarrayfree_int(atoms);
 	return ret;
 }
-
-#else
-DEFINE_APPLET_STUB(qcheck)
-#endif

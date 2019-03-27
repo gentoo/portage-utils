@@ -8,6 +8,9 @@
 #ifndef _COPY_FILE_H
 #define _COPY_FILE_H 1
 
+#include <stdio.h>
+
 int copy_file_fd(int fd_src, int fd_dst);
+int copy_file(FILE *src, FILE *dst);
 
 #endif

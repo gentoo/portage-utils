@@ -7,6 +7,17 @@
  * Copyright 2017-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
+#include "main.h"
+#include "applets.h"
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include "atom.h"
+#include "basename.h"
+#include "cache.h"
+
 #define Q_FLAGS "irmM:" COMMON_FLAGS
 static struct option const q_long_opts[] = {
 	{"install",       no_argument, NULL, 'i'},
@@ -24,7 +35,7 @@ static const char * const q_opts_help[] = {
 };
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, NULL, lookup_applet_idx("q"))
 
-static APPLET lookup_applet(const char *applet)
+APPLET lookup_applet(const char *applet)
 {
 	unsigned int i;
 
@@ -34,7 +45,8 @@ static APPLET lookup_applet(const char *applet)
 	for (i = 0; applets[i].name; ++i) {
 		if (strcmp(applets[i].name, applet) == 0) {
 			argv0 = applets[i].name;
-			if (i && applets[i].desc != NULL) ++argv0; /* chop the leading 'q' */
+			if (i && applets[i].desc != NULL)
+				++argv0; /* chop the leading 'q' */
 			return applets[i].func;
 		}
 	}
@@ -60,11 +72,34 @@ int lookup_applet_idx(const char *applet)
 	return 0;
 }
 
+static void
+reinitialize_as_needed(int reinitialize, int reinitialize_metacache)
+{
+	size_t n;
+	const char *overlay, *ret = ret;
+
+	if (reinitialize)
+		array_for_each(overlays, n, overlay) {
+			ret = initialize_flat(overlay, CACHE_EBUILD, true);
+			if (USE_CLEANUP)
+				free((void *)ret);
+		}
+
+	if (reinitialize_metacache)
+		array_for_each(overlays, n, overlay) {
+			ret = initialize_flat(overlay, CACHE_METADATA, true);
+			if (USE_CLEANUP)
+				free((void *)ret);
+		}
+}
+
 int q_main(int argc, char **argv)
 {
 	int i, install;
 	const char *p;
 	APPLET func;
+	int reinitialize_metacache = 0;
+	int reinitialize = 0;
 
 	if (argc == 0)
 		return 1;
@@ -161,8 +196,10 @@ int q_main(int argc, char **argv)
 		return ret;
 	}
 
-	if (reinitialize > 0 || reinitialize_metacache > 0)
+	if (reinitialize > 0 || reinitialize_metacache > 0) {
+		reinitialize_as_needed(reinitialize, reinitialize_metacache);
 		return 0;
+	}
 	if (reinitialize < 0 || reinitialize_metacache < 0) {
 		reinitialize = reinitialize_metacache = 0;
 		return 0;

@@ -248,7 +248,12 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(postsyncddir)" \
 	"$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_q_OBJECTS = q-main.$(OBJEXT)
+am_q_OBJECTS = q-main.$(OBJEXT) q-q.$(OBJEXT) q-qatom.$(OBJEXT) \
+	q-qcache.$(OBJEXT) q-qcheck.$(OBJEXT) q-qdepends.$(OBJEXT) \
+	q-qfile.$(OBJEXT) q-qgrep.$(OBJEXT) q-qlist.$(OBJEXT) \
+	q-qlop.$(OBJEXT) q-qmerge.$(OBJEXT) q-qpkg.$(OBJEXT) \
+	q-qsearch.$(OBJEXT) q-qsize.$(OBJEXT) q-qtbz2.$(OBJEXT) \
+	q-qtegrity.$(OBJEXT) q-quse.$(OBJEXT) q-qxpak.$(OBJEXT)
 q_OBJECTS = $(am_q_OBJECTS)
 am__DEPENDENCIES_1 =
 q_DEPENDENCIES = $(top_builddir)/libq/libq.la \
@@ -1542,7 +1547,26 @@ SUBDIRS = autotools/gnulib libq
 portagedir = $(sysconfdir)/portage
 postsyncddir = $(portagedir)/repo.postsync.d
 dist_postsyncd_SCRIPTS = repo.postsync/q-reinit
-q_SOURCES = main.c
+q_SOURCES = \
+	main.c \
+	q.c \
+	qatom.c \
+	qcache.c \
+	qcheck.c \
+	qdepends.c \
+	qfile.c \
+	qgrep.c \
+	qlist.c \
+	qlop.c \
+	qmerge.c \
+	qpkg.c \
+	qsearch.c \
+	qsize.c \
+	qtbz2.c \
+	qtegrity.c \
+	quse.c \
+	qxpak.c
+
 
 # @@@ GEN START @@@ #
 q_CPPFLAGS = -I$(top_srcdir)/libq -I$(top_builddir)/autotools/gnulib \
@@ -1831,6 +1855,23 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-q.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qatom.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qcache.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qcheck.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qdepends.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qfile.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qgrep.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qlist.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qlop.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qmerge.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qpkg.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qsearch.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qsize.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qtbz2.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qtegrity.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-quse.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qxpak.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -1866,6 +1907,244 @@ q-main.obj: main.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='q-main.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+
+q-q.o: q.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-q.o -MD -MP -MF $(DEPDIR)/q-q.Tpo -c -o q-q.o `test -f 'q.c' || echo '$(srcdir)/'`q.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-q.Tpo $(DEPDIR)/q-q.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='q.c' object='q-q.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-q.o `test -f 'q.c' || echo '$(srcdir)/'`q.c
+
+q-q.obj: q.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-q.obj -MD -MP -MF $(DEPDIR)/q-q.Tpo -c -o q-q.obj `if test -f 'q.c'; then $(CYGPATH_W) 'q.c'; else $(CYGPATH_W) '$(srcdir)/q.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-q.Tpo $(DEPDIR)/q-q.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='q.c' object='q-q.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-q.obj `if test -f 'q.c'; then $(CYGPATH_W) 'q.c'; else $(CYGPATH_W) '$(srcdir)/q.c'; fi`
+
+q-qatom.o: qatom.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qatom.o -MD -MP -MF $(DEPDIR)/q-qatom.Tpo -c -o q-qatom.o `test -f 'qatom.c' || echo '$(srcdir)/'`qatom.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qatom.Tpo $(DEPDIR)/q-qatom.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qatom.c' object='q-qatom.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qatom.o `test -f 'qatom.c' || echo '$(srcdir)/'`qatom.c
+
+q-qatom.obj: qatom.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qatom.obj -MD -MP -MF $(DEPDIR)/q-qatom.Tpo -c -o q-qatom.obj `if test -f 'qatom.c'; then $(CYGPATH_W) 'qatom.c'; else $(CYGPATH_W) '$(srcdir)/qatom.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qatom.Tpo $(DEPDIR)/q-qatom.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qatom.c' object='q-qatom.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qatom.obj `if test -f 'qatom.c'; then $(CYGPATH_W) 'qatom.c'; else $(CYGPATH_W) '$(srcdir)/qatom.c'; fi`
+
+q-qcache.o: qcache.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qcache.o -MD -MP -MF $(DEPDIR)/q-qcache.Tpo -c -o q-qcache.o `test -f 'qcache.c' || echo '$(srcdir)/'`qcache.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qcache.Tpo $(DEPDIR)/q-qcache.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qcache.c' object='q-qcache.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qcache.o `test -f 'qcache.c' || echo '$(srcdir)/'`qcache.c
+
+q-qcache.obj: qcache.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qcache.obj -MD -MP -MF $(DEPDIR)/q-qcache.Tpo -c -o q-qcache.obj `if test -f 'qcache.c'; then $(CYGPATH_W) 'qcache.c'; else $(CYGPATH_W) '$(srcdir)/qcache.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qcache.Tpo $(DEPDIR)/q-qcache.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qcache.c' object='q-qcache.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qcache.obj `if test -f 'qcache.c'; then $(CYGPATH_W) 'qcache.c'; else $(CYGPATH_W) '$(srcdir)/qcache.c'; fi`
+
+q-qcheck.o: qcheck.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qcheck.o -MD -MP -MF $(DEPDIR)/q-qcheck.Tpo -c -o q-qcheck.o `test -f 'qcheck.c' || echo '$(srcdir)/'`qcheck.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qcheck.Tpo $(DEPDIR)/q-qcheck.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qcheck.c' object='q-qcheck.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qcheck.o `test -f 'qcheck.c' || echo '$(srcdir)/'`qcheck.c
+
+q-qcheck.obj: qcheck.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qcheck.obj -MD -MP -MF $(DEPDIR)/q-qcheck.Tpo -c -o q-qcheck.obj `if test -f 'qcheck.c'; then $(CYGPATH_W) 'qcheck.c'; else $(CYGPATH_W) '$(srcdir)/qcheck.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qcheck.Tpo $(DEPDIR)/q-qcheck.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qcheck.c' object='q-qcheck.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qcheck.obj `if test -f 'qcheck.c'; then $(CYGPATH_W) 'qcheck.c'; else $(CYGPATH_W) '$(srcdir)/qcheck.c'; fi`
+
+q-qdepends.o: qdepends.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qdepends.o -MD -MP -MF $(DEPDIR)/q-qdepends.Tpo -c -o q-qdepends.o `test -f 'qdepends.c' || echo '$(srcdir)/'`qdepends.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qdepends.Tpo $(DEPDIR)/q-qdepends.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qdepends.c' object='q-qdepends.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qdepends.o `test -f 'qdepends.c' || echo '$(srcdir)/'`qdepends.c
+
+q-qdepends.obj: qdepends.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qdepends.obj -MD -MP -MF $(DEPDIR)/q-qdepends.Tpo -c -o q-qdepends.obj `if test -f 'qdepends.c'; then $(CYGPATH_W) 'qdepends.c'; else $(CYGPATH_W) '$(srcdir)/qdepends.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qdepends.Tpo $(DEPDIR)/q-qdepends.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qdepends.c' object='q-qdepends.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qdepends.obj `if test -f 'qdepends.c'; then $(CYGPATH_W) 'qdepends.c'; else $(CYGPATH_W) '$(srcdir)/qdepends.c'; fi`
+
+q-qfile.o: qfile.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qfile.o -MD -MP -MF $(DEPDIR)/q-qfile.Tpo -c -o q-qfile.o `test -f 'qfile.c' || echo '$(srcdir)/'`qfile.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qfile.Tpo $(DEPDIR)/q-qfile.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qfile.c' object='q-qfile.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qfile.o `test -f 'qfile.c' || echo '$(srcdir)/'`qfile.c
+
+q-qfile.obj: qfile.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qfile.obj -MD -MP -MF $(DEPDIR)/q-qfile.Tpo -c -o q-qfile.obj `if test -f 'qfile.c'; then $(CYGPATH_W) 'qfile.c'; else $(CYGPATH_W) '$(srcdir)/qfile.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qfile.Tpo $(DEPDIR)/q-qfile.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qfile.c' object='q-qfile.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qfile.obj `if test -f 'qfile.c'; then $(CYGPATH_W) 'qfile.c'; else $(CYGPATH_W) '$(srcdir)/qfile.c'; fi`
+
+q-qgrep.o: qgrep.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qgrep.o -MD -MP -MF $(DEPDIR)/q-qgrep.Tpo -c -o q-qgrep.o `test -f 'qgrep.c' || echo '$(srcdir)/'`qgrep.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qgrep.Tpo $(DEPDIR)/q-qgrep.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qgrep.c' object='q-qgrep.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qgrep.o `test -f 'qgrep.c' || echo '$(srcdir)/'`qgrep.c
+
+q-qgrep.obj: qgrep.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qgrep.obj -MD -MP -MF $(DEPDIR)/q-qgrep.Tpo -c -o q-qgrep.obj `if test -f 'qgrep.c'; then $(CYGPATH_W) 'qgrep.c'; else $(CYGPATH_W) '$(srcdir)/qgrep.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qgrep.Tpo $(DEPDIR)/q-qgrep.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qgrep.c' object='q-qgrep.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qgrep.obj `if test -f 'qgrep.c'; then $(CYGPATH_W) 'qgrep.c'; else $(CYGPATH_W) '$(srcdir)/qgrep.c'; fi`
+
+q-qlist.o: qlist.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qlist.o -MD -MP -MF $(DEPDIR)/q-qlist.Tpo -c -o q-qlist.o `test -f 'qlist.c' || echo '$(srcdir)/'`qlist.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qlist.Tpo $(DEPDIR)/q-qlist.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qlist.c' object='q-qlist.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qlist.o `test -f 'qlist.c' || echo '$(srcdir)/'`qlist.c
+
+q-qlist.obj: qlist.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qlist.obj -MD -MP -MF $(DEPDIR)/q-qlist.Tpo -c -o q-qlist.obj `if test -f 'qlist.c'; then $(CYGPATH_W) 'qlist.c'; else $(CYGPATH_W) '$(srcdir)/qlist.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qlist.Tpo $(DEPDIR)/q-qlist.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qlist.c' object='q-qlist.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qlist.obj `if test -f 'qlist.c'; then $(CYGPATH_W) 'qlist.c'; else $(CYGPATH_W) '$(srcdir)/qlist.c'; fi`
+
+q-qlop.o: qlop.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qlop.o -MD -MP -MF $(DEPDIR)/q-qlop.Tpo -c -o q-qlop.o `test -f 'qlop.c' || echo '$(srcdir)/'`qlop.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qlop.Tpo $(DEPDIR)/q-qlop.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qlop.c' object='q-qlop.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qlop.o `test -f 'qlop.c' || echo '$(srcdir)/'`qlop.c
+
+q-qlop.obj: qlop.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qlop.obj -MD -MP -MF $(DEPDIR)/q-qlop.Tpo -c -o q-qlop.obj `if test -f 'qlop.c'; then $(CYGPATH_W) 'qlop.c'; else $(CYGPATH_W) '$(srcdir)/qlop.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qlop.Tpo $(DEPDIR)/q-qlop.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qlop.c' object='q-qlop.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qlop.obj `if test -f 'qlop.c'; then $(CYGPATH_W) 'qlop.c'; else $(CYGPATH_W) '$(srcdir)/qlop.c'; fi`
+
+q-qmerge.o: qmerge.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qmerge.o -MD -MP -MF $(DEPDIR)/q-qmerge.Tpo -c -o q-qmerge.o `test -f 'qmerge.c' || echo '$(srcdir)/'`qmerge.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qmerge.Tpo $(DEPDIR)/q-qmerge.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qmerge.c' object='q-qmerge.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qmerge.o `test -f 'qmerge.c' || echo '$(srcdir)/'`qmerge.c
+
+q-qmerge.obj: qmerge.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qmerge.obj -MD -MP -MF $(DEPDIR)/q-qmerge.Tpo -c -o q-qmerge.obj `if test -f 'qmerge.c'; then $(CYGPATH_W) 'qmerge.c'; else $(CYGPATH_W) '$(srcdir)/qmerge.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qmerge.Tpo $(DEPDIR)/q-qmerge.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qmerge.c' object='q-qmerge.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qmerge.obj `if test -f 'qmerge.c'; then $(CYGPATH_W) 'qmerge.c'; else $(CYGPATH_W) '$(srcdir)/qmerge.c'; fi`
+
+q-qpkg.o: qpkg.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qpkg.o -MD -MP -MF $(DEPDIR)/q-qpkg.Tpo -c -o q-qpkg.o `test -f 'qpkg.c' || echo '$(srcdir)/'`qpkg.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qpkg.Tpo $(DEPDIR)/q-qpkg.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qpkg.c' object='q-qpkg.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qpkg.o `test -f 'qpkg.c' || echo '$(srcdir)/'`qpkg.c
+
+q-qpkg.obj: qpkg.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qpkg.obj -MD -MP -MF $(DEPDIR)/q-qpkg.Tpo -c -o q-qpkg.obj `if test -f 'qpkg.c'; then $(CYGPATH_W) 'qpkg.c'; else $(CYGPATH_W) '$(srcdir)/qpkg.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qpkg.Tpo $(DEPDIR)/q-qpkg.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qpkg.c' object='q-qpkg.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qpkg.obj `if test -f 'qpkg.c'; then $(CYGPATH_W) 'qpkg.c'; else $(CYGPATH_W) '$(srcdir)/qpkg.c'; fi`
+
+q-qsearch.o: qsearch.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qsearch.o -MD -MP -MF $(DEPDIR)/q-qsearch.Tpo -c -o q-qsearch.o `test -f 'qsearch.c' || echo '$(srcdir)/'`qsearch.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qsearch.Tpo $(DEPDIR)/q-qsearch.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qsearch.c' object='q-qsearch.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qsearch.o `test -f 'qsearch.c' || echo '$(srcdir)/'`qsearch.c
+
+q-qsearch.obj: qsearch.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qsearch.obj -MD -MP -MF $(DEPDIR)/q-qsearch.Tpo -c -o q-qsearch.obj `if test -f 'qsearch.c'; then $(CYGPATH_W) 'qsearch.c'; else $(CYGPATH_W) '$(srcdir)/qsearch.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qsearch.Tpo $(DEPDIR)/q-qsearch.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qsearch.c' object='q-qsearch.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qsearch.obj `if test -f 'qsearch.c'; then $(CYGPATH_W) 'qsearch.c'; else $(CYGPATH_W) '$(srcdir)/qsearch.c'; fi`
+
+q-qsize.o: qsize.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qsize.o -MD -MP -MF $(DEPDIR)/q-qsize.Tpo -c -o q-qsize.o `test -f 'qsize.c' || echo '$(srcdir)/'`qsize.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qsize.Tpo $(DEPDIR)/q-qsize.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qsize.c' object='q-qsize.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qsize.o `test -f 'qsize.c' || echo '$(srcdir)/'`qsize.c
+
+q-qsize.obj: qsize.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qsize.obj -MD -MP -MF $(DEPDIR)/q-qsize.Tpo -c -o q-qsize.obj `if test -f 'qsize.c'; then $(CYGPATH_W) 'qsize.c'; else $(CYGPATH_W) '$(srcdir)/qsize.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qsize.Tpo $(DEPDIR)/q-qsize.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qsize.c' object='q-qsize.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qsize.obj `if test -f 'qsize.c'; then $(CYGPATH_W) 'qsize.c'; else $(CYGPATH_W) '$(srcdir)/qsize.c'; fi`
+
+q-qtbz2.o: qtbz2.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtbz2.o -MD -MP -MF $(DEPDIR)/q-qtbz2.Tpo -c -o q-qtbz2.o `test -f 'qtbz2.c' || echo '$(srcdir)/'`qtbz2.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtbz2.Tpo $(DEPDIR)/q-qtbz2.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtbz2.c' object='q-qtbz2.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtbz2.o `test -f 'qtbz2.c' || echo '$(srcdir)/'`qtbz2.c
+
+q-qtbz2.obj: qtbz2.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtbz2.obj -MD -MP -MF $(DEPDIR)/q-qtbz2.Tpo -c -o q-qtbz2.obj `if test -f 'qtbz2.c'; then $(CYGPATH_W) 'qtbz2.c'; else $(CYGPATH_W) '$(srcdir)/qtbz2.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtbz2.Tpo $(DEPDIR)/q-qtbz2.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtbz2.c' object='q-qtbz2.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtbz2.obj `if test -f 'qtbz2.c'; then $(CYGPATH_W) 'qtbz2.c'; else $(CYGPATH_W) '$(srcdir)/qtbz2.c'; fi`
+
+q-qtegrity.o: qtegrity.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtegrity.o -MD -MP -MF $(DEPDIR)/q-qtegrity.Tpo -c -o q-qtegrity.o `test -f 'qtegrity.c' || echo '$(srcdir)/'`qtegrity.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtegrity.Tpo $(DEPDIR)/q-qtegrity.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtegrity.c' object='q-qtegrity.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtegrity.o `test -f 'qtegrity.c' || echo '$(srcdir)/'`qtegrity.c
+
+q-qtegrity.obj: qtegrity.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtegrity.obj -MD -MP -MF $(DEPDIR)/q-qtegrity.Tpo -c -o q-qtegrity.obj `if test -f 'qtegrity.c'; then $(CYGPATH_W) 'qtegrity.c'; else $(CYGPATH_W) '$(srcdir)/qtegrity.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtegrity.Tpo $(DEPDIR)/q-qtegrity.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtegrity.c' object='q-qtegrity.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtegrity.obj `if test -f 'qtegrity.c'; then $(CYGPATH_W) 'qtegrity.c'; else $(CYGPATH_W) '$(srcdir)/qtegrity.c'; fi`
+
+q-quse.o: quse.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-quse.o -MD -MP -MF $(DEPDIR)/q-quse.Tpo -c -o q-quse.o `test -f 'quse.c' || echo '$(srcdir)/'`quse.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-quse.Tpo $(DEPDIR)/q-quse.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='quse.c' object='q-quse.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-quse.o `test -f 'quse.c' || echo '$(srcdir)/'`quse.c
+
+q-quse.obj: quse.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-quse.obj -MD -MP -MF $(DEPDIR)/q-quse.Tpo -c -o q-quse.obj `if test -f 'quse.c'; then $(CYGPATH_W) 'quse.c'; else $(CYGPATH_W) '$(srcdir)/quse.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-quse.Tpo $(DEPDIR)/q-quse.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='quse.c' object='q-quse.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-quse.obj `if test -f 'quse.c'; then $(CYGPATH_W) 'quse.c'; else $(CYGPATH_W) '$(srcdir)/quse.c'; fi`
+
+q-qxpak.o: qxpak.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qxpak.o -MD -MP -MF $(DEPDIR)/q-qxpak.Tpo -c -o q-qxpak.o `test -f 'qxpak.c' || echo '$(srcdir)/'`qxpak.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qxpak.Tpo $(DEPDIR)/q-qxpak.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qxpak.c' object='q-qxpak.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qxpak.o `test -f 'qxpak.c' || echo '$(srcdir)/'`qxpak.c
+
+q-qxpak.obj: qxpak.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qxpak.obj -MD -MP -MF $(DEPDIR)/q-qxpak.Tpo -c -o q-qxpak.obj `if test -f 'qxpak.c'; then $(CYGPATH_W) 'qxpak.c'; else $(CYGPATH_W) '$(srcdir)/qxpak.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qxpak.Tpo $(DEPDIR)/q-qxpak.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qxpak.c' object='q-qxpak.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qxpak.obj `if test -f 'qxpak.c'; then $(CYGPATH_W) 'qxpak.c'; else $(CYGPATH_W) '$(srcdir)/qxpak.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

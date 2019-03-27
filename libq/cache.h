@@ -10,6 +10,8 @@
 #ifndef _CACHE_H
 #define _CACHE_H 1
 
+#include "atom.h"
+
 typedef struct {
 	char *_data;
 	char *DEPEND;        /* line 1 */

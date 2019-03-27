@@ -38,14 +38,12 @@ make_human_readable_str(unsigned long long val,
 
 	unsigned frac; /* 0..9 - the fractional digit */
 	const char *u;
-	const char *fmt;
 
 	static char str[21];		/* Sufficient for 64 bit unsigned integers. */
 
 	if (val == 0)
 		return "0";
 
-	fmt = "%llu";
 	if (block_size > 1)
 		val *= block_size;
 	frac = 0;
@@ -55,11 +53,11 @@ make_human_readable_str(unsigned long long val,
 		val += display_unit/2;  /* Deal with rounding */
 		val /= display_unit;    /* Don't combine with the line above! */
 		/* will just print it as ulonglong (below) */
+		snprintf(str, sizeof(str), "%llu", val);
 	} else {
 		while ((val >= 1024)
 		 /* && (u < unit_chars + sizeof(unit_chars) - 1) - always true */
 		) {
-			fmt = "%llu.%u%c";
 			u++;
 			frac = (((unsigned)val % 1024) * 10 + 1024/2) / 1024;
 			val /= 1024;
@@ -68,19 +66,18 @@ make_human_readable_str(unsigned long long val,
 			++val;
 			frac = 0;
 		}
-#if 1
 		/* If block_size is 0, dont print fractional part */
 		if (block_size == 0) {
 			if (frac >= 5) {
 				++val;
 			}
-			fmt = "%llu%*c";
-			frac = 1;
+			snprintf(str, sizeof(str), "%llu%c", val, *u);
+		} else if (u == unit_chars) {
+			snprintf(str, sizeof(str), "%llu", val);
+		} else {
+			snprintf(str, sizeof(str), "%llu.%u%c", val, frac, *u);
 		}
-#endif
 	}
-
-	snprintf(str, sizeof(str), fmt, val, frac, *u);
 
 	return str;
 }

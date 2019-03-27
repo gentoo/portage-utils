@@ -1,13 +1,36 @@
 /*
- * Copyright 2005-2018 Gentoo Foundation
+ * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  */
 
-#ifndef _QAPPLETS_H_
-#define _QAPPLETS_H_
+#ifndef _APPLETS_H_
+#define _APPLETS_H_ 1
+
+#if defined(__sun) && defined(__SVR4)
+/* workaround non-const defined name in option struct, such that we
+ * don't get a zillion of warnings */
+#define	no_argument		0
+#define	required_argument	1
+#define	optional_argument	2
+struct option {
+	const char *name;
+	int has_arg;
+	int *flag;
+	int val;
+};
+extern int	getopt_long(int, char * const *, const char *,
+		    const struct option *, int *);
+#else
+# include <getopt.h>
+#endif
+
+#include <stdbool.h>
+#include <dirent.h>
+
+#include "xarray.h"
 
 /* applet prototypes */
 typedef int (*APPLET)(int, char **);
@@ -33,11 +56,6 @@ DECLARE_APPLET(qcache)
 /*DECLARE_APPLET(qglsa) disable */
 DECLARE_APPLET(qtegrity)
 #undef DECLARE_APPLET
-
-#define DEFINE_APPLET_STUB(applet) \
-	int applet##_main(_q_unused_ int argc, _q_unused_ char **argv) { \
-		err("Sorry, this applet has been disabled"); \
-	}
 
 static const struct applet_t {
 	const char *name;
@@ -91,5 +109,61 @@ static const struct applet_t {
 
 	{NULL, NULL, NULL, NULL}
 };
+
+/* Common usage for all applets */
+#define COMMON_FLAGS "vqChV"
+#define COMMON_LONG_OPTS \
+	{"root",       a_argument, NULL, 0x1}, \
+	{"verbose",   no_argument, NULL, 'v'}, \
+	{"quiet",     no_argument, NULL, 'q'}, \
+	{"nocolor",   no_argument, NULL, 'C'}, \
+	{"help",      no_argument, NULL, 'h'}, \
+	{"version",   no_argument, NULL, 'V'}, \
+	{NULL,        no_argument, NULL, 0x0}
+#define COMMON_OPTS_HELP \
+	"Set the ROOT env var", \
+	"Make a lot of noise", \
+	"Tighter output; suppress warnings", \
+	"Don't output color", \
+	"Print this help and exit", \
+	"Print version and exit", \
+	NULL
+#define COMMON_GETOPTS_CASES(applet) \
+	case 0x1: portroot = optarg; break; \
+	case 'v': ++verbose; break; \
+	case 'q': setup_quiet(); break; \
+	case 'V': version_barf(); break; \
+	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
+	case 'C': no_colors(); break; \
+	default: applet ## _usage(EXIT_FAILURE); break;
+
+extern char *modpath;
+extern char *portroot;
+extern int verbose;
+extern int quiet;
+extern char pretend;
+extern char *config_protect;
+extern char *config_protect_mask;
+extern char *portvdb;
+extern char *portlogdir;
+extern int portcachedir_type;
+extern char *pkg_install_mask;
+extern char *binhost;
+extern char *pkgdir;
+extern char *port_tmpdir;
+extern char *features;
+extern char *install_mask;
+extern DEFINE_ARRAY(overlays);
+
+void no_colors(void);
+void setup_quiet(void);
+void version_barf(void);
+void usage(int status, const char *flags, struct option const opts[],
+      const char * const help[], const char *desc, int blabber);
+int lookup_applet_idx(const char *);
+APPLET lookup_applet(const char *applet);
+const char *initialize_flat(const char *overlay, int cache_type, bool force);
+void freeargv(int argc, char **argv);
+void makeargv(const char *string, int *argc, char ***argv);
 
 #endif

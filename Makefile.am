@@ -8,7 +8,25 @@ postsyncddir = $(portagedir)/repo.postsync.d
 dist_postsyncd_SCRIPTS = repo.postsync/q-reinit
 
 bin_PROGRAMS = q
-q_SOURCES = main.c
+q_SOURCES = \
+	main.c \
+	q.c \
+	qatom.c \
+	qcache.c \
+	qcheck.c \
+	qdepends.c \
+	qfile.c \
+	qgrep.c \
+	qlist.c \
+	qlop.c \
+	qmerge.c \
+	qpkg.c \
+	qsearch.c \
+	qsize.c \
+	qtbz2.c \
+	qtegrity.c \
+	quse.c \
+	qxpak.c
 q_CPPFLAGS = \
 	-I$(top_srcdir)/libq \
 	-I$(top_builddir)/autotools/gnulib \
