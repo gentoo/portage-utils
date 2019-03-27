@@ -34929,6 +34929,81 @@ else
 fi
 
 
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C compiler accepts -Wno-format-nonliteral" >&5
+$as_echo_n "checking whether C compiler accepts -Wno-format-nonliteral... " >&6; }
+if ${ax_cv_check_cflags___Wno_format_nonliteral+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CFLAGS
+  CFLAGS="$CFLAGS  -Wno-format-nonliteral"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_check_cflags___Wno_format_nonliteral=yes
+else
+  ax_cv_check_cflags___Wno_format_nonliteral=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags___Wno_format_nonliteral" >&5
+$as_echo "$ax_cv_check_cflags___Wno_format_nonliteral" >&6; }
+if test "x$ax_cv_check_cflags___Wno_format_nonliteral" = xyes; then :
+  as_fn_append CFLAGS " -Wno-format-nonliteral"
+else
+  :
+fi
+
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C compiler accepts -Wno-expansion-to-defined" >&5
+$as_echo_n "checking whether C compiler accepts -Wno-expansion-to-defined... " >&6; }
+if ${ax_cv_check_cflags___Wno_expansion_to_defined+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CFLAGS
+  CFLAGS="$CFLAGS  -Wno-expansion-to-defined"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_check_cflags___Wno_expansion_to_defined=yes
+else
+  ax_cv_check_cflags___Wno_expansion_to_defined=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags___Wno_expansion_to_defined" >&5
+$as_echo "$ax_cv_check_cflags___Wno_expansion_to_defined" >&6; }
+if test "x$ax_cv_check_cflags___Wno_expansion_to_defined" = xyes; then :
+  as_fn_append CFLAGS " -Wno-expansion-to-defined"
+else
+  :
+fi
+
+
+# gnulib triggers this a lot, just to silence:
+# -Wno-format-nonliteral
+# -Wno-expansion-to-defined
 
 ac_config_files="$ac_config_files Makefile libq/Makefile autotools/gnulib/Makefile tests/atom_explode/Makefile tests/copy_file/Makefile tests/mkdir/Makefile tests/rmspace/Makefile"
 

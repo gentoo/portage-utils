@@ -46,9 +46,14 @@ m4_foreach_w([flag], [
 	-Wsequence-point
 	-Wold-style-definition
 	-Wextra
+	-Wno-format-nonliteral
+	-Wno-expansion-to-defined
 ], [
 	AX_CHECK_COMPILE_FLAG(flag, AS_VAR_APPEND([CFLAGS], " flag"))
 ])
+# gnulib triggers this a lot, just to silence:
+# -Wno-format-nonliteral
+# -Wno-expansion-to-defined
 
 AC_CONFIG_FILES([
 	Makefile
