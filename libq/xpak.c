@@ -258,7 +258,7 @@ _xpak_add_file(
 	/* the xpak format can only store files whose size is a 32bit int
 	 * so we have to make sure we don't store a big file */
 	if (in_len != st->st_size) {
-		warnf("File is too big: %"PRIu64, (uint64_t)st->st_size);
+		warnf("File is too big: %zu", (size_t)st->st_size);
 		fclose(fin);
 		goto fake_data_len;
 	}

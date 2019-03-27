@@ -223,7 +223,12 @@ qgrep_print_before_context(qgrep_buf_t *current, const char num_lines_before,
 
 /* Yield the path of one of the installed ebuilds (from VDB). */
 static char *
-get_next_installed_ebuild(char *ebuild_path, DIR *vdb_dir, struct dirent **cat_dirent_pt, DIR **cat_dir_pt)
+get_next_installed_ebuild(
+		char *ebuild_path,
+		size_t ebuild_path_len,
+		DIR *vdb_dir,
+		struct dirent **cat_dirent_pt,
+		DIR **cat_dir_pt)
 {
 	struct dirent *pkg_dirent = NULL;
 	if (*cat_dirent_pt == NULL || *cat_dir_pt == NULL)
@@ -233,7 +238,7 @@ get_next_ebuild_from_category:
 		goto get_next_category;
 	if (pkg_dirent->d_name[0] == '.')
 		goto get_next_ebuild_from_category;
-	snprintf(ebuild_path, _Q_PATH_MAX, "%s/%s/%s.ebuild",
+	snprintf(ebuild_path, ebuild_path_len, "%s/%s/%s.ebuild",
 			(*cat_dirent_pt)->d_name, pkg_dirent->d_name, pkg_dirent->d_name);
 	return ebuild_path;
 get_next_category:
@@ -260,7 +265,7 @@ int qgrep_main(int argc, char **argv)
 	DIR *vdb_dir = NULL;
 	DIR *cat_dir = NULL;
 	struct dirent *dentry = NULL;
-	char ebuild[_Q_PATH_MAX];
+	char ebuild[_Q_PATH_MAX * 4];
 	char name[_Q_PATH_MAX * 2];
 	char *label;
 	int reflags = 0;
@@ -420,8 +425,8 @@ int qgrep_main(int argc, char **argv)
 					&& snprintf(ebuild, sizeof(ebuild),
 						"eclass/%s", dentry->d_name))
 				: (do_installed
-					? (get_next_installed_ebuild(ebuild, vdb_dir,
-							&dentry, &cat_dir) != NULL)
+					? (get_next_installed_ebuild(ebuild, sizeof(ebuild),
+							vdb_dir, &dentry, &cat_dir) != NULL)
 					: (fgets(ebuild, sizeof(ebuild), fp) != NULL)))
 		{
 			FILE *newfp;

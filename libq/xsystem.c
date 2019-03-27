@@ -6,12 +6,15 @@
  */
 
 #include "main.h"
-#include "xasprintf.h"
-#include "xsystem.h"
 
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include "xasprintf.h"
+#include "xsystem.h"
 
 void xsystem(const char *command)
 {

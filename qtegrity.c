@@ -10,8 +10,11 @@
 #include "main.h"
 #include "applets.h"
 
+#include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <signal.h>
 #include <fcntl.h>
 

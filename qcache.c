@@ -805,7 +805,7 @@ qcache_stats(qcache_data *data)
 #endif
 			{
 				struct stat s;
-				char spath[_Q_PATH_MAX];
+				char spath[_Q_PATH_MAX * 2];
 				snprintf(spath, sizeof(spath), "%s/%s", catpath, de->d_name);
 				if (lstat(spath, &s) != 0)
 					continue;

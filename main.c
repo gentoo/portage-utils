@@ -448,7 +448,7 @@ read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 	if ((dentslen = scandir(buf, &dents, NULL, alphasort)) > 0) {
 		int di;
 		struct dirent *d;
-		char npath[_Q_PATH_MAX];
+		char npath[_Q_PATH_MAX * 2];
 
 		/* recurse through all files */
 		for (di = 0; di < dentslen; di++) {
@@ -858,7 +858,7 @@ initialize_flat(const char *overlay, int cache_type, bool force)
 		if (pkg_cnt < 0)
 			continue;
 		for (c = 0; c < pkg_cnt; c++) {
-			char de[_Q_PATH_MAX];
+			char de[_Q_PATH_MAX * 2];
 
 			snprintf(de, sizeof(de), "%s/%s",
 					category[i]->d_name, pn[c]->d_name);

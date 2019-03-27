@@ -77,7 +77,7 @@ qpkg_clean_dir(char *dirp, set *vdb)
 	set *ll = NULL;
 	struct dirent **fnames;
 	int i, count;
-	char buf[_Q_PATH_MAX];
+	char buf[_Q_PATH_MAX * 2];
 	struct stat st;
 	uint64_t num_all_bytes = 0;
 	size_t disp_units = 0;
@@ -186,7 +186,7 @@ qpkg_clean(char *dirp)
 	num_all_bytes = qpkg_clean_dir(dirp, vdb);
 
 	for (i = 0; i < count; i++) {
-		char buf[_Q_PATH_MAX];
+		char buf[_Q_PATH_MAX * 2];
 		snprintf(buf, sizeof(buf), "%s/%s", dirp, dnames[i]->d_name);
 		num_all_bytes += qpkg_clean_dir(buf, vdb);
 	}

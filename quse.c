@@ -11,6 +11,7 @@
 #include "applets.h"
 
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <xalloc.h>
 #include <sys/types.h>
