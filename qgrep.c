@@ -449,6 +449,7 @@ int qgrep_main(int argc, char **argv)
 				if ((p = strchr(ebuild, '\n')) != NULL)
 					*p = '\0';
 				if (show_name || (include_atoms != NULL)) {
+					size_t l;
 					/* cut ".ebuild" */
 					if (p == NULL)
 						p = ebuild + strlen(ebuild);
@@ -460,8 +461,11 @@ int qgrep_main(int argc, char **argv)
 					/* find head of the ebuild basename */
 					if ((p = strchr(p, '/')) == NULL)
 						continue;
-					/* find	start of the pkg name */
-					snprintf(name, sizeof(name), "%s/%s", ebuild, (p+1));
+					/* find	start of the pkg name, break up in two to
+					 * avoid warning about possible truncation (very
+					 * unlikely) */
+					l = snprintf(name, sizeof(name), "%s", ebuild);
+					snprintf(name + l, sizeof(name) - l, "%s", p);
 					/* restore the filepath */
 					*p = '/';
 					*(p + strlen(p)) = '.';
