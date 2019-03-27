@@ -15,6 +15,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#if defined(__MACH__)
+#include <libproc.h>
+#endif
+
 #include "atom.h"
 #include "basename.h"
 #include "cache.h"
