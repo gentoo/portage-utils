@@ -103,17 +103,21 @@ parse_date(const char *sdate, time_t *t)
 			return false;
 	} else {
 		/* Handle automatic formats:
-		 * - "12315128"   -> %s
-		 * - "2015-12-24" -> %Y-%m-%d
+		 * - "12315128"            -> %s
+		 * - "2015-12-24"          -> %Y-%m-%d
+		 * - "2019-03-28T13:52:31" -> %Y-%m-%dT%H:%M:%s"
 		 * - human readable format (see below)
 		 */
-		size_t len = strspn(sdate, "0123456789-");
+		size_t len = strspn(sdate, "0123456789-:T");
 		if (sdate[len] == '\0') {
 			const char *fmt;
-			if (strchr(sdate, '-') == NULL)
+			if (strchr(sdate, '-') == NULL) {
 				fmt = "%s";
-			else
+			} else if ((s = strchr(sdate, 'T')) == NULL) {
 				fmt = "%Y-%m-%d";
+			} else {
+				fmt = "%Y-%m-%dT%H:%M:%S";
+			}
 
 			s = strptime(sdate, fmt, &tm);
 			if (s == NULL || s[0] != '\0')
