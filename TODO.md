@@ -24,6 +24,9 @@
   we end up getting just:<br>
   `ACCEPT_LICENSE=" bar"`
 
+- q\_vdb\_foreach\_pkg should have variant that takes an atom (or just
+  cat?) to reduce search space
+
 # Atoms
 
 - only 32bit values are supported for revision (-r#)

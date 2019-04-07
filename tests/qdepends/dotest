@@ -21,6 +21,17 @@ test() {
 		return
 	fi
 
+	# qdepends output is based on a hash, which may differ based on
+	# endiannes, so sort the output so we get a deterministic set
+	while IFS= read -r line ; do
+		if [[ ${line} == *:* ]] ; then
+			pkg=${line%%:*}
+			echo "${pkg}: $(echo ${line#*:} | xargs -n1 | sort | xargs)"
+		else
+			echo "${line}"
+		fi
+	done < list | diff list - | patch -s list
+
 	local good="${as}/list${num}.good"
 	if [[ ! -e ${good} ]] ; then
 		cp list "${good}"

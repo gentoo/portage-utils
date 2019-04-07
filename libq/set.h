@@ -32,5 +32,6 @@ bool contains_set(char *s, set *q);
 set *del_set(char *s, set *q, bool *removed);
 size_t list_set(set *q, char ***l);
 void free_set(set *q);
+void clear_set(set *q);
 
 #endif

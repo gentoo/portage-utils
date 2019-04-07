@@ -72,6 +72,7 @@ add_set_unique(const char *name, set *q, bool *unique)
 	int pos;
 	elem *ll;
 	elem *w;
+	bool uniq = false;
 
 	if (q == NULL)
 		q = create_set();
@@ -85,13 +86,13 @@ add_set_unique(const char *name, set *q, bool *unique)
 		ll->next = NULL;
 		ll->name = mname;
 		ll->hash = hash;
-		*unique = true;
+		uniq = true;
 	} else {
 		ll = NULL;
 		for (w = q->buckets[pos]; w != NULL; ll = w, w = w->next) {
 			if (w->hash == hash && strcmp(w->name, mname) == 0) {
 				free(mname);
-				*unique = false;
+				uniq = false;
 				break;
 			}
 		}
@@ -100,12 +101,14 @@ add_set_unique(const char *name, set *q, bool *unique)
 			ll->next = NULL;
 			ll->name = mname;
 			ll->hash = hash;
-			*unique = true;
+			uniq = true;
 		}
 	}
 
-	if (*unique)
+	if (uniq)
 		q->len++;
+	if (unique)
+		*unique = uniq;
 	return q;
 }
 
@@ -199,7 +202,7 @@ list_set(set *q, char ***l)
 
 /* clear out a set */
 void
-free_set(set *q)
+clear_set(set *q)
 {
 	int i;
 	elem *w;
@@ -211,7 +214,16 @@ free_set(set *q)
 			free(w->name);
 			free(w);
 		}
+		q->buckets[i] = NULL;
 	}
+	q->len = 0;
+}
+
+/* clear and free a set */
+void
+free_set(set *q)
+{
+	clear_set(q);
 	free(q);
 }
 

@@ -7,6 +7,7 @@ QFILES = \
 	colors.c colors.h \
 	contents.c contents.h \
 	copy_file.c copy_file.h \
+	dep.c dep.h \
 	eat_file.c eat_file.h \
 	hash_fd.c hash_fd.h \
 	human_readable.c human_readable.h \
