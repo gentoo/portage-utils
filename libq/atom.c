@@ -16,15 +16,27 @@
 #include <ctype.h>
 #include <xalloc.h>
 
-const char * const booga[] = {"!!!", "!=", "==", ">", "<"};
-
 const char * const atom_suffixes_str[] = {
 	"_alpha", "_beta", "_pre", "_rc", "_/*bogus*/", "_p"
 };
 
-const char * const atom_op_str[] = {
-	"", ">", ">=", "=", "<=", "<", "~", "!", "!!", "*"
+const char * const atom_slotdep_str[] = {
+	"", "=", "*"
 };
+
+const char * const atom_usecond_str[] = {
+	"", "!", "-", "?", "=", "(+)", "(-)"
+};
+
+const char * const atom_blocker_str[] = {
+	"", "!", "!!"
+};
+
+const char * const atom_op_str[] = {
+	"", "=", ">", ">=", "<", "<=", "~", "*"
+};
+
+const char * const booga[] = {"!!!", "!=", "==", ">", "<"};
 
 #ifdef EBUG
 void
@@ -52,7 +64,10 @@ atom_explode(const char *atom)
 {
 	depend_atom *ret;
 	char *ptr;
-	size_t len, slen, idx, sidx;
+	size_t len;
+	size_t slen;
+	size_t idx;
+	size_t sidx;
 
 	/* we allocate mem for atom struct and two strings (strlen(atom)).
 	 * the first string is for CAT/PN/PV while the second is for PVR.
@@ -76,60 +91,36 @@ atom_explode(const char *atom)
 	ret->PVR = ret->P + slen + 1;
 	ret->CATEGORY = ret->PVR + slen + 1 + 3;
 
+	/* check for blocker operators */
+	ret->blocker = ATOM_BL_NONE;
+	if (*atom == '!') {
+		ret->blocker++;
+		atom++;
+	}
+	if (*atom == '!') {
+		ret->blocker++;
+		atom++;
+	}
+
 	/* eat any prefix operators */
-	switch (atom[0]) {
+	ret->pfx_op = ATOM_OP_NONE;
+	switch (*atom) {
 	case '>':
-		++atom;
-		if (atom[0] == '=') {
-			++atom;
-			ret->pfx_op = ATOM_OP_NEWER_EQUAL;
-		} else
-			ret->pfx_op = ATOM_OP_NEWER;
-		break;
-	case '=':
-		++atom;
-		ret->pfx_op = ATOM_OP_EQUAL;
+		ret->pfx_op = ATOM_OP_NEWER;
+		atom++;
 		break;
 	case '<':
-		++atom;
-		if (atom[0] == '=') {
-			++atom;
-			ret->pfx_op = ATOM_OP_OLDER_EQUAL;
-		} else
-			ret->pfx_op = ATOM_OP_OLDER;
+		ret->pfx_op = ATOM_OP_OLDER;
+		atom++;
 		break;
 	case '~':
-		++atom;
 		ret->pfx_op = ATOM_OP_PV_EQUAL;
+		atom++;
 		break;
-	case '!':
-		++atom;
-		switch (atom[0]) {
-		case '!':
-			++atom;
-			ret->pfx_op = ATOM_OP_BLOCK_HARD;
-			break;
-		case '>':
-			++atom;
-			if (atom[0] == '=') {
-				++atom;
-				ret->pfx_op = ATOM_OP_OLDER;
-			} else
-				ret->pfx_op = ATOM_OP_OLDER_EQUAL;
-			break;
-		case '<':
-			++atom;
-			if (atom[0] == '=') {
-				++atom;
-				ret->pfx_op = ATOM_OP_NEWER;
-			} else
-				ret->pfx_op = ATOM_OP_NEWER_EQUAL;
-			break;
-		default:
-			ret->pfx_op = ATOM_OP_BLOCK;
-			break;
-		}
-		break;
+	}
+	if (*atom == '=') {
+		ret->pfx_op += ATOM_OP_EQUAL;
+		atom++;
 	}
 	strcpy(ret->CATEGORY, atom);
 
@@ -145,21 +136,24 @@ atom_explode(const char *atom)
 
 	/* chip off the trailing [:SLOT] as needed */
 	if ((ptr = strrchr(ret->CATEGORY, ':')) != NULL) {
-		ret->SLOT = ptr + 1;
-		*ptr = '\0';
+		*ptr++ = '\0';
+		ret->SLOT = ptr;
 
-		/* ignore slots that are about package matching */
-		if (ret->SLOT[0] == '=' || ret->SLOT[0] == '*')
-			ret->SLOT = NULL;
+		/* deal with slot operators */
+		if ((ptr = strrchr(ret->SLOT, '=')) != NULL && ptr[1] == '\0') {
+			ret->slotdep = ATOM_SD_ANY_REBUILD;
+			*ptr = '\0';
+		}
+		if ((ptr = strrchr(ret->SLOT, '*')) != NULL && ptr[1] == '\0') {
+			ret->slotdep = ATOM_SD_ANY_IGNORE;
+			*ptr = '\0';
+		}
 	}
 
 	/* see if we have any suffix operators */
-	if ((ptr = strrchr(ret->CATEGORY, '*')) != NULL) {
-		/* make sure it's the last byte */
-		if (ptr[1] == '\0') {
-			ret->sfx_op = ATOM_OP_STAR;
-			*ptr = '\0';
-		}
+	if ((ptr = strrchr(ret->CATEGORY, '*')) != NULL && ptr[1] == '\0') {
+		ret->sfx_op = ATOM_OP_STAR;
+		*ptr = '\0';
 	}
 
 	/* break up the CATEGORY and PVR */
@@ -167,12 +161,75 @@ atom_explode(const char *atom)
 		ret->PN = ptr + 1;
 		*ptr = '\0';
 		/* eat extra crap in case it exists, this is a feature to allow
-		 * /path/to/pkg.ebuild */
+		 * /path/to/pkg.ebuild, doesn't work with prefix operators
+		 * though */
 		if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL)
 			ret->CATEGORY = ptr + 1;
 	} else {
 		ret->PN = ret->CATEGORY;
 		ret->CATEGORY = NULL;
+	}
+
+	/* hunt down build with USE dependencies */
+	if ((ptr = strrchr(ret->PN, ']')) != NULL && ptr[1] == '\0' &&
+			(ptr = strrchr(ret->PN, '[')) != NULL)
+	{
+		atom_usedep *w = NULL;
+		do {
+			if (ret->usedeps == NULL) {
+				ret->usedeps = w = xmalloc(sizeof(atom_usedep));
+			} else {
+				w = w->next = xmalloc(sizeof(atom_usedep));
+			}
+			w->next = NULL;
+			*ptr++ = '\0';
+			w->pfx_cond = w->sfx_cond = ATOM_UC_NONE;
+			switch (*ptr) {
+				case '-':
+					w->pfx_cond = ATOM_UC_NEG;
+					ptr++;
+					break;
+				case '!':
+					w->pfx_cond = ATOM_UC_NOT;
+					ptr++;
+					break;
+			}
+			w->use = ptr;
+			while (*ptr != '\0') {
+				switch (*ptr) {
+					case '?':
+						w->sfx_cond = ATOM_UC_COND;
+						*ptr++ = '\0';
+						break;
+					case '=':
+						w->sfx_cond = ATOM_UC_EQUAL;
+						*ptr++ = '\0';
+						break;
+					case '(':
+						if (strncmp(ptr, "(+)", 3) == 0) {
+							w->sfx_cond = ATOM_UC_PREV_ENABLED;
+							*ptr = '\0';
+							ptr += 3;
+						} else if (strncmp(ptr, "(-)", 3) == 0) {
+							w->sfx_cond = ATOM_UC_PREV_ENABLED;
+							*ptr = '\0';
+							ptr += 3;
+						} else {
+							ptr++;
+						}
+						break;
+					case ',':
+					case ']':
+						*ptr = ']';
+						break;
+					default:
+						ptr++;
+				}
+				if (*ptr == ']')
+					break;
+			}
+		} while (ptr[1] != '\0');
+		*ptr++ = '\0';
 	}
 
 	/* CATEGORY should be all set here, PN contains everything up to
@@ -202,7 +259,7 @@ atom_explode(const char *atom)
 			/* allow for 1 optional suffix letter */
 			if (*ptr >= 'a' && *ptr <= 'z')
 				ret->letter = *ptr++;
-			if (*ptr == '_' || *ptr == '\0' || *ptr == '-') {
+			if (*ptr == '_' || *ptr == '-' || *ptr == '\0') {
 				lastpv = pv;
 				continue;  /* valid, keep searching */
 			}
@@ -333,11 +390,34 @@ atom_compare(const depend_atom *a1, const depend_atom *a2)
 	atom_operator pfx_op = a2->pfx_op;
 	atom_operator sfx_op = a2->sfx_op;
 
-	/* check slot */
-	if (a1->SLOT || a2->SLOT) {
-		if (!a1->SLOT || !a2->SLOT || strcmp(a1->SLOT, a2->SLOT))
-			return NOT_EQUAL;
+	/* handle the inversing effect of blockers */
+	if (a2->blocker != ATOM_BL_NONE) {
+		switch (pfx_op) {
+			case ATOM_OP_NEWER:
+				pfx_op = ATOM_OP_OLDER_EQUAL;
+				break;
+			case ATOM_OP_NEWER_EQUAL:
+				pfx_op = ATOM_OP_OLDER;
+				break;
+			case ATOM_OP_OLDER:
+				pfx_op = ATOM_OP_NEWER_EQUAL;
+				break;
+			case ATOM_OP_OLDER_EQUAL:
+				pfx_op = ATOM_OP_NEWER;
+				break;
+			case ATOM_OP_EQUAL:
+			case ATOM_OP_PV_EQUAL:
+			default:
+				pfx_op = ATOM_OP_NEQUAL;
+				break;
+		}
 	}
+
+	/* check slot only when both sides have it */
+	if (a1->SLOT && a2->SLOT &&
+			a1->SLOT[0] != '\0' && a2->SLOT[0] != '\0' &&
+			strcmp(a1->SLOT, a2->SLOT) != 0)
+		return NOT_EQUAL;
 
 	/* check repo */
 	if (a1->REPO || a2->REPO) {
@@ -488,4 +568,40 @@ atom_compare_str(const char * const s1, const char * const s2)
 implode_a1_ret:
 	atom_implode(a1);
 	return ret;
+}
+
+static char _atom_buf[BUFSIZ];
+char *
+atom_to_string(depend_atom *a)
+{
+	char *buf = _atom_buf;
+	size_t buflen = sizeof(_atom_buf);
+	size_t off = 0;
+	atom_usedep *ud;
+
+	off += snprintf(buf + off, buflen - off, "%s%s",
+			atom_blocker_str[a->blocker], atom_op_str[a->pfx_op]);
+	if (a->CATEGORY != NULL)
+		off += snprintf(buf + off, buflen - off, "%s/", a->CATEGORY);
+	if (a->PN != NULL)
+		off += snprintf(buf + off, buflen - off, "%s", a->PN);
+	if (a->PV != NULL)
+		off += snprintf(buf + off, buflen - off, "-%s", a->PV);
+	if (a->PR_int > 0)
+		off += snprintf(buf + off, buflen - off, "-r%d", a->PR_int);
+	off += snprintf(buf + off, buflen - off, "%s", atom_op_str[a->sfx_op]);
+	for (ud = a->usedeps; ud != NULL; ud = ud->next)
+		off += snprintf(buf + off, buflen - off, "%s%s%s%s%s",
+				ud == a->usedeps ? "[" : "",
+				atom_usecond_str[ud->pfx_cond],
+				ud->use,
+				atom_usecond_str[ud->sfx_cond],
+				ud->next == NULL ? "]" : ",");
+	if (a->SLOT != NULL)
+		off += snprintf(buf + off, buflen - off, ":%s%s",
+				a->SLOT, atom_slotdep_str[a->slotdep]);
+	if (a->REPO != NULL)
+		off += snprintf(buf + off, buflen - off, "::%s", a->REPO);
+
+	return buf;
 }

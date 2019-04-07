@@ -55,4 +55,26 @@ test f17 "games-rpg eschalon-book-1-demo 106 r1" \
                       -F '%{CATEGORY} %{PN} %{PV} %{PR}' \
                                        "games-rpg/eschalon-book-1-demo-106-r1"
 
+# Comparison tests
+test c01 "cat/pkg-123-r3 == pkg" \
+	-c 'cat/pkg-123-r3' 'pkg'
+test c02 "cat/pkg-123-r3 == !<cat/pkg-123" \
+	-c 'cat/pkg-123-r3' '!<cat/pkg-123'
+test c03 "cat/pkg-123-r3 != !<cat/pkg-124" \
+	-c 'cat/pkg-123-r3' '!<cat/pkg-124'
+test c04 "cat/pkg-123-r3 < cat/pkg-123-r4" \
+	-c 'cat/pkg-123-r3' 'cat/pkg-123-r4'
+test c05 "cat/pkg-123 > cat/pkg-12.3" \
+	-c 'cat/pkg-123' 'cat/pkg-12.3'
+test c07 "cat/pkg-123 == cat/pkg-123:bar" \
+	-c 'cat/pkg-123' 'cat/pkg-123:bar'              # bug 668418
+test c08 "cat/pkg-123:foo != cat/pkg-123:bar" \
+	-c 'cat/pkg-123:foo' 'cat/pkg-123:bar'
+test c09 "cat/pkg-123:foo == cat/pkg-123:foo=" \
+	-c 'cat/pkg-123:foo' 'cat/pkg-123:foo='
+test c10 "cat/pkg-123:foo == cat/pkg-123:=" \
+	-c 'cat/pkg-123:foo' 'cat/pkg-123:='
+test c11 "cat/pkg-123[!foo,bar(+),baz=] == cat/pkg-123" \
+	-c 'cat/pkg-123[!foo,bar(+),baz=]' 'cat/pkg-123'
+
 end
