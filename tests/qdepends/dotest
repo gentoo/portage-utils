@@ -24,11 +24,14 @@ test() {
 	# qdepends output is based on a hash, which may differ based on
 	# endiannes, so sort the output so we get a deterministic set
 	while IFS= read -r line ; do
+		echo "I read: ${line} with ${SHELL}/${BASH}"
 		case "${line}" in
-		*:*)
+		*":"*)
+			echo "I found a :"
 			# dinosaur style for Travis' /bin/bash (or /bin/sh?)
 			pkg="$(echo "${line}" | cut -d':' -f1)"
 			line="$(echo "${line}" | cut -d':' -f2-)"
+			echo "I think pkg=${pkg}, line=${line}"
 			env LC_ALL=C \
 				echo "${pkg}: $(echo "${line}" | xargs -n1 | sort | xargs)"
 			;;
