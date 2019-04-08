@@ -51,6 +51,7 @@ test() {
 
 testf() { test "$1" "${3:-0}" -f "$2"; }
 
+if false ; then
 # basic sanity checks
 testf 00 '|' 1
 testf 01 ''
@@ -63,6 +64,7 @@ testf 05 '|| ( || ( || ( x ) a ) )'
 
 # hande use deps on atoms #470180
 testf 06 'a[foo(+)]'
+fi
 
 testQ() { test "$1" "${3:-0}" -Q "$2"; }
 
