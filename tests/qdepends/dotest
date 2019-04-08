@@ -26,9 +26,11 @@ test() {
 	while IFS= read -r line ; do
 		case "${line}" in
 		*:*)
-			pkg=${line%%:*}
+			# dinosaur style for Travis' /bin/bash (or /bin/sh?)
+			pkg="$(echo "${line}" | cut -d':' -f1)"
+			line="$(echo "${line}" | cut -d':' -f2-)"
 			env LC_ALL=C \
-				echo "${pkg}: $(echo ${line#*:} | xargs -n1 | sort | xargs)"
+				echo "${pkg}: $(echo "${line}" | xargs -n1 | sort | xargs)"
 			;;
 		*)
 			echo "${line}"
