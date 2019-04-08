@@ -16,14 +16,15 @@ format: |
     Pretty-print DEPEND declaration to be used in an ebuild.  This
     option initiates a very different mode of operation.  Instead of
     printing searching through packages, it constructs a multi-line
-    statement in with shell syntax, to be used in an ebuild.  Each
+    statement with shell syntax, to be used in an ebuild.  Each
     argument is turned into a separate DEPEND variable declaration.  You
     need to quote dependency strings in order for them to be printed as
     a single dependency declaration.  When used with the \fB\-q\fR
     option, only the pretty-printed dependency declaration is printed,
     e.g.\ the DEPEND= part is skipped.
 verbose: |
-    When in reverse dep mode, print the package or packages that matched
-    the query from the dependency line being searched.  This includes
-    specifiers and versions.
-quiet: Suppress DEPEND= output for \fB\-f\fR.
+    Pretty-print atoms output, per DEPEND-variable.  This is much like
+    the \fB-f\fR option, but uses as input the dependency info from the
+    matches.
+quiet: Suppress DEPEND= output for \fB\-f\fR.  Only print the matching
+    atom for \fB\-Q\fR.

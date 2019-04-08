@@ -1,25 +1,19 @@
 .SH "EXAMPLES"
 For finding out what a particular package depends on for building, you could do:
 .nf
-	$ \fIqdepends nano\fR
+	$ \fIqdepends -d nano\fR
 	app-editors/nano-2.3.2: >=sys-libs/ncurses-5.9-r1[unicode] sys-apps/file ...
 .fi
 This tells us that we have \fIapp-editors/nano-2.3.2\fR installed and it depends
 on ncurses (among other things).
-
-Searching for packages that actually have nano in their RDEPEND:
+.P
+Searching for packages that actually depend on logrotate:
 .nf
-	$ \fIqdepends -rQ nano\fR
-	virtual/editor-0
+	$ \fIqdepends -qQ logrotate\fR
+	sys-apps/portage-2.3.18: !<app-admin/logrotate-3.8.0
 .fi
-Tells us that \fIvirtual/editor\fR depends on nano.  However, if we
-wanted to know in what way a package specifically depends on another
-package, one can use \fB\-v\fR.
-.nf
-	$ \fIqdepends -vrQ logrotate\fR
-	sys-apps/portage-2.3.18: >=app-admin/logrotate-3.8.0
-.fi
-This way we can see there is a specific dependency expressed here.  If
+The \fB-q\fR flag suppresses the entire list of dependencies here, so we
+can quickly see what specific dependency is expressed here.  If
 the above had used \fI<logrotate-3\fR, for example, no matches would be
 returned.  Not using any specifiers allows to reveal in what way a
 dependency is expressed.

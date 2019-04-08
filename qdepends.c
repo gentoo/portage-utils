@@ -210,10 +210,10 @@ qdepends_results_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 						ret = 1;
 
 						if (!firstmatch) {
-							printf("%s%s/%s%s%s%s",
+							printf("%s%s/%s%s%s:",
 									BOLD, catname, BLUE,
-									qdep_name_only ? datom->PN : pkgname, NORM,
-									quiet ? "" : ":");
+									qdep_name_only ? datom->PN : pkgname,
+									NORM);
 						}
 						firstmatch = true;
 
