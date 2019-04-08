@@ -26,7 +26,8 @@ test() {
 	while IFS= read -r line ; do
 		if [[ ${line} == *:* ]] ; then
 			pkg=${line%%:*}
-			echo "${pkg}: $(echo ${line#*:} | xargs -n1 | sort | xargs)"
+			env LC_ALL=C \
+				echo "${pkg}: $(echo ${line#*:} | xargs -n1 | sort | xargs)"
 		else
 			echo "${line}"
 		fi
