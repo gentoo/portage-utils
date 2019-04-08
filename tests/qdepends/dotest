@@ -28,8 +28,7 @@ test() {
 		*:*)
 			pkg=${line%%:*}
 			line=${line#*:}
-			env LC_ALL=C \
-				echo "${pkg}: $(echo "${line}" | tr ' ' '\n' | sort | xargs)"
+			echo "${pkg}: sort? $(echo "${line}" | tr ' ' '\n' | LC_ALL=C sort | xargs)"
 			;;
 		*)
 			echo "${line}"
