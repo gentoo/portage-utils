@@ -28,7 +28,7 @@ test() {
 		*:*)
 			pkg=${line%%:*}
 			line=${line#*:}
-			echo "${pkg}: sort? $(echo "${line}" | tr ' ' '\n' | LC_ALL=C sort | xargs)"
+			echo "${pkg}: $(echo "${line}" | tr ' ' '\n' | LC_ALL=C sort | xargs)"
 			;;
 		*)
 			echo "${line}"
