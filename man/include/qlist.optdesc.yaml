@@ -16,9 +16,6 @@ columns: |
     space-separated columns.
 verbose: |
     When used with \fB\-I\fR, print the package version next to name.
-    When listing the package contents, a single \fB\-v\fR displays
-    symlinks with an arrow (\->) to their target.  Two or more \fB\-v\fR
-    adds colour to the entries and prints like \fB\-I\fR before the
-    listing.  Shows disabled USE-flags when used with \fB\-U\fR.
-quiet: |
-    Suppresses the parenthesis around the USE-flags when used with \fB\-U\fR.
+    When listing the package contents, \fB\-v\fR displays symlinks with
+    an arrow (\->) to their target.  Shows disabled USE-flags when used
+    with \fB\-U\fR.

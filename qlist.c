@@ -88,11 +88,11 @@ cmpstringp(const void *p1, const void *p2)
  * -redis -sasl (-selinux) -sqlite -srs -syslog" 0 KiB
  *
  * % qlist -IUv exim
- * mail-mta/exim-4.92 (-arc -dane -dcc dkim -dlfunc dmarc dnsdb -doc
+ * mail-mta/exim-4.92 -arc -dane -dcc dkim -dlfunc dmarc dnsdb -doc
  * -dovecot-sasl -dsn exiscan-acl -gnutls -idn ipv6 -ldap -libressl lmtp
  * maildir -mbx -mysql -nis pam -perl -pkcs11 -postgres prdr -proxy
  * -radius -redis -sasl -selinux spf -sqlite -srs ssl -syslog tcpd tpda
- * -X)
+ * -X
  */
 static char _umapstr_buf[BUFSIZ];
 static const char *
@@ -134,8 +134,7 @@ umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
 
 #define add_to_buf(fmt, Cb, use, Ce) \
 	bufp += snprintf(bufp, sizeof(_umapstr_buf) - (bufp - _umapstr_buf), \
-			" %s%s" fmt "%s", \
-			bufp == _umapstr_buf && !quiet ? "(" : "", Cb, use, Ce);
+			" %s" fmt "%s", Cb, use, Ce);
 
 	/* merge join, ensure inputs are sorted (Portage does this, but just
 	 * to be sure) */
@@ -162,9 +161,6 @@ umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
 			add_to_buf("-%s", DKBLUE, iuse_argv[i], NORM);
 		}
 	}
-
-	bufp += snprintf(bufp, sizeof(_umapstr_buf) - (bufp - _umapstr_buf),
-			"%s", bufp == _umapstr_buf || quiet ? "" : ")");
 
 	freeargv(iuse_argc, iuse_argv);
 	freeargv(use_argc, use_argv);
@@ -352,7 +348,8 @@ qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 	/* see if this cat/pkg is requested */
 	for (i = optind; i < state->argc; ++i)
-		if (qlist_match(pkg_ctx, state->argv[i], &state->atoms[i - optind], state->exact))
+		if (qlist_match(pkg_ctx, state->argv[i],
+					&state->atoms[i - optind], state->exact))
 			break;
 	if ((i == state->argc) && (state->argc != optind))
 		return 0;
@@ -362,7 +359,8 @@ qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		atom = (verbose ? NULL : atom_explode(pkgname));
 		if ((state->all + state->just_pkgname) < 2) {
 			if (state->show_slots && !pkg_ctx->slot) {
-				q_vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot, &pkg_ctx->slot_len);
+				q_vdb_pkg_eat(pkg_ctx, "SLOT",
+						&pkg_ctx->slot, &pkg_ctx->slot_len);
 				/* chop off the subslot if desired */
 				if (state->show_slots == 1) {
 					char *s = strchr(pkg_ctx->slot, '/');
@@ -396,8 +394,9 @@ qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 			return 1;
 	}
 
-	if (verbose > 1)
-		printf("%s%s/%s%s%s\n%sCONTENTS%s:\n", BOLD, catname, BLUE, pkgname, NORM, DKBLUE, NORM);
+	if (verbose)
+		printf("%s%s/%s%s%s %sCONTENTS%s:\n",
+				BOLD, catname, BLUE, pkgname, NORM, DKBLUE, NORM);
 
 	fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
 	if (fp == NULL)
@@ -420,18 +419,20 @@ qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		switch (e->type) {
 			case CONTENTS_DIR:
 				if (state->show_dir)
-					printf("%s%s%s/\n", verbose > 1 ? YELLOW : "" , e->name, verbose > 1 ? NORM : "");
+					printf("%s%s%s/\n", YELLOW, e->name, NORM);
 				break;
 			case CONTENTS_OBJ:
 				if (state->show_obj)
-					printf("%s%s%s\n", verbose > 1 ? WHITE : "" , e->name, verbose > 1 ? NORM : "");
+					printf("%s%s%s\n", WHITE, e->name, NORM);
 				break;
 			case CONTENTS_SYM:
 				if (state->show_sym) {
 					if (verbose)
-						printf("%s%s -> %s%s\n", verbose > 1 ? CYAN : "", e->name, e->sym_target, NORM);
+						printf("%s%s%s -> %s%s%s\n",
+								CYAN, e->name, NORM,
+								CYAN, e->sym_target, NORM);
 					else
-						printf("%s\n", e->name);
+						printf("%s%s%s\n", CYAN, e->name, NORM);
 				}
 				break;
 		}
