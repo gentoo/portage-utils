@@ -1,3 +1,4 @@
+sys-fs/mtools-4.0.13 CONTENTS:
 /usr/bin/minfo -> mtools
 /usr/bin/mpartition -> mtools
 /usr/bin/mrd -> mtools
