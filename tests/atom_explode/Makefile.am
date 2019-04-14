@@ -12,8 +12,6 @@ e_LDADD = $(top_builddir)/libq/libq.la \
 		  $(LIB_CLOCK_GETTIME) \
 		  $(LIB_EACCESS)
 
-test check: dotest basic
-
 basic: e
 	./e < $(s)/basic.tests > basic
 	diff -u $(s)/basic.good basic
@@ -21,7 +19,7 @@ basic: e
 dotest: e
 	$(s)/dotest
 
+check-local: dotest basic
+
 clean-local:
 	rm -f me py q basic
-
-.PHONY: all basic dotest test check clean-local

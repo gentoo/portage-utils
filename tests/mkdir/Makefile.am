@@ -12,9 +12,7 @@ m_LDADD = $(top_builddir)/libq/libq.la \
 		  $(LIB_CLOCK_GETTIME) \
 		  $(LIB_EACCESS)
 
-test check: dotest
-
 dotest: m
 	$(s)/dotest
 
-.PHONY: all basic dotest test check
+check-local: dotest

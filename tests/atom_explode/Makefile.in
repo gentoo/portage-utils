@@ -1629,6 +1629,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 	$(MAKE) $(AM_MAKEFLAGS) $(check_PROGRAMS)
+	$(MAKE) $(AM_MAKEFLAGS) check-local
 check: check-am
 all-am: Makefile
 installdirs:
@@ -1735,7 +1736,7 @@ uninstall-am:
 
 .MAKE: check-am install-am install-strip
 
-.PHONY: CTAGS GTAGS TAGS all all-am check check-am clean \
+.PHONY: CTAGS GTAGS TAGS all all-am check check-am check-local clean \
 	clean-checkPROGRAMS clean-generic clean-libtool clean-local \
 	cscopelist-am ctags ctags-am distclean distclean-compile \
 	distclean-generic distclean-libtool distclean-tags distdir dvi \
@@ -1752,8 +1753,6 @@ uninstall-am:
 .PRECIOUS: Makefile
 
 
-test check: dotest basic
-
 basic: e
 	./e < $(s)/basic.tests > basic
 	diff -u $(s)/basic.good basic
@@ -1761,10 +1760,10 @@ basic: e
 dotest: e
 	$(s)/dotest
 
+check-local: dotest basic
+
 clean-local:
 	rm -f me py q basic
-
-.PHONY: all basic dotest test check clean-local
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
