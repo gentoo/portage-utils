@@ -1543,10 +1543,58 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I autotools/m4
-SUBDIRS = autotools/gnulib libq
+SUBDIRS = \
+	autotools/gnulib \
+	libq \
+	tests/atom_explode \
+	tests/copy_file \
+	tests/mkdir \
+	tests/rmspace \
+	$(NULL)
+
 portagedir = $(sysconfdir)/portage
 postsyncddir = $(portagedir)/repo.postsync.d
 dist_postsyncd_SCRIPTS = repo.postsync/q-reinit
+APPLETS = \
+	q \
+	qatom \
+	qcache \
+	qcheck \
+	qdepends \
+	qfile \
+	qgrep \
+	qlist \
+	qlop \
+	qmerge \
+	qpkg \
+	qsearch \
+	qsize \
+	qtbz2 \
+	qtegrity \
+	quse \
+	qxpak \
+	$(NULL)
+
+dist_man_MANS = \
+	man/q.1 \
+	man/qatom.1 \
+	man/qcache.1 \
+	man/qcheck.1 \
+	man/qdepends.1 \
+	man/qfile.1 \
+	man/qgrep.1 \
+	man/qlist.1 \
+	man/qlop.1 \
+	man/qmerge.1 \
+	man/qpkg.1 \
+	man/qsearch.1 \
+	man/qsize.1 \
+	man/qtbz2.1 \
+	man/qtegrity.1 \
+	man/quse.1 \
+	man/qxpak.1 \
+	$(NULL)
+
 q_SOURCES = \
 	main.c \
 	q.c \
@@ -1565,147 +1613,34 @@ q_SOURCES = \
 	qtbz2.c \
 	qtegrity.c \
 	quse.c \
-	qxpak.c
+	qxpak.c \
+	$(NULL)
 
+q_CPPFLAGS = \
+	-I$(top_srcdir)/libq \
+	-I$(top_builddir)/autotools/gnulib \
+	-I$(top_srcdir)/autotools/gnulib \
+	$(NULL)
 
-# @@@ GEN START @@@ #
-q_CPPFLAGS = -I$(top_srcdir)/libq -I$(top_builddir)/autotools/gnulib \
-	-I$(top_srcdir)/autotools/gnulib -DAPPLET_q -DAPPLET_qatom \
-	-DAPPLET_qcache -DAPPLET_qcheck -DAPPLET_qdepends \
-	-DAPPLET_qfile -DAPPLET_qgrep -DAPPLET_qlist -DAPPLET_qlop \
-	-DAPPLET_qmerge -DAPPLET_qpkg -DAPPLET_qsearch -DAPPLET_qsize \
-	-DAPPLET_qtbz2 -DAPPLET_qtegrity -DAPPLET_quse -DAPPLET_qxpak
 q_LDADD = \
 	$(top_builddir)/libq/libq.la \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
 	-liniparser \
 	$(LIB_CLOCK_GETTIME) \
-	$(LIB_EACCESS)
+	$(LIB_EACCESS) \
+	$(NULL)
 
 TMAKE = \
 	$(MAKE) -C $(abs_top_srcdir)/tests \
 		abs_top_builddir="$(abs_top_builddir)" \
 		abs_top_srcdir="$(abs_top_srcdir)"
 
+EXTRA_DIST = \
+	autotools/m4/gnulib-cache.m4 \
+	applets.h \
+	tests \
+	$(NULL)
 
-# Start off with base values which we append below
-dist_man_MANS = man/q.1 man/qatom.1 man/qcache.1 man/qcheck.1 \
-	man/qdepends.1 man/qfile.1 man/qgrep.1 man/qlist.1 man/qlop.1 \
-	man/qmerge.1 man/qpkg.1 man/qsearch.1 man/qsize.1 man/qtbz2.1 \
-	man/qtegrity.1 man/quse.1 man/qxpak.1
-APPLETS = q qatom qcache qcheck qdepends qfile qgrep qlist qlop qmerge \
-	qpkg qsearch qsize qtbz2 qtegrity quse qxpak
-EXTRA_DIST = autotools/m4/gnulib-cache.m4 applets.h config.h \
-	include_applets.h libq/atom_compare.c libq/atom_explode.c \
-	libq/basename.c libq/busybox.h libq/colors.c libq/copy_file.c \
-	libq/hash_fd.c libq/human_readable.c libq/i18n.h libq/libq.c \
-	libq/libq.h libq/md5_sha1_sum.c libq/prelink.c libq/profile.c \
-	libq/rmspace.c libq/safe_io.c libq/scandirat.c libq/set.c \
-	libq/vdb.c libq/vdb_get_next_dir.c libq/xarray.c \
-	libq/xasprintf.c libq/xchdir.c libq/xmalloc.c libq/xmkdir.c \
-	libq/xregex.c libq/xsystem.c main.c main.h porting.h q.c \
-	qatom.c qcache.c qcheck.c qdepends.c qfile.c qglsa.c qgrep.c \
-	qlist.c qlop.c qmerge.c qpkg.c qsearch.c qsize.c qtbz2.c \
-	qtegrity.c quse.c qxpak.c tests/Makefile \
-	tests/atom_compare/.gitignore tests/atom_compare/Makefile \
-	tests/atom_compare/atom-compare.py \
-	tests/atom_compare/static.good \
-	tests/atom_compare/static.q.good \
-	tests/atom_compare/static.q.tests \
-	tests/atom_compare/static.tests tests/atom_explode/.gitignore \
-	tests/atom_explode/Makefile tests/atom_explode/atom-explode.py \
-	tests/atom_explode/basic.good tests/atom_explode/basic.tests \
-	tests/atom_explode/dotest tests/atom_explode/ebuildlist.xz \
-	tests/atom_explode/portageatoms.xz tests/atom_explode/test.c \
-	tests/copy_file/.gitignore tests/copy_file/Makefile \
-	tests/copy_file/dotest tests/copy_file/test.c tests/init.sh \
-	tests/install/.gitignore tests/install/Makefile \
-	tests/install/dotest tests/mkdir/.gitignore \
-	tests/mkdir/Makefile tests/mkdir/dotest tests/mkdir/test.c \
-	tests/profile/Makefile tests/profile/dotest \
-	tests/profile/profile1/etc/parent.conf \
-	tests/profile/profile1/etc/portage/make.conf \
-	tests/profile/profile1/etc/portage/subdir/file.conf \
-	tests/profile/profile1/etc/portage/this.level.conf \
-	tests/qatom/Makefile tests/qatom/dotest tests/qcheck/Makefile \
-	tests/qcheck/dotest tests/qcheck/list01.good \
-	tests/qcheck/list02.good tests/qcheck/list03.good \
-	tests/qcheck/list04.good tests/qcheck/list05.good \
-	tests/qcheck/list06.good tests/qcheck/list07.good \
-	tests/qcheck/list08.good tests/qcheck/list09.good \
-	tests/qcheck/root/a-b/pkg-1.0/CONTENTS \
-	tests/qcheck/root/a-b/pkg-1.0/SLOT \
-	tests/qcheck/root/a-b/pkg-1.0/repository \
-	tests/qcheck/root/bin/bad-md5 tests/qcheck/root/bin/bad-mtime \
-	tests/qcheck/root/bin/bad-mtime-obj \
-	tests/qcheck/root/bin/bad-sha1 tests/qcheck/root/bin/good-md5 \
-	tests/qcheck/root/bin/good-sha1 \
-	tests/qcheck/root/cat/pkg-1/CONTENTS \
-	tests/qcheck/root/cat/pkg-1/SLOT \
-	tests/qcheck/root/cat/pkg-1/repository tests/qdepends/Makefile \
-	tests/qdepends/dotest tests/qdepends/list01.good \
-	tests/qdepends/list02.good tests/qdepends/list03.good \
-	tests/qdepends/list04.good tests/qdepends/list05.good \
-	tests/qdepends/list06.good tests/qdepends/list07.good \
-	tests/qdepends/list08.good \
-	tests/qdepends/root/app-arch/cpio-2.11/CONTENTS \
-	tests/qdepends/root/app-arch/cpio-2.11/SLOT \
-	tests/qdepends/root/app-arch/cpio-2.11/repository \
-	tests/qdepends/root/x11-apps/xdm-1.1.11-r3/DEPEND \
-	tests/qdepends/root/x11-apps/xdm-1.1.11-r3/RDEPEND \
-	tests/qdepends/root/x11-apps/xdm-1.1.11-r3/USE \
-	tests/qfile/Makefile tests/qfile/dotest tests/qlist/Makefile \
-	tests/qlist/dotest tests/qlist/list01.good \
-	tests/qlist/list02.good tests/qlist/list03.good \
-	tests/qlist/list04.good tests/qlist/list05.good \
-	tests/qlist/list06.good tests/qlist/list07.good \
-	tests/qlist/list08.good tests/qlist/list09.good \
-	tests/qlist/list10.good tests/qlist/list11.good \
-	tests/qlist/list12.good tests/qlist/list13.good \
-	tests/qlist/list14.good tests/qlist/list15.good \
-	tests/qlist/list16.good tests/qlist/root/-merge-foo/CONTENTS \
-	tests/qlist/root/a-b/a-0/CONTENTS \
-	tests/qlist/root/a-b/a-0/SLOT \
-	tests/qlist/root/a-b/a-0/repository \
-	tests/qlist/root/a-b/b-0/CONTENTS \
-	tests/qlist/root/a-b/b-0/SLOT \
-	tests/qlist/root/a-b/b-0/repository \
-	tests/qlist/root/app-arch/cpio-2.11/CONTENTS \
-	tests/qlist/root/app-arch/cpio-2.11/SLOT \
-	tests/qlist/root/app-arch/cpio-2.11/repository \
-	tests/qlist/root/cat/pkg-1/CONTENTS \
-	tests/qlist/root/cat/pkg-1/SLOT \
-	tests/qlist/root/cat/pkg-1/repository \
-	tests/qlist/root/cat/sub-2/CONTENTS \
-	tests/qlist/root/cat/sub-2/SLOT \
-	tests/qlist/root/cat/sub-2/repository \
-	tests/qlist/root/sys-fs/mtools-4.0.13/CONTENTS \
-	tests/qlist/root/sys-fs/mtools-4.0.13/SLOT \
-	tests/qlist/root/sys-fs/mtools-4.0.13/repository \
-	tests/qlop/Makefile tests/qlop/aborts.log tests/qlop/dotest \
-	tests/qlop/list01.good tests/qlop/list02.good \
-	tests/qlop/list03.good tests/qlop/list04.good \
-	tests/qlop/list05.good tests/qlop/list06.good \
-	tests/qlop/list07.good tests/qlop/list08.good \
-	tests/qlop/list09.good tests/qlop/sync.log \
-	tests/qlop/test04.good tests/qmerge/Makefile \
-	tests/qmerge/dotest tests/qmerge/packages/Packages \
-	tests/qmerge/packages/sys-devel/qmerge-test-1.3.tbz2 \
-	tests/qtbz2/Makefile tests/qtbz2/dotest tests/quse/Makefile \
-	tests/quse/dotest tests/quse/list01.good \
-	tests/quse/portdir/profiles/arch.list \
-	tests/quse/portdir/profiles/desc/elibc.desc \
-	tests/quse/portdir/profiles/desc/one.desc \
-	tests/quse/portdir/profiles/desc/two.desc \
-	tests/quse/portdir/profiles/use.desc \
-	tests/quse/portdir/profiles/use.local.desc \
-	tests/qxpak/Makefile tests/qxpak/dotest \
-	tests/qxpak/list01.good tests/qxpak/list02.good \
-	tests/reinitialize/Makefile tests/reinitialize/dotest \
-	tests/rmspace/.gitignore tests/rmspace/Makefile \
-	tests/rmspace/dotest tests/rmspace/test.c \
-	tests/source/Makefile tests/source/dotest tests/source/space \
-	tests/subdir.mk tests/tests.h
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -2636,7 +2571,7 @@ uninstall-man: uninstall-man1
 install-exec-hook:
 	cd $(DESTDIR)$(bindir); \
 	for applet in $(APPLETS) ; do \
-		[ ! -e "$$applet" ] && ln -s q $${applet} ; \
+		[ ! -e "$${applet}" ] && $(LN_S) q $${applet} ; \
 	done
 check-hook:
 	$(TMAKE) check
@@ -2644,7 +2579,6 @@ clean-local:
 	$(TMAKE) clean
 	rm -f $(APPLETS)
 check: check-hook
-# @@@ GEN START @@@ #
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
