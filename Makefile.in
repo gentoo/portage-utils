@@ -438,6 +438,7 @@ BITSIZEOF_WINT_T = @BITSIZEOF_WINT_T@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CONFIG_EPREFIX = @CONFIG_EPREFIX@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -1546,10 +1547,8 @@ ACLOCAL_AMFLAGS = -I autotools/m4
 SUBDIRS = \
 	autotools/gnulib \
 	libq \
-	tests/atom_explode \
-	tests/copy_file \
-	tests/mkdir \
-	tests/rmspace \
+	. \
+	tests \
 	$(NULL)
 
 portagedir = $(sysconfdir)/portage
@@ -1629,11 +1628,6 @@ q_LDADD = \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS) \
 	$(NULL)
-
-TMAKE = \
-	$(MAKE) -C $(abs_top_srcdir)/tests \
-		abs_top_builddir="$(abs_top_builddir)" \
-		abs_top_srcdir="$(abs_top_srcdir)"
 
 EXTRA_DIST = \
 	autotools/m4/gnulib-cache.m4 \
@@ -2573,12 +2567,9 @@ install-exec-hook:
 	for applet in $(APPLETS) ; do \
 		[ ! -e "$${applet}" ] && $(LN_S) q $${applet} ; \
 	done
-check-hook:
-	$(TMAKE) check
+
 clean-local:
-	$(TMAKE) clean
 	rm -f $(APPLETS)
-check: check-hook
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

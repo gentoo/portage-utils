@@ -3,10 +3,8 @@ ACLOCAL_AMFLAGS = -I autotools/m4
 SUBDIRS = \
 	autotools/gnulib \
 	libq \
-	tests/atom_explode \
-	tests/copy_file \
-	tests/mkdir \
-	tests/rmspace \
+	. \
+	tests \
 	$(NULL)
 
 portagedir = $(sysconfdir)/portage
@@ -94,16 +92,8 @@ install-exec-hook:
 		[ ! -e "$${applet}" ] && $(LN_S) q $${applet} ; \
 	done
 
-TMAKE = \
-	$(MAKE) -C $(abs_top_srcdir)/tests \
-		abs_top_builddir="$(abs_top_builddir)" \
-		abs_top_srcdir="$(abs_top_srcdir)"
-check-hook:
-	$(TMAKE) check
 clean-local:
-	$(TMAKE) clean
 	rm -f $(APPLETS)
-check: check-hook
 
 EXTRA_DIST = \
 	autotools/m4/gnulib-cache.m4 \

@@ -1,24 +1,17 @@
-. /etc/init.d/functions.sh 2>/dev/null || :
+. @CONFIG_EPREFIX@lib/gentoo/functions.sh 2>/dev/null || :
 
-setup_path() {
-	local d=$PWD
-	while [[ $d != "/" ]] ; do
-		[[ -e $d/q ]] && break
-		d=${d%/*}
-	done
-	PATH=$d:$PATH
-}
-setup_path
+# get the built q in PATH
+PATH="@abs_top_builddir@:$PATH"
 
 setup_env() {
 	local a=${0%/*}
 	[[ ${a} == "." ]] && a=${PWD}
 	a=${a##*/}
 
-	: ${b:=.}
-	: ${s:=.}
-	: ${atb:=${PWD}/../..}
-	: ${ats:=${PWD}/../..}
+	: ${b:=@builddir@}
+	: ${s:=@srcdir@}
+	: ${atb:=@abs_top_builddir@}
+	: ${ats:=@abs_top_srcdir@}
 	: ${ab:=${atb}/tests/${a}}
 	: ${as:=${ats}/tests/${a}}
 

@@ -26,7 +26,9 @@ case "$with_eprefix" in
 	*/) with_eprefix="$with_eprefix" ;;
 	*)  with_eprefix="${with_eprefix}/" ;;
 esac
-AC_DEFINE_UNQUOTED([CONFIG_EPREFIX], ["$with_eprefix"], [path for Gentoo/Prefix project])
+AC_DEFINE_UNQUOTED([CONFIG_EPREFIX], ["$with_eprefix"],
+				   [Gentoo Prefix offset path])
+AC_SUBST([CONFIG_EPREFIX], ["$with_eprefix"])
 
 AX_CFLAGS_WARN_ALL
 AC_DEFUN([PT_CHECK_CFLAG],[AX_CHECK_COMPILER_FLAGS([$1],[CFLAGS="$CFLAGS $1"])])
@@ -59,9 +61,26 @@ AC_CONFIG_FILES([
 	Makefile
 	libq/Makefile
 	autotools/gnulib/Makefile
+	tests/init.sh
+	tests/Makefile
+	tests/atom_compare/Makefile
 	tests/atom_explode/Makefile
 	tests/copy_file/Makefile
+	tests/install/Makefile
 	tests/mkdir/Makefile
+	tests/profile/Makefile
+	tests/qatom/Makefile
+	tests/qcheck/Makefile
+	tests/qdepends/Makefile
+	tests/qfile/Makefile
+	tests/qlist/Makefile
+	tests/qlop/Makefile
+	tests/qmerge/Makefile
+	tests/qtbz2/Makefile
+	tests/quse/Makefile
+	tests/qxpak/Makefile
+	tests/reinitialize/Makefile
 	tests/rmspace/Makefile
+	tests/source/Makefile
 ])
 AC_OUTPUT

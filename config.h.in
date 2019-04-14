@@ -22,7 +22,7 @@
    non-IEEE-754 'long double' values. */
 #undef CHECK_PRINTF_SAFE
 
-/* path for Gentoo/Prefix project */
+/* Gentoo Prefix offset path */
 #undef CONFIG_EPREFIX
 
 /* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP

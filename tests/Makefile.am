@@ -1,11 +1,7 @@
-TESTS = \
+SUBDIRS = \
 	reinitialize atom_compare atom_explode copy_file mkdir rmspace \
 	qatom qcheck qdepends qfile qlist qlop qmerge qtbz2 quse qxpak \
 	install profile source
-
-all: check
-
-test check: $(TESTS:=_subdir)
 
 %_subdir:
 	$(Q)cd $(@:_subdir=) || exit 1; \
@@ -13,8 +9,3 @@ test check: $(TESTS:=_subdir)
 	ret=$$?; \
 	echo "$$out"; \
 	exit $$ret
-
-clean:
-	for test in $(TESTS) ; do \
-		$(MAKE) -C $$test clean ; \
-	done

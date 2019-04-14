@@ -639,6 +639,7 @@ am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+CONFIG_EPREFIX
 LIBTOOL_DEPS
 LT_SYS_LIBRARY_PATH
 OTOOL64
@@ -34304,6 +34305,8 @@ cat >>confdefs.h <<_ACEOF
 #define CONFIG_EPREFIX "$with_eprefix"
 _ACEOF
 
+CONFIG_EPREFIX="$with_eprefix"
+
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -35005,7 +35008,7 @@ fi
 # -Wno-format-nonliteral
 # -Wno-expansion-to-defined
 
-ac_config_files="$ac_config_files Makefile libq/Makefile autotools/gnulib/Makefile tests/atom_explode/Makefile tests/copy_file/Makefile tests/mkdir/Makefile tests/rmspace/Makefile"
+ac_config_files="$ac_config_files Makefile libq/Makefile autotools/gnulib/Makefile tests/init.sh tests/Makefile tests/atom_compare/Makefile tests/atom_explode/Makefile tests/copy_file/Makefile tests/install/Makefile tests/mkdir/Makefile tests/profile/Makefile tests/qatom/Makefile tests/qcheck/Makefile tests/qdepends/Makefile tests/qfile/Makefile tests/qlist/Makefile tests/qlop/Makefile tests/qmerge/Makefile tests/qtbz2/Makefile tests/quse/Makefile tests/qxpak/Makefile tests/reinitialize/Makefile tests/rmspace/Makefile tests/source/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -36095,10 +36098,27 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "libq/Makefile") CONFIG_FILES="$CONFIG_FILES libq/Makefile" ;;
     "autotools/gnulib/Makefile") CONFIG_FILES="$CONFIG_FILES autotools/gnulib/Makefile" ;;
+    "tests/init.sh") CONFIG_FILES="$CONFIG_FILES tests/init.sh" ;;
+    "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
+    "tests/atom_compare/Makefile") CONFIG_FILES="$CONFIG_FILES tests/atom_compare/Makefile" ;;
     "tests/atom_explode/Makefile") CONFIG_FILES="$CONFIG_FILES tests/atom_explode/Makefile" ;;
     "tests/copy_file/Makefile") CONFIG_FILES="$CONFIG_FILES tests/copy_file/Makefile" ;;
+    "tests/install/Makefile") CONFIG_FILES="$CONFIG_FILES tests/install/Makefile" ;;
     "tests/mkdir/Makefile") CONFIG_FILES="$CONFIG_FILES tests/mkdir/Makefile" ;;
+    "tests/profile/Makefile") CONFIG_FILES="$CONFIG_FILES tests/profile/Makefile" ;;
+    "tests/qatom/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qatom/Makefile" ;;
+    "tests/qcheck/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qcheck/Makefile" ;;
+    "tests/qdepends/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qdepends/Makefile" ;;
+    "tests/qfile/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qfile/Makefile" ;;
+    "tests/qlist/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qlist/Makefile" ;;
+    "tests/qlop/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qlop/Makefile" ;;
+    "tests/qmerge/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qmerge/Makefile" ;;
+    "tests/qtbz2/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qtbz2/Makefile" ;;
+    "tests/quse/Makefile") CONFIG_FILES="$CONFIG_FILES tests/quse/Makefile" ;;
+    "tests/qxpak/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qxpak/Makefile" ;;
+    "tests/reinitialize/Makefile") CONFIG_FILES="$CONFIG_FILES tests/reinitialize/Makefile" ;;
     "tests/rmspace/Makefile") CONFIG_FILES="$CONFIG_FILES tests/rmspace/Makefile" ;;
+    "tests/source/Makefile") CONFIG_FILES="$CONFIG_FILES tests/source/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
