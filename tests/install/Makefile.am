@@ -2,12 +2,8 @@ this_subdir = tests/install
 b = $(abs_top_builddir)/$(this_subdir)
 s = $(abs_top_srcdir)/$(this_subdir)
 
-all: check
-
-test check:
+check-local:
 	$(Q)$(s)/dotest
 
-clean:
+clean-local:
 	rm -f $(b)/q `find $(b) -type l`
-
-.PHONY: all check clean test

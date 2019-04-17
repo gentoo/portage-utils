@@ -4,9 +4,7 @@ s = $(abs_top_srcdir)/$(this_subdir)
 atb = $(abs_top_builddir)
 mkdir = $(if $(wildcard $(dir $(1))),:,mkdir -p "$(dir $(1))")
 
-all: test
-
-test check: static static.q portage
+check-local: static static.q portage
 
 t = \
 	@set -f && \
@@ -38,7 +36,7 @@ static.q: $(s)/static.q.tests $(atb)/q
 portage: $(s)/static.tests $(s)/atom-compare.py
 	$(call t)
 
-clean:
+clean-local:
 	rm -f $(b)/static $(b)/static.q $(b)/portage
 
 .PHONY: all check clean test

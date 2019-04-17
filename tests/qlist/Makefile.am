@@ -1,11 +1,5 @@
 this_subdir = tests/qlist
 s = $(abs_top_srcdir)/$(this_subdir)
 
-all: check
-
-test check:
+check-local:
 	$(Q)$(s)/dotest
-
-clean:
-
-.PHONY: all check clean test

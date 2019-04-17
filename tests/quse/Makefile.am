@@ -2,12 +2,8 @@ this_subdir = tests/quse
 b = $(abs_top_builddir)/$(this_subdir)
 s = $(abs_top_srcdir)/$(this_subdir)
 
-all: check
-
-test check:
+check-local:
 	$(Q)$(s)/dotest
 
-clean:
+clean-local:
 	rm -f $(b)/PORTDIR-* $(b)/*.squashfs
-
-.PHONY: all check clean test
