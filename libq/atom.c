@@ -160,6 +160,11 @@ atom_explode(const char *atom)
 	if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL) {
 		ret->PN = ptr + 1;
 		*ptr = '\0';
+
+		/* set PN to NULL if there's nothing */
+		if (ret->PN[0] == '\0')
+			ret->PN = NULL;
+
 		/* eat extra crap in case it exists, this is a feature to allow
 		 * /path/to/pkg.ebuild, doesn't work with prefix operators
 		 * though */
@@ -168,6 +173,13 @@ atom_explode(const char *atom)
 	} else {
 		ret->PN = ret->CATEGORY;
 		ret->CATEGORY = NULL;
+	}
+
+	if (ret->PN == NULL) {
+		/* atom has no name, this is it */
+		ret->P = NULL;
+		ret->PVR = NULL;
+		return ret;
 	}
 
 	/* hunt down build with USE dependencies */
@@ -378,15 +390,22 @@ int
 atom_compare(const depend_atom *a1, const depend_atom *a2)
 {
 	/* sanity check that at most one has operators */
-	if (a1->pfx_op != ATOM_OP_NONE || a1->sfx_op != ATOM_OP_NONE) {
-		/* this is bogus, so punt it */
-		if (a2->pfx_op != ATOM_OP_NONE || a2->sfx_op != ATOM_OP_NONE)
+	if (a1->pfx_op != ATOM_OP_NONE ||
+			a1->sfx_op != ATOM_OP_NONE ||
+			a1->blocker != ATOM_BL_NONE)
+	{
+		/* is the other also having operators, then punt it */
+		if (a2->pfx_op != ATOM_OP_NONE ||
+				a2->sfx_op != ATOM_OP_NONE ||
+				a2->blocker != ATOM_BL_NONE)
 			return NOT_EQUAL;
+
 		/* swap a1 & a2 so that a2 is the atom with operators */
 		const depend_atom *as = a2;
 		a2 = a1;
 		a1 = as;
 	}
+
 	atom_operator pfx_op = a2->pfx_op;
 	atom_operator sfx_op = a2->sfx_op;
 
@@ -437,6 +456,9 @@ atom_compare(const depend_atom *a1, const depend_atom *a2)
 	if (a1->PN && a2->PN) {
 		if (strcmp(a1->PN, a2->PN))
 			return NOT_EQUAL;
+	} else if (a1->CATEGORY && a2->CATEGORY) {
+		/* if CAT is set, and one side has empty PN, accept as match */
+		return a2->blocker != ATOM_BL_NONE ? NOT_EQUAL : EQUAL;
 	} else if (a1->PN || a2->PN)
 		return NOT_EQUAL;
 
