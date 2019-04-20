@@ -25,7 +25,7 @@
   `ACCEPT_LICENSE=" bar"`
 
 - q\_vdb\_foreach\_pkg should have variant that takes an atom (or just
-  cat?) to reduce search space
+  cat?) to reduce search space, same for cache\_foreach\_pkg
 
 # Atoms
 
