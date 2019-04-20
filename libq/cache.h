@@ -11,6 +11,14 @@
 #define _CACHE_H 1
 
 #include "atom.h"
+#include "vdb.h"
+
+typedef struct cache_ctx {
+	q_vdb_ctx *dir_ctx;
+	enum { CACHE_UNSET = 0, CACHE_METADATA_MD5, CACHE_METADATA_PMS } cachetype;
+} cache_ctx;
+#define cache_cat_ctx q_vdb_cat_ctx
+#define cache_pkg_ctx q_vdb_pkg_ctx
 
 typedef struct {
 	char *_data;
@@ -30,23 +38,30 @@ typedef struct {
 	char *PROVIDE;       /* line 14 */
 	char *EAPI;
 	char *PROPERTIES;
-	depend_atom *atom;
 	/* These are MD5-Cache only */
 	char *DEFINED_PHASES;
 	char *REQUIRED_USE;
 	char *_eclasses_;
 	char *_md5_;
-} portage_cache;
+} cache_pkg_meta;
 
-portage_cache *
-cache_read_file(int portcachedir_type, const char *file);
-void cache_free(portage_cache *cache);
+typedef int (cache_pkg_cb)(cache_pkg_ctx *, void *priv);
+typedef int (cache_cat_filter)(cache_cat_ctx *, void *priv);
 
-enum {
-	CACHE_EBUILD = 1,
-	CACHE_METADATA = 2,
-	CACHE_METADATA_PMS = 10,
-	CACHE_METADATA_MD5 = 11,
-};
+cache_ctx *cache_open(const char *sroot, const char *portdir);
+void cache_close(cache_ctx *ctx);
+cache_cat_ctx *cache_open_cat(cache_ctx *ctx, const char *name);
+cache_cat_ctx *cache_next_cat(cache_ctx *ctx);
+void cache_close_cat(cache_cat_ctx *cat_ctx);
+cache_pkg_ctx *cache_open_pkg(cache_cat_ctx *cat_ctx, const char *name);
+cache_pkg_ctx *cache_next_pkg(cache_cat_ctx *cat_ctx);
+cache_pkg_meta *cache_pkg_read(cache_pkg_ctx *pkg_ctx);
+void cache_close_meta(cache_pkg_meta *cache);
+void cache_close_pkg(cache_pkg_ctx *pkg_ctx);
+int cache_foreach_pkg(const char *sroot, const char *portdir,
+		cache_pkg_cb callback, void *priv, cache_cat_filter filter);
+int cache_foreach_pkg_sorted(const char *sroot, const char *portdir,
+		cache_pkg_cb callback, void *priv,
+		void *catsortfunc, void *pkgsortfunc);
 
 #endif

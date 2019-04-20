@@ -14,8 +14,9 @@
 #include <sys/stat.h>
 #include <xalloc.h>
 
-#include "atom.h"
 #include "cache.h"
+#include "scandirat.h"
+#include "vdb.h"
 
 #ifdef EBUG
 static void
@@ -48,34 +49,92 @@ cache_dump(portage_cache *cache)
 }
 #endif
 
-static portage_cache *cache_read_file_pms(const char *file);
-static portage_cache *cache_read_file_md5(const char *file);
-
-portage_cache *
-cache_read_file(int portcachedir_type, const char *file)
+static const char portcachedir_pms[] = "metadata/cache";
+static const char portcachedir_md5[] = "metadata/md5-cache";
+cache_ctx *
+cache_open(const char *sroot, const char *portdir)
 {
-	if (portcachedir_type == CACHE_METADATA_MD5)
-		return(cache_read_file_md5(file));
-	else if (portcachedir_type == CACHE_METADATA_PMS)
-		return(cache_read_file_pms(file));
-	warn("Unknown metadata cache type!");
+	q_vdb_ctx *dir;
+	cache_ctx *ret;
+	char buf[_Q_PATH_MAX];
+
+	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_md5);
+	dir = q_vdb_open(sroot, buf);
+	if (dir != NULL) {
+		ret = xmalloc(sizeof(cache_ctx));
+		ret->dir_ctx = dir;
+		ret->cachetype = CACHE_METADATA_MD5;
+		return ret;
+	}
+
+	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_pms);
+	dir = q_vdb_open(sroot, buf);
+	if (dir != NULL) {
+		ret = xmalloc(sizeof(cache_ctx));
+		ret->dir_ctx = dir;
+		ret->cachetype = CACHE_METADATA_PMS;
+		return ret;
+	}
+
 	return NULL;
 }
 
-static portage_cache *
-cache_read_file_pms(const char *file)
+void
+cache_close(cache_ctx *ctx)
+{
+	q_vdb_close(ctx->dir_ctx);
+	free(ctx);
+}
+
+cache_cat_ctx *
+cache_open_cat(cache_ctx *ctx, const char *name)
+{
+	cache_cat_ctx *ret = q_vdb_open_cat(ctx->dir_ctx, name);
+	if (ret != NULL)
+		ret->ctx = (q_vdb_ctx *)ctx;
+	return ret;
+}
+
+cache_cat_ctx *
+cache_next_cat(cache_ctx *ctx)
+{
+	return q_vdb_next_cat(ctx->dir_ctx);
+}
+
+void
+cache_close_cat(cache_cat_ctx *cat_ctx)
+{
+	q_vdb_close_cat(cat_ctx);
+}
+
+cache_pkg_ctx *
+cache_open_pkg(cache_cat_ctx *cat_ctx, const char *name)
+{
+	return q_vdb_open_pkg(cat_ctx, name);
+}
+
+cache_pkg_ctx *
+cache_next_pkg(cache_cat_ctx *cat_ctx)
+{
+	return q_vdb_next_pkg(cat_ctx);
+}
+
+static cache_pkg_meta *
+cache_read_file_pms(cache_pkg_ctx *pkg_ctx)
 {
 	struct stat s;
 	char *ptr;
 	FILE *f;
-	portage_cache *ret = NULL;
+	cache_pkg_meta *ret = NULL;
 	size_t len;
+	char buf[_Q_PATH_MAX];
 
-	if ((f = fopen(file, "r")) == NULL)
+	if ((f = fdopen(pkg_ctx->fd, "r")) == NULL)
 		goto err;
 
-	if (fstat(fileno(f), &s) != 0)
+	if (fstat(pkg_ctx->fd, &s) != 0)
 		goto err;
+
 	len = sizeof(*ret) + s.st_size + 1;
 	ret = xzalloc(len);
 	ptr = (char*)ret;
@@ -83,11 +142,10 @@ cache_read_file_pms(const char *file)
 	if ((off_t)fread(ret->_data, 1, s.st_size, f) != s.st_size)
 		goto err;
 
-	ret->atom = atom_explode(file);
 	ret->DEPEND = ret->_data;
 #define next_line(curr, next) \
 	if ((ptr = strchr(ret->curr, '\n')) == NULL) { \
-		warn("Invalid cache file '%s'", file); \
+		warn("Invalid cache file for '%s'", buf); \
 		goto err; \
 	} \
 	ret->next = ptr+1; \
@@ -110,43 +168,48 @@ cache_read_file_pms(const char *file)
 #undef next_line
 	ptr = strchr(ptr+1, '\n');
 	if (ptr == NULL) {
-		warn("Invalid cache file '%s' - could not find end of cache data", file);
+		warn("Invalid cache file for '%s' - could not find end of cache data",
+				buf);
 		goto err;
 	}
 	*ptr = '\0';
 
 	fclose(f);
+	pkg_ctx->fd = -1;
 
 	return ret;
 
 err:
-	if (f) fclose(f);
-	if (ret) cache_free(ret);
+	if (f)
+		fclose(f);
+	pkg_ctx->fd = -1;
+	if (ret)
+		cache_close_meta(ret);
 	return NULL;
 }
 
-static portage_cache *
-cache_read_file_md5(const char *file)
+static cache_pkg_meta *
+cache_read_file_md5(cache_pkg_ctx *pkg_ctx)
 {
 	struct stat s;
 	char *ptr, *endptr;
 	FILE *f;
-	portage_cache *ret = NULL;
+	cache_pkg_meta *ret = NULL;
 	size_t len;
+	char buf[_Q_PATH_MAX];
 
-	if ((f = fopen(file, "r")) == NULL)
+	if ((f = fdopen(pkg_ctx->fd, "r")) == NULL)
 		goto err;
 
-	if (fstat(fileno(f), &s) != 0)
+	if (fstat(pkg_ctx->fd, &s) != 0)
 		goto err;
+
 	len = sizeof(*ret) + s.st_size + 1;
 	ret = xzalloc(len);
 	ptr = (char*)ret;
 	ret->_data = ptr + sizeof(*ret);
 	if ((off_t)fread(ret->_data, 1, s.st_size, f) != s.st_size)
 		goto err;
-
-	ret->atom = atom_explode(file);
 
 	/* We have a block of key=value\n data.
 	 * KEY=VALUE\n
@@ -166,7 +229,8 @@ cache_read_file_md5(const char *file)
 	ptr = ret->_data;
 	endptr = strchr(ptr, '\0');
 	if (endptr == NULL) {
-			warn("Invalid cache file '%s' - could not find end of cache data", file);
+			warn("Invalid cache file for '%s': "
+					"could not find end of cache data", buf);
 			goto err;
 	}
 
@@ -176,14 +240,14 @@ cache_read_file_md5(const char *file)
 		keyptr = ptr;
 		valptr = strchr(ptr, '=');
 		if (valptr == NULL) {
-			warn("Invalid cache file '%s' val", file);
+			warn("Invalid cache file for '%s': missing val", buf);
 			goto err;
 		}
 		*valptr = '\0';
 		valptr++;
 		ptr = strchr(valptr, '\n');
 		if (ptr == NULL) {
-			warn("Invalid cache file '%s' key", file);
+			warn("Invalid cache file for '%s': missing key", buf);
 			goto err;
 		}
 		*ptr = '\0';
@@ -209,26 +273,140 @@ cache_read_file_md5(const char *file)
 		assign_var(REQUIRED_USE);
 		assign_var(_eclasses_);
 		assign_var(_md5_);
-		warn("Cache file '%s' with unknown key %s", file, keyptr);
+		warn("Cache file for '%s' has unknown key %s", buf, keyptr);
 	}
 #undef assign_var
 #undef assign_var_cmp
 
 	fclose(f);
+	pkg_ctx->fd = -1;
 
 	return ret;
 
 err:
-	if (f) fclose(f);
-	if (ret) cache_free(ret);
+	if (f)
+		fclose(f);
+	pkg_ctx->fd = -1;
+	if (ret)
+		cache_close_meta(ret);
+	return NULL;
+}
+
+cache_pkg_meta *
+cache_pkg_read(cache_pkg_ctx *pkg_ctx)
+{
+	cache_ctx *ctx = (cache_ctx *)(pkg_ctx->cat_ctx->ctx);
+
+	if (pkg_ctx->fd == -1) {
+		pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name,
+				O_RDONLY|O_CLOEXEC);
+		if (pkg_ctx->fd == -1)
+			return NULL;
+	}
+
+	if (ctx->cachetype == CACHE_METADATA_MD5) {
+		return cache_read_file_md5(pkg_ctx);
+	} else if (ctx->cachetype == CACHE_METADATA_PMS) {
+		return cache_read_file_pms(pkg_ctx);
+	}
+
+	warn("Unknown metadata cache type!");
 	return NULL;
 }
 
 void
-cache_free(portage_cache *cache)
+cache_close_meta(cache_pkg_meta *cache)
 {
 	if (!cache)
 		errf("Cache is empty !");
-	atom_implode(cache->atom);
 	free(cache);
+}
+
+void
+cache_close_pkg(cache_pkg_ctx *pkg_ctx)
+{
+	q_vdb_close_pkg(pkg_ctx);
+}
+
+int
+cache_foreach_pkg(const char *sroot, const char *portdir,
+		q_vdb_pkg_cb callback, void *priv, q_vdb_cat_filter filter)
+{
+	cache_ctx *ctx;
+	cache_cat_ctx *cat_ctx;
+	cache_pkg_ctx *pkg_ctx;
+	int ret;
+
+	ctx = cache_open(sroot, portdir);
+	if (!ctx)
+		return EXIT_FAILURE;
+
+	ret = 0;
+	while ((cat_ctx = cache_next_cat(ctx))) {
+		if (filter && !filter(cat_ctx, priv))
+			continue;
+		while ((pkg_ctx = cache_next_pkg(cat_ctx))) {
+			ret |= callback(pkg_ctx, priv);
+			cache_close_pkg(pkg_ctx);
+		}
+	}
+
+	cache_close(ctx);
+	return ret;
+}
+
+int
+cache_foreach_pkg_sorted(const char *sroot, const char *portdir,
+		q_vdb_pkg_cb callback, void *priv,
+		void *catsortfunc, void *pkgsortfunc)
+{
+	cache_ctx *ctx;
+	cache_cat_ctx *cat_ctx;
+	cache_pkg_ctx *pkg_ctx;
+	int ret = 0;
+	int c;
+	int p;
+	int cat_cnt;
+	int pkg_cnt;
+	struct dirent **cat_de;
+	struct dirent **pkg_de;
+
+	ctx = cache_open(sroot, portdir);
+	if (!ctx)
+		return EXIT_FAILURE;
+
+	if (catsortfunc == NULL)
+		catsortfunc = alphasort;
+	if (pkgsortfunc == NULL)
+		pkgsortfunc = alphasort;
+
+	cat_cnt = scandirat(ctx->dir_ctx->vdb_fd,
+			".", &cat_de, q_vdb_filter_cat, catsortfunc);
+	for (c = 0; c < cat_cnt; ++c) {
+		cat_ctx = cache_open_cat(ctx, cat_de[c]->d_name);
+		if (!cat_ctx)
+			continue;
+
+		pkg_cnt = scandirat(ctx->dir_ctx->vdb_fd,
+				cat_de[c]->d_name, &pkg_de, q_vdb_filter_pkg, pkgsortfunc);
+		for (p = 0; p < pkg_cnt; ++p) {
+			if (pkg_de[p]->d_name[0] == '-')
+				continue;
+
+			pkg_ctx = cache_open_pkg(cat_ctx, pkg_de[p]->d_name);
+			if (!pkg_ctx)
+				continue;
+
+			ret |= callback(pkg_ctx, priv);
+
+			cache_close_pkg(pkg_ctx);
+		}
+		scandir_free(pkg_de, pkg_cnt);
+
+		cache_close_cat(cat_ctx);
+	}
+	scandir_free(cat_de, cat_cnt);
+
+	cache_close(ctx);
+	return ret;
 }
