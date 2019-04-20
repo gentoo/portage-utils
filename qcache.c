@@ -2,7 +2,8 @@
  * Copyright 2005-2019 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
- * Copyright 2006 Thomas A. Cort - <tcort@gentoo.org>
+ * Copyright 2006      Thomas A. Cort - <tcort@gentoo.org>
+ * Copyright 2019-     Fabian Groffen - <grobian@gentoo.org>
  */
 
 #include "main.h"
@@ -52,41 +53,23 @@ static const char * const qcache_opts_help[] = {
 };
 #define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, NULL, lookup_applet_idx("qcache"))
 
-/********************************************************************/
-/* Structs                                                          */
-/********************************************************************/
-
 typedef struct {
-	const char *overlay;
-	const char *category;
-	const char *package;
-	const char *ebuild;
-	portage_cache *cache_data;
-	unsigned char cur;
-	unsigned char num;
+	depend_atom *qatom;
+	depend_atom *lastatom;
+	int *keywordsbuf;
+	size_t keywordsbuflen;
+	const char *arch;
+	cache_pkg_cb *runfunc;
 } qcache_data;
 
-/********************************************************************/
-/* Global Variables                                                 */
-/********************************************************************/
-
-static set *archs;
-static char **archlist;
-static int archlist_count;
+static set *archs = NULL;
+static char **archlist = NULL;
+static size_t archlist_count;
 static size_t arch_longest_len;
 const char status[3] = {'-', '~', '+'};
-int qcache_skip, qcache_test_arch;
-char *qcache_matchpkg = NULL, *qcache_matchcat = NULL;
-
-/********************************************************************/
-/* Enumerations                                                     */
-/********************************************************************/
+int qcache_test_arch = 0;
 
 enum { none = 0, testing, stable, minus };
-
-/********************************************************************/
-/* Keyword functions                                                */
-/********************************************************************/
 
 /*
  * int decode_status(char c);
@@ -109,8 +92,6 @@ decode_status(char c)
 }
 
 /*
- * int decode_arch(const char *arch);
- *
  * Decode the architecture string
  *
  * IN:
@@ -138,8 +119,6 @@ decode_arch(const char *arch)
 }
 
 /*
- * void print_keywords(char *category, char *ebuild, int *keywords);
- *
  * Prints the keywords to stdout
  *
  * IN:
@@ -150,31 +129,24 @@ static void
 print_keywords(const char *category, const char *ebuild, int *keywords)
 {
 	char **arch = archlist;
-	int a;
-	char *package;
+	size_t a;
 
-	package = xstrdup(ebuild);
-	package[strlen(ebuild)-7] = '\0';
-
-	printf("%s%s/%s%s%s ", BOLD, category, BLUE, package, NORM);
+	printf("%s%s/%s%s%s ", BOLD, category, BLUE, ebuild, NORM);
 	for (a = 0; a < archlist_count; a++) {
 		switch (keywords[a]) {
 			case stable:
 				printf("%s%c%s%s ", GREEN, status[keywords[a]], arch[a], NORM);
 				break;
 			case testing:
-				printf("%s%c%s%s ", YELLOW, status[keywords[a]], arch[0], NORM);
+				printf("%s%c%s%s ", YELLOW, status[keywords[a]], arch[a], NORM);
 				break;
 		}
 	}
 
 	printf("\n");
-	free(package);
 }
 
 /*
- * int read_keywords(char *s, int *keywords);
- *
  * Read the KEYWORDS string and decode the values
  *
  * IN:
@@ -188,7 +160,8 @@ read_keywords(char *s, int *keywords)
 {
 	char *arch, delim[2] = { ' ', '\0' };
 	size_t slen;
-	int a;
+	size_t a;
+	int i;
 
 	if (!s)
 		return -1;
@@ -206,138 +179,18 @@ read_keywords(char *s, int *keywords)
 
 	arch = strtok(s, delim);
 	do {
-		a = decode_arch(arch);
-		if (a == -1)
+		i = decode_arch(arch);
+		if (i == -1)
 			continue;
-		keywords[a] = decode_status(arch[0]);
+		keywords[i] = decode_status(arch[0]);
 	} while ((arch = strtok(NULL, delim)));
 
 	return 0;
 }
 
 /*
- * portage_cache *qcache_read_cache_file(const char *file);
- *
- * Read a file from the edb cache and store data in portage_cache.
- *
- * IN:
- *  const char *filename - cache file to read
- * OUT:
- *  portage_cache *pkg - cache data
- * ERR:
- *  NULL is returned when an error occurs.
- */
-static portage_cache *
-qcache_read_cache_file(const char *filename)
-{
-	struct stat s;
-	char *buf;
-	FILE *f;
-	portage_cache *ret = NULL;
-	int linelen;
-	size_t len, buflen;
-
-	if ((f = fopen(filename, "r")) == NULL)
-		goto err;
-
-	if (fstat(fileno(f), &s) != 0) {
-		fclose(f);
-		goto err;
-	}
-
-	buf = NULL;
-	len = sizeof(*ret) + s.st_size + 1;
-	ret = xzalloc(len);
-
-	while ((linelen = getline(&buf, &buflen, f)) >= 0) {
-		rmspace_len(buf, (size_t)linelen);
-
-		if (strncmp(buf, "DEPEND=", 7) == 0)
-			ret->DEPEND = xstrdup(buf + 7);
-
-		if (strncmp(buf, "DESCRIPTION=", 12) == 0)
-			ret->DESCRIPTION = xstrdup(buf + 12);
-
-		if (strncmp(buf, "HOMEPAGE=", 9) == 0)
-			ret->HOMEPAGE = xstrdup(buf + 9);
-
-		if (strncmp(buf, "INHERITED=", 10) == 0)
-			ret->INHERITED = xstrdup(buf + 10);
-
-		if (strncmp(buf, "IUSE=", 4) == 0)
-			ret->IUSE = xstrdup(buf + 4);
-
-		if (strncmp(buf, "KEYWORDS=", 9) == 0)
-			ret->KEYWORDS = xstrdup(buf + 9);
-
-		if (strncmp(buf, "LICENSE=", 8) == 0)
-			ret->LICENSE = xstrdup(buf + 8);
-
-		if (strncmp(buf, "PDEPEND=", 8) == 0)
-			ret->PDEPEND = xstrdup(buf + 8);
-
-		if (strncmp(buf, "PROVIDE=", 8) == 0)
-			ret->PROVIDE = xstrdup(buf + 8);
-
-		if (strncmp(buf, "RDEPEND=", 8) == 0)
-			ret->RDEPEND = xstrdup(buf + 8);
-
-		if (strncmp(buf, "RESTRICT=", 9) == 0)
-			ret->RESTRICT = xstrdup(buf + 9);
-
-		if (strncmp(buf, "SLOT=", 5) == 0)
-			ret->SLOT = xstrdup(buf + 5);
-
-		if (strncmp(buf, "SRC_URI=", 8) == 0)
-			ret->SRC_URI = xstrdup(buf + 8);
-	}
-
-	free(buf);
-	ret->atom = atom_explode(filename);
-	fclose(f);
-
-	return ret;
-
- err:
-	if (ret)
-		cache_free(ret);
-	return NULL;
-}
-
-/*
- * void qcache_free_data(portage_cache *cache);
- *
- * free()'s a portage_cache
- *
- * IN:
- *  portage_cache *cache - the portage_cache to be free()'d
- */
-static void
-qcache_free_data(portage_cache *cache)
-{
-	int i;
-	char **c;
-
-	if (!cache)
-		errf("Cache is empty !");
-
-	for (i = 0, c = (char**) cache; i < 15; i++)
-		if (c[i])
-			free(c[i]);
-
-	atom_implode(cache->atom);
-	free(cache);
-}
-
-/********************************************************************/
-/* Comparison functions                                             */
-/********************************************************************/
-
-/*
- * int qcache_vercmp(const void *x, const void *y);
- *
  * Compare 2 struct dirent d_name strings based with atom_compare_str().
- * Used with dirscan() to sort ebuild filenames by version.
+ * Used with dirscan() to sort ebuild filenames by version, reversed.
  *
  * IN:
  *  2 (const struct dirent **) with d_name filled in
@@ -350,357 +203,163 @@ static int
 qcache_vercmp(const struct dirent **x, const struct dirent **y)
 {
 	switch (atom_compare_str((*x)->d_name, (*y)->d_name)) {
-		case NEWER: return -1;
-		case OLDER: return  1;
-		default:    return  0;
+		case EQUAL:      return  0;
+		case NEWER:      return -1;
+		case OLDER:      return  1;
+		default:         return strcmp((*x)->d_name, (*y)->d_name);
 	}
 }
 
-/********************************************************************/
-/* Selection functions                                              */
-/********************************************************************/
-
-/*
- * int qcache_file_select(const struct dirent *entry);
- *
- * Selects filenames that do not begin with '.' and are not name "metadata.xml"
- *  or that file matches ".cpickle"
- *
- * IN:
- *  const struct dirent *entry - entry to check
- * OUT:
- *  int - 0 if filename begins with '.' or is "metadata.xml", otherwise 1
- */
 static int
-qcache_file_select(const struct dirent *entry)
+qcache_imlate(cache_pkg_ctx *pkg_ctx, void *priv)
 {
-	return !(entry->d_name[0] == '.' ||
-			(strcmp(entry->d_name, "metadata.xml") == 0) ||
-			(strstr(entry->d_name, ".cpickle") != 0));
-}
+	size_t a;
+	qcache_data *data = (qcache_data *)priv;
 
-/*
- * int qcache_ebuild_select(const struct dirent *entry);
- *
- * Select filenames that end in ".ebuild"
- *
- * IN:
- *  const struct dirent *entry - entry to check
- * OUT:
- *  int - 1 if the filename ends in ".ebuild", otherwise 0
- */
-static int
-qcache_ebuild_select(const struct dirent *entry)
-{
-	return ((strlen(entry->d_name) > 7) &&
-			!strcmp(entry->d_name+strlen(entry->d_name)-7, ".ebuild"));
-}
-
-/********************************************************************/
-/* Traversal function                                               */
-/********************************************************************/
-
-static void qcache_load_arches(const char *overlay);
-
-/*
- * int qcache_traverse(void (*func)(qcache_data*));
- *
- * visit every version of every package of every category in the tree
- *
- * IN:
- *  void (*func)(qcache_data*) - function to call
- * OUT:
- *  int - 0 on success.
- * ERR:
- *  exit or return -1 on failure.
- */
-static int
-qcache_traverse_overlay(void (*func)(qcache_data*), const char *overlay)
-{
-	qcache_data data = {
-		.overlay = overlay,
-	};
-	char *catpath, *pkgpath, *ebuildpath, *cachepath;
-	int i, j, k, len, num_cat, num_pkg, num_ebuild;
-	struct dirent **categories, **packages, **ebuilds;
-
-	xasprintf(&catpath, "%s/metadata/md5-cache", overlay);
-
-	if (-1 == (num_cat = scandir(catpath, &categories,
-					qcache_file_select, alphasort)))
-	{
-		errp("%s", catpath);
-		free(catpath);
-	}
-
-	if (!num_cat)
-		warn("%s is empty!", catpath);
-
-	/* traverse categories */
-	for (i = 0; i < num_cat; i++) {
-		xasprintf(&pkgpath, "%s/%s", overlay, categories[i]->d_name);
-
-		if (-1 == (num_pkg = scandir(pkgpath, &packages,
-						qcache_file_select, alphasort)))
-		{
-			if (errno != ENOENT)
-				warnp("Found a cache dir, but unable to process %s", pkgpath);
-			free(categories[i]);
-			free(pkgpath);
-			continue;
-		}
-
-		if (qcache_matchcat) {
-			if (strcmp(categories[i]->d_name, qcache_matchcat) != 0) {
-				scandir_free(packages, num_pkg);
-				free(categories[i]);
-				free(pkgpath);
-				continue;
-			}
-		}
-
-		/* traverse packages */
-		for (j = 0; j < num_pkg; j++) {
-			xasprintf(&ebuildpath, "%s/%s/%s",
-					overlay, categories[i]->d_name, packages[j]->d_name);
-
-			if (-1 == (num_ebuild = scandir(ebuildpath, &ebuilds,
-							qcache_ebuild_select, qcache_vercmp)))
-			{
-				/* Do not complain about spurious files */
-				if (errno != ENOTDIR)
-					warnp("%s", ebuildpath);
-				free(packages[j]);
-				free(ebuildpath);
-				continue;
-			}
-
-			if (qcache_matchpkg) {
-				if (strcmp(packages[j]->d_name, qcache_matchpkg) != 0) {
-					scandir_free(ebuilds, num_ebuild);
-					free(packages[j]);
-					free(ebuildpath);
-					continue;
-				}
-			}
-
-			qcache_skip = 0;
-
-			/* traverse ebuilds */
-			data.num = num_ebuild;
-			for (k = 0; k < num_ebuild; k++) {
-				len = xasprintf(&cachepath, "%s/%s/%s",
-						catpath, categories[i]->d_name, ebuilds[k]->d_name);
-				cachepath[len - 7] = '\0'; /* remove ".ebuild" */
-
-				data.category = categories[i]->d_name;
-				data.package = packages[j]->d_name;
-				data.ebuild = ebuilds[k]->d_name;
-				data.cur = k + 1;
-				data.cache_data = qcache_read_cache_file(cachepath);
-
-				if (data.cache_data != NULL) {
-					if (!qcache_skip)
-						func(&data);
-
-					qcache_free_data(data.cache_data);
-				} else {
-					static bool warned = false;
-					if (!warned) {
-						warned = true;
-						warnp("unable to read cache '%s'\n"
-						      "\tperhaps you need to `egencache`?", cachepath);
-					}
-				}
-
-				free(ebuilds[k]);
-				free(cachepath);
-			}
-
-			free(packages[j]);
-			free(ebuilds);
-			free(ebuildpath);
-		}
-
-		free(categories[i]);
-		free(packages);
-		free(pkgpath);
-	}
-
-	free(categories);
-	free(catpath);
-
-	return 0;
-}
-
-static int
-qcache_traverse(void (*func)(qcache_data*))
-{
-	int ret;
-	size_t n;
-	const char *overlay;
-
-	/* Preload all the arches. Not entirely correctly (as arches are bound
-	 * to overlays if set), but oh well. */
-	array_for_each(overlays, n, overlay)
-		qcache_load_arches(overlay);
-
-	ret = 0;
-	array_for_each(overlays, n, overlay)
-		ret |= qcache_traverse_overlay(func, overlay);
-
-	func(NULL);
-
-	return ret;
-}
-
-/********************************************************************/
-/* functors                                                         */
-/********************************************************************/
-
-static void
-qcache_imlate(qcache_data *data)
-{
-	int *keywords;
-	int a;
-
-	if (!data)
-		return;
-
-	keywords = xmalloc(sizeof(*keywords) * archlist_count);
-
-	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
-		if (verbose)
-			warn("Failed to read keywords for %s%s/%s%s%s",
-				BOLD, data->category, BLUE, data->ebuild, NORM);
-		free(keywords);
-		return;
-	}
-
-	switch (keywords[qcache_test_arch]) {
+	switch (data->keywordsbuf[qcache_test_arch]) {
 		case stable:
-			qcache_skip = 1;
 		case none:
 		case minus:
 			break;
 
 		default:
-			for (a = 0; a < archlist_count && !qcache_skip; ++a) {
-				if (keywords[a] != stable)
+			/* match if any of the other arches have stable keywords */
+			for (a = 0; a < archlist_count; a++) {
+				if (data->keywordsbuf[a] != stable)
 					continue;
-				qcache_skip = 1;
-				print_keywords(data->category, data->ebuild, keywords);
+				print_keywords(pkg_ctx->cat_ctx->name, pkg_ctx->name,
+						data->keywordsbuf);
+
+				return EXIT_SUCCESS;
 			}
 	}
-	free(keywords);
+
+	return EXIT_FAILURE;
 }
 
-static void
-qcache_not(qcache_data *data)
+static int
+qcache_not(cache_pkg_ctx *pkg_ctx, void *priv)
 {
-	int *keywords;
+	qcache_data *data = (qcache_data *)priv;
 
-	if (!data)
-		return;
-
-	keywords = xmalloc(sizeof(*keywords) * archlist_count);
-
-	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
-		if (verbose)
-			warn("Failed to read keywords for %s%s/%s%s%s",
-				BOLD, data->category, BLUE, data->ebuild, NORM);
-		free(keywords);
-		return;
-	}
-
-	if (keywords[qcache_test_arch] == testing ||
-			keywords[qcache_test_arch] == stable)
+	if (data->keywordsbuf[qcache_test_arch] != testing &&
+			data->keywordsbuf[qcache_test_arch] != stable)
 	{
-		qcache_skip = 1;
-	} else if (data->cur == data->num) {
-		printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE,
-				data->package, NORM);
+		print_keywords(pkg_ctx->cat_ctx->name, pkg_ctx->name,
+				data->keywordsbuf);
+		return EXIT_SUCCESS;
 	}
 
-	free(keywords);
+	return EXIT_FAILURE;
 }
 
-static void
-qcache_all(qcache_data *data)
+static int
+qcache_all(cache_pkg_ctx *pkg_ctx, void *priv)
 {
-	int *keywords;
+	qcache_data *data = (qcache_data *)priv;
 
-	if (!data)
-		return;
-
-	keywords = xmalloc(sizeof(*keywords) * archlist_count);
-
-	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
-		if (verbose)
-			warn("Failed to read keywords for %s%s/%s%s%s",
-				BOLD, data->category, BLUE, data->ebuild, NORM);
-		free(keywords);
-		return;
-	}
-
-	if (keywords[qcache_test_arch] == stable ||
-			keywords[qcache_test_arch] == testing)
+	if (data->keywordsbuf[qcache_test_arch] == stable ||
+			data->keywordsbuf[qcache_test_arch] == testing)
 	{
-		qcache_skip = 1;
-		printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE,
-				data->package, NORM);
+		print_keywords(pkg_ctx->cat_ctx->name, pkg_ctx->name,
+				data->keywordsbuf);
+		return EXIT_SUCCESS;
 	}
 
-	free(keywords);
+	return EXIT_FAILURE;
 }
 
-static void
-qcache_dropped(qcache_data *data)
+static int
+qcache_dropped(cache_pkg_ctx *pkg_ctx, void *priv)
 {
-	static int possible = 0;
-	int *keywords, i;
+	static bool candidate = false;
+	static char pkg1[_Q_PATH_MAX];
+	static char pkg2[_Q_PATH_MAX];
+	static char *lastpkg = pkg1;
+	static char *curpkg = pkg2;
+	static char candpkg[_Q_PATH_MAX];
+	static int *candkwds = NULL;
+	static size_t candkwdslen = 0;
 
-	if (!data)
-		return;
+	qcache_data *data = (qcache_data *)priv;
+	size_t i;
+	char *p;
 
-	if (data->cur == 1)
-		possible = 0;
+	/* a keyword is "dropped", if:
+	 * - the keyword is present (stable or testing) in earlier ebuilds
+	 * - there are other stable or testing keywords in the ebuild being
+	 *   evaluated
+	 * - the keyword is absent, thus not explicitly removed -keyword */
 
-	keywords = xmalloc(sizeof(*keywords) * archlist_count);
+	/* mutt-1.10.4: amd64
+	 * mutt-1.11.1: amd64 ppc64
+	 * mutt-1.15.1: amd64           <-- this ebuild for ppc64
+	 * mutt-9999:                                                    */
 
-	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
-		if (verbose)
-			warn("Failed to read keywords for %s%s/%s%s%s",
-				BOLD, data->category, BLUE, data->ebuild, NORM);
-		free(keywords);
-		return;
+	p = lastpkg;
+	lastpkg = curpkg;
+	curpkg = p;
+	if (pkg_ctx != NULL) {
+		snprintf(curpkg, _Q_PATH_MAX, "%s/%s",
+				pkg_ctx->cat_ctx->name, pkg_ctx->name);
+	} else {
+		curpkg[0] = '\0';
 	}
-
-	if (keywords[qcache_test_arch] == testing ||
-			keywords[qcache_test_arch] == stable)
+	if (atom_compare_str(lastpkg, curpkg) == NOT_EQUAL)
 	{
-		qcache_skip = 1;
-
-		if (possible) {
-			printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE,
-					data->package, NORM);
-		}
-
-		free(keywords);
-		return;
+		/* different package, reset */
+		candidate = false;
 	}
 
-	if (!possible) {
-		/* don't count newer versions with "-*" keywords */
-		for (i = 0; i < archlist_count; ++i) {
-			if (keywords[i] == stable || keywords[i] == testing) {
-				possible = 1;
-				break;
+	if (data == NULL) {
+		if (candkwds != NULL)
+			free(candkwds);
+		return EXIT_SUCCESS;
+	}
+
+	if (candkwdslen < data->keywordsbuflen) {
+		candkwds = xrealloc(candkwds,
+				data->keywordsbuflen * sizeof(candkwds[0]));
+		candkwdslen = data->keywordsbuflen;
+	}
+
+	/* explicitly removed? */
+	if (data->keywordsbuf[qcache_test_arch] == minus)
+		return EXIT_FAILURE;
+
+	/* got a keyword? */
+	if (data->keywordsbuf[qcache_test_arch] == testing ||
+			data->keywordsbuf[qcache_test_arch] == stable)
+	{
+		if (candidate) {
+			p = strchr(candpkg, '/');
+			if (p != NULL) {
+				*p++ = '\0';
+				print_keywords(candpkg, p, candkwds);
 			}
+			candidate = false;
 		}
+		return EXIT_SUCCESS;  /* suppress further hits for this package */
 	}
 
-	free(keywords);
+	/* do others have keywords? */
+	for (i = 0; i < archlist_count; i++) {
+		if (data->keywordsbuf[i] == stable || data->keywordsbuf[i] == testing) {
+			/* we don't have a keyword, others do: candidate */
+			break;
+		}
+	}
+	if (i == archlist_count)
+		return EXIT_FAILURE;
+
+	/* keep the "highest" candidate */
+	if (!candidate) {
+		memcpy(candkwds, data->keywordsbuf,
+				data->keywordsbuflen * sizeof(candkwds[0]));
+		memcpy(candpkg, curpkg, _Q_PATH_MAX);
+		candidate = true;
+	}
+	return EXIT_FAILURE;
 }
 
 static void
@@ -712,36 +371,54 @@ print_seconds_for_earthlings(const unsigned long t)
 	mm = tt % 60; tt /= 60;
 	hh = tt % 24; tt /= 24;
 	dd = tt;
-	if (dd) printf("%s%u%s day%s, ", GREEN, dd, NORM, (dd == 1 ? "" : "s"));
-	if (hh) printf("%s%u%s hour%s, ", GREEN, hh, NORM, (hh == 1 ? "" : "s"));
-	if (mm) printf("%s%u%s minute%s, ", GREEN, mm, NORM, (mm == 1 ? "" : "s"));
+	if (dd)
+		printf("%s%u%s day%s, ", GREEN, dd, NORM, (dd == 1 ? "" : "s"));
+	if (hh)
+		printf("%s%u%s hour%s, ", GREEN, hh, NORM, (hh == 1 ? "" : "s"));
+	if (mm)
+		printf("%s%u%s minute%s, ", GREEN, mm, NORM, (mm == 1 ? "" : "s"));
 	printf("%s%u%s second%s", GREEN, ss, NORM, (ss == 1 ? "" : "s"));
 }
 
-static void
-qcache_stats(qcache_data *data)
+static int
+qcache_stats(cache_pkg_ctx *pkg_ctx, void *priv)
 {
 	static time_t runtime;
-	static set *allcats;
-	static const char *last_overlay;
 	static int numpkg  = 0;
 	static int numebld = 0;
-	static int numcat;
+	static int numcat = 0;
 	static int *packages_stable;
 	static int *packages_testing;
 	static int *current_package_keywords;
-	static int *keywords;
-	int a;
+	static const char *lastcat = NULL;
+	static char lastpkg[_Q_PATH_MAX];
+
+	size_t a;
+	depend_atom *atom;
+	qcache_data *data = (qcache_data *)priv;
 
 	/* Is this the last time we'll be called? */
 	if (!data) {
 		char **arch;
 		const char border[] = "------------------------------------------------------------------";
 
+		/* include stats for last package */
+		for (a = 0; a < archlist_count; a++) {
+			switch (current_package_keywords[a]) {
+				case stable:
+					packages_stable[a]++;
+					break;
+				case testing:
+					packages_testing[a]++;
+				default:
+					break;
+			}
+		}
+
 		printf("+%.*s+\n", 25, border);
 		printf("|   general statistics    |\n");
 		printf("+%.*s+\n", 25, border);
-		printf("| %s%13s%s | %s%7d%s |\n",
+		printf("| %s%13s%s | %s%7zd%s |\n",
 				GREEN, "architectures", NORM, BLUE, archlist_count, NORM);
 		printf("| %s%13s%s | %s%7d%s |\n",
 				GREEN, "categories", NORM, BLUE, numcat, NORM);
@@ -783,81 +460,49 @@ qcache_stats(qcache_data *data)
 
 		free(packages_stable);
 		free(packages_testing);
-		free(keywords);
 		free(current_package_keywords);
-		free_set(allcats);
-		return;
+		return EXIT_SUCCESS;
 	}
 
-	if (last_overlay != data->overlay) {
-		DIR *dir;
-		struct dirent *de;
-		char *catpath;
-
-		runtime = time(NULL);
-
-		xasprintf(&catpath, "%s/metadata/md5-cache", data->overlay);
-		dir = opendir(catpath);
-		while ((de = readdir(dir))) {
-			/* Look for all the directories in this path. */
-#if defined(DT_UNKNOWN) && defined(DT_DIR)
-			if (de->d_type == DT_UNKNOWN)
-#endif
-			{
-				struct stat s;
-				char spath[_Q_PATH_MAX * 2];
-				snprintf(spath, sizeof(spath), "%s/%s", catpath, de->d_name);
-				if (lstat(spath, &s) != 0)
-					continue;
-				if (!S_ISDIR(s.st_mode))
-					continue;
-			}
-#if defined(DT_UNKNOWN) && defined(DT_DIR)
-			else if (de->d_type != DT_DIR)
-				continue;
-#endif
-
-			if (de->d_name[0] != '.') {
-				bool ok;
-				allcats = add_set_unique(de->d_name, allcats, &ok);
-				if (ok)
-					++numcat;
-			}
-		}
-		closedir(dir);
-		free(catpath);
-
-		last_overlay = data->overlay;
-	}
-
-	if (!numpkg) {
+	if (numpkg == 0) {
+		runtime                  = time(NULL);
 		packages_stable          =
 			xcalloc(archlist_count, sizeof(*packages_stable));
 		packages_testing         =
 			xcalloc(archlist_count, sizeof(*packages_testing));
-		keywords                 =
-			xcalloc(archlist_count, sizeof(*keywords));
 		current_package_keywords =
 			xcalloc(archlist_count, sizeof(*current_package_keywords));
 	}
 
-	if (data->cur == 1) {
+	if (lastcat != pkg_ctx->cat_ctx->name)
+		numcat++;
+	lastcat = pkg_ctx->cat_ctx->name;
+
+	atom = atom_explode(pkg_ctx->name);
+	if (atom && strcmp(lastpkg, atom->PN) != 0) {
+		for (a = 0; a < archlist_count; a++) {
+			switch (current_package_keywords[a]) {
+				case stable:
+					packages_stable[a]++;
+					break;
+				case testing:
+					packages_testing[a]++;
+				default:
+					break;
+			}
+		}
+
 		numpkg++;
+		snprintf(lastpkg, sizeof(lastpkg), "%s", atom->PN);
 		memset(current_package_keywords, 0,
 				archlist_count * sizeof(*current_package_keywords));
 	}
-	++numebld;
+	atom_implode(atom);
 
-	memset(keywords, 0, archlist_count * sizeof(*keywords));
-	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
-		if (verbose)
-			warn("Failed to read keywords for %s%s/%s%s%s",
-				BOLD, data->category, BLUE, data->ebuild, NORM);
-		return;
-	}
+	numebld++;
 
-	for (a = 0; a < archlist_count; ++a) {
-		switch (keywords[a]) {
+	for (a = 0; a < archlist_count; a++) {
+		switch (data->keywordsbuf[a]) {
 			case stable:
 				current_package_keywords[a] = stable;
 				break;
@@ -869,64 +514,139 @@ qcache_stats(qcache_data *data)
 		}
 	}
 
-	if (data->cur == data->num) {
-		for (a = 0; a < archlist_count; ++a) {
-			switch (current_package_keywords[a]) {
-				case stable:
-					packages_stable[a]++;
-					break;
-				case testing:
-					packages_testing[a]++;
-				default:
-					break;
+	return EXIT_FAILURE;
+}
+
+static int
+qcache_testing_only(cache_pkg_ctx *pkg_ctx, void *priv)
+{
+	static bool candidate = false;
+	static char pkg1[_Q_PATH_MAX];
+	static char pkg2[_Q_PATH_MAX];
+	static char *lastpkg = pkg1;
+	static char *curpkg = pkg2;
+	static char candpkg[_Q_PATH_MAX];
+	static int *candkwds = NULL;
+	static size_t candkwdslen = 0;
+
+	qcache_data *data = (qcache_data *)priv;
+	char *p;
+
+	p = lastpkg;
+	lastpkg = curpkg;
+	curpkg = p;
+	if (pkg_ctx != NULL) {
+		snprintf(curpkg, _Q_PATH_MAX, "%s/%s",
+				pkg_ctx->cat_ctx->name, pkg_ctx->name);
+	} else {
+		curpkg[0] = '\0';
+	}
+	if (atom_compare_str(lastpkg, curpkg) == NOT_EQUAL)
+	{
+		/* different package, print if candidate */
+		if (candidate) {
+			p = strchr(candpkg, '/');
+			if (p != NULL) {
+				*p++ = '\0';
+				print_keywords(candpkg, p, candkwds);
 			}
+			candidate = false;
 		}
 	}
+
+	if (data == NULL) {
+		if (candkwds != NULL)
+			free(candkwds);
+		return EXIT_SUCCESS;
+	}
+
+	if (candkwdslen < data->keywordsbuflen) {
+		candkwds = xrealloc(candkwds,
+				data->keywordsbuflen * sizeof(candkwds[0]));
+		candkwdslen = data->keywordsbuflen;
+	}
+
+	/* explicitly removed or unkeyworded? */
+	if (data->keywordsbuf[qcache_test_arch] == minus ||
+			data->keywordsbuf[qcache_test_arch] == none)
+		return EXIT_FAILURE;
+
+	/* got a stable keyword? */
+	if (data->keywordsbuf[qcache_test_arch] == stable)
+		return EXIT_SUCCESS;  /* suppress further hits for this package */
+
+	/* must be testing at this point */
+
+	/* keep the "highest" candidate */
+	if (!candidate) {
+		memcpy(candkwds, data->keywordsbuf,
+				data->keywordsbuflen * sizeof(candkwds[0]));
+		memcpy(candpkg, curpkg, _Q_PATH_MAX);
+		candidate = true;
+	}
+	return EXIT_FAILURE;
 }
 
-static void
-qcache_testing_only(qcache_data *data)
+static int
+qcache_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 {
-	static int possible = 0;
 	int *keywords;
+	qcache_data *data = (qcache_data *)priv;
+	char buf[_Q_PATH_MAX];
+	depend_atom *patom = NULL;
+	cache_pkg_meta *meta;
+	int ret;
 
-	if (!data)
-		return;
+	snprintf(buf, sizeof(buf), "%s/%s",
+			pkg_ctx->cat_ctx->name, pkg_ctx->name);
+	patom = atom_explode(buf);
+	if (patom == NULL)
+		return EXIT_FAILURE;
 
-	if (data->cur == 1)
-		possible = 0;
+	if (data->qatom != NULL &&
+			atom_compare(patom, data->qatom) != EQUAL)
+	{
+		atom_implode(patom);
+		return EXIT_FAILURE;
+	}
 
-	keywords = xmalloc(sizeof(*keywords) * archlist_count);
+	if (data->lastatom != NULL &&
+			atom_compare(data->lastatom, patom) != NOT_EQUAL)
+	{
+		atom_implode(patom);
+		return EXIT_SUCCESS;
+	}
 
-	if (read_keywords(data->cache_data->KEYWORDS, keywords) < 0) {
+	keywords = data->keywordsbuf;
+	meta = cache_pkg_read(pkg_ctx);
+	if (meta == NULL) {
+		atom_implode(patom);
+		return EXIT_FAILURE;
+	}
+
+	if (read_keywords(meta->KEYWORDS, keywords) < 0) {
 		if (verbose)
 			warn("Failed to read keywords for %s%s/%s%s%s",
-				BOLD, data->category, BLUE, data->ebuild, NORM);
-		free(keywords);
-		return;
+				BOLD, pkg_ctx->cat_ctx->name, BLUE, pkg_ctx->name, NORM);
+		atom_implode(patom);
+		return EXIT_FAILURE;
 	}
 
-	if (keywords[qcache_test_arch] == stable) {
-		qcache_skip = 1;
-		free(keywords);
-		return;
+	ret = data->runfunc(pkg_ctx, priv);
+
+	if (ret == EXIT_SUCCESS) {
+		/* store CAT/PN in lastatom */
+		patom->P = patom->PN;
+		patom->PVR = patom->PN;
+		patom->PR_int = 0;
+		data->lastatom = patom;
+		patom = NULL;
+	} else {
+		atom_implode(patom);
 	}
 
-	/* the qcache_test_arch must have at least 1 ~arch keyword */
-	if (keywords[qcache_test_arch] == testing)
-		possible = 1;
-
-	if (data->cur == data->num && possible) {
-		printf("%s%s/%s%s%s\n", BOLD, data->category, BLUE,
-				data->package, NORM);
-	}
-
-	free(keywords);
+	return EXIT_SUCCESS;
 }
-
-/********************************************************************/
-/* Misc functions                                                   */
-/********************************************************************/
 
 static void
 qcache_load_arches(const char *overlay)
@@ -937,11 +657,12 @@ qcache_load_arches(const char *overlay)
 	size_t buflen;
 	char *buf;
 
-	xasprintf(&filename, "%s/profiles/arch.list", overlay);
+	xasprintf(&filename, "%s/%s/profiles/arch.list", portroot, overlay);
 	fp = fopen(filename, "re");
 	if (!fp)
 		goto done;
 
+	clear_set(archs);
 	archlist_count = 0;
 	arch_longest_len = 0;
 	buf = NULL;
@@ -956,13 +677,17 @@ qcache_load_arches(const char *overlay)
 		bool ok;
 		archs = add_set_unique(buf, archs, &ok);
 		if (ok) {
-			++archlist_count;
-			arch_longest_len = MAX(arch_longest_len, strlen(buf));
+			archlist_count++;
+			buflen = strlen(buf);
+			if (arch_longest_len < buflen)
+				arch_longest_len = buflen;
 		}
 	}
 	free(buf);
 
 	/* materialise into a list */
+	if (archlist != NULL)
+		free(archlist);
 	list_set(archs, &archlist);
 
 	fclose(fp);
@@ -970,30 +695,51 @@ qcache_load_arches(const char *overlay)
 	free(filename);
 }
 
-/*
- * int qcache_free();
- *
- * Deallocate variables (archlist)
- */
-static void
-qcache_free(void)
+static int
+qcache_traverse(cache_pkg_cb func, void *priv)
 {
-	free(archlist);
-	free_set(archs);
-}
+	int ret;
+	size_t n;
+	const char *overlay;
+	qcache_data *data = (qcache_data *)priv;
 
-/********************************************************************/
-/* main                                                             */
-/********************************************************************/
+	/* Preload all the arches. Not entirely correctly (as arches are bound
+	 * to overlays if set), but oh well. */
+	array_for_each(overlays, n, overlay)
+		qcache_load_arches(overlay);
+
+	/* allocate memory (once) for the list used by various funcs */
+	if (archlist_count > data->keywordsbuflen) {
+		data->keywordsbuf = xrealloc(data->keywordsbuf,
+				archlist_count * sizeof(data->keywordsbuf[0]));
+		data->keywordsbuflen = archlist_count;
+	}
+
+	qcache_test_arch = decode_arch(data->arch);
+	if (qcache_test_arch == -1)
+		return EXIT_FAILURE;
+
+	data->runfunc = func;
+	ret = 0;
+	array_for_each(overlays, n, overlay)
+		ret |= cache_foreach_pkg_sorted(portroot, overlay,
+				qcache_results_cb, priv, NULL, qcache_vercmp);
+
+	return ret;
+}
 
 int qcache_main(int argc, char **argv)
 {
-	int i, action = 0;
+	int i;
+	char action = '\0';
+	qcache_data data;
+	char *pkg = NULL;
+	char *cat = NULL;
 
 	while ((i = GETOPT_LONG(QCACHE, qcache, "")) != -1) {
 		switch (i) {
-			case 'p': qcache_matchpkg = optarg; break;
-			case 'c': qcache_matchcat = optarg; break;
+			case 'p': pkg = optarg; break;
+			case 'c': cat = optarg; break;
 			case 'i':
 			case 'd':
 			case 't':
@@ -1010,22 +756,56 @@ int qcache_main(int argc, char **argv)
 		}
 	}
 
+	data.arch = NULL;
 	if (optind < argc)
-		qcache_test_arch = decode_arch(argv[optind]);
+		data.arch = argv[optind];
 
-	if ((qcache_test_arch == -1 && action != 's') || optind + 1 < argc)
+	if ((data.arch == NULL && action != 's') || optind + 1 < argc)
 		qcache_usage(EXIT_FAILURE);
 
-	switch (action) {
-		case 'i': return qcache_traverse(qcache_imlate);
-		case 'd': return qcache_traverse(qcache_dropped);
-		case 't': return qcache_traverse(qcache_testing_only);
-		case 's': return qcache_traverse(qcache_stats);
-		case 'a': return qcache_traverse(qcache_all);
-		case 'n': return qcache_traverse(qcache_not);
+	if (cat != NULL) {
+		char buf[_Q_PATH_MAX];
+
+		snprintf(buf, sizeof(buf), "%s/%s", cat, pkg == NULL ? "" : pkg);
+		data.qatom = atom_explode(buf);
+		if (data.qatom == NULL) {
+			warnf("invalid cat/pkg: %s\n", buf);
+			return EXIT_FAILURE;
+		}
+	} else if (pkg != NULL) {
+		data.qatom = atom_explode(pkg);
+		if (data.qatom == NULL) {
+			warnf("invalid pkg: %s\n", pkg);
+			return EXIT_FAILURE;
+		}
+	} else {
+		data.qatom = NULL;
 	}
 
-	qcache_free();
-	qcache_usage(EXIT_FAILURE);
-	return EXIT_FAILURE;
+	archs = create_set();
+	data.lastatom = NULL;
+	data.keywordsbuf = NULL;
+	data.keywordsbuflen = 0;
+
+	switch (action) {
+		case 'i': i = qcache_traverse(qcache_imlate, &data);          break;
+		case 'd': i = qcache_traverse(qcache_dropped, &data);
+				  i = qcache_dropped(NULL, NULL);                     break;
+		case 't': i = qcache_traverse(qcache_testing_only, &data);
+				  i = qcache_testing_only(NULL, NULL);                break;
+		case 's': data.arch = "amd64";  /* doesn't matter, need to be set */
+				  i = qcache_traverse(qcache_stats, &data);
+				  i = qcache_stats(NULL, NULL);                       break;
+		case 'a': i = qcache_traverse(qcache_all, &data);             break;
+		case 'n': i = qcache_traverse(qcache_not, &data);             break;
+		default:  i = -2;                                             break;
+	}
+
+	if (data.qatom != NULL)
+		atom_implode(data.qatom);
+	free(archlist);
+	free_set(archs);
+	if (i == -2)
+		qcache_usage(EXIT_FAILURE);
+	return i;
 }
