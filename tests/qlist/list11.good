@@ -1,6 +1,6 @@
 a-b/a::a
 a-b/b::b
 app-arch/cpio::gentoo
-cat/pkg::repo
-cat/sub::repo
 sys-fs/mtools::gentoo
+virtual/pkg::repo
+virtual/sub::repo

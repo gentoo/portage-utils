@@ -1,6 +1,6 @@
 a-b/a:a-0
 a-b/b:b-0
 app-arch/cpio:0
-cat/pkg:1
-cat/sub:1
 sys-fs/mtools:0
+virtual/pkg:1
+virtual/sub:1

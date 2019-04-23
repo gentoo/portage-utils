@@ -68,6 +68,7 @@ int
 q_vdb_filter_cat(const struct dirent *de)
 {
 	int i;
+	bool founddash;
 
 #ifdef DT_UNKNOWN
 	if (de->d_type != DT_UNKNOWN &&
@@ -76,24 +77,31 @@ q_vdb_filter_cat(const struct dirent *de)
 		return 0;
 #endif
 
-	if (de->d_name[0] == '.' || de->d_name[0] == '-')
-		return 0;
-
-	for (i = 0; de->d_name[i]; ++i) {
-		if (!isalnum(de->d_name[i])) { /* [A-Za-z0-9+_.-] */
-			switch (de->d_name[i]) {
-				case '+':
-				case '_':
-				case '.':
-				case '-':
-					if (i)
-						break;
-					/* fall through */
-				default:
-					return 0;
-			}
+	/* PMS 3.1.1 */
+	founddash = false;
+	for (i = 0; de->d_name[i] != '\0'; i++) {
+		switch (de->d_name[i]) {
+			case '_':
+				break;
+			case '-':
+				founddash = true;
+				/* fall through */
+			case '+':
+			case '.':
+				if (i)
+					break;
+				return 0;
+			default:
+				if ((de->d_name[i] >= 'A' && de->d_name[i] <= 'Z') ||
+						(de->d_name[i] >= 'a' && de->d_name[i] <= 'z') ||
+						(de->d_name[i] >= '0' && de->d_name[i] <= '9'))
+					break;
+				return 0;
 		}
 	}
+	if (!founddash && strcmp(de->d_name, "virtual") != 0)
+		return 0;
+
 	return i;
 }
 

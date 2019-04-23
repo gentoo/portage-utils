@@ -68,7 +68,7 @@ test 14 0 "qlist -ICSS"
 test 15 1 "qlist -Iv lajsdflkjasdflkjasdfljasdf"
 
 # match test w/out sub-SLOT
-test 16 0 "qlist -ICSS cat/sub-2:1"
+test 16 0 "qlist -ICSS virtual/sub-2:1"
 
 cleantmpdir
 

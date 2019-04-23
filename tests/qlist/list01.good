@@ -1,6 +1,6 @@
 a-b/a
 a-b/b
 app-arch/cpio
-cat/pkg
-cat/sub
 sys-fs/mtools
+virtual/pkg
+virtual/sub
