@@ -18,13 +18,14 @@
 #include <xalloc.h>
 
 q_vdb_ctx *
-q_vdb_open(const char *sroot, const char *svdb)
+q_vdb_open2(const char *sroot, const char *svdb, bool quiet)
 {
 	q_vdb_ctx *ctx = xmalloc(sizeof(*ctx));
 
 	ctx->portroot_fd = open(sroot, O_RDONLY|O_CLOEXEC|O_PATH);
 	if (ctx->portroot_fd == -1) {
-		warnp("could not open root: %s", sroot);
+		if (!quiet)
+			warnp("could not open root: %s", sroot);
 		goto f_error;
 	}
 
@@ -35,7 +36,8 @@ q_vdb_open(const char *sroot, const char *svdb)
 	/* Cannot use O_PATH as we want to use fdopendir() */
 	ctx->vdb_fd = openat(ctx->portroot_fd, svdb, O_RDONLY|O_CLOEXEC);
 	if (ctx->vdb_fd == -1) {
-		warnp("could not open vdb: %s (in root %s)", svdb, sroot);
+		if (!quiet)
+			warnp("could not open vdb: %s (in root %s)", svdb, sroot);
 		goto cp_error;
 	}
 
@@ -52,6 +54,12 @@ q_vdb_open(const char *sroot, const char *svdb)
  f_error:
 	free(ctx);
 	return NULL;
+}
+
+q_vdb_ctx *
+q_vdb_open(const char *sroot, const char *svdb)
+{
+	return q_vdb_open2(sroot, svdb, false);
 }
 
 void

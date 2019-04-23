@@ -38,6 +38,7 @@ typedef int (q_vdb_pkg_cb)(q_vdb_pkg_ctx *, void *priv);
 typedef int (q_vdb_cat_filter)(q_vdb_cat_ctx *, void *priv);
 
 q_vdb_ctx *q_vdb_open(const char *sroot, const char *svdb);
+q_vdb_ctx *q_vdb_open2(const char *sroot, const char *svdb, bool quiet);
 void q_vdb_close(q_vdb_ctx *ctx);
 int q_vdb_filter_cat(const struct dirent *de);
 q_vdb_cat_ctx *q_vdb_open_cat(q_vdb_ctx *ctx, const char *name);
