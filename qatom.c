@@ -94,20 +94,23 @@ qatom_printf(const char *format, const depend_atom *atom, int pverbose)
 						printf("r%i", atom->PR_int);
 				} else if (!strncmp("SLOT", fmt, len)) {
 					if (showit || atom->SLOT)
-						printf(":%s%s",
-								atom->SLOT ? atom->SLOT : "-",
+						printf("%s%s%s%s%s",
+								atom->SLOT ? ":" : "<unset>",
+								atom->SLOT ? atom->SLOT : "",
+								atom->SUBSLOT ? "/" : "",
+								atom->SUBSLOT ? atom->SUBSLOT : "",
 								atom_slotdep_str[atom->slotdep]);
 				} else if (!strncmp("REPO", fmt, len)) {
 					if (showit || atom->REPO)
 						printf("::%s", HN(atom->REPO));
 				} else if (!strncmp("pfx", fmt, len)) {
 					if (showit || atom->pfx_op != ATOM_OP_NONE)
-						fputs(atom->pfx_op == ATOM_OP_NONE ?
-								"-" : atom_op_str[atom->pfx_op], stdout);
+						printf("%s", atom->pfx_op == ATOM_OP_NONE ?
+								"<unset>" : atom_op_str[atom->pfx_op]);
 				} else if (!strncmp("sfx", fmt, len)) {
 					if (showit || atom->sfx_op != ATOM_OP_NONE)
-						fputs(atom->sfx_op == ATOM_OP_NONE ?
-								"-" : atom_op_str[atom->sfx_op], stdout);
+						printf("%s", atom->sfx_op == ATOM_OP_NONE ?
+								"<unset>" : atom_op_str[atom->sfx_op]);
 				} else
 					printf("<BAD:%.*s>", (int)len, fmt);
 				++p;
