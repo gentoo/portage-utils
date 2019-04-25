@@ -80,6 +80,7 @@ typedef struct {
 	char *P;
 	atom_usedep *usedeps;
 	char *SLOT;
+	char *SUBSLOT;
 	atom_slotdep slotdep;
 	char *REPO;
 } depend_atom;

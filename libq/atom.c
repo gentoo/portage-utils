@@ -148,6 +148,12 @@ atom_explode(const char *atom)
 			ret->slotdep = ATOM_SD_ANY_IGNORE;
 			*ptr = '\0';
 		}
+		
+		/* cut in two when sub-slot */
+		if ((ptr = strchr(ret->SLOT, '/')) != NULL) {
+			*ptr++ = '\0';
+			ret->SUBSLOT = ptr;
+		}
 	}
 
 	/* see if we have any suffix operators */
@@ -435,7 +441,9 @@ atom_compare(const depend_atom *a1, const depend_atom *a2)
 	/* check slot only when both sides have it */
 	if (a1->SLOT && a2->SLOT &&
 			a1->SLOT[0] != '\0' && a2->SLOT[0] != '\0' &&
-			strcmp(a1->SLOT, a2->SLOT) != 0)
+			(strcmp(a1->SLOT, a2->SLOT) != 0 ||
+			(a1->SUBSLOT != NULL && a2->SUBSLOT != NULL &&
+			 strcmp(a1->SUBSLOT, a2->SUBSLOT) != 0)))
 		return NOT_EQUAL;
 
 	/* check repo */
@@ -620,8 +628,10 @@ atom_to_string(depend_atom *a)
 				atom_usecond_str[ud->sfx_cond],
 				ud->next == NULL ? "]" : ",");
 	if (a->SLOT != NULL)
-		off += snprintf(buf + off, buflen - off, ":%s%s",
-				a->SLOT, atom_slotdep_str[a->slotdep]);
+		off += snprintf(buf + off, buflen - off, ":%s%s%s%s",
+				a->SLOT,
+				a->SUBSLOT ? "/" : "", a->SUBSLOT ? a->SUBSLOT : "",
+				atom_slotdep_str[a->slotdep]);
 	if (a->REPO != NULL)
 		off += snprintf(buf + off, buflen - off, "::%s", a->REPO);
 
