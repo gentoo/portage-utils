@@ -58,9 +58,10 @@
 
 # qdepends
 
-- support querying uninstalled packages (via metadata/md5 cache)
+- support querying uninstalled packages (via libq/cache)
 - support atoms like `qdepends -rQ qtsql:4` (should match unslotted deps)
 - add -S/-v/-R behavior like qlist #574934
+- support printing full dep content (with -v?) from libq/cache
 
 # qpkg
 
