@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <ctype.h>
 #include <xalloc.h>
 
 #include "cache.h"
@@ -20,7 +21,7 @@
 
 #ifdef EBUG
 static void
-cache_dump(portage_cache *cache)
+cache_dump(cache_pkg_meta *cache)
 {
 	if (!cache)
 		errf("Cache is empty !");
@@ -41,11 +42,6 @@ cache_dump(portage_cache *cache)
 	printf("PROVIDE    : %s\n", cache->PROVIDE);
 	printf("EAPI       : %s\n", cache->EAPI);
 	printf("PROPERTIES : %s\n", cache->PROPERTIES);
-	if (!cache->atom) return;
-	printf("CATEGORY   : %s\n", cache->atom->CATEGORY);
-	printf("PN         : %s\n", cache->atom->PN);
-	printf("PV         : %s\n", cache->atom->PV);
-	printf("PVR        : %s\n", cache->atom->PVR);
 }
 #endif
 
@@ -59,7 +55,7 @@ cache_open(const char *sroot, const char *portdir)
 	char buf[_Q_PATH_MAX];
 
 	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_md5);
-	dir = q_vdb_open(sroot, buf);
+	dir = q_vdb_open2(sroot, buf, true);
 	if (dir != NULL) {
 		ret = xmalloc(sizeof(cache_ctx));
 		ret->dir_ctx = dir;
@@ -68,13 +64,24 @@ cache_open(const char *sroot, const char *portdir)
 	}
 
 	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_pms);
-	dir = q_vdb_open(sroot, buf);
+	dir = q_vdb_open2(sroot, buf, true);
 	if (dir != NULL) {
 		ret = xmalloc(sizeof(cache_ctx));
 		ret->dir_ctx = dir;
 		ret->cachetype = CACHE_METADATA_PMS;
 		return ret;
 	}
+
+	dir = q_vdb_open2(sroot, portdir, true);
+	if (dir != NULL) {
+		ret = xmalloc(sizeof(cache_ctx));
+		ret->dir_ctx = dir;
+		ret->cachetype = CACHE_EBUILD;
+		return ret;
+	}
+
+	warnf("could not open repository at %s (under root %s)",
+			portdir, sroot);
 
 	return NULL;
 }
@@ -98,7 +105,10 @@ cache_open_cat(cache_ctx *ctx, const char *name)
 cache_cat_ctx *
 cache_next_cat(cache_ctx *ctx)
 {
-	return q_vdb_next_cat(ctx->dir_ctx);
+	cache_cat_ctx *ret = q_vdb_next_cat(ctx->dir_ctx);
+	if (ret != NULL)
+		ret->ctx = (q_vdb_ctx *)ctx;
+	return ret;
 }
 
 void
@@ -116,7 +126,48 @@ cache_open_pkg(cache_cat_ctx *cat_ctx, const char *name)
 cache_pkg_ctx *
 cache_next_pkg(cache_cat_ctx *cat_ctx)
 {
-	return q_vdb_next_pkg(cat_ctx);
+	cache_ctx *ctx = (cache_ctx *)(cat_ctx->ctx);
+	cache_pkg_ctx *ret = NULL;
+
+	if (ctx->cachetype == CACHE_EBUILD) {
+		char *p;
+
+		/* serve *.ebuild files each as separate pkg_ctx with name set
+		 * to CAT/P like in VDB and metadata */
+		do {
+			if (ctx->ebuilddir_pkg_ctx == NULL) {
+				q_vdb_ctx *pkgdir = &ctx->ebuilddir_ctx;
+
+				if ((ctx->ebuilddir_pkg_ctx = q_vdb_next_pkg(cat_ctx)) == NULL)
+					return NULL;
+
+				pkgdir->portroot_fd = -1;
+				pkgdir->vdb_fd = cat_ctx->fd;
+				pkgdir->dir = NULL;
+
+				ctx->ebuilddir_cat_ctx =
+					q_vdb_open_cat(pkgdir, ctx->ebuilddir_pkg_ctx->name);
+			}
+
+			ret = q_vdb_next_pkg(ctx->ebuilddir_cat_ctx);
+			if (ret == NULL) {
+				ctx->ebuilddir_pkg_ctx = NULL;
+			} else {
+				if ((p = strstr(ret->name, ".ebuild")) == NULL) {
+					q_vdb_close_pkg(ret);
+					ret = NULL;
+				} else {
+					/* "zap" the pkg such that it looks like CAT/P */
+					ret->cat_ctx = cat_ctx;
+					*p = '\0';
+				}
+			}
+		} while (ret == NULL);
+	} else {
+		ret = q_vdb_next_pkg(cat_ctx);
+	}
+
+	return ret;
 }
 
 static cache_pkg_meta *
@@ -292,6 +343,103 @@ err:
 	return NULL;
 }
 
+static cache_pkg_meta *
+cache_read_file_ebuild(cache_pkg_ctx *pkg_ctx)
+{
+	FILE *f;
+	struct stat s;
+	cache_pkg_meta *ret = NULL;
+	size_t len;
+	char *p;
+	char *q;
+	char *r;
+	char **key;
+
+	if ((f = fdopen(pkg_ctx->fd, "r")) == NULL)
+		goto err;
+
+	if (fstat(pkg_ctx->fd, &s) != 0)
+		goto err;
+
+	len = sizeof(*ret) + s.st_size + 1;
+	ret = xzalloc(len);
+	p = (char *)ret;
+	ret->_data = p + sizeof(*ret);
+	if ((off_t)fread(ret->_data, 1, s.st_size, f) != s.st_size)
+		goto err;
+
+	p = ret->_data;
+	do {
+		if ((p = strchr(p, '\n')) == NULL)
+			break;
+		q = p;
+		while (*p >= 'A' && *p <= 'Z')
+			p++;
+
+		key = NULL;
+		if (q < p && *p == '=') {
+			*p++ = '\0';
+			/* match variable against which ones we look for */
+#define match_key(X) else if (strcmp(q, #X) == 0) key = &ret->X
+			if (1 == 0); /* dummy for syntax */
+			match_key(DEPEND);
+			match_key(RDEPEND);
+			match_key(SLOT);
+			match_key(SRC_URI);
+			match_key(RESTRICT);
+			match_key(HOMEPAGE);
+			match_key(LICENSE);
+			match_key(DESCRIPTION);
+			match_key(KEYWORDS);
+			match_key(IUSE);
+			match_key(CDEPEND);
+			match_key(PDEPEND);
+			match_key(EAPI);
+			match_key(REQUIRED_USE);
+#undef match_key
+		}
+
+		if (key != NULL) {
+			q = p;
+			if (*q == '"' || *q == '\'') {
+				/* find matching quote */
+				q = ++p;
+				do {
+					while (*p != '\0' && *p != *q)
+						p++;
+					if (*p == *q) {
+						for (r = p - 1; r > q; r--)
+							if (*r != '\\')
+								break;
+						if (r != q && (p - 1 - r) % 2 == 1)
+							continue;
+					}
+					break;
+				} while (1);
+			} else {
+				/* find first whitespace */
+				while (!isspace((int)*p))
+					p++;
+			}
+			*p = '\0';
+			*key = q;
+		}
+	} while (p != NULL);
+
+	fclose(f);
+	pkg_ctx->fd = -1;
+
+	return ret;
+
+err:
+	if (f)
+		fclose(f);
+	pkg_ctx->fd = -1;
+	if (ret)
+		cache_close_meta(ret);
+	return NULL;
+}
+
 cache_pkg_meta *
 cache_pkg_read(cache_pkg_ctx *pkg_ctx)
 {
@@ -308,6 +456,8 @@ cache_pkg_read(cache_pkg_ctx *pkg_ctx)
 		return cache_read_file_md5(pkg_ctx);
 	} else if (ctx->cachetype == CACHE_METADATA_PMS) {
 		return cache_read_file_pms(pkg_ctx);
+	} else if (ctx->cachetype == CACHE_EBUILD) {
+		return cache_read_file_ebuild(pkg_ctx);
 	}
 
 	warn("Unknown metadata cache type!");
@@ -351,7 +501,6 @@ cache_foreach_pkg(const char *sroot, const char *portdir,
 		}
 	}
 
-	cache_close(ctx);
 	return ret;
 }
 
@@ -382,14 +531,14 @@ cache_foreach_pkg_sorted(const char *sroot, const char *portdir,
 
 	cat_cnt = scandirat(ctx->dir_ctx->vdb_fd,
 			".", &cat_de, q_vdb_filter_cat, catsortfunc);
-	for (c = 0; c < cat_cnt; ++c) {
+	for (c = 0; c < cat_cnt; c++) {
 		cat_ctx = cache_open_cat(ctx, cat_de[c]->d_name);
 		if (!cat_ctx)
 			continue;
 
 		pkg_cnt = scandirat(ctx->dir_ctx->vdb_fd,
 				cat_de[c]->d_name, &pkg_de, q_vdb_filter_pkg, pkgsortfunc);
-		for (p = 0; p < pkg_cnt; ++p) {
+		for (p = 0; p < pkg_cnt; p++) {
 			if (pkg_de[p]->d_name[0] == '-')
 				continue;
 

@@ -15,7 +15,15 @@
 
 typedef struct cache_ctx {
 	q_vdb_ctx *dir_ctx;
-	enum { CACHE_UNSET = 0, CACHE_METADATA_MD5, CACHE_METADATA_PMS } cachetype;
+	enum {
+		CACHE_UNSET = 0,
+		CACHE_METADATA_MD5,
+		CACHE_METADATA_PMS,
+		CACHE_EBUILD,
+	} cachetype;
+	q_vdb_pkg_ctx *ebuilddir_pkg_ctx;
+	q_vdb_cat_ctx *ebuilddir_cat_ctx;
+	q_vdb_ctx ebuilddir_ctx;
 } cache_ctx;
 #define cache_cat_ctx q_vdb_cat_ctx
 #define cache_pkg_ctx q_vdb_pkg_ctx
