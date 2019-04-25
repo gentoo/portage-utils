@@ -27,6 +27,8 @@
 - q\_vdb\_foreach\_pkg should have variant that takes an atom (or just
   cat?) to reduce search space, same for cache\_foreach\_pkg
 
+- vdb repo/slot think about when it is freed (see cache\_pkg\_close)
+
 # Atoms
 
 - only 32bit values are supported for revision (-r#)
