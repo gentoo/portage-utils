@@ -77,3 +77,10 @@
 # qgrep
 
 - make it use standard xarray instead of its own buf\_list
+
+# qlop
+
+- have a mode that doesn't print timestamp (to get just atoms, -v should
+  work)
+- make a -d mode that allows to do equivalent of "last portage emerge"
+  to make it easy to see what was newly merged/unmerged
