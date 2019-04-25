@@ -9,7 +9,6 @@ import datetime
 import functools
 import glob
 import locale
-import multiprocessing
 import os
 import re
 import subprocess
@@ -71,7 +70,7 @@ def MkMan(applets, applet, output):
     usage = m.group(1)
     short_desc = m.group(2)
 
-    authors = COMMON_AUTHORS
+    authors = COMMON_AUTHORS[:]
     see_also = sorted(['.BR %s (1)' % x for x in applets if x != applet])
 
     description = ''
@@ -139,7 +138,7 @@ def MkMan(applets, applet, output):
     # Handle any fragments this applet has available
     for frag in sorted(glob.glob(os.path.join(FRAGS_DIR, '%s-*.include' % applet))):
         with open(frag) as f:
-            if "-authors." in frag:
+            if frag.endswith('-authors.include'):
                 authors += [x.rstrip() for x in f.readlines()]
             else:
                 extra_sections += [x.rstrip() for x in f.readlines()]
@@ -159,13 +158,6 @@ def MkMan(applets, applet, output):
     with open(output, 'w') as f:
         f.write(TEMPLATE % data)
 
-
-def _MkMan(applets, applet):
-    """Trampoline to MkMan for multiprocessing pickle"""
-    output = os.path.join(MKMAN_DIR, '%s.1' % applet)
-    MkMan(applets, applet, output)
-
-
 def main(argv):
     os.environ['NOCOLOR'] = '1'
 
@@ -174,10 +166,9 @@ def main(argv):
     # Support file completion like "qfile.1" or "./qdepends.1"
     applets = [os.path.basename(x).split('.', 1)[0] for x in argv]
 
-    p = multiprocessing.Pool()
-    functor = functools.partial(_MkMan, applets)
-    p.map(functor, applets)
-
+    for applet in applets:
+        output = os.path.join(MKMAN_DIR, '%s.1' % applet)
+        MkMan(applets, applet, output)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
