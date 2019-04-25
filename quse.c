@@ -252,7 +252,7 @@ quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, cha
 int quse_main(int argc, char **argv)
 {
 	FILE *fp;
-	const char *cache_file;
+	const char *cache_file = NULL;
 	char *p;
 
 	char buf0[_Q_PATH_MAX];
@@ -305,9 +305,7 @@ int quse_main(int argc, char **argv)
 	array_for_each(overlays, n, overlay) {
 		int overlay_fd;
 
-		cache_file = initialize_flat(overlay, CACHE_EBUILD, false);
-
-		if ((fp = fopen(cache_file, "re")) == NULL) {
+		/* FIXME: use libq/cache here */ if (1 == 1) {
 			warnp("could not read cache: %s", cache_file);
 			continue;
 		}

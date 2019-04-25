@@ -146,7 +146,6 @@ extern char *config_protect;
 extern char *config_protect_mask;
 extern char *portvdb;
 extern char *portlogdir;
-extern int portcachedir_type;
 extern char *pkg_install_mask;
 extern char *binhost;
 extern char *pkgdir;
@@ -162,7 +161,6 @@ void usage(int status, const char *flags, struct option const opts[],
       const char * const help[], const char *desc, int blabber);
 int lookup_applet_idx(const char *);
 APPLET lookup_applet(const char *applet);
-const char *initialize_flat(const char *overlay, int cache_type, bool force);
 void freeargv(int argc, char **argv);
 void makeargv(const char *string, int *argc, char ***argv);
 

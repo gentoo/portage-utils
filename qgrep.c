@@ -398,11 +398,9 @@ int qgrep_main(int argc, char **argv)
 	array_for_each(overlays, n, overlay) {
 
 		/* go look either in ebuilds or eclasses or VDB */
+		/* FIXME: use libq/vdb and libq/cache here */
 		if (!do_eclass && !do_installed) {
-			fp = fopen(initialize_flat(overlay, CACHE_EBUILD, false), "re");
-			if (fp == NULL)
-				continue;
-			xchdir(overlay);
+			/* TODO: use libq/cache here */ continue;
 		} else if (do_eclass) {
 			xchdir(overlay);
 			if ((eclass_dir = opendir("eclass")) == NULL) {
@@ -411,6 +409,7 @@ int qgrep_main(int argc, char **argv)
 				continue;
 			}
 		} else { /* if (do_install) */
+			/* TODO: use libq/vdb here */
 			char buf[_Q_PATH_MAX];
 			snprintf(buf, sizeof(buf), "%s/%s", portroot, portvdb);
 			xchdir(buf);

@@ -47,7 +47,6 @@ char *module_name = NULL;
 char *modpath = NULL;
 int verbose = 0;
 int quiet = 0;
-int portcachedir_type = 0;
 char pretend = 0;
 char *portroot;
 char *config_protect;
@@ -65,8 +64,6 @@ DECLARE_ARRAY(overlays);
 static char *main_overlay;
 static char *portarch;
 static char *portedb;
-const char portcachedir_pms[] = "metadata/cache";
-const char portcachedir_md5[] = "metadata/md5-cache";
 static char *eprefix;
 static char *accept_license;
 
@@ -781,142 +778,6 @@ initialize_portage_env(void)
 		no_colors();
 	else
 		color_remap();
-}
-
-const char *
-initialize_flat(const char *overlay, int cache_type, bool force)
-{
-	struct dirent **category, **pn, **eb;
-	struct stat st;
-	struct timeval start, finish;
-	char *cache_file;
-	char *p;
-	int i;
-	int frac, secs, count;
-	FILE *fp;
-
-	xasprintf(&cache_file, "%s/dep/%s/%s", portedb, overlay,
-		(cache_type == CACHE_EBUILD ? ".ebuild.x" : ".metadata.x"));
-
-	/* If we aren't forcing a regen, make sure the file is somewhat sane. */
-	if (!force) {
-		if (stat(cache_file, &st) != -1)
-			if (st.st_size)
-				return cache_file;
-	}
-
-	warn("Updating ebuild %scache for %s ... ",
-		cache_type == CACHE_EBUILD ? "" : "meta", overlay);
-
-	count = frac = secs = 0;
-
-	int overlay_fd, subdir_fd;
-	overlay_fd = open(overlay, O_RDONLY|O_CLOEXEC|O_PATH);
-
-	if (cache_type == CACHE_METADATA) {
-		subdir_fd = openat(overlay_fd, portcachedir_md5, O_RDONLY|O_CLOEXEC);
-		if (subdir_fd == -1) {
-			subdir_fd = openat(overlay_fd, portcachedir_pms,
-					O_RDONLY|O_CLOEXEC);
-			if (subdir_fd == -1) {
-				warnp("could not read md5 or pms cache dirs in %s", overlay);
-				goto ret;
-			}
-			portcachedir_type = CACHE_METADATA_PMS;
-		} else
-			portcachedir_type = CACHE_METADATA_MD5;
-	} else
-		subdir_fd = overlay_fd;
-
-	if ((fp = fopen(cache_file, "we")) == NULL) {
-		warnfp("opening cache failed: %s", cache_file);
-		if (errno == EACCES)
-			warnf("You should run this command as root: q -%c",
-				cache_type == CACHE_EBUILD ? 'r' : 'm');
-		goto ret;
-	}
-
-	gettimeofday(&start, NULL);
-
-	int cat_cnt;
-	cat_cnt = scandirat(subdir_fd, ".", &category, q_vdb_filter_cat, alphasort);
-	if (cat_cnt < 0)
-		goto ret;
-
-	for (i = 0; i < cat_cnt; i++) {
-		if (fstatat(subdir_fd, category[i]->d_name, &st, 0))
-			continue;
-		if (!S_ISDIR(st.st_mode))
-			continue;
-		if (strchr(category[i]->d_name, '-') == NULL)
-			if (strncmp(category[i]->d_name, "virtual", 7) != 0)
-				continue;
-
-		int c, pkg_cnt;
-		pkg_cnt = scandirat(subdir_fd, category[i]->d_name, &pn,
-				q_vdb_filter_pkg, alphasort);
-		if (pkg_cnt < 0)
-			continue;
-		for (c = 0; c < pkg_cnt; c++) {
-			char de[_Q_PATH_MAX * 2];
-
-			snprintf(de, sizeof(de), "%s/%s",
-					category[i]->d_name, pn[c]->d_name);
-
-			if (fstatat(subdir_fd, de, &st, 0) < 0)
-				continue;
-
-			switch (cache_type) {
-			case CACHE_EBUILD:
-				if (!S_ISDIR(st.st_mode))
-					continue;
-				break;
-			case CACHE_METADATA:
-				if (S_ISREG(st.st_mode))
-					fprintf(fp, "%s\n", de);
-				continue;
-			}
-
-			int e, ebuild_cnt;
-			ebuild_cnt = scandirat(subdir_fd, de, &eb,
-					filter_hidden, alphasort);
-			if (ebuild_cnt < 0)
-				continue;
-			for (e = 0; e < ebuild_cnt; ++e) {
-				if ((p = strrchr(eb[e]->d_name, '.')) != NULL)
-					if (strcmp(p, ".ebuild") == 0) {
-						count++;
-						fprintf(fp, "%s/%s\n", de, eb[e]->d_name);
-					}
-			}
-			scandir_free(eb, ebuild_cnt);
-		}
-		scandir_free(pn, pkg_cnt);
-	}
-	fclose(fp);
-	scandir_free(category, cat_cnt);
-
-	if (quiet) goto ret;
-
-	gettimeofday(&finish, NULL);
-	if (start.tv_usec > finish.tv_usec) {
-		finish.tv_usec += 1000000;
-		finish.tv_sec--;
-	}
-	frac = (finish.tv_usec - start.tv_usec);
-	secs = (finish.tv_sec - start.tv_sec);
-	if (secs < 0) secs = 0;
-	if (frac < 0) frac = 0;
-
-	warn("Finished %u entries in %d.%02d seconds", count, secs, frac);
-	if (secs > 120)
-		warn("You should consider using the noatime mount option "
-				"for '%s' if it's not already enabled", overlay);
-ret:
-	close(subdir_fd);
-	if (subdir_fd != overlay_fd)
-		close(overlay_fd);
-	return cache_file;
 }
 
 int main(int argc, char **argv)

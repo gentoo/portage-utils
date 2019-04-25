@@ -23,18 +23,14 @@
 #include "basename.h"
 #include "cache.h"
 
-#define Q_FLAGS "irmM:" COMMON_FLAGS
+#define Q_FLAGS "iM:" COMMON_FLAGS
 static struct option const q_long_opts[] = {
 	{"install",       no_argument, NULL, 'i'},
-	{"reinitialize", opt_argument, NULL, 'r'},
-	{"metacache",    opt_argument, NULL, 'm'},
 	{"modpath",        a_argument, NULL, 'M'},
 	COMMON_LONG_OPTS
 };
 static const char * const q_opts_help[] = {
 	"Install symlinks for applets",
-	"Reinitialize ebuild cache",
-	"Reinitialize metadata cache",
 	"Module path",
 	COMMON_OPTS_HELP
 };
@@ -77,27 +73,6 @@ int lookup_applet_idx(const char *applet)
 	return 0;
 }
 
-static void
-reinitialize_as_needed(int reinitialize, int reinitialize_metacache)
-{
-	size_t n;
-	const char *overlay, *ret = ret;
-
-	if (reinitialize)
-		array_for_each(overlays, n, overlay) {
-			ret = initialize_flat(overlay, CACHE_EBUILD, true);
-			if (USE_CLEANUP)
-				free((void *)ret);
-		}
-
-	if (reinitialize_metacache)
-		array_for_each(overlays, n, overlay) {
-			ret = initialize_flat(overlay, CACHE_METADATA, true);
-			if (USE_CLEANUP)
-				free((void *)ret);
-		}
-}
-
 int q_main(int argc, char **argv)
 {
 	int i, install;
@@ -125,25 +100,6 @@ int q_main(int argc, char **argv)
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
 		case 'M': modpath = optarg; break;
-		case 'm':
-			if (optarg) {
-				const char *path =
-					initialize_flat(optarg, CACHE_METADATA, true);
-				if (USE_CLEANUP)
-					free((void *)path);
-				reinitialize_metacache = -1;
-			} else
-				reinitialize_metacache = 1;
-			break;
-		case 'r':
-			if (optarg) {
-				const char *path = initialize_flat(optarg, CACHE_EBUILD, true);
-				if (USE_CLEANUP)
-					free((void *)path);
-				reinitialize = -1;
-			} else
-				reinitialize = 1;
-			break;
 		case 'i': install = 1; break;
 		}
 	}
@@ -201,10 +157,12 @@ int q_main(int argc, char **argv)
 		return ret;
 	}
 
+#if 0
 	if (reinitialize > 0 || reinitialize_metacache > 0) {
 		reinitialize_as_needed(reinitialize, reinitialize_metacache);
 		return 0;
 	}
+#endif
 	if (reinitialize < 0 || reinitialize_metacache < 0) {
 		reinitialize = reinitialize_metacache = 0;
 		return 0;

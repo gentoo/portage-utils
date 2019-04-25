@@ -147,9 +147,7 @@ qpkg_clean(char *dirp)
 		const char *overlay;
 
 		array_for_each(overlays, n, overlay) {
-			fp = fopen(initialize_flat(overlay, CACHE_EBUILD, false), "re");
-			if (fp == NULL)
-				continue;
+			/* FIXME: use libq/cache here */ continue;
 
 			size_t buflen;
 			char *buf;
