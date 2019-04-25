@@ -25,232 +25,151 @@
 #include "xarray.h"
 #include "xregex.h"
 
-#define QSEARCH_FLAGS "acesSNH" COMMON_FLAGS
+#define QSEARCH_FLAGS "asSNHR" COMMON_FLAGS
 static struct option const qsearch_long_opts[] = {
 	{"all",       no_argument, NULL, 'a'},
-	{"cache",     no_argument, NULL, 'c'},
-	{"ebuilds",   no_argument, NULL, 'e'},
 	{"search",    no_argument, NULL, 's'},
 	{"desc",       a_argument, NULL, 'S'},
 	{"name-only", no_argument, NULL, 'N'},
 	{"homepage",  no_argument, NULL, 'H'},
+	{"repo",      no_argument, NULL, 'R'},
 	COMMON_LONG_OPTS
 };
 static const char * const qsearch_opts_help[] = {
 	"List the descriptions of every package in the cache",
-	"Use the portage cache",
-	"Use the portage ebuild tree (default)",
 	"Regex search package basenames",
-	"Regex search package descriptions",
+	"Regex search package descriptions (or homepage when using -H)",
 	"Only show package name",
-	"Show homepage info",
+	"Show homepage info instead of description",
+	"Show repository the ebuild originates from",
 	COMMON_OPTS_HELP
 };
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, NULL, lookup_applet_idx("qsearch"))
 
-#define LAST_BUF_SIZE 256
+struct qsearch_state {
+	bool show_homepage:1;
+	bool show_name:1;
+	bool show_desc:1;
+	bool show_repo:1;
+	bool search_desc:1;
+	bool search_name:1;
+	regex_t search_expr;
+};
 
-/* Search an ebuild's details via the metadata cache. */
-static void
-qsearch_ebuild_metadata(
-		int overlay_fd,
-		const char *ebuild,
-		const char *search_me,
-		char *last,
-		bool search_desc,
-		bool search_all,
-		bool search_name,
-		bool show_name_only,
-		bool show_homepage)
+static int
+qsearch_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 {
-	(void)overlay_fd;
-	(void)search_name;
+	static depend_atom *last_atom;
 
-	portage_cache *pcache = cache_read_file(portcachedir_type, ebuild);
+	struct qsearch_state *state = (struct qsearch_state *)priv;
+	depend_atom *atom;
+	char buf[_Q_PATH_MAX];
+	cache_pkg_meta *meta;
+	char *desc;
+	char *repo;
+	bool match;
 
-	if (pcache == NULL) {
-		warnf("missing cache, please (re)generate");
-		return;
+	snprintf(buf, sizeof(buf), "%s/%s", pkg_ctx->cat_ctx->name, pkg_ctx->name);
+	atom = atom_explode(buf);
+	if (atom == NULL)
+		return 0;
+
+	/* skip duplicate packages (we never report version) */
+	if (last_atom != NULL && strcmp(last_atom->PN, atom->PN) == 0) {
+		atom_implode(atom);
+		return 0;
 	}
 
-	if (strcmp(pcache->atom->PN, last) != 0) {
-		strncpy(last, pcache->atom->PN, LAST_BUF_SIZE);
-		if (search_all || rematch(search_me,
-					(search_desc ? pcache->DESCRIPTION : ebuild),
-					REG_EXTENDED | REG_ICASE) == 0)
-			printf("%s%s/%s%s%s%s%s\n", BOLD, pcache->atom->CATEGORY, BLUE,
-			       pcache->atom->PN, NORM,
-				   (show_name_only ? "" : " "),
-			       (show_name_only ? "" :
-			        (show_homepage ? pcache->HOMEPAGE : pcache->DESCRIPTION)));
-	}
-	cache_free(pcache);
-}
+	match = false;
+	if (state->search_name &&
+			regexec(&state->search_expr, atom->PN, 0, NULL, 0) == 0)
+		match = true;
 
-/* Search an ebuild's details via the ebuild cache. */
-static void
-qsearch_ebuild_ebuild(
-		int overlay_fd,
-		const char *ebuild,
-		const char *search_me,
-		char *last,
-		bool search_desc,
-		bool search_all,
-		bool search_name,
-		bool show_name_only,
-		bool show_homepage)
-{
-	const char * const search_vars[] = { "DESCRIPTION=", "HOMEPAGE=" };
-	const char *search_var = search_vars[show_homepage ? 1 : 0];
-	size_t search_len = strlen(search_var);
-	char *p, *q, *str;
-	char *buf = NULL;
-	int linelen;
-	size_t buflen;
-	bool show_it = false;
-	FILE *ebuildfp;
-	int fd;
-
-	str = xstrdup(ebuild);
-	p = dirname(str);
-
-	(void)search_desc;
-	(void)show_homepage;
-
-	if (strcmp(p, last) == 0)
-		goto no_cache_ebuild_match;
-
-	strncpy(last, p, LAST_BUF_SIZE);
-	if (search_name) {
-		if (rematch(search_me, basename(last), REG_EXTENDED | REG_ICASE) != 0) {
-			goto no_cache_ebuild_match;
-		} else {
-			q = NULL;
-			show_it = true;
+	desc = NULL;
+	meta = NULL;
+	if ((match && (state->show_homepage || state->show_desc)) ||
+			(!match && state->search_desc))
+	{
+		meta = cache_pkg_read(pkg_ctx);
+		if (meta != NULL) {
+			if (state->show_homepage)
+				desc = meta->HOMEPAGE;
+			else if (state->show_desc)
+				desc = meta->DESCRIPTION;
 		}
 	}
 
-	fd = openat(overlay_fd, ebuild, O_RDONLY|O_CLOEXEC);
-	if (fd != -1) {
-		ebuildfp = fdopen(fd, "r");
-		if (ebuildfp == NULL) {
-			close(fd);
-			goto no_cache_ebuild_match;
-		}
-	} else {
-		warnf("missing cache, please (re)generate");
-		goto no_cache_ebuild_match;
+	if (!match && state->search_desc && desc != NULL &&
+			regexec(&state->search_expr, desc, 0, NULL, 0) == 0)
+		match = true;
+
+	repo = NULL;
+	if (match) {
+		if (state->show_repo)
+			repo = pkg_ctx->repo;
+		printf("%s%s/%s%s%s%s%s%s%s%s\n", BOLD, atom->CATEGORY,
+				BLUE, atom->PN,
+				GREEN, (repo ? "::" : ""), (repo ? repo : ""), NORM,
+				(state->show_name ? "" : " "),
+				(state->show_name ? "" : desc ? desc : ""));
 	}
 
-	while ((linelen = getline(&buf, &buflen, ebuildfp)) >= 0) {
-		if ((size_t)linelen <= search_len)
-			continue;
-		if (strncmp(buf, search_var, search_len) != 0)
-			continue;
-		if ((q = strrchr(buf, '"')) != NULL)
-			*q = 0;
-		if (strlen(buf) <= search_len)
-			break;
-		q = buf + search_len + 1;
-		if (!search_all && !search_name &&
-				rematch(search_me, q, REG_EXTENDED | REG_ICASE) != 0)
-			break;
-		show_it = true;
-		break;
-	}
+	if (meta != NULL)
+		cache_close_meta(meta);
 
-	if (show_it) {
-		const char *pkg = basename(p);
-		printf("%s%s/%s%s%s%s%s\n",
-			BOLD, dirname(p), BLUE, pkg, NORM,
-			(show_name_only ? "" : " "),
-			(show_name_only ? "" : q ? : "<no DESCRIPTION found>"));
-	}
+	if (last_atom != NULL)
+		atom_implode(last_atom);
+	last_atom = atom;
 
-	free(buf);
-	fclose(ebuildfp);
- no_cache_ebuild_match:
-	free(str);
+	return EXIT_SUCCESS;
 }
 
 int qsearch_main(int argc, char **argv)
 {
-	char last[LAST_BUF_SIZE];
-	char *search_me = NULL;
-	bool show_homepage = false, show_name_only = false;
-	bool search_desc = false, search_all = false, search_name = true;
-	int search_cache = CACHE_EBUILD;
+	int ret = EXIT_SUCCESS;
+	const char *search_me = NULL;
 	int i;
-	void (*search_func)(int, const char *, const char *, char *last, bool, bool, bool, bool, bool);
+	const char *overlay;
+	size_t n;
+	struct qsearch_state state = {
+		.show_homepage = false,
+		.show_name = false,
+		.show_desc = false,
+		.show_repo = false,
+		.search_desc = false,
+		.search_name = false,
+	};
 
 	while ((i = GETOPT_LONG(QSEARCH, qsearch, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsearch)
-		case 'a': search_all = true; break;
-		case 'c': search_cache = CACHE_METADATA; break;
-		case 'e': search_cache = CACHE_EBUILD; break;
-		case 's': search_desc = false; search_name = true; break;
-		case 'S': search_desc = true; search_name = false; break;
-		case 'N': show_name_only = true; break;
-		case 'H': show_homepage = true; break;
+		case 'a': search_me           = ".*";  break;
+		case 's': state.search_name   = true;  break;
+		case 'S': state.search_desc   = true;  break;
+		case 'N': state.show_name     = true;  break;
+		case 'H': state.show_homepage = true;  break;
+		case 'R': state.show_repo     = true;  break;
 		}
 	}
 
-	switch (search_cache) {
-	case CACHE_METADATA:
-		search_func = qsearch_ebuild_metadata;
-		break;
-	case CACHE_EBUILD:
-		search_func = qsearch_ebuild_ebuild;
-		break;
-	default:
-		err("unknown cache %i", search_cache);
-	}
+	/* set defaults */
+	if (!state.show_homepage)
+		state.show_desc = true;
+	if (!state.search_name && !state.search_desc)
+		state.search_name = true;
 
-	if (search_all) {
-		search_desc = true;
-		search_name = false;
-	} else {
+	/* compile expression */
+	if (search_me == NULL) {
 		if (argc == optind)
 			qsearch_usage(EXIT_FAILURE);
 		search_me = argv[optind];
 	}
-	last[0] = 0;
+	xregcomp(&state.search_expr, search_me, REG_EXTENDED | REG_ICASE);
 
-	int ret = 0;
-	size_t n;
-	const char *overlay;
-	array_for_each(overlays, n, overlay) {
-		FILE *fp = fopen(initialize_flat(overlay, search_cache, false), "r");
-		if (!fp) {
-			warnp("opening cache for %s failed", overlay);
-			ret = 1;
-			continue;
-		}
-
-		int overlay_fd = open(overlay, O_RDONLY|O_CLOEXEC|O_PATH);
-		if (overlay_fd < 0) {
-			fclose(fp);
-			warnp("open failed: %s", overlay);
-			ret = 1;
-			continue;
-		}
-
-		int linelen;
-		size_t buflen;
-		char *buf = NULL;
-		while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
-			rmspace_len(buf, (size_t)linelen);
-			if (!buf[0])
-				continue;
-
-			search_func(overlay_fd, buf, search_me, last, search_desc,
-				search_all, search_name, show_name_only, show_homepage);
-		}
-		free(buf);
-		close(overlay_fd);
-		fclose(fp);
-	}
+	/* use sorted order here so the duplicate reduction works reliably */
+	array_for_each(overlays, n, overlay)
+		ret |= cache_foreach_pkg_sorted(portroot, overlay, qsearch_cb,
+				&state, NULL, NULL);
 
 	return ret;
 }
