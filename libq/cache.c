@@ -16,6 +16,8 @@
 #include <xalloc.h>
 
 #include "cache.h"
+#include "eat_file.h"
+#include "rmspace.h"
 #include "scandirat.h"
 #include "vdb.h"
 
@@ -47,17 +49,27 @@ cache_dump(cache_pkg_meta *cache)
 
 static const char portcachedir_pms[] = "metadata/cache";
 static const char portcachedir_md5[] = "metadata/md5-cache";
+static const char portrepo_name[]    = "profiles/repo_name";
 cache_ctx *
 cache_open(const char *sroot, const char *portdir)
 {
 	q_vdb_ctx *dir;
 	cache_ctx *ret;
 	char buf[_Q_PATH_MAX];
+	size_t repolen = 0;
+
+	ret = xzalloc(sizeof(cache_ctx));
+
+	snprintf(buf, sizeof(buf), "%s%s/%s", sroot, portdir, portrepo_name);
+	if (eat_file(buf, &ret->repo, &repolen)) {
+		(void)rmspace(ret->repo);
+	} else {
+		ret->repo = NULL;  /* ignore missing repo file */
+	}
 
 	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_md5);
 	dir = q_vdb_open2(sroot, buf, true);
 	if (dir != NULL) {
-		ret = xmalloc(sizeof(cache_ctx));
 		ret->dir_ctx = dir;
 		ret->cachetype = CACHE_METADATA_MD5;
 		return ret;
@@ -66,7 +78,6 @@ cache_open(const char *sroot, const char *portdir)
 	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_pms);
 	dir = q_vdb_open2(sroot, buf, true);
 	if (dir != NULL) {
-		ret = xmalloc(sizeof(cache_ctx));
 		ret->dir_ctx = dir;
 		ret->cachetype = CACHE_METADATA_PMS;
 		return ret;
@@ -74,12 +85,12 @@ cache_open(const char *sroot, const char *portdir)
 
 	dir = q_vdb_open2(sroot, portdir, true);
 	if (dir != NULL) {
-		ret = xmalloc(sizeof(cache_ctx));
 		ret->dir_ctx = dir;
 		ret->cachetype = CACHE_EBUILD;
 		return ret;
 	}
 
+	cache_close(ret);
 	warnf("could not open repository at %s (under root %s)",
 			portdir, sroot);
 
@@ -89,7 +100,10 @@ cache_open(const char *sroot, const char *portdir)
 void
 cache_close(cache_ctx *ctx)
 {
-	q_vdb_close(ctx->dir_ctx);
+	if (ctx->dir_ctx != NULL)
+		q_vdb_close(ctx->dir_ctx);
+	if (ctx->repo != NULL)
+		free(ctx->repo);
 	free(ctx);
 }
 
@@ -120,7 +134,9 @@ cache_close_cat(cache_cat_ctx *cat_ctx)
 cache_pkg_ctx *
 cache_open_pkg(cache_cat_ctx *cat_ctx, const char *name)
 {
-	return q_vdb_open_pkg(cat_ctx, name);
+	cache_pkg_ctx *ret = q_vdb_open_pkg(cat_ctx, name);
+	ret->repo = ((cache_ctx *)cat_ctx->ctx)->repo;
+	return ret;
 }
 
 cache_pkg_ctx *
@@ -154,7 +170,7 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 				ctx->ebuilddir_pkg_ctx = NULL;
 			} else {
 				if ((p = strstr(ret->name, ".ebuild")) == NULL) {
-					q_vdb_close_pkg(ret);
+					cache_close_pkg(ret);
 					ret = NULL;
 				} else {
 					/* "zap" the pkg such that it looks like CAT/P */
@@ -475,6 +491,9 @@ cache_close_meta(cache_pkg_meta *cache)
 void
 cache_close_pkg(cache_pkg_ctx *pkg_ctx)
 {
+	/* avoid free of cache_ctx' repo by q_vdb_close_pkg */
+	if (((cache_ctx *)pkg_ctx->cat_ctx->ctx)->repo == pkg_ctx->repo)
+		pkg_ctx->repo = NULL;
 	q_vdb_close_pkg(pkg_ctx);
 }
 

@@ -24,6 +24,7 @@ typedef struct cache_ctx {
 	q_vdb_pkg_ctx *ebuilddir_pkg_ctx;
 	q_vdb_cat_ctx *ebuilddir_cat_ctx;
 	q_vdb_ctx ebuilddir_ctx;
+	char *repo;
 } cache_ctx;
 #define cache_cat_ctx q_vdb_cat_ctx
 #define cache_pkg_ctx q_vdb_pkg_ctx
