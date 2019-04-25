@@ -79,7 +79,6 @@ AC_CONFIG_FILES([
 	tests/qtbz2/Makefile
 	tests/quse/Makefile
 	tests/qxpak/Makefile
-	tests/reinitialize/Makefile
 	tests/rmspace/Makefile
 	tests/source/Makefile
 ])
