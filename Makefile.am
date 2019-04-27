@@ -7,11 +7,6 @@ SUBDIRS = \
 	tests \
 	$(NULL)
 
-portagedir = $(sysconfdir)/portage
-postsyncddir = $(portagedir)/repo.postsync.d
-
-dist_postsyncd_SCRIPTS = repo.postsync/q-reinit
-
 APPLETS = \
 	q \
 	qatom \
