@@ -19,6 +19,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdint.h>
+#include <limits.h>
 
 #include "i18n.h"
 #include "colors.h"
