@@ -148,7 +148,7 @@ atom_explode(const char *atom)
 			ret->slotdep = ATOM_SD_ANY_IGNORE;
 			*ptr = '\0';
 		}
-		
+
 		/* cut in two when sub-slot */
 		if ((ptr = strchr(ret->SLOT, '/')) != NULL) {
 			*ptr++ = '\0';
