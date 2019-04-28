@@ -124,11 +124,27 @@ qpkg_clean_dir(char *dirp, set *vdb)
 	return num_all_bytes;
 }
 
+static int
+qpkg_cb(cache_pkg_ctx *pkg_ctx, void *priv)
+{
+	set *vdb = (set *)priv;
+	depend_atom *atom;
+	char buf[_Q_PATH_MAX];
+
+	snprintf(buf, sizeof(buf), "%s/%s", pkg_ctx->cat_ctx->name, pkg_ctx->name);
+	atom = atom_explode(buf);
+	if (atom == NULL)
+		return 0;
+
+	vdb = add_set(buf, vdb);
+
+	return 1;
+}
+
 /* figure out what dirs we want to process for cleaning and display results. */
 static int
 qpkg_clean(char *dirp)
 {
-	FILE *fp;
 	int i, count;
 	size_t disp_units = 0;
 	uint64_t num_all_bytes;
@@ -146,39 +162,8 @@ qpkg_clean(char *dirp)
 		size_t n;
 		const char *overlay;
 
-		array_for_each(overlays, n, overlay) {
-			/* FIXME: use libq/cache here */ continue;
-
-			size_t buflen;
-			char *buf;
-
-			buf = NULL;
-			while (getline(&buf, &buflen, fp) != -1) {
-				char *name, *p;
-				if ((p = strrchr(buf, '.')) == NULL)
-					continue;
-				*p = 0;
-				if ((p = strrchr(buf, '/')) == NULL)
-					continue;
-				*p = 0;
-				name = p + 1;
-				if ((p = strrchr(buf, '/')) == NULL)
-					continue;
-				*p = 0;
-				/* these strcat() are safe. the name is extracted from
-				 * buf already. */
-				strcat(buf, "/");
-				strcat(buf, name);
-
-				/* num_all_bytes will be off when pretend and eclean are
-				 * enabled together */
-				/* vdb = del_set(buf, vdb, &i); */
-				vdb = add_set(buf, vdb);
-			}
-
-			free(buf);
-			fclose(fp);
-		}
+		array_for_each(overlays, n, overlay)
+			cache_foreach_pkg(portroot, overlay, qpkg_cb, vdb, NULL);
 	}
 
 	num_all_bytes = qpkg_clean_dir(dirp, vdb);
