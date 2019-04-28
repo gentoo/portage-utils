@@ -25,7 +25,7 @@
 #include "xchdir.h"
 #include "xregex.h"
 
-#define QGREP_FLAGS "IiHNclLexJEsS:B:A:" COMMON_FLAGS
+#define QGREP_FLAGS "IiHNclLexJEsRS:B:A:" COMMON_FLAGS
 static struct option const qgrep_long_opts[] = {
 	{"invert-match",  no_argument, NULL, 'I'},
 	{"ignore-case",   no_argument, NULL, 'i'},
@@ -39,6 +39,7 @@ static struct option const qgrep_long_opts[] = {
 	{"installed",     no_argument, NULL, 'J'},
 	{"eclass",        no_argument, NULL, 'E'},
 	{"skip-comments", no_argument, NULL, 's'},
+	{"repo",          no_argument, NULL, 'R'},
 	{"skip",           a_argument, NULL, 'S'},
 	{"before",         a_argument, NULL, 'B'},
 	{"after",          a_argument, NULL, 'A'},
@@ -57,6 +58,7 @@ static const char * const qgrep_opts_help[] = {
 	"Search in installed ebuilds instead of the tree",
 	"Search in eclasses instead of ebuilds",
 	"Skip comments lines",
+	"Print source repository name for each match (implies -N)",
 	"Skip lines matching <arg>",
 	"Print <arg> lines of leading context",
 	"Print <arg> lines of trailing context",
@@ -198,6 +200,7 @@ struct qgrep_grepargs {
 	bool do_list:1;
 	bool show_filename:1;
 	bool show_name:1;
+	bool show_repo:1;
 	bool skip_comments:1;
 	bool invert_list:1;
 	bool invert_match:1;
@@ -421,7 +424,10 @@ qgrep_cache_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 
 	label = NULL;
 	if (data->show_name) {
-		snprintf(name, sizeof(name), "%s/%s", patom->CATEGORY, patom->P);
+		char *repo = data->show_repo ? cctx->repo : NULL;
+		snprintf(name, sizeof(name), "%s%s/%s%s%s%s%s%s",
+				BOLD, patom->CATEGORY, BLUE, patom->P, GREEN,
+				repo ? "::" : "", repo ? repo : "", NORM);
 		label = name;
 	} else if (data->show_filename) {
 		label = buf;
@@ -473,7 +479,8 @@ qgrep_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 	label = NULL;
 	if (data->show_name) {
-		snprintf(name, sizeof(name), "%s/%s", patom->CATEGORY, patom->P);
+		snprintf(name, sizeof(name), "%s%s/%s%s%s",
+				BOLD, patom->CATEGORY, BLUE, patom->P, NORM);
 		label = name;
 	} else if (data->show_filename) {
 		label = buf;
@@ -523,25 +530,26 @@ int qgrep_main(int argc, char **argv)
 
 	while ((i = GETOPT_LONG(QGREP, qgrep, "")) != -1) {
 		switch (i) {
-		case 'I': args.invert_match = 1; break;
+		case 'I': args.invert_match = true;               break;
 		case 'i':
 			args.strfunc = strcasestr;
 			reflags |= REG_ICASE;
 			break;
-		case 'c': args.do_count = 1; break;
-		case 'l': args.do_list = 1; break;
-		case 'L': args.do_list = args.invert_list = 1; break;
-		case 'e': args.do_regex = 1; break;
+		case 'c': args.do_count = true;                   break;
+		case 'l': args.do_list = true;                    break;
+		case 'L': args.do_list = args.invert_list = true; break;
+		case 'e': args.do_regex = true;                   break;
 		case 'x':
-			args.do_regex = 1;
+			args.do_regex = true;
 			reflags |= REG_EXTENDED;
 			break;
-		case 'J': do_installed = 1; break;
-		case 'E': do_eclass = 1; break;
-		case 'H': args.show_filename = 1; break;
-		case 'N': args.show_name = 1; break;
-		case 's': args.skip_comments = 1; break;
-		case 'S': args.skip_pattern = optarg; break;
+		case 'J': do_installed = true;                    break;
+		case 'E': do_eclass = true;                       break;
+		case 'H': args.show_filename = true;              break;
+		case 'N': args.show_name = true;                  break;
+		case 's': args.skip_comments = true;              break;
+		case 'R': args.show_repo = args.show_name = true; break;
+		case 'S': args.skip_pattern = optarg;             break;
 		case 'B':
 		case 'A':
 			errno = 0;
@@ -667,8 +675,9 @@ int qgrep_main(int argc, char **argv)
 
 				label = NULL;
 				if (args.show_name) {
-					snprintf(name, sizeof(name), "%.*s",
-							(int)(strlen(dentry->d_name) - 7), dentry->d_name);
+					snprintf(name, sizeof(name), "%s%.*s%s", BLUE,
+							(int)(strlen(dentry->d_name) - 7), dentry->d_name,
+							NORM);
 					label = name;
 				} else if (args.show_filename) {
 					snprintf(name, sizeof(name), "eclass/%s", dentry->d_name);
