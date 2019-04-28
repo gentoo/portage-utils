@@ -7,31 +7,59 @@
 #define _VDB_H 1
 
 #include <dirent.h>
+#include <stdbool.h>
 
 #include "set.h"
 
+typedef struct q_vdb_ctx q_vdb_ctx;
+typedef struct q_vdb_cat_ctx q_vdb_cat_ctx;
+typedef struct q_vdb_pkg_ctx q_vdb_pkg_ctx;
+
 /* VDB context */
-typedef struct {
-	int portroot_fd, vdb_fd;
+struct q_vdb_ctx {
+	int portroot_fd;
+	int vdb_fd;
 	DIR *dir;
-} q_vdb_ctx;
+	struct dirent **cat_de;
+	size_t cat_cnt;
+	size_t cat_cur;
+	void *catsortfunc;
+	void *pkgsortfunc;
+	bool do_sort:1;
+	enum {
+		CACHE_UNSET = 0,
+		CACHE_METADATA_MD5,
+		CACHE_METADATA_PMS,
+		CACHE_EBUILD,
+		CACHE_VDB,
+	} cachetype:3;
+	q_vdb_pkg_ctx *ebuilddir_pkg_ctx;
+	q_vdb_cat_ctx *ebuilddir_cat_ctx;
+	q_vdb_ctx *ebuilddir_ctx;
+	char *repo;
+};
 
 /* Category context */
-typedef struct {
+struct q_vdb_cat_ctx {
 	const char *name;
 	int fd;
 	DIR *dir;
 	const q_vdb_ctx *ctx;
-} q_vdb_cat_ctx;
+	struct dirent **pkg_de;
+	size_t pkg_cnt;
+	size_t pkg_cur;
+};
 
 /* Package context */
-typedef struct {
+struct q_vdb_pkg_ctx {
 	const char *name;
-	char *slot, *repo;
-	size_t slot_len, repo_len;
+	char *slot;
+	char *repo;
+	size_t slot_len;
+	size_t repo_len;
 	int fd;
 	q_vdb_cat_ctx *cat_ctx;
-} q_vdb_pkg_ctx;
+};
 
 /* Global helpers */
 typedef int (q_vdb_pkg_cb)(q_vdb_pkg_ctx *, void *priv);

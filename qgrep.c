@@ -413,9 +413,9 @@ qgrep_cache_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 	/* need to construct path in portdir to ebuild, pass it to grep */
 	cctx = (cache_ctx *)(pkg_ctx->cat_ctx->ctx);
 	if (cctx->cachetype == CACHE_EBUILD) {
-		pfd = cctx->dir_ctx->vdb_fd;
+		pfd = cctx->vdb_fd;
 	} else {
-		pfd = openat(cctx->dir_ctx->vdb_fd, "../..", O_RDONLY|O_CLOEXEC);
+		pfd = openat(cctx->vdb_fd, "../..", O_RDONLY|O_CLOEXEC);
 	}
 
 	/* cat/pkg/pkg-ver.ebuild */
