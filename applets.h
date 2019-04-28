@@ -73,7 +73,7 @@ static const struct applet_t {
 	/*
 	{"qglsa",     qglsa_main,     "<action> <list>", "check GLSAs against system"},
 	*/
-	{"qgrep",     qgrep_main,     "<misc args>",     "grep in ebuilds"},
+	{"qgrep",     qgrep_main,     "<expr> [pkg ...]", "grep in ebuilds"},
 	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
 	{"qmerge",    qmerge_main,    "<pkgnames>",      "fetch and merge binary package"},

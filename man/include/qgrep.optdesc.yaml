@@ -1,5 +1,4 @@
 verbose: |
-    Print multiple matches per files.  When this option is given
-    multiple times, also linenumber are printed for matches next to file
-    names.
+    Prefix each matching line with filename (like \fB-H\fR).  When this
+    option is given multiple times, also linenumbers are printed.
 quiet: Ignored for compatibility with other qapplets.

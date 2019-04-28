@@ -4,11 +4,14 @@
 qgrep \- grep in ebuilds
 .SH SYNOPSIS
 .B qgrep
-\fI[opts] <misc args>\fR
+\fI[opts] <expr> [pkg ...]\fR
 .SH DESCRIPTION
-\fIqgrep\fR searches for a given pattern in all ebuilds of the current
-portage tree.  Optionally the search is in all eclasses, or just in the
-ebuilds that are currently installed.
+\fIqgrep\fR searches for a given expression in all ebuilds of the
+current portage tree and defined additional overlays.  Optionally the
+search is in all eclasses, or just in the ebuilds that are currently
+installed.  To narrow the search, multiple targets can be given using
+atom syntax.  In particular, the trailing slash (/) syntax can be used
+to match an entire category.  See also \fIqatom\fR(1).
 .SH OPTIONS
 .TP
 \fB\-I\fR, \fB\-\-invert\-match\fR
@@ -60,9 +63,8 @@ Print <arg> lines of trailing context.
 Set the ROOT env var.
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
-Print multiple matches per files.  When this option is given
-multiple times, also linenumber are printed for matches next to file
-names.
+Prefix each matching line with filename (like \fB-H\fR).  When this
+option is given multiple times, also linenumbers are printed.
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
 Ignored for compatibility with other qapplets.
