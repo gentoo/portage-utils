@@ -255,7 +255,6 @@ cache_read_file_md5(cache_pkg_ctx *pkg_ctx)
 	FILE *f;
 	cache_pkg_meta *ret = NULL;
 	size_t len;
-	char buf[_Q_PATH_MAX];
 
 	if ((f = fdopen(pkg_ctx->fd, "r")) == NULL)
 		goto err;
@@ -288,8 +287,9 @@ cache_read_file_md5(cache_pkg_ctx *pkg_ctx)
 	ptr = ret->_data;
 	endptr = strchr(ptr, '\0');
 	if (endptr == NULL) {
-			warn("Invalid cache file for '%s': "
-					"could not find end of cache data", buf);
+			warn("Invalid cache file for '%s/%s': "
+					"could not find end of cache data",
+					pkg_ctx->cat_ctx->name, pkg_ctx->name);
 			goto err;
 	}
 
@@ -299,14 +299,16 @@ cache_read_file_md5(cache_pkg_ctx *pkg_ctx)
 		keyptr = ptr;
 		valptr = strchr(ptr, '=');
 		if (valptr == NULL) {
-			warn("Invalid cache file for '%s': missing val", buf);
+			warn("Invalid cache file for '%s/%s': missing val",
+					pkg_ctx->cat_ctx->name, pkg_ctx->name);
 			goto err;
 		}
 		*valptr = '\0';
 		valptr++;
 		ptr = strchr(valptr, '\n');
 		if (ptr == NULL) {
-			warn("Invalid cache file for '%s': missing key", buf);
+			warn("Invalid cache file for '%s/%s': missing key",
+					pkg_ctx->cat_ctx->name, pkg_ctx->name);
 			goto err;
 		}
 		*ptr = '\0';
@@ -330,9 +332,11 @@ cache_read_file_md5(cache_pkg_ctx *pkg_ctx)
 		assign_var(SRC_URI);
 		assign_var(DEFINED_PHASES);
 		assign_var(REQUIRED_USE);
+		assign_var(BDEPEND);
 		assign_var(_eclasses_);
 		assign_var(_md5_);
-		warn("Cache file for '%s' has unknown key %s", buf, keyptr);
+		warn("Cache file for '%s/%s' has unknown key %s",
+				pkg_ctx->cat_ctx->name, pkg_ctx->name, keyptr);
 	}
 #undef assign_var
 #undef assign_var_cmp

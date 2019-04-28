@@ -38,6 +38,7 @@ typedef struct {
 	/* These are MD5-Cache only */
 	char *DEFINED_PHASES;
 	char *REQUIRED_USE;
+	char *BDEPEND;
 	char *_eclasses_;
 	char *_md5_;
 } cache_pkg_meta;
