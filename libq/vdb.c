@@ -88,6 +88,7 @@ q_vdb_filter_cat(const struct dirent *de)
 	bool founddash;
 
 #ifdef DT_UNKNOWN
+	/* cat must be a dir */
 	if (de->d_type != DT_UNKNOWN &&
 	    de->d_type != DT_DIR &&
 	    de->d_type != DT_LNK)
@@ -204,10 +205,33 @@ q_vdb_close_cat(q_vdb_cat_ctx *cat_ctx)
 int
 q_vdb_filter_pkg(const struct dirent *de)
 {
-	if (de->d_name[0] == '.' || de->d_name[0] == '-')
-		return 0;
+	int i;
+	bool founddash = false;
 
-	return 1;
+	/* PMS 3.1.2 */
+	for (i = 0; de->d_name[i] != '\0'; i++) {
+		switch (de->d_name[i]) {
+			case '_':
+				break;
+			case '-':
+				founddash = true;
+				/* fall through */
+			case '+':
+				if (i)
+					break;
+				return 0;
+			default:
+				if ((de->d_name[i] >= 'A' && de->d_name[i] <= 'Z') ||
+						(de->d_name[i] >= 'a' && de->d_name[i] <= 'z') ||
+						(de->d_name[i] >= '0' && de->d_name[i] <= '9'))
+					break;
+				if (founddash)
+					return 1;
+				return 0;
+		}
+	}
+
+	return i;
 }
 
 q_vdb_pkg_ctx *
