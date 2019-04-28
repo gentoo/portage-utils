@@ -204,13 +204,6 @@ q_vdb_close_cat(q_vdb_cat_ctx *cat_ctx)
 int
 q_vdb_filter_pkg(const struct dirent *de)
 {
-#ifdef DT_UNKNOWN
-	if (de->d_type != DT_UNKNOWN &&
-	    de->d_type != DT_DIR &&
-	    de->d_type != DT_LNK)
-		return 0;
-#endif
-
 	if (de->d_name[0] == '.' || de->d_name[0] == '-')
 		return 0;
 
