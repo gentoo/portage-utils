@@ -78,8 +78,6 @@ int q_main(int argc, char **argv)
 	int i, install;
 	const char *p;
 	APPLET func;
-	int reinitialize_metacache = 0;
-	int reinitialize = 0;
 
 	if (argc == 0)
 		return 1;
@@ -157,16 +155,6 @@ int q_main(int argc, char **argv)
 		return ret;
 	}
 
-#if 0
-	if (reinitialize > 0 || reinitialize_metacache > 0) {
-		reinitialize_as_needed(reinitialize, reinitialize_metacache);
-		return 0;
-	}
-#endif
-	if (reinitialize < 0 || reinitialize_metacache < 0) {
-		reinitialize = reinitialize_metacache = 0;
-		return 0;
-	}
 	if (argc == optind)
 		q_usage(EXIT_FAILURE);
 	if ((func = lookup_applet(argv[optind])) == NULL)
