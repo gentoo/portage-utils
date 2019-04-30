@@ -144,14 +144,17 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 				q_vdb_ctx *pkgdir = ctx->ebuilddir_ctx;
 
 				if (pkgdir == NULL)
-					pkgdir = ctx->ebuilddir_ctx = xzalloc(sizeof(q_vdb_ctx));
+					pkgdir = ctx->ebuilddir_ctx = xmalloc(sizeof(q_vdb_ctx));
+				memset(ctx->ebuilddir_ctx, '\0', sizeof(*ctx->ebuilddir_ctx));
 
 				if ((ctx->ebuilddir_pkg_ctx = q_vdb_next_pkg(cat_ctx)) == NULL)
 					return NULL;
 
 				pkgdir->portroot_fd = -1;
 				pkgdir->vdb_fd = cat_ctx->fd;
-				pkgdir->dir = NULL;
+				pkgdir->do_sort = ctx->do_sort;
+				pkgdir->repo = ctx->repo;
+				pkgdir->cachetype = ctx->cachetype;
 
 				ctx->ebuilddir_cat_ctx =
 					q_vdb_open_cat(pkgdir, ctx->ebuilddir_pkg_ctx->name);
@@ -159,6 +162,7 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 
 			ret = q_vdb_next_pkg(ctx->ebuilddir_cat_ctx);
 			if (ret == NULL) {
+				q_vdb_close_cat(ctx->ebuilddir_cat_ctx);
 				ctx->ebuilddir_pkg_ctx = NULL;
 			} else {
 				if ((p = strstr(ret->name, ".ebuild")) == NULL) {
@@ -166,7 +170,7 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 					ret = NULL;
 				} else {
 					/* "zap" the pkg such that it looks like CAT/P */
-					ret->cat_ctx = cat_ctx;
+					ret->cat_ctx->name = cat_ctx->name;
 					*p = '\0';
 				}
 			}
@@ -366,6 +370,7 @@ cache_read_file_ebuild(cache_pkg_ctx *pkg_ctx)
 	char *q;
 	char *r;
 	char **key;
+	bool findnl;
 
 	if ((f = fdopen(pkg_ctx->fd, "r")) == NULL)
 		goto err;
@@ -382,8 +387,6 @@ cache_read_file_ebuild(cache_pkg_ctx *pkg_ctx)
 
 	p = ret->_data;
 	do {
-		if ((p = strchr(p, '\n')) == NULL)
-			break;
 		q = p;
 		while (*p >= 'A' && *p <= 'Z')
 			p++;
@@ -411,11 +414,12 @@ cache_read_file_ebuild(cache_pkg_ctx *pkg_ctx)
 #undef match_key
 		}
 
+		findnl = true;
 		if (key != NULL) {
 			q = p;
 			if (*q == '"' || *q == '\'') {
 				/* find matching quote */
-				q = ++p;
+				q = p;
 				do {
 					while (*p != '\0' && *p != *q)
 						p++;
@@ -428,14 +432,20 @@ cache_read_file_ebuild(cache_pkg_ctx *pkg_ctx)
 					}
 					break;
 				} while (1);
+				q++;
 			} else {
 				/* find first whitespace */
 				while (!isspace((int)*p))
 					p++;
+				if (*p == '\n')
+					findnl = false;
 			}
-			*p = '\0';
+			*p++ = '\0';
 			*key = q;
 		}
+
+		if (findnl && (p = strchr(p, '\n')) != NULL)
+			p++;
 	} while (p != NULL);
 
 	fclose(f);
@@ -458,8 +468,17 @@ cache_pkg_read(cache_pkg_ctx *pkg_ctx)
 	cache_ctx *ctx = (cache_ctx *)(pkg_ctx->cat_ctx->ctx);
 
 	if (pkg_ctx->fd == -1) {
-		pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name,
-				O_RDONLY|O_CLOEXEC);
+		if (ctx->cachetype != CACHE_EBUILD) {
+			pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name,
+					O_RDONLY|O_CLOEXEC);
+		} else {
+			char *p = (char *)pkg_ctx->name;
+			p += strlen(p);
+			*p = '.';
+			pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name,
+					O_RDONLY|O_CLOEXEC);
+			*p = '\0';
+		}
 		if (pkg_ctx->fd == -1)
 			return NULL;
 	}
