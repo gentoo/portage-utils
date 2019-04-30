@@ -419,7 +419,7 @@ cache_read_file_ebuild(cache_pkg_ctx *pkg_ctx)
 			q = p;
 			if (*q == '"' || *q == '\'') {
 				/* find matching quote */
-				q = p;
+				p++;
 				do {
 					while (*p != '\0' && *p != *q)
 						p++;
