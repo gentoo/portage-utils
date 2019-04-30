@@ -240,14 +240,23 @@ qcache_imlate(cache_pkg_ctx *pkg_ctx, void *priv)
 static int
 qcache_not(cache_pkg_ctx *pkg_ctx, void *priv)
 {
+	size_t a;
 	qcache_data *data = (qcache_data *)priv;
 
 	if (data->keywordsbuf[qcache_test_arch] != testing &&
 			data->keywordsbuf[qcache_test_arch] != stable)
 	{
-		print_keywords(pkg_ctx->cat_ctx->name, pkg_ctx->name,
-				data->keywordsbuf);
-		return EXIT_SUCCESS;
+		/* match if any of the other arches have keywords */
+		for (a = 0; a < archlist_count; a++) {
+			if (data->keywordsbuf[a] == stable ||
+					data->keywordsbuf[a] == testing)
+				break;
+		}
+		if (a < archlist_count) {
+			print_keywords(pkg_ctx->cat_ctx->name, pkg_ctx->name,
+					data->keywordsbuf);
+			return EXIT_SUCCESS;
+		}
 	}
 
 	return EXIT_FAILURE;
