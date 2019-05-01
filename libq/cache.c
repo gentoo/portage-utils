@@ -153,6 +153,8 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 				pkgdir->portroot_fd = -1;
 				pkgdir->vdb_fd = cat_ctx->fd;
 				pkgdir->do_sort = ctx->do_sort;
+				pkgdir->catsortfunc = ctx->catsortfunc;
+				pkgdir->pkgsortfunc = ctx->pkgsortfunc;
 				pkgdir->repo = ctx->repo;
 				pkgdir->cachetype = ctx->cachetype;
 
