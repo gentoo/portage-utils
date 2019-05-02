@@ -2,7 +2,7 @@
 
 | What     | How                                                       |
 | -------- | --------------------------------------------------------- |
-| HOMEPAGE | https://wiki.gentoo.org/wiki/Q\_applets                   |
+| HOMEPAGE | https://wiki.gentoo.org/wiki/Q_applets                    |
 | GIT      | https://anongit.gentoo.org/git/proj/portage-utils.git     |
 | VIEWVCS  | https://gitweb.gentoo.org/proj/portage-utils.git/         |
 | GITHUB   | https://github.com/gentoo/portage-utils                   |
@@ -14,8 +14,8 @@ of information.  The focus is on size and speed, so everything is in C.
 
 ## Building
 
-Just run `make`.  This should work on any recent Linux system.
-Alternatively, run `configure` followed by `make`.
+Run `configure` followed by `make`.  If you're using git-sources, run
+autoreconf first to get various timestamps correct.
 
 ## Helping out
 
@@ -28,7 +28,7 @@ There's also a [HACKING](./HACKING.md) doc to help you get started.
 ## Examples
 
 * find elf files linking to old openssl (using app-misc/pax-utils)<br>
-  `qlist -ao | scanelf -BqgN libssl.so.0.9.6 -f -`
+  `qlist -Cao | scanelf -BqgN libssl.so.0.9.6 -f -`
 
 * produce a package.use file for currently installed packages<br>
   `qlist -UCq | grep ' ' > package.use`
@@ -54,26 +54,3 @@ Please file bugs at:
 * solar@gentoo.org
 * vapier@gentoo.org
 * grobian@gentoo.org
-
-## Notes
-
-### Speed is everything.
-
-Having your PORTDIR and VDB on the right file system helps dramatically
-
-Nowadays this should rarely matter, but on smaller scale (embedded) or
-older hardware, consider the following.
-
-IDE raid with PORTDIR on reiserfs:
-
-```sh
-$ q -r
-q: Finished 20655 entries in 1.990951 seconds
-```
-
-IDE raid with PORTDIR on ext3:
-
-```sh
-$ q -r
-q: Finished 20655 entries in 203.664252 seconds
-```
