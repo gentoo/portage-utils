@@ -8,8 +8,6 @@
 
 - disable color when tty = NULL; may break less?
 
-- multiline reads don't yet work for quse/qsearch
-
 - standardize/unify/clean up misc handling of colors
   define rules:
     BOLD CATEGORY/ BLUE PKG GREEN ::REPO NORM [ MAGENTA USE NORM ]
