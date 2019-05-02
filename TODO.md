@@ -38,7 +38,6 @@
 - only 64bit values are supported in any individual version component
   foo-(1234)\_alpha(56789)
 - these limits should not be an issue for all practical purposes
-- need to handle USE deps like: cat/pkg-123[foo(+)]
 
 # qmerge
 
