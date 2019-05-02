@@ -98,3 +98,4 @@
 
 # quse
 - make -v faster by calling searcg funcs once per package match
+- make -v only print requested USE-flag when flags given

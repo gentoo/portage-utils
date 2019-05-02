@@ -1,2 +1,2 @@
- one:abc: cow
- two:abc: pig
+ONE[abc] cow
+TWO[abc] pig

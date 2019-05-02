@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <ctype.h>
 #include <assert.h>
 
 #include "cache.h"
@@ -25,434 +26,565 @@
 #include "xarray.h"
 #include "xregex.h"
 
-/*
- quse -CKe -- '-*' {'~',-,}{alpha,amd64,hppa,ia64,ppc,ppc64,sparc,x86}
- quse -Ke --  nls
-*/
-
-#define QUSE_FLAGS "eavKLDF:N" COMMON_FLAGS
+#define QUSE_FLAGS "eaLDp:" COMMON_FLAGS
 static struct option const quse_long_opts[] = {
 	{"exact",     no_argument, NULL, 'e'},
 	{"all",       no_argument, NULL, 'a'},
-	{"keywords",  no_argument, NULL, 'K'},
 	{"license",   no_argument, NULL, 'L'},
 	{"describe",  no_argument, NULL, 'D'},
-	{"format",     a_argument, NULL, 'F'},
-	{"name-only", no_argument, NULL, 'N'},
+	{"package",    a_argument, NULL, 'p'},
 	COMMON_LONG_OPTS
 };
 static const char * const quse_opts_help[] = {
 	"Show exact non regexp matching using strcmp",
 	"List all ebuilds, don't match anything",
-	"Use the KEYWORDS vs IUSE",
 	"Use the LICENSE vs IUSE",
 	"Describe the USE flag",
-	"Use your own variable formats. -F NAME=",
-	"Only show package name",
+	"Restrict matching to package or category",
 	COMMON_OPTS_HELP
 };
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, NULL, lookup_applet_idx("quse"))
 
-char quse_name_only = 0;
+struct quse_state {
+	int argc;
+	char **argv;
+	const char *overlay;
+	bool do_all:1;
+	bool do_regex:1;
+	bool do_describe:1;
+	bool do_licence:1;
+	bool do_list:1;
+	depend_atom *match;
+	regex_t *pregv;
+};
 
-static void
-print_highlighted_use_flags(char *string, int ind, int argc, char **argv)
+static char *_quse_getline_buf = NULL;
+static size_t _quse_getline_buflen = 0;
+#define GETLINE(FD, BUF, LEN) \
+	LEN = getline(&_quse_getline_buf, &_quse_getline_buflen, FD); \
+	BUF = _quse_getline_buf
+
+static bool
+quse_search_use_local_desc(int portdirfd, struct quse_state *state)
 {
-	char *str, *p;
-	char buf[BUFSIZ];
-	size_t pos, len;
-	short highlight = 0;
+	int fd;
+	FILE *f;
+	ssize_t linelen;
+	char *buf;
+	char *p;
+	char *q;
 	int i;
+	bool match = false;
+	bool ret = false;
+	depend_atom *atom;
 
-	if (quse_name_only)
-		return;
+	fd = openat(portdirfd, "profiles/use.local.desc", O_RDONLY | O_CLOEXEC);
+	if (fd == -1)
+		return false;
 
-	snprintf(buf, sizeof(buf), "%.*s", (int)sizeof(buf) - 1, string);
-	str = buf;
-	remove_extra_space(str);
-	rmspace(str);
-
-	if (*WHITE == '\0') {
-		printf("%s", str);
-		return;
+	f = fdopen(fd, "r");
+	if (f == NULL) {
+		close(fd);
+		return false;
 	}
 
-	len = strlen(str);
-	for (pos = 0; pos < len; pos++) {
-		highlight = 0;
-		if ((p = strchr(str, ' ')) != NULL)
-			*p = 0;
-		pos += strlen(str);
-		for (i = ind; i < argc; ++i)
-			if (strcmp(str, argv[i]) == 0)
-				highlight = 1;
-		if (highlight)
-			printf("%s%s%s ", BOLD, str, NORM);
-		else
-			printf("%s%s%s%s ", NORM, MAGENTA, str, NORM);
-		if (p != NULL)
-			str = p + 1;
-	}
-}
+	/* use.local.desc: <pkg>:<use> - <desc> */
+	do {
+		GETLINE(f, buf, linelen);
+		if (linelen < 0)
+			break;
 
-static void
-quse_describe_flag(const char *overlay, unsigned int ind, unsigned int argc, char **argv)
-{
-#define NUM_SEARCH_FILES ARRAY_SIZE(search_files)
-	int linelen;
-	size_t buflen;
-	char *buf, *p;
-	unsigned int i, f;
-	size_t s;
-	const char * const search_files[] = {
-		"use.desc",
-		"use.local.desc",
-		"arch.list"
-	};
-	FILE *fp[NUM_SEARCH_FILES];
-	int dfd, fd;
-	DIR *d;
-	struct dirent *de;
+		rmspace_len(buf, (size_t)linelen);
+		if (buf[0] == '#' || buf[0] == '\0')
+			continue;
 
-	/* pick 1000 arbitrarily long enough for all files under desc/ */
-	buflen = strlen(overlay) + 1000;
-	buf = xmalloc(buflen);
+		if ((p = strchr(buf, ':')) == NULL)
+			continue;
+		*p++ = '\0';
 
-	for (i = 0; i < NUM_SEARCH_FILES; ++i) {
-		snprintf(buf, buflen, "%s/profiles/%s", overlay, search_files[i]);
-		fp[i] = fopen(buf, "r");
-		if (verbose && fp[i] == NULL)
-			warnp("skipping %s", buf);
-	}
+		q = strchr(p, ' ');
+		if (q == NULL || q[1] != '-')
+			continue;
+		*q = '\0';
+		q += 3; /* " - " */
 
-	for (i = ind; i < argc; i++) {
-		s = strlen(argv[i]);
+		match = false;
+		for (i = 0; i < state->argc; i++) {
+			if (state->do_regex) {
+				if (regexec(&state->pregv[i], p, 0, NULL, 0) != 0)
+					continue;
+			} else {
+				if (strcmp(p, state->argv[i]) != 0)
+					continue;
+			}
+			match = true;
+			break;
+		}
 
-		for (f = 0; f < NUM_SEARCH_FILES; ++f) {
-			if (fp[f] == NULL)
+		if (match) {
+			if ((atom = atom_explode(buf)) == NULL)
 				continue;
 
-			while ((linelen = getline(&buf, &buflen, fp[f])) >= 0) {
-				rmspace_len(buf, (size_t)linelen);
-				if (buf[0] == '#' || buf[0] == '\0')
-					continue;
-
-				switch (f) {
-					case 0: /* Global use.desc */
-						if (!strncmp(buf, argv[i], s))
-							if (buf[s] == ' ' && buf[s + 1] == '-') {
-								printf(" %sglobal%s:%s%s%s: %s\n",
-										BOLD, NORM, BLUE, argv[i], NORM,
-										buf + s + 3);
-								goto skip_file;
-							}
-						break;
-
-					case 1: /* Local use.local.desc */
-						if ((p = strchr(buf, ':')) == NULL)
-							break;
-						++p;
-						if (!strncmp(p, argv[i], s)) {
-							if (p[s] == ' ' && p[s + 1] == '-') {
-								*p = '\0';
-								printf(" %slocal%s:%s%s%s:%s%s%s %s\n",
-										BOLD, NORM, BLUE, argv[i], NORM,
-										BOLD, buf, NORM, p + s + 3);
-							}
-						}
-						break;
-
-					case 2: /* Architectures arch.list */
-						if (!strcmp(buf, argv[i])) {
-							printf(" %sarch%s:%s%s%s: %s architecture\n",
-									BOLD, NORM, BLUE, argv[i], NORM, argv[i]);
-							goto skip_file;
-						}
-						break;
-				}
+			if (state->match == NULL ||
+					atom_compare(atom, state->match) == EQUAL)
+			{
+				if (state->do_list)
+					printf("  %s%s%s  %s\n", MAGENTA, p, NORM, q);
+				else
+					printf("%s%s/%s%s%s[%s%s%s] %s\n",
+							BOLD, atom->CATEGORY,
+							BLUE, atom->PN, NORM,
+							MAGENTA, p, NORM, q);
 			}
 
- skip_file:
-			rewind(fp[f]);
+			atom_implode(atom);
+			ret = true;
 		}
+	} while (1);
+
+	fclose(f);
+	return ret;
+}
+
+static bool
+quse_search_use_desc(int portdirfd, struct quse_state *state)
+{
+	int fd;
+	FILE *f;
+	ssize_t linelen;
+	char *buf;
+	char *p;
+	int i;
+	bool match = false;
+	bool ret = false;
+
+	fd = openat(portdirfd, "profiles/use.desc", O_RDONLY | O_CLOEXEC);
+	if (fd == -1)
+		return false;
+
+	f = fdopen(fd, "r");
+	if (f == NULL) {
+		close(fd);
+		return false;
 	}
 
-	for (f = 0; f < NUM_SEARCH_FILES; ++f)
-		if (fp[f] != NULL)
-			fclose(fp[f]);
+	/* use.desc: <use> - <desc> */
+	do {
+		GETLINE(f, buf, linelen);
+		if (linelen < 0)
+			break;
 
-	/* now scan the desc dir */
-	snprintf(buf, buflen, "%s/profiles/desc/", overlay);
-	dfd = open(buf, O_RDONLY|O_CLOEXEC);
-	if (dfd == -1) {
-		if (verbose)
-			warnp("skipping %s", buf);
-		goto done;
-	}
-	d = fdopendir(dfd);
-	if (!d) {
-		close(dfd);
-		goto done;
-	}
-
-	while ((de = readdir(d)) != NULL) {
-		s = strlen(de->d_name);
-		if (s < 6)
-			continue;
-		p = de->d_name + s - 5;
-		if (strcmp(p, ".desc"))
+		rmspace_len(buf, (size_t)linelen);
+		if (buf[0] == '#' || buf[0] == '\0')
 			continue;
 
-		fd = openat(dfd, de->d_name, O_RDONLY|O_CLOEXEC);
-		if (fd == -1) {
-			if (verbose)
-				warnp("skipping %s/profiles/desc/%s", overlay, de->d_name);
+		p = strchr(buf, ' ');
+		if (p == NULL || p[1] != '-')
 			continue;
-		}
-		fp[0] = fdopen(fd, "r");
-		if (!fp[0]) {
-			close(fd);
-			continue;
-		}
-
-		/* Chop the trailing .desc for better display */
 		*p = '\0';
+		p += 3; /* " - " */
 
-		while ((linelen = getline(&buf, &buflen, fp[0])) >= 0) {
+		match = false;
+		for (i = 0; i < state->argc; i++) {
+			if (state->do_regex) {
+				if (regexec(&state->pregv[i], buf, 0, NULL, 0) != 0)
+					continue;
+			} else {
+				if (strcmp(buf, state->argv[i]) != 0)
+					continue;
+			}
+			match = true;
+			break;
+		}
+
+		if (match) {
+			if (state->do_list)
+				printf("  %s%s%s  %s\n", MAGENTA, buf, NORM, p);
+			else
+				printf("%sglobal%s[%s%s%s] %s\n",
+						BOLD, NORM, MAGENTA, buf, NORM, p);
+
+			ret = true;
+		}
+	} while (1);
+
+	fclose(f);
+	return ret;
+}
+
+static bool
+quse_search_profiles_desc(
+		int portdirfd,
+		struct quse_state *state)
+{
+	int fd;
+	FILE *f;
+	ssize_t linelen;
+	char *buf;
+	char *p;
+	int i;
+	bool match = false;
+	bool ret = false;
+	size_t namelen;
+	size_t arglen;
+	char ubuf[_Q_PATH_MAX];
+	struct dirent *de;
+	DIR *d;
+	int dfd;
+
+	fd = openat(portdirfd, "profiles/desc", O_RDONLY|O_CLOEXEC);
+	if (fd == -1)
+		return false;
+	d = fdopendir(fd);
+	if (!d) {
+		close(fd);
+		return false;
+	}
+
+	if (_quse_getline_buf == NULL) {
+		_quse_getline_buflen = _Q_PATH_MAX;
+		_quse_getline_buf = xmalloc(sizeof(char) * _quse_getline_buflen);
+	}
+
+	while ((de = readdir(d))) {
+		if (de->d_name[0] == '.')
+			continue;
+
+		namelen = strlen(de->d_name);
+		if (namelen <= 5 || strcmp(de->d_name + namelen - 5, ".desc") != 0)
+			return false;
+
+		snprintf(_quse_getline_buf, _quse_getline_buflen,
+				"profiles/desc/%s", de->d_name);
+		dfd = openat(portdirfd, _quse_getline_buf, O_RDONLY | O_CLOEXEC);
+		if (dfd == -1)
+			return false;
+
+		f = fdopen(dfd, "r");
+		if (f == NULL) {
+			close(fd);
+			return false;
+		}
+
+		/* remove trailing .desc */
+		namelen -= 5;
+
+		/* use.desc: <use> - <desc> */
+		do {
+			GETLINE(f, buf, linelen);
+			if (linelen < 0)
+				break;
+
 			rmspace_len(buf, (size_t)linelen);
 			if (buf[0] == '#' || buf[0] == '\0')
 				continue;
 
-			if ((p = strchr(buf, '-')) == NULL) {
- invalid_line:
-				warn("Invalid line in '%s': %s", de->d_name, buf);
+			p = strchr(buf, ' ');
+			if (p == NULL || p[1] != '-')
 				continue;
-			}
-			while (p[-1] != ' ' && p[1] != ' ') {
-				/* maybe the flag has a '-' in it ... */
-				if ((p = strchr(p + 1, '-')) == NULL)
-					goto invalid_line;
-			}
-			p[-1] = '\0';
-			p += 2;
+			*p = '\0';
+			p += 3; /* " - " */
 
-			for (i = ind; i < argc; i++)
-				if (!strcmp(argv[i], buf))
-					printf(" %s%s%s:%s%s%s: %s\n",
-							BOLD, de->d_name, NORM, BLUE, argv[i], NORM, p);
-		}
-		fclose(fp[0]);
+			match = false;
+			for (i = 0; i < state->argc; i++) {
+				arglen = strlen(state->argv[i]);
+				if (arglen > namelen) {
+					/* nginx_modules_http_lua = NGINX_MODULES_HTTP[lua] */
+					match = strncmp(state->argv[i], de->d_name, namelen) == 0;
+					if (match && state->argv[i][namelen] == '_') {
+						match = strcmp(&state->argv[i][namelen + 1], buf) == 0;
+					} else {
+						match = false;
+					}
+					if (match)
+						break;
+				}
+
+				if (state->do_regex) {
+					if (regexec(&state->pregv[i], buf, 0, NULL, 0) != 0)
+						continue;
+				} else {
+					if (strcmp(buf, state->argv[i]) != 0)
+						continue;
+				}
+				match = true;
+				break;
+			}
+
+			if (match) {
+				const char *r = de->d_name;
+				char *s = ubuf;
+				do {
+					*s++ = (char)toupper((int)*r);
+				} while (++r < (de->d_name + namelen));
+				*s = '\0';
+				if (state->do_list)
+					printf("  %s=%s%s%s  %s\n", ubuf, MAGENTA, buf, NORM, p);
+				else
+					printf("%s%s%s[%s%s%s] %s\n",
+							BOLD, ubuf, NORM, MAGENTA, buf, NORM, p);
+
+				ret = true;
+			}
+		} while (1);
+
+		fclose(f);
 	}
 	closedir(d);
 
- done:
-	free(buf);
+	return ret;
+}
+
+static void
+quse_describe_flag(const char *root, const char *overlay,
+		struct quse_state *state)
+{
+	char buf[_Q_PATH_MAX];
+	int portdirfd;
+
+	snprintf(buf, sizeof(buf), "%s/%s", root, overlay);
+	portdirfd = open(buf, O_RDONLY|O_CLOEXEC|O_PATH);
+	if (portdirfd == -1)
+		return;
+
+	quse_search_use_desc(portdirfd, state);
+	quse_search_use_local_desc(portdirfd, state);
+	quse_search_profiles_desc(portdirfd, state);
+
+	close(portdirfd);
+}
+
+static int
+quse_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
+{
+	struct quse_state *state = (struct quse_state *)priv;
+	depend_atom *atom = NULL;  /* pacify compiler */
+	char buf[8192];
+	cache_pkg_meta *meta;
+	bool match;
+	char *p;
+	char *q;
+	char *s;
+	char *v;
+	char *w;
+	int i;
+	int len;
+	int portdirfd = -1;  /* pacify compiler */
+
+	if (state->match || verbose) {
+		snprintf(buf, sizeof(buf), "%s/%s",
+				pkg_ctx->cat_ctx->name, pkg_ctx->name);
+		atom = atom_explode(buf);
+		if (atom == NULL)
+			return 0;
+
+		if (state->match) {
+			match = atom_compare(atom, state->match) == EQUAL;
+			if (!verbose || !match)
+				atom_implode(atom);
+
+			if (!match)
+				return 0;
+		}
+	}
+
+	meta = cache_pkg_read(pkg_ctx);
+	if (meta == NULL)
+		return 0;
+
+	if (meta->IUSE == NULL)
+		return 0;
+
+	if (verbose) {
+		portdirfd = openat(pkg_ctx->cat_ctx->ctx->portroot_fd,
+				state->overlay, O_RDONLY | O_CLOEXEC | O_PATH);
+		if (portdirfd == -1)
+			return 0;
+	}
+
+	match = false;
+	q = p = state->do_licence ? meta->LICENSE : meta->IUSE;
+	buf[0] = '\0';
+	v = buf;
+	w = buf + sizeof(buf);
+
+	if (state->do_all) {
+		match = true;
+		v = q;
+	} else {
+		do {
+			if (*p == ' ' || *p == '\0') {
+				/* skip over consequtive whitespace */
+				if (p == q) {
+					q++;
+					continue;
+				}
+
+				s = q;
+				if (*q == '-' || *q == '+' || *q == '@')
+					q++;
+				if (state->do_regex) {
+					char r;
+					for (i = 0; i < state->argc; i++) {
+						r = *p;
+						*p = '\0';
+						if (regexec(&state->pregv[i], q, 0, NULL, 0) == 0) {
+							*p = r;
+							v += snprintf(v, w - v, "%s%.*s%s%c",
+									RED, (int)(p - s), s, NORM, *p);
+							match = true;
+							break;
+						}
+						*p = r;
+					}
+				} else {
+					for (i = 0; i < state->argc; i++) {
+						len = strlen(state->argv[i]);
+						if (len == (int)(p - q) &&
+								strncmp(q, state->argv[i], len) == 0)
+						{
+							v += snprintf(v, w - v, "%s%.*s%s%c",
+									RED, (int)(p - s), s, NORM, *p);
+							match = true;
+							break;
+						}
+					}
+				}
+				if (i == state->argc)
+					v += snprintf(v, w - v, "%.*s%c", (int)(p - s), s, *p);
+				q = p + 1;
+			}
+		} while (*p++ != '\0' && v < w);
+		v = buf;
+	}
+
+	if (match) {
+		if (quiet) {
+			printf("%s%s/%s%s%s\n", BOLD, pkg_ctx->cat_ctx->name,
+					BLUE, pkg_ctx->name, NORM);
+		} else if (verbose) {
+			/* multi-line result, printing USE-flags with their descs */
+			struct quse_state us = {
+				.do_regex = false,
+				.do_describe = false,
+				.do_list = true,
+				.match = atom,
+				.argc = 1,
+				.argv = NULL,
+				.overlay = NULL,
+			};
+
+			printf("%s%s/%s%s%s:\n", BOLD, pkg_ctx->cat_ctx->name,
+					BLUE, pkg_ctx->name, NORM);
+
+			q = p = state->do_licence ? meta->LICENSE : meta->IUSE;
+			buf[0] = '\0';
+			do {
+				if (*p == ' ' || *p == '\0') {
+					s = q;
+					if (*q == '-' || *q == '+' || *q == '@')
+						q++;
+
+					snprintf(buf, sizeof(buf), "%.*s", (int)(p - q), q);
+					v = buf;
+					us.argv = &v;
+
+					/* print at most one match for each flag, this is
+					 * why we can't setup all flags in argc/argv,
+					 * because then we either print way to few, or way
+					 * too many, possible opt: when argv would be
+					 * modified by search funcs so they remove what they
+					 * matched */
+					if (!quse_search_use_local_desc(portdirfd, &us))
+						if (!quse_search_use_desc(portdirfd, &us))
+							quse_search_profiles_desc(portdirfd, &us);
+
+					q = p + 1;
+				}
+			} while (*p++ != '\0');
+		} else {
+			printf("%s%s/%s%s%s: %s\n", BOLD, pkg_ctx->cat_ctx->name,
+					BLUE, pkg_ctx->name, NORM, v);
+		}
+	}
+
+	cache_close_meta(meta);
+	if (state->match || verbose)
+		atom_implode(atom);
+	if (verbose)
+		close(portdirfd);
+
+	return EXIT_SUCCESS;
 }
 
 int quse_main(int argc, char **argv)
 {
-	FILE *fp;
-	const char *cache_file = NULL;
-	char *p;
-
-	char buf0[_Q_PATH_MAX];
-	char buf1[_Q_PATH_MAX];
-	char buf2[_Q_PATH_MAX];
-
-	int linelen;
-	size_t ebuildlen;
-	char *ebuild;
-
-	const char *search_var = NULL;
-	const char *search_vars[] = {
-		"IUSE=",
-		"KEYWORDS=",
-		"LICENSE=",
-		search_var
-	};
-	short quse_all = 0;
-	int regexp_matching = 1, i, idx = 0;
-	size_t search_len;
+	int i;
 	size_t n;
 	const char *overlay;
+	char *match = NULL;
+	struct quse_state state = {
+		.do_all = false,
+		.do_regex = true,
+		.do_describe = false,
+		.do_licence = false,
+		.match = NULL,
+		.overlay = NULL,
+	};
 
 	while ((i = GETOPT_LONG(QUSE, quse, "")) != -1) {
 		switch (i) {
-		case 'e': regexp_matching = 0; break;
-		case 'a': quse_all = 1; break;
-		case 'K': idx = 1; break;
-		case 'L': idx = 2; break;
-		case 'D': idx = -1; break;
-		case 'F': idx = 3, search_vars[idx] = xstrdup(optarg); break;
-		case 'N': quse_name_only = 1; break;
+		case 'e': state.do_regex = false;   break;
+		case 'a': state.do_all = true;      break;
+		case 'L': state.do_licence = true;  break;
+		case 'D': state.do_describe = true; break;
+		case 'p': match = optarg;           break;
 		COMMON_GETOPTS_CASES(quse)
 		}
 	}
-	if (argc == optind && !quse_all && idx >= 0)
-		quse_usage(EXIT_FAILURE);
+	if (argc == optind && !state.do_all) {
+		if (match != NULL) {
+			/* default to printing everything if just package is given */
+			state.do_all = true;
+		} else {
+			quse_usage(EXIT_FAILURE);
+		}
+	}
 
-	if (idx == -1) {
+	state.argc = argc - optind;
+	state.argv = &argv[optind];
+
+	if (match != NULL) {
+		state.match = atom_explode(match);
+		if (state.match == NULL)
+			errf("invalid atom: %s", match);
+	}
+
+	if (state.do_regex) {
+		state.pregv = xmalloc(sizeof(state.pregv[0]) * state.argc);
+		for (i = 0; i < state.argc; i++)
+			xregcomp(&state.pregv[i], state.argv[i], REG_EXTENDED | REG_NOSUB);
+	}
+
+	if (state.do_describe) {
 		array_for_each(overlays, n, overlay)
-			quse_describe_flag(overlay, optind, argc, argv);
-		return 0;
+			quse_describe_flag(portroot, overlay, &state);
+	} else {
+		array_for_each(overlays, n, overlay) {
+			state.overlay = overlay;
+			cache_foreach_pkg_sorted(portroot, overlay,
+					quse_results_cb, &state, NULL, NULL);
+		}
 	}
 
-	if (quse_all) optind = argc;
-
-	search_len = strlen(search_vars[idx]);
-	assert(search_len < sizeof(buf0));
-
-	array_for_each(overlays, n, overlay) {
-		int overlay_fd;
-
-		/* FIXME: use libq/cache here */ if (1 == 1) {
-			warnp("could not read cache: %s", cache_file);
-			continue;
-		}
-
-		overlay_fd = open(overlay, O_RDONLY|O_CLOEXEC|O_PATH);
-
-		ebuild = NULL;
-		while ((linelen = getline(&ebuild, &ebuildlen, fp)) >= 0) {
-			FILE *newfp;
-			int fd;
-
-			rmspace_len(ebuild, (size_t)linelen);
-
-			fd = openat(overlay_fd, ebuild, O_RDONLY|O_CLOEXEC);
-			if (fd < 0)
-				continue;
-			newfp = fdopen(fd, "r");
-			if (newfp != NULL) {
-				unsigned int lineno = 0;
-
-				while (fgets(buf0, sizeof(buf0), newfp) != NULL) {
-					int ok = 0;
-					char warned = 0;
-					lineno++;
-
-					if (strncmp(buf0, search_vars[idx], search_len) != 0)
-						continue;
-
-					if ((p = strchr(buf0, '\n')) != NULL)
-						*p = 0;
-					if ((p = strchr(buf0, '#')) != NULL) {
-						if (buf0 != p && p[-1] == ' ')
-							p[-1] = 0;
-						else
-							*p = 0;
-					}
-					if (verbose > 1) {
-						if ((strchr(buf0, '\t') != NULL)
-						    || (strchr(buf0, '$') != NULL)
-						    || (strchr(buf0, '\\') != NULL)
-						    || (strchr(buf0, '\'') != NULL)
-						    || (strstr(buf0, "  ") != NULL)) {
-							warned = 1;
-							warn("# Line %d of %s has an annoying %s",
-								lineno, ebuild, buf0);
-						}
-					}
-#ifdef THIS_SUCKS
-					if ((p = strrchr(&buf0[search_len + 1], '\\')) != NULL) {
-
-					multiline:
-						*p = ' ';
-
-						if (fgets(buf1, sizeof(buf1), newfp) == NULL)
-							continue;
-						lineno++;
-
-						if ((p = strchr(buf1, '\n')) != NULL)
-							*p = 0;
-						snprintf(buf2, sizeof(buf2), "%s %s", buf0, buf1);
-						remove_extra_space(buf2);
-						strcpy(buf0, buf2);
-						if ((p = strrchr(buf1, '\\')) != NULL)
-							goto multiline;
-					}
-#else
-					remove_extra_space(buf0);
-#endif
-					while ((p = strrchr(&buf0[search_len + 1], '"')) != NULL)  *p = 0;
-					while ((p = strrchr(&buf0[search_len + 1], '\'')) != NULL) *p = 0;
-					while ((p = strrchr(&buf0[search_len + 1], '\\')) != NULL) *p = ' ';
-
-					if (verbose && warned == 0) {
-						if ((strchr(buf0, '$') != NULL) || (strchr(buf0, '\\') != NULL)) {
-							warned = 1;
-							warn("# Line %d of %s has an annoying %s",
-								lineno, ebuild, buf0);
-						}
-					}
-
-					if (strlen(buf0) < search_len + 1) {
-						/* warnf("err '%s'/%zu <= %zu; line %u\n", buf0, strlen(buf0), search_len + 1, lineno); */
-						continue;
-					}
-
-					if ((argc == optind) || (quse_all)) {
-						ok = 1;
-					} else {
-						ok = 0;
-						if (regexp_matching) {
-							for (i = optind; i < argc; ++i) {
-								if (rematch(argv[i], &buf0[search_len + 1], REG_NOSUB) == 0) {
-									ok = 1;
-									break;
-								}
-							}
-						} else {
-							remove_extra_space(buf0);
-							strcpy(buf1, &buf0[search_len + 1]);
-
-							for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
-								if (strcmp(buf1, argv[i]) == 0) {
-									ok = 1;
-									break;
-								}
-							}
-							if (ok == 0) while ((p = strchr(buf1, ' ')) != NULL) {
-								*p = 0;
-								for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
-									if (strcmp(buf1, argv[i]) == 0) {
-										ok = 1;
-										break;
-									}
-								}
-								strcpy(buf2, p + 1);
-								strcpy(buf1, buf2);
-								if (strchr(buf1, ' ') == NULL)
-									for (i = (size_t) optind; i < argc && argv[i] != NULL; i++) {
-										if (strcmp(buf1, argv[i]) == 0)
-											ok = 1;
-									}
-							}
-						}
-					}
-					if (ok) {
-						printf("%s%s%s ", CYAN, ebuild, NORM);
-						print_highlighted_use_flags(&buf0[search_len + 1],
-								optind, argc, argv);
-						puts(NORM);
-						if (verbose > 1) {
-							char **ARGV;
-							int ARGC;
-							makeargv(&buf0[search_len + 1], &ARGC, &ARGV);
-							quse_describe_flag(overlay, 1, ARGC, ARGV);
-							freeargv(ARGC, ARGV);
-						}
-					}
-					break;
-				}
-				fclose(newfp);
-			} else {
-				warnf("missing cache, please (re)generate");
-			}
-		}
-		fclose(fp);
-		close(overlay_fd);
+	if (state.do_regex) {
+		for (i = 0; i < state.argc; i++)
+			regfree(&state.pregv[i]);
+		free(state.pregv);
 	}
+
+	if (state.match != NULL)
+		atom_implode(state.match);
 
 	return EXIT_SUCCESS;
 }

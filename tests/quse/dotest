@@ -13,30 +13,16 @@ entries() {
 	sed -e 's:#.*::' -e '/^$/d' "$1"
 }
 
-# check arch.list
-f="$d/arch.list"
-all=$(entries "$f")
-for x in ${all} ; do
-	quse -CD $x > x
-	echo " arch:$x: $x architecture" > good
-	cat good >> all.good
-	diff -u x good
-done
-quse -CD ${all} > x
-diff -u x all.good
-rm x good all.good
-tpass "arch.list"
-
 # check use.desc
 f="$d/use.desc"
 all=$(entries "$f" | awk '{print $1}')
 for x in ${all} ; do
-	quse -CD $x > x
-	sed -n -e "/^$x - /{s|^[^ ]* - | global:$x: |;p}" "$f" > good
+	quse -eCD $x > x
+	sed -n -e "/^$x - /{s|^[^ ]* - |global[$x] |;p}" "$f" > good
 	cat good >> all.good
 	diff -u x good
 done
-quse -CD ${all} > x
+quse -eCD ${all} > x
 diff -u x all.good
 rm x good all.good
 tpass "use.desc"
@@ -45,12 +31,12 @@ tpass "use.desc"
 f="$d/use.local.desc"
 all=$(entries "$f" | awk '{print $1}' | cut -f2 -d:)
 for x in ${all} ; do
-	quse -CD $x > x
-	sed -n -e "/^[^:]*:$x - /{s|^\([^:]*\):[^ ]* - | local:$x:\1: |;p}" "$f" > good
+	quse -eCD $x > x
+	sed -n -e "/^[^:]*:$x - /{s|^\([^:]*\):[^ ]* - |\1[$x] |;p}" "$f" > good
 	cat good >> all.good
 	diff -u x good
 done
-quse -CD ${all} > x
+quse -eCD ${all} > x
 diff -u x all.good
 rm x good all.good
 tpass "use.local.desc"
@@ -59,14 +45,15 @@ tpass "use.local.desc"
 f="$d/desc/elibc.desc"
 all=$(entries "$f" | awk '{print $1}')
 for x in ${all} ; do
-	quse -CD $x > x
+	quse -eCD $x > x
 	dispf=${f##*/}
 	dispf=${dispf%.desc}
-	sed -n -e "/^$x - /{s|^[^ ]* - | ${dispf}:$x: |;p}" "$f" > good
+	dispf=${dispf^^}
+	sed -n -e "/^$x - /{s|^[^ ]* - |${dispf}[$x] |;p}" "$f" > good
 	cat good >> all.good
 	diff -u x good
 done
-quse -CD ${all} > x
+quse -eCD ${all} > x
 diff -u x all.good
 rm x good all.good
 tpass "desc/elibc.desc"
@@ -82,25 +69,3 @@ tpass "multi file match"
 
 cleantmpdir
 
-###### faster test needed.########
-end
-##################################
-type -p mksquashfs || exit 0
-
-export PORTDIR=$(portageq envvar PORTDIR) ;
-
-arches="x86 amd64 ppc"
-
-for arch in $arches; do
-	mkdir -p PORTDIR-${arch}
-	cd PORTDIR-${arch} || exit 1
-	[[ ! -e arch.${arch} ]] && quse -CKe ${arch} > arch.${arch} ;
-	awk '{print $1}' < arch.${arch} | cut -d / -f 1-2 | uniq | while read cpn ; do mkdir -p $cpn ; done ; 
-	for ebuild in $(awk '{print $1}' < arch.${arch}) ; do cp $PORTDIR/$ebuild ./$ebuild; done ;
-	quse -CKe ${arch} | awk '{print $1}' | cut -d / -f 1-2 | uniq | while read cpn ; do cp -a $PORTDIR/$cpn/files ./$cpn/; done ;
-	cp -a $PORTDIR/{eclass,profiles,licences} . ; sync ; 
-	mksquashfs ./ ../PORTDIR-${arch}.squashfs -noappend -e arch.${arch} ; 
-	rm -rf *-*
-	cd -
-done
-ls -lh PORTDIR-*.squashfs
