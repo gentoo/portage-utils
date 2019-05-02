@@ -28,8 +28,6 @@
 
 - vdb repo/slot think about when it is freed (see cache\_pkg\_close)
 
-- quse -K -> move to qkeyword
-
 # Atoms
 
 - only 32bit values are supported for revision (-r#)
