@@ -429,8 +429,11 @@ cache_read_file_ebuild(cache_pkg_ctx *pkg_ctx)
 						for (r = p - 1; r > q; r--)
 							if (*r != '\\')
 								break;
-						if (r != q && (p - 1 - r) % 2 == 1)
+						if (r != q && (p - 1 - r) % 2 == 1) {
+							/* escaped, move along */
+							p++;
 							continue;
+						}
 					}
 					break;
 				} while (1);
