@@ -4,6 +4,7 @@
 	- default \*foo\*
 	- -e foo
 	- -r (-R ?) regexp foo.\*
+- make default -e for apps like quse/qdepends?
 
 - disable color when tty = NULL; may break less?
 
@@ -28,6 +29,12 @@
   cat?) to reduce search space, same for cache\_foreach\_pkg
 
 - vdb repo/slot think about when it is freed (see cache\_pkg\_close)
+
+- cache:cache\_read\_file\_ebuild deal with \\\\n sequences
+
+- qcache -> rename to qkeyword
+
+- quse -K -> move to qkeyword
 
 # Atoms
 
@@ -61,6 +68,7 @@
 - support querying uninstalled packages (via libq/cache)
 - add -S/-v/-R behavior like qlist #574934
 - support printing full dep content (with -v?) from libq/cache
+- bring back -k?  (but seems solved by using qlist -IF%{SLOT} pkg)
 
 # qpkg
 
@@ -83,3 +91,10 @@
   work)
 - make a -d mode that allows to do equivalent of "last portage emerge"
   to make it easy to see what was newly merged/unmerged
+
+# qlist
+- have -F for use with -I so one can do things like print SLOT for
+  package X
+
+# quse
+- make -v faster by calling searcg funcs once per package match
