@@ -246,8 +246,8 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_q_OBJECTS = q-main.$(OBJEXT) q-q.$(OBJEXT) q-qatom.$(OBJEXT) \
-	q-qcache.$(OBJEXT) q-qcheck.$(OBJEXT) q-qdepends.$(OBJEXT) \
-	q-qfile.$(OBJEXT) q-qgrep.$(OBJEXT) q-qlist.$(OBJEXT) \
+	q-qcheck.$(OBJEXT) q-qdepends.$(OBJEXT) q-qfile.$(OBJEXT) \
+	q-qgrep.$(OBJEXT) q-qkeyword.$(OBJEXT) q-qlist.$(OBJEXT) \
 	q-qlop.$(OBJEXT) q-qmerge.$(OBJEXT) q-qpkg.$(OBJEXT) \
 	q-qsearch.$(OBJEXT) q-qsize.$(OBJEXT) q-qtbz2.$(OBJEXT) \
 	q-qtegrity.$(OBJEXT) q-quse.$(OBJEXT) q-qxpak.$(OBJEXT)
@@ -1550,11 +1550,11 @@ SUBDIRS = \
 APPLETS = \
 	q \
 	qatom \
-	qcache \
 	qcheck \
 	qdepends \
 	qfile \
 	qgrep \
+	qkeyword \
 	qlist \
 	qlop \
 	qmerge \
@@ -1570,11 +1570,11 @@ APPLETS = \
 dist_man_MANS = \
 	man/q.1 \
 	man/qatom.1 \
-	man/qcache.1 \
 	man/qcheck.1 \
 	man/qdepends.1 \
 	man/qfile.1 \
 	man/qgrep.1 \
+	man/qkeyword.1 \
 	man/qlist.1 \
 	man/qlop.1 \
 	man/qmerge.1 \
@@ -1591,11 +1591,11 @@ q_SOURCES = \
 	main.c \
 	q.c \
 	qatom.c \
-	qcache.c \
 	qcheck.c \
 	qdepends.c \
 	qfile.c \
 	qgrep.c \
+	qkeyword.c \
 	qlist.c \
 	qlop.c \
 	qmerge.c \
@@ -1744,11 +1744,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-q.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qatom.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qcache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qcheck.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qdepends.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qfile.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qgrep.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qkeyword.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qlop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/q-qmerge.Po@am__quote@
@@ -1823,20 +1823,6 @@ q-qatom.obj: qatom.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qatom.obj `if test -f 'qatom.c'; then $(CYGPATH_W) 'qatom.c'; else $(CYGPATH_W) '$(srcdir)/qatom.c'; fi`
 
-q-qcache.o: qcache.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qcache.o -MD -MP -MF $(DEPDIR)/q-qcache.Tpo -c -o q-qcache.o `test -f 'qcache.c' || echo '$(srcdir)/'`qcache.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qcache.Tpo $(DEPDIR)/q-qcache.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qcache.c' object='q-qcache.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qcache.o `test -f 'qcache.c' || echo '$(srcdir)/'`qcache.c
-
-q-qcache.obj: qcache.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qcache.obj -MD -MP -MF $(DEPDIR)/q-qcache.Tpo -c -o q-qcache.obj `if test -f 'qcache.c'; then $(CYGPATH_W) 'qcache.c'; else $(CYGPATH_W) '$(srcdir)/qcache.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qcache.Tpo $(DEPDIR)/q-qcache.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qcache.c' object='q-qcache.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qcache.obj `if test -f 'qcache.c'; then $(CYGPATH_W) 'qcache.c'; else $(CYGPATH_W) '$(srcdir)/qcache.c'; fi`
-
 q-qcheck.o: qcheck.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qcheck.o -MD -MP -MF $(DEPDIR)/q-qcheck.Tpo -c -o q-qcheck.o `test -f 'qcheck.c' || echo '$(srcdir)/'`qcheck.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qcheck.Tpo $(DEPDIR)/q-qcheck.Po
@@ -1892,6 +1878,20 @@ q-qgrep.obj: qgrep.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qgrep.c' object='q-qgrep.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qgrep.obj `if test -f 'qgrep.c'; then $(CYGPATH_W) 'qgrep.c'; else $(CYGPATH_W) '$(srcdir)/qgrep.c'; fi`
+
+q-qkeyword.o: qkeyword.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qkeyword.o -MD -MP -MF $(DEPDIR)/q-qkeyword.Tpo -c -o q-qkeyword.o `test -f 'qkeyword.c' || echo '$(srcdir)/'`qkeyword.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qkeyword.Tpo $(DEPDIR)/q-qkeyword.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qkeyword.c' object='q-qkeyword.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qkeyword.o `test -f 'qkeyword.c' || echo '$(srcdir)/'`qkeyword.c
+
+q-qkeyword.obj: qkeyword.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qkeyword.obj -MD -MP -MF $(DEPDIR)/q-qkeyword.Tpo -c -o q-qkeyword.obj `if test -f 'qkeyword.c'; then $(CYGPATH_W) 'qkeyword.c'; else $(CYGPATH_W) '$(srcdir)/qkeyword.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qkeyword.Tpo $(DEPDIR)/q-qkeyword.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qkeyword.c' object='q-qkeyword.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qkeyword.obj `if test -f 'qkeyword.c'; then $(CYGPATH_W) 'qkeyword.c'; else $(CYGPATH_W) '$(srcdir)/qkeyword.c'; fi`
 
 q-qlist.o: qlist.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qlist.o -MD -MP -MF $(DEPDIR)/q-qlist.Tpo -c -o q-qlist.o `test -f 'qlist.c' || echo '$(srcdir)/'`qlist.c

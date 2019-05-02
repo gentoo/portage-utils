@@ -30,8 +30,6 @@
 
 - vdb repo/slot think about when it is freed (see cache\_pkg\_close)
 
-- qcache -> rename to qkeyword
-
 - quse -K -> move to qkeyword
 
 # Atoms

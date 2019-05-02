@@ -52,7 +52,7 @@ DECLARE_APPLET(qpkg)
 DECLARE_APPLET(qgrep)
 DECLARE_APPLET(qatom)
 DECLARE_APPLET(qmerge)
-DECLARE_APPLET(qcache)
+DECLARE_APPLET(qkeyword)
 /*DECLARE_APPLET(qglsa) disable */
 DECLARE_APPLET(qtegrity)
 #undef DECLARE_APPLET
@@ -66,7 +66,7 @@ static const struct applet_t {
 	/* q must always be the first applet */
 	{"q",         q_main,         "<applet> <args>", "virtual applet"},
 	{"qatom",     qatom_main,     "<pkg>",           "split atom strings"},
-	{"qcache",    qcache_main,    "<action> <args>", "search the metadata cache"},
+	{"qkeyword",  qkeyword_main,  "<action> <args>", "list packages based on keywords"},
 	{"qcheck",    qcheck_main,    "<pkgname>",       "verify integrity of installed packages"},
 	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
 	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},

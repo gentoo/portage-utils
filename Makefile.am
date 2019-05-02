@@ -10,11 +10,11 @@ SUBDIRS = \
 APPLETS = \
 	q \
 	qatom \
-	qcache \
 	qcheck \
 	qdepends \
 	qfile \
 	qgrep \
+	qkeyword \
 	qlist \
 	qlop \
 	qmerge \
@@ -30,11 +30,11 @@ APPLETS = \
 dist_man_MANS = \
 	man/q.1 \
 	man/qatom.1 \
-	man/qcache.1 \
 	man/qcheck.1 \
 	man/qdepends.1 \
 	man/qfile.1 \
 	man/qgrep.1 \
+	man/qkeyword.1 \
 	man/qlist.1 \
 	man/qlop.1 \
 	man/qmerge.1 \
@@ -52,11 +52,11 @@ q_SOURCES = \
 	main.c \
 	q.c \
 	qatom.c \
-	qcache.c \
 	qcheck.c \
 	qdepends.c \
 	qfile.c \
 	qgrep.c \
+	qkeyword.c \
 	qlist.c \
 	qlop.c \
 	qmerge.c \

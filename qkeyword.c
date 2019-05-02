@@ -28,8 +28,8 @@
 /* Required portage-utils stuff                                     */
 /********************************************************************/
 
-#define QCACHE_FLAGS "p:c:idtans" COMMON_FLAGS
-static struct option const qcache_long_opts[] = {
+#define QKEYWORD_FLAGS "p:c:idtans" COMMON_FLAGS
+static struct option const qkeyword_long_opts[] = {
 	{"matchpkg", a_argument, NULL, 'p'},
 	{"matchcat", a_argument, NULL, 'c'},
 	{"imlate",  no_argument, NULL, 'i'},
@@ -40,7 +40,7 @@ static struct option const qcache_long_opts[] = {
 	{"not",     no_argument, NULL, 'n'},
 	COMMON_LONG_OPTS
 };
-static const char * const qcache_opts_help[] = {
+static const char * const qkeyword_opts_help[] = {
 	"match pkgname",
 	"match catname",
 	"list packages that can be marked stable on a given arch",
@@ -51,7 +51,7 @@ static const char * const qcache_opts_help[] = {
 	"list packages that aren't keyworded on a given arch.",
 	COMMON_OPTS_HELP
 };
-#define qcache_usage(ret) usage(ret, QCACHE_FLAGS, qcache_long_opts, qcache_opts_help, NULL, lookup_applet_idx("qcache"))
+#define qkeyword_usage(ret) usage(ret, QKEYWORD_FLAGS, qkeyword_long_opts, qkeyword_opts_help, NULL, lookup_applet_idx("qkeyword"))
 
 typedef struct {
 	depend_atom *qatom;
@@ -60,14 +60,14 @@ typedef struct {
 	size_t keywordsbuflen;
 	const char *arch;
 	cache_pkg_cb *runfunc;
-} qcache_data;
+} qkeyword_data;
 
 static set *archs = NULL;
 static char **archlist = NULL;
 static size_t archlist_count;
 static size_t arch_longest_len;
 const char status[3] = {'-', '~', '+'};
-int qcache_test_arch = 0;
+int qkeyword_test_arch = 0;
 
 enum { none = 0, testing, stable, minus };
 
@@ -200,7 +200,7 @@ read_keywords(char *s, int *keywords)
  *   0 (SAME)
  */
 static int
-qcache_vercmp(const struct dirent **x, const struct dirent **y)
+qkeyword_vercmp(const struct dirent **x, const struct dirent **y)
 {
 	switch (atom_compare_str((*x)->d_name, (*y)->d_name)) {
 		case EQUAL:      return  0;
@@ -211,12 +211,12 @@ qcache_vercmp(const struct dirent **x, const struct dirent **y)
 }
 
 static int
-qcache_imlate(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_imlate(cache_pkg_ctx *pkg_ctx, void *priv)
 {
 	size_t a;
-	qcache_data *data = (qcache_data *)priv;
+	qkeyword_data *data = (qkeyword_data *)priv;
 
-	switch (data->keywordsbuf[qcache_test_arch]) {
+	switch (data->keywordsbuf[qkeyword_test_arch]) {
 		case stable:
 		case none:
 		case minus:
@@ -238,13 +238,13 @@ qcache_imlate(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qcache_not(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_not(cache_pkg_ctx *pkg_ctx, void *priv)
 {
 	size_t a;
-	qcache_data *data = (qcache_data *)priv;
+	qkeyword_data *data = (qkeyword_data *)priv;
 
-	if (data->keywordsbuf[qcache_test_arch] != testing &&
-			data->keywordsbuf[qcache_test_arch] != stable)
+	if (data->keywordsbuf[qkeyword_test_arch] != testing &&
+			data->keywordsbuf[qkeyword_test_arch] != stable)
 	{
 		/* match if any of the other arches have keywords */
 		for (a = 0; a < archlist_count; a++) {
@@ -263,12 +263,12 @@ qcache_not(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qcache_all(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_all(cache_pkg_ctx *pkg_ctx, void *priv)
 {
-	qcache_data *data = (qcache_data *)priv;
+	qkeyword_data *data = (qkeyword_data *)priv;
 
-	if (data->keywordsbuf[qcache_test_arch] == stable ||
-			data->keywordsbuf[qcache_test_arch] == testing)
+	if (data->keywordsbuf[qkeyword_test_arch] == stable ||
+			data->keywordsbuf[qkeyword_test_arch] == testing)
 	{
 		print_keywords(pkg_ctx->cat_ctx->name, pkg_ctx->name,
 				data->keywordsbuf);
@@ -279,7 +279,7 @@ qcache_all(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qcache_dropped(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_dropped(cache_pkg_ctx *pkg_ctx, void *priv)
 {
 	static bool candidate = false;
 	static char pkg1[_Q_PATH_MAX];
@@ -290,7 +290,7 @@ qcache_dropped(cache_pkg_ctx *pkg_ctx, void *priv)
 	static int *candkwds = NULL;
 	static size_t candkwdslen = 0;
 
-	qcache_data *data = (qcache_data *)priv;
+	qkeyword_data *data = (qkeyword_data *)priv;
 	size_t i;
 	char *p;
 
@@ -333,12 +333,12 @@ qcache_dropped(cache_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	/* explicitly removed? */
-	if (data->keywordsbuf[qcache_test_arch] == minus)
+	if (data->keywordsbuf[qkeyword_test_arch] == minus)
 		return EXIT_FAILURE;
 
 	/* got a keyword? */
-	if (data->keywordsbuf[qcache_test_arch] == testing ||
-			data->keywordsbuf[qcache_test_arch] == stable)
+	if (data->keywordsbuf[qkeyword_test_arch] == testing ||
+			data->keywordsbuf[qkeyword_test_arch] == stable)
 	{
 		if (candidate) {
 			p = strchr(candpkg, '/');
@@ -390,7 +390,7 @@ print_seconds_for_earthlings(const unsigned long t)
 }
 
 static int
-qcache_stats(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_stats(cache_pkg_ctx *pkg_ctx, void *priv)
 {
 	static time_t runtime;
 	static int numpkg  = 0;
@@ -404,7 +404,7 @@ qcache_stats(cache_pkg_ctx *pkg_ctx, void *priv)
 
 	size_t a;
 	depend_atom *atom;
-	qcache_data *data = (qcache_data *)priv;
+	qkeyword_data *data = (qkeyword_data *)priv;
 
 	/* Is this the last time we'll be called? */
 	if (!data) {
@@ -527,7 +527,7 @@ qcache_stats(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qcache_testing_only(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_testing_only(cache_pkg_ctx *pkg_ctx, void *priv)
 {
 	static bool candidate = false;
 	static char pkg1[_Q_PATH_MAX];
@@ -538,7 +538,7 @@ qcache_testing_only(cache_pkg_ctx *pkg_ctx, void *priv)
 	static int *candkwds = NULL;
 	static size_t candkwdslen = 0;
 
-	qcache_data *data = (qcache_data *)priv;
+	qkeyword_data *data = (qkeyword_data *)priv;
 	char *p;
 
 	p = lastpkg;
@@ -576,12 +576,12 @@ qcache_testing_only(cache_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	/* explicitly removed or unkeyworded? */
-	if (data->keywordsbuf[qcache_test_arch] == minus ||
-			data->keywordsbuf[qcache_test_arch] == none)
+	if (data->keywordsbuf[qkeyword_test_arch] == minus ||
+			data->keywordsbuf[qkeyword_test_arch] == none)
 		return EXIT_FAILURE;
 
 	/* got a stable keyword? */
-	if (data->keywordsbuf[qcache_test_arch] == stable)
+	if (data->keywordsbuf[qkeyword_test_arch] == stable)
 		return EXIT_SUCCESS;  /* suppress further hits for this package */
 
 	/* must be testing at this point */
@@ -597,10 +597,10 @@ qcache_testing_only(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qcache_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 {
 	int *keywords;
-	qcache_data *data = (qcache_data *)priv;
+	qkeyword_data *data = (qkeyword_data *)priv;
 	char buf[_Q_PATH_MAX];
 	depend_atom *patom = NULL;
 	cache_pkg_meta *meta;
@@ -658,7 +658,7 @@ qcache_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static void
-qcache_load_arches(const char *overlay)
+qkeyword_load_arches(const char *overlay)
 {
 	FILE *fp;
 	char *filename, *s;
@@ -705,17 +705,17 @@ qcache_load_arches(const char *overlay)
 }
 
 static int
-qcache_traverse(cache_pkg_cb func, void *priv)
+qkeyword_traverse(cache_pkg_cb func, void *priv)
 {
 	int ret;
 	size_t n;
 	const char *overlay;
-	qcache_data *data = (qcache_data *)priv;
+	qkeyword_data *data = (qkeyword_data *)priv;
 
 	/* Preload all the arches. Not entirely correctly (as arches are bound
 	 * to overlays if set), but oh well. */
 	array_for_each(overlays, n, overlay)
-		qcache_load_arches(overlay);
+		qkeyword_load_arches(overlay);
 
 	/* allocate memory (once) for the list used by various funcs */
 	if (archlist_count > data->keywordsbuflen) {
@@ -724,28 +724,28 @@ qcache_traverse(cache_pkg_cb func, void *priv)
 		data->keywordsbuflen = archlist_count;
 	}
 
-	qcache_test_arch = decode_arch(data->arch);
-	if (qcache_test_arch == -1)
+	qkeyword_test_arch = decode_arch(data->arch);
+	if (qkeyword_test_arch == -1)
 		return EXIT_FAILURE;
 
 	data->runfunc = func;
 	ret = 0;
 	array_for_each(overlays, n, overlay)
 		ret |= cache_foreach_pkg_sorted(portroot, overlay,
-				qcache_results_cb, priv, NULL, qcache_vercmp);
+				qkeyword_results_cb, priv, NULL, qkeyword_vercmp);
 
 	return ret;
 }
 
-int qcache_main(int argc, char **argv)
+int qkeyword_main(int argc, char **argv)
 {
 	int i;
 	char action = '\0';
-	qcache_data data;
+	qkeyword_data data;
 	char *pkg = NULL;
 	char *cat = NULL;
 
-	while ((i = GETOPT_LONG(QCACHE, qcache, "")) != -1) {
+	while ((i = GETOPT_LONG(QKEYWORD, qkeyword, "")) != -1) {
 		switch (i) {
 			case 'p': pkg = optarg; break;
 			case 'c': cat = optarg; break;
@@ -756,12 +756,12 @@ int qcache_main(int argc, char **argv)
 			case 'a':
 			case 'n':
 				if (action)
-					qcache_usage(EXIT_FAILURE);
+					qkeyword_usage(EXIT_FAILURE);
 					/* trying to use more than 1 action */
 				action = i;
 				break;
 
-			COMMON_GETOPTS_CASES(qcache)
+			COMMON_GETOPTS_CASES(qkeyword)
 		}
 	}
 
@@ -770,7 +770,7 @@ int qcache_main(int argc, char **argv)
 		data.arch = argv[optind];
 
 	if ((data.arch == NULL && action != 's') || optind + 1 < argc)
-		qcache_usage(EXIT_FAILURE);
+		qkeyword_usage(EXIT_FAILURE);
 
 	if (cat != NULL) {
 		char buf[_Q_PATH_MAX];
@@ -797,17 +797,17 @@ int qcache_main(int argc, char **argv)
 	data.keywordsbuflen = 0;
 
 	switch (action) {
-		case 'i': i = qcache_traverse(qcache_imlate, &data);          break;
-		case 'd': i = qcache_traverse(qcache_dropped, &data);
-				  i = qcache_dropped(NULL, NULL);                     break;
-		case 't': i = qcache_traverse(qcache_testing_only, &data);
-				  i = qcache_testing_only(NULL, NULL);                break;
+		case 'i': i = qkeyword_traverse(qkeyword_imlate, &data);        break;
+		case 'd': i = qkeyword_traverse(qkeyword_dropped, &data);
+				  i = qkeyword_dropped(NULL, NULL);                     break;
+		case 't': i = qkeyword_traverse(qkeyword_testing_only, &data);
+				  i = qkeyword_testing_only(NULL, NULL);                break;
 		case 's': data.arch = "amd64";  /* doesn't matter, need to be set */
-				  i = qcache_traverse(qcache_stats, &data);
-				  i = qcache_stats(NULL, NULL);                       break;
-		case 'a': i = qcache_traverse(qcache_all, &data);             break;
-		case 'n': i = qcache_traverse(qcache_not, &data);             break;
-		default:  i = -2;                                             break;
+				  i = qkeyword_traverse(qkeyword_stats, &data);
+				  i = qkeyword_stats(NULL, NULL);                       break;
+		case 'a': i = qkeyword_traverse(qkeyword_all, &data);           break;
+		case 'n': i = qkeyword_traverse(qkeyword_not, &data);           break;
+		default:  i = -2;                                               break;
 	}
 
 	if (data.qatom != NULL)
@@ -815,6 +815,6 @@ int qcache_main(int argc, char **argv)
 	free(archlist);
 	free_set(archs);
 	if (i == -2)
-		qcache_usage(EXIT_FAILURE);
+		qkeyword_usage(EXIT_FAILURE);
 	return i;
 }
