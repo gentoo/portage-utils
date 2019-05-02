@@ -11,13 +11,13 @@
 - multiline reads don't yet work for quse/qsearch
 
 - standardize/unify/clean up misc handling of colors
+  define rules:
+    BOLD CATEGORY/ BLUE PKG GREEN ::REPO NORM [ MAGENTA USE NORM ]
 
 - remove odd rmspace for each string in libq/set.c (allows a lot less
   malloc/frees)
 
 - make set.c to array (xarray) instead of C-array (list)
-
-- equiv of `equery m` (metadata)
 
 - env vars only get expanded once, so this fails:<br>
   `ACCEPT_LICENSE="foo"`<br>
@@ -29,8 +29,6 @@
   cat?) to reduce search space, same for cache\_foreach\_pkg
 
 - vdb repo/slot think about when it is freed (see cache\_pkg\_close)
-
-- cache:cache\_read\_file\_ebuild deal with \\\\n sequences
 
 - qcache -> rename to qkeyword
 

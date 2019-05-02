@@ -370,8 +370,9 @@ cache_read_file_ebuild(cache_pkg_ctx *pkg_ctx)
 	size_t len;
 	char *p;
 	char *q;
-	char *r;
+	char *w;
 	char **key;
+	bool esc;
 	bool findnl;
 
 	if ((f = fdopen(pkg_ctx->fd, "r")) == NULL)
@@ -422,22 +423,35 @@ cache_read_file_ebuild(cache_pkg_ctx *pkg_ctx)
 			if (*q == '"' || *q == '\'') {
 				/* find matching quote */
 				p++;
+				w = p;
+				esc = false;
 				do {
-					while (*p != '\0' && *p != *q)
-						p++;
-					if (*p == *q) {
-						for (r = p - 1; r > q; r--)
-							if (*r != '\\')
-								break;
-						if (r != q && (p - 1 - r) % 2 == 1) {
-							/* escaped, move along */
-							p++;
-							continue;
+					while (*p != '\0' && *p != *q) {
+						if (*p == '\\') {
+							esc = !esc;
+							if (esc) {
+								p++;
+								continue;
+							}
+						} else {
+							/* implement line continuation (\ before newline) */
+							if (esc && (*p == '\n' || *p == '\r'))
+								*p = ' ';
+							esc = false;
 						}
+
+						*w++ = *p++;
+					}
+					if (*p == *q && esc) {
+						/* escaped, move along */
+						esc = false;
+						*w++ = *p++;
+						continue;
 					}
 					break;
 				} while (1);
 				q++;
+				*w = '\0';
 			} else {
 				/* find first whitespace */
 				while (!isspace((int)*p))
