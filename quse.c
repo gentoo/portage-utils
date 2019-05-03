@@ -26,13 +26,14 @@
 #include "xarray.h"
 #include "xregex.h"
 
-#define QUSE_FLAGS "eaLDp:" COMMON_FLAGS
+#define QUSE_FLAGS "eaLDp:R" COMMON_FLAGS
 static struct option const quse_long_opts[] = {
 	{"exact",     no_argument, NULL, 'e'},
 	{"all",       no_argument, NULL, 'a'},
 	{"license",   no_argument, NULL, 'L'},
 	{"describe",  no_argument, NULL, 'D'},
 	{"package",    a_argument, NULL, 'p'},
+	{"repo",      no_argument, NULL, 'R'},
 	COMMON_LONG_OPTS
 };
 static const char * const quse_opts_help[] = {
@@ -41,6 +42,7 @@ static const char * const quse_opts_help[] = {
 	"Use the LICENSE vs IUSE",
 	"Describe the USE flag",
 	"Restrict matching to package or category",
+	"Show repository the ebuild originates from",
 	COMMON_OPTS_HELP
 };
 #define quse_usage(ret) usage(ret, QUSE_FLAGS, quse_long_opts, quse_opts_help, NULL, lookup_applet_idx("quse"))
@@ -48,12 +50,14 @@ static const char * const quse_opts_help[] = {
 struct quse_state {
 	int argc;
 	char **argv;
+	char **retv;
 	const char *overlay;
 	bool do_all:1;
 	bool do_regex:1;
 	bool do_describe:1;
 	bool do_licence:1;
 	bool do_list:1;
+	bool do_repo:1;
 	depend_atom *match;
 	regex_t *pregv;
 };
@@ -110,6 +114,9 @@ quse_search_use_local_desc(int portdirfd, struct quse_state *state)
 
 		match = false;
 		for (i = 0; i < state->argc; i++) {
+			if (state->do_list && state->retv[i] != NULL)
+				continue;
+
 			if (state->do_regex) {
 				if (regexec(&state->pregv[i], p, 0, NULL, 0) != 0)
 					continue;
@@ -128,19 +135,30 @@ quse_search_use_local_desc(int portdirfd, struct quse_state *state)
 			if (state->match == NULL ||
 					atom_compare(atom, state->match) == EQUAL)
 			{
-				if (state->do_list)
-					printf("  %s%s%s  %s\n", MAGENTA, p, NORM, q);
-				else
+				if (state->do_list) {
+					state->retv[i] = xstrdup(q);
+				} else {
 					printf("%s%s/%s%s%s[%s%s%s] %s\n",
 							BOLD, atom->CATEGORY,
 							BLUE, atom->PN, NORM,
 							MAGENTA, p, NORM, q);
+				}
 			}
 
 			atom_implode(atom);
 			ret = true;
 		}
 	} while (1);
+
+	if (state->do_list && ret) {
+		/* check if all requested flags are retrieved */
+		ret = true;
+		for (i = 0; i < state->argc; i++)
+			if (state->retv[i] == NULL)
+				break;
+		if (i < state->argc)
+			ret = false;
+	}
 
 	fclose(f);
 	return ret;
@@ -186,6 +204,9 @@ quse_search_use_desc(int portdirfd, struct quse_state *state)
 
 		match = false;
 		for (i = 0; i < state->argc; i++) {
+			if (state->do_list && state->retv[i] != NULL)
+				continue;
+
 			if (state->do_regex) {
 				if (regexec(&state->pregv[i], buf, 0, NULL, 0) != 0)
 					continue;
@@ -198,15 +219,26 @@ quse_search_use_desc(int portdirfd, struct quse_state *state)
 		}
 
 		if (match) {
-			if (state->do_list)
-				printf("  %s%s%s  %s\n", MAGENTA, buf, NORM, p);
-			else
+			if (state->do_list) {
+				state->retv[i] = xstrdup(p);
+			} else {
 				printf("%sglobal%s[%s%s%s] %s\n",
 						BOLD, NORM, MAGENTA, buf, NORM, p);
+			}
 
 			ret = true;
 		}
 	} while (1);
+
+	if (state->do_list && ret) {
+		/* check if all requested flags are retrieved */
+		ret = true;
+		for (i = 0; i < state->argc; i++)
+			if (state->retv[i] == NULL)
+				break;
+		if (i < state->argc)
+			ret = false;
+	}
 
 	fclose(f);
 	return ret;
@@ -287,6 +319,9 @@ quse_search_profiles_desc(
 
 			match = false;
 			for (i = 0; i < state->argc; i++) {
+				if (state->do_list && state->retv[i] != NULL)
+					continue;
+
 				arglen = strlen(state->argv[i]);
 				if (arglen > namelen) {
 					/* nginx_modules_http_lua = NGINX_MODULES_HTTP[lua] */
@@ -312,17 +347,18 @@ quse_search_profiles_desc(
 			}
 
 			if (match) {
-				const char *r = de->d_name;
-				char *s = ubuf;
-				do {
-					*s++ = (char)toupper((int)*r);
-				} while (++r < (de->d_name + namelen));
-				*s = '\0';
-				if (state->do_list)
-					printf("  %s=%s%s%s  %s\n", ubuf, MAGENTA, buf, NORM, p);
-				else
+				if (state->do_list) {
+					state->retv[i] = xstrdup(p);
+				} else {
+					const char *r = de->d_name;
+					char *s = ubuf;
+					do {
+						*s++ = (char)toupper((int)*r);
+					} while (++r < (de->d_name + namelen));
+					*s = '\0';
 					printf("%s%s%s[%s%s%s] %s\n",
 							BOLD, ubuf, NORM, MAGENTA, buf, NORM, p);
+				}
 
 				ret = true;
 			}
@@ -331,6 +367,16 @@ quse_search_profiles_desc(
 		fclose(f);
 	}
 	closedir(d);
+
+	if (state->do_list && ret) {
+		/* check if all requested flags are retrieved */
+		ret = true;
+		for (i = 0; i < state->argc; i++)
+			if (state->retv[i] == NULL)
+				break;
+		if (i < state->argc)
+			ret = false;
+	}
 
 	return ret;
 }
@@ -369,6 +415,8 @@ quse_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 	char *w;
 	int i;
 	int len;
+	int maxlen;
+	int cnt;
 	int portdirfd = -1;  /* pacify compiler */
 
 	if (state->match || verbose) {
@@ -402,13 +450,15 @@ quse_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 			return 0;
 	}
 
+	maxlen = 0;
+	cnt = 0;
 	match = false;
 	q = p = state->do_licence ? meta->LICENSE : meta->IUSE;
 	buf[0] = '\0';
 	v = buf;
 	w = buf + sizeof(buf);
 
-	if (state->do_all) {
+	if (state->do_all && !verbose) {
 		match = true;
 		v = q;
 	} else {
@@ -423,7 +473,10 @@ quse_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 				s = q;
 				if (*q == '-' || *q == '+' || *q == '@')
 					q++;
-				if (state->do_regex) {
+				if (state->do_all) {
+					i = 0;
+					match = true;
+				} else if (state->do_regex) {
 					char r;
 					for (i = 0; i < state->argc; i++) {
 						r = *p;
@@ -452,6 +505,11 @@ quse_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 				}
 				if (i == state->argc)
 					v += snprintf(v, w - v, "%.*s%c", (int)(p - s), s, *p);
+
+				if (maxlen < p - q)
+					maxlen = p - q;
+				cnt++;
+
 				q = p + 1;
 			}
 		} while (*p++ != '\0' && v < w);
@@ -459,57 +517,82 @@ quse_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	if (match) {
+		char *repo = state->do_repo ? pkg_ctx->repo : NULL;
+
 		if (quiet) {
-			printf("%s%s/%s%s%s\n", BOLD, pkg_ctx->cat_ctx->name,
-					BLUE, pkg_ctx->name, NORM);
-		} else if (verbose) {
+			printf("%s%s/%s%s%s%s%s%s\n", BOLD, pkg_ctx->cat_ctx->name,
+					BLUE, pkg_ctx->name,
+					repo ? RED : "", repo ? "::" : "", repo ? repo : "",
+					NORM);
+		} else if (verbose && !state->do_licence) {
 			/* multi-line result, printing USE-flags with their descs */
 			struct quse_state us = {
 				.do_regex = false,
 				.do_describe = false,
 				.do_list = true,
 				.match = atom,
-				.argc = 1,
-				.argv = NULL,
+				.argc = cnt,
+				.argv = xmalloc(sizeof(char *) * cnt),
+				.retv = xzalloc(sizeof(char *) * cnt),
 				.overlay = NULL,
 			};
 
-			printf("%s%s/%s%s%s:\n", BOLD, pkg_ctx->cat_ctx->name,
-					BLUE, pkg_ctx->name, NORM);
+			printf("%s%s/%s%s%s%s%s%s\n", BOLD, pkg_ctx->cat_ctx->name,
+					BLUE, pkg_ctx->name,
+					repo ? RED : "", repo ? "::" : "", repo ? repo : "",
+					NORM);
 
-			q = p = state->do_licence ? meta->LICENSE : meta->IUSE;
+			q = p = meta->IUSE;
 			buf[0] = '\0';
+			v = buf;
+			w = buf + sizeof(buf);
+			i = 0;
 			do {
 				if (*p == ' ' || *p == '\0') {
 					s = q;
 					if (*q == '-' || *q == '+' || *q == '@')
 						q++;
 
-					snprintf(buf, sizeof(buf), "%.*s", (int)(p - q), q);
-					v = buf;
-					us.argv = &v;
-
-					/* print at most one match for each flag, this is
-					 * why we can't setup all flags in argc/argv,
-					 * because then we either print way to few, or way
-					 * too many, possible opt: when argv would be
-					 * modified by search funcs so they remove what they
-					 * matched */
-					if (!quse_search_use_local_desc(portdirfd, &us))
-						if (!quse_search_use_desc(portdirfd, &us))
-							quse_search_profiles_desc(portdirfd, &us);
+					/* pre-padd everything such that we always refer to
+					 * the char before the USE-flag */
+					us.argv[i++] = v + 1;
+					v += snprintf(v, w - v, "%c%.*s",
+							s == q ? ' ' : *s, (int)(p - q), q) + 1;
 
 					q = p + 1;
 				}
-			} while (*p++ != '\0');
+			} while (*p++ != '\0' && i < cnt && v < w);
+
+			/* harvest descriptions for USE-flags */
+			if (!quse_search_use_local_desc(portdirfd, &us))
+				if (!quse_search_use_desc(portdirfd, &us))
+					quse_search_profiles_desc(portdirfd, &us);
+
+			for (i = 0; i < cnt; i++) {
+				printf(" %c%s%s%s%*s  %s\n",
+						us.argv[i][-1],
+						/* selected ? RED : NORM */ MAGENTA,
+						us.argv[i],
+						NORM,
+						(int)(maxlen - strlen(us.argv[i])), "",
+						us.retv[i] == NULL ? "<no description found>" :
+							us.retv[i]);
+				if (us.retv[i] != NULL)
+					free(us.retv[i]);
+			}
+
+			free(us.retv);
+			free(us.argv);
 		} else {
-			printf("%s%s/%s%s%s: %s\n", BOLD, pkg_ctx->cat_ctx->name,
-					BLUE, pkg_ctx->name, NORM, v);
+			printf("%s%s/%s%s%s%s%s%s: %s\n", BOLD, pkg_ctx->cat_ctx->name,
+					BLUE, pkg_ctx->name,
+					repo ? RED : "", repo ? "::" : "", repo ? repo : "",
+					NORM, v);
 		}
 	}
 
 	cache_close_meta(meta);
-	if (state->match || verbose)
+	if (state->match && verbose)
 		atom_implode(atom);
 	if (verbose)
 		close(portdirfd);
@@ -528,6 +611,7 @@ int quse_main(int argc, char **argv)
 		.do_regex = true,
 		.do_describe = false,
 		.do_licence = false,
+		.do_repo = false,
 		.match = NULL,
 		.overlay = NULL,
 	};
@@ -538,6 +622,7 @@ int quse_main(int argc, char **argv)
 		case 'a': state.do_all = true;      break;
 		case 'L': state.do_licence = true;  break;
 		case 'D': state.do_describe = true; break;
+		case 'R': state.do_repo = true;     break;
 		case 'p': match = optarg;           break;
 		COMMON_GETOPTS_CASES(quse)
 		}
