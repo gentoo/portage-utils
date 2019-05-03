@@ -1,0 +1,3 @@
+\fIqkeyword\fR allows various searches based on KEYWORDS aimed at Gentoo
+developers.  Various modes allow to query which packages would be
+available, or are candidate for keywording.
