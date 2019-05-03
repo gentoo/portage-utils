@@ -275,8 +275,8 @@ static char *fmt_atom(struct qlop_mode *flags, depend_atom *atom)
 	(void)flags;
 
 	if (verbose) {
-		size_t len = snprintf(_atom_buf, sizeof(_atom_buf), "%s/%s-%s",
-				atom->CATEGORY, atom->PN, atom->PV);
+		size_t len = snprintf(_atom_buf, sizeof(_atom_buf), "%s/%s",
+				atom->CATEGORY, atom->P);
 		if (atom->PR_int > 0)
 			snprintf(_atom_buf + len, sizeof(_atom_buf) - len, "-r%d",
 				atom->PR_int);
