@@ -89,3 +89,4 @@
 
 # quse
 - make -v only print requested USE-flag when flags given
+- read VDB on -v to print details about current USE-flag status, bug #656550
