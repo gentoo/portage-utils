@@ -163,8 +163,10 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 
 				/* opening might fail if what we found wasn't a
 				 * directory or something */
-				if (ctx->ebuilddir_cat_ctx == NULL)
+				if (ctx->ebuilddir_cat_ctx == NULL) {
+					ctx->ebuilddir_pkg_ctx = NULL;
 					return NULL;
+				}
 			}
 
 			ret = q_vdb_next_pkg(ctx->ebuilddir_cat_ctx);
