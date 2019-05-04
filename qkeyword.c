@@ -677,9 +677,6 @@ qkeyword_load_arches(const char *overlay)
 	if (!fp)
 		goto done;
 
-	clear_set(archs);
-	archlist_count = 0;
-	arch_longest_len = 0;
 	buf = NULL;
 	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
 		rmspace_len(buf, (size_t)linelen);
@@ -798,6 +795,9 @@ int qkeyword_main(int argc, char **argv)
 	}
 
 	archs = create_set();
+	archlist_count = 0;
+	arch_longest_len = 0;
+
 	data.lastatom = NULL;
 	data.keywordsbuf = NULL;
 	data.keywordsbuflen = 0;
