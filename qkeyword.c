@@ -411,6 +411,12 @@ qkeyword_stats(cache_pkg_ctx *pkg_ctx, void *priv)
 		char **arch;
 		const char border[] = "------------------------------------------------------------------";
 
+		/* no packages, nothing to report */
+		if (current_package_keywords == NULL) {
+			printf("no packages found\n");
+			return EXIT_SUCCESS;
+		}
+
 		/* include stats for last package */
 		for (a = 0; a < archlist_count; a++) {
 			switch (current_package_keywords[a]) {
