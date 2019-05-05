@@ -610,7 +610,7 @@ atom_to_string_r(char *buf, size_t buflen, depend_atom *a)
  *  %{keyword}: Always display the field that matches "keyword" or <unset>
  *  %[keyword]: Only display the field when it's set (or pverbose)
  * The possible "keywords" are:
- *  CATEGORY  P  PN  PV  PVR  PF  PR  SLOT
+ *  CATEGORY  P  PN  PV  PVR  PF  PR  SLOT  REPO  USE
  *    - these are all the standard portage variables (so see ebuild(5))
  *  pfx - the version qualifier if set (e.g. > < = !)
  *  sfx - the version qualifier if set (e.g. *)
@@ -663,39 +663,52 @@ atom_format_r(
 #define HN(X) (X ? X : "<unset>")
 				if (!strncmp("CATEGORY", fmt, len)) {
 					if (showit || atom->CATEGORY)
-						append_buf(buf, buflen, "%s", HN(atom->CATEGORY));
+						append_buf(buf, buflen, "%s%s%s%s",
+								BOLD, HN(atom->CATEGORY),
+								bracket == '[' ? "/" : "", NORM);
 				} else if (!strncmp("P", fmt, len)) {
 					if (showit || atom->P)
-						append_buf(buf, buflen, "%s", HN(atom->P));
+						append_buf(buf, buflen, "%s%s%s",
+								BLUE, HN(atom->P), NORM);
 				} else if (!strncmp("PN", fmt, len)) {
 					if (showit || atom->PN)
-						append_buf(buf, buflen, "%s", HN(atom->PN));
+						append_buf(buf, buflen, "%s%s%s",
+								BLUE, HN(atom->PN), NORM);
 				} else if (!strncmp("PV", fmt, len)) {
 					if (showit || atom->PV)
-						append_buf(buf, buflen, "%s", HN(atom->PV));
+						append_buf(buf, buflen, "%s%s%s",
+								DKBLUE, HN(atom->PV), NORM);
 				} else if (!strncmp("PVR", fmt, len)) {
 					if (showit || atom->PVR)
-						append_buf(buf, buflen, "%s", HN(atom->PVR));
+						append_buf(buf, buflen, "%s%s%s",
+								DKBLUE, HN(atom->PVR), NORM);
 				} else if (!strncmp("PF", fmt, len)) {
-					append_buf(buf, buflen, "%s", atom->PN);
+					append_buf(buf, buflen, "%s%s%s", BLUE, atom->PN, NORM);
 					if (atom->PV)
-						append_buf(buf, buflen, "-%s", atom->PV);
+						append_buf(buf, buflen, "%s-%s%s",
+								DKBLUE, atom->PV, NORM);
 					if (atom->PR_int)
-						append_buf(buf, buflen,"-r%i", atom->PR_int);
+						append_buf(buf, buflen,"%s-r%d%s",
+								DKBLUE, atom->PR_int, NORM);
 				} else if (!strncmp("PR", fmt, len)) {
 					if (showit || atom->PR_int)
-						append_buf(buf, buflen, "r%i", atom->PR_int);
+						append_buf(buf, buflen, "%sr%d%s",
+								DKBLUE, atom->PR_int, NORM);
 				} else if (!strncmp("SLOT", fmt, len)) {
 					if (showit || atom->SLOT)
-						append_buf(buf, buflen, "%s%s%s%s%s",
-								atom->SLOT ? ":" : "<unset>",
-								atom->SLOT ? atom->SLOT : "",
+						append_buf(buf, buflen, "%s%s%s%s%s%s%s",
+								YELLOW,
+								bracket == '[' ? ":" : "",
+								atom->SLOT ? atom->SLOT : "<unset>",
 								atom->SUBSLOT ? "/" : "",
 								atom->SUBSLOT ? atom->SUBSLOT : "",
-								atom_slotdep_str[atom->slotdep]);
+								atom_slotdep_str[atom->slotdep],
+								NORM);
 				} else if (!strncmp("REPO", fmt, len)) {
 					if (showit || atom->REPO)
-						append_buf(buf, buflen, "::%s", HN(atom->REPO));
+						append_buf(buf, buflen, "%s%s%s%s",
+								GREEN, bracket == '[' ? "::" : "",
+								HN(atom->REPO), NORM);
 				} else if (!strncmp("pfx", fmt, len)) {
 					if (showit || atom->pfx_op != ATOM_OP_NONE)
 						append_buf(buf, buflen, "%s",
@@ -706,6 +719,16 @@ atom_format_r(
 						append_buf(buf, buflen, "%s",
 								atom->sfx_op == ATOM_OP_NONE ?
 								"<unset>" : atom_op_str[atom->sfx_op]);
+				} else if (!strncmp("USE", fmt, len)) {
+					if (showit || atom->usedeps) {
+						atom_usedep *ud;
+						append_buf(buf, buflen, "%s", "[");
+						for (ud = atom->usedeps; ud != NULL; ud = ud->next)
+							append_buf(buf, buflen, "%s%s%s%s%s%s",
+									MAGENTA, atom_usecond_str[ud->pfx_cond],
+									ud->use, atom_usecond_str[ud->sfx_cond],
+									NORM, ud->next == NULL ? "]" : ",");
+					}
 				} else
 					append_buf(buf, buflen, "<BAD:%.*s>", (int)len, fmt);
 				++p;
