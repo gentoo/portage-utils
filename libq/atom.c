@@ -38,27 +38,6 @@ const char * const atom_op_str[] = {
 
 const char * const booga[] = {"!!!", "!=", "==", ">", "<"};
 
-#ifdef EBUG
-void
-atom_print(const depend_atom *atom)
-{
-	if (atom->CATEGORY)
-		printf("%s/", atom->CATEGORY);
-	printf("%s", atom->P);
-	if (atom->PR_int)
-		printf("-r%i", atom->PR_int);
-	if (atom->SLOT)
-		printf(":%s", atom->SLOT);
-	if (atom->REPO)
-		printf("::%s", atom->REPO);
-}
-#endif
-
-#ifdef _USE_CACHE
-static depend_atom *_atom_cache = NULL;
-static size_t _atom_cache_len = 0;
-#endif
-
 depend_atom *
 atom_explode(const char *atom)
 {
@@ -74,18 +53,7 @@ atom_explode(const char *atom)
 	 * PVR needs 3 extra bytes for possible implicit '-r0'. */
 	slen = strlen(atom);
 	len = sizeof(*ret) + (slen + 1) * sizeof(*atom) * 3 + 3;
-#ifdef _USE_CACHE
-	if (len <= _atom_cache_len) {
-		ret = _atom_cache;
-		memset(ret, 0x00, len);
-	} else {
-		free(_atom_cache);
-		_atom_cache = ret = xzalloc(len);
-		_atom_cache_len = len;
-	}
-#else
 	ret = xzalloc(len);
-#endif
 	ptr = (char*)ret;
 	ret->P = ptr + sizeof(*ret);
 	ret->PVR = ret->P + slen + 1;
@@ -356,9 +324,7 @@ atom_implode(depend_atom *atom)
 	if (!atom)
 		errf("Atom is empty !");
 	free(atom->suffixes);
-#ifndef _USE_CACHE
 	free(atom);
-#endif
 }
 
 static int
@@ -600,6 +566,9 @@ implode_a1_ret:
 	return ret;
 }
 
+/**
+ * Reconstructs an atom exactly like it was originally given (exploded).
+ */
 static char _atom_buf[BUFSIZ];
 char *
 atom_to_string(depend_atom *a)
