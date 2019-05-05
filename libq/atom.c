@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <ctype.h>
 #include <xalloc.h>
 
@@ -569,12 +570,9 @@ implode_a1_ret:
 /**
  * Reconstructs an atom exactly like it was originally given (exploded).
  */
-static char _atom_buf[BUFSIZ];
 char *
-atom_to_string(depend_atom *a)
+atom_to_string_r(char *buf, size_t buflen, depend_atom *a)
 {
-	char *buf = _atom_buf;
-	size_t buflen = sizeof(_atom_buf);
 	size_t off = 0;
 	atom_usedep *ud;
 
@@ -605,4 +603,134 @@ atom_to_string(depend_atom *a)
 		off += snprintf(buf + off, buflen - off, "::%s", a->REPO);
 
 	return buf;
+}
+
+/**
+ * Run printf on an atom.  The format field takes the form:
+ *  %{keyword}: Always display the field that matches "keyword" or <unset>
+ *  %[keyword]: Only display the field when it's set (or pverbose)
+ * The possible "keywords" are:
+ *  CATEGORY  P  PN  PV  PVR  PF  PR  SLOT
+ *    - these are all the standard portage variables (so see ebuild(5))
+ *  pfx - the version qualifier if set (e.g. > < = !)
+ *  sfx - the version qualifier if set (e.g. *)
+ */
+char *
+atom_format_r(
+		char *buf,
+		size_t buflen,
+		const char *format,
+		const depend_atom *atom,
+		int pverbose)
+{
+	char bracket;
+	const char *fmt;
+	const char *p;
+	size_t len;
+	bool showit;
+	char *ret;
+
+	if (!atom) {
+		snprintf(buf, buflen, "%s", "(NULL:atom)");
+		return buf;
+	}
+
+#define append_buf(B,L,FMT,...) \
+	{ \
+		len = snprintf(B, L, FMT, __VA_ARGS__); \
+		L -= len; \
+		B += len; \
+	}
+	ret = buf;
+	p = format;
+	while (*p != '\0') {
+		fmt = strchr(p, '%');
+		if (fmt == NULL) {
+			if (buflen > 0)
+				*buf = '\0';
+			return buf;
+		} else if (fmt != p) {
+			append_buf(buf, buflen, "%.*s", (int)(fmt - p), p);
+		}
+
+		bracket = fmt[1];
+		if (bracket == '{' || bracket == '[') {
+			fmt += 2;
+			p = strchr(fmt, bracket == '{' ? '}' : ']');
+			if (p) {
+				len = p - fmt;
+				showit = (bracket == '{') || pverbose;
+#define HN(X) (X ? X : "<unset>")
+				if (!strncmp("CATEGORY", fmt, len)) {
+					if (showit || atom->CATEGORY)
+						append_buf(buf, buflen, "%s", HN(atom->CATEGORY));
+				} else if (!strncmp("P", fmt, len)) {
+					if (showit || atom->P)
+						append_buf(buf, buflen, "%s", HN(atom->P));
+				} else if (!strncmp("PN", fmt, len)) {
+					if (showit || atom->PN)
+						append_buf(buf, buflen, "%s", HN(atom->PN));
+				} else if (!strncmp("PV", fmt, len)) {
+					if (showit || atom->PV)
+						append_buf(buf, buflen, "%s", HN(atom->PV));
+				} else if (!strncmp("PVR", fmt, len)) {
+					if (showit || atom->PVR)
+						append_buf(buf, buflen, "%s", HN(atom->PVR));
+				} else if (!strncmp("PF", fmt, len)) {
+					append_buf(buf, buflen, "%s", atom->PN);
+					if (atom->PV)
+						append_buf(buf, buflen, "-%s", atom->PV);
+					if (atom->PR_int)
+						append_buf(buf, buflen,"-r%i", atom->PR_int);
+				} else if (!strncmp("PR", fmt, len)) {
+					if (showit || atom->PR_int)
+						append_buf(buf, buflen, "r%i", atom->PR_int);
+				} else if (!strncmp("SLOT", fmt, len)) {
+					if (showit || atom->SLOT)
+						append_buf(buf, buflen, "%s%s%s%s%s",
+								atom->SLOT ? ":" : "<unset>",
+								atom->SLOT ? atom->SLOT : "",
+								atom->SUBSLOT ? "/" : "",
+								atom->SUBSLOT ? atom->SUBSLOT : "",
+								atom_slotdep_str[atom->slotdep]);
+				} else if (!strncmp("REPO", fmt, len)) {
+					if (showit || atom->REPO)
+						append_buf(buf, buflen, "::%s", HN(atom->REPO));
+				} else if (!strncmp("pfx", fmt, len)) {
+					if (showit || atom->pfx_op != ATOM_OP_NONE)
+						append_buf(buf, buflen, "%s",
+								atom->pfx_op == ATOM_OP_NONE ?
+								"<unset>" : atom_op_str[atom->pfx_op]);
+				} else if (!strncmp("sfx", fmt, len)) {
+					if (showit || atom->sfx_op != ATOM_OP_NONE)
+						append_buf(buf, buflen, "%s",
+								atom->sfx_op == ATOM_OP_NONE ?
+								"<unset>" : atom_op_str[atom->sfx_op]);
+				} else
+					append_buf(buf, buflen, "<BAD:%.*s>", (int)len, fmt);
+				++p;
+#undef HN
+			} else
+				p = fmt + 1;
+		} else
+			++p;
+	}
+#undef append_buf
+
+	return ret;
+}
+
+/* versions that use an internal buffer, which is suitable for most
+ * scenarios */
+static char _atom_buf[BUFSIZ];
+char *
+atom_to_string(depend_atom *a)
+{
+	return atom_to_string_r(_atom_buf, sizeof(_atom_buf), a);
+}
+
+char *
+atom_format(const char *format, const depend_atom *atom, int pverbose)
+{
+	return atom_format_r(_atom_buf, sizeof(_atom_buf), format, atom, pverbose);
 }
