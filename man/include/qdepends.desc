@@ -27,4 +27,6 @@ dependencies for the package are shown.  When colours are enabled, the
 matched atom is highlighted in the list.  In addition to just querying
 DEPEND, the default mode changed to query all DEPEND-variables, and
 return the unique atoms found in them.  Automatic regular expression
-match support was removed.
+match support was removed.  The \fB-N\fR option was removed, as the same
+effect can be achieved via the new \fB-F\fR option or \fB-q\fR option.
+The \fB-f\fR option was renamed to \fB-S\fR.

@@ -22,15 +22,15 @@
 #include "xasprintf.h"
 #include "xregex.h"
 
-#define QDEPENDS_FLAGS "drpbfNQu" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpbQF:S" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
 	{"depend",    no_argument, NULL, 'd'},
 	{"rdepend",   no_argument, NULL, 'r'},
 	{"pdepend",   no_argument, NULL, 'p'},
 	{"bdepend",   no_argument, NULL, 'b'},
 	{"query",     no_argument, NULL, 'Q'},
-	{"name-only", no_argument, NULL, 'N'},
-	{"format",    no_argument, NULL, 'f'},
+	{"format",     a_argument, NULL, 'F'},
+	{"pretty",    no_argument, NULL, 'S'},
 	COMMON_LONG_OPTS
 };
 static const char * const qdepends_opts_help[] = {
@@ -39,13 +39,11 @@ static const char * const qdepends_opts_help[] = {
 	"Show PDEPEND info",
 	"Show BDEPEND info",
 	"Query reverse deps",
-	"Only show package name",
+	"Print matched atom using given format string",
 	"Pretty format specified depend strings",
 	COMMON_OPTS_HELP
 };
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, NULL, lookup_applet_idx("qdepends"))
-
-static char qdep_name_only = 0;
 
 /* structures / types / etc ... */
 struct qdepends_opt_state {
@@ -55,6 +53,7 @@ struct qdepends_opt_state {
 	set *udeps;
 	char *depend;
 	size_t depend_len;
+	const char *format;
 };
 
 #define QMODE_DEPEND     (1<<0)
@@ -141,8 +140,7 @@ qdepends_results_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 
 		ret = 1;
 
-		printf("%s%s/%s%s%s:", BOLD, catname, BLUE,
-				qdep_name_only ? datom->PN : pkgname, NORM);
+		printf("%s:", atom_format(state->format, datom, 0));
 	}
 
 	xarrayfree_int(state->deps);
@@ -179,11 +177,8 @@ qdepends_results_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 				if (atom == NULL) {
 					ret = 1;
 
-					if (!firstmatch) {
-						printf("%s%s/%s%s%s:",
-								BOLD, catname, BLUE,
-								qdep_name_only ? datom->PN : pkgname, NORM);
-					}
+					if (!firstmatch)
+						printf("%s:", atom_format(state->format, datom, 0));
 					firstmatch = true;
 
 					printf("\n%s=\"\n", *dfile);
@@ -209,12 +204,8 @@ qdepends_results_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 					if (fatom == NULL) {
 						ret = 1;
 
-						if (!firstmatch) {
-							printf("%s%s/%s%s%s:",
-									BOLD, catname, BLUE,
-									qdep_name_only ? datom->PN : pkgname,
-									NORM);
-						}
+						if (!firstmatch)
+							printf("%s:", atom_format(state->format, datom, 0));
 						firstmatch = true;
 
 						snprintf(buf, sizeof(buf), "%s%s%s",
@@ -263,10 +254,14 @@ int qdepends_main(int argc, char **argv)
 		.qmode = 0,
 		.depend = NULL,
 		.depend_len = 0,
+		.format = "%[CATEGORY]%[PF]",
 	};
 	size_t i;
 	int ret;
-	bool do_format = false;
+	bool do_pretty = false;
+
+	if (quiet)
+		state.format = "%[CATEGORY]%[PN]";
 
 	while ((ret = GETOPT_LONG(QDEPENDS, qdepends, "")) != -1) {
 		switch (ret) {
@@ -277,8 +272,8 @@ int qdepends_main(int argc, char **argv)
 		case 'p': state.qmode |= QMODE_PDEPEND; break;
 		case 'b': state.qmode |= QMODE_BDEPEND; break;
 		case 'Q': state.qmode |= QMODE_REVERSE; break;
-		case 'N': qdep_name_only = 1; break;
-		case 'f': do_format = true; break;
+		case 'S': do_pretty = true;             break;
+		case 'F': state.format = optarg;        break;
 		}
 	}
 
@@ -290,10 +285,10 @@ int qdepends_main(int argc, char **argv)
 					   QMODE_BDEPEND;
 	}
 
-	if ((argc == optind) && !do_format)
+	if ((argc == optind) && !do_pretty)
 		qdepends_usage(EXIT_FAILURE);
 
-	if (do_format) {
+	if (do_pretty) {
 		while (optind < argc) {
 			if (!qdepends_print_depend(stdout, argv[optind++]))
 				return EXIT_FAILURE;

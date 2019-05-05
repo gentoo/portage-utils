@@ -35,7 +35,9 @@ dependencies for the package are shown.  When colours are enabled, the
 matched atom is highlighted in the list.  In addition to just querying
 DEPEND, the default mode changed to query all DEPEND-variables, and
 return the unique atoms found in them.  Automatic regular expression
-match support was removed.
+match support was removed.  The \fB-N\fR option was removed, as the same
+effect can be achieved via the new \fB-F\fR option or \fB-q\fR option.
+The \fB-f\fR option was renamed to \fB-S\fR.
 .SH OPTIONS
 .TP
 \fB\-d\fR, \fB\-\-depend\fR
@@ -56,10 +58,7 @@ package that references \fI<arg>\fR in DEPEND, RDEPEND, PDEPEND or BDEPEND.
 This can be useful to find consumers of a given package, e.g.\ to
 search for packages that have \fIlogwatch\fR in their DEPEND.
 .TP
-\fB\-N\fR, \fB\-\-name\-only\fR
-Only show category/package, instead of category/package-version.
-.TP
-\fB\-f\fR, \fB\-\-format\fR
+\fB\-F\fR \fI<arg>\fR, \fB\-\-format\fR \fI<arg>\fR
 Pretty-print DEPEND declaration to be used in an ebuild.  This
 option initiates a very different mode of operation.  Instead of
 printing searching through packages, it constructs a multi-line
@@ -69,6 +68,9 @@ need to quote dependency strings in order for them to be printed as
 a single dependency declaration.  When used with the \fB\-q\fR
 option, only the pretty-printed dependency declaration is printed,
 e.g.\ the DEPEND= part is skipped.
+.TP
+\fB\-S\fR, \fB\-\-pretty\fR
+Pretty format specified depend strings.
 .TP
 \fB\-\-root\fR \fI<arg>\fR
 Set the ROOT env var.

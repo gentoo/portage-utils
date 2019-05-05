@@ -10,7 +10,7 @@
 
 - standardize/unify/clean up misc handling of colors
   define rules:
-    BOLD CATEGORY/ BLUE PKG GREEN ::REPO NORM [ MAGENTA USE NORM ]
+    BOLD CATEGORY/ BLUE PKG BKBLUE -VER YELLOW :SLOT GREEN ::REPO NORM [ MAGENTA USE NORM ]
 
 - remove odd rmspace for each string in libq/set.c (allows a lot less
   malloc/frees)
