@@ -167,6 +167,9 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 					ctx->ebuilddir_pkg_ctx = NULL;
 					return NULL;
 				}
+
+				/* "zap" the pkg such that it looks like CAT/P */
+				ctx->ebuilddir_cat_ctx->name = cat_ctx->name;
 			}
 
 			ret = q_vdb_next_pkg(ctx->ebuilddir_cat_ctx);
@@ -178,8 +181,6 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 					cache_close_pkg(ret);
 					ret = NULL;
 				} else {
-					/* "zap" the pkg such that it looks like CAT/P */
-					ret->cat_ctx->name = cat_ctx->name;
 					*p = '\0';
 				}
 			}
@@ -527,6 +528,100 @@ cache_close_meta(cache_pkg_meta *cache)
 	if (!cache)
 		errf("Cache is empty !");
 	free(cache);
+}
+
+cache_metadata_xml *
+cache_read_metadata(cache_pkg_ctx *pkg_ctx)
+{
+	cache_ctx *ctx = (cache_ctx *)(pkg_ctx->cat_ctx->ctx);
+	int fd;
+	FILE *f;
+	struct stat s;
+	char *xbuf;
+	char *p;
+	char *q;
+	size_t len;
+	cache_metadata_xml *ret = NULL;
+	struct elist *emailw = NULL;
+	char buf[_Q_PATH_MAX];
+
+	/* lame @$$ XML parsing, I don't want to pull in a real parser
+	 * library because we only retrieve one element for now: email
+	 * technically speaking, email may occur only once in a maintainer
+	 * tag, but practically speaking we don't care at all, so we can
+	 * just extract everything between <email> and </email> */
+
+	if (ctx->cachetype == CACHE_EBUILD) {
+		fd = openat(pkg_ctx->cat_ctx->fd, "metadata", O_RDONLY | O_CLOEXEC);
+	} else {
+		depend_atom *atom;
+		snprintf(buf, sizeof(buf), "%s/%s",
+				pkg_ctx->cat_ctx->name, pkg_ctx->name);
+		atom = atom_explode(buf);
+		snprintf(buf, sizeof(buf), "../../%s/%s/metadata.xml",
+				atom->CATEGORY, atom->PN);
+		atom_implode(atom);
+		fd = openat(ctx->vdb_fd, buf, O_RDONLY | O_CLOEXEC);
+	}
+
+	if (fd == -1)
+		return NULL;
+
+	if ((f = fdopen(fd, "r")) == NULL) {
+		close(fd);
+		return NULL;
+	}
+
+	if (fstat(fd, &s) != 0) {
+		fclose(f);
+		return NULL;
+	}
+
+	len = sizeof(*ret) + s.st_size + 1;
+	p = xbuf = xzalloc(len);
+	if ((off_t)fread(p, 1, s.st_size, f) != s.st_size) {
+		free(p);
+		fclose(f);
+		pkg_ctx->fd = -1;
+		return NULL;
+	}
+
+	ret = xmalloc(sizeof(*ret));
+	ret->email = NULL;
+
+	while ((q = strstr(p, "<email>")) != NULL) {
+		p = q + sizeof("<email>") - 1;
+		if ((q = strstr(p, "</email>")) == NULL)
+			break;
+		*q = '\0';
+		rmspace(p);
+		if (emailw == NULL) {
+			emailw = ret->email = xmalloc(sizeof(*emailw));
+		} else {
+			emailw = emailw->next = xmalloc(sizeof(*emailw));
+		}
+		emailw->next = NULL;
+		emailw->addr = xstrdup(p);
+		p = q + 1;
+	}
+
+	free(xbuf);
+	fclose(f);
+	return ret;
+}
+
+void
+cache_close_metadata(cache_metadata_xml *meta_ctx)
+{
+	struct elist *e;
+	while (meta_ctx->email != NULL) {
+		e = meta_ctx->email;
+		free(e->addr);
+		e = e->next;
+		free(meta_ctx->email);
+		meta_ctx->email = e;
+	}
+	free(meta_ctx);
 }
 
 void

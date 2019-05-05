@@ -43,6 +43,13 @@ typedef struct {
 	char *_md5_;
 } cache_pkg_meta;
 
+typedef struct {
+	struct elist {
+		char *addr;
+		struct elist *next;
+	} *email;
+} cache_metadata_xml;
+
 typedef int (cache_pkg_cb)(cache_pkg_ctx *, void *priv);
 typedef int (cache_cat_filter)(cache_cat_ctx *, void *priv);
 
@@ -55,6 +62,8 @@ cache_pkg_ctx *cache_open_pkg(cache_cat_ctx *cat_ctx, const char *name);
 cache_pkg_ctx *cache_next_pkg(cache_cat_ctx *cat_ctx);
 cache_pkg_meta *cache_pkg_read(cache_pkg_ctx *pkg_ctx);
 void cache_close_meta(cache_pkg_meta *cache);
+cache_metadata_xml *cache_read_metadata(cache_pkg_ctx *pkg_ctx);
+void cache_close_metadata(cache_metadata_xml *meta_ctx);
 void cache_close_pkg(cache_pkg_ctx *pkg_ctx);
 int cache_foreach_pkg(const char *sroot, const char *portdir,
 		cache_pkg_cb callback, void *priv, cache_cat_filter filter);
