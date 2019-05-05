@@ -28,10 +28,11 @@
 /* Required portage-utils stuff                                     */
 /********************************************************************/
 
-#define QKEYWORD_FLAGS "p:c:idtans" COMMON_FLAGS
+#define QKEYWORD_FLAGS "p:c:m:idtans" COMMON_FLAGS
 static struct option const qkeyword_long_opts[] = {
 	{"matchpkg", a_argument, NULL, 'p'},
 	{"matchcat", a_argument, NULL, 'c'},
+	{"matchmaint", a_argument, NULL, 'm'},
 	{"imlate",  no_argument, NULL, 'i'},
 	{"dropped", no_argument, NULL, 'd'},
 	{"testing", no_argument, NULL, 't'},
@@ -43,6 +44,7 @@ static struct option const qkeyword_long_opts[] = {
 static const char * const qkeyword_opts_help[] = {
 	"match pkgname",
 	"match catname",
+	"match maintainer email from metadata.xml (slow)",
 	"list packages that can be marked stable on a given arch",
 	"list packages that have dropped keywords on a version bump on a given arch",
 	"list packages that have ~arch versions, but no stable versions on a given arch",
@@ -56,6 +58,7 @@ static const char * const qkeyword_opts_help[] = {
 typedef struct {
 	depend_atom *qatom;
 	depend_atom *lastatom;
+	char *qmaint;
 	int *keywordsbuf;
 	size_t keywordsbuflen;
 	const char *arch;
@@ -610,6 +613,8 @@ qkeyword_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 	char buf[_Q_PATH_MAX];
 	depend_atom *patom = NULL;
 	cache_pkg_meta *meta;
+	cache_metadata_xml *metadata;
+	struct elist *emailw;
 	int ret;
 
 	snprintf(buf, sizeof(buf), "%s/%s",
@@ -630,6 +635,17 @@ qkeyword_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 	{
 		atom_implode(patom);
 		return EXIT_SUCCESS;
+	}
+
+	if (data->qmaint != NULL) {
+		metadata = cache_read_metadata(pkg_ctx);
+		for (emailw = metadata->email; emailw != NULL; emailw = emailw->next) {
+			if (strcmp(emailw->addr, data->qmaint) != 0)
+				break;
+		}
+		cache_close_metadata(metadata);
+		if (emailw != NULL)
+			return EXIT_SUCCESS;
 	}
 
 	keywords = data->keywordsbuf;
@@ -747,11 +763,13 @@ int qkeyword_main(int argc, char **argv)
 	qkeyword_data data;
 	char *pkg = NULL;
 	char *cat = NULL;
+	char *maint = NULL;
 
 	while ((i = GETOPT_LONG(QKEYWORD, qkeyword, "")) != -1) {
 		switch (i) {
 			case 'p': pkg = optarg; break;
 			case 'c': cat = optarg; break;
+			case 'm': maint = optarg; break;
 			case 'i':
 			case 'd':
 			case 't':
@@ -801,6 +819,7 @@ int qkeyword_main(int argc, char **argv)
 	data.lastatom = NULL;
 	data.keywordsbuf = NULL;
 	data.keywordsbuflen = 0;
+	data.qmaint = maint;
 
 	switch (action) {
 		case 'i': i = qkeyword_traverse(qkeyword_imlate, &data);        break;

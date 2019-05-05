@@ -9,6 +9,17 @@ qkeyword \- list packages based on keywords
 \fIqkeyword\fR allows various searches based on KEYWORDS aimed at Gentoo
 developers.  Various modes allow to query which packages would be
 available, or are candidate for keywording.
+.P
+By default, the entire tree is traversed.  Since this process can be
+slow, or result in too many results, the match arguments can be used to
+reduce the set of packages evaluated.  \fB-p\fR and \fB-c\fR match
+package name and category respectively.  They can both be used at the
+same time, but \fB-p\fR accepts regular atom format, including version
+and/or range.  Hence, \fB-p\fR can be used to set both category as well
+as package in one go.  The \fB-m\fR maintainer match, while reducing the
+resulting set, is likely to slow down the query processing since the
+metadata.xml file has to be read for each package examined.  It is best
+used in combination with \fB-p\fR or \fB-c\fR.
 .SH OPTIONS
 .TP
 \fB\-p\fR \fI<arg>\fR, \fB\-\-matchpkg\fR \fI<arg>\fR
@@ -16,6 +27,9 @@ match pkgname.
 .TP
 \fB\-c\fR \fI<arg>\fR, \fB\-\-matchcat\fR \fI<arg>\fR
 match catname.
+.TP
+\fB\-m\fR \fI<arg>\fR, \fB\-\-matchmaint\fR \fI<arg>\fR
+match maintainer email from metadata.xml (slow).
 .TP
 \fB\-i\fR, \fB\-\-imlate\fR
 list packages that can be marked stable on a given arch.
