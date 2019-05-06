@@ -65,7 +65,7 @@ struct qcheck_opt_state {
 };
 
 static int
-qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
+qcheck_process_contents(vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 {
 	int fd_contents;
 	FILE *fp_contents, *fp_contents_update;
@@ -81,7 +81,7 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	fp_contents_update = NULL;
 
 	/* Open contents */
-	fd_contents = q_vdb_pkg_openat(pkg_ctx, "CONTENTS", O_RDONLY|O_CLOEXEC, 0);
+	fd_contents = vdb_pkg_openat(pkg_ctx, "CONTENTS", O_RDONLY|O_CLOEXEC, 0);
 	if (fd_contents == -1)
 		return EXIT_SUCCESS;
 	if (fstat(fd_contents, &cst)) {
@@ -99,7 +99,7 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 		(state->qc_update ? "Updat" : "Check"),
 		GREEN, catname, pkgname, NORM);
 	if (state->qc_update) {
-		fp_contents_update = q_vdb_pkg_fopenat_rw(pkg_ctx, "CONTENTS~");
+		fp_contents_update = vdb_pkg_fopenat_rw(pkg_ctx, "CONTENTS~");
 		if (fp_contents_update == NULL) {
 			fclose(fp_contents);
 			warnp("unable to fopen(%s/%s, w)", pkgname, "CONTENTS~");
@@ -363,7 +363,7 @@ qcheck_process_contents(q_vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 }
 
 static int
-qcheck_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+qcheck_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qcheck_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;
@@ -439,7 +439,7 @@ int qcheck_main(int argc, char **argv)
 			xarraypush_ptr(atoms, atom);
 	}
 
-	ret = q_vdb_foreach_pkg_sorted(portroot, portvdb, qcheck_cb, &state);
+	ret = vdb_foreach_pkg_sorted(portroot, portvdb, qcheck_cb, &state);
 	{
 		void *regex;
 		array_for_each(regex_arr, i, regex)

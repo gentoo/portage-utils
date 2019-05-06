@@ -92,7 +92,7 @@ qdepends_print_depend(FILE *fp, const char *depend)
 }
 
 static int
-qdepends_results_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qdepends_opt_state *state = priv;
 	depend_atom *atom;
@@ -116,7 +116,7 @@ qdepends_results_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	 * *DEPEND alters the search somewhat and affects results printing.
 	 */
 
-	datom = q_vdb_get_atom(pkg_ctx);
+	datom = vdb_get_atom(pkg_ctx);
 	if (datom == NULL)
 		return ret;
 
@@ -145,7 +145,7 @@ qdepends_results_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	for (i = QMODE_DEPEND; i <= QMODE_BDEPEND; i <<= 1, dfile++) {
 		if (!(state->qmode & i))
 			continue;
-		if (!q_vdb_pkg_eat(pkg_ctx, *dfile,
+		if (!vdb_pkg_eat(pkg_ctx, *dfile,
 					&state->depend, &state->depend_len))
 			continue;
 
@@ -302,7 +302,7 @@ int qdepends_main(int argc, char **argv)
 			xarraypush_ptr(atoms, atom);
 	}
 
-	ret = q_vdb_foreach_pkg(portroot, portvdb,
+	ret = vdb_foreach_pkg(portroot, portvdb,
 			qdepends_results_cb, &state, NULL);
 
 	if (state.depend != NULL)

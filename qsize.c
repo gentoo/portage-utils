@@ -97,7 +97,7 @@ struct qsize_opt_state {
 };
 
 static int
-qsize_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+qsize_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qsize_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;
@@ -126,7 +126,7 @@ qsize_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	if (!showit)
 		return EXIT_SUCCESS;
 
-	if ((fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
+	if ((fp = vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
 		return EXIT_SUCCESS;
 
 	num_ignored = num_files = num_nonfiles = num_bytes = 0;
@@ -230,7 +230,7 @@ int qsize_main(int argc, char **argv)
 	state.buflen = _Q_PATH_MAX;
 	state.buf = xmalloc(state.buflen);
 
-	ret = q_vdb_foreach_pkg(portroot, portvdb, qsize_cb, &state, NULL);
+	ret = vdb_foreach_pkg(portroot, portvdb, qsize_cb, &state, NULL);
 
 	if (state.summary) {
 		printf(" %sTotals%s: %'zu files, %'zu non-files, ", BOLD, NORM,

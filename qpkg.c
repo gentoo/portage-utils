@@ -334,9 +334,9 @@ qpkg_make(depend_atom *atom)
 
 int qpkg_main(int argc, char **argv)
 {
-	q_vdb_ctx *ctx;
-	q_vdb_cat_ctx *cat_ctx;
-	q_vdb_pkg_ctx *pkg_ctx;
+	vdb_ctx *ctx;
+	vdb_cat_ctx *cat_ctx;
+	vdb_pkg_ctx *pkg_ctx;
 	size_t s, pkgs_made;
 	int i;
 	struct stat st;
@@ -417,15 +417,15 @@ retry_mkdir:
 	}
 
 	/* now try to run through vdb and locate matches for user inputs */
-	ctx = q_vdb_open(portroot, portvdb);
+	ctx = vdb_open(portroot, portvdb);
 	if (!ctx)
 		return EXIT_FAILURE;
 
 	/* scan all the categories */
-	while ((cat_ctx = q_vdb_next_cat(ctx))) {
+	while ((cat_ctx = vdb_next_cat(ctx))) {
 		/* scan all the packages in this category */
 		const char *catname = cat_ctx->name;
-		while ((pkg_ctx = q_vdb_next_pkg(cat_ctx))) {
+		while ((pkg_ctx = vdb_next_pkg(cat_ctx))) {
 			const char *pkgname = pkg_ctx->name;
 
 			/* see if user wants any of these packages */
@@ -449,7 +449,7 @@ retry_mkdir:
 			atom_implode(atom);
 
  next_pkg:
-			q_vdb_close_pkg(pkg_ctx);
+			vdb_close_pkg(pkg_ctx);
 		}
 	}
 

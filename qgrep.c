@@ -441,7 +441,7 @@ qgrep_cache_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qgrep_vdb_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+qgrep_vdb_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qgrep_grepargs *data = (struct qgrep_grepargs *)priv;
 	char buf[_Q_PATH_MAX];
@@ -687,7 +687,7 @@ int qgrep_main(int argc, char **argv)
 			}
 			closedir(eclass_dir);
 		} else if (do_installed) {
-			status = q_vdb_foreach_pkg(portroot, portvdb,
+			status = vdb_foreach_pkg(portroot, portvdb,
 					qgrep_vdb_cb, &args, NULL);
 		} else { /* do_ebuild */
 			status = cache_foreach_pkg(portroot, overlay,

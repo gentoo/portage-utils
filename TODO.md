@@ -23,7 +23,7 @@
   we end up getting just:<br>
   `ACCEPT_LICENSE=" bar"`
 
-- q\_vdb\_foreach\_pkg should have variant that takes an atom (or just
+- vdb\_foreach\_pkg should have variant that takes an atom (or just
   cat?) to reduce search space, same for cache\_foreach\_pkg
 
 - vdb repo/slot think about when it is freed (see cache\_pkg\_close)

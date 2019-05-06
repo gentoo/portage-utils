@@ -96,7 +96,7 @@ cmpstringp(const void *p1, const void *p2)
  */
 static char _umapstr_buf[BUFSIZ];
 static const char *
-umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
+umapstr(char display, vdb_pkg_ctx *pkg_ctx)
 {
 	char *bufp = _umapstr_buf;
 	char *use = NULL;
@@ -115,10 +115,10 @@ umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
 	if (!display)
 		return bufp;
 
-	q_vdb_pkg_eat(pkg_ctx, "USE", &use, &use_len);
+	vdb_pkg_eat(pkg_ctx, "USE", &use, &use_len);
 	if (!use[0])
 		return bufp;
-	q_vdb_pkg_eat(pkg_ctx, "IUSE", &iuse, &iuse_len);
+	vdb_pkg_eat(pkg_ctx, "IUSE", &iuse, &iuse_len);
 	if (!iuse[0])
 		return bufp;
 
@@ -173,13 +173,13 @@ umapstr(char display, q_vdb_pkg_ctx *pkg_ctx)
 /* forward declaration necessary for misuse from qmerge.c, see HACK there */
 bool
 qlist_match(
-		q_vdb_pkg_ctx *pkg_ctx,
+		vdb_pkg_ctx *pkg_ctx,
 		const char *name,
 		depend_atom **name_atom,
 		bool exact);
 bool
 qlist_match(
-		q_vdb_pkg_ctx *pkg_ctx,
+		vdb_pkg_ctx *pkg_ctx,
 		const char *name,
 		depend_atom **name_atom,
 		bool exact)
@@ -200,7 +200,7 @@ qlist_match(
 			uslot = NULL;
 		else {
 			if (!pkg_ctx->slot)
-				q_vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot,
+				vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot,
 						&pkg_ctx->slot_len);
 			uslot_len = strlen(uslot);
 		}
@@ -209,7 +209,7 @@ qlist_match(
 	urepo = strstr(name, "::");
 	if (urepo) {
 		if (!pkg_ctx->repo)
-			q_vdb_pkg_eat(pkg_ctx, "repository", &pkg_ctx->repo,
+			vdb_pkg_eat(pkg_ctx, "repository", &pkg_ctx->repo,
 					&pkg_ctx->repo_len);
 		urepo += 2;
 		urepo_len = strlen(urepo);
@@ -338,7 +338,7 @@ struct qlist_opt_state {
 };
 
 static int
-qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+qlist_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qlist_opt_state *state = priv;
 	int i;
@@ -359,7 +359,7 @@ qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		atom = (verbose ? NULL : atom_explode(pkgname));
 		if ((state->all + state->just_pkgname) < 2) {
 			if (state->show_slots && !pkg_ctx->slot) {
-				q_vdb_pkg_eat(pkg_ctx, "SLOT",
+				vdb_pkg_eat(pkg_ctx, "SLOT",
 						&pkg_ctx->slot, &pkg_ctx->slot_len);
 				/* chop off the subslot if desired */
 				if (state->show_slots == 1) {
@@ -369,7 +369,7 @@ qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 				}
 			}
 			if (state->show_repo && !pkg_ctx->repo)
-				q_vdb_pkg_eat(pkg_ctx, "repository",
+				vdb_pkg_eat(pkg_ctx, "repository",
 						&pkg_ctx->repo, &pkg_ctx->repo_len);
 			/* display it */
 			printf("%s%s/%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
@@ -398,7 +398,7 @@ qlist_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		printf("%s%s/%s%s%s %sCONTENTS%s:\n",
 				BOLD, catname, BLUE, pkgname, NORM, DKBLUE, NORM);
 
-	fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
+	fp = vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
 	if (fp == NULL)
 		return 1;
 
@@ -489,7 +489,7 @@ int qlist_main(int argc, char **argv)
 
 	state.buf = xmalloc(state.buflen);
 	state.atoms = xcalloc(argc - optind, sizeof(*state.atoms));
-	ret = q_vdb_foreach_pkg_sorted(portroot, portvdb, qlist_cb, &state);
+	ret = vdb_foreach_pkg_sorted(portroot, portvdb, qlist_cb, &state);
 	free(state.buf);
 	for (i = optind; i < state.argc; ++i)
 		if (state.atoms[i - optind])

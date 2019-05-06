@@ -66,7 +66,7 @@ cache_open(const char *sroot, const char *portdir)
 	}
 
 	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_md5);
-	ret = q_vdb_open2(sroot, buf, true);
+	ret = vdb_open2(sroot, buf, true);
 	if (ret != NULL) {
 		ret->cachetype = CACHE_METADATA_MD5;
 		ret->repo = repo;
@@ -74,14 +74,14 @@ cache_open(const char *sroot, const char *portdir)
 	}
 
 	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_pms);
-	ret = q_vdb_open2(sroot, buf, true);
+	ret = vdb_open2(sroot, buf, true);
 	if (ret != NULL) {
 		ret->cachetype = CACHE_METADATA_PMS;
 		ret->repo = repo;
 		return ret;
 	}
 
-	ret = q_vdb_open2(sroot, portdir, true);
+	ret = vdb_open2(sroot, portdir, true);
 	if (ret != NULL) {
 		ret->cachetype = CACHE_EBUILD;
 		ret->repo = repo;
@@ -101,31 +101,31 @@ cache_close(cache_ctx *ctx)
 		free(ctx->repo);
 	if (ctx->ebuilddir_ctx != NULL)
 		free(ctx->ebuilddir_ctx);
-	q_vdb_close(ctx);
+	vdb_close(ctx);
 }
 
 cache_cat_ctx *
 cache_open_cat(cache_ctx *ctx, const char *name)
 {
-	return q_vdb_open_cat(ctx, name);
+	return vdb_open_cat(ctx, name);
 }
 
 cache_cat_ctx *
 cache_next_cat(cache_ctx *ctx)
 {
-	return q_vdb_next_cat(ctx);
+	return vdb_next_cat(ctx);
 }
 
 void
 cache_close_cat(cache_cat_ctx *cat_ctx)
 {
-	return q_vdb_close_cat(cat_ctx);
+	return vdb_close_cat(cat_ctx);
 }
 
 cache_pkg_ctx *
 cache_open_pkg(cache_cat_ctx *cat_ctx, const char *name)
 {
-	return q_vdb_open_pkg(cat_ctx, name);
+	return vdb_open_pkg(cat_ctx, name);
 }
 
 cache_pkg_ctx *
@@ -141,13 +141,13 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 		 * to CAT/P like in VDB and metadata */
 		do {
 			if (ctx->ebuilddir_pkg_ctx == NULL) {
-				q_vdb_ctx *pkgdir = ctx->ebuilddir_ctx;
+				vdb_ctx *pkgdir = ctx->ebuilddir_ctx;
 
 				if (pkgdir == NULL)
-					pkgdir = ctx->ebuilddir_ctx = xmalloc(sizeof(q_vdb_ctx));
+					pkgdir = ctx->ebuilddir_ctx = xmalloc(sizeof(vdb_ctx));
 				memset(ctx->ebuilddir_ctx, '\0', sizeof(*ctx->ebuilddir_ctx));
 
-				if ((ctx->ebuilddir_pkg_ctx = q_vdb_next_pkg(cat_ctx)) == NULL)
+				if ((ctx->ebuilddir_pkg_ctx = vdb_next_pkg(cat_ctx)) == NULL)
 					return NULL;
 
 				pkgdir->portroot_fd = -1;
@@ -159,7 +159,7 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 				pkgdir->cachetype = ctx->cachetype;
 
 				ctx->ebuilddir_cat_ctx =
-					q_vdb_open_cat(pkgdir, ctx->ebuilddir_pkg_ctx->name);
+					vdb_open_cat(pkgdir, ctx->ebuilddir_pkg_ctx->name);
 
 				/* opening might fail if what we found wasn't a
 				 * directory or something */
@@ -172,9 +172,9 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 				ctx->ebuilddir_cat_ctx->name = cat_ctx->name;
 			}
 
-			ret = q_vdb_next_pkg(ctx->ebuilddir_cat_ctx);
+			ret = vdb_next_pkg(ctx->ebuilddir_cat_ctx);
 			if (ret == NULL) {
-				q_vdb_close_cat(ctx->ebuilddir_cat_ctx);
+				vdb_close_cat(ctx->ebuilddir_cat_ctx);
 				ctx->ebuilddir_pkg_ctx = NULL;
 			} else {
 				if ((p = strstr(ret->name, ".ebuild")) == NULL) {
@@ -186,7 +186,7 @@ cache_next_pkg(cache_cat_ctx *cat_ctx)
 			}
 		} while (ret == NULL);
 	} else {
-		ret = q_vdb_next_pkg(cat_ctx);
+		ret = vdb_next_pkg(cat_ctx);
 	}
 
 	return ret;
@@ -627,16 +627,16 @@ cache_close_metadata(cache_metadata_xml *meta_ctx)
 void
 cache_close_pkg(cache_pkg_ctx *pkg_ctx)
 {
-	/* avoid free of cache_ctx' repo by q_vdb_close_pkg */
+	/* avoid free of cache_ctx' repo by vdb_close_pkg */
 	if (pkg_ctx->cat_ctx->ctx->repo == pkg_ctx->repo)
 		pkg_ctx->repo = NULL;
 
-	q_vdb_close_pkg(pkg_ctx);
+	vdb_close_pkg(pkg_ctx);
 }
 
 static int
 cache_foreach_pkg_int(const char *sroot, const char *portdir,
-		q_vdb_pkg_cb callback, void *priv, q_vdb_cat_filter filter,
+		vdb_pkg_cb callback, void *priv, vdb_cat_filter filter,
 		bool sort, void *catsortfunc, void *pkgsortfunc)
 {
 	cache_ctx *ctx;
@@ -671,7 +671,7 @@ cache_foreach_pkg_int(const char *sroot, const char *portdir,
 
 int
 cache_foreach_pkg(const char *sroot, const char *portdir,
-		q_vdb_pkg_cb callback, void *priv, q_vdb_cat_filter filter)
+		vdb_pkg_cb callback, void *priv, vdb_cat_filter filter)
 {
 	return cache_foreach_pkg_int(sroot, portdir, callback, priv,
 			filter, false, NULL, NULL);
@@ -679,7 +679,7 @@ cache_foreach_pkg(const char *sroot, const char *portdir,
 
 int
 cache_foreach_pkg_sorted(const char *sroot, const char *portdir,
-		q_vdb_pkg_cb callback, void *priv,
+		vdb_pkg_cb callback, void *priv,
 		void *catsortfunc, void *pkgsortfunc)
 {
 	return cache_foreach_pkg_int(sroot, portdir, callback, priv,

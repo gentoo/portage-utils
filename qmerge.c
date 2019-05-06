@@ -118,7 +118,7 @@ typedef struct llist_char_t llist_char;
 
 static void pkg_fetch(int, const depend_atom *, const struct pkg_t *);
 static void pkg_merge(int, const depend_atom *, const struct pkg_t *);
-static int pkg_unmerge(q_vdb_pkg_ctx *, set *, int, char **, int, char **);
+static int pkg_unmerge(vdb_pkg_ctx *, set *, int, char **, int, char **);
 static struct pkg_t *grab_binpkg_info(const char *);
 static char *find_binpkg(const char *);
 
@@ -282,7 +282,7 @@ struct qmerge_bv_state {
 };
 
 static int
-qmerge_filter_cat(q_vdb_cat_ctx *cat_ctx, void *priv)
+qmerge_filter_cat(vdb_cat_ctx *cat_ctx, void *priv)
 {
 	struct qmerge_bv_state *state = priv;
 	return !state->catname || strcmp(cat_ctx->name, state->catname) == 0;
@@ -292,13 +292,13 @@ qmerge_filter_cat(q_vdb_cat_ctx *cat_ctx, void *priv)
  * should however figure out how to do what match does here from e.g.
  * atom */
 extern bool qlist_match(
-		q_vdb_pkg_ctx *pkg_ctx,
+		vdb_pkg_ctx *pkg_ctx,
 		const char *name,
 		depend_atom **name_atom,
 		bool exact);
 
 static int
-qmerge_best_version_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+qmerge_best_version_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qmerge_bv_state *state = priv;
 	if (qlist_match(pkg_ctx, state->buf, NULL, true))
@@ -338,7 +338,7 @@ best_version(const char *catname, const char *pkgname, const char *slot)
 	retbuf[0] = '\0';
 	snprintf(state.buf, sizeof(state.buf), "%s%s%s:%s",
 		 catname ? : "", catname ? "/" : "", pkgname, slot);
-	q_vdb_foreach_pkg(portroot, portvdb,
+	vdb_foreach_pkg(portroot, portvdb,
 			qmerge_best_version_cb, &state, qmerge_filter_cat);
 
  done:
@@ -999,8 +999,8 @@ static void
 pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 {
 	set *objs;
-	q_vdb_ctx *vdb_ctx;
-	q_vdb_cat_ctx *cat_ctx;
+	vdb_ctx *vdb;
+	vdb_cat_ctx *cat_ctx;
 	FILE *fp, *contents;
 	static char *phases;
 	static size_t phases_len;
@@ -1122,19 +1122,19 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	}
 
 	/* Get a handle on the main vdb repo */
-	vdb_ctx = q_vdb_open(portroot, portvdb);
-	if (!vdb_ctx)
+	vdb = vdb_open(portroot, portvdb);
+	if (!vdb)
 		return;
-	cat_ctx = q_vdb_open_cat(vdb_ctx, pkg->CATEGORY);
+	cat_ctx = vdb_open_cat(vdb, pkg->CATEGORY);
 	if (!cat_ctx) {
 		if (errno != ENOENT) {
-			q_vdb_close(vdb_ctx);
+			vdb_close(vdb);
 			return;
 		}
-		mkdirat(vdb_ctx->vdb_fd, pkg->CATEGORY, 0755);
-		cat_ctx = q_vdb_open_cat(vdb_ctx, pkg->CATEGORY);
+		mkdirat(vdb->vdb_fd, pkg->CATEGORY, 0755);
+		cat_ctx = vdb_open_cat(vdb, pkg->CATEGORY);
 		if (!cat_ctx) {
-			q_vdb_close(vdb_ctx);
+			vdb_close(vdb);
 			return;
 		}
 	}
@@ -1345,10 +1345,10 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	/* TODO: Should see about merging with unmerge_packages() */
 	while (1) {
 		int ret;
-		q_vdb_pkg_ctx *pkg_ctx;
+		vdb_pkg_ctx *pkg_ctx;
 		depend_atom *old_atom;
 
-		pkg_ctx = q_vdb_next_pkg(cat_ctx);
+		pkg_ctx = vdb_next_pkg(cat_ctx);
 		if (!pkg_ctx)
 			break;
 
@@ -1377,7 +1377,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 		pkg_unmerge(pkg_ctx, objs, cp_argc, cp_argv, cpm_argc, cpm_argv);
  next_pkg:
-		q_vdb_close_pkg(pkg_ctx);
+		vdb_close_pkg(pkg_ctx);
 	}
 
 	freeargv(cp_argc, cp_argv);
@@ -1416,14 +1416,14 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	printf("%s>>>%s %s%s%s/%s%s%s\n",
 			YELLOW, NORM, WHITE, atom->CATEGORY, NORM, CYAN, atom->PN, NORM);
 
-	q_vdb_close(vdb_ctx);
+	vdb_close(vdb);
 }
 
 static int
-pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, set *keep,
+pkg_unmerge(vdb_pkg_ctx *pkg_ctx, set *keep,
 		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
-	q_vdb_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
+	vdb_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
 	const char *cat = cat_ctx->name;
 	const char *pkgname = pkg_ctx->name;
 	size_t buflen;
@@ -1447,7 +1447,7 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, set *keep,
 		return 0;
 
 	/* First get a handle on the things to clean up */
-	fp = q_vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
+	fp = vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
 	if (fp == NULL)
 		return ret;
 
@@ -1455,7 +1455,7 @@ pkg_unmerge(q_vdb_pkg_ctx *pkg_ctx, set *keep,
 
 	/* Then execute the pkg_prerm step */
 	if (!pretend) {
-		q_vdb_pkg_eat(pkg_ctx, "DEFINED_PHASES", &phases, &phases_len);
+		vdb_pkg_eat(pkg_ctx, "DEFINED_PHASES", &phases, &phases_len);
 		mkdirat(pkg_ctx->fd, "temp", 0755);
 		pkg_run_func_at(pkg_ctx->fd, ".", phases, "pkg_prerm", T, T);
 	}
@@ -1776,7 +1776,7 @@ print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 }
 
 static int
-qmerge_unmerge_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
+qmerge_unmerge_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	int cp_argc;
 	int cpm_argc;
@@ -1804,7 +1804,7 @@ qmerge_unmerge_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 static int
 unmerge_packages(set *todo)
 {
-	return q_vdb_foreach_pkg(portroot, portvdb, qmerge_unmerge_cb, todo, NULL);
+	return vdb_foreach_pkg(portroot, portvdb, qmerge_unmerge_cb, todo, NULL);
 }
 
 static FILE *

@@ -13,9 +13,9 @@
 #include "atom.h"
 #include "vdb.h"
 
-#define cache_ctx     q_vdb_ctx
-#define cache_cat_ctx q_vdb_cat_ctx
-#define cache_pkg_ctx q_vdb_pkg_ctx
+#define cache_ctx     vdb_ctx
+#define cache_cat_ctx vdb_cat_ctx
+#define cache_pkg_ctx vdb_pkg_ctx
 
 typedef struct {
 	char *_data;
