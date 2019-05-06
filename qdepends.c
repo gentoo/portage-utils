@@ -116,7 +116,7 @@ qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 	 * *DEPEND alters the search somewhat and affects results printing.
 	 */
 
-	datom = vdb_get_atom(pkg_ctx);
+	datom = vdb_get_atom(pkg_ctx, false);
 	if (datom == NULL)
 		return ret;
 
@@ -135,6 +135,7 @@ qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 
 		ret = 1;
 
+		datom = vdb_get_atom(pkg_ctx, true);
 		printf("%s:", atom_format(state->format, datom, 0));
 	}
 
@@ -172,8 +173,10 @@ qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 				if (atom == NULL) {
 					ret = 1;
 
-					if (!firstmatch)
+					if (!firstmatch) {
+						datom = vdb_get_atom(pkg_ctx, true);
 						printf("%s:", atom_format(state->format, datom, 0));
+					}
 					firstmatch = true;
 
 					printf("\n%s=\"\n", *dfile);
@@ -199,8 +202,10 @@ qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 					if (fatom == NULL) {
 						ret = 1;
 
-						if (!firstmatch)
+						if (!firstmatch) {
+							datom = vdb_get_atom(pkg_ctx, true);
 							printf("%s:", atom_format(state->format, datom, 0));
+						}
 						firstmatch = true;
 
 						snprintf(buf, sizeof(buf), "%s%s%s",
