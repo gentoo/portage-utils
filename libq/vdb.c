@@ -414,17 +414,27 @@ next_entry:
 }
 
 depend_atom *
-vdb_get_atom(vdb_pkg_ctx *pkg_ctx)
+vdb_get_atom(vdb_pkg_ctx *pkg_ctx, bool complete)
 {
-	pkg_ctx->atom = atom_explode(pkg_ctx->name);
-	if (pkg_ctx->atom == NULL)
-		return NULL;
-	pkg_ctx->atom->CATEGORY = (char *)pkg_ctx->cat_ctx->name;
+	if (pkg_ctx->atom == NULL) {
+		pkg_ctx->atom = atom_explode(pkg_ctx->name);
+		if (pkg_ctx->atom == NULL)
+			return NULL;
+		pkg_ctx->atom->CATEGORY = (char *)pkg_ctx->cat_ctx->name;
+	}
 
-	vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot, &pkg_ctx->slot_len);
-	pkg_ctx->atom->SLOT = pkg_ctx->slot;
-	vdb_pkg_eat(pkg_ctx, "repository", &pkg_ctx->repo, &pkg_ctx->repo_len);
-	pkg_ctx->atom->REPO = pkg_ctx->repo;
+	if (complete) {
+		if (pkg_ctx->atom->SLOT == NULL) {
+			vdb_pkg_eat(pkg_ctx, "SLOT",
+					&pkg_ctx->slot, &pkg_ctx->slot_len);
+			pkg_ctx->atom->SLOT = pkg_ctx->slot;
+		}
+		if (pkg_ctx->atom->REPO == NULL) {
+			vdb_pkg_eat(pkg_ctx, "repository",
+					&pkg_ctx->repo, &pkg_ctx->repo_len);
+			pkg_ctx->atom->REPO = pkg_ctx->repo;
+		}
+	}
 
 	return pkg_ctx->atom;
 }

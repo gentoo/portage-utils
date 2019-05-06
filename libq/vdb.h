@@ -91,6 +91,6 @@ int vdb_foreach_pkg_sorted(const char *sroot, const char *svdb,
 		vdb_pkg_cb callback, void *priv);
 struct dirent *vdb_get_next_dir(DIR *dir);
 set *get_vdb_atoms(const char *sroot, const char *svdb, int fullcpv);
-depend_atom *vdb_get_atom(vdb_pkg_ctx *pkg_ctx);
+depend_atom *vdb_get_atom(vdb_pkg_ctx *pkg_ctx, bool complete);
 
 #endif
