@@ -639,10 +639,17 @@ qkeyword_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 
 	if (data->qmaint != NULL) {
 		metadata = cache_read_metadata(pkg_ctx);
+		if (metadata == NULL)
+			return EXIT_SUCCESS;
+
 		for (emailw = metadata->email; emailw != NULL; emailw = emailw->next) {
 			if (strcmp(emailw->addr, data->qmaint) != 0)
 				break;
 		}
+		if (metadata->email == NULL)
+			/* arbitrary pointer to trigger exit below */
+			emailw = (struct elist *)buf;
+
 		cache_close_metadata(metadata);
 		if (emailw != NULL)
 			return EXIT_SUCCESS;
