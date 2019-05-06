@@ -59,6 +59,7 @@ struct q_vdb_pkg_ctx {
 	size_t repo_len;
 	int fd;
 	q_vdb_cat_ctx *cat_ctx;
+	depend_atom *atom;
 };
 
 /* Global helpers */
@@ -90,5 +91,6 @@ int q_vdb_foreach_pkg_sorted(const char *sroot, const char *svdb,
 		q_vdb_pkg_cb callback, void *priv);
 struct dirent *q_vdb_get_next_dir(DIR *dir);
 set *get_vdb_atoms(const char *sroot, const char *svdb, int fullcpv);
+depend_atom *q_vdb_get_atom(q_vdb_pkg_ctx *pkg_ctx);
 
 #endif

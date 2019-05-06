@@ -4,6 +4,7 @@
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2019-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #include "main.h"
@@ -334,6 +335,8 @@ q_vdb_close_pkg(q_vdb_pkg_ctx *pkg_ctx)
 {
 	if (pkg_ctx->fd != -1)
 		close(pkg_ctx->fd);
+	if (pkg_ctx->atom != NULL)
+		atom_implode(pkg_ctx->atom);
 	free(pkg_ctx->slot);
 	free(pkg_ctx->repo);
 	free(pkg_ctx);
@@ -407,6 +410,22 @@ next_entry:
 		goto next_entry;
 
 	return ret;
+}
+
+depend_atom *
+q_vdb_get_atom(q_vdb_pkg_ctx *pkg_ctx)
+{
+	pkg_ctx->atom = atom_explode(pkg_ctx->name);
+	if (pkg_ctx->atom == NULL)
+		return NULL;
+	pkg_ctx->atom->CATEGORY = (char *)pkg_ctx->cat_ctx->name;
+
+	q_vdb_pkg_eat(pkg_ctx, "SLOT", &pkg_ctx->slot, &pkg_ctx->slot_len);
+	pkg_ctx->atom->SLOT = pkg_ctx->slot;
+	q_vdb_pkg_eat(pkg_ctx, "repository", &pkg_ctx->repo, &pkg_ctx->repo_len);
+	pkg_ctx->atom->REPO = pkg_ctx->repo;
+
+	return pkg_ctx->atom;
 }
 
 set *
