@@ -406,22 +406,21 @@ atom_compare(const depend_atom *a1, const depend_atom *a2)
 	}
 
 	/* check slot only when both sides have it */
-	if (a1->SLOT && a2->SLOT &&
+	if (a1->SLOT != NULL && a2->SLOT != NULL &&
 			a1->SLOT[0] != '\0' && a2->SLOT[0] != '\0' &&
 			(strcmp(a1->SLOT, a2->SLOT) != 0 ||
 			(a1->SUBSLOT != NULL && a2->SUBSLOT != NULL &&
 			 strcmp(a1->SUBSLOT, a2->SUBSLOT) != 0)))
 		return NOT_EQUAL;
 
-	/* check repo */
-	if (a1->REPO || a2->REPO) {
-		if (!a1->REPO || !a2->REPO || strcmp(a1->REPO, a2->REPO))
-			return NOT_EQUAL;
-	}
+	/* same for check repo */
+	if (a1->REPO != NULL && a2->REPO != NULL &&
+			a1->REPO[0] != '\0' && a2->REPO[0] != '\0' &&
+			strcmp(a1->REPO, a2->REPO) != 0)
+		return NOT_EQUAL;
 
 	/* Check category, iff both are specified.  This way we can match
-	 * atoms like "sys-devel/gcc" and "gcc".
-	 */
+	 * atoms like "sys-devel/gcc" and "gcc". */
 	if (a1->CATEGORY && a2->CATEGORY) {
 		if (strcmp(a1->CATEGORY, a2->CATEGORY))
 			return NOT_EQUAL;
