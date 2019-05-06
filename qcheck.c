@@ -69,14 +69,13 @@ qcheck_process_contents(vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 {
 	int fd_contents;
 	FILE *fp_contents, *fp_contents_update;
-	const char *catname = pkg_ctx->cat_ctx->name;
-	const char *pkgname = pkg_ctx->name;
 	size_t num_files, num_files_ok, num_files_unknown, num_files_ignored;
 	char *buffer, *line;
 	size_t linelen;
 	struct stat st, cst;
 	int cp_argc, cpm_argc;
 	char **cp_argv, **cpm_argv;
+	depend_atom *atom;
 
 	fp_contents_update = NULL;
 
@@ -94,15 +93,16 @@ qcheck_process_contents(vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	}
 
 	/* Open contents_update, if needed */
+	atom = vdb_get_atom(pkg_ctx, false);
 	num_files = num_files_ok = num_files_unknown = num_files_ignored = 0;
-	qcprintf("%sing %s%s/%s%s ...\n",
+	qcprintf("%sing %s ...\n",
 		(state->qc_update ? "Updat" : "Check"),
-		GREEN, catname, pkgname, NORM);
+		atom_format("%[CATEGORY]%[PF]", atom, 0));
 	if (state->qc_update) {
 		fp_contents_update = vdb_pkg_fopenat_rw(pkg_ctx, "CONTENTS~");
 		if (fp_contents_update == NULL) {
 			fclose(fp_contents);
-			warnp("unable to fopen(%s/%s, w)", pkgname, "CONTENTS~");
+			warnp("unable to fopen(%s/%s, w)", atom->P, "CONTENTS~");
 			return EXIT_FAILURE;
 		}
 	}
@@ -165,13 +165,14 @@ qcheck_process_contents(vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 					break;
 			if (i == cpm_argc) {
 				/* Not explicitly masked, so it's protected */
-				for (i = 1; i < cp_argc; ++i)
+				for (i = 1; i < cp_argc; ++i) {
 					if (strncmp(cp_argv[i], entry->name,
 								strlen(cp_argv[i])) == 0)
 					{
 						num_files_ok++;
 						continue;
 					}
+				}
 			}
 		}
 
@@ -329,18 +330,9 @@ qcheck_process_contents(vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	}
 	if (state->bad_only && num_files_ok != num_files) {
 		if (verbose)
-			printf("%s/%s\n", catname, pkgname);
+			printf("%s\n", atom_format("%[CATEGORY]%[PF]", atom, 0));
 		else {
-			depend_atom *atom = NULL;
-			char *buf;
-			xasprintf(&buf, "%s/%s", catname, pkgname);
-			if ((atom = atom_explode(buf)) != NULL) {
-				printf("%s/%s\n", catname, atom->PN);
-				atom_implode(atom);
-			} else  {
-				printf("%s/%s\n", catname, pkgname);
-			}
-			free(buf);
+			printf("%s\n", atom_format("%[CATEGORY]%[PN]", atom, 0));
 		}
 	}
 	qcprintf("  %2$s*%1$s %3$s%4$zu%1$s out of %3$s%5$zu%1$s file%6$s are good",
@@ -366,27 +358,24 @@ static int
 qcheck_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qcheck_opt_state *state = priv;
-	const char *catname = pkg_ctx->cat_ctx->name;
-	const char *pkgname = pkg_ctx->name;
 	bool showit = false;
 
 	/* see if this cat/pkg is requested */
 	if (array_cnt(state->atoms)) {
-		char *buf;
 		size_t i;
-		depend_atom *qatom, *atom;
+		depend_atom *qatom;
+		depend_atom *atom;
 
-		xasprintf(&buf, "%s/%s", catname, pkgname);
-		qatom = atom_explode(buf);
-		array_for_each(state->atoms, i, atom)
+		qatom = vdb_get_atom(pkg_ctx, false);
+		array_for_each(state->atoms, i, atom) {
 			if (atom_compare(atom, qatom) == EQUAL) {
 				showit = true;
 				break;
 			}
-		atom_implode(qatom);
-		free(buf);
-	} else
+		}
+	} else {
 		showit = true;
+	}
 
 	return showit ? qcheck_process_contents(pkg_ctx, priv) : 0;
 }
