@@ -8,9 +8,9 @@
 
 - disable color when tty = NULL; may break less?
 
-- standardize/unify/clean up misc handling of colors
+- standardize/unify/clean up misc handling of colors (atom\_format)
   define rules:
-    BOLD CATEGORY/ BLUE PKG BKBLUE -VER YELLOW :SLOT GREEN ::REPO NORM [ MAGENTA USE NORM ]
+    BOLD CATEGORY/ BLUE PKG CYAN -VER YELLOW :SLOT GREEN ::REPO NORM [ MAGENTA USE NORM ]
 
 - remove odd rmspace for each string in libq/set.c (allows a lot less
   malloc/frees)

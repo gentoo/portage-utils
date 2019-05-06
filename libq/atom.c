@@ -676,23 +676,23 @@ atom_format_r(
 				} else if (!strncmp("PV", fmt, len)) {
 					if (showit || atom->PV)
 						append_buf(buf, buflen, "%s%s%s",
-								DKBLUE, HN(atom->PV), NORM);
+								CYAN, HN(atom->PV), NORM);
 				} else if (!strncmp("PVR", fmt, len)) {
 					if (showit || atom->PVR)
 						append_buf(buf, buflen, "%s%s%s",
-								DKBLUE, HN(atom->PVR), NORM);
+								CYAN, HN(atom->PVR), NORM);
 				} else if (!strncmp("PF", fmt, len)) {
 					append_buf(buf, buflen, "%s%s%s", BLUE, atom->PN, NORM);
 					if (atom->PV)
 						append_buf(buf, buflen, "%s-%s%s",
-								DKBLUE, atom->PV, NORM);
+								CYAN, atom->PV, NORM);
 					if (atom->PR_int)
 						append_buf(buf, buflen,"%s-r%d%s",
-								DKBLUE, atom->PR_int, NORM);
+								CYAN, atom->PR_int, NORM);
 				} else if (!strncmp("PR", fmt, len)) {
 					if (showit || atom->PR_int)
 						append_buf(buf, buflen, "%sr%d%s",
-								DKBLUE, atom->PR_int, NORM);
+								CYAN, atom->PR_int, NORM);
 				} else if (!strncmp("SLOT", fmt, len)) {
 					if (showit || atom->SLOT)
 						append_buf(buf, buflen, "%s%s%s%s%s%s%s",
