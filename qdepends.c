@@ -95,8 +95,6 @@ static int
 qdepends_results_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qdepends_opt_state *state = priv;
-	const char *catname = pkg_ctx->cat_ctx->name;
-	const char *pkgname = pkg_ctx->name;
 	depend_atom *atom;
 	depend_atom *datom;
 	depend_atom *fatom;
@@ -118,8 +116,7 @@ qdepends_results_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 	 * *DEPEND alters the search somewhat and affects results printing.
 	 */
 
-	snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
-	datom = atom_explode(buf);
+	datom = q_vdb_get_atom(pkg_ctx);
 	if (datom == NULL)
 		return ret;
 
@@ -133,10 +130,8 @@ qdepends_results_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 		}
 
 		/* nothing matched */
-		if (atom != NULL) {
-			atom_implode(datom);
+		if (atom != NULL)
 			return ret;
-		}
 
 		ret = 1;
 
@@ -236,8 +231,6 @@ qdepends_results_cb(q_vdb_pkg_ctx *pkg_ctx, void *priv)
 			printf("\n");
 		}
 	}
-
-	atom_implode(datom);
 
 	return ret;
 }
