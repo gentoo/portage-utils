@@ -51,7 +51,7 @@
 #include "atom.h"
 #include "contents.h"
 #include "human_readable.h"
-#include "vdb.h"
+#include "tree.h"
 #include "xarray.h"
 #include "xregex.h"
 
@@ -97,7 +97,7 @@ struct qsize_opt_state {
 };
 
 static int
-qsize_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
+qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qsize_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;
@@ -126,7 +126,7 @@ qsize_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 	if (!showit)
 		return EXIT_SUCCESS;
 
-	if ((fp = vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
+	if ((fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
 		return EXIT_SUCCESS;
 
 	num_ignored = num_files = num_nonfiles = num_bytes = 0;
@@ -181,6 +181,7 @@ int qsize_main(int argc, char **argv)
 {
 	size_t i;
 	int ret;
+	tree_ctx *vdb;
 	DECLARE_ARRAY(ignore_regexp);
 	depend_atom *atom;
 	DECLARE_ARRAY(atoms);
@@ -230,7 +231,11 @@ int qsize_main(int argc, char **argv)
 	state.buflen = _Q_PATH_MAX;
 	state.buf = xmalloc(state.buflen);
 
-	ret = vdb_foreach_pkg(portroot, portvdb, qsize_cb, &state, NULL);
+	vdb = tree_open_vdb(portroot, portvdb);
+	if (vdb != NULL) {
+		ret = tree_foreach_pkg_fast(vdb, qsize_cb, &state, NULL);
+		tree_close(vdb);
+	}
 
 	if (state.summary) {
 		printf(" %sTotals%s: %'zu files, %'zu non-files, ", BOLD, NORM,

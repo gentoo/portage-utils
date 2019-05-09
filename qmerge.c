@@ -30,7 +30,7 @@
 #include "rmspace.h"
 #include "scandirat.h"
 #include "set.h"
-#include "vdb.h"
+#include "tree.h"
 #include "xasprintf.h"
 #include "xchdir.h"
 #include "xmkdir.h"
@@ -118,7 +118,7 @@ typedef struct llist_char_t llist_char;
 
 static void pkg_fetch(int, const depend_atom *, const struct pkg_t *);
 static void pkg_merge(int, const depend_atom *, const struct pkg_t *);
-static int pkg_unmerge(vdb_pkg_ctx *, set *, int, char **, int, char **);
+static int pkg_unmerge(tree_pkg_ctx *, set *, int, char **, int, char **);
 static struct pkg_t *grab_binpkg_info(const char *);
 static char *find_binpkg(const char *);
 
@@ -282,7 +282,7 @@ struct qmerge_bv_state {
 };
 
 static int
-qmerge_filter_cat(vdb_cat_ctx *cat_ctx, void *priv)
+qmerge_filter_cat(tree_cat_ctx *cat_ctx, void *priv)
 {
 	struct qmerge_bv_state *state = priv;
 	return !state->catname || strcmp(cat_ctx->name, state->catname) == 0;
@@ -292,13 +292,13 @@ qmerge_filter_cat(vdb_cat_ctx *cat_ctx, void *priv)
  * should however figure out how to do what match does here from e.g.
  * atom */
 extern bool qlist_match(
-		vdb_pkg_ctx *pkg_ctx,
+		tree_pkg_ctx *pkg_ctx,
 		const char *name,
 		depend_atom **name_atom,
 		bool exact);
 
 static int
-qmerge_best_version_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
+qmerge_best_version_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qmerge_bv_state *state = priv;
 	if (qlist_match(pkg_ctx, state->buf, NULL, true))
@@ -312,6 +312,8 @@ best_version(const char *catname, const char *pkgname, const char *slot)
 {
 	static int vdb_check = 1;
 	static char retbuf[4096];
+
+	tree_ctx *vdb;
 	struct qmerge_bv_state state = {
 		.catname = catname,
 		.pkgname = pkgname,
@@ -338,8 +340,12 @@ best_version(const char *catname, const char *pkgname, const char *slot)
 	retbuf[0] = '\0';
 	snprintf(state.buf, sizeof(state.buf), "%s%s%s:%s",
 		 catname ? : "", catname ? "/" : "", pkgname, slot);
-	vdb_foreach_pkg(portroot, portvdb,
-			qmerge_best_version_cb, &state, qmerge_filter_cat);
+	vdb = tree_open_vdb(portroot, portvdb);
+	if (vdb != NULL) {
+		tree_foreach_pkg_fast(vdb,
+				qmerge_best_version_cb, &state, qmerge_filter_cat);
+		tree_close(vdb);
+	}
 
  done:
 	return retbuf;
@@ -999,8 +1005,8 @@ static void
 pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 {
 	set *objs;
-	vdb_ctx *vdb;
-	vdb_cat_ctx *cat_ctx;
+	tree_ctx *vdb;
+	tree_cat_ctx *cat_ctx;
 	FILE *fp, *contents;
 	static char *phases;
 	static size_t phases_len;
@@ -1122,19 +1128,19 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	}
 
 	/* Get a handle on the main vdb repo */
-	vdb = vdb_open(portroot, portvdb);
+	vdb = tree_open(portroot, portvdb);
 	if (!vdb)
 		return;
-	cat_ctx = vdb_open_cat(vdb, pkg->CATEGORY);
+	cat_ctx = tree_open_cat(vdb, pkg->CATEGORY);
 	if (!cat_ctx) {
 		if (errno != ENOENT) {
-			vdb_close(vdb);
+			tree_close(vdb);
 			return;
 		}
-		mkdirat(vdb->vdb_fd, pkg->CATEGORY, 0755);
-		cat_ctx = vdb_open_cat(vdb, pkg->CATEGORY);
+		mkdirat(vdb->tree_fd, pkg->CATEGORY, 0755);
+		cat_ctx = tree_open_cat(vdb, pkg->CATEGORY);
 		if (!cat_ctx) {
-			vdb_close(vdb);
+			tree_close(vdb);
 			return;
 		}
 	}
@@ -1345,10 +1351,10 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	/* TODO: Should see about merging with unmerge_packages() */
 	while (1) {
 		int ret;
-		vdb_pkg_ctx *pkg_ctx;
+		tree_pkg_ctx *pkg_ctx;
 		depend_atom *old_atom;
 
-		pkg_ctx = vdb_next_pkg(cat_ctx);
+		pkg_ctx = tree_next_pkg(cat_ctx);
 		if (!pkg_ctx)
 			break;
 
@@ -1377,7 +1383,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 		pkg_unmerge(pkg_ctx, objs, cp_argc, cp_argv, cpm_argc, cpm_argv);
  next_pkg:
-		vdb_close_pkg(pkg_ctx);
+		tree_close_pkg(pkg_ctx);
 	}
 
 	freeargv(cp_argc, cp_argv);
@@ -1416,14 +1422,14 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	printf("%s>>>%s %s%s%s/%s%s%s\n",
 			YELLOW, NORM, WHITE, atom->CATEGORY, NORM, CYAN, atom->PN, NORM);
 
-	vdb_close(vdb);
+	tree_close(vdb);
 }
 
 static int
-pkg_unmerge(vdb_pkg_ctx *pkg_ctx, set *keep,
+pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
-	vdb_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
+	tree_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
 	const char *cat = cat_ctx->name;
 	const char *pkgname = pkg_ctx->name;
 	size_t buflen;
@@ -1447,7 +1453,7 @@ pkg_unmerge(vdb_pkg_ctx *pkg_ctx, set *keep,
 		return 0;
 
 	/* First get a handle on the things to clean up */
-	fp = vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
+	fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
 	if (fp == NULL)
 		return ret;
 
@@ -1455,7 +1461,7 @@ pkg_unmerge(vdb_pkg_ctx *pkg_ctx, set *keep,
 
 	/* Then execute the pkg_prerm step */
 	if (!pretend) {
-		vdb_pkg_eat(pkg_ctx, "DEFINED_PHASES", &phases, &phases_len);
+		tree_pkg_vdb_eat(pkg_ctx, "DEFINED_PHASES", &phases, &phases_len);
 		mkdirat(pkg_ctx->fd, "temp", 0755);
 		pkg_run_func_at(pkg_ctx->fd, ".", phases, "pkg_prerm", T, T);
 	}
@@ -1587,7 +1593,7 @@ pkg_unmerge(vdb_pkg_ctx *pkg_ctx, set *keep,
 		unlinkat(cat_ctx->fd, pkg_ctx->name, AT_REMOVEDIR);
 
 		/* And prune the category if it's empty */
-		unlinkat(cat_ctx->ctx->vdb_fd, cat_ctx->name, AT_REMOVEDIR);
+		unlinkat(cat_ctx->ctx->tree_fd, cat_ctx->name, AT_REMOVEDIR);
 	}
 
 	ret = 0;
@@ -1776,7 +1782,7 @@ print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 }
 
 static int
-qmerge_unmerge_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
+qmerge_unmerge_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	int cp_argc;
 	int cpm_argc;
@@ -1804,7 +1810,13 @@ qmerge_unmerge_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 static int
 unmerge_packages(set *todo)
 {
-	return vdb_foreach_pkg(portroot, portvdb, qmerge_unmerge_cb, todo, NULL);
+	tree_ctx *vdb = tree_open_vdb(portroot, portvdb);
+	int ret = 1;
+	if (vdb != NULL) {
+		ret = tree_foreach_pkg_fast(vdb, qmerge_unmerge_cb, todo, NULL);
+		tree_close(vdb);
+	}
+	return ret;
 }
 
 static FILE *
@@ -2315,7 +2327,7 @@ qmerge_add_set(char *buf, set *q)
 	if (strcmp(buf, "world") == 0)
 		return qmerge_add_set_file("/var/lib/portage", "world", q);
 	else if (strcmp(buf, "all") == 0)
-		return get_vdb_atoms(portroot, portvdb, 0);
+		return tree_get_vdb_atoms(portroot, portvdb, 0);
 	else if (strcmp(buf, "system") == 0)
 		return q_profile_walk("packages", qmerge_add_set_system, q);
 	else if (buf[0] == '@')

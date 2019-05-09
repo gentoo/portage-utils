@@ -18,10 +18,10 @@
 #include <sys/stat.h>
 
 #include "atom.h"
-#include "cache.h"
-#include "scandirat.h"
 #include "rmspace.h"
+#include "scandirat.h"
 #include "set.h"
+#include "tree.h"
 #include "xasprintf.h"
 
 /********************************************************************/
@@ -62,7 +62,7 @@ typedef struct {
 	int *keywordsbuf;
 	size_t keywordsbuflen;
 	const char *arch;
-	cache_pkg_cb *runfunc;
+	tree_pkg_cb *runfunc;
 } qkeyword_data;
 
 static set *archs = NULL;
@@ -214,7 +214,7 @@ qkeyword_vercmp(const struct dirent **x, const struct dirent **y)
 }
 
 static int
-qkeyword_imlate(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_imlate(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	size_t a;
 	qkeyword_data *data = (qkeyword_data *)priv;
@@ -241,7 +241,7 @@ qkeyword_imlate(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qkeyword_not(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_not(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	size_t a;
 	qkeyword_data *data = (qkeyword_data *)priv;
@@ -266,7 +266,7 @@ qkeyword_not(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qkeyword_all(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_all(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	qkeyword_data *data = (qkeyword_data *)priv;
 
@@ -282,7 +282,7 @@ qkeyword_all(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qkeyword_dropped(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_dropped(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	static bool candidate = false;
 	static char pkg1[_Q_PATH_MAX];
@@ -393,7 +393,7 @@ print_seconds_for_earthlings(const unsigned long t)
 }
 
 static int
-qkeyword_stats(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_stats(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	static time_t runtime;
 	static int numpkg  = 0;
@@ -536,7 +536,7 @@ qkeyword_stats(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qkeyword_testing_only(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_testing_only(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	static bool candidate = false;
 	static char pkg1[_Q_PATH_MAX];
@@ -606,14 +606,14 @@ qkeyword_testing_only(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qkeyword_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	int *keywords;
 	qkeyword_data *data = (qkeyword_data *)priv;
 	char buf[_Q_PATH_MAX];
 	depend_atom *patom = NULL;
-	cache_pkg_meta *meta;
-	cache_metadata_xml *metadata;
+	tree_pkg_meta *meta;
+	tree_metadata_xml *metadata;
 	struct elist *emailw;
 	int ret;
 
@@ -638,7 +638,7 @@ qkeyword_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	if (data->qmaint != NULL) {
-		metadata = cache_read_metadata(pkg_ctx);
+		metadata = tree_pkg_metadata(pkg_ctx);
 		if (metadata == NULL)
 			return EXIT_SUCCESS;
 
@@ -650,13 +650,13 @@ qkeyword_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 			/* arbitrary pointer to trigger exit below */
 			emailw = (struct elist *)buf;
 
-		cache_close_metadata(metadata);
+		tree_close_metadata(metadata);
 		if (emailw != NULL)
 			return EXIT_SUCCESS;
 	}
 
 	keywords = data->keywordsbuf;
-	meta = cache_pkg_read(pkg_ctx);
+	meta = tree_pkg_read(pkg_ctx);
 	if (meta == NULL) {
 		atom_implode(patom);
 		return EXIT_FAILURE;
@@ -731,7 +731,7 @@ qkeyword_load_arches(const char *overlay)
 }
 
 static int
-qkeyword_traverse(cache_pkg_cb func, void *priv)
+qkeyword_traverse(tree_pkg_cb func, void *priv)
 {
 	int ret;
 	size_t n;
@@ -756,9 +756,14 @@ qkeyword_traverse(cache_pkg_cb func, void *priv)
 
 	data->runfunc = func;
 	ret = 0;
-	array_for_each(overlays, n, overlay)
-		ret |= cache_foreach_pkg_sorted(portroot, overlay,
-				qkeyword_results_cb, priv, NULL, qkeyword_vercmp);
+	array_for_each(overlays, n, overlay) {
+		tree_ctx *t = tree_open(portroot, overlay);
+		if (t != NULL) {
+			ret |= tree_foreach_pkg(t, qkeyword_results_cb, priv,
+					NULL, true, NULL, qkeyword_vercmp);
+			tree_close(t);
+		}
+	}
 
 	return ret;
 }

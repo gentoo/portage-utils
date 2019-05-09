@@ -3,7 +3,6 @@ QFILES = \
 	atom.c atom.h \
 	basename.c basename.h \
 	busybox.h \
-	cache.c cache.h \
 	colors.c colors.h \
 	contents.c contents.h \
 	copy_file.c copy_file.h \
@@ -19,7 +18,7 @@ QFILES = \
 	safe_io.c safe_io.h \
 	scandirat.c scandirat.h \
 	set.c set.h \
-	vdb.c vdb.h \
+	tree.c tree.h \
 	xarray.c xarray.h \
 	xasprintf.h \
 	xchdir.c xchdir.h \

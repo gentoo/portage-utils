@@ -19,9 +19,7 @@
 #include <libproc.h>
 #endif
 
-#include "atom.h"
 #include "basename.h"
-#include "cache.h"
 
 #define Q_FLAGS "iM:" COMMON_FLAGS
 static struct option const q_long_opts[] = {

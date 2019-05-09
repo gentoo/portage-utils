@@ -17,30 +17,10 @@
 #include <sys/time.h>
 #include <limits.h>
 
-#include "atom.h"
-#include "basename.h"
-#include "busybox.h"
-#include "cache.h"
-#include "colors.h"
-#include "copy_file.h"
 #include "eat_file.h"
-#include "hash_fd.h"
-#include "human_readable.h"
-#include "i18n.h"
-#include "md5_sha1_sum.h"
-#include "prelink.h"
-#include "profile.h"
 #include "rmspace.h"
-#include "safe_io.h"
 #include "scandirat.h"
-#include "set.h"
-#include "vdb.h"
-#include "xarray.h"
 #include "xasprintf.h"
-#include "xchdir.h"
-#include "xmkdir.h"
-#include "xregex.h"
-#include "xsystem.h"
 
 /* variables to control runtime behavior */
 char *module_name = NULL;

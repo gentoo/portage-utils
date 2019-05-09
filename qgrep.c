@@ -19,8 +19,7 @@
 #include <fcntl.h>
 
 #include "atom.h"
-#include "cache.h"
-#include "vdb.h"
+#include "tree.h"
 #include "xarray.h"
 #include "xchdir.h"
 #include "xregex.h"
@@ -381,14 +380,14 @@ print_after_context:
 }
 
 static int
-qgrep_cache_cb(cache_pkg_ctx *pkg_ctx, void *priv)
+qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qgrep_grepargs *data = (struct qgrep_grepargs *)priv;
 	char buf[_Q_PATH_MAX];
 	char name[_Q_PATH_MAX];
 	char *label;
 	depend_atom *patom = NULL;
-	cache_ctx *cctx;
+	tree_ctx *cctx;
 	int ret;
 	int pfd;
 
@@ -411,11 +410,11 @@ qgrep_cache_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	/* need to construct path in portdir to ebuild, pass it to grep */
-	cctx = (cache_ctx *)(pkg_ctx->cat_ctx->ctx);
+	cctx = (tree_ctx *)(pkg_ctx->cat_ctx->ctx);
 	if (cctx->cachetype == CACHE_EBUILD) {
-		pfd = cctx->vdb_fd;
+		pfd = cctx->tree_fd;
 	} else {
-		pfd = openat(cctx->vdb_fd, "../..", O_RDONLY|O_CLOEXEC);
+		pfd = openat(cctx->tree_fd, "../..", O_RDONLY|O_CLOEXEC);
 	}
 
 	/* cat/pkg/pkg-ver.ebuild */
@@ -441,7 +440,7 @@ qgrep_cache_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qgrep_vdb_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
+qgrep_vdb_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qgrep_grepargs *data = (struct qgrep_grepargs *)priv;
 	char buf[_Q_PATH_MAX];
@@ -687,11 +686,17 @@ int qgrep_main(int argc, char **argv)
 			}
 			closedir(eclass_dir);
 		} else if (do_installed) {
-			status = vdb_foreach_pkg(portroot, portvdb,
-					qgrep_vdb_cb, &args, NULL);
+			tree_ctx *t = tree_open_vdb(portroot, portvdb);
+			if (t != NULL) {
+				status = tree_foreach_pkg_fast(t, qgrep_vdb_cb, &args, NULL);
+				tree_close(t);
+			}
 		} else { /* do_ebuild */
-			status = cache_foreach_pkg(portroot, overlay,
-					qgrep_cache_cb, &args, NULL);
+			tree_ctx *t = tree_open(portroot, overlay);
+			if (t != NULL) {
+				status = tree_foreach_pkg_fast(t, qgrep_cache_cb, &args, NULL);
+				tree_close(t);
+			}
 		}
 	}
 

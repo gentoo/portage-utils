@@ -18,7 +18,7 @@
 #include "basename.h"
 #include "contents.h"
 #include "rmspace.h"
-#include "vdb.h"
+#include "tree.h"
 
 #define QFILE_FLAGS "boRx:S" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
@@ -74,7 +74,7 @@ struct qfile_opt_state {
  * We assume the people calling us have chdir(/var/db/pkg) and so
  * we use relative paths throughout here.
  */
-static int qfile_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
+static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qfile_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;
@@ -115,14 +115,14 @@ static int qfile_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 		}
 		if (state->exclude_slot == NULL)
 			goto qlist_done; /* "(CAT/)?(PN|PF)" matches, and no SLOT specified */
-		vdb_pkg_eat(pkg_ctx, "SLOT", &state->buf, &state->buflen);
+		tree_pkg_vdb_eat(pkg_ctx, "SLOT", &state->buf, &state->buflen);
 		rmspace(state->buf);
 		if (strcmp(state->exclude_slot, state->buf) == 0)
 			goto qlist_done; /* "(CAT/)?(PN|PF):SLOT" matches */
 	}
  dont_skip_pkg: /* End of the package exclusion tests. */
 
-	fp = vdb_pkg_fopenat_ro(pkg_ctx, "CONTENTS");
+	fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
 	if (fp == NULL)
 		goto qlist_done;
 
@@ -227,7 +227,7 @@ static int qfile_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 					/* XXX: This assumes the buf is big enough. */
 					char *slot_hack = slot + 1;
 					size_t slot_len = sizeof(slot) - 1;
-					vdb_pkg_eat(pkg_ctx, "SLOT", &slot_hack, &slot_len);
+					tree_pkg_vdb_eat(pkg_ctx, "SLOT", &slot_hack, &slot_len);
 					rmspace(slot_hack);
 					slot[0] = ':';
 				} else
@@ -478,8 +478,13 @@ int qfile_main(int argc, char **argv)
 	/* Prepare the qfile(...) arguments structure */
 	nb_of_queries = prepare_qfile_args(argc, (const char **) argv, &state);
 	/* Now do the actual `qfile` checking */
-	if (nb_of_queries > 0)
-		found += vdb_foreach_pkg_sorted(portroot, portvdb, qfile_cb, &state);
+	if (nb_of_queries > 0) {
+		tree_ctx *vdb = tree_open_vdb(portroot, portvdb);
+		if (vdb != NULL) {
+			found += tree_foreach_pkg_sorted(vdb, qfile_cb, &state);
+			tree_close(vdb);
+		}
+	}
 
 	if (state.args.non_orphans) {
 		/* display orphan files */

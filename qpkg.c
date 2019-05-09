@@ -20,13 +20,12 @@
 
 #include "atom.h"
 #include "basename.h"
-#include "cache.h"
 #include "contents.h"
 #include "human_readable.h"
 #include "md5_sha1_sum.h"
 #include "scandirat.h"
 #include "set.h"
-#include "vdb.h"
+#include "tree.h"
 #include "xarray.h"
 #include "xasprintf.h"
 #include "xchdir.h"
@@ -125,7 +124,7 @@ qpkg_clean_dir(char *dirp, set *vdb)
 }
 
 static int
-qpkg_cb(cache_pkg_ctx *pkg_ctx, void *priv)
+qpkg_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	set *vdb = (set *)priv;
 	depend_atom *atom;
@@ -156,14 +155,19 @@ qpkg_clean(char *dirp)
 	if ((count = scandir(".", &dnames, filter_hidden, alphasort)) < 0)
 		return 1;
 
-	vdb = get_vdb_atoms(portroot, portvdb, 1);
+	vdb = tree_get_vdb_atoms(portroot, portvdb, 1);
 
 	if (eclean) {
 		size_t n;
 		const char *overlay;
 
-		array_for_each(overlays, n, overlay)
-			cache_foreach_pkg(portroot, overlay, qpkg_cb, vdb, NULL);
+		array_for_each(overlays, n, overlay) {
+			tree_ctx *t = tree_open(portroot, overlay);
+			if (t != NULL) {
+				tree_foreach_pkg_fast(t, qpkg_cb, vdb, NULL);
+				tree_close(t);
+			}
+		}
 	}
 
 	num_all_bytes = qpkg_clean_dir(dirp, vdb);
@@ -334,9 +338,9 @@ qpkg_make(depend_atom *atom)
 
 int qpkg_main(int argc, char **argv)
 {
-	vdb_ctx *ctx;
-	vdb_cat_ctx *cat_ctx;
-	vdb_pkg_ctx *pkg_ctx;
+	tree_ctx *ctx;
+	tree_cat_ctx *cat_ctx;
+	tree_pkg_ctx *pkg_ctx;
 	size_t s, pkgs_made;
 	int i;
 	struct stat st;
@@ -417,15 +421,15 @@ retry_mkdir:
 	}
 
 	/* now try to run through vdb and locate matches for user inputs */
-	ctx = vdb_open(portroot, portvdb);
+	ctx = tree_open_vdb(portroot, portvdb);
 	if (!ctx)
 		return EXIT_FAILURE;
 
 	/* scan all the categories */
-	while ((cat_ctx = vdb_next_cat(ctx))) {
+	while ((cat_ctx = tree_next_cat(ctx))) {
 		/* scan all the packages in this category */
 		const char *catname = cat_ctx->name;
-		while ((pkg_ctx = vdb_next_pkg(cat_ctx))) {
+		while ((pkg_ctx = tree_next_pkg(cat_ctx))) {
 			const char *pkgname = pkg_ctx->name;
 
 			/* see if user wants any of these packages */
@@ -449,7 +453,7 @@ retry_mkdir:
 			atom_implode(atom);
 
  next_pkg:
-			vdb_close_pkg(pkg_ctx);
+			tree_close_pkg(pkg_ctx);
 		}
 	}
 

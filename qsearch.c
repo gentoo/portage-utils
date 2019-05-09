@@ -20,8 +20,8 @@
 
 #include "atom.h"
 #include "basename.h"
-#include "cache.h"
 #include "rmspace.h"
+#include "tree.h"
 #include "xarray.h"
 #include "xregex.h"
 
@@ -57,14 +57,14 @@ struct qsearch_state {
 };
 
 static int
-qsearch_cb(cache_pkg_ctx *pkg_ctx, void *priv)
+qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	static depend_atom *last_atom;
 
 	struct qsearch_state *state = (struct qsearch_state *)priv;
 	depend_atom *atom;
 	char buf[_Q_PATH_MAX];
-	cache_pkg_meta *meta;
+	tree_pkg_meta *meta;
 	char *desc;
 	char *repo;
 	bool match;
@@ -90,7 +90,7 @@ qsearch_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 	if ((match && (state->show_homepage || state->show_desc)) ||
 			(!match && state->search_desc))
 	{
-		meta = cache_pkg_read(pkg_ctx);
+		meta = tree_pkg_read(pkg_ctx);
 		if (meta != NULL) {
 			if (state->show_homepage)
 				desc = meta->HOMEPAGE;
@@ -115,7 +115,7 @@ qsearch_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	if (meta != NULL)
-		cache_close_meta(meta);
+		tree_close_meta(meta);
 
 	if (last_atom != NULL)
 		atom_implode(last_atom);
@@ -167,9 +167,13 @@ int qsearch_main(int argc, char **argv)
 	xregcomp(&state.search_expr, search_me, REG_EXTENDED | REG_ICASE);
 
 	/* use sorted order here so the duplicate reduction works reliably */
-	array_for_each(overlays, n, overlay)
-		ret |= cache_foreach_pkg_sorted(portroot, overlay, qsearch_cb,
-				&state, NULL, NULL);
+	array_for_each(overlays, n, overlay) {
+		tree_ctx *t = tree_open(portroot, overlay);
+		if (t != NULL) {
+			ret |= tree_foreach_pkg_sorted(t, qsearch_cb, &state);
+			tree_close(t);
+		}
+	}
 
 	return ret;
 }

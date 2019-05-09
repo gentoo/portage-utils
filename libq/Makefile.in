@@ -241,13 +241,13 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libq_la_LIBADD =
-am__objects_1 = libq_la-atom.lo libq_la-basename.lo libq_la-cache.lo \
-	libq_la-colors.lo libq_la-contents.lo libq_la-copy_file.lo \
-	libq_la-dep.lo libq_la-eat_file.lo libq_la-hash_fd.lo \
+am__objects_1 = libq_la-atom.lo libq_la-basename.lo libq_la-colors.lo \
+	libq_la-contents.lo libq_la-copy_file.lo libq_la-dep.lo \
+	libq_la-eat_file.lo libq_la-hash_fd.lo \
 	libq_la-human_readable.lo libq_la-md5_sha1_sum.lo \
 	libq_la-prelink.lo libq_la-profile.lo libq_la-rmspace.lo \
 	libq_la-safe_io.lo libq_la-scandirat.lo libq_la-set.lo \
-	libq_la-vdb.lo libq_la-xarray.lo libq_la-xchdir.lo \
+	libq_la-tree.lo libq_la-xarray.lo libq_la-xchdir.lo \
 	libq_la-xmkdir.lo libq_la-xpak.lo libq_la-xregex.lo \
 	libq_la-xsystem.lo
 am_libq_la_OBJECTS = $(am__objects_1)
@@ -1447,7 +1447,6 @@ QFILES = \
 	atom.c atom.h \
 	basename.c basename.h \
 	busybox.h \
-	cache.c cache.h \
 	colors.c colors.h \
 	contents.c contents.h \
 	copy_file.c copy_file.h \
@@ -1463,7 +1462,7 @@ QFILES = \
 	safe_io.c safe_io.h \
 	scandirat.c scandirat.h \
 	set.c set.h \
-	vdb.c vdb.h \
+	tree.c tree.h \
 	xarray.c xarray.h \
 	xasprintf.h \
 	xchdir.c xchdir.h \
@@ -1535,7 +1534,6 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-atom.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-basename.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-cache.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-colors.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-contents.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-copy_file.Plo@am__quote@
@@ -1550,7 +1548,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-safe_io.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-scandirat.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-set.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-vdb.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-tree.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-xarray.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-xchdir.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-xmkdir.Plo@am__quote@
@@ -1592,13 +1590,6 @@ libq_la-basename.lo: basename.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='basename.c' object='libq_la-basename.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-basename.lo `test -f 'basename.c' || echo '$(srcdir)/'`basename.c
-
-libq_la-cache.lo: cache.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-cache.lo -MD -MP -MF $(DEPDIR)/libq_la-cache.Tpo -c -o libq_la-cache.lo `test -f 'cache.c' || echo '$(srcdir)/'`cache.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_la-cache.Tpo $(DEPDIR)/libq_la-cache.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cache.c' object='libq_la-cache.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-cache.lo `test -f 'cache.c' || echo '$(srcdir)/'`cache.c
 
 libq_la-colors.lo: colors.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-colors.lo -MD -MP -MF $(DEPDIR)/libq_la-colors.Tpo -c -o libq_la-colors.lo `test -f 'colors.c' || echo '$(srcdir)/'`colors.c
@@ -1698,12 +1689,12 @@ libq_la-set.lo: set.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-set.lo `test -f 'set.c' || echo '$(srcdir)/'`set.c
 
-libq_la-vdb.lo: vdb.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-vdb.lo -MD -MP -MF $(DEPDIR)/libq_la-vdb.Tpo -c -o libq_la-vdb.lo `test -f 'vdb.c' || echo '$(srcdir)/'`vdb.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_la-vdb.Tpo $(DEPDIR)/libq_la-vdb.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vdb.c' object='libq_la-vdb.lo' libtool=yes @AMDEPBACKSLASH@
+libq_la-tree.lo: tree.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-tree.lo -MD -MP -MF $(DEPDIR)/libq_la-tree.Tpo -c -o libq_la-tree.lo `test -f 'tree.c' || echo '$(srcdir)/'`tree.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_la-tree.Tpo $(DEPDIR)/libq_la-tree.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='tree.c' object='libq_la-tree.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-vdb.lo `test -f 'vdb.c' || echo '$(srcdir)/'`vdb.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-tree.lo `test -f 'tree.c' || echo '$(srcdir)/'`tree.c
 
 libq_la-xarray.lo: xarray.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-xarray.lo -MD -MP -MF $(DEPDIR)/libq_la-xarray.Tpo -c -o libq_la-xarray.lo `test -f 'xarray.c' || echo '$(srcdir)/'`xarray.c

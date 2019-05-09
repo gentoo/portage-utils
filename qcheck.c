@@ -20,7 +20,7 @@
 #include "md5_sha1_sum.h"
 #include "prelink.h"
 #include "set.h"
-#include "vdb.h"
+#include "tree.h"
 #include "xarray.h"
 #include "xasprintf.h"
 #include "xregex.h"
@@ -65,7 +65,7 @@ struct qcheck_opt_state {
 };
 
 static int
-qcheck_process_contents(vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
+qcheck_process_contents(tree_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 {
 	int fd_contents;
 	FILE *fp_contents, *fp_contents_update;
@@ -80,7 +80,8 @@ qcheck_process_contents(vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	fp_contents_update = NULL;
 
 	/* Open contents */
-	fd_contents = vdb_pkg_openat(pkg_ctx, "CONTENTS", O_RDONLY|O_CLOEXEC, 0);
+	fd_contents = tree_pkg_vdb_openat(pkg_ctx, "CONTENTS",
+			O_RDONLY | O_CLOEXEC, 0);
 	if (fd_contents == -1)
 		return EXIT_SUCCESS;
 	if (fstat(fd_contents, &cst)) {
@@ -93,13 +94,13 @@ qcheck_process_contents(vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	}
 
 	/* Open contents_update, if needed */
-	atom = vdb_get_atom(pkg_ctx, false);
+	atom = tree_get_atom(pkg_ctx, false);
 	num_files = num_files_ok = num_files_unknown = num_files_ignored = 0;
 	qcprintf("%sing %s ...\n",
 		(state->qc_update ? "Updat" : "Check"),
 		atom_format("%[CATEGORY]%[PF]", atom, 0));
 	if (state->qc_update) {
-		fp_contents_update = vdb_pkg_fopenat_rw(pkg_ctx, "CONTENTS~");
+		fp_contents_update = tree_pkg_vdb_fopenat_rw(pkg_ctx, "CONTENTS~");
 		if (fp_contents_update == NULL) {
 			fclose(fp_contents);
 			warnp("unable to fopen(%s/%s, w)", atom->P, "CONTENTS~");
@@ -355,7 +356,7 @@ qcheck_process_contents(vdb_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 }
 
 static int
-qcheck_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
+qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qcheck_opt_state *state = priv;
 	bool showit = false;
@@ -366,7 +367,7 @@ qcheck_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 		depend_atom *qatom;
 		depend_atom *atom;
 
-		qatom = vdb_get_atom(pkg_ctx, false);
+		qatom = tree_get_atom(pkg_ctx, false);
 		array_for_each(state->atoms, i, atom) {
 			if (atom_compare(atom, qatom) == EQUAL) {
 				showit = true;
@@ -384,6 +385,7 @@ int qcheck_main(int argc, char **argv)
 {
 	size_t i;
 	int ret;
+	tree_ctx *vdb;
 	DECLARE_ARRAY(regex_arr);
 	depend_atom *atom;
 	DECLARE_ARRAY(atoms);
@@ -403,9 +405,9 @@ int qcheck_main(int argc, char **argv)
 		switch (ret) {
 		COMMON_GETOPTS_CASES(qcheck)
 		case 's': {
-			regex_t regex;
-			xregcomp(&regex, optarg, REG_EXTENDED|REG_NOSUB);
-			xarraypush(regex_arr, &regex, sizeof(regex));
+			regex_t preg;
+			xregcomp(&preg, optarg, REG_EXTENDED | REG_NOSUB);
+			xarraypush(regex_arr, &preg, sizeof(preg));
 			break;
 		}
 		case 'u': state.qc_update = true; break;
@@ -428,11 +430,16 @@ int qcheck_main(int argc, char **argv)
 			xarraypush_ptr(atoms, atom);
 	}
 
-	ret = vdb_foreach_pkg_sorted(portroot, portvdb, qcheck_cb, &state);
-	{
-		void *regex;
-		array_for_each(regex_arr, i, regex)
-			regfree(regex);
+	vdb = tree_open_vdb(portroot, portvdb);
+	ret = -1;
+	if (vdb != NULL) {
+		ret = tree_foreach_pkg_sorted(vdb, qcheck_cb, &state);
+		tree_close(vdb);
+	}
+	if (array_cnt(regex_arr) > 0) {
+		void *preg;
+		array_for_each(regex_arr, i, preg)
+			regfree(preg);
 	}
 	xarrayfree(regex_arr);
 	array_for_each(atoms, i, atom)

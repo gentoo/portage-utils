@@ -17,7 +17,7 @@
 #include "atom.h"
 #include "dep.h"
 #include "set.h"
-#include "vdb.h"
+#include "tree.h"
 #include "xarray.h"
 #include "xasprintf.h"
 #include "xregex.h"
@@ -92,7 +92,7 @@ qdepends_print_depend(FILE *fp, const char *depend)
 }
 
 static int
-qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
+qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qdepends_opt_state *state = priv;
 	depend_atom *atom;
@@ -116,7 +116,7 @@ qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 	 * *DEPEND alters the search somewhat and affects results printing.
 	 */
 
-	datom = vdb_get_atom(pkg_ctx, false);
+	datom = tree_get_atom(pkg_ctx, false);
 	if (datom == NULL)
 		return ret;
 
@@ -135,7 +135,7 @@ qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 
 		ret = 1;
 
-		datom = vdb_get_atom(pkg_ctx, true);
+		datom = tree_get_atom(pkg_ctx, true);
 		printf("%s:", atom_format(state->format, datom, 0));
 	}
 
@@ -146,7 +146,7 @@ qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 	for (i = QMODE_DEPEND; i <= QMODE_BDEPEND; i <<= 1, dfile++) {
 		if (!(state->qmode & i))
 			continue;
-		if (!vdb_pkg_eat(pkg_ctx, *dfile,
+		if (!tree_pkg_vdb_eat(pkg_ctx, *dfile,
 					&state->depend, &state->depend_len))
 			continue;
 
@@ -174,7 +174,7 @@ qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 					ret = 1;
 
 					if (!firstmatch) {
-						datom = vdb_get_atom(pkg_ctx, true);
+						datom = tree_get_atom(pkg_ctx, true);
 						printf("%s:", atom_format(state->format, datom, 0));
 					}
 					firstmatch = true;
@@ -203,7 +203,7 @@ qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 						ret = 1;
 
 						if (!firstmatch) {
-							datom = vdb_get_atom(pkg_ctx, true);
+							datom = tree_get_atom(pkg_ctx, true);
 							printf("%s:", atom_format(state->format, datom, 0));
 						}
 						firstmatch = true;
@@ -243,6 +243,7 @@ qdepends_results_cb(vdb_pkg_ctx *pkg_ctx, void *priv)
 int qdepends_main(int argc, char **argv)
 {
 	depend_atom *atom;
+	tree_ctx *vdb;
 	DECLARE_ARRAY(atoms);
 	DECLARE_ARRAY(deps);
 	struct qdepends_opt_state state = {
@@ -307,8 +308,11 @@ int qdepends_main(int argc, char **argv)
 			xarraypush_ptr(atoms, atom);
 	}
 
-	ret = vdb_foreach_pkg(portroot, portvdb,
-			qdepends_results_cb, &state, NULL);
+	vdb = tree_open_vdb(portroot, portvdb);
+	if (vdb != NULL) {
+		ret = tree_foreach_pkg_fast(vdb, qdepends_results_cb, &state, NULL);
+		tree_close(vdb);
+	}
 
 	if (state.depend != NULL)
 		free(state.depend);

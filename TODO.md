@@ -23,10 +23,11 @@
   we end up getting just:<br>
   `ACCEPT_LICENSE=" bar"`
 
-- vdb\_foreach\_pkg should have variant that takes an atom (or just
-  cat?) to reduce search space, same for cache\_foreach\_pkg
+- tree\_foreach\_pkg should have variant that takes an atom (or just
+  cat?) to reduce search space
 
-- vdb repo/slot think about when it is freed (see cache\_pkg\_close)
+- tree\_get\_atoms should return atoms iso string set, needs a rewrite
+  to use foreach\_pkg and get\_atom
 
 # Atoms
 

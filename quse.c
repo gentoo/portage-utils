@@ -21,8 +21,8 @@
 #include <ctype.h>
 #include <assert.h>
 
-#include "cache.h"
 #include "rmspace.h"
+#include "tree.h"
 #include "xarray.h"
 #include "xregex.h"
 
@@ -401,12 +401,12 @@ quse_describe_flag(const char *root, const char *overlay,
 }
 
 static int
-quse_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
+quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct quse_state *state = (struct quse_state *)priv;
 	depend_atom *atom = NULL;  /* pacify compiler */
 	char buf[8192];
-	cache_pkg_meta *meta;
+	tree_pkg_meta *meta;
 	bool match;
 	char *p;
 	char *q;
@@ -436,7 +436,7 @@ quse_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 		}
 	}
 
-	meta = cache_pkg_read(pkg_ctx);
+	meta = tree_pkg_read(pkg_ctx);
 	if (meta == NULL)
 		return 0;
 
@@ -591,7 +591,7 @@ quse_results_cb(cache_pkg_ctx *pkg_ctx, void *priv)
 		}
 	}
 
-	cache_close_meta(meta);
+	tree_close_meta(meta);
 	if (state->match && verbose)
 		atom_implode(atom);
 	if (verbose)
@@ -656,9 +656,12 @@ int quse_main(int argc, char **argv)
 			quse_describe_flag(portroot, overlay, &state);
 	} else {
 		array_for_each(overlays, n, overlay) {
+			tree_ctx *t = tree_open(portroot, overlay);
 			state.overlay = overlay;
-			cache_foreach_pkg_sorted(portroot, overlay,
-					quse_results_cb, &state, NULL, NULL);
+			if (t != NULL) {
+				tree_foreach_pkg_sorted(t, quse_results_cb, &state);
+				tree_close(t);
+			}
 		}
 	}
 
