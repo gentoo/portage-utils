@@ -739,6 +739,8 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		"nonfatal() { \"$@\"; }\n"
 		"ebegin() { printf ' * %%b ...' \"$*\"; }\n"
 		"eend() { local r=${1:-$?}; [ $# -gt 0 ] && shift; [ $r -eq 0 ] && echo ' [ ok ]' || echo \" $* \"'[ !! ]'; return $r; }\n"
+		"dodir() { mkdir -p \"$@\"; }\n"
+		"keepdir() { dodir \"$@\" && touch \"$@\"/.keep_${CATEGORY}_${PN}-${SLOT%%/*}; }\n"
 		/* TODO: This should be fatal upon error */
 		"emake() { ${MAKE:-make} ${MAKEOPTS} \"$@\"; }\n"
 		/* Unpack the env if need be */
