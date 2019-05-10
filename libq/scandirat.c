@@ -64,7 +64,8 @@ scandirat(int dir_fd, const char *dir, struct dirent ***dirlist,
 	}
 	*dirlist = ret;
 
-	qsort(ret, retlen, sizeof(*ret), (void *)compar);
+	if (compar != NULL)
+		qsort(ret, retlen, sizeof(*ret), (void *)compar);
 
 	/* closes underlying fd */
 	closedir(dirp);
