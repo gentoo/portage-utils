@@ -391,9 +391,7 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int ret;
 	int pfd;
 
-	snprintf(buf, sizeof(buf), "%s/%s",
-			pkg_ctx->cat_ctx->name, pkg_ctx->name);
-	patom = atom_explode(buf);
+	patom = tree_get_atom(pkg_ctx, false);
 	if (patom == NULL)
 		return EXIT_FAILURE;
 
@@ -403,10 +401,8 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			if (atom_compare(patom, *d) == EQUAL)
 				break;
 		}
-		if (*d == NULL) {
-			atom_implode(patom);
+		if (*d == NULL)
 			return EXIT_FAILURE;
-		}
 	}
 
 	/* need to construct path in portdir to ebuild, pass it to grep */
@@ -423,6 +419,7 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	label = NULL;
 	if (data->show_name) {
+		/* this is a super-optimisation, should get it from the full atom */
 		char *repo = data->show_repo ? cctx->repo : NULL;
 		snprintf(name, sizeof(name), "%s%s/%s%s%s%s%s%s",
 				BOLD, patom->CATEGORY, BLUE, patom->P, GREEN,
@@ -433,8 +430,6 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	ret = qgrep_grepat(pfd, buf, label, data);
-
-	atom_implode(patom);
 
 	return ret;
 }
@@ -450,9 +445,7 @@ qgrep_vdb_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int ret;
 	int pfd;
 
-	snprintf(buf, sizeof(buf), "%s/%s",
-			pkg_ctx->cat_ctx->name, pkg_ctx->name);
-	patom = atom_explode(buf);
+	patom = tree_get_atom(pkg_ctx, false);
 	if (patom == NULL)
 		return EXIT_FAILURE;
 
@@ -486,8 +479,6 @@ qgrep_vdb_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	ret = qgrep_grepat(pfd, buf, label, data);
-
-	atom_implode(patom);
 
 	return ret;
 }
