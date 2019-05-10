@@ -224,7 +224,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				if (quiet)
 					puts("");
 				else
-					printf(" (%s%s)\n", state->root ? : "", e->name);
+					printf(": %s%s\n", state->root ? : "", e->name);
 			} else {
 				non_orphans[i] = 1;
 			}
