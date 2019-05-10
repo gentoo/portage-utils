@@ -28,6 +28,11 @@ config.log
 config.status
 libtool
 stamp-h1
+INSTALL
+Makefile
+/autotools/gnulib/*.h
+/autotools/gnulib/sys
+/tests/init.sh
 
 /*.old.c
 /q
