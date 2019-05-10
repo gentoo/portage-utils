@@ -15,7 +15,8 @@ of information.  The focus is on size and speed, so everything is in C.
 ## Building
 
 Run `configure` followed by `make`.  If you're using git-sources, run
-autoreconf first to get various timestamps correct.
+`configure` with `--disable-maintainer-mode` or run autoreconf to get
+various timestamps correct.
 
 ## Helping out
 
