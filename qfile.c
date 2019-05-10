@@ -78,11 +78,9 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qfile_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;
-	const char *pkgname = pkg_ctx->name;
 	qfile_args_t *args = &state->args;
 	FILE *fp;
 	const char *base;
-	char pkg[_Q_PATH_MAX];
 	depend_atom *atom = NULL;
 	int i;
 	bool path_ok;
@@ -93,8 +91,6 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	short *non_orphans = args->non_orphans;
 	int found = 0;
 
-	snprintf(pkg, sizeof(pkg), "%s/%s", catname, pkgname);
-
 	/* If exclude_pkg is not NULL, check it.  We are looking for files
 	 * collisions, and must exclude one package.
 	 */
@@ -103,21 +99,15 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		if (state->exclude_atom->CATEGORY &&
 		    strcmp(state->exclude_atom->CATEGORY, catname))
 			goto dont_skip_pkg;
-		atom = atom_explode(pkg);
-		if (state->exclude_atom->PVR) {
-			/* see if PVR is exact match */
-			if (strcmp(state->exclude_atom->PVR, atom->PVR))
-				goto dont_skip_pkg;
-		} else {
-			/* see if PN is exact match */
-			if (strcmp(state->exclude_atom->PN, atom->PN))
-				goto dont_skip_pkg;
-		}
+		atom = tree_get_atom(pkg_ctx, false);
+		if (atom_compare(state->exclude_atom, atom) != EQUAL)
+			goto dont_skip_pkg;
+		/* "(CAT/)?(PN|PF)" matches, and no SLOT specified */
 		if (state->exclude_slot == NULL)
-			goto qlist_done; /* "(CAT/)?(PN|PF)" matches, and no SLOT specified */
-		tree_pkg_vdb_eat(pkg_ctx, "SLOT", &state->buf, &state->buflen);
-		rmspace(state->buf);
-		if (strcmp(state->exclude_slot, state->buf) == 0)
+			goto qlist_done;
+		/* retrieve atom, this time with SLOT */
+		atom = tree_get_atom(pkg_ctx, true);
+		if (strcmp(state->exclude_slot, atom->SLOT) == 0)
 			goto qlist_done; /* "(CAT/)?(PN|PF):SLOT" matches */
 	}
  dont_skip_pkg: /* End of the package exclusion tests. */
@@ -134,11 +124,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		if (!e)
 			continue;
 
-		/* basename(3) possibly modifies e->name (if it has trailing
-		 * slashes) but this is not likely since it comes from VDB which
-		 * has normalised everything, so effectively e->name isn't
-		 * touched, however, it /can/ return a pointer to a private
-		 * allocation */
+		/* note: this is our own basename which doesn't modify its input */
 		base = basename(e->name);
 		if (base < e->name || base > (e->name + strlen(e->name)))
 			continue;
@@ -163,8 +149,8 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			path_ok = false;
 
 			if (dir_names[i] &&
-			    strncmp(e->name, dir_names[i], dirname_len) == 0 &&
-				dir_names[i][dirname_len] == '\0')
+					strncmp(e->name, dir_names[i], dirname_len) == 0 &&
+					dir_names[i][dirname_len] == '\0')
 			{
 				/* dir_name == dirname(CONTENTS) */
 				path_ok = true;
@@ -185,8 +171,10 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				_rpath = rpath + real_root_len;
 				if (realpath(fullpath, rpath) == NULL) {
 					if (verbose) {
+						atom = tree_get_atom(pkg_ctx, false);
 						warnp("Could not read real path of \"%s\" (from %s)",
-								fullpath, pkg);
+								fullpath,
+								atom_format("%[CATEGORY]%[PF]", atom, false));
 						warn("We'll never know whether \"%s\" was a result "
 								"for your query...", e->name);
 					}
@@ -215,26 +203,24 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				continue;
 
 			if (non_orphans == NULL) {
-				char slot[126];
+				const char *fmt;
 
-				if (!atom) {
-					if ((atom = atom_explode(pkg)) == NULL) {
-						warn("invalid atom %s", pkg);
-						continue;
+				atom = tree_get_atom(pkg_ctx, true);
+
+				if (state->slotted) {
+					if (verbose) {
+						fmt = "%[CATEGORY]%[PF]%[SLOT]";
+					} else {
+						fmt = "%[CATEGORY]%[PN]%[SLOT]";
+					}
+				} else {
+					if (verbose) {
+						fmt = "%[CATEGORY]%[PF]";
+					} else {
+						fmt = "%[CATEGORY]%[PN]";
 					}
 				}
-				if (state->slotted) {
-					/* XXX: This assumes the buf is big enough. */
-					char *slot_hack = slot + 1;
-					size_t slot_len = sizeof(slot) - 1;
-					tree_pkg_vdb_eat(pkg_ctx, "SLOT", &slot_hack, &slot_len);
-					rmspace(slot_hack);
-					slot[0] = ':';
-				} else
-					slot[0] = '\0';
-				printf("%s%s/%s%s%s%s", BOLD, atom->CATEGORY, BLUE,
-					(verbose ? pkg_ctx->name : atom->PN),
-					slot, NORM);
+				printf("%s", atom_format(fmt, atom, false));
 				if (quiet)
 					puts("");
 				else
@@ -248,9 +234,6 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	fclose(fp);
 
  qlist_done:
-	if (atom)
-		atom_implode(atom);
-
 	return found;
 }
 
