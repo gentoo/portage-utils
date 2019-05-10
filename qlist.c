@@ -193,24 +193,19 @@ qlist_match(
 	const char *urepo;
 	size_t urepo_len = 0;
 	depend_atom *atom;
+	depend_atom *_atom = NULL;
 
 	uslot = strchr(name, ':');
-	if (uslot) {
+	if (uslot != NULL) {
 		if (*++uslot == ':')
 			uslot = NULL;
 		else {
-			if (!pkg_ctx->slot)
-				tree_pkg_vdb_eat(pkg_ctx, "SLOT", &pkg_ctx->slot,
-						&pkg_ctx->slot_len);
 			uslot_len = strlen(uslot);
 		}
 	}
 
 	urepo = strstr(name, "::");
-	if (urepo) {
-		if (!pkg_ctx->repo)
-			tree_pkg_vdb_eat(pkg_ctx, "repository", &pkg_ctx->repo,
-					&pkg_ctx->repo_len);
+	if (urepo != NULL) {
 		urepo += 2;
 		urepo_len = strlen(urepo);
 
@@ -224,28 +219,18 @@ qlist_match(
 	case '>':
 	case '<':
 	case '~':
-		snprintf(buf, sizeof(buf), "%s/%s%c%s%s%s", catname, pkgname,
-			pkg_ctx->slot ? ':' : '\0', pkg_ctx->slot ? : "",
-			pkg_ctx->repo ? "::" : "", pkg_ctx->repo ? : "");
-		if ((atom = atom_explode(buf)) == NULL) {
-			warn("invalid atom %s", buf);
-			return false;
-		}
+		atom = tree_get_atom(pkg_ctx, uslot != NULL || urepo != NULL);
 
-		depend_atom *_atom = NULL;
 		if (!name_atom)
 			name_atom = &_atom;
 		if (!*name_atom) {
 			if ((*name_atom = atom_explode(name)) == NULL) {
-				atom_implode(atom);
 				warn("invalid atom %s", name);
 				return false;
 			}
 		}
 
-		bool ret = atom_compare(atom, *name_atom) == EQUAL;
-		atom_implode(atom);
-		return ret;
+		return atom_compare(atom, *name_atom) == EQUAL;
 	}
 
 	if (uslot) {
@@ -277,10 +262,7 @@ qlist_match(
 			return true;
 
 		/* let's try exact matching w/out the PV */
-		if ((atom = atom_explode(buf)) == NULL) {
-			warn("invalid atom %s", buf);
-			return false;
-		}
+		atom = tree_get_atom(pkg_ctx, uslot != NULL || urepo != NULL);
 
 		i = snprintf(swap, sizeof(swap), "%s/%s", atom->CATEGORY, atom->PN);
 		if (uslot && i <= (int)sizeof(swap))
@@ -288,7 +270,6 @@ qlist_match(
 		if (urepo && i <= (int)sizeof(swap))
 			i += snprintf(swap + i, sizeof(swap) - i, "::%s", atom->REPO);
 
-		atom_implode(atom);
 		/* exact match: CAT/PN[:SLOT][::REPO] */
 		if (strcmp(name, swap) == 0)
 			return true;
@@ -345,6 +326,7 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	FILE *fp;
 	const char *catname = pkg_ctx->cat_ctx->name;
 	const char *pkgname = pkg_ctx->name;
+	depend_atom *atom;
 
 	/* see if this cat/pkg is requested */
 	for (i = optind; i < state->argc; ++i)
@@ -354,23 +336,19 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if ((i == state->argc) && (state->argc != optind))
 		return 0;
 
+	atom = tree_get_atom(pkg_ctx, false);
 	if (state->just_pkgname) {
-		depend_atom *atom;
-		atom = (verbose ? NULL : atom_explode(pkgname));
 		if ((state->all + state->just_pkgname) < 2) {
+			atom = tree_get_atom(pkg_ctx,
+					state->show_slots || state->show_repo);
 			if (state->show_slots && !pkg_ctx->slot) {
-				tree_pkg_vdb_eat(pkg_ctx, "SLOT",
-						&pkg_ctx->slot, &pkg_ctx->slot_len);
 				/* chop off the subslot if desired */
-				if (state->show_slots == 1) {
+				if (state->show_slots == 1 && pkg_ctx->slot != NULL) {
 					char *s = strchr(pkg_ctx->slot, '/');
 					if (s)
 						*s = '\0';
 				}
 			}
-			if (state->show_repo && !pkg_ctx->repo)
-				tree_pkg_vdb_eat(pkg_ctx, "repository",
-						&pkg_ctx->repo, &pkg_ctx->repo_len);
 			/* display it */
 			printf("%s%s/%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
 					BOLD, catname, BLUE,
@@ -387,16 +365,14 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					NORM,
 					umapstr(state->show_umap, pkg_ctx));
 		}
-		if (atom)
-			atom_implode(atom);
 
 		if (!state->all)
 			return 1;
 	}
 
 	if (verbose)
-		printf("%s%s/%s%s%s %sCONTENTS%s:\n",
-				BOLD, catname, BLUE, pkgname, NORM, DKBLUE, NORM);
+		printf("%s %sCONTENTS%s:\n",
+				atom_format("%[CATEGORY]%[PF]", atom, 0), DKBLUE, NORM);
 
 	fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
 	if (fp == NULL)
@@ -423,7 +399,7 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				break;
 			case CONTENTS_OBJ:
 				if (state->show_obj)
-					printf("%s%s%s\n", WHITE, e->name, NORM);
+					printf("%s%s%s\n", DKGREEN, e->name, NORM);
 				break;
 			case CONTENTS_SYM:
 				if (state->show_sym) {
