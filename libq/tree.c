@@ -25,6 +25,8 @@
 #include <ctype.h>
 #include <xalloc.h>
 
+static int tree_pkg_compar(const void *l, const void *r);
+
 static tree_ctx *
 tree_open_int(const char *sroot, const char *tdir, bool quiet)
 {
@@ -56,7 +58,7 @@ tree_open_int(const char *sroot, const char *tdir, bool quiet)
 	ctx->do_sort = false;
 	ctx->cat_de = NULL;
 	ctx->catsortfunc = alphasort;
-	ctx->pkgsortfunc = alphasort;
+	ctx->pkgsortfunc = tree_pkg_compar;
 	ctx->repo = NULL;
 	ctx->ebuilddir_ctx = NULL;
 	ctx->ebuilddir_pkg_ctx = NULL;
@@ -208,7 +210,7 @@ tree_open_cat(tree_ctx *ctx, const char *name)
 	cat_ctx->fd = fd;
 	cat_ctx->dir = dir;
 	cat_ctx->ctx = ctx;
-	cat_ctx->pkg_de = NULL;
+	cat_ctx->pkg_ctxs = NULL;
 	return cat_ctx;
 }
 
@@ -260,7 +262,7 @@ tree_close_cat(tree_cat_ctx *cat_ctx)
 	/* closedir() above does this for us: */
 	/* close(ctx->fd); */
 	if (cat_ctx->ctx->do_sort)
-		scandir_free(cat_ctx->pkg_de, cat_ctx->pkg_cnt);
+		free(cat_ctx->pkg_ctxs);
 	free(cat_ctx);
 }
 
@@ -309,30 +311,63 @@ tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name)
 	return pkg_ctx;
 }
 
+static int
+tree_pkg_compar(const void *l, const void *r)
+{
+	tree_pkg_ctx *pl = *(tree_pkg_ctx **)l;
+	tree_pkg_ctx *pr = *(tree_pkg_ctx **)r;
+	depend_atom *al = tree_get_atom(pl, false);
+	depend_atom *ar = tree_get_atom(pr, false);
+
+	switch (atom_compare(al, ar)) {
+		case EQUAL:  return  0;
+		case NEWER:  return -1;
+		case OLDER:  return  1;
+		default:     return strcmp(al->PN, ar->PN);
+	}
+
+	/* unreachable */
+}
+
 static tree_pkg_ctx *
 tree_next_pkg_int(tree_cat_ctx *cat_ctx);
 static tree_pkg_ctx *
 tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 {
 	tree_pkg_ctx *pkg_ctx = NULL;
+	const struct dirent *de;
 
 	if (cat_ctx->ctx->do_sort) {
-		if (cat_ctx->pkg_de == NULL) {
-			cat_ctx->pkg_cnt = scandirat(cat_ctx->fd, ".", &cat_ctx->pkg_de,
-					tree_filter_pkg, cat_ctx->ctx->pkgsortfunc);
+		if (cat_ctx->pkg_ctxs == NULL) {
+			size_t pkg_size = 0;
+			cat_ctx->pkg_ctxs = NULL;
+			cat_ctx->pkg_cnt = 0;
 			cat_ctx->pkg_cur = 0;
+			while ((de = readdir(cat_ctx->dir)) != NULL) {
+				if (tree_filter_pkg(de) == 0)
+					continue;
+
+				if (cat_ctx->pkg_cnt == pkg_size) {
+					pkg_size += 256;
+					cat_ctx->pkg_ctxs = xrealloc(cat_ctx->pkg_ctxs,
+								sizeof(*cat_ctx->pkg_ctxs) * pkg_size);
+				}
+				pkg_ctx = cat_ctx->pkg_ctxs[cat_ctx->pkg_cnt++] =
+					tree_open_pkg(cat_ctx, de->d_name);
+				if (pkg_ctx == NULL)
+					cat_ctx->pkg_cnt--;
+			}
+
+			if (cat_ctx->ctx->pkgsortfunc != NULL) {
+				qsort(cat_ctx->pkg_ctxs, cat_ctx->pkg_cnt,
+						sizeof(*cat_ctx->pkg_ctxs), cat_ctx->ctx->pkgsortfunc);
+			}
 		}
 
-		while (cat_ctx->pkg_cur < cat_ctx->pkg_cnt) {
-			pkg_ctx =
-				tree_open_pkg(cat_ctx,
-						cat_ctx->pkg_de[cat_ctx->pkg_cur++]->d_name);
-			if (!pkg_ctx)
-				continue;
-			break;
-		}
+		pkg_ctx = NULL;
+		if (cat_ctx->pkg_cur < cat_ctx->pkg_cnt)
+			pkg_ctx = cat_ctx->pkg_ctxs[cat_ctx->pkg_cur++];
 	} else {
-		const struct dirent *de;
 		do {
 			de = readdir(cat_ctx->dir);
 			if (!de)

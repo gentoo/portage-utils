@@ -48,7 +48,7 @@ struct tree_cat_ctx {
 	int fd;
 	DIR *dir;
 	tree_ctx *ctx;
-	struct dirent **pkg_de;
+	tree_pkg_ctx **pkg_ctxs;
 	size_t pkg_cnt;
 	size_t pkg_cur;
 };
