@@ -269,25 +269,6 @@ static char *fmt_elapsedtime(struct qlop_mode *flags, time_t e)
 	return _elapsed_buf;
 }
 
-static char _atom_buf[BUFSIZ];
-static char *fmt_atom(struct qlop_mode *flags, depend_atom *atom)
-{
-	(void)flags;
-
-	if (verbose) {
-		size_t len = snprintf(_atom_buf, sizeof(_atom_buf), "%s/%s",
-				atom->CATEGORY, atom->P);
-		if (atom->PR_int > 0)
-			snprintf(_atom_buf + len, sizeof(_atom_buf) - len, "-r%d",
-				atom->PR_int);
-	} else {
-		snprintf(_atom_buf, sizeof(_atom_buf), "%s/%s",
-				atom->CATEGORY, atom->PN);
-	}
-
-	return _atom_buf;
-}
-
 /* The format of the sync log has changed over time.
 
 Old format:
@@ -361,6 +342,10 @@ static int do_emerge_log(
 	};
 	struct pkg_match *pkg;
 	struct pkg_match *pkgw;
+	const char *afmt = "%[CATEGORY]%[PN]";
+
+	if (verbose)
+		afmt = "%[CATEGORY]%[PF]";
 
 	if ((fp = fopen(log, "r")) == NULL) {
 		warnp("Could not open logfile '%s'", log);
@@ -602,14 +587,14 @@ static int do_emerge_log(
 						break;
 					}
 					if (flags->do_time) {
-						printf("%s >>> %s%s%s: %s\n",
+						printf("%s >>> %s: %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
-								BLUE, fmt_atom(flags, pkgw->atom), NORM,
+								atom_format(afmt, pkgw->atom, 0),
 								fmt_elapsedtime(flags, elapsed));
 					} else if (!flags->do_average) {
-						printf("%s >>> %s%s%s\n",
+						printf("%s >>> %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
-								BLUE, fmt_atom(flags, pkgw->atom), NORM);
+								atom_format(afmt, pkgw->atom, 0));
 					}
 					atom_implode(pkgw->atom);
 					xarraydelete(merge_matches, i);
@@ -701,14 +686,14 @@ static int do_emerge_log(
 						break;
 					}
 					if (flags->do_time) {
-						printf("%s <<< %s%s%s: %s\n",
+						printf("%s <<< %s: %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
-								BLUE, fmt_atom(flags, pkgw->atom), NORM,
+								atom_format(afmt, pkgw->atom, 0),
 								fmt_elapsedtime(flags, elapsed));
 					} else if (!flags->do_average) {
-						printf("%s <<< %s%s%s\n",
+						printf("%s <<< %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
-								BLUE, fmt_atom(flags, pkgw->atom), NORM);
+								atom_format(afmt, pkgw->atom, 0));
 					}
 					atom_implode(pkgw->atom);
 					xarraydelete(unmerge_matches, i);
@@ -768,17 +753,17 @@ static int do_emerge_log(
 			}
 
 			if (flags->do_time) {
-				printf("%s >>> %s%s%s: %s...%s ETA: %s\n",
+				printf("%s >>> %s: %s...%s ETA: %s\n",
 						fmt_date(flags, pkgw->tbegin, 0),
-						YELLOW, fmt_atom(flags, pkgw->atom), NORM,
+						atom_format(afmt, pkgw->atom, 0),
 						fmt_elapsedtime(flags, elapsed),
 						p == NULL ? "" : p,
 						maxtime == 0 ? "unknown" :
 							fmt_elapsedtime(flags, maxtime - elapsed));
 			} else {
-				printf("%s >>> %s%s%s...%s ETA: %s\n",
+				printf("%s >>> %s...%s ETA: %s\n",
 						fmt_date(flags, pkgw->tbegin, 0),
-						YELLOW, fmt_atom(flags, pkgw->atom), NORM,
+						atom_format(afmt, pkgw->atom, 0),
 						p == NULL ? "" : p,
 						maxtime == 0 ? "unknown" :
 							fmt_elapsedtime(flags, maxtime - elapsed));
@@ -801,16 +786,16 @@ static int do_emerge_log(
 			}
 
 			if (flags->do_time) {
-				printf("%s <<< %s%s%s: %s... ETA: %s\n",
+				printf("%s <<< %s: %s... ETA: %s\n",
 						fmt_date(flags, pkgw->tbegin, 0),
-						YELLOW, fmt_atom(flags, pkgw->atom), NORM,
+						atom_format(afmt, pkgw->atom, 0),
 						fmt_elapsedtime(flags, elapsed),
 						maxtime == 0 ? "unknown" :
 							fmt_elapsedtime(flags, maxtime - elapsed));
 			} else {
-				printf("%s <<< %s%s%s... ETA: %s\n",
+				printf("%s <<< %s... ETA: %s\n",
 						fmt_date(flags, pkgw->tbegin, 0),
-						YELLOW, fmt_atom(flags, pkgw->atom), NORM,
+						atom_format(afmt, pkgw->atom, 0),
 						maxtime == 0 ? "unknown" :
 							fmt_elapsedtime(flags, maxtime - elapsed));
 			}
@@ -821,16 +806,16 @@ static int do_emerge_log(
 		time_t total_time = (time_t)0;
 
 		array_for_each(merge_averages, i, pkg) {
-			printf("%s%s%s: %s average for %s%zd%s merge%s\n",
-					BLUE, fmt_atom(flags, pkg->atom), NORM,
+			printf("%s: %s average for %s%zd%s merge%s\n",
+					atom_format(afmt, pkg->atom, 0),
 					fmt_elapsedtime(flags, pkg->time / pkg->cnt),
 					GREEN, pkg->cnt, NORM, pkg->cnt == 1 ? "" : "s");
 			total_merges += pkg->cnt;
 			total_time += pkg->time;
 		}
 		array_for_each(unmerge_averages, i, pkg) {
-			printf("%s%s%s: %s average for %s%zd%s unmerge%s\n",
-					BLUE, fmt_atom(flags, pkg->atom), NORM,
+			printf("%s: %s average for %s%zd%s unmerge%s\n",
+					atom_format(afmt, pkg->atom, 0),
 					fmt_elapsedtime(flags, pkg->time / pkg->cnt),
 					GREEN, pkg->cnt, NORM, pkg->cnt == 1 ? "" : "s");
 			total_unmerges += pkg->cnt;
