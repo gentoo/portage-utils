@@ -821,7 +821,6 @@ tree_pkg_metadata(tree_pkg_ctx *pkg_ctx)
 	size_t len;
 	tree_metadata_xml *ret = NULL;
 	struct elist *emailw = NULL;
-	char buf[_Q_PATH_MAX];
 
 	/* lame @$$ XML parsing, I don't want to pull in a real parser
 	 * library because we only retrieve one element for now: email
@@ -832,13 +831,10 @@ tree_pkg_metadata(tree_pkg_ctx *pkg_ctx)
 	if (ctx->cachetype == CACHE_EBUILD) {
 		fd = openat(pkg_ctx->cat_ctx->fd, "metadata", O_RDONLY | O_CLOEXEC);
 	} else {
-		depend_atom *atom;
-		snprintf(buf, sizeof(buf), "%s/%s",
-				pkg_ctx->cat_ctx->name, pkg_ctx->name);
-		atom = atom_explode(buf);
+		char buf[_Q_PATH_MAX];
+		depend_atom *atom = tree_get_atom(pkg_ctx, false);
 		snprintf(buf, sizeof(buf), "../../%s/%s/metadata.xml",
 				atom->CATEGORY, atom->PN);
-		atom_implode(atom);
 		fd = openat(ctx->tree_fd, buf, O_RDONLY | O_CLOEXEC);
 	}
 
