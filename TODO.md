@@ -93,8 +93,4 @@
 - read VDB on -v to print details about current USE-flag status, bug #656550
 
 # qkeyword
-- avoid multiple atom\_explode in path traversal
-  * during qkeyword\_vercmp
-  * during qkeyword\_results\_cb
-  * in libq/cache\_read\_metadata
 - drop -c argument? it can be fully expressed using -p cat/

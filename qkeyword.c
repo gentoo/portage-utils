@@ -191,28 +191,6 @@ read_keywords(char *s, int *keywords)
 	return 0;
 }
 
-/*
- * Compare 2 struct dirent d_name strings based with atom_compare_str().
- * Used with dirscan() to sort ebuild filenames by version, reversed.
- *
- * IN:
- *  2 (const struct dirent **) with d_name filled in
- * OUT:
- *  -1 (NEWER)
- *   1 (OLDER)
- *   0 (SAME)
- */
-static int
-qkeyword_vercmp(const struct dirent **x, const struct dirent **y)
-{
-	switch (atom_compare_str((*x)->d_name, (*y)->d_name)) {
-		case EQUAL:      return  0;
-		case NEWER:      return -1;
-		case OLDER:      return  1;
-		default:         return strcmp((*x)->d_name, (*y)->d_name);
-	}
-}
-
 static int
 qkeyword_imlate(tree_pkg_ctx *pkg_ctx, void *priv)
 {
@@ -496,7 +474,7 @@ qkeyword_stats(tree_pkg_ctx *pkg_ctx, void *priv)
 		numcat++;
 	lastcat = pkg_ctx->cat_ctx->name;
 
-	atom = atom_explode(pkg_ctx->name);
+	atom = tree_get_atom(pkg_ctx, false);
 	if (atom && strcmp(lastpkg, atom->PN) != 0) {
 		for (a = 0; a < archlist_count; a++) {
 			switch (current_package_keywords[a]) {
@@ -515,7 +493,6 @@ qkeyword_stats(tree_pkg_ctx *pkg_ctx, void *priv)
 		memset(current_package_keywords, 0,
 				archlist_count * sizeof(*current_package_keywords));
 	}
-	atom_implode(atom);
 
 	numebld++;
 
@@ -617,25 +594,17 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	struct elist *emailw;
 	int ret;
 
-	snprintf(buf, sizeof(buf), "%s/%s",
-			pkg_ctx->cat_ctx->name, pkg_ctx->name);
-	patom = atom_explode(buf);
+	patom = tree_get_atom(pkg_ctx, false);
 	if (patom == NULL)
 		return EXIT_FAILURE;
 
 	if (data->qatom != NULL &&
 			atom_compare(patom, data->qatom) != EQUAL)
-	{
-		atom_implode(patom);
 		return EXIT_FAILURE;
-	}
 
 	if (data->lastatom != NULL &&
 			atom_compare(data->lastatom, patom) != NOT_EQUAL)
-	{
-		atom_implode(patom);
 		return EXIT_SUCCESS;
-	}
 
 	if (data->qmaint != NULL) {
 		metadata = tree_pkg_metadata(pkg_ctx);
@@ -657,16 +626,13 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	keywords = data->keywordsbuf;
 	meta = tree_pkg_read(pkg_ctx);
-	if (meta == NULL) {
-		atom_implode(patom);
+	if (meta == NULL)
 		return EXIT_FAILURE;
-	}
 
 	if (read_keywords(meta->KEYWORDS, keywords) < 0) {
 		if (verbose)
 			warn("Failed to read keywords for %s%s/%s%s%s",
 				BOLD, pkg_ctx->cat_ctx->name, BLUE, pkg_ctx->name, NORM);
-		atom_implode(patom);
 		return EXIT_FAILURE;
 	}
 
@@ -678,9 +644,7 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		patom->PVR = patom->PN;
 		patom->PR_int = 0;
 		data->lastatom = patom;
-		patom = NULL;
-	} else {
-		atom_implode(patom);
+		pkg_ctx->atom = NULL;  /* take tree's atom */
 	}
 
 	return EXIT_SUCCESS;
@@ -759,8 +723,7 @@ qkeyword_traverse(tree_pkg_cb func, void *priv)
 	array_for_each(overlays, n, overlay) {
 		tree_ctx *t = tree_open(portroot, overlay);
 		if (t != NULL) {
-			ret |= tree_foreach_pkg(t, qkeyword_results_cb, priv,
-					NULL, true, NULL, qkeyword_vercmp);
+			ret |= tree_foreach_pkg_sorted(t, qkeyword_results_cb, priv);
 			tree_close(t);
 		}
 	}
