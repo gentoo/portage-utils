@@ -37,6 +37,7 @@ cd "${p}"
 
 einfo "Building autotools ..."
 sed -i "/^AC_INIT/s:git:${ver#v}:" configure.ac
+sed -i "/^AM_MAINTAINER_MODE/s:(.*)$::" configure.ac
 sed -i "1iPV := ${ver#v}" Makefile
 LC_ALL=C ${MAKE} -s autotools >/dev/null
 rm -rf autom4te.cache
