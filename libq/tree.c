@@ -993,24 +993,28 @@ tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 		tree_ctx *ctx = pkg_ctx->cat_ctx->ctx;
 		if (ctx->cachetype == CACHE_VDB) {
 			if (pkg_ctx->atom->SLOT == NULL) {
-				tree_pkg_vdb_eat(pkg_ctx, "SLOT",
-						&pkg_ctx->slot, &pkg_ctx->slot_len);
+				if (pkg_ctx->slot == NULL)
+					tree_pkg_vdb_eat(pkg_ctx, "SLOT",
+							&pkg_ctx->slot, &pkg_ctx->slot_len);
 				pkg_ctx->atom->SLOT = pkg_ctx->slot;
 			}
 			if (pkg_ctx->atom->REPO == NULL) {
-				tree_pkg_vdb_eat(pkg_ctx, "repository",
-						&pkg_ctx->repo, &pkg_ctx->repo_len);
+				if (pkg_ctx->repo == NULL)
+					tree_pkg_vdb_eat(pkg_ctx, "repository",
+							&pkg_ctx->repo, &pkg_ctx->repo_len);
 				pkg_ctx->atom->REPO = pkg_ctx->repo;
 			}
 		} else { /* metadata or ebuild */
 			if (pkg_ctx->atom->SLOT == NULL) {
-				tree_pkg_meta *meta = tree_pkg_read(pkg_ctx);
-				if (meta != NULL) {
-					pkg_ctx->slot = xstrdup(meta->SLOT);
-					pkg_ctx->slot_len = strlen(pkg_ctx->slot);
-					pkg_ctx->atom->SLOT = pkg_ctx->slot;
-					tree_close_meta(meta);
+				if (pkg_ctx->slot == NULL) {
+					tree_pkg_meta *meta = tree_pkg_read(pkg_ctx);
+					if (meta != NULL) {
+						pkg_ctx->slot = xstrdup(meta->SLOT);
+						pkg_ctx->slot_len = strlen(pkg_ctx->slot);
+						tree_close_meta(meta);
+					}
 				}
+				pkg_ctx->atom->SLOT = pkg_ctx->slot;
 			}
 			/* repo is set from the tree, when found */
 			if (pkg_ctx->atom->REPO == NULL)
