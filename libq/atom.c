@@ -609,7 +609,7 @@ atom_to_string_r(char *buf, size_t buflen, depend_atom *a)
  *  %{keyword}: Always display the field that matches "keyword" or <unset>
  *  %[keyword]: Only display the field when it's set (or pverbose)
  * The possible "keywords" are:
- *  CATEGORY  P  PN  PV  PVR  PF  PR  SLOT  REPO  USE
+ *  CATEGORY  P  PN  PV  PVR  PF  PR  SLOT  SUBSLOT  REPO  USE
  *    - these are all the standard portage variables (so see ebuild(5))
  *  pfx - the version qualifier if set (e.g. > < = !)
  *  sfx - the version qualifier if set (e.g. *)
@@ -695,11 +695,16 @@ atom_format_r(
 								CYAN, atom->PR_int, NORM);
 				} else if (!strncmp("SLOT", fmt, len)) {
 					if (showit || atom->SLOT)
-						append_buf(buf, buflen, "%s%s%s%s%s%s%s",
+						append_buf(buf, buflen, "%s%s%s%s",
 								YELLOW,
 								bracket == '[' ? ":" : "",
 								atom->SLOT ? atom->SLOT : "<unset>",
-								atom->SUBSLOT ? "/" : "",
+								NORM);
+				} else if (!strncmp("SUBSLOT", fmt, len)) {
+					if (showit || atom->SUBSLOT)
+						append_buf(buf, buflen, "%s%s%s%s%s",
+								YELLOW,
+								bracket == '[' ? "/" : "",
 								atom->SUBSLOT ? atom->SUBSLOT : "",
 								atom_slotdep_str[atom->slotdep],
 								NORM);
