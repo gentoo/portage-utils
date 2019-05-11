@@ -184,34 +184,39 @@ qlist_match(
 		depend_atom **name_atom,
 		bool exact)
 {
-	const char *catname = pkg_ctx->cat_ctx->name;
-	const char *pkgname = pkg_ctx->name;
 	char buf[_Q_PATH_MAX];
-	char swap[_Q_PATH_MAX];
-	const char *uslot;
-	size_t uslot_len = 0;
+	char uslot[32];
+	char *usslot = NULL;
 	const char *urepo;
-	size_t urepo_len = 0;
+	size_t pf_len;
 	depend_atom *atom;
 	depend_atom *_atom = NULL;
 
-	uslot = strchr(name, ':');
-	if (uslot != NULL) {
-		if (*++uslot == ':')
-			uslot = NULL;
-		else {
-			uslot_len = strlen(uslot);
-		}
-	}
-
-	urepo = strstr(name, "::");
+	uslot[0] = '\0';
+	urepo = strchr(name, ':');
 	if (urepo != NULL) {
-		urepo += 2;
-		urepo_len = strlen(urepo);
-
-		if (uslot_len)
-			uslot_len -= (urepo_len + 2);
+		pf_len = urepo - name;
+		if (*++urepo == ':') {
+			uslot[0] = '\0';
+			urepo++;
+		} else {
+			usslot = (char *)urepo;
+			urepo = strstr(urepo, "::");
+			if (urepo != NULL) {
+				snprintf(uslot, sizeof(uslot), "%.*s",
+						(int)(urepo - usslot), usslot);
+				urepo += 2;
+			} else {
+				snprintf(uslot, sizeof(uslot), "%s", usslot);
+			}
+			if ((usslot = strchr(uslot, '/')) != NULL)
+				*usslot++ = '\0';
+		}
+	} else {
+		pf_len = strlen(name);
 	}
+
+	atom = tree_get_atom(pkg_ctx, uslot[0] != '\0' || urepo != NULL);
 
 	/* maybe they're using a version range */
 	switch (name[0]) {
@@ -219,8 +224,6 @@ qlist_match(
 	case '>':
 	case '<':
 	case '~':
-		atom = tree_get_atom(pkg_ctx, uslot != NULL || urepo != NULL);
-
 		if (!name_atom)
 			name_atom = &_atom;
 		if (!*name_atom) {
@@ -233,26 +236,36 @@ qlist_match(
 		return atom_compare(atom, *name_atom) == EQUAL;
 	}
 
-	if (uslot) {
+	if (uslot[0] != '\0') {
+		if (pkg_ctx->slot == NULL)
+			return false;
+
 		/* Require exact match on SLOTs.  If the user didn't include a
 		 * subslot, then ignore it when checking the package's value. */
-		if (strncmp(pkg_ctx->slot, uslot, uslot_len) != 0 ||
-		    (pkg_ctx->slot[uslot_len] != '\0' &&
-		     pkg_ctx->slot[uslot_len] != '/'))
+		if (strcmp(atom->SLOT, uslot) != 0)
+			return false;
+
+		if (usslot != NULL && strcmp(atom->SUBSLOT, usslot) != 0)
 			return false;
 	}
 
 	if (urepo) {
 		/* require exact match on repositories */
-		if (strcmp(pkg_ctx->repo, urepo) != 0)
+		if (strcmp(atom->REPO, urepo) != 0)
 			return false;
 	}
 
 	if (exact) {
 		int i;
 
-		snprintf(buf, sizeof(buf), "%s/%s:%s::%s",
-			catname, pkgname, pkg_ctx->slot, pkg_ctx->repo);
+		snprintf(buf, sizeof(buf), "%s/%s-%s:%s%s%s::%s",
+			atom->CATEGORY,
+			atom->PN,
+			atom->PVR,
+			atom->SLOT != NULL ? atom->SLOT : "",
+			atom->SUBSLOT != NULL ? "/" : "",
+			atom->SUBSLOT != NULL ? atom->SUBSLOT : "",
+			atom->REPO != NULL ? atom->REPO : "");
 
 		/* exact match: CAT/PN-PVR[:SLOT][::REPO] */
 		if (strcmp(name, buf) == 0)
@@ -262,37 +275,29 @@ qlist_match(
 			return true;
 
 		/* let's try exact matching w/out the PV */
-		atom = tree_get_atom(pkg_ctx, uslot != NULL || urepo != NULL);
-
-		i = snprintf(swap, sizeof(swap), "%s/%s", atom->CATEGORY, atom->PN);
-		if (uslot && i <= (int)sizeof(swap))
-			i += snprintf(swap + i, sizeof(swap) - i, ":%s", atom->SLOT);
-		if (urepo && i <= (int)sizeof(swap))
-			i += snprintf(swap + i, sizeof(swap) - i, "::%s", atom->REPO);
+		i = snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
+		if (uslot[0] != '\0' && i <= (int)sizeof(buf))
+			i += snprintf(buf + i, sizeof(buf) - i, ":%s", atom->SLOT);
+		if (urepo && i <= (int)sizeof(buf))
+			i += snprintf(buf + i, sizeof(buf) - i, "::%s", atom->REPO);
 
 		/* exact match: CAT/PN[:SLOT][::REPO] */
-		if (strcmp(name, swap) == 0)
+		if (strcmp(name, buf) == 0)
 			return true;
 		/* exact match: PN[:SLOT][::REPO] */
-		if (strcmp(name, strstr(swap, "/") + 1) == 0)
+		if (strcmp(name, strstr(buf, "/") + 1) == 0)
 			return true;
 	} else {
-		size_t ulen = strlen(name);
-		if (urepo)
-			ulen -= (urepo_len + 2);
-		if (uslot)
-			ulen -= (uslot_len + 1);
-		snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
 		/* partial leading match: CAT/PN-PVR */
-		if (strncmp(name, buf, ulen) == 0)
+		snprintf(buf, sizeof(buf), "%s/%s-%s",
+				atom->CATEGORY, atom->PN, atom->PVR);
+		if (strncmp(name, buf, pf_len) == 0 ||
+				rematch(name, buf, REG_EXTENDED) == 0)
 			return true;
 		/* partial leading match: PN-PVR */
-		if (strncmp(name, pkgname, ulen) == 0)
-			return true;
-		/* try again but with regexps */
-		if (rematch(name, buf, REG_EXTENDED) == 0)
-			return true;
-		if (rematch(name, pkgname, REG_EXTENDED) == 0)
+		snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PVR);
+		if (strncmp(name, buf, pf_len) == 0 ||
+				rematch(name, buf, REG_EXTENDED) == 0)
 			return true;
 	}
 
@@ -324,8 +329,6 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	struct qlist_opt_state *state = priv;
 	int i;
 	FILE *fp;
-	const char *catname = pkg_ctx->cat_ctx->name;
-	const char *pkgname = pkg_ctx->name;
 	depend_atom *atom;
 
 	/* see if this cat/pkg is requested */
@@ -339,30 +342,26 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	atom = tree_get_atom(pkg_ctx, false);
 	if (state->just_pkgname) {
 		if ((state->all + state->just_pkgname) < 2) {
+			char qfmt[128];
 			atom = tree_get_atom(pkg_ctx,
 					state->show_slots || state->show_repo);
-			if (state->show_slots && !pkg_ctx->slot) {
-				/* chop off the subslot if desired */
-				if (state->show_slots == 1 && pkg_ctx->slot != NULL) {
-					char *s = strchr(pkg_ctx->slot, '/');
-					if (s)
-						*s = '\0';
-				}
+			if (state->columns) {
+				snprintf(qfmt, sizeof(qfmt),
+						"%%{CATEGORY} %%{PN}%s%s%s%s",
+						verbose ? " %{PVR}" : "",
+						state->show_slots >= 1 ? " %{SLOT}" : "",
+						state->show_slots >= 2 ? " %{SUBSLOT}" : "",
+						state->show_repo ? " %{REPO}" : "");
+			} else {
+				snprintf(qfmt, sizeof(qfmt),
+						"%%[CATEGORY]%%[P%c]%s%s%s",
+						verbose ? 'F' : 'N',
+						state->show_slots >= 1 ? "%[SLOT]" : "",
+						state->show_slots >= 2 ? "%[SUBSLOT]" : "",
+						state->show_repo ? "%[REPO]" : "");
 			}
-			/* display it */
-			printf("%s%s/%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
-					BOLD, catname, BLUE,
-					(!state->columns ? (atom ? atom->PN : pkgname) : atom->PN),
-					(state->columns ? " " : ""),
-					(state->columns ? atom->PV : ""),
-					NORM, YELLOW,
-					state->show_slots ? ":" : "",
-					state->show_slots ? pkg_ctx->slot : "",
-					NORM,
-					NORM, GREEN,
-					state->show_repo ? "::" : "",
-					state->show_repo ? pkg_ctx->repo : "",
-					NORM,
+			printf("%s%s\n",
+					atom_format(qfmt, atom, 0),
 					umapstr(state->show_umap, pkg_ctx));
 		}
 

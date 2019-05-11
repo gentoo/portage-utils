@@ -29,6 +29,8 @@
 - tree\_get\_atoms should return atoms iso string set, needs a rewrite
   to use foreach\_pkg and get\_atom
 
+- remove odd pverbose argument to atom\_format
+
 # Atoms
 
 - only 32bit values are supported for revision (-r#)
