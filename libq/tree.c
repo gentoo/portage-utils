@@ -1020,6 +1020,18 @@ tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 			if (pkg_ctx->atom->REPO == NULL)
 				pkg_ctx->atom->REPO = pkg_ctx->repo;
 		}
+
+		/* this is a bit atom territory, but since we pulled in SLOT we
+		 * need to split it up in SLOT and SUBSLOT for atom_format to
+		 * behave properly, this may be redundant but this probably
+		 * isn't much of an issue */
+		if (pkg_ctx->atom->SUBSLOT == NULL && pkg_ctx->atom->SLOT != NULL) {
+			char *ptr;
+			if ((ptr = strchr(pkg_ctx->atom->SLOT, '/')) != NULL) {
+				*ptr++ = '\0';
+				pkg_ctx->atom->SUBSLOT = ptr;
+			}
+		}
 	}
 
 	return pkg_ctx->atom;
