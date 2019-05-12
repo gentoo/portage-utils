@@ -420,16 +420,12 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int portdirfd = -1;  /* pacify compiler */
 
 	if (state->match || verbose) {
-		snprintf(buf, sizeof(buf), "%s/%s",
-				pkg_ctx->cat_ctx->name, pkg_ctx->name);
-		atom = atom_explode(buf);
+		atom = tree_get_atom(pkg_ctx, 0);
 		if (atom == NULL)
 			return 0;
 
 		if (state->match) {
 			match = atom_compare(atom, state->match) == EQUAL;
-			if (!verbose || !match)
-				atom_implode(atom);
 
 			if (!match)
 				return 0;
@@ -517,13 +513,17 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	if (match) {
-		char *repo = state->do_repo ? pkg_ctx->repo : NULL;
+		const char *qfmt;
+
+		atom = tree_get_atom(pkg_ctx, state->do_repo);
+		if (state->do_repo) {
+			qfmt = "%[CATEGORY]%[PF]%[REPO]";
+		} else {
+			qfmt = "%[CATEGORY]%[PF]";
+		}
 
 		if (quiet) {
-			printf("%s%s/%s%s%s%s%s%s\n", BOLD, pkg_ctx->cat_ctx->name,
-					BLUE, pkg_ctx->name,
-					repo ? RED : "", repo ? "::" : "", repo ? repo : "",
-					NORM);
+			printf("%s\n", atom_format(qfmt, atom, 0));
 		} else if (verbose && !state->do_licence) {
 			/* multi-line result, printing USE-flags with their descs */
 			struct quse_state us = {
@@ -537,10 +537,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				.overlay = NULL,
 			};
 
-			printf("%s%s/%s%s%s%s%s%s\n", BOLD, pkg_ctx->cat_ctx->name,
-					BLUE, pkg_ctx->name,
-					repo ? RED : "", repo ? "::" : "", repo ? repo : "",
-					NORM);
+			printf("%s\n", atom_format(qfmt, atom, 0));
 
 			q = p = meta->IUSE;
 			buf[0] = '\0';
@@ -584,16 +581,11 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			free(us.retv);
 			free(us.argv);
 		} else {
-			printf("%s%s/%s%s%s%s%s%s: %s\n", BOLD, pkg_ctx->cat_ctx->name,
-					BLUE, pkg_ctx->name,
-					repo ? RED : "", repo ? "::" : "", repo ? repo : "",
-					NORM, v);
+			printf("%s: %s\n", atom_format(qfmt, atom, 0), v);
 		}
 	}
 
 	tree_close_meta(meta);
-	if (state->match && verbose)
-		atom_implode(atom);
 	if (verbose)
 		close(portdirfd);
 
