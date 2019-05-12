@@ -63,22 +63,17 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	struct qsearch_state *state = (struct qsearch_state *)priv;
 	depend_atom *atom;
-	char buf[_Q_PATH_MAX];
 	tree_pkg_meta *meta;
 	char *desc;
-	char *repo;
 	bool match;
 
-	snprintf(buf, sizeof(buf), "%s/%s", pkg_ctx->cat_ctx->name, pkg_ctx->name);
-	atom = atom_explode(buf);
+	atom = tree_get_atom(pkg_ctx, 0);
 	if (atom == NULL)
 		return 0;
 
 	/* skip duplicate packages (we never report version) */
-	if (last_atom != NULL && strcmp(last_atom->PN, atom->PN) == 0) {
-		atom_implode(atom);
+	if (last_atom != NULL && strcmp(last_atom->PN, atom->PN) == 0)
 		return 0;
-	}
 
 	match = false;
 	if (state->search_name &&
@@ -103,13 +98,16 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			regexec(&state->search_expr, desc, 0, NULL, 0) == 0)
 		match = true;
 
-	repo = NULL;
 	if (match) {
-		if (state->show_repo)
-			repo = pkg_ctx->repo;
-		printf("%s%s/%s%s%s%s%s%s%s%s\n", BOLD, atom->CATEGORY,
-				BLUE, atom->PN,
-				GREEN, (repo ? "::" : ""), (repo ? repo : ""), NORM,
+		const char *qfmt;
+		if (state->show_repo) {
+			atom = tree_get_atom(pkg_ctx, 1);
+			qfmt = "%[CATEGORY]%[PN]%[REPO]";
+		} else {
+			qfmt = "%[CATEGORY]%[PN]";
+		}
+		printf("%s%s%s\n",
+				atom_format(qfmt, atom, 0),
 				(state->show_name ? "" : " "),
 				(state->show_name ? "" : desc ? desc : ""));
 	}
@@ -120,6 +118,7 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (last_atom != NULL)
 		atom_implode(last_atom);
 	last_atom = atom;
+	pkg_ctx->atom = NULL;  /* we stole the atom, make sure it won't get freed */
 
 	return EXIT_SUCCESS;
 }
