@@ -100,8 +100,6 @@ static int
 qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qsize_opt_state *state = priv;
-	const char *catname = pkg_ctx->cat_ctx->name;
-	const char *pkgname = pkg_ctx->name;
 	size_t i;
 	depend_atom *atom;
 	FILE *fp;
@@ -113,14 +111,12 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (array_cnt(state->atoms)) {
 		depend_atom *qatom;
 
-		snprintf(state->buf, state->buflen, "%s/%s", catname, pkgname);
-		qatom = atom_explode(state->buf);
+		qatom = tree_get_atom(pkg_ctx, 0);
 		array_for_each(state->atoms, i, atom)
 			if (atom_compare(atom, qatom) == EQUAL) {
 				showit = true;
 				break;
 			}
-		atom_implode(qatom);
 	} else
 		showit = true;
 	if (!showit)
@@ -164,9 +160,10 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	state->num_all_ignored += num_ignored;
 
 	if (!state->summary_only) {
-		printf("%s%s/%s%s%s: %'zu files, %'zu non-files, ", BOLD,
-		       catname, BLUE, pkgname, NORM,
-		       num_files, num_nonfiles);
+		atom = tree_get_atom(pkg_ctx, 0);
+		printf("%s: %'zu files, %'zu non-files, ",
+				atom_format("%[CATEGORY]%[PF]", atom, 0),
+				num_files, num_nonfiles);
 		if (num_ignored)
 			printf("%'zu names-ignored, ", num_ignored);
 		printf("%s %s\n",
