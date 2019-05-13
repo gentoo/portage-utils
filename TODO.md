@@ -71,10 +71,6 @@
 	- newer binpkgs available
 	- newer installed version available
 
-# qsync
-
-- rewrite to use new repos.conf standard
-
 # qgrep
 
 - make it use standard xarray instead of its own buf\_list
