@@ -10,9 +10,10 @@ qlop \- emerge log analyzer
 reads from $EMERGE_LOG_DIR/emerge.log and tries to extract
 information about merges, unmerges and syncs.  It can
 calculate average merge times or just list them.  When given no
-arguments or just \fB-v\fR, \fIqlop\fR acts as if \fB-must\fR was given
+arguments or just \fB-v\fR, \fIqlop\fR acts as if \fB-slumt\fR was given
 and thus lists the time taken for all occurrances of merges, unmerges
-and sync operations found in the log.
+and sync operations found in the log for the last \fBemerge\fR(1) action
+performed by Portage.
 .P
 By default, packages are printed as CATEGORY/PN.  Use \fB-v\fR to print
 the package version and revision numbers, e.g\. CATEGORY/PF.  Note that
@@ -97,6 +98,10 @@ Seconds since 1970-01-01 00:00:00 +0000 (UTC), the UNIX epoch.
 .IP FORMAT|DATE
 Use \fIFORMAT\fR as input for \fBstrptime\fR(3) to parse \fIDATE\fR.
 .RE
+.TP
+\fB\-l\fR, \fB\-\-lastmerge\fR
+Limit selection to last Portage emerge action.  This option is a
+dynamic version of \fB-d\fR, and hence both cannot be used together.
 .TP
 \fB\-f\fR \fI<arg>\fR, \fB\-\-logfile\fR \fI<arg>\fR
 Read emerge logfile instead of $EMERGE_LOG_DIR/emerge.log.

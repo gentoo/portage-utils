@@ -24,7 +24,7 @@
 
 #define QLOP_DEFAULT_LOGFILE "emerge.log"
 
-#define QLOP_FLAGS "ctaHMmuUserd:f:w:" COMMON_FLAGS
+#define QLOP_FLAGS "ctaHMmuUslerd:f:w:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
 	{"summary",   no_argument, NULL, 'c'},
 	{"time",      no_argument, NULL, 't'},
@@ -38,6 +38,7 @@ static struct option const qlop_long_opts[] = {
 	{"endtime",   no_argument, NULL, 'e'},
 	{"running",   no_argument, NULL, 'r'},
 	{"date",       a_argument, NULL, 'd'},
+	{"lastmerge", no_argument, NULL, 'l'},
 	{"logfile",    a_argument, NULL, 'f'},
 	{"atoms",      a_argument, NULL, 'w'},
 	COMMON_LONG_OPTS
@@ -55,6 +56,7 @@ static const char * const qlop_opts_help[] = {
 	"Report time at which the operation finished (iso started)",
 	"Show current emerging packages",
 	"Limit selection to this time (1st -d is start, 2nd -d is end)",
+	"Limit selection to last Portage emerge action",
 	"Read emerge logfile instead of $EMERGE_LOG_DIR/" QLOP_DEFAULT_LOGFILE,
 	"Read package atoms to report from file",
 	COMMON_OPTS_HELP
@@ -80,6 +82,7 @@ struct qlop_mode {
 	char do_human:1;
 	char do_machine:1;
 	char do_endtime:1;
+	char show_lastmerge:1;
 };
 
 static bool
@@ -319,7 +322,8 @@ static int do_emerge_log(
 	char buf[BUFSIZ];
 	char *p;
 	char *q;
-	time_t tstart;
+	time_t tstart = LONG_MAX;
+	time_t last_merge = 0;
 	time_t sync_start = 0;
 	time_t sync_time = 0;
 	size_t sync_cnt = 0;
@@ -332,6 +336,7 @@ static int do_emerge_log(
 	DECLARE_ARRAY(unmerge_averages);
 	size_t i;
 	size_t parallel_emerge = 0;
+	bool all_atoms = false;
 
 	struct pkg_match {
 		char id[BUFSIZ];
@@ -352,7 +357,8 @@ static int do_emerge_log(
 		return 1;
 	}
 
-	if (array_cnt(atoms) == 0) {
+	all_atoms = array_cnt(atoms) == 0;
+	if (all_atoms || flags->show_lastmerge) {
 		/* assemble list of atoms */
 		while (fgets(buf, sizeof(buf), fp) != NULL) {
 			if ((p = strchr(buf, ':')) == NULL)
@@ -362,6 +368,17 @@ static int do_emerge_log(
 			tstart = atol(buf);
 			if (tstart < tbegin || tstart > tend)
 				continue;
+
+			if (flags->show_lastmerge) {
+				if (strncmp(p, "  *** emerge ", 13) == 0) {
+					last_merge = tstart;
+					array_for_each(atoms, i, atomw)
+						atom_implode(atomw);
+					xarrayfree_int(atoms);
+				}
+				if (!all_atoms)
+					continue;
+			}
 
 			atom = NULL;
 			if (strncmp(p, "  >>> emerge ", 13) == 0 &&
@@ -411,6 +428,10 @@ static int do_emerge_log(
 		rewind(fp);
 	}
 
+	if (flags->show_lastmerge) {
+		tbegin = last_merge;
+		tend = tstart;
+	}
 	/* loop over lines searching for atoms */
 	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		if ((p = strchr(buf, ':')) == NULL)
@@ -876,22 +897,24 @@ int qlop_main(int argc, char **argv)
 	m.do_human = 0;
 	m.do_machine = 0;
 	m.do_endtime = 0;
+	m.show_lastmerge = 0;
 
 	while ((ret = GETOPT_LONG(QLOP, qlop, "")) != -1) {
 		switch (ret) {
 			COMMON_GETOPTS_CASES(qlop)
 
-			case 't': m.do_time = 1;      break;
-			case 'm': m.do_merge = 1;     break;
-			case 'u': m.do_unmerge = 1;   break;
-			case 'U': m.do_autoclean = 1; break;
-			case 's': m.do_sync = 1;      break;
-			case 'r': m.do_running = 1;   break;
-			case 'a': m.do_average = 1;   break;
-			case 'c': m.do_summary = 1;   break;
-			case 'H': m.do_human = 1;     break;
-			case 'M': m.do_machine = 1;   break;
-			case 'e': m.do_endtime = 1;   break;
+			case 't': m.do_time = 1;        break;
+			case 'm': m.do_merge = 1;       break;
+			case 'u': m.do_unmerge = 1;     break;
+			case 'U': m.do_autoclean = 1;   break;
+			case 's': m.do_sync = 1;        break;
+			case 'r': m.do_running = 1;     break;
+			case 'a': m.do_average = 1;     break;
+			case 'c': m.do_summary = 1;     break;
+			case 'H': m.do_human = 1;       break;
+			case 'M': m.do_machine = 1;     break;
+			case 'e': m.do_endtime = 1;     break;
+			case 'l': m.show_lastmerge = 1; break;
 			case 'd':
 				if (start_time == 0) {
 					if (!parse_date(optarg, &start_time))
@@ -945,7 +968,7 @@ int qlop_main(int argc, char **argv)
 	if (atomfile)
 		free(atomfile);
 
-	/* default operation: -must */
+	/* default operation: -slumt */
 	if (
 			m.do_time == 0 &&
 			m.do_merge == 0 &&
@@ -962,6 +985,8 @@ int qlop_main(int argc, char **argv)
 		if (array_cnt(atoms) == 0)
 			m.do_sync = 1;
 		m.do_time = 1;
+		if (start_time == 0)
+			m.show_lastmerge = 1;
 	}
 
 	/* handle deps */
@@ -987,9 +1012,16 @@ int qlop_main(int argc, char **argv)
 		m.do_machine = 0;
 	}
 
+	/* handle -s + atoms */
 	if (m.do_sync && array_cnt(atoms) > 0) {
 		warn("-s cannot be used when specifying atoms, dropping -s");
 		m.do_sync = 0;
+	}
+
+	/* handle -l / -d conflict */
+	if (start_time != 0 && m.show_lastmerge) {
+		warn("-l and -d cannot be used together, dropping -l");
+		m.show_lastmerge = 0;
 	}
 
 	/* set default for -t, -a or -r */

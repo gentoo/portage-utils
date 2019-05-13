@@ -21,6 +21,9 @@ date: |
     .IP FORMAT|DATE
     Use \fIFORMAT\fR as input for \fBstrptime\fR(3) to parse \fIDATE\fR.
     .RE
+lastmerge: |
+    Limit selection to last Portage emerge action.  This option is a
+    dynamic version of \fB-d\fR, and hence both cannot be used together.
 time: |
     Show the time it took to merge, unmerge or sync.
 average: |
