@@ -75,11 +75,6 @@
 
 - make it use standard xarray instead of its own buf\_list
 
-# qlop
-
-- have a mode that doesn't print timestamp (to get just atoms, -v should
-  work)
-
 # qlist
 - have -F for use with -I so one can do things like print SLOT for
   package X

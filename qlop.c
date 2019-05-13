@@ -506,7 +506,13 @@ static int do_emerge_log(
 					sync_start = 0;  /* reset */
 					continue;
 				}
-				if (flags->do_time) {
+				if (quiet) {
+					printf("%s%s%s%s%s\n",
+							GREEN, p, NORM,
+							flags->do_time ? ": " : "",
+							flags->do_time ?
+								fmt_elapsedtime(flags, elapsed) : "");
+				} else if (flags->do_time) {
 					printf("%s *** %s%s%s: %s\n",
 							fmt_date(flags, sync_start, tstart),
 							GREEN, p, NORM,
@@ -607,7 +613,13 @@ static int do_emerge_log(
 						}
 						break;
 					}
-					if (flags->do_time) {
+					if (quiet && !flags->do_average) {
+						printf("%s%s%s\n",
+								atom_format(afmt, pkgw->atom, 0),
+								flags->do_time ? ": " : "",
+								flags->do_time ?
+									fmt_elapsedtime(flags, elapsed) : "");
+					} else if (flags->do_time) {
 						printf("%s >>> %s: %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
 								atom_format(afmt, pkgw->atom, 0),
@@ -706,7 +718,13 @@ static int do_emerge_log(
 						}
 						break;
 					}
-					if (flags->do_time) {
+					if (quiet && !flags->do_average) {
+						printf("%s%s%s\n",
+								atom_format(afmt, pkgw->atom, 0),
+								flags->do_time ? ": " : "",
+								flags->do_time ?
+									fmt_elapsedtime(flags, elapsed) : "");
+					} else if (flags->do_time) {
 						printf("%s <<< %s: %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
 								atom_format(afmt, pkgw->atom, 0),
