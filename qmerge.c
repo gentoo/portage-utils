@@ -1358,12 +1358,12 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		pkg_ctx = tree_next_pkg(cat_ctx);
 		if (!pkg_ctx)
 			break;
-
-		old_atom = atom_explode(pkg_ctx->name);
-		/* This cast sucks, but we know for now the field isn't modified */
-		old_atom->CATEGORY = (char *)cat_ctx->name;
+		old_atom = tree_get_atom(pkg_ctx, 1);  /* retrieve SLOT */
+		if (!old_atom)
+			goto next_pkg;
+		old_atom->SUBSLOT = NULL;  /* just match SLOT */
+		old_atom->REPO = NULL;     /* REPO never matters, TODO atom_compare */
 		ret = atom_compare(atom, old_atom);
-		atom_implode(old_atom);
 		switch (ret) {
 			case NEWER:
 			case OLDER:
