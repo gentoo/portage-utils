@@ -258,13 +258,15 @@ qlist_match(
 	if (exact) {
 		int i;
 
-		snprintf(buf, sizeof(buf), "%s/%s-%s:%s%s%s::%s",
+		snprintf(buf, sizeof(buf), "%s/%s-%s%s%s%s%s%s%s",
 			atom->CATEGORY,
 			atom->PN,
 			atom->PVR,
+			atom->SLOT != NULL ? ":" : "",
 			atom->SLOT != NULL ? atom->SLOT : "",
 			atom->SUBSLOT != NULL ? "/" : "",
 			atom->SUBSLOT != NULL ? atom->SUBSLOT : "",
+			atom->REPO != NULL ? "::" : "",
 			atom->REPO != NULL ? atom->REPO : "");
 
 		/* exact match: CAT/PN-PVR[:SLOT][::REPO] */
