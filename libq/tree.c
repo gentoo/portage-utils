@@ -497,9 +497,14 @@ tree_pkg_vdb_eat(
 		char **bufptr,
 		size_t *buflen)
 {
-	int fd = tree_pkg_vdb_openat(pkg_ctx, file, O_RDONLY, 0);
-	bool ret = eat_file_fd(fd, bufptr, buflen);
-	rmspace(*bufptr);
+	int fd;
+	bool ret;
+
+	fd = tree_pkg_vdb_openat(pkg_ctx, file, O_RDONLY, 0);
+	ret = eat_file_fd(fd, bufptr, buflen);
+	if (ret)
+		rmspace(*bufptr);
+
 	if (fd != -1)
 		close(fd);
 	return ret;
