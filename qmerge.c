@@ -1378,7 +1378,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 				goto next_pkg;
 		}
 
-		qprintf("%s+++%s %s/%s %s %s/%s\n",
+		printf("%s+++%s %s/%s %s %s/%s\n",
 				GREEN, NORM, atom->CATEGORY, pkg->PF,
 				booga[ret], cat_ctx->name, pkg_ctx->name);
 
@@ -1421,7 +1421,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	rmdir("../qmerge");
 
 	printf("%s>>>%s %s%s%s/%s%s%s\n",
-			YELLOW, NORM, WHITE, atom->CATEGORY, NORM, CYAN, atom->PN, NORM);
+			YELLOW, NORM, WHITE, atom->CATEGORY, NORM, CYAN, pkg->PF, NORM);
 
 	tree_close(vdb);
 }
@@ -1738,7 +1738,7 @@ print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 	char *p = NULL;
 	char buf[512];
 
-	printf("%s%s/%s%s%s%s%s%s\n", BOLD, atom->CATEGORY, BLUE, pkg->PF, NORM,
+	printf("%s%s/%s%s:%s%s%s%s%s\n", BOLD, atom->CATEGORY, BLUE, pkg->PF, pkg->SLOT, NORM,
 		!quiet ? " [" : "",
 		!quiet ? make_human_readable_str(pkg->SIZE, 1, KILOBYTE) : "",
 		!quiet ? " KiB]" : "");
