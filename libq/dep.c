@@ -244,7 +244,9 @@ dep_print_tree(
 	if (root->type == DEP_OR)
 		fprintf(fp, "|| (");
 	if (root->info) {
-		if (hlatoms != NULL && root->type == DEP_NORM) {
+		if (hlatoms != NULL && array_cnt(hlatoms) > 0 &&
+				root->type == DEP_NORM)
+		{
 			size_t i;
 			depend_atom *m;
 			char *oslot;
