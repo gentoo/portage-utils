@@ -59,9 +59,7 @@
 
 # qdepends
 
-- support querying uninstalled packages (via libq/cache)
 - add -S/-v/-R behavior like qlist #574934
-- support printing full dep content (with -v?) from libq/cache
 - bring back -k?  (but seems solved by using qlist -IF%{SLOT} pkg)
 
 # qpkg

@@ -22,13 +22,15 @@
 #include "xasprintf.h"
 #include "xregex.h"
 
-#define QDEPENDS_FLAGS "drpbQF:S" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpbQitF:S" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
 	{"depend",    no_argument, NULL, 'd'},
 	{"rdepend",   no_argument, NULL, 'r'},
 	{"pdepend",   no_argument, NULL, 'p'},
 	{"bdepend",   no_argument, NULL, 'b'},
 	{"query",     no_argument, NULL, 'Q'},
+	{"installed", no_argument, NULL, 'i'},
+	{"tree",      no_argument, NULL, 't'},
 	{"format",     a_argument, NULL, 'F'},
 	{"pretty",    no_argument, NULL, 'S'},
 	COMMON_LONG_OPTS
@@ -39,6 +41,8 @@ static const char * const qdepends_opts_help[] = {
 	"Show PDEPEND info",
 	"Show BDEPEND info",
 	"Query reverse deps",
+	"Search installed packages using VDB",
+	"Search available ebuilds in the tree",
 	"Print matched atom using given format string",
 	"Pretty format specified depend strings",
 	COMMON_OPTS_HELP
@@ -54,12 +58,15 @@ struct qdepends_opt_state {
 	char *depend;
 	size_t depend_len;
 	const char *format;
+	tree_ctx *vdb;
 };
 
 #define QMODE_DEPEND     (1<<0)
 #define QMODE_RDEPEND    (1<<1)
 #define QMODE_PDEPEND    (1<<2)
 #define QMODE_BDEPEND    (1<<3)
+#define QMODE_INSTALLED  (1<<5)
+#define QMODE_TREE       (1<<6)
 #define QMODE_REVERSE    (1<<7)
 
 const char *depend_files[] = {  /* keep *DEPEND aligned with above defines */
@@ -107,6 +114,8 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int ret = 0;
 	dep_node *dep_tree;
 	char **d;
+	tree_pkg_meta *meta = NULL;
+	char *depstr;
 
 	/* matrix consists of:
 	 * - QMODE_*DEPEND
@@ -142,19 +151,53 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	xarrayfree_int(state->deps);
 	clear_set(state->udeps);
 
+	if (state->qmode & QMODE_TREE)
+		if ((meta = tree_pkg_read(pkg_ctx)) == NULL)
+			return ret;
 	dfile = depend_files;
 	for (i = QMODE_DEPEND; i <= QMODE_BDEPEND; i <<= 1, dfile++) {
 		if (!(state->qmode & i))
 			continue;
-		if (!tree_pkg_vdb_eat(pkg_ctx, *dfile,
-					&state->depend, &state->depend_len))
-			continue;
 
-		dep_tree = dep_grow_tree(state->depend);
+		if (state->qmode & QMODE_INSTALLED) {
+			if (!tree_pkg_vdb_eat(pkg_ctx, *dfile,
+						&state->depend, &state->depend_len))
+				continue;
+			depstr = state->depend;
+		} else {
+			depstr = i == 1<<0 ? meta->DEPEND :
+					 i == 1<<1 ? meta->RDEPEND :
+					 i == 1<<2 ? meta->PDEPEND :
+					 i == 1<<3 ? meta->BDEPEND : NULL;
+			if (depstr == NULL)
+				continue;
+		}
+		dep_tree = dep_grow_tree(depstr);
 		if (dep_tree == NULL)
 			continue;
 
-		dep_flatten_tree(dep_tree, state->deps);
+		if (state->qmode & QMODE_TREE && verbose) {
+			/* pull in flags in use if possible */
+			tree_cat_ctx *vcat =
+				tree_open_cat(state->vdb, pkg_ctx->cat_ctx->name);
+			if (vcat != NULL) {
+				tree_pkg_ctx *vpkg =
+					tree_open_pkg(vcat, pkg_ctx->name);
+				if (vpkg != NULL) {
+					if (tree_pkg_vdb_eat(vpkg, *dfile,
+							&state->depend, &state->depend_len))
+					{
+						dep_node *dep_vdb = dep_grow_tree(state->depend);
+						if (dep_vdb != NULL)
+							dep_flatten_tree(dep_vdb, state->deps);
+					}
+					tree_close_pkg(vpkg);
+				}
+				tree_close_cat(vcat);
+			}
+		} else {
+			dep_flatten_tree(dep_tree, state->deps);
+		}
 
 		if (verbose) {
 			if (state->qmode & QMODE_REVERSE) {
@@ -243,7 +286,6 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 int qdepends_main(int argc, char **argv)
 {
 	depend_atom *atom;
-	tree_ctx *vdb;
 	DECLARE_ARRAY(atoms);
 	DECLARE_ARRAY(deps);
 	struct qdepends_opt_state state = {
@@ -254,6 +296,7 @@ int qdepends_main(int argc, char **argv)
 		.depend = NULL,
 		.depend_len = 0,
 		.format = "%[CATEGORY]%[PF]",
+		.vdb = NULL,
 	};
 	size_t i;
 	int ret;
@@ -266,22 +309,34 @@ int qdepends_main(int argc, char **argv)
 		switch (ret) {
 		COMMON_GETOPTS_CASES(qdepends)
 
-		case 'd': state.qmode |= QMODE_DEPEND;  break;
-		case 'r': state.qmode |= QMODE_RDEPEND; break;
-		case 'p': state.qmode |= QMODE_PDEPEND; break;
-		case 'b': state.qmode |= QMODE_BDEPEND; break;
-		case 'Q': state.qmode |= QMODE_REVERSE; break;
-		case 'S': do_pretty = true;             break;
-		case 'F': state.format = optarg;        break;
+		case 'd': state.qmode |= QMODE_DEPEND;    break;
+		case 'r': state.qmode |= QMODE_RDEPEND;   break;
+		case 'p': state.qmode |= QMODE_PDEPEND;   break;
+		case 'b': state.qmode |= QMODE_BDEPEND;   break;
+		case 'Q': state.qmode |= QMODE_REVERSE;   break;
+		case 'i': state.qmode |= QMODE_INSTALLED; break;
+		case 't': state.qmode |= QMODE_TREE;      break;
+		case 'S': do_pretty = true;               break;
+		case 'F': state.format = optarg;          break;
 		}
 	}
 
-	if ((state.qmode & ~QMODE_REVERSE) == 0) {
+	if ((state.qmode & ~(QMODE_REVERSE | QMODE_INSTALLED | QMODE_TREE)) == 0) {
 		/* default mode of operation: -qau (also for just -Q) */
 		state.qmode |= QMODE_DEPEND  |
 					   QMODE_RDEPEND |
 					   QMODE_PDEPEND |
 					   QMODE_BDEPEND;
+	}
+
+	/* default to installed packages */
+	if (!(state.qmode & QMODE_INSTALLED) && !(state.qmode & QMODE_TREE))
+		state.qmode |= QMODE_INSTALLED;
+
+	/* don't allow both installed and froim tree */
+	if (state.qmode & QMODE_INSTALLED && state.qmode & QMODE_TREE) {
+		warn("-i and -t cannot be used together, dropping -i");
+		state.qmode &= ~QMODE_INSTALLED;
 	}
 
 	if ((argc == optind) && !do_pretty)
@@ -308,12 +363,28 @@ int qdepends_main(int argc, char **argv)
 			xarraypush_ptr(atoms, atom);
 	}
 
-	vdb = tree_open_vdb(portroot, portvdb);
-	if (vdb != NULL) {
-		ret = tree_foreach_pkg_fast(vdb, qdepends_results_cb, &state, NULL);
-		tree_close(vdb);
+	if (state.qmode & QMODE_INSTALLED || verbose)
+		state.vdb = tree_open_vdb(portroot, portvdb);
+	if (state.qmode & QMODE_TREE) {
+		char *overlay;
+		size_t n;
+		tree_ctx *t;
+
+		array_for_each(overlays, n, overlay) {
+			t = tree_open(portroot, overlay);
+			if (t != NULL) {
+				ret = tree_foreach_pkg_sorted(t,
+						qdepends_results_cb, &state);
+				tree_close(t);
+			}
+		}
+	} else {
+		ret = tree_foreach_pkg_fast(state.vdb,
+				qdepends_results_cb, &state, NULL);
 	}
 
+	if (state.vdb != NULL)
+		tree_close(state.vdb);
 	if (state.depend != NULL)
 		free(state.depend);
 

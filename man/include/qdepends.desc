@@ -12,8 +12,8 @@ option.
 .P
 Currently,
 .I qdepends
-will only query installed packages.  There is no support for
-querying packages not yet installed (see \fBequery\fR(1) for that).
+defaults to query installed packages.  To query packages from ebuild
+trees, use the \fB-t\fR option.
 .P
 If there is no answer to your query (i.e. you've asked for a package
 that is not installed, or a version that does not match), then you will

@@ -20,8 +20,8 @@ option.
 .P
 Currently,
 .I qdepends
-will only query installed packages.  There is no support for
-querying packages not yet installed (see \fBequery\fR(1) for that).
+defaults to query installed packages.  To query packages from ebuild
+trees, use the \fB-t\fR option.
 .P
 If there is no answer to your query (i.e. you've asked for a package
 that is not installed, or a version that does not match), then you will
@@ -58,6 +58,12 @@ package that references \fI<arg>\fR in DEPEND, RDEPEND, PDEPEND or BDEPEND.
 This can be useful to find consumers of a given package, e.g.\ to
 search for packages that have \fIlogwatch\fR in their DEPEND.
 .TP
+\fB\-i\fR, \fB\-\-installed\fR
+Search installed packages using VDB.
+.TP
+\fB\-t\fR, \fB\-\-tree\fR
+Search available ebuilds in the tree.
+.TP
 \fB\-F\fR \fI<arg>\fR, \fB\-\-format\fR \fI<arg>\fR
 Pretty-print DEPEND declaration to be used in an ebuild.  This
 option initiates a very different mode of operation.  Instead of
@@ -78,7 +84,8 @@ Set the ROOT env var.
 \fB\-v\fR, \fB\-\-verbose\fR
 Pretty-print atoms output, per DEPEND-variable.  This is much like
 the \fB-f\fR option, but uses as input the dependency info from the
-matches.
+matches.  When used with \fB-t\fR, the atom highlighting matches
+what is used by the installed package, if available.
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
 Suppress DEPEND= output for \fB\-f\fR.  Only print the matching atom for \fB\-Q\fR.

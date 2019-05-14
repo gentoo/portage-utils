@@ -25,6 +25,7 @@ format: |
 verbose: |
     Pretty-print atoms output, per DEPEND-variable.  This is much like
     the \fB-f\fR option, but uses as input the dependency info from the
-    matches.
+    matches.  When used with \fB-t\fR, the atom highlighting matches
+    what is used by the installed package, if available.
 quiet: Suppress DEPEND= output for \fB\-f\fR.  Only print the matching
     atom for \fB\-Q\fR.
