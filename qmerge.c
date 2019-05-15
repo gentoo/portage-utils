@@ -263,13 +263,11 @@ qmerge_initialize(void)
 	mkdir_p(buf, 0755);
 	xchdir(buf);
 
-	if (force_download != 2) {
-		if (force_download)
-			unlink(Packages);
-
-		if (access(Packages, R_OK) != 0)
-			fetch(buf, Packages);
+	if (force_download == 1 /* -f: fetch */) {
+		unlink(Packages);
+		fetch(buf, Packages);
 	}
+
 	free(buf);
 }
 
