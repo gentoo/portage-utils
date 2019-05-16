@@ -243,6 +243,8 @@ fetch(const char *destdir, const char *src)
 static void
 qmerge_initialize(void)
 {
+	char *buf;
+
 	if (strlen(BUSYBOX))
 		if (access(BUSYBOX, X_OK) != 0)
 			err(BUSYBOX " must be installed");
@@ -258,7 +260,6 @@ qmerge_initialize(void)
 			errp("could not setup PKGDIR: %s", pkgdir);
 	}
 
-	char *buf;
 	xasprintf(&buf, "%s/portage/", port_tmpdir);
 	mkdir_p(buf, 0755);
 	xchdir(buf);
