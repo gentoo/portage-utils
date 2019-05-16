@@ -1000,11 +1000,12 @@ int qlop_main(int argc, char **argv)
 	{
 		m.do_merge = 1;
 		m.do_unmerge = 1;
-		if (array_cnt(atoms) == 0)
+		if (array_cnt(atoms) == 0) {
 			m.do_sync = 1;
+			if (start_time == 0)
+				m.show_lastmerge = 1;
+		}
 		m.do_time = 1;
-		if (start_time == 0)
-			m.show_lastmerge = 1;
 	}
 
 	/* handle deps */
