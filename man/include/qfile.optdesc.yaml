@@ -5,3 +5,7 @@ verbose: |
 quiet: |
     Don't print matching file for matches, just the package.  Don't
     report about orphan files.
+dir: |
+    Only consider basename of argument and also match directories, this
+    option makes qlist ignore any path component given in the arguments
+    if present.

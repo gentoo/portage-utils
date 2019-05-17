@@ -20,11 +20,11 @@
 #include "rmspace.h"
 #include "tree.h"
 
-#define QFILE_FLAGS "boRx:S" COMMON_FLAGS
+#define QFILE_FLAGS "doRx:S" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"slots",       no_argument, NULL, 'S'},
 	{"root-prefix", no_argument, NULL, 'R'},
-	{"basename",    no_argument, NULL, 'b'},
+	{"dir",         no_argument, NULL, 'd'},
 	{"orphans",     no_argument, NULL, 'o'},
 	{"exclude",      a_argument, NULL, 'x'},
 	COMMON_LONG_OPTS
@@ -32,7 +32,7 @@ static struct option const qfile_long_opts[] = {
 static const char * const qfile_opts_help[] = {
 	"Display installed packages with slots",
 	"Assume arguments are already prefixed by $ROOT",
-	"Match any component of the path",
+	"Also match directories for single component arguments",
 	"List orphan files",
 	"Don't look in package <arg> (used with --orphans)",
 	COMMON_OPTS_HELP
@@ -191,14 +191,25 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					/* real_dir_name == realpath(dirname(CONTENTS)) */
 					path_ok = true;
 				}
-			} else if (state->basename) {
+			}
+
+			if (!path_ok && state->basename) {
 				path_ok = true;
-			} else if (state->pwd && dir_names[i] == NULL) {
+			}
+
+			if (!path_ok && state->pwd && dir_names[i] == NULL) {
 				/* try to match file in current directory */
 				if (strncmp(e->name, state->pwd, dirname_len) == 0 &&
 						state->pwd[dirname_len] == '\0')
 					path_ok = true;
 			}
+
+			if (!path_ok && dir_names[i] == NULL && real_dir_names[i] == NULL) {
+				/* try basename match */
+				if (e->type != CONTENTS_DIR)
+					path_ok = true;
+			}
+
 			if (!path_ok)
 				continue;
 
@@ -401,15 +412,16 @@ int qfile_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QFILE, qfile, "")) != -1) {
 		switch (i) {
 			COMMON_GETOPTS_CASES(qfile)
-			case 'S': state.slotted = true; break;
-			case 'b': state.basename = true; break;
-			case 'o': state.orphans = true; break;
-			case 'R': state.assume_root_prefix = true; break;
+			case 'S': state.slotted = true;             break;
+			case 'd': state.basename = true;            break;
+			case 'o': state.orphans = true;             break;
+			case 'R': state.assume_root_prefix = true;  break;
 			case 'x':
 				if (state.exclude_pkg)
 					err("--exclude can only be used once.");
 				state.exclude_pkg = xstrdup(optarg);
-				if ((state.exclude_slot = strchr(state.exclude_pkg, ':')) != NULL)
+				state.exclude_slot = strchr(state.exclude_pkg, ':');
+				if (state.exclude_slot != NULL)
 					*state.exclude_slot++ = '\0';
 				state.exclude_atom = atom_explode(optarg);
 				if (!state.exclude_atom)
@@ -426,8 +438,7 @@ int qfile_main(int argc, char **argv)
 	state.buf = xmalloc(state.buflen);
 	if (state.assume_root_prefix) {
 		/* Get a copy of $ROOT, with no trailing slash
-		 * (this one is just for qfile(...) output)
-		 */
+		 * (this one is just for qfile(...) output) */
 		size_t lastc = strlen(portroot) - 1;
 		state.root = xstrdup(portroot);
 		if (state.root[lastc] == '/')

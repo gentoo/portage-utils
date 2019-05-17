@@ -1,13 +1,12 @@
 .SH "FINDING ORPHAN FILES"
 .PP
-\fBqfile\fP can also, with the \fB\-\-orphans\fP option, find files which are 
-not owned by any package.  This behavior is the opposite of the usual file 
-owner search: the output is the list of query items for which no reference has
-been found in your installed packages database.  The \fB\-\-exact\fP option has
-no effect in this mode, whereas \fB\-\-verbose\fP may add a few warning 
-messages.  As for \fB\-\-quiet\fP, it will completly turn off the output, 
-leaving just a silent test command, which returns \fI0\fP if and only if
-there was no orphan in your query items.
+\fBqfile\fP can also, with the \fB\-\-orphans\fP option, find files
+which are not owned by any package.  This behaviour is the opposite of
+the usual file owner search: the output is the list of query items for
+which no reference has been found in your installed packages database.
+As for \fB\-\-quiet\fP, it will completly turn off the output, leaving
+just a silent test command, which returns \fI0\fP if and only if there
+was no orphan in your query items.
 .PP
 Find the orphan libtool files of your system:
 .nf\fI

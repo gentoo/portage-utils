@@ -4,9 +4,9 @@ A last option of \fBqfile\fP is \fB\-\-exclude\fP (\fB\-x\fP), which will makes
 it skip one particular package when doing its files owners search.  This option
 takes one argument, which can be a package name (\fBbash\fP or
 \fBapp\-shells/bash\fP), or a versioned package (\fBbash\-3.2_p9\-r1\fP or
-\fBapp\-shells/bash\-3.2_p9\-r1\fP), or a slotted package (\fBbash:0\fP or 
-\fBapp\-shells/bash:0\fP). It is useful for finding file collisions beetween 
-packages (ie., comparing the contents of one package with the contents of all 
+\fBapp\-shells/bash\-3.2_p9\-r1\fP), or a slotted package (\fBbash:0\fP or
+\fBapp\-shells/bash:0\fP). It is useful for finding file collisions between
+packages (ie.\ comparing the contents of one package with the contents of all
 the others).
 .PP
 For example, the following script will search collisions between all your
@@ -26,7 +26,7 @@ installed packages. Be careful, this will takes time:
 	done
 .fi
 .PP
-An other example is the following script, which can be used to check that a 
+An other example is the following script, which can be used to check that a
 binary package (.tbz2) has no conflict with any of your installed packages,
 but the one it may replace (same name and slot), if any:
 .nf\fI

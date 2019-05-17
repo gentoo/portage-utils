@@ -10,6 +10,29 @@ qfile \- list all pkgs owning files
 packages must be installed, thus the search is for any file on the
 filesystem, to what package that file belongs.  It allows to identify
 which package installed a certain file.
+.P
+The arguments to \fIqfile\fR can be absolute or relative paths and
+individual files.  By default arguments are interpreted as follows:
+.RS
+.IP "absolute path"
+The path is matched against directories, symlinks and objects.
+.IP "relative path"
+The path is resolved against the current directory, and after that
+matched like an absolute path.
+.IP "-d option in use"
+The basename (last component) of the argument path is matched to any
+directory, symlink or object whose basename matches.  This effectively
+means it matches directories as well as symlinks and objects unlike when
+\fB-d\fR is not given and a basename is given as argument.
+.IP basename
+The basename is first attempted to be located in the current directory.
+If an object exists by that name, it is matched like an absolute path.
+If no such object exists, the name is matched against the basename of
+any symlink or object.  For matching directories, use \fB-d\fR.
+.RE
+.P
+After version \fB0.74\fR of portage-utils, the \fB-b\fR option was
+renamed to \fB-d\fR.
 .SH OPTIONS
 .TP
 \fB\-S\fR, \fB\-\-slots\fR
@@ -18,8 +41,10 @@ Display installed packages with slots.
 \fB\-R\fR, \fB\-\-root\-prefix\fR
 Assume arguments are already prefixed by $ROOT.
 .TP
-\fB\-b\fR, \fB\-\-basename\fR
-Match any component of the path.
+\fB\-d\fR, \fB\-\-dir\fR
+Only consider basename of argument and also match directories, this
+option makes qlist ignore any path component given in the arguments
+if present.
 .TP
 \fB\-o\fR, \fB\-\-orphans\fR
 List orphan files.
@@ -49,17 +74,15 @@ Print this help and exit.
 Print version and exit.
 .SH "FINDING FILE OWNERS"
 .PP
-This is the default behavior of \fBqfile\fP.  It will list the packages which
-own the files (or directories, or symlinks, or anything else Portage can
-install) you are querying.  Query items may be file paths or simple file
-names when the \fB\-b\fP option is used.
-By default, output includes packages names and the complete paths to
-the matching files.  If using \fB\-\-exact\fP, versions of the packages will
-also be shown.  At the contrary, when using \fB\-\-quiet\fP, only package
-names are listed, without files paths.  Finally, \fB\-\-verbose\fP is similar
-to \fB\-\-exact\fP, but may add a few warnings.  The return status of
-\fBqfile\fP will be \fI0\fP as soon as an owning package has been found for
-one of the query items.
+This is the default behavior of \fBqfile\fP.  It will list the packages
+which own the files (or directories, or symlinks, or anything else
+Portage can install) you are querying.  Query items may be file paths or
+simple file names.  By default, output includes packages names and the
+complete paths to the matching files.  If using \fB\-\-verbose\fP,
+versions of the packages will also be shown.  In contrast, when using
+\fB\-\-quiet\fP, only package names are listed, without files paths.
+The return status of \fBqfile\fP will be \fI0\fP as soon as an owning
+package has been found for one of the query items.
 .PP
 Find names of package(s) owning "/bin/bash":
 .nf\fI
@@ -69,17 +92,17 @@ Find names of package(s) owning "/bin/bash":
 .PP
 Find package(s) owning any file named "bash", and show paths of this files:
 .nf\fI
-	$ qfile -b bash
-	app-shells/bash (/bin/bash)
-	app-shells/bash (/etc/bash)
+	$ qfile -d bash
+	app-shells/bash: /bin/bash
+	app-shells/bash: /etc/bash
 .fi
 .PP
 Find packages(s) owning the file named "bash" in the current directory. Also
 display their exact version:
 .nf\fI
 	$ cd /bin
-	$ qfile -e ./bash
-	app-shells/bash-3.1_p17 (/bin/bash)
+	$ qfile -v ./bash
+	app-shells/bash-3.1_p17: /bin/bash
 .fi
 .PP
 Find the package(s) owning the libraries needed by the Bash binary:
@@ -91,14 +114,13 @@ Find the package(s) owning the libraries needed by the Bash binary:
 .fi
 .SH "FINDING ORPHAN FILES"
 .PP
-\fBqfile\fP can also, with the \fB\-\-orphans\fP option, find files which are
-not owned by any package.  This behavior is the opposite of the usual file
-owner search: the output is the list of query items for which no reference has
-been found in your installed packages database.  The \fB\-\-exact\fP option has
-no effect in this mode, whereas \fB\-\-verbose\fP may add a few warning
-messages.  As for \fB\-\-quiet\fP, it will completly turn off the output,
-leaving just a silent test command, which returns \fI0\fP if and only if
-there was no orphan in your query items.
+\fBqfile\fP can also, with the \fB\-\-orphans\fP option, find files
+which are not owned by any package.  This behaviour is the opposite of
+the usual file owner search: the output is the list of query items for
+which no reference has been found in your installed packages database.
+As for \fB\-\-quiet\fP, it will completly turn off the output, leaving
+just a silent test command, which returns \fI0\fP if and only if there
+was no orphan in your query items.
 .PP
 Find the orphan libtool files of your system:
 .nf\fI
@@ -128,7 +150,7 @@ work in the sytem of your choice. This example shows queries for owner of
 Note that the query item is "/bin/sh" in both commands: by default, what
 \fBqfile\fP looks for is file paths as they are recorded in the packages
 database of the target system, and this paths don't include \fI$ROOT\fP.
-If, at the contrary, you want to query files with their current actual
+If, on the contrary, you want to query files with their current actual
 paths (including the mount point), you should add the \fB\-\-root\-prefix\fP
 (\fB\-R\fP) option:
 .nf\fI
@@ -136,14 +158,14 @@ paths (including the mount point), you should add the \fB\-\-root\-prefix\fP
 	sys-apps/busybox
 .fi
 .PP
-The other difference beetween defaults and \fB\-R\fP queries is the output
+The other difference between defaults and \fB\-R\fP queries is the output
 of files paths.  The former doesn't include the \fI$ROOT\fP prefix, and the
-later does:
+latter does:
 .nf\fI
 	$ ROOT=/mnt qfile sh
-	sys-apps/busybox (/bin/sh)
+	sys-apps/busybox: /bin/sh
 	$ ROOT=/mnt qfile -R sh
-	sys-apps/busybox (/mnt/bin/sh)
+	sys-apps/busybox: /mnt/bin/sh
 .fi
 .PP
 Sure, the same differences hold when querying for orphan files:
@@ -160,8 +182,8 @@ it skip one particular package when doing its files owners search.  This option
 takes one argument, which can be a package name (\fBbash\fP or
 \fBapp\-shells/bash\fP), or a versioned package (\fBbash\-3.2_p9\-r1\fP or
 \fBapp\-shells/bash\-3.2_p9\-r1\fP), or a slotted package (\fBbash:0\fP or
-\fBapp\-shells/bash:0\fP). It is useful for finding file collisions beetween
-packages (ie., comparing the contents of one package with the contents of all
+\fBapp\-shells/bash:0\fP). It is useful for finding file collisions between
+packages (ie.\ comparing the contents of one package with the contents of all
 the others).
 .PP
 For example, the following script will search collisions between all your

@@ -1,16 +1,14 @@
 .SH "FINDING FILE OWNERS"
 .PP
-This is the default behavior of \fBqfile\fP.  It will list the packages which
-own the files (or directories, or symlinks, or anything else Portage can 
-install) you are querying.  Query items may be file paths or simple file
-names when the \fB\-b\fP option is used.
-By default, output includes packages names and the complete paths to
-the matching files.  If using \fB\-\-exact\fP, versions of the packages will 
-also be shown.  At the contrary, when using \fB\-\-quiet\fP, only package 
-names are listed, without files paths.  Finally, \fB\-\-verbose\fP is similar
-to \fB\-\-exact\fP, but may add a few warnings.  The return status of 
-\fBqfile\fP will be \fI0\fP as soon as an owning package has been found for 
-one of the query items.
+This is the default behavior of \fBqfile\fP.  It will list the packages
+which own the files (or directories, or symlinks, or anything else
+Portage can install) you are querying.  Query items may be file paths or
+simple file names.  By default, output includes packages names and the
+complete paths to the matching files.  If using \fB\-\-verbose\fP,
+versions of the packages will also be shown.  In contrast, when using
+\fB\-\-quiet\fP, only package names are listed, without files paths.
+The return status of \fBqfile\fP will be \fI0\fP as soon as an owning
+package has been found for one of the query items.
 .PP
 Find names of package(s) owning "/bin/bash":
 .nf\fI
@@ -20,17 +18,17 @@ Find names of package(s) owning "/bin/bash":
 .PP
 Find package(s) owning any file named "bash", and show paths of this files:
 .nf\fI
-	$ qfile -b bash
-	app-shells/bash (/bin/bash)
-	app-shells/bash (/etc/bash)
+	$ qfile -d bash
+	app-shells/bash: /bin/bash
+	app-shells/bash: /etc/bash
 .fi
 .PP
 Find packages(s) owning the file named "bash" in the current directory. Also 
 display their exact version:
 .nf\fI
 	$ cd /bin
-	$ qfile -e ./bash
-	app-shells/bash-3.1_p17 (/bin/bash)
+	$ qfile -v ./bash
+	app-shells/bash-3.1_p17: /bin/bash
 .fi
 .PP
 Find the package(s) owning the libraries needed by the Bash binary:
