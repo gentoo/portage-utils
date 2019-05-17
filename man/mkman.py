@@ -84,7 +84,7 @@ def MkMan(applets, applet, output):
     desc_file = os.path.join(FRAGS_DIR, '%s.optdesc.yaml' % applet)
     if os.path.exists(desc_file):
         with open(desc_file) as fh:
-            optdescs = yaml.load(fh)
+            optdescs = yaml.safe_load(fh)
 
     # Extract all the options
     options = []
