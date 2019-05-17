@@ -6,7 +6,14 @@ q \- invoke a portage utility applet
 .B q
 \fI<applet> <args> \fR
 .SH DESCRIPTION
-
+.I q
+is a collection of utilities for use with Gentoo systems regarding
+installed and available packages.
+.P
+After version 0.74 of portage-utils, the cache functionality was removed
+in favour of using various trees directly, and optionally the caches
+therein.  As such the \fB-r\fR and \fB-m\fR options were removed.  It is
+no longer necessary to initialise the cache at any time.
 .SH OPTIONS
 .TP
 \fB\-i\fR, \fB\-\-install\fR
