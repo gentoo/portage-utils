@@ -24,7 +24,6 @@
 
 /* variables to control runtime behavior */
 char *module_name = NULL;
-char *modpath = NULL;
 int verbose = 0;
 int quiet = 0;
 char pretend = 0;

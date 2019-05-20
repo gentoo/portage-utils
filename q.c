@@ -21,15 +21,13 @@
 
 #include "basename.h"
 
-#define Q_FLAGS "iM:" COMMON_FLAGS
+#define Q_FLAGS "i" COMMON_FLAGS
 static struct option const q_long_opts[] = {
 	{"install",       no_argument, NULL, 'i'},
-	{"modpath",        a_argument, NULL, 'M'},
 	COMMON_LONG_OPTS
 };
 static const char * const q_opts_help[] = {
 	"Install symlinks for applets",
-	"Module path",
 	COMMON_OPTS_HELP
 };
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, NULL, lookup_applet_idx("q"))
@@ -95,7 +93,6 @@ int q_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
-		case 'M': modpath = optarg; break;
 		case 'i': install = 1; break;
 		}
 	}
