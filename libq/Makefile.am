@@ -8,6 +8,7 @@ QFILES = \
 	copy_file.c copy_file.h \
 	dep.c dep.h \
 	eat_file.c eat_file.h \
+	hash.c hash.h \
 	hash_fd.c hash_fd.h \
 	human_readable.c human_readable.h \
 	i18n.h \
@@ -31,5 +32,6 @@ QFILES = \
 noinst_LTLIBRARIES = libq.la
 libq_la_SOURCES = $(QFILES)
 libq_la_CPPFLAGS = \
+	$(OPENMP_CFLAGS) \
 	-I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib

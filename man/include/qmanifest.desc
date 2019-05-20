@@ -1,0 +1,29 @@
+\fIqmanifest\fR allows to verify or generate thick signed Manifests in
+an ebuild tree.  By default, \fIqmanifest\fR will verify the main tree
+as specified by Portage's configuration (one can check which using
+\fIq\fR \fB-o\fR).  In this mode, it will output some information about
+the GPG signature of the top-level Manifest file, and further reports on
+any problems it encounters.
+.P
+This applet was originally a standalone program \fIhashgen\fR and its
+alias \fIhashverify\fR.  Aliases for these names are still available for
+historical reasons.  With the incorporation of \fIhashgen\fR in
+\fBportage-utils\fR, development on the former has stopped in favour of
+the latter.
+.P
+The arguments to \fIqmanifest\fR can be directories or names of
+overlays.  By default, each argument is attempted to be matched against
+all overlay names, and if that fails, treated as directory to presume a
+tree is in.  This behaviour can be overridden with the \fB-d\fR and
+\fB-o\fR flags to force treating the arguments as directories or
+overlay names respectively.  Note that overlay names are those as
+defined in \fIrepos.conf\fR from Portage's configuration.  The
+\fIrepo_name\fR files from the overlays themselves (if present) are
+ignored.
+.P
+This applet does similar things as \fIapp-portage/gemato\fR.  However,
+the output and implemented strategies are completely different.  When
+compiled with \fBUSE=openmp\fR, this applet will exploit parallelism
+where possible to traverse a tree.  Should you want to limit the number
+of parallel threads, export \fBOMP_NUM_THREADS\fR in your environment
+with the desired maximum amount of threads in use by \fIqmanifest\fR.

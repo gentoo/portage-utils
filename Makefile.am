@@ -17,6 +17,7 @@ APPLETS = \
 	qkeyword \
 	qlist \
 	qlop \
+	qmanifest \
 	qmerge \
 	qpkg \
 	qsearch \
@@ -37,6 +38,7 @@ dist_man_MANS = \
 	man/qkeyword.1 \
 	man/qlist.1 \
 	man/qlop.1 \
+	man/qmanifest.1 \
 	man/qmerge.1 \
 	man/qpkg.1 \
 	man/qsearch.1 \
@@ -59,6 +61,7 @@ q_SOURCES = \
 	qkeyword.c \
 	qlist.c \
 	qlop.c \
+	qmanifest.c \
 	qmerge.c \
 	qpkg.c \
 	qsearch.c \
@@ -69,14 +72,21 @@ q_SOURCES = \
 	qxpak.c \
 	$(NULL)
 q_CPPFLAGS = \
+	$(OPENMP_CFLAGS) \
+	$(GPGME_CFLAGS) \
 	-I$(top_srcdir)/libq \
 	-I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib \
 	$(NULL)
 q_LDADD = \
+	$(OPENMP_CFLAGS) \
 	$(top_builddir)/libq/libq.la \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
 	-liniparser \
+	$(LIBSSL) \
+	$(LIBBL2) \
+	$(LIBZ) \
+	$(GPGME_LIBS) \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS) \
 	$(NULL)

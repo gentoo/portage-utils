@@ -38,23 +38,24 @@ typedef int (*APPLET)(int, char **);
 #define DECLARE_APPLET(applet) \
 	extern int applet##_main(int, char **) __attribute__((weak));
 DECLARE_APPLET(q)
+DECLARE_APPLET(qatom)
 DECLARE_APPLET(qcheck)
 DECLARE_APPLET(qdepends)
 DECLARE_APPLET(qfile)
+/*DECLARE_APPLET(qglsa) disable */
+DECLARE_APPLET(qgrep)
+DECLARE_APPLET(qkeyword)
 DECLARE_APPLET(qlist)
 DECLARE_APPLET(qlop)
+DECLARE_APPLET(qmanifest)
+DECLARE_APPLET(qmerge)
+DECLARE_APPLET(qpkg)
 DECLARE_APPLET(qsearch)
 DECLARE_APPLET(qsize)
 DECLARE_APPLET(qtbz2)
+DECLARE_APPLET(qtegrity)
 DECLARE_APPLET(quse)
 DECLARE_APPLET(qxpak)
-DECLARE_APPLET(qpkg)
-DECLARE_APPLET(qgrep)
-DECLARE_APPLET(qatom)
-DECLARE_APPLET(qmerge)
-DECLARE_APPLET(qkeyword)
-/*DECLARE_APPLET(qglsa) disable */
-DECLARE_APPLET(qtegrity)
 #undef DECLARE_APPLET
 
 static const struct applet_t {
@@ -66,7 +67,6 @@ static const struct applet_t {
 	/* q must always be the first applet */
 	{"q",         q_main,         "<applet> <args>", "virtual applet"},
 	{"qatom",     qatom_main,     "<pkg>",           "split atom strings"},
-	{"qkeyword",  qkeyword_main,  "<action> <args>", "list packages based on keywords"},
 	{"qcheck",    qcheck_main,    "<pkgname>",       "verify integrity of installed packages"},
 	{"qdepends",  qdepends_main,  "<pkgname>",       "show dependency info"},
 	{"qfile",     qfile_main,     "<filename>",      "list all pkgs owning files"},
@@ -74,16 +74,18 @@ static const struct applet_t {
 	{"qglsa",     qglsa_main,     "<action> <list>", "check GLSAs against system"},
 	*/
 	{"qgrep",     qgrep_main,     "<expr> [pkg ...]", "grep in ebuilds"},
+	{"qkeyword",  qkeyword_main,  "<action> <args>", "list packages based on keywords"},
 	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
+	{"qmanifest", qmanifest_main, "<misc args>",     "verify or generate thick Manifest files"},
 	{"qmerge",    qmerge_main,    "<pkgnames>",      "fetch and merge binary package"},
 	{"qpkg",      qpkg_main,      "<misc args>",     "manipulate Gentoo binpkgs"},
 	{"qsearch",   qsearch_main,   "<regex>",         "search pkgname/desc"},
 	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
 	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
+	{"qtegrity",  qtegrity_main,  "<misc args>",     "verify files with IMA"},
 	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
 	{"qxpak",     qxpak_main,     "<misc args>",     "manipulate xpak archives"},
-	{"qtegrity",  qtegrity_main,  "<misc args>",     "verify files with IMA"},
 
 	/* aliases for equery compatibility */
 	{"belongs",   qfile_main,     NULL, NULL},
@@ -106,6 +108,10 @@ static const struct applet_t {
 
 	/* alias for qtegrity */
 	{"integrity", qtegrity_main,  NULL, NULL},
+
+	/* old hashgen */
+	{"hashgen",   qmanifest_main, NULL, NULL},
+	{"hashverify",qmanifest_main, NULL, NULL},
 
 	{NULL, NULL, NULL, NULL}
 };
