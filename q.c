@@ -20,14 +20,18 @@
 #endif
 
 #include "basename.h"
+#include "eat_file.h"
+#include "rmspace.h"
 
-#define Q_FLAGS "i" COMMON_FLAGS
+#define Q_FLAGS "io" COMMON_FLAGS
 static struct option const q_long_opts[] = {
 	{"install",       no_argument, NULL, 'i'},
+	{"overlays",      no_argument, NULL, 'o'},
 	COMMON_LONG_OPTS
 };
 static const char * const q_opts_help[] = {
 	"Install symlinks for applets",
+	"Print available overlays (read from repos.conf)",
 	COMMON_OPTS_HELP
 };
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, NULL, lookup_applet_idx("q"))
@@ -71,7 +75,9 @@ int lookup_applet_idx(const char *applet)
 
 int q_main(int argc, char **argv)
 {
-	int i, install;
+	int i;
+	bool install;
+	bool print_overlays;
 	const char *p;
 	APPLET func;
 
@@ -88,12 +94,13 @@ int q_main(int argc, char **argv)
 	if (argc == 1)
 		q_usage(EXIT_FAILURE);
 
-	install = 0;
-
+	install = false;
+	print_overlays = false;
 	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
-		case 'i': install = 1; break;
+		case 'i': install = true;        break;
+		case 'o': print_overlays = true; break;
 		}
 	}
 
@@ -148,6 +155,30 @@ int q_main(int argc, char **argv)
 		close(fd);
 
 		return ret;
+	}
+
+	if (print_overlays) {
+		char *overlay;
+		char *repo_name = NULL;
+		size_t repo_name_len = 0;
+		char buf[_Q_PATH_MAX];
+		size_t n;
+
+		array_for_each(overlays, n, overlay) {
+			snprintf(buf, sizeof(buf), "%s/profiles/repo_name", overlay);
+			if (!eat_file(buf, &repo_name, &repo_name_len))
+				repo_name = NULL;
+			if (repo_name != NULL)
+				rmspace(repo_name);
+			printf("%s%s%s: %s%s%s%s\n",
+					GREEN, repo_name == NULL ? "?unknown?" : repo_name,
+					NORM, overlay,
+					YELLOW, main_overlay == overlay ? " (main)" : "", NORM);
+		}
+		if (repo_name != NULL)
+			free(repo_name);
+
+		return 0;
 	}
 
 	if (argc == optind)

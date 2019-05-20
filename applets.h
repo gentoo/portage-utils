@@ -152,6 +152,7 @@ extern char *port_tmpdir;
 extern char *features;
 extern char *install_mask;
 extern DEFINE_ARRAY(overlays);
+extern char *main_overlay;
 
 void no_colors(void);
 void setup_quiet(void);
