@@ -23,6 +23,7 @@
 #include "xasprintf.h"
 
 /* variables to control runtime behavior */
+char *main_overlay;
 char *module_name = NULL;
 int verbose = 0;
 int quiet = 0;
@@ -39,8 +40,8 @@ char *port_tmpdir;
 char *features;
 char *install_mask;
 DECLARE_ARRAY(overlays);
+DECLARE_ARRAY(overlay_names);
 
-static char *main_overlay;
 static char *portarch;
 static char *portedb;
 static char *eprefix;
@@ -237,6 +238,7 @@ read_one_repos_conf(const char *repos_conf)
 		path = iniparser_getstring(dict, conf, NULL);
 		if (path) {
 			void *ele = xarraypush_str(overlays, path);
+			xarraypush_str(overlay_names, repo);
 			if (main_repo && !strcmp(repo, main_repo))
 				main_overlay = ele;
 		}
@@ -735,8 +737,10 @@ initialize_portage_env(void)
 	read_repos_conf(configroot, "/etc/portage/repos.conf");
 	if (orig_main_overlay != main_overlay)
 		free(orig_main_overlay);
-	if (array_cnt(overlays) == 0)
+	if (array_cnt(overlays) == 0) {
 		xarraypush_str(overlays, main_overlay);
+		xarraypush_str(overlay_names, "<PORTDIR>");
+	}
 
 	if (getenv("DEBUG")) {
 		for (i = 0; vars_to_read[i].name; ++i) {

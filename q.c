@@ -165,18 +165,24 @@ int q_main(int argc, char **argv)
 		size_t n;
 
 		array_for_each(overlays, n, overlay) {
-			snprintf(buf, sizeof(buf), "%s/profiles/repo_name", overlay);
-			if (!eat_file(buf, &repo_name, &repo_name_len))
+			repo_name = xarrayget(overlay_names, n);
+			if (strcmp(repo_name, "<PORTDIR>") == 0) {
 				repo_name = NULL;
-			if (repo_name != NULL)
-				rmspace(repo_name);
+				snprintf(buf, sizeof(buf), "%s/profiles/repo_name", overlay);
+				if (!eat_file(buf, &repo_name, &repo_name_len))
+					repo_name = NULL;
+				if (repo_name != NULL)
+					rmspace(repo_name);
+			}
 			printf("%s%s%s: %s%s%s%s\n",
 					GREEN, repo_name == NULL ? "?unknown?" : repo_name,
 					NORM, overlay,
 					YELLOW, main_overlay == overlay ? " (main)" : "", NORM);
+			if (repo_name_len != 0) {
+				free(repo_name);
+				repo_name_len = 0;
+			}
 		}
-		if (repo_name != NULL)
-			free(repo_name);
 
 		return 0;
 	}
