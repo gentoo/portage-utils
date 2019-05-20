@@ -243,7 +243,7 @@ LTLIBRARIES = $(noinst_LTLIBRARIES)
 libq_la_LIBADD =
 am__objects_1 = libq_la-atom.lo libq_la-basename.lo libq_la-colors.lo \
 	libq_la-contents.lo libq_la-copy_file.lo libq_la-dep.lo \
-	libq_la-eat_file.lo libq_la-hash_fd.lo \
+	libq_la-eat_file.lo libq_la-hash.lo libq_la-hash_fd.lo \
 	libq_la-human_readable.lo libq_la-md5_sha1_sum.lo \
 	libq_la-prelink.lo libq_la-profile.lo libq_la-rmspace.lo \
 	libq_la-safe_io.lo libq_la-scandirat.lo libq_la-set.lo \
@@ -719,6 +719,9 @@ GNULIB_WMEMMOVE = @GNULIB_WMEMMOVE@
 GNULIB_WMEMSET = @GNULIB_WMEMSET@
 GNULIB_WRITE = @GNULIB_WRITE@
 GNULIB__EXIT = @GNULIB__EXIT@
+GPGME_CFLAGS = @GPGME_CFLAGS@
+GPGME_CONFIG = @GPGME_CONFIG@
+GPGME_LIBS = @GPGME_LIBS@
 GREP = @GREP@
 HAVE_ACOSF = @HAVE_ACOSF@
 HAVE_ACOSL = @HAVE_ACOSL@
@@ -1055,13 +1058,16 @@ INT32_MAX_LT_INTMAX_MAX = @INT32_MAX_LT_INTMAX_MAX@
 INT64_MAX_EQ_LONG_MAX = @INT64_MAX_EQ_LONG_MAX@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBBL2 = @LIBBL2@
 LIBGNU_LIBDEPS = @LIBGNU_LIBDEPS@
 LIBGNU_LTLIBDEPS = @LIBGNU_LTLIBDEPS@
 LIBINTL = @LIBINTL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
+LIBSSL = @LIBSSL@
 LIBTOOL = @LIBTOOL@
 LIBTOOL_DEPS = @LIBTOOL_DEPS@
+LIBZ = @LIBZ@
 LIB_CLOCK_GETTIME = @LIB_CLOCK_GETTIME@
 LIB_EACCESS = @LIB_EACCESS@
 LIMITS_H = @LIMITS_H@
@@ -1120,6 +1126,7 @@ NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
+OPENMP_CFLAGS = @OPENMP_CFLAGS@
 OTOOL = @OTOOL@
 OTOOL64 = @OTOOL64@
 PACKAGE = @PACKAGE@
@@ -1453,6 +1460,7 @@ QFILES = \
 	copy_file.c copy_file.h \
 	dep.c dep.h \
 	eat_file.c eat_file.h \
+	hash.c hash.h \
 	hash_fd.c hash_fd.h \
 	human_readable.c human_readable.h \
 	i18n.h \
@@ -1476,6 +1484,7 @@ QFILES = \
 noinst_LTLIBRARIES = libq.la
 libq_la_SOURCES = $(QFILES)
 libq_la_CPPFLAGS = \
+	$(OPENMP_CFLAGS) \
 	-I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib
 
@@ -1540,6 +1549,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-copy_file.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-dep.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-eat_file.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-hash.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-hash_fd.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-human_readable.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-md5_sha1_sum.Plo@am__quote@
@@ -1626,6 +1636,13 @@ libq_la-eat_file.lo: eat_file.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='eat_file.c' object='libq_la-eat_file.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-eat_file.lo `test -f 'eat_file.c' || echo '$(srcdir)/'`eat_file.c
+
+libq_la-hash.lo: hash.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-hash.lo -MD -MP -MF $(DEPDIR)/libq_la-hash.Tpo -c -o libq_la-hash.lo `test -f 'hash.c' || echo '$(srcdir)/'`hash.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_la-hash.Tpo $(DEPDIR)/libq_la-hash.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='hash.c' object='libq_la-hash.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-hash.lo `test -f 'hash.c' || echo '$(srcdir)/'`hash.c
 
 libq_la-hash_fd.lo: hash_fd.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-hash_fd.lo -MD -MP -MF $(DEPDIR)/libq_la-hash_fd.Tpo -c -o libq_la-hash_fd.lo `test -f 'hash_fd.c' || echo '$(srcdir)/'`hash_fd.c

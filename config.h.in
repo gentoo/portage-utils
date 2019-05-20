@@ -59,6 +59,9 @@
 /* Define to 1 if // is a file system root distinct from /. */
 #undef DOUBLE_SLASH_IS_DISTINCT_ROOT
 
+/* Define if qmanifest should be compiled */
+#undef ENABLE_QMANIFEST
+
 /* Define this to 1 if F_DUPFD behavior does not match POSIX */
 #undef FCNTL_DUPFD_BUGGY
 
@@ -319,6 +322,12 @@
    */
 #undef HAVE_ALLOCA_H
 
+/* Define if you have blake2b */
+#undef HAVE_BLAKE2B
+
+/* Define to 1 if you have the <blake2.h> header file. */
+#undef HAVE_BLAKE2_H
+
 /* Define to 1 if you have the <bp-sym.h> header file. */
 #undef HAVE_BP_SYM_H
 
@@ -537,6 +546,9 @@
 /* Define to 1 if you have the <libgen.h> header file. */
 #undef HAVE_LIBGEN_H
 
+/* Define if you have zlib */
+#undef HAVE_LIBZ
+
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 
@@ -596,6 +608,12 @@
 /* Define to 1 if you have the `opendir' function. */
 #undef HAVE_OPENDIR
 
+/* Define to 1 if you have the <openssl/err.h> header file. */
+#undef HAVE_OPENSSL_ERR_H
+
+/* Define to 1 if you have the <openssl/ssl.h> header file. */
+#undef HAVE_OPENSSL_SSL_H
+
 /* Define to 1 if you have the `pipe' function. */
 #undef HAVE_PIPE
 
@@ -642,6 +660,9 @@
    bytes (excluding the terminating NUL) that would have been produced if the
    buffer had been large enough. */
 #undef HAVE_SNPRINTF_RETVAL_C99
+
+/* Define if you have ssl */
+#undef HAVE_SSL
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -791,6 +812,9 @@
 
 /* Define if utimes works properly. */
 #undef HAVE_WORKING_UTIMES
+
+/* Define to 1 if you have the <zlib.h> header file. */
+#undef HAVE_ZLIB_H
 
 /* Define to 1 if the system has the type `_Bool'. */
 #undef HAVE__BOOL

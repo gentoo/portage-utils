@@ -19,6 +19,9 @@ no longer necessary to initialise the cache at any time.
 \fB\-i\fR, \fB\-\-install\fR
 Install symlinks for applets.
 .TP
+\fB\-o\fR, \fB\-\-overlays\fR
+Print available overlays (read from repos.conf).
+.TP
 \fB\-\-root\fR \fI<arg>\fR
 Set the ROOT env var.
 .TP
@@ -41,21 +44,22 @@ Print version and exit.
 .B This applet also has sub applets:
         q <applet> <args> : virtual applet
     qatom <pkg>           : split atom strings
- qkeyword <action> <args> : list packages based on keywords
    qcheck <pkgname>       : verify integrity of installed packages
  qdepends <pkgname>       : show dependency info
     qfile <filename>      : list all pkgs owning files
     qgrep <expr> [pkg ...]: grep in ebuilds
+ qkeyword <action> <args> : list packages based on keywords
     qlist <pkgname>       : list files owned by pkgname
      qlop <pkgname>       : emerge log analyzer
+ qmanifest <misc args>     : verify or generate thick Manifest files
    qmerge <pkgnames>      : fetch and merge binary package
      qpkg <misc args>     : manipulate Gentoo binpkgs
   qsearch <regex>         : search pkgname/desc
     qsize <pkgname>       : calculate size usage
     qtbz2 <misc args>     : manipulate tbz2 packages
+ qtegrity <misc args>     : verify files with IMA
      quse <useflag>       : find pkgs using useflags
     qxpak <misc args>     : manipulate xpak archives
- qtegrity <misc args>     : verify files with IMA
 .fi
 .SH "REPORTING BUGS"
 Please report bugs via http://bugs.gentoo.org/
@@ -76,6 +80,7 @@ Fabian Groffen <grobian@gentoo.org>
 .BR qkeyword (1),
 .BR qlist (1),
 .BR qlop (1),
+.BR qmanifest (1),
 .BR qmerge (1),
 .BR qpkg (1),
 .BR qsearch (1),
