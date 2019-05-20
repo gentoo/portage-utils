@@ -79,7 +79,7 @@ testit src.typos
 # don't allow obsolete functions
 #
 find ${ats} "${src_files[@]}" -print0 | xargs -0 \
-	grep -n -E -e '\<(bcmp|bcopy|bzero|getwd|index|mktemp|rindex|utimes)\>[[:space:]]*\(' \
+	grep -n -E -e '\<(bcmp|bcopy|bzero|getwd|index|mktemp|rindex|utime)\>[[:space:]]*\(' \
 	| sed -e "s:^\.\./\.\./::g" > src.obsolete.funcs
 testit src.obsolete.funcs
 
