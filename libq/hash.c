@@ -106,9 +106,15 @@ hash_compute_file(
 	SHA256_CTX s256;
 	SHA512_CTX s512;
 	WHIRLPOOL_CTX whrl;
+#else
+	(void)sha256;
+	(void)sha512;
+	(void)whrlpl;
 #endif
 #ifdef HAVE_BLAKE2B
 	blake2b_state bl2b;
+#else
+	(void)blak2b;
 #endif
 
 	if ((f = fopen(fname, "r")) == NULL)
