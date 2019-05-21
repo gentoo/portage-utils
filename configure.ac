@@ -103,6 +103,7 @@ AS_IF([test "x$enable_qmanifest" != xno],
 	   AC_MSG_CHECKING([whether to enable qmanifest])
 	   AC_MSG_RESULT([no: disabled by configure argument])
 	])
+AM_CONDITIONAL([QMANIFEST_ENABLED], [test "x$enable_qmanifest" != xno])
 
 AX_CFLAGS_WARN_ALL
 AC_DEFUN([PT_CHECK_CFLAG],[AX_CHECK_COMPILER_FLAGS([$1],[CFLAGS="$CFLAGS $1"])])

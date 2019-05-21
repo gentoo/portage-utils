@@ -17,7 +17,6 @@ APPLETS = \
 	qkeyword \
 	qlist \
 	qlop \
-	qmanifest \
 	qmerge \
 	qpkg \
 	qsearch \
@@ -38,7 +37,6 @@ dist_man_MANS = \
 	man/qkeyword.1 \
 	man/qlist.1 \
 	man/qlop.1 \
-	man/qmanifest.1 \
 	man/qmerge.1 \
 	man/qpkg.1 \
 	man/qsearch.1 \
@@ -61,7 +59,6 @@ q_SOURCES = \
 	qkeyword.c \
 	qlist.c \
 	qlop.c \
-	qmanifest.c \
 	qmerge.c \
 	qpkg.c \
 	qsearch.c \
@@ -90,6 +87,12 @@ q_LDADD = \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS) \
 	$(NULL)
+
+if QMANIFEST_ENABLED
+q_SOURCES += qmanifest.c
+dist_man_MANS += man/qmanifest.1
+APPLETS += qmanifest
+endif
 
 install-exec-hook:
 	cd $(DESTDIR)$(bindir); \
