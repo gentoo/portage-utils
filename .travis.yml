@@ -25,4 +25,5 @@ addons:
 before_install:
   - ./travis/install-iniparser.sh
   - ./travis/install-blake2.sh
+  - sudo apt-get install libgpgme-dev
 script: ./travis/main.sh
