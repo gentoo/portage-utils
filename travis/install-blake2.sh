@@ -15,12 +15,14 @@ main() {
 		./configure \
 			--enable-static \
 			--disable-shared \
+			--disable-openmp \
 			--prefix=/ \
 			--libdir=/ \
 			--includedir=/
 		m
 		m DESTDIR="${PWD}/../../sysroot" install
 	)
+	v rm -f ../sysroot/*.la
 	v rm -rf libb2*
 	travis_fold end dep-blake2
 }
