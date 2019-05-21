@@ -19,7 +19,7 @@ main() {
 			--libdir=/ \
 			--includedir=/
 		m
-		m DESTDIR=../../sysroot install
+		m DESTDIR="${PWD}/../../sysroot" install
 	)
 	v rm -rf libb2*
 	travis_fold end dep-blake2

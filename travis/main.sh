@@ -31,7 +31,8 @@ main() {
 	export LDFLAGS="-L${PWD}/../sysroot"
 
 	# ignore timestamps which git doesn't preserve
-	v ./configure --disable-maintainer-mode
+	# disable openmp because Clang's libomp isn't installed
+	v ./configure --disable-maintainer-mode --disable-openmp
 
 	# Standard optimized build.
 	m
