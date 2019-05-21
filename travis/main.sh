@@ -35,7 +35,7 @@ main() {
 	v ./configure --disable-maintainer-mode --disable-openmp
 
 	# Standard optimized build.
-	m
+	m V=1
 	m check
 
 	# LSan needs sudo, which we don't use at the moment
