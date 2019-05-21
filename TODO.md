@@ -85,3 +85,6 @@
 
 # qkeyword
 - drop -c argument? it can be fully expressed using -p cat/
+
+# qmanifest
+- use openat in most places

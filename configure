@@ -639,6 +639,8 @@ am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+QMANIFEST_ENABLED_FALSE
+QMANIFEST_ENABLED_TRUE
 GPGME_LIBS
 GPGME_CFLAGS
 GPGME_CONFIG
@@ -34901,6 +34903,14 @@ $as_echo_n "checking whether to enable qmanifest... " >&6; }
 $as_echo "no: disabled by configure argument" >&6; }
 
 fi
+ if test "x$enable_qmanifest" != xno; then
+  QMANIFEST_ENABLED_TRUE=
+  QMANIFEST_ENABLED_FALSE='#'
+else
+  QMANIFEST_ENABLED_TRUE='#'
+  QMANIFEST_ENABLED_FALSE=
+fi
+
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -35602,7 +35612,7 @@ fi
 # -Wno-format-nonliteral
 # -Wno-expansion-to-defined
 
-ac_config_files="$ac_config_files Makefile libq/Makefile autotools/gnulib/Makefile tests/init.sh tests/Makefile tests/atom_compare/Makefile tests/atom_explode/Makefile tests/copy_file/Makefile tests/install/Makefile tests/mkdir/Makefile tests/profile/Makefile tests/qatom/Makefile tests/qcheck/Makefile tests/qdepends/Makefile tests/qfile/Makefile tests/qlist/Makefile tests/qlop/Makefile tests/qmerge/Makefile tests/qtbz2/Makefile tests/quse/Makefile tests/qxpak/Makefile tests/rmspace/Makefile tests/source/Makefile"
+ac_config_files="$ac_config_files Makefile libq/Makefile autotools/gnulib/Makefile tests/init.sh tests/Makefile tests/atom_compare/Makefile tests/atom_explode/Makefile tests/copy_file/Makefile tests/install/Makefile tests/mkdir/Makefile tests/profile/Makefile tests/qatom/Makefile tests/qcheck/Makefile tests/qdepends/Makefile tests/qfile/Makefile tests/qlist/Makefile tests/qlop/Makefile tests/qmanifest/Makefile tests/qmerge/Makefile tests/qtbz2/Makefile tests/quse/Makefile tests/qxpak/Makefile tests/rmspace/Makefile tests/source/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -35815,6 +35825,10 @@ fi
     gltests_LTLIBOBJS=$gltests_ltlibobjs
 
 
+if test -z "${QMANIFEST_ENABLED_TRUE}" && test -z "${QMANIFEST_ENABLED_FALSE}"; then
+  as_fn_error $? "conditional \"QMANIFEST_ENABLED\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 
 : "${CONFIG_STATUS=./config.status}"
 ac_write_fail=0
@@ -36710,6 +36724,7 @@ do
     "tests/qfile/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qfile/Makefile" ;;
     "tests/qlist/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qlist/Makefile" ;;
     "tests/qlop/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qlop/Makefile" ;;
+    "tests/qmanifest/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qmanifest/Makefile" ;;
     "tests/qmerge/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qmerge/Makefile" ;;
     "tests/qtbz2/Makefile") CONFIG_FILES="$CONFIG_FILES tests/qtbz2/Makefile" ;;
     "tests/quse/Makefile") CONFIG_FILES="$CONFIG_FILES tests/quse/Makefile" ;;

@@ -89,6 +89,9 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = q$(EXEEXT)
+@QMANIFEST_ENABLED_TRUE@am__append_1 = qmanifest.c
+@QMANIFEST_ENABLED_TRUE@am__append_2 = man/qmanifest.1
+@QMANIFEST_ENABLED_TRUE@am__append_3 = qmanifest
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
@@ -245,13 +248,17 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
+am__q_SOURCES_DIST = main.c q.c qatom.c qcheck.c qdepends.c qfile.c \
+	qgrep.c qkeyword.c qlist.c qlop.c qmerge.c qpkg.c qsearch.c \
+	qsize.c qtbz2.c qtegrity.c quse.c qxpak.c qmanifest.c
+@QMANIFEST_ENABLED_TRUE@am__objects_1 = q-qmanifest.$(OBJEXT)
 am_q_OBJECTS = q-main.$(OBJEXT) q-q.$(OBJEXT) q-qatom.$(OBJEXT) \
 	q-qcheck.$(OBJEXT) q-qdepends.$(OBJEXT) q-qfile.$(OBJEXT) \
 	q-qgrep.$(OBJEXT) q-qkeyword.$(OBJEXT) q-qlist.$(OBJEXT) \
-	q-qlop.$(OBJEXT) q-qmanifest.$(OBJEXT) q-qmerge.$(OBJEXT) \
-	q-qpkg.$(OBJEXT) q-qsearch.$(OBJEXT) q-qsize.$(OBJEXT) \
-	q-qtbz2.$(OBJEXT) q-qtegrity.$(OBJEXT) q-quse.$(OBJEXT) \
-	q-qxpak.$(OBJEXT)
+	q-qlop.$(OBJEXT) q-qmerge.$(OBJEXT) q-qpkg.$(OBJEXT) \
+	q-qsearch.$(OBJEXT) q-qsize.$(OBJEXT) q-qtbz2.$(OBJEXT) \
+	q-qtegrity.$(OBJEXT) q-quse.$(OBJEXT) q-qxpak.$(OBJEXT) \
+	$(am__objects_1)
 q_OBJECTS = $(am_q_OBJECTS)
 am__DEPENDENCIES_1 =
 q_DEPENDENCIES = $(am__DEPENDENCIES_1) $(top_builddir)/libq/libq.la \
@@ -298,7 +305,7 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(q_SOURCES)
-DIST_SOURCES = $(q_SOURCES)
+DIST_SOURCES = $(am__q_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -1558,70 +1565,16 @@ SUBDIRS = \
 	tests \
 	$(NULL)
 
-APPLETS = \
-	q \
-	qatom \
-	qcheck \
-	qdepends \
-	qfile \
-	qgrep \
-	qkeyword \
-	qlist \
-	qlop \
-	qmanifest \
-	qmerge \
-	qpkg \
-	qsearch \
-	qsize \
-	qtbz2 \
-	qtegrity \
-	quse \
-	qxpak \
-	$(NULL)
-
-dist_man_MANS = \
-	man/q.1 \
-	man/qatom.1 \
-	man/qcheck.1 \
-	man/qdepends.1 \
-	man/qfile.1 \
-	man/qgrep.1 \
-	man/qkeyword.1 \
-	man/qlist.1 \
-	man/qlop.1 \
-	man/qmanifest.1 \
-	man/qmerge.1 \
-	man/qpkg.1 \
-	man/qsearch.1 \
-	man/qsize.1 \
-	man/qtbz2.1 \
-	man/qtegrity.1 \
-	man/quse.1 \
-	man/qxpak.1 \
-	$(NULL)
-
-q_SOURCES = \
-	main.c \
-	q.c \
-	qatom.c \
-	qcheck.c \
-	qdepends.c \
-	qfile.c \
-	qgrep.c \
-	qkeyword.c \
-	qlist.c \
-	qlop.c \
-	qmanifest.c \
-	qmerge.c \
-	qpkg.c \
-	qsearch.c \
-	qsize.c \
-	qtbz2.c \
-	qtegrity.c \
-	quse.c \
-	qxpak.c \
-	$(NULL)
-
+APPLETS = q qatom qcheck qdepends qfile qgrep qkeyword qlist qlop \
+	qmerge qpkg qsearch qsize qtbz2 qtegrity quse qxpak $(NULL) \
+	$(am__append_3)
+dist_man_MANS = man/q.1 man/qatom.1 man/qcheck.1 man/qdepends.1 \
+	man/qfile.1 man/qgrep.1 man/qkeyword.1 man/qlist.1 man/qlop.1 \
+	man/qmerge.1 man/qpkg.1 man/qsearch.1 man/qsize.1 man/qtbz2.1 \
+	man/qtegrity.1 man/quse.1 man/qxpak.1 $(NULL) $(am__append_2)
+q_SOURCES = main.c q.c qatom.c qcheck.c qdepends.c qfile.c qgrep.c \
+	qkeyword.c qlist.c qlop.c qmerge.c qpkg.c qsearch.c qsize.c \
+	qtbz2.c qtegrity.c quse.c qxpak.c $(NULL) $(am__append_1)
 q_CPPFLAGS = \
 	$(OPENMP_CFLAGS) \
 	$(GPGME_CFLAGS) \
@@ -1943,20 +1896,6 @@ q-qlop.obj: qlop.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qlop.obj `if test -f 'qlop.c'; then $(CYGPATH_W) 'qlop.c'; else $(CYGPATH_W) '$(srcdir)/qlop.c'; fi`
 
-q-qmanifest.o: qmanifest.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qmanifest.o -MD -MP -MF $(DEPDIR)/q-qmanifest.Tpo -c -o q-qmanifest.o `test -f 'qmanifest.c' || echo '$(srcdir)/'`qmanifest.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qmanifest.Tpo $(DEPDIR)/q-qmanifest.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qmanifest.c' object='q-qmanifest.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qmanifest.o `test -f 'qmanifest.c' || echo '$(srcdir)/'`qmanifest.c
-
-q-qmanifest.obj: qmanifest.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qmanifest.obj -MD -MP -MF $(DEPDIR)/q-qmanifest.Tpo -c -o q-qmanifest.obj `if test -f 'qmanifest.c'; then $(CYGPATH_W) 'qmanifest.c'; else $(CYGPATH_W) '$(srcdir)/qmanifest.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qmanifest.Tpo $(DEPDIR)/q-qmanifest.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qmanifest.c' object='q-qmanifest.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qmanifest.obj `if test -f 'qmanifest.c'; then $(CYGPATH_W) 'qmanifest.c'; else $(CYGPATH_W) '$(srcdir)/qmanifest.c'; fi`
-
 q-qmerge.o: qmerge.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qmerge.o -MD -MP -MF $(DEPDIR)/q-qmerge.Tpo -c -o q-qmerge.o `test -f 'qmerge.c' || echo '$(srcdir)/'`qmerge.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qmerge.Tpo $(DEPDIR)/q-qmerge.Po
@@ -2068,6 +2007,20 @@ q-qxpak.obj: qxpak.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qxpak.c' object='q-qxpak.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qxpak.obj `if test -f 'qxpak.c'; then $(CYGPATH_W) 'qxpak.c'; else $(CYGPATH_W) '$(srcdir)/qxpak.c'; fi`
+
+q-qmanifest.o: qmanifest.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qmanifest.o -MD -MP -MF $(DEPDIR)/q-qmanifest.Tpo -c -o q-qmanifest.o `test -f 'qmanifest.c' || echo '$(srcdir)/'`qmanifest.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qmanifest.Tpo $(DEPDIR)/q-qmanifest.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qmanifest.c' object='q-qmanifest.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qmanifest.o `test -f 'qmanifest.c' || echo '$(srcdir)/'`qmanifest.c
+
+q-qmanifest.obj: qmanifest.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qmanifest.obj -MD -MP -MF $(DEPDIR)/q-qmanifest.Tpo -c -o q-qmanifest.obj `if test -f 'qmanifest.c'; then $(CYGPATH_W) 'qmanifest.c'; else $(CYGPATH_W) '$(srcdir)/qmanifest.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qmanifest.Tpo $(DEPDIR)/q-qmanifest.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qmanifest.c' object='q-qmanifest.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qmanifest.obj `if test -f 'qmanifest.c'; then $(CYGPATH_W) 'qmanifest.c'; else $(CYGPATH_W) '$(srcdir)/qmanifest.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
