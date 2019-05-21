@@ -138,7 +138,7 @@ list_dir(char ***retlist, size_t *retcnt, const char *path)
 
 			if (rlen == rsize) {
 				rsize += LISTSZ;
-				rlist = realloc(rlist,
+				rlist = xrealloc(rlist,
 						rsize * sizeof(rlist[0]));
 				if (rlist == NULL) {
 					fprintf(stderr, "out of memory\n");
@@ -691,11 +691,11 @@ generate_dir(const char *dir, enum type_manifest mtype)
 static const char *
 process_dir_gen(const char *dir)
 {
-	char path[8192];
+	char path[_Q_PATH_MAX];
 	int newhashes;
 	int curdirfd;
 
-	snprintf(path, sizeof(path), "%s/metadata/layout.conf", dir);
+	snprintf(path, sizeof(path), "%s%s/metadata/layout.conf", portroot, dir);
 	if ((newhashes = parse_layout_conf(path)) != 0) {
 		hashes = newhashes;
 	} else {
@@ -706,7 +706,8 @@ process_dir_gen(const char *dir)
 		fprintf(stderr, "cannot open current directory?!? %s\n",
 				strerror(errno));
 	}
-	if (chdir(dir) != 0) {
+	snprintf(path, sizeof(path), "%s%s", portroot, dir);
+	if (chdir(path) != 0) {
 		fprintf(stderr, "cannot chdir() to %s: %s\n", dir, strerror(errno));
 		return "not a directory";
 	}
@@ -715,7 +716,8 @@ process_dir_gen(const char *dir)
 		return "generation failed";
 
 	/* return to where we were before we called this function */
-	fchdir(curdirfd);
+	if (fchdir(curdirfd) != 0 && verbose > 1)
+		warn("could not move back to original directory");
 	close(curdirfd);
 
 	return NULL;
@@ -1154,7 +1156,7 @@ verify_dir(
 
 				if (subdirlen == subdirsize) {
 					subdirsize += LISTSZ;
-					subdir = realloc(subdir,
+					subdir = xrealloc(subdir,
 							subdirsize * sizeof(subdir[0]));
 					if (subdir == NULL) {
 						msgs_add(msgs, mfest, NULL, "out of memory allocating "
@@ -1434,8 +1436,7 @@ process_dir_vrfy(const char *dir)
 
 	gettimeofday(&startt, NULL);
 
-	fprintf(stdout, "verifying %s...\n", dir);
-	snprintf(buf, sizeof(buf), "%s/metadata/layout.conf", dir);
+	snprintf(buf, sizeof(buf), "%s%s/metadata/layout.conf", portroot,  dir);
 	if ((newhashes = parse_layout_conf(buf)) != 0) {
 		hashes = newhashes;
 	} else {
@@ -1446,7 +1447,8 @@ process_dir_vrfy(const char *dir)
 		fprintf(stderr, "cannot open current directory?!? %s\n",
 				strerror(errno));
 	}
-	if (chdir(dir) != 0) {
+	snprintf(buf, sizeof(buf), "%s%s", portroot, dir);
+	if (chdir(buf) != 0) {
 		fprintf(stderr, "cannot chdir() to %s: %s\n", dir, strerror(errno));
 		return "not a directory";
 	}
@@ -1574,7 +1576,8 @@ process_dir_vrfy(const char *dir)
 	gettimeofday(&finisht, NULL);
 
 	/* return to where we were before we called this function */
-	fchdir(curdirfd);
+	if (fchdir(curdirfd) != 0 && verbose > 1)
+		warn("could not move back to original directory");
 	close(curdirfd);
 
 	etime = ((double)((finisht.tv_sec - startt.tv_sec) * 1000000 +
@@ -1589,11 +1592,12 @@ qmanifest_main(int argc, char **argv)
 {
 	char *prog;
 	const char *(*runfunc)(const char *);
-	int ret = 0;
+	int ret;
 	const char *rsn;
 	bool isdir = false;
 	bool isoverlay = false;
 	char *overlay;
+	char path[_Q_PATH_MAX];
 	size_t n;
 	int i;
 
@@ -1634,15 +1638,14 @@ qmanifest_main(int argc, char **argv)
 	gpgme_check_version(NULL);
 
 	if (isoverlay || (!isdir && !isoverlay)) {
-		char buf[_Q_PATH_MAX];
 		char *repo;
 		size_t repolen;
 
 		array_for_each(overlays, n, overlay) {
 			repo = xarrayget(overlay_names, n);
 			if (strcmp(repo, "<PORTDIR>") == 0) {
-				snprintf(buf, sizeof(buf), "%s/profiles/repo_name", overlay);
-				if (eat_file(buf, &repo, &repolen)) {
+				snprintf(path, sizeof(path), "%s/profiles/repo_name", overlay);
+				if (eat_file(path, &repo, &repolen)) {
 					free(array_get_elem(overlays, n));
 					array_get_elem(overlays, n) = repo;
 				}
@@ -1650,6 +1653,7 @@ qmanifest_main(int argc, char **argv)
 		}
 	}
 
+	ret = EXIT_SUCCESS;
 	argc -= optind;
 	argv += optind;
 	for (i = 0; i < argc; i++) {
@@ -1669,23 +1673,39 @@ qmanifest_main(int argc, char **argv)
 
 		if (isoverlay && overlay == NULL) {
 			warn("no such overlay: %s", argv[i]);
+			ret |= 1;
 			continue;
 		}
 		if (isdir || (!isoverlay && overlay == NULL)) /* !isdir && !isoverlay */
 			overlay = argv[i];
 
+		if (runfunc == process_dir_vrfy)
+			printf("verifying %s%s%s...\n", BOLD, overlay, NORM);
+
+		if (*overlay != '/') {
+			if (portroot[1] == '\0') {
+				/* resolve the path */
+				(void)realpath(overlay, path);
+			} else {
+				snprintf(path, sizeof(path), "./%s", overlay);
+			}
+			overlay = path;
+		}
+
 		rsn = runfunc(overlay);
 		if (rsn != NULL) {
 			printf("%s%s%s\n", RED, rsn, NORM);
-			ret |= 1;
+			ret |= 2;
 		}
 	}
 
 	if (i == 0) {
+		if (runfunc == process_dir_vrfy)
+			printf("verifying %s%s%s...\n", BOLD, main_overlay, NORM);
 		rsn = runfunc(main_overlay);
 		if (rsn != NULL) {
 			printf("%s%s%s\n", RED, rsn, NORM);
-			ret |= 1;
+			ret |= 2;
 		}
 	}
 
