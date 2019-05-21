@@ -1,0 +1,55 @@
+#!/bin/bash
+
+. ../init.sh || exit 1
+
+set -e
+
+export ROOT=${as}/root
+export PORTAGE_CONFIGROOT=${as}/root
+
+mktmpdir
+
+test() {
+	local num=$1 exp=$2 ret=0
+	shift 2
+	eval "$@" > manifest 2>&1 || ret=$?
+	sed -i -e '/^checked [0-9]/s/ in [0-9.]\+s$//' manifest
+	if ! diff -u ${as}/manifest${num}.good manifest; then
+		tfail "output does not match"
+	fi
+	if [[ ${exp} -ne ${ret} ]] ; then
+		tfail "exit code (${ret}) does not match expected (${exp}) for test ${num}"
+	fi
+	tend $? "$*"
+}
+
+# verify we see our overlays
+test 00 0 "q -o"
+
+# simple run check (should do bad_tree)
+test 01 2 "qmanifest"
+
+# match overlay
+test 02 2 "qmanifest not_a_tree"
+
+# match dir
+test 03 2 "qmanifest notatree"
+
+# dir test
+test 04 2 "qmanifest -d not_a_tree"
+
+# overlay test
+test 05 1 "qmanifest -o notatree"
+
+# generate a valid tree
+rm -Rf testtree
+cp -r "${ROOT}/simpletree" testtree || echo try it anyway
+unset ROOT PORTAGE_CONFIGROOT
+test 06 0 "qmanifest -g testtree"
+
+# validate the just generated tree (doesn't do GPG signing hence fails)
+test 07 0 "qmanifest testtree | sed '/Manifest timestamp/d'"
+
+cleantmpdir
+
+end

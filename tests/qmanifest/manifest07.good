@@ -1,0 +1,7 @@
+verifying testtree...
+Manifest:
+- failed to verify signature
+my-cat/mypackage/Manifest:
+- file not listed: unrecorded-file
+checked 5 Manifests, 9 files, 1 failures
+manifest verification failed

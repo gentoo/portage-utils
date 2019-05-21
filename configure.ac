@@ -150,6 +150,7 @@ AC_CONFIG_FILES([
 	tests/qfile/Makefile
 	tests/qlist/Makefile
 	tests/qlop/Makefile
+	tests/qmanifest/Makefile
 	tests/qmerge/Makefile
 	tests/qtbz2/Makefile
 	tests/quse/Makefile

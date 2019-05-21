@@ -1,0 +1,22 @@
+verifying /simpletree...
+Manifest timestamp: 2018-03-01T10:58:37Z
+Manifest:
+- failed to verify signature
+my-cat/mypackage/Manifest::mypackage-1.ebuild:
+- file size mismatch
+       got: 257
+  expected: 237
+my-cat/mypackage/Manifest::mypackage-2.ebuild:
+- BLAKE2B hash mismatch
+  computed: '2bcad0952735a0a5bf631fe1c65b...ea81babd2a90f3076daa1e6e62ecf042a0b'
+  Manifest: '2410d545e7441e6402c32ca3ce7e...9fb575bd6f74e7cd92e125181af722500a3'
+my-cat/mypackage/Manifest::mypackage-2.ebuild:
+- SHA512 hash mismatch
+  computed: 'baf9a3bf09b590997d77db13d171...548c3403ac9b2dc22cb78a3112305a68889'
+  Manifest: 'b22f73bd10773a7b01456a237b52...62307fba13d8b04988c5aeb417f2e286d61'
+my-cat/mypackage/Manifest::mypackage-3.ebuild:
+- DATA file listed in Manifest, but not found
+my-cat/mypackage/Manifest:
+- file not listed: unrecorded-file
+checked 5 Manifests, 9 files, 4 failures
+manifest verification failed
