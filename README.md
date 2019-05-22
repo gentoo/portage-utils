@@ -40,8 +40,11 @@ There's also a [HACKING](./HACKING.md) doc to help you get started.
 * get PORTDIR<br>
   `env DEBUG=: q -Ch 2>&1 | grep ^PORTDIR | awk '{print $3}`
 
-* Verify all packages<br>
+* verify all packages<br>
   `qcheck`
+
+* check validity of the Manifest files for the main tree<br>
+  `qmanifest`
 
 ## Contact
 
