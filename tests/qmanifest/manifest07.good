@@ -1,7 +1,6 @@
 verifying testtree...
-Manifest:
-- failed to verify signature
-my-cat/mypackage/Manifest:
-- file not listed: unrecorded-file
-checked 5 Manifests, 9 files, 1 failures
-manifest verification failed
+good signature made by
+  Qmanifest Test Key
+primary key fingerprint 3D69 5C8C 0F87 966B 62DC  5AFC DCFA BA8E 07F5 2261
+ RSA subkey fingerprint 3D69 5C8C 0F87 966B 62DC  5AFC DCFA BA8E 07F5 2261
+checked 5 Manifests, 9 files, 0 failures

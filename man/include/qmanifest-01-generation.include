@@ -1,0 +1,17 @@
+.SH "GENERATING A SIGNED TREE"
+.PP
+By default, \fBqmanifest\fR will not try to sign the top-level Manifest
+when it generating thick Manifests.  A tree as such isn't completely
+valid (as it misses the final signature), but still correct.  To sign
+the top-level Manifest, the \fB-s\fR flag needs to be used to provide
+the GPG keyid to sign with.  The passphrase is requested by \fBgpg\fR(1)
+itself, unless the \fB-p\fR flag is given, in which case \fBqmanifest\fR
+attempts to read the passphrase from \fIstdin\fR and then pass that
+passphrase onto \fBgpg\fR.  This is useful for scenarios in which the
+signing of a tree is scripted.
+.PP
+To generate a tree signed by GPG keyid \fI0x123567ABC\fR using
+passphrase \fImypasswd\fR, one could use:
+.nf\fI
+	$ echo mypasswd | qmanifest -g -s 0x123567ABC -p /path/to/tree
+.fi

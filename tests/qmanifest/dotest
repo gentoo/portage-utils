@@ -36,7 +36,7 @@ test 02 2 "qmanifest not_a_tree"
 test 03 2 "qmanifest notatree"
 
 # dir test
-test 04 2 "qmanifest -d not_a_tree"
+test 04 1 "qmanifest -d not_a_tree"
 
 # overlay test
 test 05 1 "qmanifest -o notatree"
@@ -44,11 +44,19 @@ test 05 1 "qmanifest -o notatree"
 # generate a valid tree
 rm -Rf testtree
 cp -r "${ROOT}/simpletree" testtree || echo try it anyway
+# make it a fully valid tree
+export HOME=${ROOT}  # for gnupg home
+rm testtree/my-cat/mypackage/unrecorded-file
 unset ROOT PORTAGE_CONFIGROOT
-test 06 0 "qmanifest -g testtree"
+SIGNAS=0x3D695C8C0F87966B62DC5AFCDCFABA8E07F52261
+KEYPASS=qmanifest
+test 06 0 "echo ${KEYPASS} | qmanifest -g -s ${SIGNAS} -p testtree"
 
-# validate the just generated tree (doesn't do GPG signing hence fails)
-test 07 0 "qmanifest testtree | sed '/Manifest timestamp/d'"
+# validate the just generated tree
+test 07 0 "qmanifest testtree | sed -e '/Manifest timestamp/d' -e 's/made .* UTC by/made by/'"
+
+# shut down agents and whatnot
+gpgconf --kill all
 
 cleantmpdir
 

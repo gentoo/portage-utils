@@ -1,2 +1,1 @@
-verifying not_a_tree...
-verification must be done on a full tree
+manifest: cannot change directory to not_a_tree: No such file or directory

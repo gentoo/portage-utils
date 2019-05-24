@@ -1,0 +1,8 @@
+signas: |
+    Sign generated Manifest using GPG key.  This key must exist in your
+    keyring and be valid for signing.
+passphrase: |
+    Ask for GPG key password (instead of relying on gpg-agent).  While
+    this option is not very useful compared to gpg's ways of gathering a
+    password, it is mainly intended for automated setups where the
+    password is piped in using \fIstdin\fR.

@@ -39,15 +39,19 @@
 #include "eat_file.h"
 #include "hash.h"
 
-#define QMANIFEST_FLAGS "gdo" COMMON_FLAGS
+#define QMANIFEST_FLAGS "gs:pdo" COMMON_FLAGS
 static struct option const qmanifest_long_opts[] = {
 	{"generate",   no_argument, NULL, 'g'},
+	{"signas",      a_argument, NULL, 's'},
+	{"passphrase", no_argument, NULL, 'p'},
 	{"dir",        no_argument, NULL, 'd'},
 	{"overlay",    no_argument, NULL, 'o'},
 	COMMON_LONG_OPTS
 };
 static const char * const qmanifest_opts_help[] = {
-	"Generate thick Manifests and sign",
+	"Generate thick Manifests",
+	"Sign generated Manifest using GPG key",
+	"Ask for GPG key password (instead of relying on gpg-agent)",
 	"Treat arguments as directories",
 	"Treat arguments as overlay names",
 	COMMON_OPTS_HELP
@@ -55,6 +59,8 @@ static const char * const qmanifest_opts_help[] = {
 #define qmanifest_usage(ret) usage(ret, QMANIFEST_FLAGS, qmanifest_long_opts, qmanifest_opts_help, NULL, lookup_applet_idx("qmanifest"))
 
 static int hashes = HASH_DEFAULT;
+static char *gpg_sign_key = NULL;
+static bool gpg_get_password = false;
 
 /* linked list structure to hold verification complaints */
 typedef struct verify_msg {
@@ -688,37 +694,124 @@ generate_dir(const char *dir, enum type_manifest mtype)
 	}
 }
 
+static gpgme_error_t
+gpgme_pw_cb(void *opaque, const char *uid_hint, const char *pw_info,
+		int last_was_bad, int fd)
+{
+	char *pass = (char *)opaque;
+	size_t passlen = strlen(pass);
+	ssize_t ret;
+
+	(void)uid_hint;
+	(void)pw_info;
+	(void)last_was_bad;
+
+	do {
+		ret = write(fd, pass, passlen);
+		if (ret > 0) {
+			pass += ret;
+			passlen -= ret;
+		}
+	} while (passlen > 0 && ret > 0);
+
+	return passlen == 0 ? GPG_ERR_NO_ERROR : gpgme_error_from_errno(errno);
+}
+
 static const char *
-process_dir_gen(const char *dir)
+process_dir_gen(void)
 {
 	char path[_Q_PATH_MAX];
 	int newhashes;
-	int curdirfd;
+	struct termios termio;
+	char *gpg_pass;
 
-	snprintf(path, sizeof(path), "%s%s/metadata/layout.conf", portroot, dir);
-	if ((newhashes = parse_layout_conf(path)) != 0) {
+	if ((newhashes = parse_layout_conf("metadata/layout.conf")) != 0) {
 		hashes = newhashes;
 	} else {
 		return "generation must be done on a full tree";
 	}
 
-	if ((curdirfd = open(".", O_RDONLY)) < 0) {
-		fprintf(stderr, "cannot open current directory?!? %s\n",
-				strerror(errno));
-	}
-	snprintf(path, sizeof(path), "%s%s", portroot, dir);
-	if (chdir(path) != 0) {
-		fprintf(stderr, "cannot chdir() to %s: %s\n", dir, strerror(errno));
-		return "not a directory";
-	}
-
 	if (generate_dir(".\0", GLOBAL_MANIFEST) == NULL)
 		return "generation failed";
 
-	/* return to where we were before we called this function */
-	if (fchdir(curdirfd) != 0 && verbose > 1)
-		warn("could not move back to original directory");
-	close(curdirfd);
+	if (gpg_sign_key != NULL) {
+		gpgme_ctx_t gctx;
+		gpgme_error_t gerr;
+		gpgme_key_t gkey;
+		gpgme_data_t manifest;
+		gpgme_data_t out;
+		FILE *f;
+		size_t dlen;
+
+		gerr = gpgme_new(&gctx);
+		if (gerr != GPG_ERR_NO_ERROR)
+			return "GPG setup failed";
+
+		gerr = gpgme_get_key(gctx, gpg_sign_key, &gkey, 0);
+		if (gerr != GPG_ERR_NO_ERROR)
+			return "failed to get GPG key";
+		gerr = gpgme_signers_add(gctx, gkey);
+		if (gerr != GPG_ERR_NO_ERROR)
+			return "failed to add GPG key to sign list, is it a suitable key?";
+
+		gpg_pass = NULL;
+		if (gpg_get_password) {
+			if (isatty(fileno(stdin))) {
+				/* disable terminal echo; the printing of what you type */
+				tcgetattr(fileno(stdin), &termio);
+				termio.c_lflag &= ~ECHO;
+				tcsetattr(fileno(stdin), TCSANOW, &termio);
+
+				printf("Password for GPG-key %s: ", gpg_sign_key);
+			}
+
+			gpg_pass = fgets(path, sizeof(path), stdin);
+
+			if (isatty(fileno(stdin))) {
+				printf("\n");
+				/* restore echoing, for what it's worth */
+				termio.c_lflag |= ECHO;
+				tcsetattr(fileno(stdin), TCSANOW, &termio);
+			}
+
+			if (gpg_pass == NULL || *gpg_pass == '\0')
+				warn("no GPG password given, gpg might ask for it again");
+				/* continue for the case where gpg-agent holds the pass */
+			else {
+				gpgme_set_pinentry_mode(gctx, GPGME_PINENTRY_MODE_LOOPBACK);
+				gpgme_set_passphrase_cb(gctx, gpgme_pw_cb, gpg_pass);
+			}
+		}
+
+		if ((f = fopen(str_manifest, "r+")) == NULL)
+			return "could not open top-level Manifest file";
+
+		/* finally, sign the Manifest */
+		if (gpgme_data_new_from_stream(&manifest, f) != GPG_ERR_NO_ERROR)
+			return "failed to create GPG data from Manifest";
+
+		if (gpgme_data_new(&out) != GPG_ERR_NO_ERROR)
+			return "failed to create GPG output buffer";
+
+		gerr = gpgme_op_sign(gctx, manifest, out, GPGME_SIG_MODE_CLEAR);
+		if (gerr != GPG_ERR_NO_ERROR) {
+			warn("%s: %s", gpgme_strsource(gerr), gpgme_strerror(gerr));
+			return "failed to GPG sign Manifest";
+		}
+
+		/* write back signed Manifest */
+		rewind(f);
+		gpgme_data_seek(out, 0, SEEK_SET);
+		do {
+			dlen = gpgme_data_read(out, path, sizeof(path));
+			fwrite(path, dlen, 1, f);
+		} while (dlen == sizeof(path));
+		fclose(f);
+
+		gpgme_data_release(out);
+		gpgme_data_release(manifest);
+		gpgme_release(gctx);
+	}
 
 	return NULL;
 }
@@ -854,13 +947,19 @@ verify_gpg_sig(const char *path, verify_msg **msgs)
 						"used to verify the signature has been revoked");
 				break;
 			case GPG_ERR_BAD_SIGNATURE:
+				free(ret);
+				ret = NULL;
 				printf("the signature is invalid\n");
 				break;
 			case GPG_ERR_NO_PUBKEY:
+				free(ret);
+				ret = NULL;
 				printf("the signature could not be verified due to a "
 						"missing key\n");
 				break;
 			default:
+				free(ret);
+				ret = NULL;
 				printf("there was some other error which prevented the "
 						"signature verification\n");
 				break;
@@ -1414,7 +1513,7 @@ format_line(const char *pfx, const char *msg, int twidth)
 }
 
 static const char *
-process_dir_vrfy(const char *dir)
+process_dir_vrfy(void)
 {
 	char buf[8192];
 	int newhashes;
@@ -1422,7 +1521,6 @@ process_dir_vrfy(const char *dir)
 	struct timeval startt;
 	struct timeval finisht;
 	double etime;
-	int curdirfd;
 	char *timestamp;
 	verify_msg topmsg;
 	verify_msg *walk = &topmsg;
@@ -1436,21 +1534,11 @@ process_dir_vrfy(const char *dir)
 
 	gettimeofday(&startt, NULL);
 
-	snprintf(buf, sizeof(buf), "%s%s/metadata/layout.conf", portroot,  dir);
+	snprintf(buf, sizeof(buf), "metadata/layout.conf");
 	if ((newhashes = parse_layout_conf(buf)) != 0) {
 		hashes = newhashes;
 	} else {
 		return "verification must be done on a full tree";
-	}
-
-	if ((curdirfd = open(".", O_RDONLY)) < 0) {
-		fprintf(stderr, "cannot open current directory?!? %s\n",
-				strerror(errno));
-	}
-	snprintf(buf, sizeof(buf), "%s%s", portroot, dir);
-	if (chdir(buf) != 0) {
-		fprintf(stderr, "cannot chdir() to %s: %s\n", dir, strerror(errno));
-		return "not a directory";
 	}
 
 	if ((gs = verify_gpg_sig(str_manifest, &walk)) == NULL) {
@@ -1458,13 +1546,13 @@ process_dir_vrfy(const char *dir)
 	} else {
 		fprintf(stdout,
 				"%s%s%s signature made %s by\n"
-				"%s\n"
+				"  %s%s%s\n"
 				"primary key fingerprint %s\n"
 				"%4s subkey fingerprint %s\n",
 				gs->isgood ? GREEN : RED,
 				gs->isgood ? "good": "BAD",
 				NORM, gs->timestamp,
-				gs->signer,
+				DKBLUE, gs->signer, NORM,
 				gs->pkfingerprint,
 				gs->algo, gs->fingerprint);
 		if (!gs->isgood)
@@ -1575,11 +1663,6 @@ process_dir_vrfy(const char *dir)
 
 	gettimeofday(&finisht, NULL);
 
-	/* return to where we were before we called this function */
-	if (fchdir(curdirfd) != 0 && verbose > 1)
-		warn("could not move back to original directory");
-	close(curdirfd);
-
 	etime = ((double)((finisht.tv_sec - startt.tv_sec) * 1000000 +
 				finisht.tv_usec) - (double)startt.tv_usec) / 1000000.0;
 	printf("checked %zd Manifests, %zd files, %zd failures in %.02fs\n",
@@ -1591,15 +1674,17 @@ int
 qmanifest_main(int argc, char **argv)
 {
 	char *prog;
-	const char *(*runfunc)(const char *);
+	const char *(*runfunc)(void);
 	int ret;
 	const char *rsn;
 	bool isdir = false;
 	bool isoverlay = false;
 	char *overlay;
 	char path[_Q_PATH_MAX];
+	char path2[_Q_PATH_MAX];
 	size_t n;
 	int i;
+	int curdirfd;
 
 	if ((prog = strrchr(argv[0], '/')) == NULL) {
 		prog = argv[0];
@@ -1620,6 +1705,8 @@ qmanifest_main(int argc, char **argv)
 		switch (ret) {
 			COMMON_GETOPTS_CASES(qmanifest)
 			case 'g': runfunc = process_dir_gen;  break;
+			case 's': gpg_sign_key = optarg;      break;
+			case 'p': gpg_get_password = true;    break;
 			case 'd': isdir = true;               break;
 			case 'o': isoverlay = true;           break;
 		}
@@ -1653,6 +1740,9 @@ qmanifest_main(int argc, char **argv)
 		}
 	}
 
+	if ((curdirfd = open(".", O_RDONLY)) < 0)
+		warn("cannot open current directory?!? %s\n", strerror(errno));
+
 	ret = EXIT_SUCCESS;
 	argc -= optind;
 	argv += optind;
@@ -1679,20 +1769,27 @@ qmanifest_main(int argc, char **argv)
 		if (isdir || (!isoverlay && overlay == NULL)) /* !isdir && !isoverlay */
 			overlay = argv[i];
 
-		if (runfunc == process_dir_vrfy)
-			printf("verifying %s%s%s...\n", BOLD, overlay, NORM);
-
 		if (*overlay != '/') {
 			if (portroot[1] == '\0') {
 				/* resolve the path */
+				(void)fchdir(curdirfd);
 				(void)realpath(overlay, path);
 			} else {
 				snprintf(path, sizeof(path), "./%s", overlay);
 			}
-			overlay = path;
 		}
 
-		rsn = runfunc(overlay);
+		snprintf(path2, sizeof(path2), "%s%s", portroot, path);
+		if (chdir(path2) != 0) {
+			warn("cannot change directory to %s: %s", overlay, strerror(errno));
+			ret |= 1;
+			continue;
+		}
+
+		if (runfunc == process_dir_vrfy)
+			printf("verifying %s%s%s...\n", BOLD, overlay, NORM);
+
+		rsn = runfunc();
 		if (rsn != NULL) {
 			printf("%s%s%s\n", RED, rsn, NORM);
 			ret |= 2;
@@ -1700,14 +1797,27 @@ qmanifest_main(int argc, char **argv)
 	}
 
 	if (i == 0) {
-		if (runfunc == process_dir_vrfy)
-			printf("verifying %s%s%s...\n", BOLD, main_overlay, NORM);
-		rsn = runfunc(main_overlay);
-		if (rsn != NULL) {
-			printf("%s%s%s\n", RED, rsn, NORM);
-			ret |= 2;
+		snprintf(path, sizeof(path), "%s%s", portroot, main_overlay);
+		if (chdir(path) != 0) {
+			warn("cannot change directory to %s: %s",
+					main_overlay, strerror(errno));
+			ret |= 1;
+		} else {
+			if (runfunc == process_dir_vrfy)
+				printf("verifying %s%s%s...\n", BOLD, main_overlay, NORM);
+
+			rsn = runfunc();
+			if (rsn != NULL) {
+				printf("%s%s%s\n", RED, rsn, NORM);
+				ret |= 2;
+			}
 		}
 	}
+
+	/* return to where we were before we called this function */
+	if (fchdir(curdirfd) != 0 && verbose > 1)
+		warn("could not move back to original directory");
+	close(curdirfd);
 
 	return ret;
 }
