@@ -1777,6 +1777,8 @@ qmanifest_main(int argc, char **argv)
 			} else {
 				snprintf(path, sizeof(path), "./%s", overlay);
 			}
+		} else {
+			snprintf(path, sizeof(path), "%s", overlay);
 		}
 
 		snprintf(path2, sizeof(path2), "%s%s", portroot, path);
