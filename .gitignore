@@ -33,6 +33,7 @@ Makefile
 /autotools/gnulib/*.h
 /autotools/gnulib/sys
 /tests/init.sh
+/tests/qmanifest/root/.gnupg/random_seed
 
 /*.old.c
 /q
@@ -45,10 +46,12 @@ Makefile
 /qkeyword
 /qlist
 /qlop
+/qmanifest
 /qmerge
 /qpkg
 /qsearch
 /qsize
+/qtbz2
 /qtegrity
 /quse
 /qxpak
