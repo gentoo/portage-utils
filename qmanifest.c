@@ -1772,8 +1772,12 @@ qmanifest_main(int argc, char **argv)
 		if (*overlay != '/') {
 			if (portroot[1] == '\0') {
 				/* resolve the path */
-				(void)fchdir(curdirfd);
-				(void)realpath(overlay, path);
+				if (fchdir(curdirfd) != 0)
+					continue;  /* this shouldn't happen */
+				if (realpath(overlay, path) == NULL && *path == '\0') {
+					warn("could not resolve %s", overlay);
+					continue;  /* very unlikely */
+				}
 			} else {
 				snprintf(path, sizeof(path), "./%s", overlay);
 			}
