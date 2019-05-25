@@ -23,7 +23,7 @@ addons:
   apt:
     packages:
     - libgpgme11-dev
-    - gnupg
+    - gnupg2
 
 before_install:
   - ./travis/install-iniparser.sh
