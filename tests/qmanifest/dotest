@@ -42,6 +42,10 @@ test 04 1 "qmanifest -d not_a_tree"
 # overlay test
 test 05 1 "qmanifest -o notatree"
 
+# Travis uses old Ubuntu, and Ubuntu uses prehistoric gpg, which just
+# won't work.  Too bad, really.
+if [[ ${TRAVIS_OS_NAME} != Linux ]] ; then
+
 # generate a valid tree
 rm -Rf testtree
 cp -r "${ROOT}/simpletree" testtree || echo try it anyway
@@ -58,16 +62,11 @@ gpg_import() {
 		--quiet
 		--no-tty
 		--passphrase-fd 0
+		--pinentry-mode loopback
 		--import "${key}"
 	)
-	local killpinentry="--pinentry-mode loopback"
 
-	# see if gpg is new enough for killpinentry
-	if echo "${pass}" | gpg -n ${killpinentry} "${args[@]}" ; then
-		echo "${pass}" | gpg ${killpinentry} "${args[@]}"
-	else
-		echo "${pass}" | gpg "${args[@]}"
-	fi
+	echo "${pass}" | gpg "${args[@]}"
 }
 # import key
 gpg_import "${as}"/key.gpg qmanifest
@@ -89,6 +88,8 @@ test 07 0 "qmanifest testtree | sed -e '/Manifest timestamp/d' -e 's/made .* UTC
 # shut down agents and whatnot
 gpgconf --kill all
 rm -Rf "${HOME}"
+
+fi  # TRAVIS_OS_NAME==Linux
 
 cleantmpdir
 
