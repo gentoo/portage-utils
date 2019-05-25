@@ -13,6 +13,7 @@ sudo: false
 # Order here matters; see compiler comment above.
 os:
   - linux
+dist: xenial
 
 env:
   global:
@@ -21,9 +22,10 @@ env:
 addons:
   apt:
     packages:
+    - libgpgme11-dev
+    - gnupg
 
 before_install:
   - ./travis/install-iniparser.sh
   - ./travis/install-blake2.sh
-  - sudo apt-get install libgpgme11-dev gnupg
 script: ./travis/main.sh
