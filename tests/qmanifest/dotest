@@ -63,11 +63,10 @@ gpg_import() {
 	local killpinentry="--pinentry-mode loopback"
 
 	# see if gpg is new enough for killpinentry
-	echo "${pass}" | gpg -n ${killpinentry} "${args[@]}"
-	if [[ $? -ne 0 ]] ; then
-		echo "${pass}" | gpg "${args[@]}"
-	else
+	if echo "${pass}" | gpg -n ${killpinentry} "${args[@]}" ; then
 		echo "${pass}" | gpg ${killpinentry} "${args[@]}"
+	else
+		echo "${pass}" | gpg "${args[@]}"
 	fi
 }
 # import key and sanity check
