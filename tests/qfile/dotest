@@ -30,8 +30,8 @@ tests=(
 	"(cd /bin; q file -Cq bash)"
 	"app-shells/bash"
 
-	"(cd /; q file -Co bash)"
-	"bash"
+	"(cd /; q file -Co whatever)"
+	"whatever"
 )
 
 set -- "${tests[@]}"
