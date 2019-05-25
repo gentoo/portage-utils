@@ -46,11 +46,18 @@ test 05 1 "qmanifest -o notatree"
 rm -Rf testtree
 cp -r "${ROOT}/simpletree" testtree || echo try it anyway
 export HOME=$(mktemp -d)  # for gnupg home
-cp -r "${ROOT}/.gnupg" "${HOME}/"
+mkdir "${HOME}"/.gnupg
 # silence gpg warnings
 chmod -R og-rwx "${HOME}"/.gnupg
 
-# sanity check
+# import key and sanity check
+echo qmanifest | gpg \
+	--batch \
+	--quiet \
+	--no-tty \
+	--passphrase-fd 0 \
+	--pinentry-mode loopback \
+	--import "${as}"/key.gpg
 test p6 0 "gpg --list-keys | sed '1,2d'"
 
 # make it a fully valid tree
