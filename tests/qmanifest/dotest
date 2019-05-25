@@ -49,6 +49,10 @@ export HOME=$(mktemp -d)  # for gnupg home
 cp -r "${ROOT}/.gnupg" "${HOME}/"
 # silence gpg warnings
 chmod -R og-rwx "${HOME}"/.gnupg
+
+# sanity check
+test p6 0 "gpg --list-keys | sed '1,2d'"
+
 # make it a fully valid tree
 rm testtree/my-cat/mypackage/unrecorded-file
 # drop ROOT, we'll work here in T
