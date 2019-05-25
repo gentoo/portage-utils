@@ -50,14 +50,28 @@ mkdir "${HOME}"/.gnupg
 # silence gpg warnings
 chmod -R og-rwx "${HOME}"/.gnupg
 
+gpg_import() {
+	local key=$1
+	local pass=$2
+	local args=(
+		--batch
+		--quiet
+		--no-tty
+		--passphrase-fd 0
+		--import "${key}"
+	)
+	local killpinentry="--pinentry-mode loopback"
+
+	# see if gpg is new enough for killpinentry
+	echo "${pass}" | gpg -n ${killpinentry} "${args[@]}"
+	if [[ $? -ne 0 ]] ; then
+		echo "${pass}" | gpg "${args[@]}"
+	else
+		echo "${pass}" | gpg ${killpinentry} "${args[@]}"
+	fi
+}
 # import key and sanity check
-echo qmanifest | gpg \
-	--batch \
-	--quiet \
-	--no-tty \
-	--passphrase-fd 0 \
-	--pinentry-mode loopback \
-	--import "${as}"/key.gpg
+gpg_import "${as}"/key.gpg qmanifest
 test p6 0 "gpg --list-keys | sed '1,2d'"
 
 # make it a fully valid tree
