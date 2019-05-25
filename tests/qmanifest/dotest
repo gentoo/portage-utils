@@ -44,9 +44,10 @@ test 05 1 "qmanifest -o notatree"
 # generate a valid tree
 rm -Rf testtree
 cp -r "${ROOT}/simpletree" testtree || echo try it anyway
-export HOME=${ROOT}  # for gnupg home
+export HOME=$(mktemp -d)  # for gnupg home
+cp -r "${ROOT}/.gnupg" "${HOME}/"
 # silence gpg warnings
-chmod -R og-rwx "${ROOT}"/.gnupg
+chmod -R og-rwx "${HOME}"/.gnupg
 # make it a fully valid tree
 rm testtree/my-cat/mypackage/unrecorded-file
 # drop ROOT, we'll work here in T
@@ -60,6 +61,7 @@ test 07 0 "qmanifest testtree | sed -e '/Manifest timestamp/d' -e 's/made .* UTC
 
 # shut down agents and whatnot
 gpgconf --kill all
+rm -Rf "${HOME}"
 
 cleantmpdir
 
