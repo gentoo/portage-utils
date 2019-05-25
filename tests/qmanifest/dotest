@@ -69,9 +69,8 @@ gpg_import() {
 		echo "${pass}" | gpg "${args[@]}"
 	fi
 }
-# import key and sanity check
+# import key
 gpg_import "${as}"/key.gpg qmanifest
-test p6 0 "gpg --list-keys | sed '1,2d'"
 
 # make it a fully valid tree
 rm testtree/my-cat/mypackage/unrecorded-file
