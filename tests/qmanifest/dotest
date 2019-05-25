@@ -16,6 +16,7 @@ test() {
 	sed -i -e '/^checked [0-9]/s/ in [0-9.]\+s$//' manifest
 	if ! diff -u ${as}/manifest${num}.good manifest; then
 		tfail "output does not match"
+		[[ -e gpgme.log ]] && cat gpgme.log
 	fi
 	if [[ ${exp} -ne ${ret} ]] ; then
 		tfail "exit code (${ret}) does not match expected (${exp}) for test ${num}"
@@ -54,9 +55,12 @@ rm testtree/my-cat/mypackage/unrecorded-file
 unset ROOT PORTAGE_CONFIGROOT
 SIGNAS=0x3D695C8C0F87966B62DC5AFCDCFABA8E07F52261
 KEYPASS=qmanifest
+export GPGME_DEBUG=9:${PWD}/gpgme.log
+rm -f gpgme.log
 test 06 0 "echo ${KEYPASS} | qmanifest -g -s ${SIGNAS} -p testtree"
 
 # validate the just generated tree
+rm -f gpgme.log
 test 07 0 "qmanifest testtree | sed -e '/Manifest timestamp/d' -e 's/made .* UTC by/made by/'"
 
 # shut down agents and whatnot
