@@ -44,7 +44,7 @@ test 05 1 "qmanifest -o notatree"
 
 # Travis uses old Ubuntu, and Ubuntu uses prehistoric gpg, which just
 # won't work.  Too bad, really.
-if [[ ${TRAVIS_OS_NAME} != Linux ]] ; then
+if [[ ${TRAVIS_OS_NAME} != linux ]] ; then
 
 # generate a valid tree
 rm -Rf testtree
