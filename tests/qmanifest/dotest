@@ -44,9 +44,12 @@ test 05 1 "qmanifest -o notatree"
 # generate a valid tree
 rm -Rf testtree
 cp -r "${ROOT}/simpletree" testtree || echo try it anyway
-# make it a fully valid tree
 export HOME=${ROOT}  # for gnupg home
+# silence gpg warnings
+chmod -R og-rwx "${ROOT}"/.gnupg
+# make it a fully valid tree
 rm testtree/my-cat/mypackage/unrecorded-file
+# drop ROOT, we'll work here in T
 unset ROOT PORTAGE_CONFIGROOT
 SIGNAS=0x3D695C8C0F87966B62DC5AFCDCFABA8E07F52261
 KEYPASS=qmanifest
