@@ -1,0 +1,153 @@
+dir /usr
+dir /usr/bin
+obj /usr/bin/bashbug 9b20c085e9d7f3646f3b4b45e74f70ca 1547713704
+dir /usr/share
+dir /usr/share/info
+obj /usr/share/info/bash.info.bz2 e96f21c53fd71a8b9f392eae611c8393 1547713705
+sym /usr/share/info/bashref.info.bz2 -> bash.info.bz2 1547713709
+dir /usr/share/man
+dir /usr/share/man/man1
+obj /usr/share/man/man1/rbash.1.bz2 c8370af7d2cba6984a624f80a9f75bb1 1547713707
+obj /usr/share/man/man1/builtins.1.bz2 5a135e368c236f17d1d98f8b3f170898 1547713707
+obj /usr/share/man/man1/bashbug.1.bz2 214100b4439c2b3fddc8afcdd176afc4 1547713707
+obj /usr/share/man/man1/bash.1.bz2 167fbcd505b4ab3517c1f902e4e7b0fd 1547713707
+dir /usr/share/locale
+dir /usr/share/locale/nl
+dir /usr/share/locale/nl/LC_MESSAGES
+obj /usr/share/locale/nl/LC_MESSAGES/bash.mo 9e46ff47323e90ae06a3d6bca048272e 1547713705
+dir /usr/share/locale/af
+dir /usr/share/locale/af/LC_MESSAGES
+obj /usr/share/locale/af/LC_MESSAGES/bash.mo 41c37d8a87fef0c492736c69719e6c6d 1547713705
+dir /usr/share/locale/sv
+dir /usr/share/locale/sv/LC_MESSAGES
+obj /usr/share/locale/sv/LC_MESSAGES/bash.mo b66c7adfda290a08b3e72ac6f9cd8945 1547713705
+dir /usr/share/locale/uk
+dir /usr/share/locale/uk/LC_MESSAGES
+obj /usr/share/locale/uk/LC_MESSAGES/bash.mo bedd282c9d1c91979a0ca61b556283ce 1547713706
+dir /usr/share/locale/ja
+dir /usr/share/locale/ja/LC_MESSAGES
+obj /usr/share/locale/ja/LC_MESSAGES/bash.mo dd347d2692940ec86da0997939c92456 1547713705
+dir /usr/share/locale/ca
+dir /usr/share/locale/ca/LC_MESSAGES
+obj /usr/share/locale/ca/LC_MESSAGES/bash.mo f8f6318563af78500bdcd343da9fb5bd 1547713705
+dir /usr/share/locale/da
+dir /usr/share/locale/da/LC_MESSAGES
+obj /usr/share/locale/da/LC_MESSAGES/bash.mo 17911605b0dfce2cbcec904385562bc5 1547713705
+dir /usr/share/locale/zh_TW
+dir /usr/share/locale/zh_TW/LC_MESSAGES
+obj /usr/share/locale/zh_TW/LC_MESSAGES/bash.mo 3be163bd6ff115f158152008b38ac969 1547713706
+dir /usr/share/locale/ru
+dir /usr/share/locale/ru/LC_MESSAGES
+obj /usr/share/locale/ru/LC_MESSAGES/bash.mo 41500366236f08a546b04089e15eb7ac 1547713705
+dir /usr/share/locale/et
+dir /usr/share/locale/et/LC_MESSAGES
+obj /usr/share/locale/et/LC_MESSAGES/bash.mo 9021bbbc713985bdf7a083e29e0bf895 1547713705
+dir /usr/share/locale/hr
+dir /usr/share/locale/hr/LC_MESSAGES
+obj /usr/share/locale/hr/LC_MESSAGES/bash.mo 37b44cc4f316c9caa93d528481d33101 1547713705
+dir /usr/share/locale/el
+dir /usr/share/locale/el/LC_MESSAGES
+obj /usr/share/locale/el/LC_MESSAGES/bash.mo bdf88cf8bf58ac0e68e06d875f8e9f9f 1547713705
+dir /usr/share/locale/sl
+dir /usr/share/locale/sl/LC_MESSAGES
+obj /usr/share/locale/sl/LC_MESSAGES/bash.mo 70863c54e2afd14279ef56533839a348 1547713705
+dir /usr/share/locale/es
+dir /usr/share/locale/es/LC_MESSAGES
+obj /usr/share/locale/es/LC_MESSAGES/bash.mo 904fe5b6516f8f826221189a2fe441c9 1547713705
+dir /usr/share/locale/en@boldquot
+dir /usr/share/locale/en@boldquot/LC_MESSAGES
+obj /usr/share/locale/en@boldquot/LC_MESSAGES/bash.mo 5d38e79cce3b7ba4b528cda0cbd45c5f 1547713705
+dir /usr/share/locale/ro
+dir /usr/share/locale/ro/LC_MESSAGES
+obj /usr/share/locale/ro/LC_MESSAGES/bash.mo 081cb1677de385da8f8f6a33530a1e27 1547713705
+dir /usr/share/locale/fi
+dir /usr/share/locale/fi/LC_MESSAGES
+obj /usr/share/locale/fi/LC_MESSAGES/bash.mo 93ecb14eb6818e7ec4d0e71ce8dfb46b 1547713705
+dir /usr/share/locale/hu
+dir /usr/share/locale/hu/LC_MESSAGES
+obj /usr/share/locale/hu/LC_MESSAGES/bash.mo d894f16d5c3d1df6ee890acd1fb68bdd 1547713705
+dir /usr/share/locale/gl
+dir /usr/share/locale/gl/LC_MESSAGES
+obj /usr/share/locale/gl/LC_MESSAGES/bash.mo 09bf9ea4c06650fec7297d652d452072 1547713705
+dir /usr/share/locale/zh_CN
+dir /usr/share/locale/zh_CN/LC_MESSAGES
+obj /usr/share/locale/zh_CN/LC_MESSAGES/bash.mo 982f68ff89ba75cb1a26ee4b1576a77e 1547713706
+dir /usr/share/locale/sk
+dir /usr/share/locale/sk/LC_MESSAGES
+obj /usr/share/locale/sk/LC_MESSAGES/bash.mo da1a183b7424ed2763e4b57cca9f81c5 1547713705
+dir /usr/share/locale/sr
+dir /usr/share/locale/sr/LC_MESSAGES
+obj /usr/share/locale/sr/LC_MESSAGES/bash.mo 123101974934c1739603380ff64c34fb 1547713705
+dir /usr/share/locale/nb
+dir /usr/share/locale/nb/LC_MESSAGES
+obj /usr/share/locale/nb/LC_MESSAGES/bash.mo 63bb59bf3116e89f6a0de715b13bee2d 1547713705
+dir /usr/share/locale/it
+dir /usr/share/locale/it/LC_MESSAGES
+obj /usr/share/locale/it/LC_MESSAGES/bash.mo e4cd256316092bc484fc7c1643b0642b 1547713705
+dir /usr/share/locale/lt
+dir /usr/share/locale/lt/LC_MESSAGES
+obj /usr/share/locale/lt/LC_MESSAGES/bash.mo d7f88bb2d27036603108ca63a1242877 1547713705
+dir /usr/share/locale/pl
+dir /usr/share/locale/pl/LC_MESSAGES
+obj /usr/share/locale/pl/LC_MESSAGES/bash.mo f29f6495aa95493baa76c3db6c44a46b 1547713705
+dir /usr/share/locale/id
+dir /usr/share/locale/id/LC_MESSAGES
+obj /usr/share/locale/id/LC_MESSAGES/bash.mo 2e3a6b6569e3d63dbee7ccb27369d919 1547713705
+dir /usr/share/locale/ga
+dir /usr/share/locale/ga/LC_MESSAGES
+obj /usr/share/locale/ga/LC_MESSAGES/bash.mo cba1736115ba3cfca171bd107a5e15c8 1547713705
+dir /usr/share/locale/bg
+dir /usr/share/locale/bg/LC_MESSAGES
+obj /usr/share/locale/bg/LC_MESSAGES/bash.mo 5fa98a9e7839eaffb678029b63d29ac2 1547713705
+dir /usr/share/locale/en@quot
+dir /usr/share/locale/en@quot/LC_MESSAGES
+obj /usr/share/locale/en@quot/LC_MESSAGES/bash.mo c52f08684d8c0028e8b85f5e7e68c17d 1547713705
+dir /usr/share/locale/fr
+dir /usr/share/locale/fr/LC_MESSAGES
+obj /usr/share/locale/fr/LC_MESSAGES/bash.mo c83ca2e7b7f1e26e0ed099f2954d81ca 1547713705
+dir /usr/share/locale/tr
+dir /usr/share/locale/tr/LC_MESSAGES
+obj /usr/share/locale/tr/LC_MESSAGES/bash.mo 9263814b39d2c82190f73dc8e53873b5 1547713706
+dir /usr/share/locale/eo
+dir /usr/share/locale/eo/LC_MESSAGES
+obj /usr/share/locale/eo/LC_MESSAGES/bash.mo f73eab965f06f39bebeebea9823dbd65 1547713705
+dir /usr/share/locale/cs
+dir /usr/share/locale/cs/LC_MESSAGES
+obj /usr/share/locale/cs/LC_MESSAGES/bash.mo 0d37f682297cf2058d299c9a609b1776 1547713705
+dir /usr/share/locale/de
+dir /usr/share/locale/de/LC_MESSAGES
+obj /usr/share/locale/de/LC_MESSAGES/bash.mo 99ac10426e2a7f53f466132a416c3c74 1547713705
+dir /usr/share/locale/vi
+dir /usr/share/locale/vi/LC_MESSAGES
+obj /usr/share/locale/vi/LC_MESSAGES/bash.mo f5358a7d46ab199cd60a1092e50ed51a 1547713706
+dir /usr/share/locale/pt_BR
+dir /usr/share/locale/pt_BR/LC_MESSAGES
+obj /usr/share/locale/pt_BR/LC_MESSAGES/bash.mo e4b8c7f219da7133b54651397ae9492e 1547713705
+dir /usr/share/doc
+dir /usr/share/doc/bash-4.4_p23-r1
+obj /usr/share/doc/bash-4.4_p23-r1/CHANGES.bz2 90497d0564cd628e219e573c7e1f91a2 1547713706
+obj /usr/share/doc/bash-4.4_p23-r1/RBASH.bz2 186ce9e929bbdae0610329d2ed8b0866 1547713704
+obj /usr/share/doc/bash-4.4_p23-r1/FAQ.bz2 9e5ccebbf4184a087962fdb7916e0070 1547713705
+obj /usr/share/doc/bash-4.4_p23-r1/POSIX.bz2 b0775619c07d1c1e1499b5e81adf89af 1547713704
+obj /usr/share/doc/bash-4.4_p23-r1/NEWS.bz2 91265b542f03a160da810ceaadea9ba0 1547713706
+dir /usr/share/doc/bash-4.4_p23-r1/html
+obj /usr/share/doc/bash-4.4_p23-r1/html/bashref.html f0b4a5de246defd76b7e70e7c0ed1b27 1547713705
+obj /usr/share/doc/bash-4.4_p23-r1/html/bash.html 0f0ac8b9fe84d2b4eea5b70cc22cb1e2 1547713705
+obj /usr/share/doc/bash-4.4_p23-r1/INTRO.bz2 0adb1e98d3ad2a3a012d696ea17e5547 1547713705
+obj /usr/share/doc/bash-4.4_p23-r1/ChangeLog.bz2 18be01005cfbe3a8ec3ade7f826510dc 1547713707
+obj /usr/share/doc/bash-4.4_p23-r1/COMPAT.bz2 98fe32b626a3d32e568f33d6c2cf02c9 1547713704
+obj /usr/share/doc/bash-4.4_p23-r1/AUTHORS.bz2 65f88febe33195919919139655121a7f 1547713706
+obj /usr/share/doc/bash-4.4_p23-r1/README.bz2 c0ca2da4709cedc22e6cd2de6b1e0202 1547713706
+dir /bin
+sym /bin/rbash -> bash 1547713706
+obj /bin/bash 2bb7a207ac3295d9c722132e7987969a 1547713709
+dir /etc
+dir /etc/skel
+obj /etc/skel/.bash_profile d3322040528c46743ea8e4b0b9a186bc 1547713707
+obj /etc/skel/.bashrc d210b9cd7fc07420736480f2062d7d7f 1547713707
+obj /etc/skel/.bash_logout 7d8a8ef90c1818a0cd66808ac2740638 1547713707
+dir /etc/bash
+obj /etc/bash/bash_logout 229ccc2980a94877f2e87f957e9da7bf 1547713707
+dir /etc/bash/bashrc.d
+obj /etc/bash/bashrc.d/.keep_app-shells_bash-0 d41d8cd98f00b204e9800998ecf8427e 1547713707
+obj /etc/bash/bashrc de46ed8f069d75d6982c5ea2fc8458f4 1547713707

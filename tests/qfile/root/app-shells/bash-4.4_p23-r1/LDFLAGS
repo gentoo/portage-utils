@@ -1,0 +1,1 @@
+-Wl,-O1 -Wl,--as-needed
