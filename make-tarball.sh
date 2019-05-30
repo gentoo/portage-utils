@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/bin/env bash
 
 set -e
 
-if ! . /etc/init.d/functions.sh 2>/dev/null ; then
+if ! .  ${EPREFIX}/lib/gentoo/functions.sh 2>/dev/null ; then
 	einfo() { printf ' * %b\n' "$*"; }
 	eerror() { einfo "$@" 1>&2; }
 fi
@@ -26,38 +26,32 @@ git) ver="HEAD" ;;
 	fi
 	;;
 esac
-p="portage-utils-${ver#v}"
+p="${TMPDIR:-/var/tmp}/portage-utils-${ver#v}"
 
 rm -rf "${p}"
 mkdir "${p}"
 
 einfo "Checking out clean git sources ..."
 git archive "${ver}" | tar xf - -C "${p}"
-cd "${p}"
+pushd "${p}" >/dev/null
 
 einfo "Building autotools ..."
 sed -i "/^AC_INIT/s:git:${ver#v}:" configure.ac
 sed -i "/^AM_MAINTAINER_MODE/s:(.*)$::" configure.ac
-sed -i "1iPV := ${ver#v}" Makefile
-LC_ALL=C ${MAKE} -s autotools >/dev/null
+./autogen.sh
 rm -rf autom4te.cache
-cd ..
+popd >/dev/null
 
 einfo "Generating tarball ..."
-tar --numeric-owner -cf - "${p}" | xz > "${p}".tar.xz
-rm -r "${p}"
-du -b "${p}".tar.*
-
-einfo "Checking tarball (simple) ..."
-tar xf "${p}".tar.*
-pushd "${p}" >/dev/null
-v ${MAKE} -s
-v ${MAKE} -s check
+pushd "${p%/*}" >/dev/null
+tar --numeric-owner -cf - "${p##*/}" | xz > "${p}".tar.xz
 popd >/dev/null
-rm -rf "${p}"
+rm -r "${p}"
 
-einfo "Checking tarball (autotools) ..."
+einfo "Checking tarball ..."
+pushd "${p%/*}" >/dev/null
 tar xf "${p}".tar.*
+popd >/dev/null
 pushd "${p}" >/dev/null
 v ./configure -q
 v ${MAKE} -s
@@ -67,6 +61,7 @@ rm -rf "${p}"
 
 echo
 einfo "All ready for distribution!"
-du -b "${p}".tar.*
+mv "${p}".tar.* .
+du -b "${p##*/}".tar.*
 
 exit 0
