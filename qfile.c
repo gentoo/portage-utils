@@ -137,7 +137,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		for (i = 0; i < args->length; i++) {
 			if (base_names[i] == NULL)
 				continue;
-			if (non_orphans && non_orphans[i])
+			if (non_orphans != NULL && non_orphans[i])
 				continue;
 
 			/* For optimization of qfile(), we also give it an array of
@@ -316,7 +316,7 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 		 * "realpath(ROOT)" prefix) */
 		if (argv[i][0] == '/') {
 			snprintf(abspath, sizeof(abspath), "%s%s",
-					state->assume_root_prefix ? real_root : "", argv[i]);
+					state->assume_root_prefix ? "" : real_root, argv[i]);
 		} else if (pwd) {
 			if (state->assume_root_prefix)
 				snprintf(abspath, sizeof(abspath), "%s/%s", pwd, argv[i]);
