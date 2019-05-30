@@ -1045,7 +1045,7 @@ int qlop_main(int argc, char **argv)
 
 	/* set default for -t, -a or -r */
 	if ((m.do_average || m.do_time || m.do_running) &&
-			!(m.do_merge || m.do_unmerge || m.do_sync))
+			!(m.do_merge || m.do_unmerge || m.do_autoclean || m.do_sync))
 	{
 		m.do_merge = 1;
 		m.do_unmerge = 1;
