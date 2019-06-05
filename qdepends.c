@@ -322,7 +322,7 @@ int qdepends_main(int argc, char **argv)
 	}
 
 	if ((state.qmode & ~(QMODE_REVERSE | QMODE_INSTALLED | QMODE_TREE)) == 0) {
-		/* default mode of operation: -qau (also for just -Q) */
+		/* default mode of operation: -drpb (also for just -Q) */
 		state.qmode |= QMODE_DEPEND  |
 					   QMODE_RDEPEND |
 					   QMODE_PDEPEND |

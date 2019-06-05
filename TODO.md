@@ -63,6 +63,8 @@
 
 - add -S/-v/-R behavior like qlist #574934
 - bring back -k?  (but seems solved by using qlist -IF%{SLOT} pkg)
+- -Qt acts weird (if not, incorrect)
+- -v should lookup whether packages are installed for || cases/colouring
 
 # qpkg
 
@@ -88,3 +90,10 @@
 
 # qmanifest
 - use openat in most places
+
+# qlop
+- guestimate runtime based on best-matching pkg (e.g. with gcc)
+- calculate or take some "smooth" factor just added on top of the
+  guestimate alternative to current time jumping
+- display excess time (+12:05) when overrunning guestimate to indicate
+  longer run than last guestimate
