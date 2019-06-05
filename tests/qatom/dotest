@@ -56,6 +56,8 @@ test f16 "media-fonts font-adobe-100dpi 1.0.3 r1" \
 test f17 "games-rpg eschalon-book-1-demo 106 r1" \
                       -F '%{CATEGORY} %{PN} %{PV} %{PR}' \
                                        "games-rpg/eschalon-book-1-demo-106-r1"
+test f18 "bla"        -F 'bla'         "cat/pkg-c"  # bug #687416
+test f19 ":pkg-c-1.4" -F ':%{PN}-1.4'  "cat/pkg-c"  # bug #687416
 
 # Comparison tests
 test c01 "cat/pkg-123-r3 == pkg" \

@@ -646,7 +646,7 @@ atom_format_r(
 		fmt = strchr(p, '%');
 		if (fmt == NULL) {
 			append_buf(buf, buflen, "%s", p);
-			return buf;
+			return ret;
 		} else if (fmt != p) {
 			append_buf(buf, buflen, "%.*s", (int)(fmt - p), p);
 		}
