@@ -645,8 +645,7 @@ atom_format_r(
 	while (*p != '\0') {
 		fmt = strchr(p, '%');
 		if (fmt == NULL) {
-			if (buflen > 0)
-				*buf = '\0';
+			append_buf(buf, buflen, "%s", p);
 			return buf;
 		} else if (fmt != p) {
 			append_buf(buf, buflen, "%.*s", (int)(fmt - p), p);

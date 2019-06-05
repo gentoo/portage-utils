@@ -4,6 +4,7 @@
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #include "main.h"
@@ -41,9 +42,9 @@ int qatom_main(int argc, char **argv)
 
 	while ((i = GETOPT_LONG(QATOM, qatom, "")) != -1) {
 		switch (i) {
-		case 'F': format = optarg; break;
+		case 'F': format = optarg;   break;
 		case 'c': action = _COMPARE; break;
-		case 'p': action = _PRINT; break;
+		case 'p': action = _PRINT;   break;
 		COMMON_GETOPTS_CASES(qatom)
 		}
 	}
