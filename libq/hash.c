@@ -131,6 +131,7 @@ hash_compute_file(
 
 	while ((len = fread(data, 1, sizeof(data), f)) > 0) {
 		*flen += len;
+#if defined(HAVE_SSL) || defined(HAVE_BLAKE2B)
 #pragma omp parallel sections
 		{
 #ifdef HAVE_SSL
@@ -158,9 +159,11 @@ hash_compute_file(
 			}
 #endif
 		}
+#endif /* HAVE_SSL || HAVE_BLAKE2B */
 	}
 	fclose(f);
 
+#if defined(HAVE_SSL) || defined(HAVE_BLAKE2B)
 #pragma omp parallel sections
 	{
 #ifdef HAVE_SSL
@@ -199,4 +202,5 @@ hash_compute_file(
 		}
 #endif
 	}
+#endif /* HAVE_SSL || HAVE_BLAKE2B */
 }
