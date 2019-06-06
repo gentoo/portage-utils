@@ -451,7 +451,7 @@ static int do_emerge_log(
 			} else if (parallel_emerge > 0) {
 				parallel_emerge--;
 			}
-			
+
 			/* for bug #687508, this cannot be in the else if case
 			 * above, if the log is truncated somehow, the leading
 			 * *** emerge might be missing, but a termination in that
