@@ -899,13 +899,18 @@ verify_gpg_sig(const char *path, verify_msg **msgs)
 	if ((sig = vres->signatures) != NULL) {
 		ret = xmalloc(sizeof(gpg_sig));
 
-		if (sig->status != GPG_ERR_NO_PUBKEY) {
-			ret->algo = xstrdup(gpgme_pubkey_algo_name(sig->pubkey_algo));
+		if (sig->fpr != NULL) {
 			snprintf(buf, sizeof(buf),
 					"%.4s %.4s %.4s %.4s %.4s  %.4s %.4s %.4s %.4s %.4s",
 					sig->fpr +  0, sig->fpr +  4, sig->fpr +  8, sig->fpr + 12,
 					sig->fpr + 16, sig->fpr + 20, sig->fpr + 24, sig->fpr + 28,
 					sig->fpr + 32, sig->fpr + 36);
+		} else {
+			snprintf(buf, sizeof(buf), "<fingerprint not found>");
+		}
+
+		if (sig->status != GPG_ERR_NO_PUBKEY) {
+			ret->algo = xstrdup(gpgme_pubkey_algo_name(sig->pubkey_algo));
 			ret->fingerprint = xstrdup(buf);
 			ret->isgood = sig->status == GPG_ERR_NO_ERROR ? 1 : 0;
 			ctime = gmtime((time_t *)&sig->timestamp);
@@ -955,13 +960,14 @@ verify_gpg_sig(const char *path, verify_msg **msgs)
 				free(ret);
 				ret = NULL;
 				printf("the signature could not be verified due to a "
-						"missing key\n");
+						"missing key for:\n  %s", buf);
 				break;
 			default:
 				free(ret);
 				ret = NULL;
-				printf("there was some other error which prevented the "
-						"signature verification\n");
+				printf("there was some error which prevented the "
+						"signature verification:\n  %s: %s\n",
+						buf, gpgme_strerror(sig->status));
 				break;
 		}
 	}

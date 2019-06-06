@@ -90,6 +90,7 @@
 
 # qmanifest
 - use openat in most places
+- parse timestamps and print in local timezone
 
 # qlop
 - guestimate runtime based on best-matching pkg (e.g. with gcc)
