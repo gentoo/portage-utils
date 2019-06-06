@@ -450,23 +450,29 @@ static int do_emerge_log(
 				parallel_emerge++;
 			} else if (parallel_emerge > 0) {
 				parallel_emerge--;
-				if (parallel_emerge == 0) {
-					/* we just finished the only emerge we found to be
-					 * running, so if there were "running" (unfinished)
-					 * merges, they must have been terminated */
-					sync_start = 0;
-					while ((i = array_cnt(merge_matches)) > 0) {
-						i--;
-						pkgw = xarrayget(merge_matches, i);
-						atom_implode(pkgw->atom);
-						xarraydelete(merge_matches, i);
-					}
-					while ((i = array_cnt(unmerge_matches)) > 0) {
-						i--;
-						pkgw = xarrayget(unmerge_matches, i);
-						atom_implode(pkgw->atom);
-						xarraydelete(unmerge_matches, i);
-					}
+			}
+			
+			/* for bug #687508, this cannot be in the else if case
+			 * above, if the log is truncated somehow, the leading
+			 * *** emerge might be missing, but a termination in that
+			 * case better means we forget about everything that was
+			 * unfinished not to keep reporting some packages forever */
+			if (parallel_emerge == 0) {
+				/* we just finished the only emerge we found to be
+				 * running, so if there were "running" (unfinished)
+				 * merges, they must have been terminated */
+				sync_start = 0;
+				while ((i = array_cnt(merge_matches)) > 0) {
+					i--;
+					pkgw = xarrayget(merge_matches, i);
+					atom_implode(pkgw->atom);
+					xarraydelete(merge_matches, i);
+				}
+				while ((i = array_cnt(unmerge_matches)) > 0) {
+					i--;
+					pkgw = xarrayget(unmerge_matches, i);
+					atom_implode(pkgw->atom);
+					xarraydelete(unmerge_matches, i);
 				}
 			}
 		}
