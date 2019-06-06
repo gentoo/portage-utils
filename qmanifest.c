@@ -960,7 +960,7 @@ verify_gpg_sig(const char *path, verify_msg **msgs)
 				free(ret);
 				ret = NULL;
 				printf("the signature could not be verified due to a "
-						"missing key for:\n  %s", buf);
+						"missing key for:\n  %s\n", buf);
 				break;
 			default:
 				free(ret);
