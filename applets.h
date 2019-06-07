@@ -35,8 +35,7 @@ extern int	getopt_long(int, char * const *, const char *,
 /* applet prototypes */
 typedef int (*APPLET)(int, char **);
 
-#define DECLARE_APPLET(applet) \
-	extern int applet##_main(int, char **) __attribute__((weak));
+#define DECLARE_APPLET(applet) extern int applet##_main(int, char **);
 DECLARE_APPLET(q)
 DECLARE_APPLET(qatom)
 DECLARE_APPLET(qcheck)
