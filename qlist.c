@@ -245,7 +245,8 @@ qlist_match(
 		if (strcmp(atom->SLOT, uslot) != 0)
 			return false;
 
-		if (usslot != NULL && strcmp(atom->SUBSLOT, usslot) != 0)
+		if (usslot != NULL &&
+				(atom->SUBSLOT == NULL || strcmp(atom->SUBSLOT, usslot) != 0))
 			return false;
 	}
 
