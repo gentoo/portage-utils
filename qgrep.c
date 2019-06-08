@@ -430,6 +430,7 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	ret = qgrep_grepat(pfd, buf, label, data);
+	close(pfd);
 
 	return ret;
 }
