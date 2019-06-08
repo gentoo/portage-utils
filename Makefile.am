@@ -69,14 +69,11 @@ q_SOURCES = \
 	qxpak.c \
 	$(NULL)
 q_CPPFLAGS = \
-	$(OPENMP_CFLAGS) \
-	$(GPGME_CFLAGS) \
 	-I$(top_srcdir)/libq \
 	-I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib \
 	$(NULL)
 q_LDADD = \
-	$(OPENMP_CFLAGS) \
 	$(top_builddir)/libq/libq.la \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
 	-liniparser \
@@ -90,6 +87,11 @@ q_LDADD = \
 
 if QMANIFEST_ENABLED
 q_SOURCES += qmanifest.c
+q_CPPFLAGS += \
+	$(OPENMP_CFLAGS) \
+	$(GPGME_CFLAGS)
+q_LDADD += \
+	$(OPENMP_CFLAGS)
 dist_man_MANS += man/qmanifest.1
 APPLETS += qmanifest
 endif
