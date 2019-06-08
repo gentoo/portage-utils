@@ -46,7 +46,7 @@ DECLARE_APPLET(qgrep)
 DECLARE_APPLET(qkeyword)
 DECLARE_APPLET(qlist)
 DECLARE_APPLET(qlop)
-#ifdef HAVE_QMANIFEST
+#ifdef ENABLE_QMANIFEST
 DECLARE_APPLET(qmanifest)
 #endif
 DECLARE_APPLET(qmerge)
@@ -78,7 +78,7 @@ static const struct applet_t {
 	{"qkeyword",  qkeyword_main,  "<action> <args>", "list packages based on keywords"},
 	{"qlist",     qlist_main,     "<pkgname>",       "list files owned by pkgname"},
 	{"qlop",      qlop_main,      "<pkgname>",       "emerge log analyzer"},
-#ifdef HAVE_QMANIFEST
+#ifdef ENABLE_QMANIFEST
 	{"qmanifest", qmanifest_main, "<misc args>",     "verify or generate thick Manifest files"},
 #endif
 	{"qmerge",    qmerge_main,    "<pkgnames>",      "fetch and merge binary package"},
@@ -112,7 +112,7 @@ static const struct applet_t {
 	/* alias for qtegrity */
 	{"integrity", qtegrity_main,  NULL, NULL},
 
-#ifdef HAVE_QMANIFEST
+#ifdef ENABLE_QMANIFEST
 	/* old hashgen */
 	{"hashgen",   qmanifest_main, NULL, NULL},
 	{"hashverify",qmanifest_main, NULL, NULL},
