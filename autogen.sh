@@ -4,9 +4,19 @@ v() { echo "$@"; "$@"; }
 
 m4dir="autotools/m4"
 
+# check for dependencies
+if ! qlist -qI dev-libs/gnulib > /dev/null ; then
+	echo "please install dev-libs/gnulib"
+	exit 1
+fi
+if ! qlist -qI sys-devel/autoconf-archive > /dev/null ; then
+	echo "please install sys-devel/autoconf-archive"
+	exit 1
+fi
+
 v rm -rf autotools
 
-# reload the gnulib code if possible
+# reload the gnulib code
 PATH=/usr/local/src/gnu/gnulib:${PATH}
 mods="
 	dirent
@@ -36,13 +46,6 @@ v gnulib-tool \
 	--import \
 	--no-vc-files \
 	${mods}
-
-# not everyone has sys-devel/autoconf-archive installed
-for macro in $(grep -o '\<AX[A-Z_]*\>' configure.ac | sort -u) ; do
-	if m4=$(grep -rl "\[${macro}\]" /usr/share/aclocal/) ; then
-		v cp $m4 ${m4dir}/
-	fi
-done
 
 export AUTOMAKE="automake --foreign"
 v autoreconf -i -f
