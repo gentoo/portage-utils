@@ -2360,7 +2360,7 @@ BEGIN {RS = " "; FS = "/|\n";} {
     mingw* | cegcc*) lt_search_path_spec=`$ECHO "$lt_search_path_spec" |\
       $SED 's|/\([[A-Za-z]]:\)|\1|g'` ;;
   esac
-  sys_lib_search_path_spec=`$ECHO "/gentoo/prefix64/lib /gentoo/prefix64/usr/lib $lt_search_path_spec" | $lt_NL2SP`
+  sys_lib_search_path_spec=`$ECHO "/gentoo/prefix64l/lib /gentoo/prefix64l/usr/lib $lt_search_path_spec" | $lt_NL2SP`
 else
   sys_lib_search_path_spec="/lib /usr/lib /usr/local/lib"
 fi])

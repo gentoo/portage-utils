@@ -5,7 +5,7 @@
 test() {
 	local num=$1 exp=$2 ret=0 out
 	shift 2
-	set -- q atom "$@"
+	set -- qatom "$@"
 	out=$("$@") || ret=$?
 	if [[ ${num} == l* ]] ; then
 		out=$(echo "${out}" | sed -r -e 's: +: :g' -e 's: *$::')
