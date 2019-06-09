@@ -1,4 +1,4 @@
 verbose: |
     Prefix each matching line with filename (like \fB-H\fR).  When this
     option is given multiple times, also linenumbers are printed.
-quiet: Ignored for compatibility with other qapplets.
+quiet: Do not prefix each match with filename.

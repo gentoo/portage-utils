@@ -24,11 +24,10 @@
 #include "xchdir.h"
 #include "xregex.h"
 
-#define QGREP_FLAGS "IiHNclLexJEsRS:B:A:" COMMON_FLAGS
+#define QGREP_FLAGS "IiNclLexJEsRS:B:A:" COMMON_FLAGS
 static struct option const qgrep_long_opts[] = {
 	{"invert-match",  no_argument, NULL, 'I'},
 	{"ignore-case",   no_argument, NULL, 'i'},
-	{"with-filename", no_argument, NULL, 'H'},
 	{"with-name",     no_argument, NULL, 'N'},
 	{"count",         no_argument, NULL, 'c'},
 	{"list",          no_argument, NULL, 'l'},
@@ -398,6 +397,8 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (data->include_atoms != NULL) {
 		depend_atom **d;
 		for (d = data->include_atoms; *d != NULL; d++) {
+			if ((*d)->SLOT != NULL || (*d)->REPO != NULL)
+				patom = tree_get_atom(pkg_ctx, true);
 			if (atom_compare(patom, *d) == EQUAL)
 				break;
 		}
@@ -409,6 +410,8 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	cctx = (tree_ctx *)(pkg_ctx->cat_ctx->ctx);
 	if (cctx->cachetype == CACHE_EBUILD) {
 		pfd = cctx->tree_fd;
+	} else if (cctx->cachetype == CACHE_VDB) {
+		pfd = openat(cctx->portroot_fd, data->portdir, O_RDONLY|O_CLOEXEC);
 	} else {
 		pfd = openat(cctx->tree_fd, "../..", O_RDONLY|O_CLOEXEC);
 	}
@@ -419,11 +422,9 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	label = NULL;
 	if (data->show_name) {
-		/* this is a super-optimisation, should get it from the full atom */
-		char *repo = data->show_repo ? cctx->repo : NULL;
-		snprintf(name, sizeof(name), "%s%s/%s%s%s%s%s%s",
-				BOLD, patom->CATEGORY, BLUE, patom->P, GREEN,
-				repo ? "::" : "", repo ? repo : "", NORM);
+		if (data->show_repo)
+			patom = tree_get_atom(pkg_ctx, true);
+		atom_format_r(name, sizeof(name), "%[CATEGORY]%[P]%[REPO]", patom, 0);
 		label = name;
 	} else if (data->show_filename) {
 		label = buf;
@@ -431,55 +432,6 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	ret = qgrep_grepat(pfd, buf, label, data);
 	close(pfd);
-
-	return ret;
-}
-
-static int
-qgrep_vdb_cb(tree_pkg_ctx *pkg_ctx, void *priv)
-{
-	struct qgrep_grepargs *data = (struct qgrep_grepargs *)priv;
-	char buf[_Q_PATH_MAX];
-	char name[_Q_PATH_MAX];
-	char *label;
-	depend_atom *patom = NULL;
-	int ret;
-	int pfd;
-
-	patom = tree_get_atom(pkg_ctx, false);
-	if (patom == NULL)
-		return EXIT_FAILURE;
-
-	if (data->include_atoms != NULL) {
-		depend_atom **d;
-		for (d = data->include_atoms; *d != NULL; d++) {
-			if (atom_compare(patom, *d) == EQUAL)
-				break;
-		}
-		if (*d == NULL) {
-			atom_implode(patom);
-			return EXIT_FAILURE;
-		}
-	}
-
-	/* get path to portdir */
-	pfd = openat(pkg_ctx->cat_ctx->ctx->portroot_fd,
-			data->portdir, O_RDONLY|O_CLOEXEC);
-
-	/* cat/pkg/pkg-ver.ebuild */
-	snprintf(buf, sizeof(buf), "%s/%s/%s.ebuild",
-			patom->CATEGORY, patom->PN, patom->P);
-
-	label = NULL;
-	if (data->show_name) {
-		snprintf(name, sizeof(name), "%s%s/%s%s%s",
-				BOLD, patom->CATEGORY, BLUE, patom->P, NORM);
-		label = name;
-	} else if (data->show_filename) {
-		label = buf;
-	}
-
-	ret = qgrep_grepat(pfd, buf, label, data);
 
 	return ret;
 }
@@ -499,14 +451,14 @@ int qgrep_main(int argc, char **argv)
 	char *overlay;
 
 	struct qgrep_grepargs args = {
-		.do_count = 0,
-		.do_regex = 0,
-		.do_list = 0,
-		.show_filename = 0,
-		.show_name = 0,
-		.skip_comments = 0,
-		.invert_list = 0,
-		.invert_match = 0,
+		.do_count = false,
+		.do_regex = false,
+		.do_list = false,
+		.show_filename = true,
+		.show_name = false,
+		.skip_comments = false,
+		.invert_list = false,
+		.invert_match = false,
 		.skip_pattern = NULL,
 		.num_lines_before = 0,
 		.num_lines_after = 0,
@@ -536,8 +488,8 @@ int qgrep_main(int argc, char **argv)
 			break;
 		case 'J': do_installed = true;                    break;
 		case 'E': do_eclass = true;                       break;
-		case 'H': args.show_filename = true;              break;
-		case 'N': args.show_name = true;                  break;
+		case 'N': args.show_name = true;
+				  args.show_filename = false;             break;
 		case 's': args.skip_comments = true;              break;
 		case 'R': args.show_repo = args.show_name = true; break;
 		case 'S': args.skip_pattern = optarg;             break;
@@ -561,6 +513,9 @@ int qgrep_main(int argc, char **argv)
 	}
 	if (argc == optind)
 		qgrep_usage(EXIT_FAILURE);
+
+	if (quiet)
+		args.show_filename = args.show_name = false;
 
 	if (args.do_list && args.do_count) {
 		warn("%s and --count are incompatible options. The former wins.",
@@ -677,14 +632,13 @@ int qgrep_main(int argc, char **argv)
 				status = qgrep_grepat(efd, dentry->d_name, label, &args);
 			}
 			closedir(eclass_dir);
-		} else if (do_installed) {
-			tree_ctx *t = tree_open_vdb(portroot, portvdb);
-			if (t != NULL) {
-				status = tree_foreach_pkg_fast(t, qgrep_vdb_cb, &args, NULL);
-				tree_close(t);
+		} else { /* do_ebuild || do_installed */
+			tree_ctx *t;
+			if (do_installed) {
+				t = tree_open_vdb(portroot, portvdb);
+			} else {
+				t = tree_open(portroot, overlay);
 			}
-		} else { /* do_ebuild */
-			tree_ctx *t = tree_open(portroot, overlay);
 			if (t != NULL) {
 				status = tree_foreach_pkg_fast(t, qgrep_cache_cb, &args, NULL);
 				tree_close(t);
