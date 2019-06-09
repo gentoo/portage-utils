@@ -30,7 +30,7 @@ const char * const atom_usecond_str[] = {
 };
 
 const char * const atom_blocker_str[] = {
-	"", "!", "!!"
+	"", "!", "!!", "^"
 };
 
 const char * const atom_op_str[] = {
@@ -65,9 +65,12 @@ atom_explode(const char *atom)
 	if (*atom == '!') {
 		ret->blocker++;
 		atom++;
-	}
-	if (*atom == '!') {
-		ret->blocker++;
+		if (*atom == '!') {
+			ret->blocker++;
+			atom++;
+		}
+	} else if (*atom == '^') {
+		ret->blocker = ATOM_BL_ANTISLOT;
 		atom++;
 	}
 
@@ -101,65 +104,14 @@ atom_explode(const char *atom)
 	if ((ptr = strstr(ret->CATEGORY, "::")) != NULL) {
 		ret->REPO = ptr + 2;
 		*ptr = '\0';
-	}
-
-	/* chip off the trailing [:SLOT] as needed */
-	if ((ptr = strrchr(ret->CATEGORY, ':')) != NULL) {
-		*ptr++ = '\0';
-		ret->SLOT = ptr;
-
-		/* deal with slot operators */
-		if ((ptr = strrchr(ret->SLOT, '=')) != NULL && ptr[1] == '\0') {
-			ret->slotdep = ATOM_SD_ANY_REBUILD;
-			*ptr = '\0';
-		}
-		if ((ptr = strrchr(ret->SLOT, '*')) != NULL && ptr[1] == '\0') {
-			ret->slotdep = ATOM_SD_ANY_IGNORE;
-			*ptr = '\0';
-		}
-
-		/* cut in two when sub-slot */
-		if ((ptr = strchr(ret->SLOT, '/')) != NULL) {
-			*ptr++ = '\0';
-			ret->SUBSLOT = ptr;
-		}
-	}
-
-	/* see if we have any suffix operators */
-	if ((ptr = strrchr(ret->CATEGORY, '*')) != NULL && ptr[1] == '\0') {
-		ret->sfx_op = ATOM_OP_STAR;
-		*ptr = '\0';
-	}
-
-	/* break up the CATEGORY and PVR */
-	if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL) {
-		ret->PN = ptr + 1;
-		*ptr = '\0';
-
-		/* set PN to NULL if there's nothing */
-		if (ret->PN[0] == '\0')
-			ret->PN = NULL;
-
-		/* eat extra crap in case it exists, this is a feature to allow
-		 * /path/to/pkg.ebuild, doesn't work with prefix operators
-		 * though */
-		if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL)
-			ret->CATEGORY = ptr + 1;
-	} else {
-		ret->PN = ret->CATEGORY;
-		ret->CATEGORY = NULL;
-	}
-
-	if (ret->PN == NULL) {
-		/* atom has no name, this is it */
-		ret->P = NULL;
-		ret->PVR = NULL;
-		return ret;
+		/* set to NULL if there's nothing */
+		if (ret->REPO[0] == '\0')
+			ret->REPO = NULL;
 	}
 
 	/* hunt down build with USE dependencies */
-	if ((ptr = strrchr(ret->PN, ']')) != NULL && ptr[1] == '\0' &&
-			(ptr = strrchr(ret->PN, '[')) != NULL)
+	if ((ptr = strrchr(ret->CATEGORY, ']')) != NULL && ptr[1] == '\0' &&
+			(ptr = strrchr(ret->CATEGORY, '[')) != NULL)
 	{
 		atom_usedep *w = NULL;
 		do {
@@ -217,6 +169,65 @@ atom_explode(const char *atom)
 			}
 		} while (ptr[1] != '\0');
 		*ptr++ = '\0';
+	}
+
+	/* chip off the trailing [:SLOT] as needed */
+	if ((ptr = strrchr(ret->CATEGORY, ':')) != NULL) {
+		*ptr++ = '\0';
+		ret->SLOT = ptr;
+
+		/* deal with slot operators */
+		if ((ptr = strrchr(ret->SLOT, '=')) != NULL && ptr[1] == '\0') {
+			ret->slotdep = ATOM_SD_ANY_REBUILD;
+			*ptr = '\0';
+		}
+		if ((ptr = strrchr(ret->SLOT, '*')) != NULL && ptr[1] == '\0') {
+			ret->slotdep = ATOM_SD_ANY_IGNORE;
+			*ptr = '\0';
+		}
+
+		/* cut in two when sub-slot */
+		if ((ptr = strchr(ret->SLOT, '/')) != NULL) {
+			*ptr++ = '\0';
+			if (*ptr != '\0')
+				ret->SUBSLOT = ptr;
+		}
+
+		/* set to NULL if there's nothing */
+		if (ret->SLOT[0] == '\0')
+			ret->SLOT = NULL;
+	}
+
+	/* see if we have any suffix operators */
+	if ((ptr = strrchr(ret->CATEGORY, '*')) != NULL && ptr[1] == '\0') {
+		ret->sfx_op = ATOM_OP_STAR;
+		*ptr = '\0';
+	}
+
+	/* break up the CATEGORY and PVR */
+	if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL) {
+		ret->PN = ptr + 1;
+		*ptr = '\0';
+
+		/* set PN to NULL if there's nothing */
+		if (ret->PN[0] == '\0')
+			ret->PN = NULL;
+
+		/* eat extra crap in case it exists, this is a feature to allow
+		 * /path/to/pkg.ebuild, doesn't work with prefix operators
+		 * though */
+		if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL)
+			ret->CATEGORY = ptr + 1;
+	} else {
+		ret->PN = ret->CATEGORY;
+		ret->CATEGORY = NULL;
+	}
+
+	if (ret->PN == NULL) {
+		/* atom has no name, this is it */
+		ret->P = NULL;
+		ret->PVR = NULL;
+		return ret;
 	}
 
 	/* CATEGORY should be all set here, PN contains everything up to
@@ -360,30 +371,93 @@ _atom_compare_match(int ret, atom_operator op)
  * foo-1 <NOT_EQUAL> bar-1
  */
 int
-atom_compare(const depend_atom *a1, const depend_atom *a2)
+atom_compare(const depend_atom *data, const depend_atom *query)
 {
-	/* sanity check that at most one has operators */
-	if (a1->pfx_op != ATOM_OP_NONE ||
-			a1->sfx_op != ATOM_OP_NONE ||
-			a1->blocker != ATOM_BL_NONE)
-	{
-		/* is the other also having operators, then punt it */
-		if (a2->pfx_op != ATOM_OP_NONE ||
-				a2->sfx_op != ATOM_OP_NONE ||
-				a2->blocker != ATOM_BL_NONE)
-			return NOT_EQUAL;
+	atom_operator pfx_op;
+	atom_operator sfx_op;
+	atom_blocker bl_op;
+	unsigned int ver_bits;
 
-		/* swap a1 & a2 so that a2 is the atom with operators */
-		const depend_atom *as = a2;
-		a2 = a1;
-		a1 = as;
+	/* remember:
+	 * query should have operators, if data has them, they are ignored */
+
+	/* here comes the antislot: bug #683430
+	 * it basically is a feature to select versions that are *not*
+	 * what's queried for, but requiring SLOT to be set
+	 *
+	 * recap of slot operators:
+	 *
+	 * DEPEND  perl:=        (any slot change, rebuild)
+	 *         perl:0=       (any sub-slot change, rebuild)
+	 *         perl:*        (any slot will do, never rebuild)
+	 *         perl:0*       (any sub-slot will do, never rebuild ?valid?)
+	 *         perl:0        (effectively we can treat * as absent)
+	 *
+	 * VDB     perl:0/5.28=  (the slot/subslot it satisfied when merging)
+	 *
+	 * ebuild  perl:0/5.26
+	 *         perl:0        (SLOT defaults to 0)
+	 *
+	 * query   perl:0        (matches perl:0, perl:0/5.28)
+	 *         perl:0/5.28   (matches any perl:0/5.28)
+	 *        !perl:0/5.28   (matches perl, perl:0, perl:0/5.26, perl:1)
+	 *        ^perl:0/5.28   (matches perl:0/5.26, perl:0/5.30)
+	 *        ^perl:0        (matches perl:1)
+	 *         perl:=        (= in this case is meaningless: perl, perl:0 ...)
+	 *  (with ^ being a portage-utils addition to match antislot)
+	 */
+	bl_op = query->blocker;
+	if (bl_op == ATOM_BL_ANTISLOT) {
+		/* ^perl -> match anything with a SLOT */
+		if (query->SLOT == NULL && data->SLOT == NULL)
+			return NOT_EQUAL;
+		if (query->SLOT != NULL) {
+			if (query->SUBSLOT == NULL) {
+				/* ^perl:0 -> match different SLOT */
+				if (data->SLOT == NULL ||
+						strcmp(query->SLOT, data->SLOT) == 0)
+					return NOT_EQUAL;
+			} else {
+				/* ^perl:0/5.28 -> match SLOT, but different SUBSLOT */
+				if (data->SLOT == NULL ||
+						strcmp(query->SLOT, data->SLOT) != 0)
+					return NOT_EQUAL;
+				if (data->SUBSLOT == NULL ||
+						strcmp(query->SUBSLOT, data->SUBSLOT) == 0)
+					return NOT_EQUAL;
+			}
+		}
+		bl_op = ATOM_BL_NONE;  /* ease work below */
+	} else if (query->SLOT != NULL) {
+		/* check SLOT only when query side has it */
+		if (data->SLOT == NULL) {
+			if (bl_op == ATOM_BL_NONE)
+				return NOT_EQUAL;
+		} else {
+			if (strcmp(query->SLOT, data->SLOT) != 0) {
+				/* slot has differs */
+				if (bl_op == ATOM_BL_NONE)
+					return NOT_EQUAL;
+			} else {
+				if (query->SUBSLOT != NULL) {
+					if (data->SUBSLOT == NULL) {
+						if (bl_op == ATOM_BL_NONE)
+							return NOT_EQUAL;
+					} else {
+						if (strcmp(query->SUBSLOT, data->SUBSLOT) != 0) {
+							if (bl_op == ATOM_BL_NONE)
+								return NOT_EQUAL;
+						}
+					}
+				}
+			}
+		}
 	}
 
-	atom_operator pfx_op = a2->pfx_op;
-	atom_operator sfx_op = a2->sfx_op;
-
 	/* handle the inversing effect of blockers */
-	if (a2->blocker != ATOM_BL_NONE) {
+	pfx_op = query->pfx_op;
+	sfx_op = query->sfx_op;
+	if (bl_op != ATOM_BL_NONE) {
 		switch (pfx_op) {
 			case ATOM_OP_NEWER:
 				pfx_op = ATOM_OP_OLDER_EQUAL;
@@ -405,60 +479,62 @@ atom_compare(const depend_atom *a1, const depend_atom *a2)
 		}
 	}
 
-	/* check slot only when both sides have it */
-	if (a1->SLOT != NULL && a2->SLOT != NULL &&
-			a1->SLOT[0] != '\0' && a2->SLOT[0] != '\0' &&
-			(strcmp(a1->SLOT, a2->SLOT) != 0 ||
-			(a1->SUBSLOT != NULL && a2->SUBSLOT != NULL &&
-			 strcmp(a1->SUBSLOT, a2->SUBSLOT) != 0)))
-		return NOT_EQUAL;
-
-	/* same for check repo */
-	if (a1->REPO != NULL && a2->REPO != NULL &&
-			a1->REPO[0] != '\0' && a2->REPO[0] != '\0' &&
-			strcmp(a1->REPO, a2->REPO) != 0)
-		return NOT_EQUAL;
-
-	/* Check category, iff both are specified.  This way we can match
-	 * atoms like "sys-devel/gcc" and "gcc". */
-	if (a1->CATEGORY && a2->CATEGORY) {
-		if (strcmp(a1->CATEGORY, a2->CATEGORY))
+	/* check REPO, if query has it, ignore blocker stuff for this one */
+	if (query->REPO != NULL) {
+		if (data->REPO == NULL)
+			return NOT_EQUAL;
+		if (strcmp(query->REPO, data->REPO) != 0)
 			return NOT_EQUAL;
 	}
 
-	/* check name */
-	if (a1->PN && a2->PN) {
-		if (strcmp(a1->PN, a2->PN))
+	/* check CATEGORY, if query has it, so we match
+	 * atoms like "sys-devel/gcc" and "gcc" */
+	if (query->CATEGORY != NULL) {
+		if (data->CATEGORY == NULL)
 			return NOT_EQUAL;
-	} else if (a1->CATEGORY && a2->CATEGORY) {
-		/* if CAT is set, and one side has empty PN, accept as match */
-		return a2->blocker != ATOM_BL_NONE ? NOT_EQUAL : EQUAL;
-	} else if (a1->PN || a2->PN)
-		return NOT_EQUAL;
+		if (strcmp(query->CATEGORY, data->CATEGORY) != 0) {
+			if (bl_op == ATOM_BL_NONE)
+				return NOT_EQUAL;
+		} else {
+			if (bl_op != ATOM_BL_NONE && query->PN == NULL)
+				return EQUAL;
+		}
+	}
+
+	/* check PN, this may be absent if query is for CATEGORY only */
+	if (query->PN != NULL) {
+		if (data->PN == NULL)
+			return NOT_EQUAL;
+		if (strcmp(query->PN, data->PN) != 0) {
+			if (bl_op == ATOM_BL_NONE)
+				return NOT_EQUAL;
+		} else {
+			if (bl_op != ATOM_BL_NONE && query->PV == NULL)
+				return EQUAL;
+		}
+	}
 
 	/* in order to handle suffix globs, we need to know all of the
-	 * version elements provided in it ahead of time
-	 */
-	unsigned int ver_bits = 0;
+	 * version elements provided in it ahead of time */
+	ver_bits = 0;
 	if (sfx_op == ATOM_OP_STAR) {
-		if (a2->letter)
+		if (query->letter)
 			ver_bits |= (1 << 0);
-		if (a2->suffixes[0].suffix != VER_NORM)
+		if (query->suffixes[0].suffix != VER_NORM)
 			ver_bits |= (1 << 1);
 		/* This doesn't handle things like foo-1.0-r0*, but that atom
-		 * doesn't ever show up in practice, so who cares.
-		 */
-		if (a2->PR_int)
+		 * doesn't ever show up in practice, so who cares. */
+		if (query->PR_int)
 			ver_bits |= (1 << 2);
 	}
 
 	/* check version */
-	if (a1->PV && a2->PV) {
+	if (data->PV && query->PV) {
 		char *s1, *s2;
 		uint64_t n1, n2;
 		/* first we compare the version [1.0]z_alpha1 */
-		s1 = a1->PV;
-		s2 = a2->PV;
+		s1 = data->PV;
+		s2 = query->PV;
 		while (s1 || s2) {
 			if (s1 && s2) {
 				/* deal with leading zeros */
@@ -491,16 +567,16 @@ atom_compare(const depend_atom *a1, const depend_atom *a2)
 		/* compare trailing letter 1.0[z]_alpha1 */
 		if (sfx_op == ATOM_OP_STAR) {
 			ver_bits >>= 1;
-			if (!a2->letter && !ver_bits)
+			if (!query->letter && !ver_bits)
 				return _atom_compare_match(EQUAL, pfx_op);
 		}
-		if (a1->letter < a2->letter)
+		if (data->letter < query->letter)
 			return _atom_compare_match(OLDER, pfx_op);
-		if (a1->letter > a2->letter)
+		if (data->letter > query->letter)
 			return _atom_compare_match(NEWER, pfx_op);
 		/* find differing suffixes 1.0z[_alpha1] */
-		const atom_suffix *as1 = &a1->suffixes[0];
-		const atom_suffix *as2 = &a2->suffixes[0];
+		const atom_suffix *as1 = &data->suffixes[0];
+		const atom_suffix *as2 = &query->suffixes[0];
 		while (as1->suffix == as2->suffix) {
 			if (as1->suffix == VER_NORM ||
 			    as2->suffix == VER_NORM)
@@ -509,8 +585,8 @@ atom_compare(const depend_atom *a1, const depend_atom *a2)
 			if (as1->sint != as2->sint)
 				break;
 
-			++as1;
-			++as2;
+			as1++;
+			as2++;
 		}
 		/* compare suffixes 1.0z[_alpha]1 */
 		if (sfx_op == ATOM_OP_STAR) {
@@ -530,15 +606,15 @@ atom_compare(const depend_atom *a1, const depend_atom *a2)
 		else if (as1->sint > as2->sint)
 			return _atom_compare_match(NEWER, pfx_op);
 		/* fall through to -r# check below */
-	} else if (a1->PV || a2->PV)
+	} else if (data->PV || query->PV)
 		return EQUAL;
 
 	/* Make sure the -r# is the same. */
-	if ((sfx_op == ATOM_OP_STAR && !a2->PR_int) ||
+	if ((sfx_op == ATOM_OP_STAR && !query->PR_int) ||
 	    pfx_op == ATOM_OP_PV_EQUAL ||
-	    a1->PR_int == a2->PR_int)
+	    data->PR_int == query->PR_int)
 		return _atom_compare_match(EQUAL, pfx_op);
-	else if (a1->PR_int < a2->PR_int)
+	else if (data->PR_int < query->PR_int)
 		return _atom_compare_match(OLDER, pfx_op);
 	else
 		return _atom_compare_match(NEWER, pfx_op);
@@ -586,6 +662,11 @@ atom_to_string_r(char *buf, size_t buflen, depend_atom *a)
 	if (a->PR_int > 0)
 		off += snprintf(buf + off, buflen - off, "-r%d", a->PR_int);
 	off += snprintf(buf + off, buflen - off, "%s", atom_op_str[a->sfx_op]);
+	if (a->SLOT != NULL || a->slotdep != ATOM_SD_NONE)
+		off += snprintf(buf + off, buflen - off, ":%s%s%s%s",
+				a->SLOT ? a->SLOT : "",
+				a->SUBSLOT ? "/" : "", a->SUBSLOT ? a->SUBSLOT : "",
+				atom_slotdep_str[a->slotdep]);
 	for (ud = a->usedeps; ud != NULL; ud = ud->next)
 		off += snprintf(buf + off, buflen - off, "%s%s%s%s%s",
 				ud == a->usedeps ? "[" : "",
@@ -593,11 +674,6 @@ atom_to_string_r(char *buf, size_t buflen, depend_atom *a)
 				ud->use,
 				atom_usecond_str[ud->sfx_cond],
 				ud->next == NULL ? "]" : ",");
-	if (a->SLOT != NULL)
-		off += snprintf(buf + off, buflen - off, ":%s%s%s%s",
-				a->SLOT,
-				a->SUBSLOT ? "/" : "", a->SUBSLOT ? a->SUBSLOT : "",
-				atom_slotdep_str[a->slotdep]);
 	if (a->REPO != NULL)
 		off += snprintf(buf + off, buflen - off, "::%s", a->REPO);
 

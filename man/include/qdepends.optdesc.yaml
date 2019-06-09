@@ -9,7 +9,11 @@ query: |
     Query reverse deps.  This basically reverses the search to any
     package that references \fI<arg>\fR in DEPEND, RDEPEND, PDEPEND or BDEPEND.
     This can be useful to find consumers of a given package, e.g.\ to
-    search for packages that have \fIlogwatch\fR in their DEPEND.
+    search for packages that have \fIlogwatch\fR in their DEPEND.  Note
+    that using versions or range specifiers may yield odd results since
+    dependency strings often have ranges themselves.  For installed
+    packages, SLOT and SUBSLOTs are available, thus SLOT and antiSLOT
+    queries are possible.  See \fBqatom\fR(1).
 name-only: |
     Only show category/package, instead of category/package-version.
 format: |

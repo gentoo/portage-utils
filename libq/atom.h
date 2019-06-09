@@ -19,7 +19,7 @@ extern const char * const atom_suffixes_str[];
 typedef enum {
 	/*   */ ATOM_SD_NONE = 0,
 	/* = */ ATOM_SD_ANY_REBUILD,
-	/* * */ ATOM_SD_ANY_IGNORE
+	/* * */ ATOM_SD_ANY_IGNORE,
 } atom_slotdep;
 extern const char * const atom_slotdep_str[];
 
@@ -38,6 +38,7 @@ typedef enum {
 	/*    */ ATOM_BL_NONE = 0,
 	/* !  */ ATOM_BL_BLOCK,
 	/* !! */ ATOM_BL_BLOCK_HARD,
+	/* ^  */ ATOM_BL_ANTISLOT,
 } atom_blocker;
 extern const char * const atom_blocker_str[];
 

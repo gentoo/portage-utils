@@ -1,0 +1,37 @@
+.SH "ANTISLOT"
+A feature present in portage-utils is the so-called antislot, and is
+activated by starting the atom with a carrot (^), in place of the
+blocker bang (!).  The antislot is similar to the inversing behaviour of
+a blocker, but only operates on SLOT and SUBSLOT, and requires SLOT to
+be available, e.g. it won't match unset SLOT (NULL).
+
+The antislot is mostly useful with dependencies and is best described
+with an example.  Consider a perl upgrade from \fIperl:0/5.28\fR to
+\fIperl:0/5.30\fR.  To find a consumer for \fIperl:0/5.28\fR a simple
+match can be made, e.g. using \fBqdepends\Rf(1):
+
+.nf
+	$ \fIqdepends -Q perl:0/5.28\fR
+	virtual/perl-ExtUtils-MakeMaker-7.340.0-r1: ... dev-lang/perl:0/5.28 ...
+	...
+.fi
+
+However, to query after \fIperl:0/5.30\fR is installed, which packages
+are still not rebuilt (e.g. depending on an older perl: 5.28, 5.26,
+etc.) one can use the antislot:
+
+.nf
+	$ \fIqdepends -Q ^perl:0/5.30\fR
+	...
+.fi
+
+This will return any package that depends on \fIperl:0\fR not having
+subslot \fI5.30\fR.
+.P
+Obviously this can be tested using \fBqatom\fR using the \fI-c\fR
+option:
+
+.nf
+	$ \fIqatom -c ^perl:0/5.30 perl-5.28.1:0/5.28\fR
+	^perl:0/5.30 == perl-5.28.1:0/5.28
+.fi

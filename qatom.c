@@ -63,20 +63,38 @@ int qatom_main(int argc, char **argv)
 		}
 
 		switch (action) {
-		case _COMPARE:
+		case _COMPARE: {
+			int r;
+
 			i++;
 			atomc = atom_explode(argv[i]);
 			if (atomc == NULL) {
 				warnf("invalid atom: %s\n", argv[i]);
 				break;
 			}
-			printf("%s %s ",
-					atom_to_string(atom),
-					booga[atom_compare(atom, atomc)]);
-			printf("%s\n",
-					atom_to_string(atomc));
+
+			if (atomc->blocker != ATOM_BL_NONE ||
+					atomc->pfx_op != ATOM_OP_NONE ||
+					atomc->sfx_op != ATOM_OP_NONE ||
+					(atomc->CATEGORY == NULL &&
+					 atom->blocker == ATOM_BL_NONE &&
+					 atom->pfx_op == ATOM_OP_NONE &&
+					 atom->sfx_op == ATOM_OP_NONE))
+			{
+				r = atom_compare(atom, atomc);
+			} else {
+				r = atom_compare(atomc, atom);
+				switch (r) {
+					case NEWER:     r = OLDER;     break;
+					case OLDER:     r = NEWER;     break;
+				}
+			}
+
+			printf("%s %s ", atom_to_string(atom), booga[r]);
+			printf("%s\n", atom_to_string(atomc));
 			atom_implode(atomc);
 			break;
+		}
 		case _EXPLODE:
 			printf("%s\n", atom_format(format, atom, verbose));
 			break;

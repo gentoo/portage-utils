@@ -76,9 +76,13 @@ test c08 "cat/pkg-123:foo != cat/pkg-123:bar" \
 	-c 'cat/pkg-123:foo' 'cat/pkg-123:bar'
 test c09 "cat/pkg-123:foo == cat/pkg-123:foo=" \
 	-c 'cat/pkg-123:foo' 'cat/pkg-123:foo='
-test c10 "cat/pkg-123:foo == cat/pkg-123:=" \
-	-c 'cat/pkg-123:foo' 'cat/pkg-123:='
+test c10 "cat/pkg-123:foo != cat/pkg-123:=" \
+	-c 'cat/pkg-123:foo' 'cat/pkg-123:='            # slot vs empty slot
 test c11 "cat/pkg-123[!foo,bar(+),baz=] == cat/pkg-123" \
 	-c 'cat/pkg-123[!foo,bar(+),baz=]' 'cat/pkg-123'
+test c12 "cat/pkg-123:0/25 == ^cat/pkg-123:0/26" \
+	-c 'cat/pkg-123:0/25' '^cat/pkg-123:0/26'       # bug 683430 antislot
+test c13 "cat/pkg-123 != ^cat/pkg-123:0/26" \
+	-c 'cat/pkg-123' '^cat/pkg-123:0/26'
 
 end

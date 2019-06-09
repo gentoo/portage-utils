@@ -132,7 +132,11 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if ((state->qmode & QMODE_REVERSE) == 0) {
 		/* see if this cat/pkg is requested */
 		array_for_each(state->atoms, i, atom) {
-			if (atom_compare(atom, datom) == EQUAL) {
+			if (atom->blocker != ATOM_BL_NONE ||
+					atom->SLOT != NULL ||
+					atom->REPO != NULL)
+				datom = tree_get_atom(pkg_ctx, true);
+			if (atom_compare(datom, atom) == EQUAL) {
 				atom = NULL;
 				break;
 			}
@@ -203,7 +207,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			if (state->qmode & QMODE_REVERSE) {
 				array_for_each(state->atoms, m, atom) {
 					array_for_each(state->deps, n, fatom) {
-						if (atom_compare(atom, fatom) == EQUAL) {
+						if (atom_compare(fatom, atom) == EQUAL) {
 							fatom = NULL;
 							break;
 						}
