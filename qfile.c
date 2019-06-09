@@ -92,15 +92,16 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int found = 0;
 
 	/* If exclude_pkg is not NULL, check it.  We are looking for files
-	 * collisions, and must exclude one package.
-	 */
+	 * collisions, and must exclude one package. */
 	if (state->exclude_pkg) {
 		/* see if CATEGORY matches */
 		if (state->exclude_atom->CATEGORY &&
 		    strcmp(state->exclude_atom->CATEGORY, catname))
 			goto dont_skip_pkg;
-		atom = tree_get_atom(pkg_ctx, false);
-		if (atom_compare(state->exclude_atom, atom) != EQUAL)
+		atom = tree_get_atom(pkg_ctx,
+				state->exclude_atom->SLOT != NULL ||
+				state->exclude_atom->REPO != NULL);
+		if (atom_compare(atom, state->exclude_atom) != EQUAL)
 			goto dont_skip_pkg;
 		/* "(CAT/)?(PN|PF)" matches, and no SLOT specified */
 		if (state->exclude_slot == NULL)
