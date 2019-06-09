@@ -2,34 +2,19 @@
 
 . ../init.sh || exit 1
 
-PORTDIR=$(DEBUG=: q -Ch 2>&1 | grep ^PORTDIR | awk '{print $NF}')
-if [[ -z ${TRAVIS_OS_NAME} && -d "${PORTDIR}"/metadata/md5-cache ]] &&
-	"$s"/atom-explode.py < /dev/null >& /dev/null ;
-then
-	pushd "${PORTDIR}"/metadata/md5-cache >/dev/null || exit $?
-
-	if [[ $1 == -v ]] ; then
-		find . -mindepth 2 -type f -printf '%P\n%f\n' | while read line ; do
-			echo "TESTING $line: "
-			"$b"/e "${line}"
-		done
-		exit 0
-	fi
-
-	# split the disk i/o out so both tests are CPU bound only
-	files=$(find . -mindepth 2 -type f ! -name "Manifest.*" -printf '%P\n%f\n')
-	popd >/dev/null
-else
-	files=$(xzcat ebuildlist.xz)
-fi
+files=$(xzcat ebuildlist.xz)
 
 printf "atom_explode():"
 time echo "${files}" | "$b"/e > "$b"/me || exit $?
 echo
 
-printf "portage:"
-time echo "${files}" | "$s"/atom-explode.py > "$b"/py || xzcat portageatoms.xz > "$b"/py
-echo
+if [[ -n ${QATOM_COMPARE_TO_PORTAGE} ]] ; then
+	printf "portage:"
+	time echo "${files}" | "$s"/atom-explode.py > "$b"/py
+	echo
+else
+	xzcat portageatoms.xz > "$b"/py
+fi
 
 diff -U 0 "$b"/me "$b"/py
 tend $? "portage-utils vs portage atom parsing"
