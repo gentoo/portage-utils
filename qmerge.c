@@ -2163,7 +2163,7 @@ parse_packages(set *todo)
 					for (i = 0; i < todo_cnt; i++) {
 						pkg_atom->REPO = todo_atoms[i]->REPO ? Pkg.REPO : NULL;
 						pkg_atom->SLOT = todo_atoms[i]->SLOT ? Pkg.SLOT : NULL;
-						if (atom_compare(todo_atoms[i], pkg_atom) == EQUAL) {
+						if (atom_compare(pkg_atom, todo_atoms[i]) == EQUAL) {
 							if (search_pkgs)
 								print_Pkg(verbose, pkg_atom, &Pkg);
 							else
