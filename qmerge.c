@@ -358,6 +358,10 @@ config_protected(const char *buf, int cp_argc, char **cp_argv,
 	char dest[_Q_PATH_MAX];
 	snprintf(dest, sizeof(dest), "%s%s", portroot, buf);
 
+	/* config protect paths don't carry EPREFIX */
+	if (strncmp(buf, CONFIG_EPREFIX, strlen(CONFIG_EPREFIX) - 1) == 0)
+		buf += strlen(CONFIG_EPREFIX) - 1;
+
 	/* Check CONFIG_PROTECT_MASK */
 	for (i = 1; i < cpm_argc; ++i)
 		if (strncmp(cpm_argv[i], buf, strlen(cpm_argv[i])) == 0)
@@ -370,7 +374,7 @@ config_protected(const char *buf, int cp_argc, char **cp_argv,
 				return 1;
 
 	/* this would probably be bad */
-	if (strcmp("/bin/sh", buf) == 0)
+	if (strcmp(CONFIG_EPREFIX "bin/sh", buf) == 0)
 		return 1;
 
 	return 0;
@@ -750,9 +754,9 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		"FILESDIR=/.does/not/exist/anywhere\n"
 		"MERGE_TYPE=binary\n"
 		"ROOT='%4$s'\n"
-		"EROOT=\"${EPREFIX%%/}/${ROOT#/}/\"\n"
+		"EROOT=\"/${ROOT#/}/${EPREFIX%%/}/\"\n"
 		"D=\"%5$s\"\n"
-		"ED=\"${EPREFIX%%/}/${D#/}/\"\n"
+		"ED=\"${D%%/}/${EPREFIX%%/}/\"\n"
 		"T=\"%6$s\"\n"
 		/* Finally run the func */
 		"%7$s%2$s\n"
