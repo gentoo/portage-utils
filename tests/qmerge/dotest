@@ -71,7 +71,7 @@ tend $? "qmerge-test: [C] pkg_* order of execution" || printf '%s\n' "${order}" 
 [[ ! -x ${ROOT}/usr/bin/qmerge-test && \
      -f ${ROOT}/etc/some.conf && \
    ! -f ${ROOT}/etc/another.conf && \
-   ! -d ${ROOT}/var/pkg/db/sys-devel ]]
+   ! -d ${ROOT}/var/db/pkg/sys-devel ]]
 tend $? "qmerge-test: [C] uninstalled expected files" || treedir "${ROOT}"
 
 set -e
