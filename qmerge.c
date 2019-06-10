@@ -1015,6 +1015,8 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	FILE *fp, *contents;
 	static char *phases;
 	static size_t phases_len;
+	char *eprefix = NULL;
+	size_t eprefix_len = 0;
 	char buf[1024];
 	char *tbz2, *p, *D, *T;
 	int i;
@@ -1285,8 +1287,11 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	pkg_run_func("vdb", phases, "pkg_setup", D, T);
 	pkg_run_func("vdb", phases, "pkg_preinst", D, T);
 
+	if (!eat_file("vdb/EPREFIX", &eprefix, &eprefix_len))
+		eprefix = NULL;
+
 	{
-		int imagefd = open("image" CONFIG_EPREFIX, O_RDONLY);
+		int imagefd = open("image", O_RDONLY);
 		size_t masklen = strlen(install_mask) + 1 +
 				15 + 1 + 14 + 1 + 14 + 1 + 1;  /* worst case scenario */
 		char *imask = xmalloc(masklen);
@@ -1295,6 +1300,12 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		if (fstat(imagefd, &st) == -1) {
 			close(imagefd);
 			err("Cannot stat image dirfd");
+		} else if (eprefix != NULL) {
+			int imagepfx = openat(imagefd, eprefix + 1, O_RDONLY);
+			if (imagepfx != -1) {
+				close(imagefd);
+				imagefd = imagepfx;
+			}
 		}
 
 		/* rely on INSTALL_MASK code to remove optional dirs */
@@ -1321,6 +1332,10 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 		close(imagefd);
 	}
+
+	/* TODO: merge_tree_at should use this, and use chpathtool code? */
+	if (eprefix != NULL)
+		free(eprefix);
 
 	makeargv(config_protect, &cp_argc, &cp_argv);
 	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
