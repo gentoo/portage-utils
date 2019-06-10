@@ -114,7 +114,8 @@ tree_open(const char *sroot, const char *portdir)
 		return ret;
 	}
 
-	tree_close(ret);
+	if (repo != NULL)
+		free(repo);
 	warnf("could not open repository at %s (under root %s)", portdir, sroot);
 
 	return NULL;
