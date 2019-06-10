@@ -2388,6 +2388,11 @@ int qmerge_main(int argc, char **argv)
 	for (i = optind; i < argc; ++i)
 		todo = qmerge_add_set(argv[i], todo);
 
+	if (todo == NULL) {
+		warn("need package names to work with");
+		return EXIT_FAILURE;
+	}
+
 	if (!uninstall)
 		qmerge_initialize();
 
