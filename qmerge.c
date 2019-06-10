@@ -1342,6 +1342,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	if ((contents = fopen("vdb/CONTENTS", "w")) == NULL)
 		errf("come on wtf?");
+
 	objs = NULL;
 	{
 		char *cpath;
@@ -1415,6 +1416,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	free(T);
 
 	/* Update the magic counter */
+	/* FIXME: check Portage's get_counter_tick_core */
 	if ((fp = fopen("vdb/COUNTER", "w")) != NULL) {
 		fputs("0", fp);
 		fclose(fp);
@@ -1426,11 +1428,9 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 				portroot, portvdb, pkg->CATEGORY);
 		mkdir_p(buf, 0755);
 		strcat(buf, pkg->PF);
-		if (rename("vdb", buf)) {
-			xasprintf(&p, "mv vdb '%s'", buf);
-			xsystem(p);
-			free(p);
-		}
+		rm_rf(buf);  /* get rid of existing dir, empty dir is fine */
+		if (rename("vdb", buf) != 0)
+			warn("failed to move 'vdb' to '%s': %s", buf, strerror(errno));
 	}
 
 	/* clean up our local temp dir */
