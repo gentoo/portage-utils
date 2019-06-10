@@ -1286,7 +1286,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	pkg_run_func("vdb", phases, "pkg_preinst", D, T);
 
 	{
-		int imagefd = open(".", O_RDONLY);
+		int imagefd = open("image" CONFIG_EPREFIX, O_RDONLY);
 		size_t masklen = strlen(install_mask) + 1 +
 				15 + 1 + 14 + 1 + 14 + 1 + 1;  /* worst case scenario */
 		char *imask = xmalloc(masklen);
