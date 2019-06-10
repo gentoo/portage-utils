@@ -355,12 +355,6 @@ config_protected(const char *buf, int cp_argc, char **cp_argv,
                  int cpm_argc, char **cpm_argv)
 {
 	int i;
-	char dest[_Q_PATH_MAX];
-	snprintf(dest, sizeof(dest), "%s%s", portroot, buf);
-
-	/* config protect paths don't carry EPREFIX */
-	if (strncmp(buf, CONFIG_EPREFIX, strlen(CONFIG_EPREFIX) - 1) == 0)
-		buf += strlen(CONFIG_EPREFIX) - 1;
 
 	/* Check CONFIG_PROTECT_MASK */
 	for (i = 1; i < cpm_argc; ++i)
@@ -370,8 +364,7 @@ config_protected(const char *buf, int cp_argc, char **cp_argv,
 	/* Check CONFIG_PROTECT */
 	for (i = 1; i < cp_argc; ++i)
 		if (strncmp(cp_argv[i], buf, strlen(cp_argv[i])) == 0)
-			if (access(dest, R_OK) == 0)
-				return 1;
+			return 1;
 
 	/* this would probably be bad */
 	if (strcmp(CONFIG_EPREFIX "bin/sh", buf) == 0)
@@ -777,7 +770,7 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 /* Copy one tree (the single package) to another tree (ROOT) */
 static int
 merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
-              FILE *contents, set **objs, char **cpathp,
+              FILE *contents, size_t eprefix_len, set **objs, char **cpathp,
               int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
 	int i, ret, subfd_src, subfd_dst;
@@ -847,8 +840,9 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			qprintf("%s>>>%s %s%s%s/\n", GREEN, NORM, DKBLUE, cpath, NORM);
 
 			/* Copy all of these contents */
-			merge_tree_at(subfd_src, name, subfd_dst, name, contents, objs,
-					cpathp, cp_argc, cp_argv, cpm_argc, cpm_argv);
+			merge_tree_at(subfd_src, name,
+					subfd_dst, name, contents, eprefix_len,
+					objs, cpathp, cp_argc, cp_argv, cpm_argc, cpm_argv);
 			cpath = *cpathp;
 			mnlen = 0;
 
@@ -862,6 +856,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			unsigned char *hash;
 			const char *tmpname, *dname;
 			char buf[_Q_PATH_MAX * 2];
+			struct stat ignore;
 
 			/* syntax: obj filename hash mtime */
 			hash = hash_file_at(subfd_src, name, HASH_MD5);
@@ -871,7 +866,10 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			free(hash);
 
 			/* Check CONFIG_PROTECT */
-			if (config_protected(cpath, cp_argc, cp_argv, cpm_argc, cpm_argv)) {
+			if (config_protected(cpath + eprefix_len,
+						cp_argc, cp_argv, cpm_argc, cpm_argv) &&
+					fstatat(subfd_dst, name, &ignore, AT_SYMLINK_NOFOLLOW) == 0)
+			{
 				/* ._cfg####_ */
 				char *num;
 				dname = buf;
@@ -880,7 +878,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 				for (i = 0; i < 10000; ++i) {
 					sprintf(num, "%04i", i);
 					num[4] = '_';
-					if (faccessat(subfd_dst, dname, F_OK, AT_SYMLINK_NOFOLLOW))
+					if (fstatat(subfd_dst, dname, &ignore, AT_SYMLINK_NOFOLLOW))
 						break;
 				}
 				qprintf("%s>>>%s %s (%s)\n", GREEN, NORM, cpath, dname);
@@ -1288,7 +1286,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	pkg_run_func("vdb", phases, "pkg_preinst", D, T);
 
 	if (!eat_file("vdb/EPREFIX", &eprefix, &eprefix_len))
-		eprefix = NULL;
+		eprefix_len = 0;
 
 	{
 		int imagefd = open("image", O_RDONLY);
@@ -1300,7 +1298,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		if (fstat(imagefd, &st) == -1) {
 			close(imagefd);
 			err("Cannot stat image dirfd");
-		} else if (eprefix != NULL) {
+		} else if (eprefix_len > 0) {
 			int imagepfx = openat(imagefd, eprefix + 1, O_RDONLY);
 			if (imagepfx != -1) {
 				close(imagefd);
@@ -1333,7 +1331,6 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		close(imagefd);
 	}
 
-	/* TODO: merge_tree_at should use this, and use chpathtool code? */
 	if (eprefix != NULL)
 		free(eprefix);
 
@@ -1350,8 +1347,9 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
 
-		ret = merge_tree_at(AT_FDCWD, "image", AT_FDCWD, portroot, contents,
-					&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv);
+		ret = merge_tree_at(AT_FDCWD, "image",
+				AT_FDCWD, portroot, contents, eprefix_len,
+				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv);
 
 		free(cpath);
 
@@ -1450,11 +1448,11 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
 	tree_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
-	const char *cat = cat_ctx->name;
-	const char *pkgname = pkg_ctx->name;
 	size_t buflen;
 	static char *phases;
 	static size_t phases_len;
+	char *eprefix = NULL;
+	size_t eprefix_len = 0;
 	const char *T;
 	char *buf;
 	FILE *fp;
@@ -1466,8 +1464,8 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 	buf = phases = NULL;
 	T = "${PWD}/temp";
 
-	printf("%s<<<%s %s%s%s/%s%s%s\n",
-			YELLOW, NORM, WHITE, cat, NORM, CYAN, pkgname, NORM);
+	printf("%s<<<%s %s\n", YELLOW, NORM,
+			atom_format("%[CATEGORY]%[PF]", tree_get_atom(pkg_ctx, false), 0));
 
 	if (pretend == 100)
 		return 0;
@@ -1486,6 +1484,11 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 		pkg_run_func_at(pkg_ctx->fd, ".", phases, "pkg_prerm", T, T);
 	}
 
+	if (!tree_pkg_vdb_eat(pkg_ctx, "EPREFIX", &eprefix, &eprefix_len))
+		eprefix_len = 0;
+	if (eprefix != NULL)
+		free(eprefix);
+
 	unmerge_config_protected =
 		strstr(features, "config-protect-if-modified") != NULL;
 
@@ -1500,7 +1503,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 		if (!e)
 			continue;
 
-		protected = config_protected(e->name,
+		protected = config_protected(e->name + eprefix_len,
 				cp_argc, cp_argv, cpm_argc, cpm_argv);
 
 		/* This should never happen ... */
