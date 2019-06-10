@@ -68,7 +68,7 @@ end() {
 }
 
 mktmpdir() {
-	local d=${1:-${ab}/tmp}
+	local d=${1:-${Q_TMPDIR:-${ab}}/q-tmp}
 	rm -rf "$d" && \
 	mkdir -p "$d" && \
 	pushd "$d" >/dev/null \
@@ -76,7 +76,7 @@ mktmpdir() {
 }
 _cleantmpdir() {
 	local cmd=$1; shift
-	local d=${1:-${ab}/tmp}
+	local d=${1:-${Q_TMPDIR:-${ab}}/q-tmp}
 	popd >/dev/null
 	${cmd} "${d}" || fail "could not clean tmp dir '$d'"
 }
