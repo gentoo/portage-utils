@@ -194,6 +194,12 @@ makeargv(const char *string, int *argc, char ***argv)
 	q = xstrdup(string);
 	str = q;
 
+	/* shortcut empty strings */
+	while (isspace((int)*string))
+		string++;
+	if (*string == '\0')
+		return;
+
 	remove_extra_space(str);
 	rmspace(str);
 
