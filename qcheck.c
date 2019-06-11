@@ -369,7 +369,7 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 		qatom = tree_get_atom(pkg_ctx, false);
 		array_for_each(state->atoms, i, atom) {
-			if (atom_compare(atom, qatom) == EQUAL) {
+			if (atom_compare(qatom, atom) == EQUAL) {
 				showit = true;
 				break;
 			}
