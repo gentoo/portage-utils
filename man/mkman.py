@@ -64,7 +64,10 @@ def MkMan(applets, applet, output):
 
     # Extract the main use string and description:
     # Usage: q <applet> <args>  : invoke a portage utility applet
-    ahelp = subprocess.check_output([Q, applet, '--help']).decode('ascii')
+    try:
+        ahelp = subprocess.check_output([Q, applet, '--help']).decode('ascii')
+    except:
+        return
     lines = ahelp.splitlines()
     m = re.search(r'^Usage: %s (.*) : (.*)' % applet, ahelp)
     usage = m.group(1)
