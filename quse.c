@@ -21,17 +21,19 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "set.h"
 #include "rmspace.h"
 #include "tree.h"
 #include "xarray.h"
 #include "xregex.h"
 
-#define QUSE_FLAGS "eaLDp:R" COMMON_FLAGS
+#define QUSE_FLAGS "eaLDIp:R" COMMON_FLAGS
 static struct option const quse_long_opts[] = {
 	{"exact",     no_argument, NULL, 'e'},
 	{"all",       no_argument, NULL, 'a'},
 	{"license",   no_argument, NULL, 'L'},
 	{"describe",  no_argument, NULL, 'D'},
+	{"installed", no_argument, NULL, 'I'},
 	{"package",    a_argument, NULL, 'p'},
 	{"repo",      no_argument, NULL, 'R'},
 	COMMON_LONG_OPTS
@@ -41,6 +43,7 @@ static const char * const quse_opts_help[] = {
 	"List all ebuilds, don't match anything",
 	"Use the LICENSE vs IUSE",
 	"Describe the USE flag",
+	"Only search installed packages",
 	"Restrict matching to package or category",
 	"Show repository the ebuild originates from",
 	COMMON_OPTS_HELP
@@ -56,6 +59,7 @@ struct quse_state {
 	bool do_regex:1;
 	bool do_describe:1;
 	bool do_licence:1;
+	bool do_installed:1;
 	bool do_list:1;
 	bool do_repo:1;
 	depend_atom *match;
@@ -407,6 +411,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	depend_atom *atom = NULL;  /* pacify compiler */
 	char buf[8192];
 	tree_pkg_meta *meta;
+	set *use = NULL;
 	bool match;
 	char *p;
 	char *q;
@@ -432,16 +437,44 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		}
 	}
 
-	meta = tree_pkg_read(pkg_ctx);
-	if (meta == NULL)
-		return 0;
+	if (state->overlay != NULL) {
+		meta = tree_pkg_read(pkg_ctx);
+		if (meta == NULL)
+			return 0;
+		if (meta->IUSE == NULL)
+			return 0;
+	} else {
+		size_t dummy;
 
-	if (meta->IUSE == NULL)
-		return 0;
+		meta = xzalloc(sizeof(*meta));
+
+		dummy = 0;
+		if (!tree_pkg_vdb_eat(pkg_ctx, "IUSE", &meta->IUSE, &dummy)) {
+			free(meta);
+			return 0;
+		}
+
+		dummy = 0;
+		tree_pkg_vdb_eat(pkg_ctx, "LICENSE", &meta->LICENSE, &dummy);
+
+		s = NULL;
+		dummy = 0;
+		tree_pkg_vdb_eat(pkg_ctx, "USE", &s, &dummy);
+		p = s;
+		while ((q = strchr(p, (int)' ')) != NULL) {
+			*q++ = '\0';
+			use = add_set(p, use);
+			p = q;
+		}
+		if (*p != '\0')
+			use = add_set(p, use);
+		free(s);
+	}
 
 	if (verbose) {
 		portdirfd = openat(pkg_ctx->cat_ctx->ctx->portroot_fd,
-				state->overlay, O_RDONLY | O_CLOEXEC | O_PATH);
+				state->overlay == NULL ? main_overlay : state->overlay,
+				O_RDONLY | O_CLOEXEC | O_PATH);
 		if (portdirfd == -1)
 			return 0;
 	}
@@ -566,7 +599,9 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					quse_search_profiles_desc(portdirfd, &us);
 
 			for (i = 0; i < cnt; i++) {
-				printf(" %c%s%s%s%*s  %s\n",
+				match = use != NULL && contains_set(us.argv[i], use);
+				printf("%s%c%s%s%s%*s  %s\n",
+						match ? "*" : " ",
 						us.argv[i][-1],
 						/* selected ? RED : NORM */ MAGENTA,
 						us.argv[i],
@@ -585,7 +620,16 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		}
 	}
 
-	tree_close_meta(meta);
+	if (state->overlay != NULL) {
+		tree_close_meta(meta);
+	} else {
+		free(meta->IUSE);
+		if (meta->LICENSE != NULL)
+			free(meta->LICENSE);
+		free(meta);
+		if (use != NULL)
+			free_set(use);
+	}
 	if (verbose)
 		close(portdirfd);
 
@@ -603,6 +647,7 @@ int quse_main(int argc, char **argv)
 		.do_regex = true,
 		.do_describe = false,
 		.do_licence = false,
+		.do_installed = false,
 		.do_repo = false,
 		.match = NULL,
 		.overlay = NULL,
@@ -610,12 +655,13 @@ int quse_main(int argc, char **argv)
 
 	while ((i = GETOPT_LONG(QUSE, quse, "")) != -1) {
 		switch (i) {
-		case 'e': state.do_regex = false;   break;
-		case 'a': state.do_all = true;      break;
-		case 'L': state.do_licence = true;  break;
-		case 'D': state.do_describe = true; break;
-		case 'R': state.do_repo = true;     break;
-		case 'p': match = optarg;           break;
+		case 'e': state.do_regex = false;    break;
+		case 'a': state.do_all = true;       break;
+		case 'L': state.do_licence = true;   break;
+		case 'D': state.do_describe = true;  break;
+		case 'I': state.do_installed = true; break;
+		case 'R': state.do_repo = true;      break;
+		case 'p': match = optarg;            break;
 		COMMON_GETOPTS_CASES(quse)
 		}
 	}
@@ -646,6 +692,11 @@ int quse_main(int argc, char **argv)
 	if (state.do_describe) {
 		array_for_each(overlays, n, overlay)
 			quse_describe_flag(portroot, overlay, &state);
+	} else if (state.do_installed) {
+		tree_ctx *t = tree_open_vdb(portroot, portvdb);
+		state.overlay = NULL;
+		tree_foreach_pkg_sorted(t, quse_results_cb, &state);
+		tree_close(t);
 	} else {
 		array_for_each(overlays, n, overlay) {
 			tree_ctx *t = tree_open(portroot, overlay);

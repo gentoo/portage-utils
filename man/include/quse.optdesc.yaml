@@ -4,3 +4,7 @@ verbose: |
     Also shows problems encountered during parsing.  These are mostly
     diagnostic and indicate possible incorrectness in the results.
 quiet: Ignored for compatibility with other qapplets.
+installed: |
+    Only search installed packages.  Together with \fB-v\fR this shows
+    USE-flags and their descriptions, and currently enabled flags
+    prefixed with an asterisk (\fI*\fR).
