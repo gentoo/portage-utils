@@ -559,6 +559,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			printf("%s\n", atom_format(qfmt, atom, 0));
 		} else if (verbose && !state->do_licence) {
 			/* multi-line result, printing USE-flags with their descs */
+			size_t desclen;
 			struct quse_state us = {
 				.do_regex = false,
 				.do_describe = false,
@@ -598,17 +599,50 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				if (!quse_search_use_desc(portdirfd, &us))
 					quse_search_profiles_desc(portdirfd, &us);
 
+			/* calculate available space in the terminal to print
+			 * descriptions */
+			len = twidth - maxlen - 2 - 1 - 2;
+
 			for (i = 0; i < cnt; i++) {
 				match = use != NULL && contains_set(us.argv[i], use);
-				printf("%s%c%s%s%s%*s  %s\n",
-						match ? "*" : " ",
+				desclen = us.retv[i] != NULL ? strlen(us.retv[i]) : 0;
+				p = NULL;
+				if (desclen > (size_t)len) {  /* need to wrap */
+					for (p = &us.retv[i][len]; p > us.retv[i]; p--)
+						if (isspace((int)*p))
+							break;
+					if (p > us.retv[i]) {
+						*p++ = '\0';
+						desclen -= p - us.retv[i];
+					} else {
+						p = NULL;
+					}
+				}
+				printf(" %c%s%s%s%c%*s  %s\n",
 						us.argv[i][-1],
-						/* selected ? RED : NORM */ MAGENTA,
+						match ? GREEN : MAGENTA,
 						us.argv[i],
 						NORM,
+						match ? '*' : ' ',
 						(int)(maxlen - strlen(us.argv[i])), "",
 						us.retv[i] == NULL ? "<no description found>" :
 							us.retv[i]);
+				while (p != NULL) {  /* continue wrapped description */
+					q = p;
+					p = NULL;
+					if ((size_t)len < desclen) {
+						for (p = q + len; p > q; p--)
+							if (isspace((int)*p))
+								break;
+						if (p > q) {
+							*p++ = '\0';
+							desclen -= p - q;
+						} else {
+							p = NULL;
+						}
+					}
+					printf("  %*s   %s\n", maxlen, "", q);
+				}
 				if (us.retv[i] != NULL)
 					free(us.retv[i]);
 			}

@@ -25,7 +25,6 @@
 #include <dirent.h>
 #include <time.h>
 #include <errno.h>
-#include <termios.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -1531,12 +1530,6 @@ process_dir_vrfy(void)
 	verify_msg topmsg;
 	verify_msg *walk = &topmsg;
 	gpg_sig *gs;
-	struct winsize winsz;
-	int twidth = 80;
-
-	ioctl(0, TIOCGWINSZ, &winsz);
-	if (winsz.ws_col > 0)
-		twidth = (int)winsz.ws_col;
 
 	gettimeofday(&startt, NULL);
 

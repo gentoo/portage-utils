@@ -16,6 +16,7 @@
 #include <ctype.h>
 #include <sys/time.h>
 #include <limits.h>
+#include <termios.h>
 
 #include "eat_file.h"
 #include "rmspace.h"
@@ -27,6 +28,7 @@ char *main_overlay;
 char *module_name = NULL;
 int verbose = 0;
 int quiet = 0;
+int twidth;
 char pretend = 0;
 char *portroot;
 char *config_protect;
@@ -772,6 +774,12 @@ initialize_portage_env(void)
 int main(int argc, char **argv)
 {
 	struct stat st;
+	struct winsize winsz;
+
+	ioctl(0, TIOCGWINSZ, &winsz);
+	if (winsz.ws_col > 0)
+	twidth = winsz.ws_col > 0 ? (int)winsz.ws_col : 80;
+
 	warnout = stderr;
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];

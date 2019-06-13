@@ -165,6 +165,7 @@ extern char *install_mask;
 extern DEFINE_ARRAY(overlays);
 extern DEFINE_ARRAY(overlay_names);
 extern char *main_overlay;
+extern int twidth;
 
 void no_colors(void);
 void setup_quiet(void);
