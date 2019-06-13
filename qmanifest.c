@@ -25,10 +25,10 @@
 #include <dirent.h>
 #include <time.h>
 #include <errno.h>
+#include <termios.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/ioctl.h>
 #include <openssl/sha.h>
 #include <openssl/whrlpool.h>
 #include <blake2.h>
@@ -1498,7 +1498,7 @@ verify_timestamp(const char *ts)
 }
 
 static void
-format_line(const char *pfx, const char *msg, int twidth)
+format_line(const char *pfx, const char *msg)
 {
 	size_t msglen = strlen(pfx) + strlen(msg);
 
@@ -1644,11 +1644,11 @@ process_dir_vrfy(void)
 				msgline = msg;
 				while ((msgline = strchr(msgline, '\n')) != NULL) {
 					*msgline++ = '\0';
-					format_line(pfx, msg, twidth);
+					format_line(pfx, msg);
 					pfx = "  ";
 					msg = msgline;
 				}
-				format_line(pfx, msg, twidth);
+				format_line(pfx, msg);
 			}
 		}
 

@@ -17,6 +17,7 @@
 #include <sys/time.h>
 #include <limits.h>
 #include <termios.h>
+#include <sys/ioctl.h>
 
 #include "eat_file.h"
 #include "rmspace.h"
