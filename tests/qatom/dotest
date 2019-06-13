@@ -64,6 +64,10 @@ test f20 "cat/pkg"    -F '%[CATEGORY]%[PF]' \
 test f21 "pkg-123-r4:5::repo" \
                       -F '%[PF]%[SLOT]%[REPO]' \
                                        "cat/pkg-123-r4:5::repo"
+# Puppet portage provider
+test p01 "[app-admin] [syslog-ng] [] [] [] [] []" \
+                      -F "[%[CATEGORY]] [%[PN]] [%[PV]] [%[PR]] [%[SLOT]] [%[pfx]] [%[sfx]]" \
+                                       "app-admin/syslog-ng"
 
 # Comparison tests
 test c01 "cat/pkg-123-r3 == pkg" \
