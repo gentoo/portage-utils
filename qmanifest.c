@@ -1505,7 +1505,7 @@ format_line(const char *pfx, const char *msg)
 	if (*pfx == '-') {
 		fprintf(stdout, "%s%s%s%s\n", pfx, RED, msg, NORM);
 	} else {
-		if (!verbose && msglen > (size_t)twidth) {
+		if (!verbose && twidth > 0 && msglen > (size_t)twidth) {
 			int to_remove = 3 + (msglen - twidth);
 			int first_half = msglen / 2 - to_remove / 2;
 			int remainder = msglen / 2 + (to_remove + 1) / 2;

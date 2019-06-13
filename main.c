@@ -778,7 +778,6 @@ int main(int argc, char **argv)
 	struct winsize winsz;
 
 	ioctl(0, TIOCGWINSZ, &winsz);
-	if (winsz.ws_col > 0)
 	twidth = winsz.ws_col > 0 ? (int)winsz.ws_col : 80;
 
 	warnout = stderr;
@@ -790,8 +789,10 @@ int main(int argc, char **argv)
 	textdomain(argv0);
 
 	if (fstat(fileno(stdout), &st) != -1)
-		if (!isatty(fileno(stdout)))
+		if (!isatty(fileno(stdout))) {
 			no_colors();
+			twidth = 0;
+		}
 	if ((getenv("TERM") == NULL) || (strcmp(getenv("TERM"), "dumb") == 0))
 		no_colors();
 

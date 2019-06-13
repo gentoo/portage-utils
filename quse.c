@@ -600,8 +600,12 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					quse_search_profiles_desc(portdirfd, &us);
 
 			/* calculate available space in the terminal to print
-			 * descriptions */
-			len = twidth - maxlen - 2 - 1 - 2;
+			 * descriptions, assume this makes sense from 10 chars */
+			if (twidth > maxlen + 2 + 1 + 2 + 10) {
+				len = twidth - maxlen - 2 - 1 - 2;
+			} else {
+				len = 0;
+			}
 
 			for (i = 0; i < cnt; i++) {
 				match = use != NULL && contains_set(us.argv[i], use);
