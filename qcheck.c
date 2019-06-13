@@ -98,7 +98,7 @@ qcheck_process_contents(tree_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	num_files = num_files_ok = num_files_unknown = num_files_ignored = 0;
 	qcprintf("%sing %s ...\n",
 		(state->qc_update ? "Updat" : "Check"),
-		atom_format("%[CATEGORY]%[PF]", atom, 0));
+		atom_format("%[CATEGORY]%[PF]", atom));
 	if (state->qc_update) {
 		fp_contents_update = tree_pkg_vdb_fopenat_rw(pkg_ctx, "CONTENTS~");
 		if (fp_contents_update == NULL) {
@@ -331,9 +331,9 @@ qcheck_process_contents(tree_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	}
 	if (state->bad_only && num_files_ok != num_files) {
 		if (verbose)
-			printf("%s\n", atom_format("%[CATEGORY]%[PF]", atom, 0));
+			printf("%s\n", atom_format("%[CATEGORY]%[PF]", atom));
 		else {
-			printf("%s\n", atom_format("%[CATEGORY]%[PN]", atom, 0));
+			printf("%s\n", atom_format("%[CATEGORY]%[PN]", atom));
 		}
 	}
 	qcprintf("  %2$s*%1$s %3$s%4$zu%1$s out of %3$s%5$zu%1$s file%6$s are good",

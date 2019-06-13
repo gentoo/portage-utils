@@ -364,7 +364,7 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 						state->show_repo ? "%[REPO]" : "");
 			}
 			printf("%s%s\n",
-					atom_format(qfmt, atom, 0),
+					atom_format(qfmt, atom),
 					umapstr(state->show_umap, pkg_ctx));
 		}
 
@@ -374,7 +374,7 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	if (verbose)
 		printf("%s %sCONTENTS%s:\n",
-				atom_format("%[CATEGORY]%[PF]", atom, 0), DKBLUE, NORM);
+				atom_format("%[CATEGORY]%[PF]", atom), DKBLUE, NORM);
 
 	fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
 	if (fp == NULL)

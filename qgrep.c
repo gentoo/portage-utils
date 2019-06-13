@@ -424,7 +424,7 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (data->show_name) {
 		if (data->show_repo)
 			patom = tree_get_atom(pkg_ctx, true);
-		atom_format_r(name, sizeof(name), "%[CATEGORY]%[P]%[REPO]", patom, 0);
+		atom_format_r(name, sizeof(name), "%[CATEGORY]%[P]%[REPO]", patom);
 		label = name;
 	} else if (data->show_filename) {
 		label = buf;

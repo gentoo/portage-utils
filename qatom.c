@@ -96,7 +96,7 @@ int qatom_main(int argc, char **argv)
 			break;
 		}
 		case _EXPLODE:
-			printf("%s\n", atom_format(format, atom, verbose));
+			printf("%s\n", atom_format(format, atom));
 			break;
 		case _PRINT:
 			printf("%s\n", atom_to_string(atom));

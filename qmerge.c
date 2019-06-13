@@ -1465,7 +1465,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 	T = "${PWD}/temp";
 
 	printf("%s<<<%s %s\n", YELLOW, NORM,
-			atom_format("%[CATEGORY]%[PF]", tree_get_atom(pkg_ctx, false), 0));
+			atom_format("%[CATEGORY]%[PF]", tree_get_atom(pkg_ctx, false)));
 
 	if (pretend == 100)
 		return 0;

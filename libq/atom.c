@@ -683,7 +683,7 @@ atom_to_string_r(char *buf, size_t buflen, depend_atom *a)
 /**
  * Run printf on an atom.  The format field takes the form:
  *  %{keyword}: Always display the field that matches "keyword" or <unset>
- *  %[keyword]: Only display the field when it's set (or pverbose)
+ *  %[keyword]: Only display the field when it's set
  * The possible "keywords" are:
  *  CATEGORY  P  PN  PV  PVR  PF  PR  SLOT  SUBSLOT  REPO  USE
  *    - these are all the standard portage variables (so see ebuild(5))
@@ -695,14 +695,14 @@ atom_format_r(
 		char *buf,
 		size_t buflen,
 		const char *format,
-		const depend_atom *atom,
-		int pverbose)
+		const depend_atom *atom)
 {
 	char bracket;
 	const char *fmt;
 	const char *p;
 	size_t len;
 	bool showit;
+	bool connected;
 	char *ret;
 
 	if (!atom) {
@@ -725,21 +725,25 @@ atom_format_r(
 			return ret;
 		} else if (fmt != p) {
 			append_buf(buf, buflen, "%.*s", (int)(fmt - p), p);
+			connected = false;
+		} else {
+			connected = true;
 		}
 
 		bracket = fmt[1];
 		if (bracket == '{' || bracket == '[') {
+			connected &= bracket == '[';
 			fmt += 2;
-			p = strchr(fmt, bracket == '{' ? '}' : ']');
-			if (p) {
+			if ((p = strchr(fmt, bracket == '{' ? '}' : ']')) != NULL) {
 				len = p - fmt;
-				showit = (bracket == '{') || pverbose;
+				showit = bracket == '{';
 #define HN(X) (X ? X : "<unset>")
 				if (!strncmp("CATEGORY", fmt, len)) {
+					connected = (p[1] == '%') & (bracket == '[');
 					if (showit || atom->CATEGORY)
 						append_buf(buf, buflen, "%s%s%s%s",
 								BOLD, HN(atom->CATEGORY),
-								bracket == '[' ? "/" : "", NORM);
+								connected ? "/" : "", NORM);
 				} else if (!strncmp("P", fmt, len)) {
 					if (showit || atom->P)
 						append_buf(buf, buflen, "%s%s%s",
@@ -772,21 +776,21 @@ atom_format_r(
 					if (showit || atom->SLOT)
 						append_buf(buf, buflen, "%s%s%s%s",
 								YELLOW,
-								bracket == '[' ? ":" : "",
+								connected ? ":" : "",
 								atom->SLOT ? atom->SLOT : "<unset>",
 								NORM);
 				} else if (!strncmp("SUBSLOT", fmt, len)) {
 					if (showit || atom->SUBSLOT)
 						append_buf(buf, buflen, "%s%s%s%s%s",
 								YELLOW,
-								bracket == '[' ? "/" : "",
+								connected ? "/" : "",
 								atom->SUBSLOT ? atom->SUBSLOT : "",
 								atom_slotdep_str[atom->slotdep],
 								NORM);
 				} else if (!strncmp("REPO", fmt, len)) {
 					if (showit || atom->REPO)
 						append_buf(buf, buflen, "%s%s%s%s",
-								GREEN, bracket == '[' ? "::" : "",
+								GREEN, connected ? "::" : "",
 								HN(atom->REPO), NORM);
 				} else if (!strncmp("pfx", fmt, len)) {
 					if (showit || atom->pfx_op != ATOM_OP_NONE)
@@ -810,12 +814,14 @@ atom_format_r(
 					}
 				} else
 					append_buf(buf, buflen, "<BAD:%.*s>", (int)len, fmt);
-				++p;
+				p++;
 #undef HN
-			} else
+			} else {
 				p = fmt + 1;
-		} else
-			++p;
+			}
+		} else {
+			p++;
+		}
 	}
 #undef append_buf
 
@@ -832,7 +838,7 @@ atom_to_string(depend_atom *a)
 }
 
 char *
-atom_format(const char *format, const depend_atom *atom, int pverbose)
+atom_format(const char *format, const depend_atom *atom)
 {
-	return atom_format_r(_atom_buf, sizeof(_atom_buf), format, atom, pverbose);
+	return atom_format_r(_atom_buf, sizeof(_atom_buf), format, atom);
 }

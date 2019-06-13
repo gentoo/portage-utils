@@ -556,7 +556,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		}
 
 		if (quiet) {
-			printf("%s\n", atom_format(qfmt, atom, 0));
+			printf("%s\n", atom_format(qfmt, atom));
 		} else if (verbose && !state->do_licence) {
 			/* multi-line result, printing USE-flags with their descs */
 			size_t desclen;
@@ -571,7 +571,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				.overlay = NULL,
 			};
 
-			printf("%s\n", atom_format(qfmt, atom, 0));
+			printf("%s\n", atom_format(qfmt, atom));
 
 			q = p = meta->IUSE;
 			buf[0] = '\0';
@@ -654,7 +654,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			free(us.retv);
 			free(us.argv);
 		} else {
-			printf("%s: %s\n", atom_format(qfmt, atom, 0), v);
+			printf("%s: %s\n", atom_format(qfmt, atom), v);
 		}
 	}
 

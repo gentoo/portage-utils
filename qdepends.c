@@ -149,7 +149,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		ret = 1;
 
 		datom = tree_get_atom(pkg_ctx, true);
-		printf("%s:", atom_format(state->format, datom, 0));
+		printf("%s:", atom_format(state->format, datom));
 	}
 
 	xarrayfree_int(state->deps);
@@ -222,7 +222,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 					if (!firstmatch) {
 						datom = tree_get_atom(pkg_ctx, true);
-						printf("%s:", atom_format(state->format, datom, 0));
+						printf("%s:", atom_format(state->format, datom));
 					}
 					firstmatch = true;
 
@@ -251,7 +251,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 						if (!firstmatch) {
 							datom = tree_get_atom(pkg_ctx, true);
-							printf("%s:", atom_format(state->format, datom, 0));
+							printf("%s:", atom_format(state->format, datom));
 						}
 						firstmatch = true;
 

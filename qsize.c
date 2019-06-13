@@ -162,7 +162,7 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (!state->summary_only) {
 		atom = tree_get_atom(pkg_ctx, 0);
 		printf("%s: %'zu files, %'zu non-files, ",
-				atom_format("%[CATEGORY]%[PF]", atom, 0),
+				atom_format("%[CATEGORY]%[PF]", atom),
 				num_files, num_nonfiles);
 		if (num_ignored)
 			printf("%'zu names-ignored, ", num_ignored);

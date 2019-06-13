@@ -95,8 +95,8 @@ int atom_compare(const depend_atom *a1, const depend_atom *a2);
 int atom_compare_str(const char * const s1, const char * const s2);
 char *atom_to_string_r(char *buf, size_t buflen, depend_atom *a);
 char *atom_format_r(char *buf, size_t buflen,
-		const char *format, const depend_atom *atom, int pverbose);
+		const char *format, const depend_atom *atom);
 char *atom_to_string(depend_atom *a);
-char *atom_format(const char *format, const depend_atom *atom, int pverbose);
+char *atom_format(const char *format, const depend_atom *atom);
 
 #endif

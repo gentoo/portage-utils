@@ -175,7 +175,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 						atom = tree_get_atom(pkg_ctx, false);
 						warnp("Could not read real path of \"%s\" (from %s)",
 								fullpath,
-								atom_format("%[CATEGORY]%[PF]", atom, false));
+								atom_format("%[CATEGORY]%[PF]", atom));
 						warn("We'll never know whether \"%s\" was a result "
 								"for your query...", e->name);
 					}
@@ -232,7 +232,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 						fmt = "%[CATEGORY]%[PN]";
 					}
 				}
-				printf("%s", atom_format(fmt, atom, false));
+				printf("%s", atom_format(fmt, atom));
 				if (quiet)
 					puts("");
 				else

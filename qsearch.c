@@ -107,7 +107,7 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			qfmt = "%[CATEGORY]%[PN]";
 		}
 		printf("%s%s%s\n",
-				atom_format(qfmt, atom, 0),
+				atom_format(qfmt, atom),
 				(state->show_name ? "" : " "),
 				(state->show_name ? "" : desc ? desc : ""));
 	}
