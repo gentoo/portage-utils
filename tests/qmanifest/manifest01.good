@@ -8,12 +8,12 @@ my-cat/mypackage/Manifest::mypackage-1.ebuild:
   expected: 237
 my-cat/mypackage/Manifest::mypackage-2.ebuild:
 - BLAKE2B hash mismatch
-  computed: '2bcad0952735a0a5bf631fe1c65b...ea81babd2a90f3076daa1e6e62ecf042a0b'
-  Manifest: '2410d545e7441e6402c32ca3ce7e...9fb575bd6f74e7cd92e125181af722500a3'
+  computed: '2bcad0952735a0a5bf631fe1c65bc6eb96eb5511f52850e55a8ad9b80480a37ea4a4b01fc6f4f7ccd94942536be3cea81babd2a90f3076daa1e6e62ecf042a0b'
+  Manifest: '2410d545e7441e6402c32ca3ce7e80d6eda82306db1c7d9732ed35d273a20f0983a4a40b02492fbad4145cc776f249fb575bd6f74e7cd92e125181af722500a3'
 my-cat/mypackage/Manifest::mypackage-2.ebuild:
 - SHA512 hash mismatch
-  computed: 'baf9a3bf09b590997d77db13d171...548c3403ac9b2dc22cb78a3112305a68889'
-  Manifest: 'b22f73bd10773a7b01456a237b52...62307fba13d8b04988c5aeb417f2e286d61'
+  computed: 'baf9a3bf09b590997d77db13d171e9b104e8acd3687b5be9a8734f0d4680bc4c34f5d0612ba11c6f5d2d34e9b659f548c3403ac9b2dc22cb78a3112305a68889'
+  Manifest: 'b22f73bd10773a7b01456a237b5224226c4178cc0755d0e84c8b8597071683b148f3b9f56d8b5c7fb8e58f7e618fd62307fba13d8b04988c5aeb417f2e286d61'
 my-cat/mypackage/Manifest::mypackage-3.ebuild:
 - DATA file listed in Manifest, but not found
 my-cat/mypackage/Manifest:

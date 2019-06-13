@@ -42,15 +42,11 @@ test 04 1 "qmanifest -d not_a_tree"
 # overlay test
 test 05 1 "qmanifest -o notatree"
 
-# Travis uses old Ubuntu, and Ubuntu uses prehistoric gpg, which just
-# won't work.  Too bad, really.
-if [[ ${TRAVIS_OS_NAME} != linux ]] ; then
-
 # generate a valid tree
 rm -Rf testtree
 cp -r "${ROOT}/simpletree" testtree || echo try it anyway
-export HOME=$(mktemp -d)  # for gnupg home
-mkdir "${HOME}"/.gnupg
+export HOME=${PWD}  # for gpgme/gnupg home
+mkdir -p "${HOME}"/.gnupg
 # silence gpg warnings
 chmod -R og-rwx "${HOME}"/.gnupg
 
@@ -68,8 +64,12 @@ gpg_import() {
 
 	echo "${pass}" | gpg "${args[@]}"
 }
-# import key
-gpg_import "${as}"/key.gpg qmanifest
+# import key, if this fails, skip the test, couple of reasons why this
+# could fail:
+# - Ubuntu uses old/ancient gnupg which doesn't grok arguments and key (Travis)
+# - HOME (T) may be too long to hold a socket, especially on Linux this
+#   pathlength is very short, Portage's T may be too long by default
+if gpg_import "${as}"/key.gpg qmanifest ; then
 
 # make it a fully valid tree
 rm testtree/my-cat/mypackage/unrecorded-file
@@ -85,11 +85,10 @@ test 06 0 "echo ${KEYPASS} | qmanifest -g -s ${SIGNAS} -p testtree"
 rm -f gpgme.log
 test 07 0 "qmanifest testtree | sed -e '/Manifest timestamp/d' -e 's/made .* UTC by/made by/'"
 
+fi  # gpgimport
+
 # shut down agents and whatnot
 gpgconf --kill all
-rm -Rf "${HOME}"
-
-fi  # TRAVIS_OS_NAME==Linux
 
 cleantmpdir
 
