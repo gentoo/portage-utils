@@ -69,7 +69,9 @@ gpg_import() {
 # - Ubuntu uses old/ancient gnupg which doesn't grok arguments and key (Travis)
 # - HOME (T) may be too long to hold a socket, especially on Linux this
 #   pathlength is very short, Portage's T may be too long by default
+set +e
 if gpg_import "${as}"/key.gpg qmanifest ; then
+set -e
 
 # make it a fully valid tree
 rm testtree/my-cat/mypackage/unrecorded-file
