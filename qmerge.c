@@ -2289,7 +2289,7 @@ parse_packages(set *todo)
 }
 
 static set *
-qmerge_add_set_file(const char *dir, const char *file, set *q)
+qmerge_add_set_file(const char *pfx, const char *dir, const char *file, set *q)
 {
 	FILE *fp;
 	int linelen;
@@ -2297,7 +2297,7 @@ qmerge_add_set_file(const char *dir, const char *file, set *q)
 	char *buf, *fname;
 
 	/* Find the file to read */
-	xasprintf(&fname, "%s%s/%s", portroot, dir, file);
+	xasprintf(&fname, "%s%s%s/%s", portroot, pfx, dir, file);
 
 	if ((fp = fopen(fname, "r")) == NULL) {
 		warnp("unable to read set file %s", fname);
@@ -2348,15 +2348,19 @@ static set *
 qmerge_add_set(char *buf, set *q)
 {
 	if (strcmp(buf, "world") == 0)
-		return qmerge_add_set_file("/var/lib/portage", "world", q);
+		return qmerge_add_set_file(CONFIG_EPREFIX, "/var/lib/portage",
+				"world", q);
 	else if (strcmp(buf, "all") == 0)
 		return tree_get_vdb_atoms(portroot, portvdb, 0);
 	else if (strcmp(buf, "system") == 0)
 		return q_profile_walk("packages", qmerge_add_set_system, q);
 	else if (buf[0] == '@')
-		return qmerge_add_set_file("/etc/portage", buf+1, q);
-	else
+		/* TODO: use configroot */
+		return qmerge_add_set_file(CONFIG_EPREFIX, "/etc/portage", buf+1, q);
+	else {
+		rmspace(buf);
 		return add_set(buf, q);
+	}
 }
 
 static int

@@ -127,14 +127,12 @@ static int
 qpkg_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	set *vdb = (set *)priv;
-	depend_atom *atom;
 	char buf[_Q_PATH_MAX];
 
-	snprintf(buf, sizeof(buf), "%s/%s", pkg_ctx->cat_ctx->name, pkg_ctx->name);
-	atom = atom_explode(buf);
-	if (atom == NULL)
+	if (tree_get_atom(pkg_ctx, false) == NULL)
 		return 0;
 
+	snprintf(buf, sizeof(buf), "%s/%s", pkg_ctx->cat_ctx->name, pkg_ctx->name);
 	vdb = add_set(buf, vdb);
 
 	return 1;

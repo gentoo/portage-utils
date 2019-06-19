@@ -19,7 +19,6 @@
 #include "contents.h"
 #include "md5_sha1_sum.h"
 #include "prelink.h"
-#include "set.h"
 #include "tree.h"
 #include "xarray.h"
 #include "xasprintf.h"

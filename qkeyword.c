@@ -666,10 +666,11 @@ qkeyword_load_arches(const char *overlay)
 
 	buf = NULL;
 	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
-		rmspace_len(buf, (size_t)linelen);
-
-		if ((s = strchr(buf, '#')) != NULL)
+		if ((s = strchr(buf, '#')) != NULL) {
 			*s = '\0';
+			linelen = s - buf;
+		}
+		rmspace_len(buf, (size_t)linelen);
 		if (buf[0] == '\0')
 			continue;
 

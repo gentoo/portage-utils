@@ -15,7 +15,6 @@
 #include <string.h>
 #include <xalloc.h>
 
-#include "rmspace.h"
 #include "set.h"
 
 static unsigned int
@@ -47,7 +46,6 @@ add_set(const char *name, set *q)
 
 	ll->next = NULL;
 	ll->name = xstrdup(name);
-	rmspace(ll->name);
 	ll->hash = fnv1a32(ll->name);
 
 	pos = ll->hash % _SET_HASH_SIZE;
@@ -77,7 +75,6 @@ add_set_unique(const char *name, set *q, bool *unique)
 	if (q == NULL)
 		q = create_set();
 
-	rmspace(mname);
 	hash = fnv1a32(mname);
 	pos = hash % _SET_HASH_SIZE;
 
@@ -116,27 +113,24 @@ add_set_unique(const char *name, set *q, bool *unique)
 bool
 contains_set(char *s, set *q)
 {
-	char *mname = xstrdup(s);
 	unsigned int hash;
 	int pos;
 	elem *w;
 	bool found;
 
-	rmspace(mname);
-	hash = fnv1a32(mname);
+	hash = fnv1a32(s);
 	pos = hash % _SET_HASH_SIZE;
 
 	found = false;
 	if (q->buckets[pos] != NULL) {
 		for (w = q->buckets[pos]; w != NULL; w = w->next) {
-			if (w->hash == hash && strcmp(w->name, mname) == 0) {
+			if (w->hash == hash && strcmp(w->name, s) == 0) {
 				found = true;
 				break;
 			}
 		}
 	}
 
-	free(mname);
 	return found;
 }
 
@@ -144,22 +138,19 @@ contains_set(char *s, set *q)
 set *
 del_set(char *s, set *q, bool *removed)
 {
-	char *mname = xstrdup(s);
 	unsigned int hash;
 	int pos;
 	elem *ll;
 	elem *w;
 
-	rmspace(mname);
-	hash = fnv1a32(mname);
+	hash = fnv1a32(s);
 	pos = hash % _SET_HASH_SIZE;
 
 	*removed = false;
 	if (q->buckets[pos] != NULL) {
 		ll = NULL;
 		for (w = q->buckets[pos]; w != NULL; ll = w, w = w->next) {
-			if (w->hash == hash && strcmp(w->name, mname) == 0) {
-				free(mname);
+			if (w->hash == hash && strcmp(w->name, s) == 0) {
 				if (ll == NULL) {
 					q->buckets[pos] = w->next;
 				} else {

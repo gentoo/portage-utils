@@ -6,9 +6,6 @@
 	- -r (-R ?) regexp foo.\*
 - make default -e for apps like quse/qdepends?
 
-- remove odd rmspace for each string in libq/set.c (allows a lot less
-  malloc/frees)
-
 - make set.c to array (xarray) instead of C-array (list)
 
 - env vars only get expanded once, so this fails:<br>
