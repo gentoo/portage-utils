@@ -687,6 +687,7 @@ atom_to_string_r(char *buf, size_t buflen, depend_atom *a)
  * The possible "keywords" are:
  *  CATEGORY  P  PN  PV  PVR  PF  PR  SLOT  SUBSLOT  REPO  USE
  *    - these are all the standard portage variables (so see ebuild(5))
+ *    - any prefix of these (e.g. CAT, CA, C) will match as well
  *  pfx - the version qualifier if set (e.g. > < = !)
  *  sfx - the version qualifier if set (e.g. *)
  */
