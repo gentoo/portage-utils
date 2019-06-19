@@ -6,12 +6,6 @@
 	- -r (-R ?) regexp foo.\*
 - make default -e for apps like quse/qdepends?
 
-- disable color when tty = NULL; may break less?
-
-- standardize/unify/clean up misc handling of colors (atom\_format)
-  define rules:
-    BOLD CATEGORY/ BLUE PKG CYAN -VER YELLOW :SLOT GREEN ::REPO NORM [ MAGENTA USE NORM ]
-
 - remove odd rmspace for each string in libq/set.c (allows a lot less
   malloc/frees)
 
@@ -28,8 +22,6 @@
 
 - tree\_get\_atoms should return atoms iso string set, needs a rewrite
   to use foreach\_pkg and get\_atom
-
-- remove odd pverbose argument to atom\_format
 
 # Atoms
 
@@ -83,7 +75,6 @@
 
 # quse
 - make -v only print requested USE-flag when flags given
-- read VDB on -v to print details about current USE-flag status, bug #656550
 
 # qkeyword
 - drop -c argument? it can be fully expressed using -p cat/
