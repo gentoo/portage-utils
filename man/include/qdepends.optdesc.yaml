@@ -32,4 +32,5 @@ verbose: |
     matches.  When used with \fB-t\fR, the atom highlighting matches
     what is used by the installed package, if available.
 quiet: Suppress DEPEND= output for \fB\-f\fR.  Only print the matching
-    atom for \fB\-Q\fR.
+    atom for \fB\-Q\fR.  When given two or more times, suppresses the
+    matching atom for \fB\-Q\fR, e.g.\ producing just a list of packages.

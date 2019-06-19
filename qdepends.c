@@ -251,13 +251,15 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 						if (!firstmatch) {
 							datom = tree_get_atom(pkg_ctx, true);
-							printf("%s:", atom_format(state->format, datom));
+							printf("%s%s", atom_format(state->format, datom),
+									quiet < 2 ? ":" : "");
 						}
 						firstmatch = true;
 
 						snprintf(buf, sizeof(buf), "%s%s%s",
 								RED, atom_to_string(atom), NORM);
-						add_set_unique(buf, state->udeps, NULL);
+						if (quiet < 2)
+							add_set_unique(buf, state->udeps, NULL);
 					} else if (!quiet) {
 						add_set_unique(atom_to_string(atom),
 								state->udeps, NULL);
