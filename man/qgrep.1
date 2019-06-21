@@ -24,43 +24,43 @@ Ignore case distinctions.
 Print the filename for each match.
 .TP
 \fB\-c\fR, \fB\-\-count\fR
-Print the package or eclass name for each match.
-.TP
-\fB\-l\fR, \fB\-\-list\fR
 Only print a count of matching lines per FILE.
 .TP
-\fB\-L\fR, \fB\-\-invert\-list\fR
+\fB\-l\fR, \fB\-\-list\fR
 Only print FILE names containing matches.
 .TP
-\fB\-e\fR, \fB\-\-regexp\fR
+\fB\-L\fR, \fB\-\-invert\-list\fR
 Only print FILE names containing no match.
 .TP
-\fB\-x\fR, \fB\-\-extended\fR
+\fB\-e\fR, \fB\-\-regexp\fR
 Use PATTERN as a regular expression.
 .TP
-\fB\-J\fR, \fB\-\-installed\fR
+\fB\-x\fR, \fB\-\-extended\fR
 Use PATTERN as an extended regular expression.
 .TP
-\fB\-E\fR, \fB\-\-eclass\fR
+\fB\-J\fR, \fB\-\-installed\fR
 Search in installed ebuilds instead of the tree.
 .TP
-\fB\-s\fR, \fB\-\-skip\-comments\fR
+\fB\-E\fR, \fB\-\-eclass\fR
 Search in eclasses instead of ebuilds.
 .TP
-\fB\-R\fR, \fB\-\-repo\fR
+\fB\-s\fR, \fB\-\-skip\-comments\fR
 Skip comments lines.
 .TP
-\fB\-S\fR \fI<arg>\fR, \fB\-\-skip\fR \fI<arg>\fR
+\fB\-R\fR, \fB\-\-repo\fR
 Print source repository name for each match (implies -N).
 .TP
-\fB\-B\fR \fI<arg>\fR, \fB\-\-before\fR \fI<arg>\fR
+\fB\-S\fR \fI<arg>\fR, \fB\-\-skip\fR \fI<arg>\fR
 Skip lines matching <arg>.
 .TP
-\fB\-A\fR \fI<arg>\fR, \fB\-\-after\fR \fI<arg>\fR
+\fB\-B\fR \fI<arg>\fR, \fB\-\-before\fR \fI<arg>\fR
 Print <arg> lines of leading context.
 .TP
-\fB\-\-root\fR \fI<arg>\fR
+\fB\-A\fR \fI<arg>\fR, \fB\-\-after\fR \fI<arg>\fR
 Print <arg> lines of trailing context.
+.TP
+\fB\-\-root\fR \fI<arg>\fR
+Set the ROOT env var.
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
 Prefix each matching line with filename (like \fB-H\fR).  When this
@@ -70,13 +70,13 @@ option is given multiple times, also linenumbers are printed.
 Do not prefix each match with filename.
 .TP
 \fB\-C\fR, \fB\-\-nocolor\fR
-Tighter output; suppress warnings.
-.TP
-\fB\-h\fR, \fB\-\-help\fR
 Don't output color.
 .TP
-\fB\-V\fR, \fB\-\-version\fR
+\fB\-h\fR, \fB\-\-help\fR
 Print this help and exit.
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version and exit.
 
 .SH "REPORTING BUGS"
 Please report bugs via http://bugs.gentoo.org/

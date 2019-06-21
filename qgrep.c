@@ -47,7 +47,6 @@ static const char * const qgrep_opts_help[] = {
 	"Select non-matching lines",
 	"Ignore case distinctions",
 	"Print the filename for each match",
-	"Print the package or eclass name for each match",
 	"Only print a count of matching lines per FILE",
 	"Only print FILE names containing matches",
 	"Only print FILE names containing no match",
