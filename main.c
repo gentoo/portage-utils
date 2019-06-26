@@ -747,7 +747,7 @@ initialize_portage_env(void)
 	if (orig_main_overlay != main_overlay)
 		free(orig_main_overlay);
 	if (array_cnt(overlays) == 0) {
-		xarraypush_str(overlays, main_overlay);
+		xarraypush_ptr(overlays, main_overlay);
 		xarraypush_str(overlay_names, "<PORTDIR>");
 	}
 
