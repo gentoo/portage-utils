@@ -749,6 +749,9 @@ initialize_portage_env(void)
 	if (array_cnt(overlays) == 0) {
 		xarraypush_ptr(overlays, main_overlay);
 		xarraypush_str(overlay_names, "<PORTDIR>");
+	} else if (orig_main_overlay == main_overlay) {
+		/* if no explicit overlay was flagged as main, take the first one */
+		main_overlay = array_get_elem(overlays, 0);
 	}
 
 	if (getenv("DEBUG")) {
