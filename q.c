@@ -129,7 +129,7 @@ int q_main(int argc, char **argv)
 		rret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
 #endif
 		if (rret == -1) {
-			warnfp("haha no symlink love for you");
+			warnfp("haha no symlink love for you ... :(");
 			return 1;
 		}
 		buf[rret] = '\0';

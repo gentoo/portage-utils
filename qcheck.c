@@ -24,8 +24,12 @@
 #include "xasprintf.h"
 #include "xregex.h"
 
-#define QCHECK_FLAGS "s:uABHTPp" COMMON_FLAGS
+#define QCHECK_FORMAT "%[CATEGORY]%[PN]"
+#define QCHECK_FORMAT_VERBOSE "%[CATEGORY]%[PF]"
+
+#define QCHECK_FLAGS "F:s:uABHTPp" COMMON_FLAGS
 static struct option const qcheck_long_opts[] = {
+	{"format",          a_argument, NULL, 'F'},
 	{"skip",            a_argument, NULL, 's'},
 	{"update",         no_argument, NULL, 'u'},
 	{"noafk",          no_argument, NULL, 'A'},
@@ -37,6 +41,7 @@ static struct option const qcheck_long_opts[] = {
 	COMMON_LONG_OPTS
 };
 static const char * const qcheck_opts_help[] = {
+	"Custom output format (default: " QCHECK_FORMAT ")",
 	"Ignore files matching the regular expression <arg>",
 	"Update missing files, chksum and mtimes for packages",
 	"Ignore missing files",
@@ -61,6 +66,7 @@ struct qcheck_opt_state {
 	bool chk_mtime;
 	bool chk_config_protect;
 	bool undo_prelink;
+	const char *fmt;
 };
 
 static int
@@ -97,7 +103,7 @@ qcheck_process_contents(tree_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	num_files = num_files_ok = num_files_unknown = num_files_ignored = 0;
 	qcprintf("%sing %s ...\n",
 		(state->qc_update ? "Updat" : "Check"),
-		atom_format("%[CATEGORY]%[PF]", atom));
+		atom_format(state->fmt, atom));
 	if (state->qc_update) {
 		fp_contents_update = tree_pkg_vdb_fopenat_rw(pkg_ctx, "CONTENTS~");
 		if (fp_contents_update == NULL) {
@@ -328,13 +334,8 @@ qcheck_process_contents(tree_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 		if (!verbose)
 			return EXIT_SUCCESS;
 	}
-	if (state->bad_only && num_files_ok != num_files) {
-		if (verbose)
-			printf("%s\n", atom_format("%[CATEGORY]%[PF]", atom));
-		else {
-			printf("%s\n", atom_format("%[CATEGORY]%[PN]", atom));
-		}
-	}
+	if (state->bad_only && num_files_ok != num_files)
+		printf("%s\n", atom_format(state->fmt, atom));
 	qcprintf("  %2$s*%1$s %3$s%4$zu%1$s out of %3$s%5$zu%1$s file%6$s are good",
 		NORM, BOLD, BLUE, num_files_ok, num_files,
 		(num_files > 1 ? "s" : ""));
@@ -398,6 +399,7 @@ int qcheck_main(int argc, char **argv)
 		.chk_mtime = true,
 		.chk_config_protect = true,
 		.undo_prelink = false,
+		.fmt = NULL,
 	};
 
 	while ((ret = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
@@ -409,15 +411,19 @@ int qcheck_main(int argc, char **argv)
 			xarraypush(regex_arr, &preg, sizeof(preg));
 			break;
 		}
-		case 'u': state.qc_update = true; break;
-		case 'A': state.chk_afk = false; break;
-		case 'B': state.bad_only = true; break;
-		case 'H': state.chk_hash = false; break;
-		case 'T': state.chk_mtime = false; break;
-		case 'P': state.chk_config_protect = false; break;
-		case 'p': state.undo_prelink = prelink_available(); break;
+		case 'u': state.qc_update = true;                    break;
+		case 'A': state.chk_afk = false;                     break;
+		case 'B': state.bad_only = true;                     break;
+		case 'H': state.chk_hash = false;                    break;
+		case 'T': state.chk_mtime = false;                   break;
+		case 'P': state.chk_config_protect = false;          break;
+		case 'p': state.undo_prelink = prelink_available();  break;
+		case 'F': state.fmt = optarg;                        break;
 		}
 	}
+
+	if (state.fmt == NULL)
+		state.fmt = verbose ? QCHECK_FORMAT_VERBOSE : QCHECK_FORMAT;
 
 	argc -= optind;
 	argv += optind;

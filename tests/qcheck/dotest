@@ -19,7 +19,7 @@ test() {
 	local num=$1 exp=$2 ret=0
 	shift 2
 	eval "$@" > list || ret=$?
-	if ! diff -u list ${as}/list${num}.good ; then
+	if ! diff -u ${as}/list${num}.good list ; then
 		tfail "output does not match"
 	fi
 	if [[ ${exp} -ne ${ret} ]] ; then
