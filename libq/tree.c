@@ -341,7 +341,6 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 	if (cat_ctx->ctx->do_sort) {
 		if (cat_ctx->pkg_ctxs == NULL) {
 			size_t pkg_size = 0;
-			cat_ctx->pkg_ctxs = NULL;
 			cat_ctx->pkg_cnt = 0;
 			cat_ctx->pkg_cur = 0;
 			while ((de = readdir(cat_ctx->dir)) != NULL) {
@@ -359,7 +358,7 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 					cat_ctx->pkg_cnt--;
 			}
 
-			if (cat_ctx->ctx->pkgsortfunc != NULL) {
+			if (cat_ctx->ctx->pkgsortfunc != NULL && cat_ctx->pkg_cnt > 1) {
 				qsort(cat_ctx->pkg_ctxs, cat_ctx->pkg_cnt,
 						sizeof(*cat_ctx->pkg_ctxs), cat_ctx->ctx->pkgsortfunc);
 			}
