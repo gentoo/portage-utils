@@ -135,7 +135,7 @@ int tree_foreach_pkg(tree_ctx *ctx,
 #define tree_foreach_pkg_sorted(ctx, cb, priv) \
 	tree_foreach_pkg(ctx, cb, priv, NULL, true, NULL, NULL);
 struct dirent *tree_get_next_dir(DIR *dir);
-set *tree_get_vdb_atoms(const char *sroot, const char *svdb, int fullcpv);
+set *tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms);
 depend_atom *tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete);
 
 #endif

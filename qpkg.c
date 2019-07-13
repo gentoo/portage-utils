@@ -123,21 +123,6 @@ qpkg_clean_dir(char *dirp, set *vdb)
 	return num_all_bytes;
 }
 
-static int
-qpkg_cb(tree_pkg_ctx *pkg_ctx, void *priv)
-{
-	set *vdb = (set *)priv;
-	char buf[_Q_PATH_MAX];
-
-	if (tree_get_atom(pkg_ctx, false) == NULL)
-		return 0;
-
-	snprintf(buf, sizeof(buf), "%s/%s", pkg_ctx->cat_ctx->name, pkg_ctx->name);
-	vdb = add_set(buf, vdb);
-
-	return 1;
-}
-
 /* figure out what dirs we want to process for cleaning and display results. */
 static int
 qpkg_clean(char *dirp)
@@ -146,23 +131,28 @@ qpkg_clean(char *dirp)
 	size_t disp_units = 0;
 	uint64_t num_all_bytes;
 	struct dirent **dnames;
-	set *vdb;
+	set *vdb = NULL;
+	tree_ctx *t;
 
 	if (chdir(dirp) != 0)
 		return 1;
 	if ((count = scandir(".", &dnames, filter_hidden, alphasort)) < 0)
 		return 1;
 
-	vdb = tree_get_vdb_atoms(portroot, portvdb, 1);
+	t = tree_open_vdb(portroot, portvdb);
+	if (t != NULL) {
+		vdb = tree_get_atoms(t, true, vdb);
+		tree_close(t);
+	}
 
 	if (eclean) {
 		size_t n;
 		const char *overlay;
 
 		array_for_each(overlays, n, overlay) {
-			tree_ctx *t = tree_open(portroot, overlay);
+			t = tree_open(portroot, overlay);
 			if (t != NULL) {
-				tree_foreach_pkg_fast(t, qpkg_cb, vdb, NULL);
+				vdb = tree_get_atoms(t, true, vdb);
 				tree_close(t);
 			}
 		}

@@ -2350,9 +2350,15 @@ qmerge_add_set(char *buf, set *q)
 	if (strcmp(buf, "world") == 0)
 		return qmerge_add_set_file(CONFIG_EPREFIX, "/var/lib/portage",
 				"world", q);
-	else if (strcmp(buf, "all") == 0)
-		return tree_get_vdb_atoms(portroot, portvdb, 0);
-	else if (strcmp(buf, "system") == 0)
+	else if (strcmp(buf, "all") == 0) {
+		tree_ctx *ctx = tree_open_vdb(portroot, portvdb);
+		set *ret = NULL;
+		if (ctx != NULL) {
+			ret = tree_get_atoms(ctx, false, NULL);
+			tree_close(ctx);
+		}
+		return ret;
+	} else if (strcmp(buf, "system") == 0)
 		return q_profile_walk("packages", qmerge_add_set_system, q);
 	else if (buf[0] == '@')
 		/* TODO: use configroot */

@@ -1042,14 +1042,14 @@ tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 	return pkg_ctx->atom;
 }
 
-struct get_vdb_atoms_state {
+struct get_atoms_state {
 	set *cpf;
 	bool fullcpv;
 };
 
-static int tree_get_vdb_atoms_cb(tree_pkg_ctx *pkg_ctx, void *priv)
+static int tree_get_atoms_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
-	struct get_vdb_atoms_state *state = (struct get_vdb_atoms_state *)priv;
+	struct get_atoms_state *state = (struct get_atoms_state *)priv;
 	depend_atom *atom = tree_get_atom(pkg_ctx, false);
 
 	if (state->fullcpv) {
@@ -1063,18 +1063,14 @@ static int tree_get_vdb_atoms_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 }
 
 set *
-tree_get_vdb_atoms(const char *sroot, const char *svdb, int fullcpv)
+tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms)
 {
-	tree_ctx *ctx;
-	struct get_vdb_atoms_state state = {
-		.cpf = NULL,
-		.fullcpv = fullcpv != 0
+	struct get_atoms_state state = {
+		.cpf = satoms,
+		.fullcpv = fullcpv
 	};
 
-	ctx = tree_open_vdb(sroot, svdb);
-	if (!ctx)
-		return NULL;
-	tree_foreach_pkg_fast(ctx, tree_get_vdb_atoms_cb, &state, NULL);
+	tree_foreach_pkg_fast(ctx, tree_get_atoms_cb, &state, NULL);
 	tree_close(ctx);
 
 	return state.cpf;
