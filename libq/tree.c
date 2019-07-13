@@ -344,6 +344,8 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 			cat_ctx->pkg_cnt = 0;
 			cat_ctx->pkg_cur = 0;
 			while ((de = readdir(cat_ctx->dir)) != NULL) {
+				char *name;
+
 				if (tree_filter_pkg(de) == 0)
 					continue;
 
@@ -352,10 +354,13 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 					cat_ctx->pkg_ctxs = xrealloc(cat_ctx->pkg_ctxs,
 								sizeof(*cat_ctx->pkg_ctxs) * pkg_size);
 				}
+				name = xstrdup(de->d_name);
 				pkg_ctx = cat_ctx->pkg_ctxs[cat_ctx->pkg_cnt++] =
-					tree_open_pkg(cat_ctx, de->d_name);
-				if (pkg_ctx == NULL)
+					tree_open_pkg(cat_ctx, name);
+				if (pkg_ctx == NULL) {
+					free(name);
 					cat_ctx->pkg_cnt--;
+				}
 			}
 
 			if (cat_ctx->ctx->pkgsortfunc != NULL && cat_ctx->pkg_cnt > 1) {
@@ -948,6 +953,8 @@ tree_close_pkg(tree_pkg_ctx *pkg_ctx)
 	/* avoid freeing tree_ctx' repo */
 	if (pkg_ctx->cat_ctx->ctx->repo != pkg_ctx->repo)
 		free(pkg_ctx->repo);
+	if (pkg_ctx->cat_ctx->ctx->do_sort)
+		free((char *)pkg_ctx->name);
 	free(pkg_ctx->slot);
 	free(pkg_ctx);
 }
