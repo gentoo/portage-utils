@@ -1042,77 +1042,40 @@ tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 	return pkg_ctx->atom;
 }
 
+struct get_vdb_atoms_state {
+	set *cpf;
+	bool fullcpv;
+};
+
+static int tree_get_vdb_atoms_cb(tree_pkg_ctx *pkg_ctx, void *priv)
+{
+	struct get_vdb_atoms_state *state = (struct get_vdb_atoms_state *)priv;
+	depend_atom *atom = tree_get_atom(pkg_ctx, false);
+
+	if (state->fullcpv) {
+		state->cpf = add_set(atom_format("%[CATEGORY]%[PF]", atom), state->cpf);
+	} else {
+		state->cpf = add_set_unique(atom_format("%[CATEGORY]%[PN]", atom),
+				state->cpf, NULL);
+	}
+
+	return 0;
+}
+
 set *
 tree_get_vdb_atoms(const char *sroot, const char *svdb, int fullcpv)
 {
 	tree_ctx *ctx;
-
-	int cfd, j;
-	int dfd, i;
-
-	char buf[_Q_PATH_MAX];
-	char slot[_Q_PATH_MAX];
-	char *slotp = slot;
-	size_t slot_len;
-
-	struct dirent **cat;
-	struct dirent **pf;
-
-	depend_atom *atom = NULL;
-	set *cpf = NULL;
+	struct get_vdb_atoms_state state = {
+		.cpf = NULL,
+		.fullcpv = fullcpv != 0
+	};
 
 	ctx = tree_open_vdb(sroot, svdb);
 	if (!ctx)
 		return NULL;
-
-	/* scan the cat first */
-	cfd = scandirat(ctx->tree_fd, ".", &cat, tree_filter_cat, alphasort);
-	if (cfd < 0)
-		goto fuckit;
-
-	for (j = 0; j < cfd; j++) {
-		dfd = scandirat(ctx->tree_fd, cat[j]->d_name,
-				&pf, tree_filter_pkg, alphasort);
-		if (dfd < 0)
-			continue;
-		for (i = 0; i < dfd; i++) {
-			int blen = snprintf(buf, sizeof(buf), "%s/%s/SLOT",
-					cat[j]->d_name, pf[i]->d_name);
-			if (blen < 0 || (size_t)blen >= sizeof(buf)) {
-				warnf("unable to parse long package: %s/%s",
-						cat[j]->d_name, pf[i]->d_name);
-				continue;
-			}
-
-			/* Chop the SLOT for the atom parsing. */
-			buf[blen - 5] = '\0';
-			if ((atom = atom_explode(buf)) == NULL)
-				continue;
-			/* Restore the SLOT. */
-			buf[blen - 5] = '/';
-
-			slot_len = sizeof(slot);
-			eat_file_at(ctx->tree_fd, buf, &slotp, &slot_len);
-			rmspace(slot);
-
-			if (fullcpv) {
-				if (atom->PR_int)
-					snprintf(buf, sizeof(buf), "%s/%s-%s-r%i",
-							atom->CATEGORY, atom->PN, atom->PV, atom->PR_int);
-				else
-					snprintf(buf, sizeof(buf), "%s/%s-%s",
-							atom->CATEGORY, atom->PN, atom->PV);
-			} else {
-				snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
-			}
-			atom_implode(atom);
-			cpf = add_set(buf, cpf);
-		}
-		scandir_free(pf, dfd);
-	}
-	scandir_free(cat, cfd);
-
- fuckit:
+	tree_foreach_pkg_fast(ctx, tree_get_vdb_atoms_cb, &state, NULL);
 	tree_close(ctx);
-	return cpf;
+
+	return state.cpf;
 }
