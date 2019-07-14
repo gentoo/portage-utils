@@ -24,7 +24,7 @@
 
 #define QLOP_DEFAULT_LOGFILE "emerge.log"
 
-#define QLOP_FLAGS "ctaHMmuUslerd:f:w:" COMMON_FLAGS
+#define QLOP_FLAGS "ctaHMmuUslerd:f:w:F:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
 	{"summary",   no_argument, NULL, 'c'},
 	{"time",      no_argument, NULL, 't'},
@@ -41,6 +41,7 @@ static struct option const qlop_long_opts[] = {
 	{"lastmerge", no_argument, NULL, 'l'},
 	{"logfile",    a_argument, NULL, 'f'},
 	{"atoms",      a_argument, NULL, 'w'},
+	{"format",     a_argument, NULL, 'F'},
 	COMMON_LONG_OPTS
 };
 static const char * const qlop_opts_help[] = {
@@ -59,6 +60,7 @@ static const char * const qlop_opts_help[] = {
 	"Limit selection to last Portage emerge action",
 	"Read emerge logfile instead of $EMERGE_LOG_DIR/" QLOP_DEFAULT_LOGFILE,
 	"Read package atoms to report from file",
+	"Print matched atom using given format string",
 	COMMON_OPTS_HELP
 };
 static const char qlop_desc[] =
@@ -83,6 +85,7 @@ struct qlop_mode {
 	char do_machine:1;
 	char do_endtime:1;
 	char show_lastmerge:1;
+	const char *fmt;
 };
 
 static bool
@@ -347,10 +350,6 @@ static int do_emerge_log(
 	};
 	struct pkg_match *pkg;
 	struct pkg_match *pkgw;
-	const char *afmt = "%[CATEGORY]%[PN]";
-
-	if (verbose)
-		afmt = "%[CATEGORY]%[PF]";
 
 	if ((fp = fopen(log, "r")) == NULL) {
 		warnp("Could not open logfile '%s'", log);
@@ -621,19 +620,19 @@ static int do_emerge_log(
 					}
 					if (quiet && !flags->do_average) {
 						printf("%s%s%s\n",
-								atom_format(afmt, pkgw->atom),
+								atom_format(flags->fmt, pkgw->atom),
 								flags->do_time ? ": " : "",
 								flags->do_time ?
 									fmt_elapsedtime(flags, elapsed) : "");
 					} else if (flags->do_time) {
 						printf("%s >>> %s: %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
-								atom_format(afmt, pkgw->atom),
+								atom_format(flags->fmt, pkgw->atom),
 								fmt_elapsedtime(flags, elapsed));
 					} else if (!flags->do_average) {
 						printf("%s >>> %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
-								atom_format(afmt, pkgw->atom));
+								atom_format(flags->fmt, pkgw->atom));
 					}
 					atom_implode(pkgw->atom);
 					xarraydelete(merge_matches, i);
@@ -726,19 +725,19 @@ static int do_emerge_log(
 					}
 					if (quiet && !flags->do_average) {
 						printf("%s%s%s\n",
-								atom_format(afmt, pkgw->atom),
+								atom_format(flags->fmt, pkgw->atom),
 								flags->do_time ? ": " : "",
 								flags->do_time ?
 									fmt_elapsedtime(flags, elapsed) : "");
 					} else if (flags->do_time) {
 						printf("%s <<< %s: %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
-								atom_format(afmt, pkgw->atom),
+								atom_format(flags->fmt, pkgw->atom),
 								fmt_elapsedtime(flags, elapsed));
 					} else if (!flags->do_average) {
 						printf("%s <<< %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
-								atom_format(afmt, pkgw->atom));
+								atom_format(flags->fmt, pkgw->atom));
 					}
 					atom_implode(pkgw->atom);
 					xarraydelete(unmerge_matches, i);
@@ -800,7 +799,7 @@ static int do_emerge_log(
 			if (flags->do_time) {
 				printf("%s >>> %s: %s...%s ETA: %s\n",
 						fmt_date(flags, pkgw->tbegin, 0),
-						atom_format(afmt, pkgw->atom),
+						atom_format(flags->fmt, pkgw->atom),
 						fmt_elapsedtime(flags, elapsed),
 						p == NULL ? "" : p,
 						maxtime == 0 ? "unknown" :
@@ -808,7 +807,7 @@ static int do_emerge_log(
 			} else {
 				printf("%s >>> %s...%s ETA: %s\n",
 						fmt_date(flags, pkgw->tbegin, 0),
-						atom_format(afmt, pkgw->atom),
+						atom_format(flags->fmt, pkgw->atom),
 						p == NULL ? "" : p,
 						maxtime == 0 ? "unknown" :
 							fmt_elapsedtime(flags, maxtime - elapsed));
@@ -833,14 +832,14 @@ static int do_emerge_log(
 			if (flags->do_time) {
 				printf("%s <<< %s: %s... ETA: %s\n",
 						fmt_date(flags, pkgw->tbegin, 0),
-						atom_format(afmt, pkgw->atom),
+						atom_format(flags->fmt, pkgw->atom),
 						fmt_elapsedtime(flags, elapsed),
 						maxtime == 0 ? "unknown" :
 							fmt_elapsedtime(flags, maxtime - elapsed));
 			} else {
 				printf("%s <<< %s... ETA: %s\n",
 						fmt_date(flags, pkgw->tbegin, 0),
-						atom_format(afmt, pkgw->atom),
+						atom_format(flags->fmt, pkgw->atom),
 						maxtime == 0 ? "unknown" :
 							fmt_elapsedtime(flags, maxtime - elapsed));
 			}
@@ -852,7 +851,7 @@ static int do_emerge_log(
 
 		array_for_each(merge_averages, i, pkg) {
 			printf("%s: %s average for %s%zd%s merge%s\n",
-					atom_format(afmt, pkg->atom),
+					atom_format(flags->fmt, pkg->atom),
 					fmt_elapsedtime(flags, pkg->time / pkg->cnt),
 					GREEN, pkg->cnt, NORM, pkg->cnt == 1 ? "" : "s");
 			total_merges += pkg->cnt;
@@ -860,7 +859,7 @@ static int do_emerge_log(
 		}
 		array_for_each(unmerge_averages, i, pkg) {
 			printf("%s: %s average for %s%zd%s unmerge%s\n",
-					atom_format(afmt, pkg->atom),
+					atom_format(flags->fmt, pkg->atom),
 					fmt_elapsedtime(flags, pkg->time / pkg->cnt),
 					GREEN, pkg->cnt, NORM, pkg->cnt == 1 ? "" : "s");
 			total_unmerges += pkg->cnt;
@@ -922,6 +921,7 @@ int qlop_main(int argc, char **argv)
 	m.do_machine = 0;
 	m.do_endtime = 0;
 	m.show_lastmerge = 0;
+	m.fmt = NULL;
 
 	while ((ret = GETOPT_LONG(QLOP, qlop, "")) != -1) {
 		switch (ret) {
@@ -939,6 +939,7 @@ int qlop_main(int argc, char **argv)
 			case 'M': m.do_machine = 1;     break;
 			case 'e': m.do_endtime = 1;     break;
 			case 'l': m.show_lastmerge = 1; break;
+			case 'F': m.fmt = optarg;       break;
 			case 'd':
 				if (start_time == 0) {
 					if (!parse_date(optarg, &start_time))
@@ -1057,6 +1058,14 @@ int qlop_main(int argc, char **argv)
 		m.do_unmerge = 1;
 		if (array_cnt(atoms) == 0)
 			m.do_sync = 1;
+	}
+
+	/* set format if none given */
+	if (m.fmt == NULL) {
+		if (verbose)
+			m.fmt = "%[CATEGORY]%[PF]";
+		else
+			m.fmt = "%[CATEGORY]%[PN]";
 	}
 
 	do_emerge_log(logfile, &m, atoms, start_time, end_time);
