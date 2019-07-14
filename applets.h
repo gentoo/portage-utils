@@ -133,7 +133,7 @@ static const struct applet_t {
 	{NULL,        no_argument, NULL, 0x0}
 #define COMMON_OPTS_HELP \
 	"Set the ROOT env var", \
-	"Make a lot of noise", \
+	"Report full package versions, emit more elaborate output", \
 	"Tighter output; suppress warnings", \
 	"Don't output color", \
 	"Print this help and exit", \
