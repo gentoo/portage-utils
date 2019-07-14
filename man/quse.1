@@ -20,12 +20,13 @@ List all ebuilds, don't match anything.
 Use the LICENSE vs IUSE.
 .TP
 \fB\-D\fR, \fB\-\-describe\fR
-Describe the USE flag.
+Describe the USE flag, when no USE-flag given and combined with
+\fB-p\fR, lists all USE-flags with their descriptions (and enabled
+state prefixed with an asterisk when used with \fB-I\fR) per
+package.
 .TP
 \fB\-I\fR, \fB\-\-installed\fR
-Only search installed packages.  Together with \fB-v\fR this shows
-USE-flags and their descriptions, and currently enabled flags
-prefixed with an asterisk (\fI*\fR).
+Only search installed packages.
 .TP
 \fB\-p\fR \fI<arg>\fR, \fB\-\-package\fR \fI<arg>\fR
 Restrict matching to package or category.
@@ -33,11 +34,14 @@ Restrict matching to package or category.
 \fB\-R\fR, \fB\-\-repo\fR
 Show repository the ebuild originates from.
 .TP
+\fB\-F\fR \fI<arg>\fR, \fB\-\-format\fR \fI<arg>\fR
+Print matched atom using given format string.
+.TP
 \fB\-\-root\fR \fI<arg>\fR
 Set the ROOT env var.
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
-Show descriptions for USE-flags for packages that match the search.
+Show versions for packages that match the search.
 Also shows problems encountered during parsing.  These are mostly
 diagnostic and indicate possible incorrectness in the results.
 .TP
