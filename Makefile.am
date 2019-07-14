@@ -42,7 +42,6 @@ dist_man_MANS = \
 	man/qsearch.1 \
 	man/qsize.1 \
 	man/qtbz2.1 \
-	man/qtegrity.1 \
 	man/quse.1 \
 	man/qxpak.1 \
 	$(NULL)
