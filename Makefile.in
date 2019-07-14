@@ -1596,13 +1596,12 @@ SUBDIRS = \
 	$(NULL)
 
 APPLETS = q qatom qcheck qdepends qfile qgrep qkeyword qlist qlop \
-	qmerge qpkg qsearch qsize qtbz2 qtegrity quse qxpak $(NULL) \
+	qmerge qpkg qsearch qsize qtbz2 quse qxpak $(NULL) \
 	$(am__append_5) $(am__append_10)
 dist_man_MANS = man/q.1 man/qatom.1 man/qcheck.1 man/qdepends.1 \
 	man/qfile.1 man/qgrep.1 man/qkeyword.1 man/qlist.1 man/qlop.1 \
 	man/qmerge.1 man/qpkg.1 man/qsearch.1 man/qsize.1 man/qtbz2.1 \
-	man/qtegrity.1 man/quse.1 man/qxpak.1 $(NULL) $(am__append_4) \
-	$(am__append_9)
+	man/quse.1 man/qxpak.1 $(NULL) $(am__append_4) $(am__append_9)
 q_SOURCES = main.c q.c qatom.c qcheck.c qdepends.c qfile.c qgrep.c \
 	qkeyword.c qlist.c qlop.c qmerge.c qpkg.c qsearch.c qsize.c \
 	qtbz2.c quse.c qxpak.c $(NULL) $(am__append_1) $(am__append_6)
