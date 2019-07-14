@@ -56,6 +56,7 @@ pushd "${p}" >/dev/null
 v ./configure -q
 v ${MAKE} -s
 v ${MAKE} -s check
+v ${MAKE} -s DESTDIR="${PWD}"/install install
 popd >/dev/null
 rm -rf "${p}"
 
