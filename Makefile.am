@@ -22,7 +22,6 @@ APPLETS = \
 	qsearch \
 	qsize \
 	qtbz2 \
-	qtegrity \
 	quse \
 	qxpak \
 	$(NULL)
