@@ -201,7 +201,7 @@ write_hashes(
 
 	update_times(tv, &s);
 
-	hash_compute_file(fname, sha256, sha512, whrlpl, blak2b, &flen);
+	hash_compute_file(fname, sha256, sha512, whrlpl, blak2b, &flen, hashes);
 
 	len = snprintf(data, sizeof(data), "%s %s %zd", type, name, flen);
 	if (hashes & HASH_BLAKE2B)
@@ -1027,7 +1027,7 @@ verify_file(const char *dir, char *mfline, const char *mfest, verify_msg **msgs)
 
 	sha256[0] = sha512[0] = whrlpl[0] = blak2b[0] = '\0';
 	snprintf(buf, sizeof(buf), "%s/%s", dir, path);
-	hash_compute_file(buf, sha256, sha512, whrlpl, blak2b, &flen);
+	hash_compute_file(buf, sha256, sha512, whrlpl, blak2b, &flen, hashes);
 
 	if (flen == 0) {
 		msgs_add(msgs, mfest, path, "cannot open file!");

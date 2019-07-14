@@ -22,8 +22,6 @@
 
 #include "hash.h"
 
-static int hashes = HASH_DEFAULT;
-
 void
 hash_hex(char *out, const unsigned char *buf, const int length)
 {
@@ -97,7 +95,8 @@ hash_compute_file(
 		char *sha512,
 		char *whrlpl,
 		char *blak2b,
-		size_t *flen)
+		size_t *flen,
+		int hashes)
 {
 	FILE *f;
 	char data[8192];

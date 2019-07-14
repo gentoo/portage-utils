@@ -21,6 +21,6 @@ enum hash_impls {
 
 void hash_hex(char *out, const unsigned char *buf, const int length);
 void hash_compute_file(const char *fname, char *sha256, char *sha512,
-		char *whrlpl, char *blak2b, size_t *flen);
+		char *whrlpl, char *blak2b, size_t *flen, int hashes);
 
 #endif
