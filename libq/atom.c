@@ -778,14 +778,14 @@ atom_format_r(
 						append_buf(buf, buflen, "%s%s%s%s",
 								YELLOW,
 								connected ? ":" : "",
-								atom->SLOT ? atom->SLOT : "<unset>",
+								HN(atom->SLOT),
 								NORM);
 				} else if (!strncmp("SUBSLOT", fmt, len)) {
 					if (showit || atom->SUBSLOT)
 						append_buf(buf, buflen, "%s%s%s%s%s",
 								YELLOW,
 								connected ? "/" : "",
-								atom->SUBSLOT ? atom->SUBSLOT : "",
+								HN(atom->SUBSLOT),
 								atom_slotdep_str[atom->slotdep],
 								NORM);
 				} else if (!strncmp("REPO", fmt, len)) {
