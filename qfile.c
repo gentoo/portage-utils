@@ -20,8 +20,9 @@
 #include "rmspace.h"
 #include "tree.h"
 
-#define QFILE_FLAGS "doRx:S" COMMON_FLAGS
+#define QFILE_FLAGS "F:doRx:S" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
+	{"format",       a_argument, NULL, 'F'},
 	{"slots",       no_argument, NULL, 'S'},
 	{"root-prefix", no_argument, NULL, 'R'},
 	{"dir",         no_argument, NULL, 'd'},
@@ -30,6 +31,7 @@ static struct option const qfile_long_opts[] = {
 	COMMON_LONG_OPTS
 };
 static const char * const qfile_opts_help[] = {
+	"Print matched atom using given format string",
 	"Display installed packages with slots",
 	"Assume arguments are already prefixed by $ROOT",
 	"Also match directories for single component arguments",
@@ -64,16 +66,13 @@ struct qfile_opt_state {
 	char *exclude_pkg;
 	char *exclude_slot;
 	depend_atom *exclude_atom;
-	bool slotted;
 	bool basename;
 	bool orphans;
 	bool assume_root_prefix;
+	const char *format;
+	bool need_full_atom;
 };
 
-/*
- * We assume the people calling us have chdir(/var/db/pkg) and so
- * we use relative paths throughout here.
- */
 static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qfile_opt_state *state = priv;
@@ -215,24 +214,9 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				continue;
 
 			if (non_orphans == NULL) {
-				const char *fmt;
+				atom = tree_get_atom(pkg_ctx, state->need_full_atom);
 
-				atom = tree_get_atom(pkg_ctx, true);
-
-				if (state->slotted) {
-					if (verbose) {
-						fmt = "%[CATEGORY]%[PF]%[SLOT]";
-					} else {
-						fmt = "%[CATEGORY]%[PN]%[SLOT]";
-					}
-				} else {
-					if (verbose) {
-						fmt = "%[CATEGORY]%[PF]";
-					} else {
-						fmt = "%[CATEGORY]%[PN]";
-					}
-				}
-				printf("%s", atom_format(fmt, atom));
+				printf("%s", atom_format(state->format, atom));
 				if (quiet)
 					puts("");
 				else
@@ -402,10 +386,11 @@ int qfile_main(int argc, char **argv)
 {
 	struct qfile_opt_state state = {
 		.buflen = _Q_PATH_MAX,
-		.slotted = false,
+		.need_full_atom = false,
 		.basename = false,
 		.orphans = false,
 		.assume_root_prefix = false,
+		.format = NULL,
 	};
 	int i, nb_of_queries, found = 0;
 	char *p;
@@ -413,7 +398,8 @@ int qfile_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QFILE, qfile, "")) != -1) {
 		switch (i) {
 			COMMON_GETOPTS_CASES(qfile)
-			case 'S': state.slotted = true;             break;
+			case 'F': state.format = optarg;            /* fall through */
+			case 'S': state.need_full_atom = true;      break;
 			case 'd': state.basename = true;            break;
 			case 'o': state.orphans = true;             break;
 			case 'R': state.assume_root_prefix = true;  break;
@@ -435,6 +421,19 @@ int qfile_main(int argc, char **argv)
 
 	argc -= optind;
 	argv += optind;
+
+	if (state.format == NULL) {
+		if (state.need_full_atom)
+			if (verbose)
+				state.format = "%[CATEGORY]%[PF]%[SLOT]";
+			else
+				state.format = "%[CATEGORY]%[PN]%[SLOT]";
+		else
+			if (verbose)
+				state.format = "%[CATEGORY]%[PF]";
+			else
+				state.format = "%[CATEGORY]%[PN]";
+	}
 
 	state.buf = xmalloc(state.buflen);
 	if (state.assume_root_prefix) {
