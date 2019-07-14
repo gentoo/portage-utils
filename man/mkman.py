@@ -69,7 +69,7 @@ def MkMan(applets, applet, output):
     except:
         return
     lines = ahelp.splitlines()
-    m = re.search(r'^Usage: %s (.*) : (.*)' % applet, ahelp)
+    m = re.search(r'^usage: %s (.*) : (.*)' % applet, ahelp)
     usage = m.group(1)
     short_desc = m.group(2)
 
@@ -92,7 +92,7 @@ def MkMan(applets, applet, output):
     # Extract all the options
     options = []
     for line, i in zip(lines, range(len(lines))):
-        if not line.startswith('Options: '):
+        if not line.startswith('options: '):
             continue
 
         for option in [x.strip().split() for x in lines[i + 1:]]:
@@ -128,8 +128,8 @@ def MkMan(applets, applet, output):
 
     # Handle applets that have applets
     extra_sections = []
-    if 'Currently defined applets:' in ahelp:
-        alines = lines[lines.index('Currently defined applets:') + 1:]
+    if 'currently defined applets:' in ahelp:
+        alines = lines[lines.index('currently defined applets:') + 1:]
         alines = alines[:alines.index('')]
         extra_sections += (
             ['.SH APPLETS', '.nf',

@@ -92,14 +92,18 @@ usage(int status, const char *flags, struct option const opts[],
 	const char opt_arg[] = "[arg]";
 	const char a_arg[] = "<arg>";
 	size_t a_arg_len = strlen(a_arg) + 1;
-	size_t i, optlen;
+	size_t i;
+	size_t optlen;
+	size_t l;
+	size_t prefixlen;
+	const char *hstr;
 	FILE *fp = status == EXIT_SUCCESS ? stdout : warnout;
 
 	if (blabber == 0) {
-		fprintf(fp, "%sUsage:%s %sq%s %s<applet> <args>%s  : %s"
+		fprintf(fp, "%susage:%s %sq%s %s<applet> <args>%s  : %s"
 			"invoke a portage utility applet\n\n", GREEN,
 			NORM, YELLOW, NORM, DKBLUE, RED, NORM);
-		fprintf(fp, "%sCurrently defined applets:%s\n", GREEN, NORM);
+		fprintf(fp, "%scurrently defined applets:%s\n", GREEN, NORM);
 		for (i = 0; applets[i].desc; ++i)
 			if (applets[i].func)
 				fprintf(fp, " %s%8s%s %s%-16s%s%s:%s %s\n",
@@ -107,7 +111,7 @@ usage(int status, const char *flags, struct option const opts[],
 					DKBLUE, applets[i].opts, NORM,
 					RED, NORM, _(applets[i].desc));
 	} else if (blabber > 0) {
-		fprintf(fp, "%sUsage:%s %s%s%s [opts] %s%s%s %s:%s %s\n",
+		fprintf(fp, "%susage:%s %s%s%s [opts] %s%s%s %s:%s %s\n",
 			GREEN, NORM,
 			YELLOW, applets[blabber].name, NORM,
 			DKBLUE, applets[blabber].opts, NORM,
@@ -116,19 +120,19 @@ usage(int status, const char *flags, struct option const opts[],
 			fprintf(fp, "\n%s\n", desc);
 	}
 	if (module_name != NULL)
-		fprintf(fp, "%sLoaded module:%s\n%s%8s%s %s<args>%s\n",
+		fprintf(fp, "%sloaded module:%s\n%s%8s%s %s<args>%s\n",
 			GREEN, NORM, YELLOW, module_name, NORM, DKBLUE, NORM);
 
 	/* Prescan the --long opt length to auto-align. */
 	optlen = 0;
 	for (i = 0; opts[i].name; ++i) {
-		size_t l = strlen(opts[i].name);
+		l = strlen(opts[i].name);
 		if (opts[i].has_arg != no_argument)
 			l += a_arg_len;
 		optlen = MAX(l, optlen);
 	}
 
-	fprintf(fp, "\n%sOptions:%s -[%s]\n", GREEN, NORM, flags);
+	fprintf(fp, "\n%soptions:%s -[%s]\n", GREEN, NORM, flags);
 	for (i = 0; opts[i].name; ++i) {
 		/* this assert is a life saver when adding new applets. */
 		assert(help[i] != NULL);
@@ -139,16 +143,39 @@ usage(int status, const char *flags, struct option const opts[],
 		else
 			fprintf(fp, "  -%c, ", opts[i].val);
 
-		/* then the long flag + help text */
+		/* then the long flag */
 		if (opts[i].has_arg == no_argument)
-			fprintf(fp, "--%-*s %s*%s %s\n", (int)optlen, opts[i].name,
-				RED, NORM, _(help[i]));
+			fprintf(fp, "--%-*s %s*%s ", (int)optlen, opts[i].name,
+				RED, NORM);
 		else
-			fprintf(fp, "--%s %s%s%s%*s %s*%s %s\n",
+			fprintf(fp, "--%s %s%s%s%*s %s*%s ",
 				opts[i].name,
 				DKBLUE, (opts[i].has_arg == a_argument ? a_arg : opt_arg), NORM,
 				(int)(optlen - strlen(opts[i].name) - a_arg_len), "",
-				RED, NORM, _(help[i]));
+				RED, NORM);
+
+		/* then wrap the help text, if necessary */
+		prefixlen = 6 + 2 + optlen + 1 + 1 + 1;
+		if ((size_t)twidth < prefixlen + 10) {
+			fprintf(fp, "%s\n", _(help[i]));
+		} else {
+			const char *t;
+			hstr = _(help[i]);
+			l = strlen(hstr);
+			while (twidth - prefixlen < l) {
+				/* search backwards for a space */
+				t = &hstr[twidth - prefixlen];
+				while (t > hstr && !isspace((int)*t))
+					t--;
+				if (t == hstr)
+					break;
+				fprintf(fp, "%.*s\n%*s",
+						(int)(t - hstr), hstr, (int)prefixlen, "");
+				l -= t + 1 - hstr;
+				hstr = t + 1;  /* skip space */
+			}
+			fprintf(fp, "%s\n", hstr);
+		}
 	}
 	exit(status);
 }
