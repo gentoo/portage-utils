@@ -780,9 +780,6 @@ int main(int argc, char **argv)
 	struct stat st;
 	struct winsize winsz;
 
-	ioctl(0, TIOCGWINSZ, &winsz);
-	twidth = winsz.ws_col > 0 ? (int)winsz.ws_col : 80;
-
 	warnout = stderr;
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
@@ -791,13 +788,18 @@ int main(int argc, char **argv)
 	bindtextdomain(argv0, CONFIG_EPREFIX "usr/share/locale");
 	textdomain(argv0);
 
-	if (fstat(fileno(stdout), &st) != -1)
+	twidth = 0;
+	if (fstat(fileno(stdout), &st) != -1) {
 		if (!isatty(fileno(stdout))) {
 			no_colors();
-			twidth = 0;
+		} else {
+			if ((getenv("TERM") == NULL) ||
+					(strcmp(getenv("TERM"), "dumb") == 0))
+				no_colors();
+			if (ioctl(0, TIOCGWINSZ, &winsz) == 0 && winsz.ws_col > 0)
+				twidth = (int)winsz.ws_col;
 		}
-	if ((getenv("TERM") == NULL) || (strcmp(getenv("TERM"), "dumb") == 0))
-		no_colors();
+	}
 
 	initialize_portage_env();
 	optind = 0;
