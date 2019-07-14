@@ -231,8 +231,8 @@ qpkg_make(depend_atom *atom)
 	struct stat st;
 
 	if (pretend) {
-		printf(" %s-%s %s/%s:\n",
-				GREEN, NORM, atom->CATEGORY, atom_to_pvr(atom));
+		printf(" %s-%s %s:\n",
+				GREEN, NORM, atom_format("%[CATEGORY]%[PF]", atom));
 		return 0;
 	}
 
@@ -286,7 +286,8 @@ qpkg_make(depend_atom *atom)
 	fclose(out);
 	fclose(fp);
 
-	printf(" %s-%s %s/%s: ", GREEN, NORM, atom->CATEGORY, atom_to_pvr(atom));
+	printf(" %s-%s %s: ", GREEN, NORM,
+			atom_format("%[CATEGORY]%[PF]", atom));
 	fflush(stdout);
 
 	snprintf(tbz2, sizeof(tbz2), "%s/bin.tbz2", tmpdir);
@@ -416,17 +417,9 @@ retry_mkdir:
 	/* scan all the categories */
 	while ((cat_ctx = tree_next_cat(ctx))) {
 		/* scan all the packages in this category */
-		const char *catname = cat_ctx->name;
 		while ((pkg_ctx = tree_next_pkg(cat_ctx))) {
-			const char *pkgname = pkg_ctx->name;
-
 			/* see if user wants any of these packages */
-			snprintf(buf, sizeof(buf), "%s/%s", catname, pkgname);
-			atom = atom_explode(buf);
-			if (!atom) {
-				warn("could not explode '%s'", buf);
-				goto next_pkg;
-			}
+			atom = tree_get_atom(pkg_ctx, false);
 			snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
 			for (i = optind; i < argc; ++i) {
 				if (!argv[i]) continue;
@@ -438,9 +431,6 @@ retry_mkdir:
 					if (!qpkg_make(atom))
 						++pkgs_made;
 			}
-			atom_implode(atom);
-
- next_pkg:
 			tree_close_pkg(pkg_ctx);
 		}
 	}
