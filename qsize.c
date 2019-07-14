@@ -55,7 +55,7 @@
 #include "xarray.h"
 #include "xregex.h"
 
-#define QSIZE_FLAGS "fsSmkbi:" COMMON_FLAGS
+#define QSIZE_FLAGS "fsSmkbi:F:" COMMON_FLAGS
 static struct option const qsize_long_opts[] = {
 	{"filesystem", no_argument, NULL, 'f'},
 	{"sum",        no_argument, NULL, 's'},
@@ -64,6 +64,7 @@ static struct option const qsize_long_opts[] = {
 	{"kilobytes",  no_argument, NULL, 'k'},
 	{"bytes",      no_argument, NULL, 'b'},
 	{"ignore",      a_argument, NULL, 'i'},
+	{"format",      a_argument, NULL, 'F'},
 	COMMON_LONG_OPTS
 };
 static const char * const qsize_opts_help[] = {
@@ -74,6 +75,7 @@ static const char * const qsize_opts_help[] = {
 	"Display all sizes in kilobytes",
 	"Display all sizes in bytes",
 	"Ignore regexp string",
+	"Print matched atom using given format string",
 	COMMON_OPTS_HELP
 };
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, NULL, lookup_applet_idx("qsize"))
@@ -88,6 +90,8 @@ struct qsize_opt_state {
 	size_t disp_units;
 	const char *str_disp_units;
 	array_t *ignore_regexp;
+	const char *fmt;
+	bool need_full_atom:1;
 
 	size_t buflen;
 	char *buf;
@@ -160,9 +164,9 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	state->num_all_ignored += num_ignored;
 
 	if (!state->summary_only) {
-		atom = tree_get_atom(pkg_ctx, 0);
+		atom = tree_get_atom(pkg_ctx, state->need_full_atom);
 		printf("%s: %'zu files, %'zu non-files, ",
-				atom_format("%[CATEGORY]%[PF]", atom),
+				atom_format(state->fmt, atom),
 				num_files, num_nonfiles);
 		if (num_ignored)
 			printf("%'zu names-ignored, ", num_ignored);
@@ -195,17 +199,24 @@ int qsize_main(int argc, char **argv)
 		.num_all_files = 0,
 		.num_all_nonfiles = 0,
 		.num_all_ignored = 0,
+		.need_full_atom = false,
+		.fmt = NULL,
 	};
 
 	while ((ret = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
 		switch (ret) {
 		COMMON_GETOPTS_CASES(qsize)
-		case 'f': state.fs_size = 1; break;
-		case 's': state.summary = 1; break;
-		case 'S': state.summary = state.summary_only = 1; break;
-		case 'm': state.disp_units = MEGABYTE; state.str_disp_units = "MiB"; break;
-		case 'k': state.disp_units = KILOBYTE; state.str_disp_units = "KiB"; break;
-		case 'b': state.disp_units = 1; state.str_disp_units = "bytes"; break;
+		case 'f': state.fs_size = 1;                       break;
+		case 's': state.summary = 1;                       break;
+		case 'S': state.summary = state.summary_only = 1;  break;
+		case 'm': state.disp_units = MEGABYTE;
+				  state.str_disp_units = "MiB";            break;
+		case 'k': state.disp_units = KILOBYTE;
+				  state.str_disp_units = "KiB";            break;
+		case 'b': state.disp_units = 1;
+				  state.str_disp_units = "bytes";          break;
+		case 'F': state.fmt = optarg;
+				  state.need_full_atom = true;             break;
 		case 'i': {
 			regex_t regex;
 			xregcomp(&regex, optarg, REG_EXTENDED|REG_NOSUB);
@@ -223,6 +234,13 @@ int qsize_main(int argc, char **argv)
 			warn("invalid atom: %s", argv[i]);
 		else
 			xarraypush_ptr(state.atoms, atom);
+	}
+
+	if (state.fmt == NULL) {
+		if (verbose)
+			state.fmt = "%[CATEGORY]%[PF]";
+		else
+			state.fmt = "%[CATEGORY]%[PN]";
 	}
 
 	state.buflen = _Q_PATH_MAX;
