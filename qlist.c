@@ -21,7 +21,7 @@
 #include "tree.h"
 #include "xregex.h"
 
-#define QLIST_FLAGS "ISRUcDeados" COMMON_FLAGS
+#define QLIST_FLAGS "ISRUcDeadosF:" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
 	{"slots",     no_argument, NULL, 'S'},
@@ -35,10 +35,11 @@ static struct option const qlist_long_opts[] = {
 	{"obj",       no_argument, NULL, 'o'},
 	{"sym",       no_argument, NULL, 's'},
 	/* {"file",       a_argument, NULL, 'f'}, */
+	{"format",     a_argument, NULL, 'F'},
 	COMMON_LONG_OPTS
 };
 static const char * const qlist_opts_help[] = {
-	"Just show installed packages",
+	"Just show installed package names",
 	"Display installed packages with slots (use twice for subslots)",
 	"Display installed packages with repository",
 	"Display installed packages with flags used",
@@ -50,6 +51,7 @@ static const char * const qlist_opts_help[] = {
 	"Only show objects",
 	"Only show symlinks",
 	/* "query filename for pkgname", */
+	"Print matched atom using given format string",
 	COMMON_OPTS_HELP
 };
 #define qlist_usage(ret) usage(ret, QLIST_FLAGS, qlist_long_opts, qlist_opts_help, NULL, lookup_applet_idx("qlist"))
@@ -311,19 +313,18 @@ struct qlist_opt_state {
 	int argc;
 	char **argv;
 	depend_atom **atoms;
-	bool exact;
-	bool all;
-	bool just_pkgname;
-	bool show_dir;
-	bool show_obj;
-	bool show_repo;
-	bool show_sym;
-	int show_slots;
-	bool show_umap;
-	bool show_dbg;
-	bool columns;
+	bool exact:1;
+	bool all:1;
+	bool just_pkgname:1;
+	bool show_dir:1;
+	bool show_obj:1;
+	bool show_sym:1;
+	bool need_full_atom:1;
+	bool show_umap:1;
+	bool show_dbg:1;
 	char *buf;
 	size_t buflen;
+	const char *fmt;
 };
 
 static int
@@ -342,29 +343,11 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if ((i == state->argc) && (state->argc != optind))
 		return 0;
 
-	atom = tree_get_atom(pkg_ctx, false);
+	atom = tree_get_atom(pkg_ctx, state->need_full_atom);
 	if (state->just_pkgname) {
 		if ((state->all + state->just_pkgname) < 2) {
-			char qfmt[128];
-			atom = tree_get_atom(pkg_ctx,
-					state->show_slots || state->show_repo);
-			if (state->columns) {
-				snprintf(qfmt, sizeof(qfmt),
-						"%%{CATEGORY} %%{PN}%s%s%s%s",
-						verbose ? " %{PVR}" : "",
-						state->show_slots >= 1 ? " %{SLOT}" : "",
-						state->show_slots >= 2 ? " %{SUBSLOT}" : "",
-						state->show_repo ? " %{REPO}" : "");
-			} else {
-				snprintf(qfmt, sizeof(qfmt),
-						"%%[CATEGORY]%%[P%c]%s%s%s",
-						verbose ? 'F' : 'N',
-						state->show_slots >= 1 ? "%[SLOT]" : "",
-						state->show_slots >= 2 ? "%[SUBSLOT]" : "",
-						state->show_repo ? "%[REPO]" : "");
-			}
 			printf("%s%s\n",
-					atom_format(qfmt, atom),
+					atom_format(state->fmt, atom),
 					umapstr(state->show_umap, pkg_ctx));
 		}
 
@@ -374,7 +357,7 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	if (verbose)
 		printf("%s %sCONTENTS%s:\n",
-				atom_format("%[CATEGORY]%[PF]", atom), DKBLUE, NORM);
+				atom_format(state->fmt, atom), DKBLUE, NORM);
 
 	fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
 	if (fp == NULL)
@@ -425,6 +408,10 @@ int qlist_main(int argc, char **argv)
 	int i;
 	int ret;
 	tree_ctx *vdb;
+	int show_slots = 0;
+	bool show_repo = false;
+	bool do_columns = false;
+	char qfmt[128];
 	struct qlist_opt_state state = {
 		.argc = argc,
 		.argv = argv,
@@ -433,39 +420,66 @@ int qlist_main(int argc, char **argv)
 		.just_pkgname = false,
 		.show_dir = false,
 		.show_obj = false,
-		.show_repo = false,
 		.show_sym = false,
-		.show_slots = 0,
+		.need_full_atom = false,
 		.show_umap = false,
 		.show_dbg = false,
-		.columns = false,
 		.buflen = _Q_PATH_MAX,
+		.fmt = NULL,
 	};
 
 	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)
-		case 'a': state.all = true; /* fall through */
-		case 'I': state.just_pkgname = true; break;
-		case 'S': state.just_pkgname = true; ++state.show_slots; break;
-		case 'R': state.just_pkgname = state.show_repo = true; break;
-		case 'U': state.just_pkgname = state.show_umap = true; break;
-		case 'e': state.exact = true; break;
-		case 'd': state.show_dir = true; break;
-		case 128: state.show_dbg = true; break;
-		case 'o': state.show_obj = true; break;
-		case 's': state.show_sym = true; break;
-		case 'c': state.columns = true; break;
-		case 'f': break;
+		case 'a': state.all = true;                 /* fall through */
+		case 'I': state.just_pkgname = true;                    break;
+		case 'S': state.just_pkgname = true; show_slots++;      break;
+		case 'R': state.just_pkgname = show_repo = true;        break;
+		case 'U': state.just_pkgname = state.show_umap = true;  break;
+		case 'e': state.exact = true;                           break;
+		case 'd': state.show_dir = true;                        break;
+		case 128: state.show_dbg = true;                        break;
+		case 'o': state.show_obj = true;                        break;
+		case 's': state.show_sym = true;                        break;
+		case 'c': do_columns = true;                            break;
+		case 'F': state.fmt = optarg;                           break;
 		}
 	}
-	if (state.columns)
-		verbose = 0; /* if not set to zero; atom wont be exploded; segv */
+
 	/* default to showing syms and objs */
 	if (!state.show_dir && !state.show_obj && !state.show_sym)
 		state.show_obj = state.show_sym = true;
 	if (argc == optind && !state.just_pkgname)
 		qlist_usage(EXIT_FAILURE);
+
+	if (state.fmt == NULL) {
+		const char *l = "%[";
+		const char *r = "]";
+		if (do_columns) {
+			l = "%{";
+			r = "} ";
+		}
+		snprintf(qfmt, sizeof(qfmt), "%sCATEGORY%s"
+				"%s%s%s"   /* PN/PF */
+				"%s%s%s"   /* SLOT */
+				"%s%s%s"   /* SUBSLOT */
+				"%s%s%s",  /* REPO */
+				l, r,
+				l, verbose ? "PF" : "PN", r,
+				show_slots >= 1 ? l : "",
+					show_slots >= 1 ? "SLOT" : "",
+					show_slots >= 1 ? r : "",
+				show_slots >= 2 ? l : "",
+					show_slots >= 2 ? "SUBSLOT" : "",
+					show_slots >= 2 ? r : "",
+				show_repo ? l : "",
+					show_repo ? "REPO" : "",
+					show_repo ? r : "");
+		state.fmt = qfmt;
+		state.need_full_atom = show_slots > 0 || show_repo;
+	} else {
+		state.need_full_atom = true;
+	}
 
 	state.buf = xmalloc(state.buflen);
 	state.atoms = xcalloc(argc - optind, sizeof(*state.atoms));
