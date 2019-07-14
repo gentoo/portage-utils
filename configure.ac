@@ -35,11 +35,15 @@ AC_SUBST([CONFIG_EPREFIX], ["$with_eprefix"])
 AC_ARG_ENABLE([qmanifest], [AS_HELP_STRING([--enable-qmanifest],
 			  [support qmanifest applet])],
 			  [], [enable_qmanifest=auto])
+AC_ARG_ENABLE([qtegrity], [AS_HELP_STRING([--enable-qtegrity],
+			  [support qtegrity applet])],
+			  [], [enable_qtegrity=auto])
 LIBSSL=
 LIBBL2=
 LIBZ=
 HASGPGME=
-AS_IF([test "x$enable_qmanifest" != xno],
+
+AS_IF([test "x${enable_qmanifest}x${enable_qtegrity}" != xnoxno],
 	  [AC_CHECK_HEADERS([openssl/err.h \
 	                     openssl/ssl.h], [], [LIBSSL=_missing_header])
 	   AC_CHECK_LIB([ssl${LIBSSL}], [SSL_connect],
@@ -55,9 +59,33 @@ AS_IF([test "x$enable_qmanifest" != xno],
 					 AC_MSG_FAILURE(
 					   [--enable-qmanifest was given, but test for ssl failed])
 					 fi
+					 if test "x$enable_qtegrity" != xauto; then
+					 AC_MSG_FAILURE(
+					   [--enable-qtegrity was given, but test for ssl failed])
+					 fi
 					 LIBSSL=
 					])
-	   AC_CHECK_HEADERS([blake2.h], [], [LIBBL2=_missing_header])
+	   AC_MSG_CHECKING([whether to enable qtegrity])
+	   case "x${LIBSSL}" in
+		   "x-lssl"*)
+				AC_MSG_RESULT([yes])
+				;;
+		   *)
+			   enable_qtegrity=no
+			   AC_MSG_RESULT([no: missing dependencies])
+			   ;;
+	   esac
+	   if test "x$enable_qtegrity" != xno ; then
+		   AC_DEFINE([ENABLE_QTEGRITY], [1],
+					 [Define if qtegrity should be compiled])
+	   fi
+	],
+	[
+	   AC_MSG_CHECKING([whether to enable qtegrity])
+	   AC_MSG_RESULT([no: disabled by configure argument])
+	])
+AS_IF([test "x$enable_qmanifest" != xno],
+	  [AC_CHECK_HEADERS([blake2.h], [], [LIBBL2=_missing_header])
 	   AC_CHECK_LIB([b2${LIBBL2}], [blake2b_update],
 					[LIBBL2="-lb2"
 					 AC_DEFINE([HAVE_BLAKE2B], [1],
@@ -104,6 +132,7 @@ AS_IF([test "x$enable_qmanifest" != xno],
 	   AC_MSG_RESULT([no: disabled by configure argument])
 	])
 AM_CONDITIONAL([QMANIFEST_ENABLED], [test "x$enable_qmanifest" != xno])
+AM_CONDITIONAL([QTEGRITY_ENABLED], [test "x$enable_qtegrity" != xno])
 
 AX_CFLAGS_WARN_ALL
 AC_DEFUN([PT_CHECK_CFLAG],[AX_CHECK_COMPILER_FLAGS([$1],[CFLAGS="$CFLAGS $1"])])

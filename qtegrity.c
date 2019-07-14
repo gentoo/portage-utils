@@ -5,10 +5,12 @@
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  * Copyright 2017-2018 Sam Besselink
+ * Copyright 2019-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #include "main.h"
 #include "applets.h"
+#include "libq/hash.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -60,63 +62,24 @@ struct qtegrity_opt_state {
 #define SHA256_LENGTH (SHA256_PREFIX_LENGTH + SHA256_DIGEST_LENGTH)
 #define SHA512_DIGEST_LENGTH 128
 
-static void external_check_sha(char * ret_digest, char * filepath, char * algo) {
-	size_t size_digest = 1;
-	char cmd[11];
-	int pipefd[2];
-	pid_t pid;
+static void
+check_sha(char *ret_digest, char *path, char *algo)
+{
+	int hashes = 0;
+	size_t flen = 0;
 
 	if (strcmp(algo, "sha256") == 0) {
-		size_digest = 64;
+		hashes |= HASH_SHA256;
 	} else if (strcmp(algo, "sha512") == 0) {
-		size_digest = 128;
-	}
-
-	if ((strcmp(algo, "sha256") != 0) && (strcmp(algo, "sha512") != 0)) {
+		hashes |= HASH_SHA512;
+	} else {
+		/* no matching hash? (we could support whirlpool and blake2b) */
 		return;
 	}
 
-	snprintf(cmd, 10, "%ssum", algo);
+	hash_compute_file(path, ret_digest, ret_digest, NULL, NULL, &flen, hashes);
+	(void)flen;  /* we don't use the file size */
 
-	if (pipe(pipefd) == -1) {
-		perror("Couldn't create pipe to shasum\n");
-		exit(1);
-	}
-	if ((pid = fork()) == -1) {
-		perror("Couldn't fork to shasum\n");
-		exit(1);
-	}
-	if (pid == 0)
-	{
-		/* Child. Redirect stdout and stderr to pipe, replace execution
-		 * environment */
-		close(pipefd[0]);
-		dup2(pipefd[1], STDOUT_FILENO);
-		dup2(pipefd[1], STDERR_FILENO);
-		execlp(cmd, cmd, filepath, (char *)NULL);
-		perror("Executing shasum failed\n");
-		exit(1);
-	}
-
-	/* Only parent gets here. Listen to pipe */
-	close(pipefd[1]);
-	FILE* output = fdopen(pipefd[0], "r");
-	if (output == NULL) {
-		printf("Failed to run command '%s'\n", cmd);
-		exit(1);
-	}
-
-	/* Read pipe line for line */
-	while (fgets(ret_digest, size_digest+1, output))
-	{
-		if (strlen(ret_digest) == 64) /* Found what we need, can stop */
-		{
-			kill(pid, SIGKILL);
-			break;
-		}
-	}
-
-	pclose(output);
 	return;
 }
 
@@ -458,7 +421,7 @@ int qtegrity_main(int argc, char **argv)
 		char *file_digest;
 		file_digest = xmalloc(SHA256_DIGEST_LENGTH+1);
 		file_digest[0] = '\0';
-		external_check_sha(file_digest, state.add_file, hash_algo);
+		check_sha(file_digest, state.add_file, hash_algo);
 
 		/* Iterate over lines; if fname matches, exit-loop */
 		char *line, *fname;
