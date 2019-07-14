@@ -25,7 +25,7 @@
 #include "xarray.h"
 #include "xregex.h"
 
-#define QSEARCH_FLAGS "asSNHR" COMMON_FLAGS
+#define QSEARCH_FLAGS "asSNHRF:" COMMON_FLAGS
 static struct option const qsearch_long_opts[] = {
 	{"all",       no_argument, NULL, 'a'},
 	{"search",    no_argument, NULL, 's'},
@@ -33,6 +33,7 @@ static struct option const qsearch_long_opts[] = {
 	{"name-only", no_argument, NULL, 'N'},
 	{"homepage",  no_argument, NULL, 'H'},
 	{"repo",      no_argument, NULL, 'R'},
+	{"format",     a_argument, NULL, 'F'},
 	COMMON_LONG_OPTS
 };
 static const char * const qsearch_opts_help[] = {
@@ -42,6 +43,7 @@ static const char * const qsearch_opts_help[] = {
 	"Only show package name",
 	"Show homepage info instead of description",
 	"Show repository the ebuild originates from",
+	"Print matched atom using given format string",
 	COMMON_OPTS_HELP
 };
 #define qsearch_usage(ret) usage(ret, QSEARCH_FLAGS, qsearch_long_opts, qsearch_opts_help, NULL, lookup_applet_idx("qsearch"))
@@ -50,10 +52,11 @@ struct qsearch_state {
 	bool show_homepage:1;
 	bool show_name:1;
 	bool show_desc:1;
-	bool show_repo:1;
 	bool search_desc:1;
 	bool search_name:1;
+	bool need_full_atom:1;
 	regex_t search_expr;
+	const char *fmt;
 };
 
 static int
@@ -99,16 +102,10 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		match = true;
 
 	if (match) {
-		const char *qfmt;
-		if (state->show_repo) {
-			atom = tree_get_atom(pkg_ctx, 1);
-			qfmt = "%[CATEGORY]%[PN]%[REPO]";
-		} else {
-			qfmt = "%[CATEGORY]%[PN]";
-		}
+		atom = tree_get_atom(pkg_ctx, state->need_full_atom);
 		printf("%s%s%s\n",
-				atom_format(qfmt, atom),
-				(state->show_name ? "" : " "),
+				atom_format(state->fmt, atom),
+				(state->show_name ? "" : ": "),
 				(state->show_name ? "" : desc ? desc : ""));
 	}
 
@@ -131,23 +128,25 @@ int qsearch_main(int argc, char **argv)
 	const char *overlay;
 	size_t n;
 	struct qsearch_state state = {
-		.show_homepage = false,
-		.show_name = false,
-		.show_desc = false,
-		.show_repo = false,
-		.search_desc = false,
-		.search_name = false,
+		.show_homepage  = false,
+		.show_name      = false,
+		.show_desc      = false,
+		.search_desc    = false,
+		.search_name    = false,
+		.need_full_atom = false,
+		.fmt            = NULL,
 	};
 
 	while ((i = GETOPT_LONG(QSEARCH, qsearch, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qsearch)
-		case 'a': search_me           = ".*";  break;
-		case 's': state.search_name   = true;  break;
-		case 'S': state.search_desc   = true;  break;
-		case 'N': state.show_name     = true;  break;
-		case 'H': state.show_homepage = true;  break;
-		case 'R': state.show_repo     = true;  break;
+		case 'a': search_me            = ".*";   break;
+		case 's': state.search_name    = true;   break;
+		case 'S': state.search_desc    = true;   break;
+		case 'N': state.show_name      = true;   break;
+		case 'H': state.show_homepage  = true;   break;
+		case 'F': state.fmt            = optarg; /* fall through */
+		case 'R': state.need_full_atom = true;   break;
 		}
 	}
 
@@ -164,6 +163,20 @@ int qsearch_main(int argc, char **argv)
 		search_me = argv[optind];
 	}
 	xregcomp(&state.search_expr, search_me, REG_EXTENDED | REG_ICASE);
+
+	/* set default format */
+	if (state.fmt == NULL) {
+		if (state.need_full_atom)
+			if (verbose)
+				state.fmt = "%[CATEGORY]%[PF]%[REPO]";
+			else
+				state.fmt = "%[CATEGORY]%[PN]%[REPO]";
+		else
+			if (verbose)
+				state.fmt = "%[CATEGORY]%[PF]";
+			else
+				state.fmt = "%[CATEGORY]%[PN]";
+	}
 
 	/* use sorted order here so the duplicate reduction works reliably */
 	array_for_each(overlays, n, overlay) {
