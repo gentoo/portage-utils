@@ -99,6 +99,15 @@ bin_PROGRAMS = q$(EXEEXT)
 
 @QMANIFEST_ENABLED_TRUE@am__append_4 = man/qmanifest.1
 @QMANIFEST_ENABLED_TRUE@am__append_5 = qmanifest
+@QTEGRITY_ENABLED_TRUE@am__append_6 = qtegrity.c
+@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_TRUE@am__append_7 = \
+@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_TRUE@	$(OPENMP_CFLAGS)
+
+@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_TRUE@am__append_8 = \
+@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_TRUE@	$(OPENMP_CFLAGS)
+
+@QTEGRITY_ENABLED_TRUE@am__append_9 = man/qtegrity.1
+@QTEGRITY_ENABLED_TRUE@am__append_10 = qtegrity
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
@@ -257,24 +266,26 @@ am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__q_SOURCES_DIST = main.c q.c qatom.c qcheck.c qdepends.c qfile.c \
 	qgrep.c qkeyword.c qlist.c qlop.c qmerge.c qpkg.c qsearch.c \
-	qsize.c qtbz2.c qtegrity.c quse.c qxpak.c qmanifest.c
+	qsize.c qtbz2.c quse.c qxpak.c qmanifest.c qtegrity.c
 @QMANIFEST_ENABLED_TRUE@am__objects_1 = q-qmanifest.$(OBJEXT)
+@QTEGRITY_ENABLED_TRUE@am__objects_2 = q-qtegrity.$(OBJEXT)
 am_q_OBJECTS = q-main.$(OBJEXT) q-q.$(OBJEXT) q-qatom.$(OBJEXT) \
 	q-qcheck.$(OBJEXT) q-qdepends.$(OBJEXT) q-qfile.$(OBJEXT) \
 	q-qgrep.$(OBJEXT) q-qkeyword.$(OBJEXT) q-qlist.$(OBJEXT) \
 	q-qlop.$(OBJEXT) q-qmerge.$(OBJEXT) q-qpkg.$(OBJEXT) \
 	q-qsearch.$(OBJEXT) q-qsize.$(OBJEXT) q-qtbz2.$(OBJEXT) \
-	q-qtegrity.$(OBJEXT) q-quse.$(OBJEXT) q-qxpak.$(OBJEXT) \
-	$(am__objects_1)
+	q-quse.$(OBJEXT) q-qxpak.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_2)
 q_OBJECTS = $(am_q_OBJECTS)
 am__DEPENDENCIES_1 =
 @QMANIFEST_ENABLED_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
+@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_TRUE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
 q_DEPENDENCIES = $(top_builddir)/libq/libq.la \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_2)
+	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_3)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -1586,20 +1597,22 @@ SUBDIRS = \
 
 APPLETS = q qatom qcheck qdepends qfile qgrep qkeyword qlist qlop \
 	qmerge qpkg qsearch qsize qtbz2 qtegrity quse qxpak $(NULL) \
-	$(am__append_5)
+	$(am__append_5) $(am__append_10)
 dist_man_MANS = man/q.1 man/qatom.1 man/qcheck.1 man/qdepends.1 \
 	man/qfile.1 man/qgrep.1 man/qkeyword.1 man/qlist.1 man/qlop.1 \
 	man/qmerge.1 man/qpkg.1 man/qsearch.1 man/qsize.1 man/qtbz2.1 \
-	man/qtegrity.1 man/quse.1 man/qxpak.1 $(NULL) $(am__append_4)
+	man/qtegrity.1 man/quse.1 man/qxpak.1 $(NULL) $(am__append_4) \
+	$(am__append_9)
 q_SOURCES = main.c q.c qatom.c qcheck.c qdepends.c qfile.c qgrep.c \
 	qkeyword.c qlist.c qlop.c qmerge.c qpkg.c qsearch.c qsize.c \
-	qtbz2.c qtegrity.c quse.c qxpak.c $(NULL) $(am__append_1)
+	qtbz2.c quse.c qxpak.c $(NULL) $(am__append_1) $(am__append_6)
 q_CPPFLAGS = -I$(top_srcdir)/libq -I$(top_builddir)/autotools/gnulib \
-	-I$(top_srcdir)/autotools/gnulib $(NULL) $(am__append_2)
+	-I$(top_srcdir)/autotools/gnulib $(NULL) $(am__append_2) \
+	$(am__append_7)
 q_LDADD = $(top_builddir)/libq/libq.la \
 	$(top_builddir)/autotools/gnulib/libgnu.a -liniparser \
 	$(LIBSSL) $(LIBBL2) $(LIBZ) $(GPGME_LIBS) $(LIB_CLOCK_GETTIME) \
-	$(LIB_EACCESS) $(NULL) $(am__append_3)
+	$(LIB_EACCESS) $(NULL) $(am__append_3) $(am__append_8)
 EXTRA_DIST = \
 	autotools/m4/gnulib-cache.m4 \
 	applets.h \
@@ -1976,20 +1989,6 @@ q-qtbz2.obj: qtbz2.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtbz2.obj `if test -f 'qtbz2.c'; then $(CYGPATH_W) 'qtbz2.c'; else $(CYGPATH_W) '$(srcdir)/qtbz2.c'; fi`
 
-q-qtegrity.o: qtegrity.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtegrity.o -MD -MP -MF $(DEPDIR)/q-qtegrity.Tpo -c -o q-qtegrity.o `test -f 'qtegrity.c' || echo '$(srcdir)/'`qtegrity.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtegrity.Tpo $(DEPDIR)/q-qtegrity.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtegrity.c' object='q-qtegrity.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtegrity.o `test -f 'qtegrity.c' || echo '$(srcdir)/'`qtegrity.c
-
-q-qtegrity.obj: qtegrity.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtegrity.obj -MD -MP -MF $(DEPDIR)/q-qtegrity.Tpo -c -o q-qtegrity.obj `if test -f 'qtegrity.c'; then $(CYGPATH_W) 'qtegrity.c'; else $(CYGPATH_W) '$(srcdir)/qtegrity.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtegrity.Tpo $(DEPDIR)/q-qtegrity.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtegrity.c' object='q-qtegrity.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtegrity.obj `if test -f 'qtegrity.c'; then $(CYGPATH_W) 'qtegrity.c'; else $(CYGPATH_W) '$(srcdir)/qtegrity.c'; fi`
-
 q-quse.o: quse.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-quse.o -MD -MP -MF $(DEPDIR)/q-quse.Tpo -c -o q-quse.o `test -f 'quse.c' || echo '$(srcdir)/'`quse.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-quse.Tpo $(DEPDIR)/q-quse.Po
@@ -2031,6 +2030,20 @@ q-qmanifest.obj: qmanifest.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qmanifest.c' object='q-qmanifest.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qmanifest.obj `if test -f 'qmanifest.c'; then $(CYGPATH_W) 'qmanifest.c'; else $(CYGPATH_W) '$(srcdir)/qmanifest.c'; fi`
+
+q-qtegrity.o: qtegrity.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtegrity.o -MD -MP -MF $(DEPDIR)/q-qtegrity.Tpo -c -o q-qtegrity.o `test -f 'qtegrity.c' || echo '$(srcdir)/'`qtegrity.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtegrity.Tpo $(DEPDIR)/q-qtegrity.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtegrity.c' object='q-qtegrity.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtegrity.o `test -f 'qtegrity.c' || echo '$(srcdir)/'`qtegrity.c
+
+q-qtegrity.obj: qtegrity.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtegrity.obj -MD -MP -MF $(DEPDIR)/q-qtegrity.Tpo -c -o q-qtegrity.obj `if test -f 'qtegrity.c'; then $(CYGPATH_W) 'qtegrity.c'; else $(CYGPATH_W) '$(srcdir)/qtegrity.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtegrity.Tpo $(DEPDIR)/q-qtegrity.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtegrity.c' object='q-qtegrity.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtegrity.obj `if test -f 'qtegrity.c'; then $(CYGPATH_W) 'qtegrity.c'; else $(CYGPATH_W) '$(srcdir)/qtegrity.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

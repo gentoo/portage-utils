@@ -295,7 +295,7 @@ ETAGS = etags
 CTAGS = ctags
 DIST_SUBDIRS = atom_compare atom_explode copy_file mkdir rmspace qatom \
 	qcheck qdepends qfile qlist qlop qmerge qtbz2 quse qxpak \
-	install profile source qmanifest
+	install profile qmanifest source
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/init.sh.in
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
@@ -1458,7 +1458,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = atom_compare atom_explode copy_file mkdir rmspace qatom \
 	qcheck qdepends qfile qlist qlop qmerge qtbz2 quse qxpak \
-	install profile source $(am__append_1)
+	install profile $(am__append_1) source
 all: all-recursive
 
 .SUFFIXES:
