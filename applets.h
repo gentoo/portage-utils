@@ -86,7 +86,9 @@ static const struct applet_t {
 	{"qsearch",   qsearch_main,   "<regex>",         "search pkgname/desc"},
 	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
 	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
+#ifdef ENABLE_QTEGRITY
 	{"qtegrity",  qtegrity_main,  "<misc args>",     "verify files with IMA"},
+#endif
 	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
 	{"qxpak",     qxpak_main,     "<misc args>",     "manipulate xpak archives"},
 
@@ -109,8 +111,10 @@ static const struct applet_t {
 	{"uickpkg",   qpkg_main,      NULL, NULL},
 	/* {"glsa",      qglsa_main,     NULL, NULL}, */
 
+#ifdef ENABLE_QTEGRITY
 	/* alias for qtegrity */
 	{"integrity", qtegrity_main,  NULL, NULL},
+#endif
 
 #ifdef ENABLE_QMANIFEST
 	/* old hashgen */
