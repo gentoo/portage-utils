@@ -50,5 +50,8 @@ running: |
     Print operations currently in progress.  An ETA is calculated based
     on the average for the operation.  If the elapsed exceeds the
     average, the ETA is calculated against the longest time observed for
-    the operation.  If the elapsed time exceeds this too, or no previous
-    occurrences for the operation exist, \fIunknown\fR is printed.
+    the operation.  The \fB-v\fR flag will display which mode is
+    currently used.  If the elapsed time also exceeds the longest time
+    observed, or no previous occurrences for the operation exist,
+    \fIunknown\fR is printed.  When combined with \fB-t\fR the
+    elapsed time is also displayed.

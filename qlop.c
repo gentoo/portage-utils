@@ -773,14 +773,17 @@ static int do_emerge_log(
 		array_for_each(merge_matches, i, pkgw) {
 			size_t j;
 			time_t maxtime = 0;
+			bool isMax = false;
 
 			elapsed = tstart - pkgw->tbegin;
 			pkg = NULL;
 			array_for_each(merge_averages, j, pkg) {
 				if (atom_compare(pkg->atom, pkgw->atom) == EQUAL) {
 					maxtime = pkg->time / pkg->cnt;
-					if (elapsed >= maxtime)
+					if (elapsed >= maxtime) {
 						maxtime = elapsed >= pkg->tbegin ? 0 : pkg->tbegin;
+						isMax = true;
+					}
 					break;
 				}
 				pkg = NULL;
@@ -797,52 +800,56 @@ static int do_emerge_log(
 			}
 
 			if (flags->do_time) {
-				printf("%s >>> %s: %s...%s ETA: %s\n",
+				printf("%s >>> %s: %s",
 						fmt_date(flags, pkgw->tbegin, 0),
 						atom_format(flags->fmt, pkgw->atom),
-						fmt_elapsedtime(flags, elapsed),
-						p == NULL ? "" : p,
-						maxtime == 0 ? "unknown" :
-							fmt_elapsedtime(flags, maxtime - elapsed));
+						fmt_elapsedtime(flags, elapsed));
 			} else {
-				printf("%s >>> %s...%s ETA: %s\n",
+				printf("%s >>> %s",
 						fmt_date(flags, pkgw->tbegin, 0),
-						atom_format(flags->fmt, pkgw->atom),
-						p == NULL ? "" : p,
-						maxtime == 0 ? "unknown" :
-							fmt_elapsedtime(flags, maxtime - elapsed));
+						atom_format(flags->fmt, pkgw->atom));
 			}
+			printf("...%s ETA: %s%s\n",
+					p == NULL ? "" : p,
+					maxtime == 0 ? "unknown" :
+						fmt_elapsedtime(flags, maxtime - elapsed),
+					maxtime > 0 && verbose ?
+						isMax ? " (longest run)" : " (average run)" : "");
 		}
 		array_for_each(unmerge_matches, i, pkgw) {
 			size_t j;
 			time_t maxtime = 0;
+			bool isMax = false;
 
 			elapsed = tstart - pkgw->tbegin;
 			pkg = NULL;
 			array_for_each(unmerge_averages, j, pkg) {
 				if (atom_compare(pkg->atom, pkgw->atom) == EQUAL) {
 					maxtime = pkg->time / pkg->cnt;
-					if (elapsed >= maxtime)
+					if (elapsed >= maxtime) {
 						maxtime = elapsed >= pkg->tbegin ? 0 : pkg->tbegin;
+						isMax = true;
+					}
 					break;
 				}
 				pkg = NULL;
 			}
 
 			if (flags->do_time) {
-				printf("%s <<< %s: %s... ETA: %s\n",
+				printf("%s <<< %s: %s",
 						fmt_date(flags, pkgw->tbegin, 0),
 						atom_format(flags->fmt, pkgw->atom),
-						fmt_elapsedtime(flags, elapsed),
-						maxtime == 0 ? "unknown" :
-							fmt_elapsedtime(flags, maxtime - elapsed));
+						fmt_elapsedtime(flags, elapsed));
 			} else {
-				printf("%s <<< %s... ETA: %s\n",
+				printf("%s <<< %s",
 						fmt_date(flags, pkgw->tbegin, 0),
-						atom_format(flags->fmt, pkgw->atom),
-						maxtime == 0 ? "unknown" :
-							fmt_elapsedtime(flags, maxtime - elapsed));
+						atom_format(flags->fmt, pkgw->atom));
 			}
+			printf("... ETA: %s%s\n",
+					maxtime == 0 ? "unknown" :
+					fmt_elapsedtime(flags, maxtime - elapsed),
+					maxtime > 0 && verbose ?
+						isMax ? " (longest run)" : " (average run)" : "");
 		}
 	} else if (flags->do_average) {
 		size_t total_merges = 0;
