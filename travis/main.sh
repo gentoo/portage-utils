@@ -32,11 +32,21 @@ main() {
 
 	# ignore timestamps which git doesn't preserve
 	# disable openmp because Clang's libomp isn't installed
-	v ./configure --disable-maintainer-mode --disable-openmp
+	DEFARGS="--disable-maintainer-mode --disable-openmp"
 
-	# Standard optimized build.
-	m V=1
-	m check
+	do_run() {
+		v ./configure ${*}
+
+		# Standard optimized build.
+		m V=1
+		m check
+	}
+
+	do_run ${DEFARGS}
+	do_run ${DEFARGS} --enable-qmanifest --enable-qtegrity
+	do_run ${DEFARGS} --distable-qmanifest --enable-qtegrity
+	do_run ${DEFARGS} --enable-qmanifest --distable-qtegrity
+	do_run ${DEFARGS} --disable-qmanifest --distable-qtegrity
 
 	# LSan needs sudo, which we don't use at the moment
 	# Debug build w/ASAN and such enabled.
