@@ -40,13 +40,14 @@ main() {
 		# Standard optimized build.
 		m V=1
 		m check
+		m clean
 	}
 
 	do_run ${DEFARGS}
 	do_run ${DEFARGS} --enable-qmanifest --enable-qtegrity
-	do_run ${DEFARGS} --distable-qmanifest --enable-qtegrity
-	do_run ${DEFARGS} --enable-qmanifest --distable-qtegrity
-	do_run ${DEFARGS} --disable-qmanifest --distable-qtegrity
+	do_run ${DEFARGS} --disable-qmanifest --enable-qtegrity
+	do_run ${DEFARGS} --enable-qmanifest --disable-qtegrity
+	do_run ${DEFARGS} --disable-qmanifest --disable-qtegrity
 
 	# LSan needs sudo, which we don't use at the moment
 	# Debug build w/ASAN and such enabled.
