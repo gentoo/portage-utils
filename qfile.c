@@ -122,7 +122,7 @@ static int qfile_check_plibreg(void *priv)
 		if (non_orphans && non_orphans[i])
 			continue;
 		if (results[i] == 1)
-			continue
+			continue;
 
 		if (dir_names[i] != NULL)
 			snprintf(file, sizeof(file), "%s/%s", dir_names[i], base_names[i]);
