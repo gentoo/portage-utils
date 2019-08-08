@@ -84,6 +84,7 @@ static int qfile_check_plibreg(void *priv)
 {
 	struct qfile_opt_state *state = priv;
 
+	char fn_plibreg[_Q_PATH_MAX];
 	int fd_plibreg;
         FILE *fp_plibreg;
 	struct stat cst;
@@ -93,11 +94,12 @@ static int qfile_check_plibreg(void *priv)
 	size_t len = 0;
 	int found = 0;
 
-	printf("           %s", eprefix);
+	snprintf(fn_plibreg, _Q_PATH_MAX, "%s%s", eprefix, "var/lib/portage/preserved_libs_registry");
+	printf("%s", fn_plibreg);
 
 	/* Open plibreg */
         fp_plibreg = NULL;
-	fd_plibreg = open("/var/lib/portage/preserved_libs_registry", O_RDONLY|O_CLOEXEC, 0); // TODO @SAM this needs EPREFIX prepended here one way or the other, I suspect there's actually some defines that point to locations like these, we should use one
+	fd_plibreg = open(fn_plibreg, O_RDONLY|O_CLOEXEC, 0);
 	if (fd_plibreg == -1)
 		return 0;
 	if (fstat(fd_plibreg, &cst)) {
@@ -302,7 +304,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			} else {
 				non_orphans[i] = 1;
 			}
-			
+
 			/* Success */
 			results[i] = 1;
 			found++;
