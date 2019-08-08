@@ -88,9 +88,16 @@ static int qfile_check_plibreg(void *priv)
         FILE *fp_plibreg;
 	struct stat cst;
 
+	char file[_Q_PATH_MAX];
+	char *line = NULL;
+	size_t len = 0;
+	int found = 0;
+
+	printf("           %s", eprefix);
+
 	/* Open plibreg */
         fp_plibreg = NULL;
-	fd_plibreg = open("/var/lib/portage/preserved_libs_registry", O_RDONLY|O_CLOEXEC, 0);
+	fd_plibreg = open("/var/lib/portage/preserved_libs_registry", O_RDONLY|O_CLOEXEC, 0); // TODO @SAM this needs EPREFIX prepended here one way or the other, I suspect there's actually some defines that point to locations like these, we should use one
 	if (fd_plibreg == -1)
 		return 0;
 	if (fstat(fd_plibreg, &cst)) {
@@ -107,10 +114,6 @@ static int qfile_check_plibreg(void *priv)
         char **dir_names = args->dirnames;
         short *non_orphans = args->non_orphans;
 	int *results = args->results;
-	char file[_Q_PATH_MAX];
-	char *line = NULL;
-	size_t len = 0;
-	int found = 0;
 
 	for (int i = 0; i < args->length; i++) {
 		if (base_names[i] == NULL)
@@ -120,9 +123,9 @@ static int qfile_check_plibreg(void *priv)
 		if (results[i] == 1)
 			continue
 
-		snprintf(file, sizeof(file), "%s/%s", dir_names[i], base_names[i]);
+		snprintf(file, sizeof(file), "%s/%s", dir_names[i], base_names[i]); // TODO @SAM Is this going to respect the -b flag?
 
-		while (getline(&line, &len, fp_plibreg) != -1)
+		while (getline(&line, &len, fp_plibreg) != -1) // TODO @SAM Is this going to respect the -b flag?
 			if (strstr(line, file) != NULL) {
 				found++;
 				if (quiet)
