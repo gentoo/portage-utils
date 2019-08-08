@@ -95,7 +95,6 @@ static int qfile_check_plibreg(void *priv)
 	int found = 0;
 
 	snprintf(fn_plibreg, _Q_PATH_MAX, "%s%s", eprefix, "var/lib/portage/preserved_libs_registry");
-	printf("%s", fn_plibreg);
 
 	/* Open plibreg */
         fp_plibreg = NULL;
@@ -125,9 +124,12 @@ static int qfile_check_plibreg(void *priv)
 		if (results[i] == 1)
 			continue
 
-		snprintf(file, sizeof(file), "%s/%s", dir_names[i], base_names[i]); // TODO @SAM Is this going to respect the -b flag?
+		if (dir_names[i] != NULL)
+			snprintf(file, sizeof(file), "%s/%s", dir_names[i], base_names[i]);
+		else
+			snprintf(file, sizeof(file), "%s", base_names[i]);
 
-		while (getline(&line, &len, fp_plibreg) != -1) // TODO @SAM Is this going to respect the -b flag?
+		while (getline(&line, &len, fp_plibreg) != -1)
 			if (strstr(line, file) != NULL) {
 				found++;
 				if (quiet)
