@@ -94,7 +94,7 @@ static int qfile_check_plibreg(void *priv)
 	size_t len = 0;
 	int found = 0;
 
-	snprintf(fn_plibreg, _Q_PATH_MAX, "%s%s", eprefix, "var/lib/portage/preserved_libs_registry");
+	snprintf(fn_plibreg, _Q_PATH_MAX, "%s%s", CONFIG_EPREFIX, "var/lib/portage/preserved_libs_registry");
 
 	/* Open plibreg */
         fp_plibreg = NULL;
