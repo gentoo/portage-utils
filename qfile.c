@@ -610,4 +610,3 @@ int qfile_main(int argc, char **argv)
 
 	return (found ? EXIT_SUCCESS : EXIT_FAILURE);
 }
-
