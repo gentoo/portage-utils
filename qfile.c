@@ -20,7 +20,7 @@
 #include "rmspace.h"
 #include "tree.h"
 
-#define QFILE_FLAGS "F:doRx:S" COMMON_FLAGS
+#define QFILE_FLAGS "F:doRx:SP" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"format",       a_argument, NULL, 'F'},
 	{"slots",       no_argument, NULL, 'S'},
@@ -28,6 +28,7 @@ static struct option const qfile_long_opts[] = {
 	{"dir",         no_argument, NULL, 'd'},
 	{"orphans",     no_argument, NULL, 'o'},
 	{"exclude",      a_argument, NULL, 'x'},
+	{"skip-plibreg",no_argument, NULL, 'P'},
 	COMMON_LONG_OPTS
 };
 static const char * const qfile_opts_help[] = {
@@ -37,6 +38,7 @@ static const char * const qfile_opts_help[] = {
 	"Also match directories for single component arguments",
 	"List orphan files",
 	"Don't look in package <arg> (used with --orphans)",
+	"Don't look in the prunelib registry",
 	COMMON_OPTS_HELP
 };
 #define qfile_usage(ret) usage(ret, QFILE_FLAGS, qfile_long_opts, qfile_opts_help, NULL, lookup_applet_idx("qfile"))
@@ -53,6 +55,7 @@ typedef struct {
 	char **dirnames;
 	char **realdirnames;
 	short *non_orphans;
+	int *results;
 } qfile_args_t;
 
 struct qfile_opt_state {
@@ -69,10 +72,86 @@ struct qfile_opt_state {
 	bool basename;
 	bool orphans;
 	bool assume_root_prefix;
+	bool skip_plibreg;
 	const char *format;
 	bool need_full_atom;
 };
 
+/*
+ * As a final step, check if file is in the plib_reg
+ */
+static int qfile_check_plibreg(void *priv)
+{
+	struct qfile_opt_state *state = priv;
+
+	char fn_plibreg[_Q_PATH_MAX];
+	int fd_plibreg;
+        FILE *fp_plibreg;
+	struct stat cst;
+
+	char file[_Q_PATH_MAX];
+	char *line = NULL;
+	size_t len = 0;
+	int found = 0;
+
+	/* Open plibreg */
+	snprintf(fn_plibreg, _Q_PATH_MAX, "%s%s", CONFIG_EPREFIX, "var/lib/portage/preserved_libs_registry");
+        fp_plibreg = NULL;
+	fd_plibreg = open(fn_plibreg, O_RDONLY|O_CLOEXEC, 0);
+	if (fd_plibreg == -1)
+		return 0;
+	if (fstat(fd_plibreg, &cst)) {
+		close(fd_plibreg);
+		return 0;
+	}
+	if ((fp_plibreg = fdopen(fd_plibreg, "r")) == NULL) {
+		close(fd_plibreg);
+		return 0;
+	}
+
+        qfile_args_t *args = &state->args;
+        char **base_names = args->basenames;
+        char **dir_names = args->dirnames;
+        short *non_orphans = args->non_orphans;
+	int *results = args->results;
+
+	for (int i = 0; i < args->length; i++) {
+		if (base_names[i] == NULL)
+			continue;
+		if (non_orphans && non_orphans[i])
+			continue;
+		if (results[i] == 1)
+			continue;
+
+		if (dir_names[i] != NULL)
+			snprintf(file, sizeof(file), "%s/%s", dir_names[i], base_names[i]);
+		else
+			snprintf(file, sizeof(file), "%s", base_names[i]);
+
+		while (getline(&line, &len, fp_plibreg) != -1)
+			if (strstr(line, file) != NULL) {
+				found++;
+				if (quiet)
+					puts("");
+				else
+					printf("%s%splib_registry%s (%s)\n", BOLD, BLUE, NORM, file);
+			}
+	}
+
+	if (line)
+		free(line);
+
+	return found;
+}
+
+/*
+ * 1. Do package exclusion tests
+ * 2. Run through CONTENTS file, perform tests and fail-by-continue
+ * 3. On success bump and return retvalue 'found'
+ *
+ * We assume the people calling us have chdir(/var/db/pkg) and so
+ * we use relative paths throughout here.
+ */
 static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qfile_opt_state *state = priv;
@@ -88,6 +167,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	char **dir_names = args->dirnames;
 	char **real_dir_names = args->realdirnames;
 	short *non_orphans = args->non_orphans;
+	int *results = args->results;
 	int found = 0;
 
 	/* If exclude_pkg is not NULL, check it.  We are looking for files
@@ -116,6 +196,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (fp == NULL)
 		goto qlist_done;
 
+	/* Run through CONTENTS file */
 	while (getline(&state->buf, &state->buflen, fp) != -1) {
 		size_t dirname_len;
 		contents_entry *e;
@@ -224,6 +305,9 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			} else {
 				non_orphans[i] = 1;
 			}
+
+			/* Success */
+			results[i] = 1;
 			found++;
 		}
 	}
@@ -250,6 +334,7 @@ static void destroy_qfile_args(qfile_args_t *qfile_args)
 	free(qfile_args->dirnames);
 	free(qfile_args->realdirnames);
 	free(qfile_args->non_orphans);
+	free(qfile_args->results);
 
 	memset(qfile_args, 0, sizeof(qfile_args_t));
 }
@@ -268,6 +353,7 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	char **basenames = NULL;
 	char **dirnames = NULL;
 	char **realdirnames = NULL;
+	int *results = NULL;
 	char tmppath[_Q_PATH_MAX];
 	char abspath[_Q_PATH_MAX];
 
@@ -279,6 +365,7 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	basenames = xcalloc(argc, sizeof(char*));
 	dirnames = xcalloc(argc, sizeof(char*));
 	realdirnames = xcalloc(argc, sizeof(char*));
+	results = xcalloc(argc, sizeof(int));
 
 	for (i = 0; i < argc; ++i) {
 		/* Record basename, but if it is ".", ".." or "/" */
@@ -375,6 +462,7 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	args->dirnames = dirnames;
 	args->realdirnames = realdirnames;
 	args->length = argc;
+	args->results = results;
 
 	if (state->orphans)
 		args->non_orphans = xcalloc(argc, sizeof(short));
@@ -390,6 +478,7 @@ int qfile_main(int argc, char **argv)
 		.basename = false,
 		.orphans = false,
 		.assume_root_prefix = false,
+		.skip_plibreg = false,
 		.format = NULL,
 	};
 	int i, nb_of_queries, found = 0;
@@ -403,6 +492,7 @@ int qfile_main(int argc, char **argv)
 			case 'd': state.basename = true;            break;
 			case 'o': state.orphans = true;             break;
 			case 'R': state.assume_root_prefix = true;  break;
+			case 'P': state.skip_plibreg = true;        break;
 			case 'x':
 				if (state.exclude_pkg)
 					err("--exclude can only be used once.");
@@ -471,7 +561,8 @@ int qfile_main(int argc, char **argv)
 
 	/* Prepare the qfile(...) arguments structure */
 	nb_of_queries = prepare_qfile_args(argc, (const char **) argv, &state);
-	/* Now do the actual `qfile` checking */
+
+	/* Now do the actual `qfile` checking by looking at CONTENTS of all pkgs */
 	if (nb_of_queries > 0) {
 		tree_ctx *vdb = tree_open_vdb(portroot, portvdb);
 		if (vdb != NULL) {
@@ -479,6 +570,14 @@ int qfile_main(int argc, char **argv)
 			tree_close(vdb);
 		}
 	}
+
+	/* Also check the prune lib registry.
+	 * But only for files we otherwise couldn't account for. If we'd check
+	 * plib_reg for all files, we would get duplicate messages for files that were
+	 * re-added to CONTENTS files after a version upgrade (which are also recorded
+	 * in plib_reg). */
+	if (nb_of_queries > 0 && !state.skip_plibreg)
+		found += qfile_check_plibreg(&state);
 
 	if (state.args.non_orphans) {
 		/* display orphan files */
