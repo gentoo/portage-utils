@@ -562,7 +562,7 @@ int qfile_main(int argc, char **argv)
 
 	/* Prepare the qfile(...) arguments structure */
 	nb_of_queries = prepare_qfile_args(argc, (const char **) argv, &state);
-	
+
 	/* Now do the actual `qfile` checking by looking at CONTENTS of all pkgs */
 	if (nb_of_queries > 0) {
 		tree_ctx *vdb = tree_open_vdb(portroot, portvdb);
