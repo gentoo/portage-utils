@@ -351,7 +351,14 @@ static int do_emerge_log(
 	struct pkg_match *pkg;
 	struct pkg_match *pkgw;
 
-	if ((fp = fopen(log, "r")) == NULL) {
+	/* support relative path in here and now, when using ROOT, stick to
+	 * it, turning relative into a moot point */
+	if (portroot[1] == '\0')
+		snprintf(buf, sizeof(buf), "%s", log);
+	else
+		snprintf(buf, sizeof(buf), "%s%s", portroot, log);
+	if ((fp = fopen(buf, "r")) == NULL)
+	{
 		warnp("Could not open logfile '%s'", log);
 		return 1;
 	}
