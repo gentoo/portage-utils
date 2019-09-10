@@ -24,7 +24,7 @@
 
 #define QLOP_DEFAULT_LOGFILE "emerge.log"
 
-#define QLOP_FLAGS "ctaHMmuUslerd:f:w:F:" COMMON_FLAGS
+#define QLOP_FLAGS "ctaHMmuUsElerd:f:w:F:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
 	{"summary",   no_argument, NULL, 'c'},
 	{"time",      no_argument, NULL, 't'},
@@ -35,6 +35,7 @@ static struct option const qlop_long_opts[] = {
 	{"unmerge",   no_argument, NULL, 'u'},
 	{"autoclean", no_argument, NULL, 'U'},
 	{"sync",      no_argument, NULL, 's'},
+	{"emerge",    no_argument, NULL, 'E'},
 	{"endtime",   no_argument, NULL, 'e'},
 	{"running",   no_argument, NULL, 'r'},
 	{"date",       a_argument, NULL, 'd'},
@@ -54,6 +55,7 @@ static const char * const qlop_opts_help[] = {
 	"Show unmerge history",
 	"Show autoclean unmerge history",
 	"Show sync history",
+	"Show last merge like how emerge(1) -v would show it",
 	"Report time at which the operation finished (iso started)",
 	"Show current emerging packages",
 	"Limit selection to this time (1st -d is start, 2nd -d is end)",
@@ -85,6 +87,7 @@ struct qlop_mode {
 	char do_machine:1;
 	char do_endtime:1;
 	char show_lastmerge:1;
+	char show_emerge:1;
 	const char *fmt;
 };
 
@@ -334,6 +337,7 @@ static int do_emerge_log(
 	time_t elapsed;
 	depend_atom *atom;
 	depend_atom *atomw;
+	depend_atom *upgrade_atom = NULL;
 	DECLARE_ARRAY(merge_matches);
 	DECLARE_ARRAY(merge_averages);
 	DECLARE_ARRAY(unmerge_matches);
@@ -638,6 +642,34 @@ static int do_emerge_log(
 								flags->do_time ? ": " : "",
 								flags->do_time ?
 									fmt_elapsedtime(flags, elapsed) : "");
+					} else if (flags->show_emerge) {
+						int state = NOT_EQUAL;
+						if (upgrade_atom != NULL)
+							state = atom_compare(pkgw->atom, upgrade_atom);
+						switch (state) {
+							/*         "NRUD " */
+							case EQUAL:
+								printf(" %sR%s   ", YELLOW, NORM);
+								break;
+							case NOT_EQUAL:
+								printf("%sN%s    ", GREEN, NORM);
+								break;
+							case NEWER:
+								printf("  %sU%s  ", BLUE, NORM);
+								break;
+							case OLDER:
+								printf("  %sU%sD%s ", BLUE, DKBLUE, NORM);
+								break;
+						}
+						printf("%s", atom_format(flags->fmt, pkgw->atom));
+						if (state == NEWER || state == OLDER)
+							printf(" %s[%s%s%s]%s", DKBLUE, NORM,
+									atom_format("%[PVR]", upgrade_atom),
+									DKBLUE, NORM);
+						if (flags->do_time)
+							printf(": %s\n", fmt_elapsedtime(flags, elapsed));
+						else
+							printf("\n");
 					} else if (flags->do_time) {
 						printf("%s >>> %s: %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
@@ -674,6 +706,14 @@ static int do_emerge_log(
 				atom = atom_explode(p);
 				if (atom == NULL)
 					continue;
+
+				if (p[-20] == ' ' && flags->show_emerge)
+				{
+					if (upgrade_atom != NULL)
+						atom_implode(upgrade_atom);
+					upgrade_atom = atom;
+					continue;
+				}
 
 				/* see if we need this atom */
 				atomw = NULL;
@@ -942,6 +982,7 @@ int qlop_main(int argc, char **argv)
 	m.do_machine = 0;
 	m.do_endtime = 0;
 	m.show_lastmerge = 0;
+	m.show_emerge = 0;
 	m.fmt = NULL;
 
 	while ((ret = GETOPT_LONG(QLOP, qlop, "")) != -1) {
@@ -953,6 +994,12 @@ int qlop_main(int argc, char **argv)
 			case 'u': m.do_unmerge = 1;     break;
 			case 'U': m.do_autoclean = 1;   break;
 			case 's': m.do_sync = 1;        break;
+			case 'E': m.do_merge = 1;
+					  m.do_unmerge = 1;
+					  m.do_autoclean = 1;
+					  m.show_lastmerge = 1;
+					  m.show_emerge = 1;
+					  verbose = 1;          break;
 			case 'r': m.do_running = 1;     break;
 			case 'a': m.do_average = 1;     break;
 			case 'c': m.do_summary = 1;     break;
