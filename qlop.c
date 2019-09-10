@@ -326,6 +326,7 @@ static int do_emerge_log(
 	char *p;
 	char *q;
 	time_t tstart = LONG_MAX;
+	time_t tstart_emerge = 0;
 	time_t last_merge = 0;
 	time_t sync_start = 0;
 	time_t sync_time = 0;
@@ -376,12 +377,8 @@ static int do_emerge_log(
 				continue;
 
 			if (flags->show_lastmerge) {
-				if (strncmp(p, "  *** emerge ", 13) == 0) {
-					last_merge = tstart;
-					array_for_each(atoms, i, atomw)
-						atom_implode(atomw);
-					xarrayfree_int(atoms);
-				}
+				if (strncmp(p, "  *** emerge ", 13) == 0)
+					tstart_emerge = tstart;
 				if (!all_atoms)
 					continue;
 			}
@@ -416,6 +413,16 @@ static int do_emerge_log(
 				atom->PV = NULL;
 				atom->PVR = NULL;
 				atom->PR_int = 0;
+
+				/* now we found a package, register this merge as a
+				 * "valid" one, such that dummy emerge calls (e.g.
+				 * emerge -pv foo) are ignored */
+				if (last_merge != tstart_emerge) {
+					last_merge = tstart_emerge;
+					array_for_each(atoms, i, atomw)
+						atom_implode(atomw);
+					xarrayfree_int(atoms);
+				}
 
 				atomw = NULL;
 				array_for_each(atoms, i, atomw) {
