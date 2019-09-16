@@ -91,7 +91,7 @@ char verify_manifest(const char *dir, const char *manifest, verify_msg **msgs);
 static inline void
 update_times(struct timeval *tv, struct stat *s)
 {
-#ifdef __MACH__
+#ifdef __MACH__ && defined __APPLE__
 # define st_mtim st_mtimespec
 # define st_atim st_atimespec
 #endif
