@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#if defined(__MACH__)
+#if defined(__MACH__) && defined(__APPLE__)
 #include <libproc.h>
 #endif
 
@@ -113,7 +113,7 @@ int q_main(int argc, char **argv)
 		if (!quiet)
 			printf("Installing symlinks:\n");
 
-#if defined(__MACH__)
+#if defined(__MACH__) && defined(__APPLE__)
 		rret = proc_pidpath(getpid(), buf, sizeof(buf));
 		if (rret != -1)
 			rret = strlen(buf);
