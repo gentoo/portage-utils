@@ -339,7 +339,7 @@ atom_implode(depend_atom *atom)
 	free(atom);
 }
 
-static int
+static atom_equality
 _atom_compare_match(int ret, atom_operator op)
 {
 	if (op == ATOM_OP_NONE)
@@ -370,7 +370,7 @@ _atom_compare_match(int ret, atom_operator op)
  * foo-1 <OLDER> foo-2
  * foo-1 <NOT_EQUAL> bar-1
  */
-int
+atom_equality
 atom_compare(const depend_atom *data, const depend_atom *query)
 {
 	atom_operator pfx_op;
@@ -620,11 +620,11 @@ atom_compare(const depend_atom *data, const depend_atom *query)
 		return _atom_compare_match(NEWER, pfx_op);
 }
 
-int
+atom_equality
 atom_compare_str(const char * const s1, const char * const s2)
 {
 	depend_atom *a1, *a2;
-	int ret = ERROR;
+	atom_equality ret = ERROR;
 
 	a1 = atom_explode(s1);
 	if (!a1)

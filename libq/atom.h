@@ -87,12 +87,18 @@ typedef struct {
 } depend_atom;
 
 extern const char * const booga[];
-enum { ERROR=0, NOT_EQUAL, EQUAL, NEWER, OLDER };
+typedef enum {
+	ERROR = 0,
+	NOT_EQUAL,
+	EQUAL,
+	NEWER,
+	OLDER
+} atom_equality;
 
 depend_atom *atom_explode(const char *atom);
 void atom_implode(depend_atom *atom);
-int atom_compare(const depend_atom *a1, const depend_atom *a2);
-int atom_compare_str(const char * const s1, const char * const s2);
+atom_equality atom_compare(const depend_atom *a1, const depend_atom *a2);
+atom_equality atom_compare_str(const char * const s1, const char * const s2);
 char *atom_to_string_r(char *buf, size_t buflen, depend_atom *a);
 char *atom_format_r(char *buf, size_t buflen,
 		const char *format, const depend_atom *atom);
