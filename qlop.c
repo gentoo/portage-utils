@@ -19,6 +19,7 @@
 
 #include "atom.h"
 #include "eat_file.h"
+#include "set.h"
 #include "xarray.h"
 #include "xasprintf.h"
 
@@ -339,12 +340,14 @@ static int do_emerge_log(
 	depend_atom *atomw;
 	depend_atom *upgrade_atom = NULL;
 	DECLARE_ARRAY(merge_matches);
-	DECLARE_ARRAY(merge_averages);
+	set *merge_averages = create_set();
 	DECLARE_ARRAY(unmerge_matches);
-	DECLARE_ARRAY(unmerge_averages);
+	set *unmerge_averages = create_set();
+	set *atomset = NULL;
 	size_t i;
 	size_t parallel_emerge = 0;
 	bool all_atoms = false;
+	char afmt[BUFSIZ];
 
 	struct pkg_match {
 		char id[BUFSIZ];
@@ -417,28 +420,27 @@ static int do_emerge_log(
 				atom->PV = NULL;
 				atom->PVR = NULL;
 				atom->PR_int = 0;
+				snprintf(afmt, sizeof(afmt), "%s/%s", atom->CATEGORY, atom->PN);
+
+				if (atomset == NULL)
+					atomset = create_set();
 
 				/* now we found a package, register this merge as a
 				 * "valid" one, such that dummy emerge calls (e.g.
 				 * emerge -pv foo) are ignored */
 				if (last_merge != tstart_emerge) {
-					last_merge = tstart_emerge;
-					array_for_each(atoms, i, atomw)
+					array_t vals;
+
+					values_set(atomset, &vals);
+					array_for_each(&vals, i, atomw)
 						atom_implode(atomw);
-					xarrayfree_int(atoms);
+					xarrayfree_int(&vals);
+					clear_set(atomset);
 				}
 
-				atomw = NULL;
-				array_for_each(atoms, i, atomw) {
-					if (atom_compare(atom, atomw) == EQUAL)
-						break;
-					atomw = NULL;
-				}
-				if (atomw == NULL) {
-					xarraypush_ptr(atoms, atom);
-				} else {
+				atomw = add_set_value(afmt, atom, atomset);
+				if (atomw != NULL)
 					atom_implode(atom);
-				}
 			}
 		}
 
@@ -576,10 +578,16 @@ static int do_emerge_log(
 
 				/* see if we need this atom */
 				atomw = NULL;
-				array_for_each(atoms, i, atomw) {
-					if (atom_compare(atom, atomw) == EQUAL)
-						break;
-					atomw = NULL;
+				if (atomset == NULL) {
+					array_for_each(atoms, i, atomw) {
+						if (atom_compare(atom, atomw) == EQUAL)
+							break;
+						atomw = NULL;
+					}
+				} else {
+					snprintf(afmt, sizeof(afmt), "%s/%s",
+							atom->CATEGORY, atom->PN);
+					atomw = get_set(afmt, atomset);
 				}
 				if (atomw == NULL) {
 					atom_implode(atom);
@@ -604,34 +612,26 @@ static int do_emerge_log(
 					if (flags->do_average || flags->do_running)
 					{
 						/* find in list of averages */
-						size_t n;
+						snprintf(afmt, sizeof(afmt), "%s/%s",
+								pkgw->atom->CATEGORY,
+								(!verbose || flags->do_running) ?
+								pkgw->atom->PN : pkgw->atom->P);
 
-						pkg = NULL;
-						array_for_each(merge_averages, n, pkg) {
-							if (atom_compare(pkg->atom, pkgw->atom) == EQUAL) {
-								pkg->cnt++;
-								pkg->time += elapsed;
-								/* store max time for do_running */
-								if (elapsed > pkg->tbegin)
-									pkg->tbegin = elapsed;
-								atom_implode(pkgw->atom);
-								xarraydelete(merge_matches, i);
-								break;
-							}
-							pkg = NULL;
-						}
-						if (pkg == NULL) {  /* push new entry */
-							if (!verbose || flags->do_running) {
-								/* strip off version info */
-								pkgw->atom->PV = NULL;
-								pkgw->atom->PVR = NULL;
-								pkgw->atom->PR_int = 0;
-							}
+						pkg = add_set_value(afmt, pkgw, merge_averages);
+						if (pkg != NULL) {
+							pkg->cnt++;
+							pkg->time += elapsed;
+							/* store max time for do_running */
+							if (elapsed > pkg->tbegin)
+								pkg->tbegin = elapsed;
+							atom_implode(pkgw->atom);
+							xarraydelete(merge_matches, i);
+						} else {
+							/* new entry */
 							pkgw->id[0] = '\0';
 							pkgw->cnt = 1;
 							pkgw->time = elapsed;
 							pkgw->tbegin = elapsed;
-							xarraypush_ptr(merge_averages, pkgw);
 							xarraydelete_ptr(merge_matches, i);
 						}
 						break;
@@ -717,10 +717,16 @@ static int do_emerge_log(
 
 				/* see if we need this atom */
 				atomw = NULL;
-				array_for_each(atoms, i, atomw) {
-					if (atom_compare(atom, atomw) == EQUAL)
-						break;
-					atomw = NULL;
+				if (atomset == NULL) {
+					array_for_each(atoms, i, atomw) {
+						if (atom_compare(atom, atomw) == EQUAL)
+							break;
+						atomw = NULL;
+					}
+				} else {
+					snprintf(afmt, sizeof(afmt), "%s/%s",
+							atom->CATEGORY, atom->PN);
+					atomw = get_set(afmt, atomset);
 				}
 				if (atomw == NULL) {
 					atom_implode(atom);
@@ -745,34 +751,26 @@ static int do_emerge_log(
 					if (flags->do_average || flags->do_running)
 					{
 						/* find in list of averages */
-						size_t n;
+						snprintf(afmt, sizeof(afmt), "%s/%s",
+								pkgw->atom->CATEGORY,
+								(!verbose || flags->do_running) ?
+								pkgw->atom->PN : pkgw->atom->P);
 
-						pkg = NULL;
-						array_for_each(unmerge_averages, n, pkg) {
-							if (atom_compare(pkg->atom, pkgw->atom) == EQUAL) {
-								pkg->cnt++;
-								pkg->time += elapsed;
-								/* store max time for do_running */
-								if (elapsed > pkg->tbegin)
-									pkg->tbegin = elapsed;
-								atom_implode(pkgw->atom);
-								xarraydelete(unmerge_matches, i);
-								break;
-							}
-							pkg = NULL;
-						}
-						if (pkg == NULL) {  /* push new entry */
-							if (!verbose || flags->do_running) {
-								/* strip off version info */
-								pkgw->atom->PV = NULL;
-								pkgw->atom->PVR = NULL;
-								pkgw->atom->PR_int = 0;
-							}
+						pkg = add_set_value(afmt, pkgw, unmerge_averages);
+						if (pkg != NULL) {
+							pkg->cnt++;
+							pkg->time += elapsed;
+							/* store max time for do_running */
+							if (elapsed > pkg->tbegin)
+								pkg->tbegin = elapsed;
+							atom_implode(pkgw->atom);
+							xarraydelete(unmerge_matches, i);
+						} else {
+							/* new entry */
 							pkgw->id[0] = '\0';
 							pkgw->cnt = 1;
 							pkgw->time = elapsed;
 							pkgw->tbegin = elapsed;
-							xarraypush_ptr(unmerge_averages, pkgw);
 							xarraydelete_ptr(unmerge_matches, i);
 						}
 						break;
@@ -825,22 +823,20 @@ static int do_emerge_log(
 			}
 		}
 		array_for_each(merge_matches, i, pkgw) {
-			size_t j;
 			time_t maxtime = 0;
 			bool isMax = false;
 
+			snprintf(afmt, sizeof(afmt), "%s/%s",
+					pkgw->atom->CATEGORY, pkgw->atom->PN);
+
 			elapsed = tstart - pkgw->tbegin;
-			pkg = NULL;
-			array_for_each(merge_averages, j, pkg) {
-				if (atom_compare(pkg->atom, pkgw->atom) == EQUAL) {
-					maxtime = pkg->time / pkg->cnt;
-					if (elapsed >= maxtime) {
-						maxtime = elapsed >= pkg->tbegin ? 0 : pkg->tbegin;
-						isMax = true;
-					}
-					break;
+			pkg = get_set(afmt, merge_averages);
+			if (pkg != NULL) {
+				maxtime = pkg->time / pkg->cnt;
+				if (elapsed >= maxtime) {
+					maxtime = elapsed >= pkg->tbegin ? 0 : pkg->tbegin;
+					isMax = true;
 				}
-				pkg = NULL;
 			}
 
 			/* extract (X of Y) from id, bug #442406 */
@@ -871,22 +867,20 @@ static int do_emerge_log(
 						isMax ? " (longest run)" : " (average run)" : "");
 		}
 		array_for_each(unmerge_matches, i, pkgw) {
-			size_t j;
 			time_t maxtime = 0;
 			bool isMax = false;
 
+			snprintf(afmt, sizeof(afmt), "%s/%s",
+					pkgw->atom->CATEGORY, pkgw->atom->PN);
+
 			elapsed = tstart - pkgw->tbegin;
-			pkg = NULL;
-			array_for_each(unmerge_averages, j, pkg) {
-				if (atom_compare(pkg->atom, pkgw->atom) == EQUAL) {
-					maxtime = pkg->time / pkg->cnt;
-					if (elapsed >= maxtime) {
-						maxtime = elapsed >= pkg->tbegin ? 0 : pkg->tbegin;
-						isMax = true;
-					}
-					break;
+			pkg = get_set(afmt, unmerge_averages);
+			if (pkg != NULL) {
+				maxtime = pkg->time / pkg->cnt;
+				if (elapsed >= maxtime) {
+					maxtime = elapsed >= pkg->tbegin ? 0 : pkg->tbegin;
+					isMax = true;
 				}
-				pkg = NULL;
 			}
 
 			if (flags->do_time) {
@@ -909,8 +903,10 @@ static int do_emerge_log(
 		size_t total_merges = 0;
 		size_t total_unmerges = 0;
 		time_t total_time = (time_t)0;
+		DECLARE_ARRAY(avgs);
 
-		array_for_each(merge_averages, i, pkg) {
+		values_set(merge_averages, avgs);
+		array_for_each(avgs, i, pkg) {
 			printf("%s: %s average for %s%zd%s merge%s\n",
 					atom_format(flags->fmt, pkg->atom),
 					fmt_elapsedtime(flags, pkg->time / pkg->cnt),
@@ -918,7 +914,10 @@ static int do_emerge_log(
 			total_merges += pkg->cnt;
 			total_time += pkg->time;
 		}
-		array_for_each(unmerge_averages, i, pkg) {
+		xarrayfree_int(avgs);
+
+		values_set(unmerge_averages, avgs);
+		array_for_each(avgs, i, pkg) {
 			printf("%s: %s average for %s%zd%s unmerge%s\n",
 					atom_format(flags->fmt, pkg->atom),
 					fmt_elapsedtime(flags, pkg->time / pkg->cnt),
@@ -926,6 +925,8 @@ static int do_emerge_log(
 			total_unmerges += pkg->cnt;
 			total_time += pkg->time;
 		}
+		xarrayfree_int(avgs);
+
 		if (sync_cnt > 0) {
 			printf("%ssync%s: %s average for %s%zd%s sync%s\n",
 					BLUE, NORM, fmt_elapsedtime(flags, sync_time / sync_cnt),

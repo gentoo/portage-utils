@@ -26,6 +26,7 @@
 - only 64bit values are supported in any individual version component
   foo-(1234)\_alpha(56789)
 - these limits should not be an issue for all practical purposes
+- remove zalloc from atom explode (just initialise what needs to)
 
 # qmerge
 
