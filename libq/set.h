@@ -10,12 +10,15 @@
 #include <stdbool.h>
 #include <unistd.h>
 
+#include "xarray.h"
+
 typedef struct elem_t elem;
 typedef struct set_t set;
 
 struct elem_t {
 	char *name;
 	unsigned int hash;  /* FNV1a32 */
+	void *val;
 	elem *next;
 };
 
@@ -28,9 +31,12 @@ struct set_t {
 set *create_set(void);
 set *add_set(const char *name, set *q);
 set *add_set_unique(const char *name, set *q, bool *unique);
-bool contains_set(char *s, set *q);
-set *del_set(char *s, set *q, bool *removed);
+void *add_set_value(const char *name, void *ptr, set *q);
+bool contains_set(const char *name, set *q);
+void *get_set(const char *name, set *q);
+set *del_set(const char *s, set *q, bool *removed);
 size_t list_set(set *q, char ***l);
+size_t values_set(set *q, array_t *ret);
 void free_set(set *q);
 void clear_set(set *q);
 

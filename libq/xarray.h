@@ -26,9 +26,9 @@ typedef struct {
  */
 /* TODO: remove ele = NULL after checking all consumers don't rely on this */
 #define array_for_each(arr, n, ele) \
-	for (n = 0, ele = NULL; n < array_cnt(arr) && (ele = arr->eles[n]); n++)
+	for (n = 0, ele = NULL; n < array_cnt(arr) && (ele = (arr)->eles[n]); n++)
 #define array_for_each_rev(arr, n, ele) \
-	for (n = array_cnt(arr); n-- > 0 && (ele = arr->eles[n]); /*nothing*/)
+	for (n = array_cnt(arr); n-- > 0 && (ele = (arr)->eles[n]); /*nothing*/)
 #define array_get_elem(arr, n) (arr->eles[n])
 #define array_init_decl { .eles = NULL, .num = 0, }
 #define array_cnt(arr) (arr)->num

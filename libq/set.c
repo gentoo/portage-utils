@@ -18,7 +18,7 @@
 #include "set.h"
 
 static unsigned int
-fnv1a32(char *s)
+fnv1a32(const char *s)
 {
 	unsigned int ret = 2166136261UL;
 	for (; *s != '\0'; s++)
@@ -33,7 +33,7 @@ create_set(void)
 	return xzalloc(sizeof(set));
 }
 
-/* add elem to a set (unpure: could add duplicates) */
+/* add elem to a set (unpure: could add duplicates, basically hash) */
 set *
 add_set(const char *name, set *q)
 {
@@ -47,6 +47,7 @@ add_set(const char *name, set *q)
 	ll->next = NULL;
 	ll->name = xstrdup(name);
 	ll->hash = fnv1a32(ll->name);
+	ll->val = NULL;
 
 	pos = ll->hash % _SET_HASH_SIZE;
 	if (q->buckets[pos] == NULL) {
@@ -61,11 +62,10 @@ add_set(const char *name, set *q)
 	return q;
 }
 
-/* add elem to set if it doesn't exist yet (pure definition of set) */
+/* add elem to set if it doesn't exist yet (pure definition of hash) */
 set *
 add_set_unique(const char *name, set *q, bool *unique)
 {
-	char *mname = xstrdup(name);
 	unsigned int hash;
 	int pos;
 	elem *ll;
@@ -75,20 +75,20 @@ add_set_unique(const char *name, set *q, bool *unique)
 	if (q == NULL)
 		q = create_set();
 
-	hash = fnv1a32(mname);
+	hash = fnv1a32(name);
 	pos = hash % _SET_HASH_SIZE;
 
 	if (q->buckets[pos] == NULL) {
 		q->buckets[pos] = ll = xmalloc(sizeof(*ll));
 		ll->next = NULL;
-		ll->name = mname;
+		ll->name = xstrdup(name);
 		ll->hash = hash;
+		ll->val = NULL;
 		uniq = true;
 	} else {
 		ll = NULL;
 		for (w = q->buckets[pos]; w != NULL; ll = w, w = w->next) {
-			if (w->hash == hash && strcmp(w->name, mname) == 0) {
-				free(mname);
+			if (w->hash == hash && strcmp(w->name, name) == 0) {
 				uniq = false;
 				break;
 			}
@@ -96,8 +96,9 @@ add_set_unique(const char *name, set *q, bool *unique)
 		if (w == NULL) {
 			ll = ll->next = xmalloc(sizeof(*ll));
 			ll->next = NULL;
-			ll->name = mname;
+			ll->name = xstrdup(name);
 			ll->hash = hash;
+			ll->val = NULL;
 			uniq = true;
 		}
 	}
@@ -109,22 +110,60 @@ add_set_unique(const char *name, set *q, bool *unique)
 	return q;
 }
 
+/* add ptr to set with name as key, return existing value when key
+ * already exists or NULL otherwise */
+void *
+add_set_value(const char *name, void *ptr, set *q)
+{
+	unsigned int hash;
+	int pos;
+	elem *ll;
+	elem *w;
+
+	hash = fnv1a32(name);
+	pos = hash % _SET_HASH_SIZE;
+
+	if (q->buckets[pos] == NULL) {
+		q->buckets[pos] = ll = xmalloc(sizeof(*ll));
+		ll->next = NULL;
+		ll->name = xstrdup(name);
+		ll->hash = hash;
+		ll->val = ptr;
+	} else {
+		ll = NULL;
+		for (w = q->buckets[pos]; w != NULL; ll = w, w = w->next) {
+			if (w->hash == hash && strcmp(w->name, name) == 0)
+				return w->val;
+		}
+		if (w == NULL) {
+			ll = ll->next = xmalloc(sizeof(*ll));
+			ll->next = NULL;
+			ll->name = xstrdup(name);
+			ll->hash = hash;
+			ll->val = ptr;
+		}
+	}
+
+	q->len++;
+	return NULL;
+}
+
 /* returns whether s is in set */
 bool
-contains_set(char *s, set *q)
+contains_set(const char *name, set *q)
 {
 	unsigned int hash;
 	int pos;
 	elem *w;
 	bool found;
 
-	hash = fnv1a32(s);
+	hash = fnv1a32(name);
 	pos = hash % _SET_HASH_SIZE;
 
 	found = false;
 	if (q->buckets[pos] != NULL) {
 		for (w = q->buckets[pos]; w != NULL; w = w->next) {
-			if (w->hash == hash && strcmp(w->name, s) == 0) {
+			if (w->hash == hash && strcmp(w->name, name) == 0) {
 				found = true;
 				break;
 			}
@@ -134,9 +173,31 @@ contains_set(char *s, set *q)
 	return found;
 }
 
+/* returns the value for name, or NULL if not found (cannot
+ * differentiate between value NULL and unset) */
+void *
+get_set(const char *name, set *q)
+{
+	unsigned int hash;
+	int pos;
+	elem *w;
+
+	hash = fnv1a32(name);
+	pos = hash % _SET_HASH_SIZE;
+
+	if (q->buckets[pos] != NULL) {
+		for (w = q->buckets[pos]; w != NULL; w = w->next) {
+			if (w->hash == hash && strcmp(w->name, name) == 0)
+				return w->val;
+		}
+	}
+
+	return NULL;
+}
+
 /* remove elem from a set. matches ->name and frees name,item */
 set *
-del_set(char *s, set *q, bool *removed)
+del_set(const char *s, set *q, bool *removed)
 {
 	unsigned int hash;
 	int pos;
@@ -188,6 +249,22 @@ list_set(set *q, char ***l)
 		}
 	}
 	*ret = NULL;
+	return q->len;
+}
+
+size_t
+values_set(set *q, array_t *ret)
+{
+	int i;
+	elem *w;
+	array_t blank = array_init_decl;
+
+	*ret = blank;
+	for (i = 0; i < _SET_HASH_SIZE; i++) {
+		for (w = q->buckets[i]; w != NULL; w = w->next)
+			xarraypush_ptr(ret, w->val);
+	}
+
 	return q->len;
 }
 
