@@ -373,6 +373,8 @@ static int do_emerge_log(
 
 	all_atoms = array_cnt(atoms) == 0;
 	if (all_atoms || flags->show_lastmerge) {
+		atomset = create_set();
+
 		/* assemble list of atoms */
 		while (fgets(buf, sizeof(buf), fp) != NULL) {
 			if ((p = strchr(buf, ':')) == NULL)
@@ -422,9 +424,6 @@ static int do_emerge_log(
 				atom->PR_int = 0;
 				snprintf(afmt, sizeof(afmt), "%s/%s", atom->CATEGORY, atom->PN);
 
-				if (atomset == NULL)
-					atomset = create_set();
-
 				/* now we found a package, register this merge as a
 				 * "valid" one, such that dummy emerge calls (e.g.
 				 * emerge -pv foo) are ignored */
@@ -435,7 +434,9 @@ static int do_emerge_log(
 					array_for_each(&vals, i, atomw)
 						atom_implode(atomw);
 					xarrayfree_int(&vals);
+
 					clear_set(atomset);
+					last_merge = tstart_emerge;
 				}
 
 				atomw = add_set_value(afmt, atom, atomset);
