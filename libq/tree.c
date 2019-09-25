@@ -1078,7 +1078,6 @@ tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms)
 	};
 
 	tree_foreach_pkg_fast(ctx, tree_get_atoms_cb, &state, NULL);
-	tree_close(ctx);
 
 	return state.cpf;
 }
