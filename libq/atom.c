@@ -855,7 +855,14 @@ atom_compar_cb(const void *l, const void *r)
 		case EQUAL:  return  0;
 		case NEWER:  return -1;
 		case OLDER:  return  1;
-		default:     return strcmp(al->PN, ar->PN);
+		default:
+		{
+			int ret;
+			ret = strcmp(al->CATEGORY, ar->CATEGORY);
+			if (ret == 0)
+				ret = strcasecmp(al->PN, ar->PN);
+			return ret;
+		}
 	}
 
 	/* unreachable */
