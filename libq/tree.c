@@ -1061,10 +1061,9 @@ static int tree_get_atoms_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	char abuf[BUFSIZ];
 
 	if (state->fullcpv) {
-		size_t len = snprintf(abuf, sizeof(abuf), "%s/%s-%s",
-				atom->CATEGORY, atom->PN, atom->PV);
-		if (atom->PR_int > 0)
-			snprintf(abuf + len, sizeof(abuf) - len, "-r%d", atom->PR_int);
+		snprintf(abuf, sizeof(abuf), "%s/%s-%s",
+				atom->CATEGORY, atom->PN,
+				atom->PR_int > 0 ? atom->PVR : atom->PV);
 		state->cpf = add_set(abuf, state->cpf);
 	} else {
 		snprintf(abuf, sizeof(abuf), "%s/%s", atom->CATEGORY, atom->PN);
