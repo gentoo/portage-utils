@@ -613,10 +613,15 @@ static int do_emerge_log(
 					if (flags->do_average || flags->do_running)
 					{
 						/* find in list of averages */
-						snprintf(afmt, sizeof(afmt), "%s/%s",
-								pkgw->atom->CATEGORY,
-								(!verbose || flags->do_running) ?
-								pkgw->atom->PN : pkgw->atom->P);
+						if (!verbose || flags->do_running) {
+							snprintf(afmt, sizeof(afmt), "%s/%s",
+								pkgw->atom->CATEGORY, pkgw->atom->PN);
+						} else {
+							snprintf(afmt, sizeof(afmt), "%s/%s-%s",
+								pkgw->atom->CATEGORY, pkgw->atom->PN,
+								pkgw->atom->PR_int > 0 ?
+								pkgw->atom->PVR : pkgw->atom->PV);
+						}
 
 						pkg = add_set_value(afmt, pkgw, merge_averages);
 						if (pkg != NULL) {
@@ -752,10 +757,15 @@ static int do_emerge_log(
 					if (flags->do_average || flags->do_running)
 					{
 						/* find in list of averages */
-						snprintf(afmt, sizeof(afmt), "%s/%s",
-								pkgw->atom->CATEGORY,
-								(!verbose || flags->do_running) ?
-								pkgw->atom->PN : pkgw->atom->P);
+						if (!verbose || flags->do_running) {
+							snprintf(afmt, sizeof(afmt), "%s/%s",
+								pkgw->atom->CATEGORY, pkgw->atom->PN);
+						} else {
+							snprintf(afmt, sizeof(afmt), "%s/%s-%s",
+								pkgw->atom->CATEGORY, pkgw->atom->PN,
+								pkgw->atom->PR_int > 0 ?
+								pkgw->atom->PVR : pkgw->atom->PV);
+						}
 
 						pkg = add_set_value(afmt, pkgw, unmerge_averages);
 						if (pkg != NULL) {
