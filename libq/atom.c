@@ -843,3 +843,20 @@ atom_format(const char *format, const depend_atom *atom)
 {
 	return atom_format_r(_atom_buf, sizeof(_atom_buf), format, atom);
 }
+
+/* qsort compatible callback function */
+inline int
+atom_compar_cb(const void *l, const void *r)
+{
+	const depend_atom *al = l;
+	const depend_atom *ar = r;
+
+	switch (atom_compare(al, ar)) {
+		case EQUAL:  return  0;
+		case NEWER:  return -1;
+		case OLDER:  return  1;
+		default:     return strcmp(al->PN, ar->PN);
+	}
+
+	/* unreachable */
+}

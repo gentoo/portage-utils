@@ -104,5 +104,6 @@ char *atom_format_r(char *buf, size_t buflen,
 		const char *format, const depend_atom *atom);
 char *atom_to_string(depend_atom *a);
 char *atom_format(const char *format, const depend_atom *atom);
+int atom_compar_cb(const void *l, const void *r);
 
 #endif
