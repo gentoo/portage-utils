@@ -173,25 +173,11 @@ qpkg_clean(char *dirp)
 	if ((num_all_bytes / KILOBYTE) > 1000)
 		disp_units = MEGABYTE;
 	qprintf(" %s*%s Total space that would be freed in packages "
-			"directory: %s%s %c%s\n", GREEN, NORM, RED,
+			"directory: %s%s %ciB%s\n", GREEN, NORM, RED,
 			make_human_readable_str(num_all_bytes, 1, disp_units),
 			disp_units == MEGABYTE ? 'M' : 'K', NORM);
 
 	return 0;
-}
-
-static const char *
-qpkg_get_bindir(void)
-{
-	if (qpkg_bindir != NULL)
-		return qpkg_bindir;
-	if (getuid() == 0)
-		return "/var/tmp/binpkgs";
-	if (getenv("HOME") == NULL)
-		errp("Your $HOME env var isn't set, aborting");
-	xasprintf(&qpkg_bindir, "%s/binpkgs", getenv("HOME"));
-
-	return qpkg_bindir;
 }
 
 static int
@@ -246,7 +232,7 @@ qpkg_make(depend_atom *atom)
 		return -1;
 	}
 
-	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", qpkg_get_bindir());
+	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", qpkg_bindir);
 	if ((i = mkstemp(tmpdir)) == -1) {
 		free(buf);
 		return -2;
@@ -308,7 +294,7 @@ qpkg_make(depend_atom *atom)
 
 	unlink(filelist);
 
-	snprintf(buf, buflen, "%s/%s.tbz2", qpkg_get_bindir(), atom_to_pvr(atom));
+	snprintf(buf, buflen, "%s/%s.tbz2", qpkg_bindir, atom_to_pvr(atom));
 	if (rename(tbz2, buf)) {
 		warnp("could not move '%s' to '%s'", tbz2, buf);
 		free(buf);
@@ -318,7 +304,7 @@ qpkg_make(depend_atom *atom)
 	rmdir(tmpdir);
 
 	stat(buf, &st);
-	printf("%s%s%s kB\n",
+	printf("%s%s%s KiB\n",
 			RED, make_human_readable_str(st.st_size, 1, KILOBYTE), NORM);
 
 	free(buf);
@@ -334,11 +320,11 @@ int qpkg_main(int argc, char **argv)
 	int i;
 	struct stat st;
 	char buf[BUFSIZE];
-	const char *bindir;
 	depend_atom *atom;
 	int restrict_chmod = 0;
 	int qclean = 0;
 
+	qpkg_bindir = pkgdir;
 	while ((i = GETOPT_LONG(QPKG, qpkg, "")) != -1) {
 		switch (i) {
 		case 'E': eclean = qclean = 1; break;
@@ -346,8 +332,7 @@ int qpkg_main(int argc, char **argv)
 		case 'p': pretend = 1; break;
 		case 'P':
 			restrict_chmod = 1;
-			free(qpkg_bindir);
-			qpkg_bindir = xstrdup(optarg);
+			qpkg_bindir = optarg;
 			if (access(qpkg_bindir, W_OK) != 0)
 				errp("%s", qpkg_bindir);
 			break;
@@ -355,28 +340,29 @@ int qpkg_main(int argc, char **argv)
 		}
 	}
 	if (qclean)
-		return qpkg_clean(qpkg_bindir == NULL ? pkgdir : qpkg_bindir);
+		return qpkg_clean(qpkg_bindir);
 
 	if (argc == optind)
 		qpkg_usage(EXIT_FAILURE);
 
 	/* setup temp dirs */
-	i = 0;
-	bindir = qpkg_get_bindir();
-	if (*bindir != '/')
-		err("'%s' is not a valid package destination", bindir);
-retry_mkdir:
-	if (mkdir(bindir, 0750) == -1) {
-		lstat(bindir, &st);
-		if (!S_ISDIR(st.st_mode)) {
-			unlink(bindir);
-			if (!i++) goto retry_mkdir;
-			errp("could not create temp bindir '%s'", bindir);
+	if (qpkg_bindir[0] != '/')
+		err("'%s' is not a valid package destination", qpkg_bindir);
+	for (i = 0; i <= 1; i++) {
+		if (mkdir(qpkg_bindir, 0750) == -1) {
+			lstat(qpkg_bindir, &st);
+			if (!S_ISDIR(st.st_mode)) {
+				unlink(qpkg_bindir);
+				continue;
+			}
+			if (!restrict_chmod)
+				if (chmod(qpkg_bindir, 0750))
+					errp("could not chmod(0750) temp bindir '%s'", qpkg_bindir);
 		}
-		if (!restrict_chmod)
-			if (chmod(bindir, 0750))
-				errp("could not chmod(0750) temp bindir '%s'", bindir);
+		break;
 	}
+	if (i == 2)
+		errp("could not create temp bindir '%s'", qpkg_bindir);
 
 	/* we have to change to the root so that we can feed the full paths
 	 * to tar when we create the binary package. */
@@ -440,7 +426,8 @@ retry_mkdir:
 		printf(" %s*%s %i package%s could not be matched :/\n",
 				RED, NORM, (int)s, (s > 1 ? "s" : ""));
 	if (pkgs_made)
-		qprintf(" %s*%s Packages can be found in %s\n", GREEN, NORM, bindir);
+		qprintf(" %s*%s Packages can be found in %s\n",
+				GREEN, NORM, qpkg_bindir);
 
 	return (pkgs_made ? EXIT_SUCCESS : EXIT_FAILURE);
 }
