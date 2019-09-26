@@ -40,6 +40,7 @@ typedef struct {
 void *xarrayget(array_t *arr, size_t idx);
 void *xarraypush_ptr(array_t *arr, void *ele);
 void *xarraypush(array_t *arr, const void *ele, size_t ele_len);
+void xarraysort(array_t *arr, int (*compar)(const void *, const void *));
 void xarraydelete_ptr(array_t *arr, size_t elem);
 void xarraydelete(array_t *arr, size_t elem);
 void xarrayfree_int(array_t *arr);
