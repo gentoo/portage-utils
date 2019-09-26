@@ -1058,12 +1058,17 @@ static int tree_get_atoms_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct get_atoms_state *state = (struct get_atoms_state *)priv;
 	depend_atom *atom = tree_get_atom(pkg_ctx, false);
+	char abuf[BUFSIZ];
 
 	if (state->fullcpv) {
-		state->cpf = add_set(atom_format("%[CATEGORY]%[PF]", atom), state->cpf);
+		size_t len = snprintf(abuf, sizeof(abuf), "%s/%s-%s",
+				atom->CATEGORY, atom->PN, atom->PV);
+		if (atom->PR_int > 0)
+			snprintf(abuf + len, sizeof(abuf) - len, "-r%d", atom->PR_int);
+		state->cpf = add_set(abuf, state->cpf);
 	} else {
-		state->cpf = add_set_unique(atom_format("%[CATEGORY]%[PN]", atom),
-				state->cpf, NULL);
+		snprintf(abuf, sizeof(abuf), "%s/%s", atom->CATEGORY, atom->PN);
+		state->cpf = add_set_unique(abuf, state->cpf, NULL);
 	}
 
 	return 0;
