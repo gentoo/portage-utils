@@ -279,6 +279,25 @@ static char *fmt_elapsedtime(struct qlop_mode *flags, time_t e)
 	return _elapsed_buf;
 }
 
+struct pkg_match {
+	char id[BUFSIZ];
+	depend_atom *atom;
+	time_t tbegin;
+	time_t time;
+	size_t cnt;
+};
+
+static int
+pkg_sort_cb(const void *l, const void *r)
+{
+	struct pkg_match *pl = *(struct pkg_match **)l;
+	struct pkg_match *pr = *(struct pkg_match **)r;
+	depend_atom *al = pl->atom;
+	depend_atom *ar = pr->atom;
+
+	return atom_compar_cb(al, ar);
+}
+
 /* The format of the sync log has changed over time.
 
 Old format:
@@ -348,14 +367,6 @@ static int do_emerge_log(
 	size_t parallel_emerge = 0;
 	bool all_atoms = false;
 	char afmt[BUFSIZ];
-
-	struct pkg_match {
-		char id[BUFSIZ];
-		depend_atom *atom;
-		time_t tbegin;
-		time_t time;
-		size_t cnt;
-	};
 	struct pkg_match *pkg;
 	struct pkg_match *pkgw;
 
@@ -917,6 +928,7 @@ static int do_emerge_log(
 		DECLARE_ARRAY(avgs);
 
 		values_set(merge_averages, avgs);
+		xarraysort(avgs, pkg_sort_cb);
 		array_for_each(avgs, i, pkg) {
 			printf("%s: %s average for %s%zd%s merge%s\n",
 					atom_format(flags->fmt, pkg->atom),
@@ -928,6 +940,7 @@ static int do_emerge_log(
 		xarrayfree_int(avgs);
 
 		values_set(unmerge_averages, avgs);
+		xarraysort(avgs, pkg_sort_cb);
 		array_for_each(avgs, i, pkg) {
 			printf("%s: %s average for %s%zd%s unmerge%s\n",
 					atom_format(flags->fmt, pkg->atom),
