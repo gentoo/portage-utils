@@ -105,12 +105,11 @@ qpkg_clean_dir(char *dirp, set *vdb)
 				if ((st.st_size / KILOBYTE) > 1000)
 					disp_units = MEGABYTE;
 				num_all_bytes += st.st_size;
-				qprintf(" %s[%s%s %3s %s %s%s]%s %s%s/%s%s\n",
-						DKBLUE, NORM, GREEN,
+				qprintf(" %s[%s %3s %s %s] %s%s%s\n",
+						DKBLUE, GREEN,
 						make_human_readable_str(st.st_size, 1, disp_units),
-						disp_units == MEGABYTE ? "M" : "K",
-						NORM, DKBLUE, NORM, CYAN,
-						basename(dirp), fnames[i]->d_name, NORM);
+						disp_units == MEGABYTE ? "MiB" : "KiB",
+						DKBLUE, BLUE, fnames[i]->d_name, NORM);
 			}
 			if (!pretend)
 				unlink(buf);
@@ -211,6 +210,7 @@ qpkg_make(depend_atom *atom)
 	char filelist[BUFSIZE + 32];
 	char tbz2[BUFSIZE + 32];
 	size_t buflen;
+	size_t xpaksize;
 	char *buf;
 	int i;
 	char *xpak_argv[2];
@@ -286,11 +286,24 @@ qpkg_make(depend_atom *atom)
 	}
 	pclose(fp);
 
+	/* get offset where xpak will start */
+	stat(tbz2, &st);
+	xpaksize = st.st_size;
+
 	snprintf(buf, buflen, "%s/%s/%s",
 			portvdb, atom->CATEGORY, atom_to_pvr(atom));
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
 	xpak_create(AT_FDCWD, tbz2, 1, xpak_argv, 1, verbose);
+
+	stat(tbz2, &st);
+
+	/* save tbz2 tail: OOOOSTOP */
+	fp = fopen(tbz2, "a");
+	WRITE_BE_INT32(buf, st.st_size - xpaksize);
+	fwrite(buf, 1, 4, fp);
+	fwrite("STOP", 1, 4, fp);
+	fclose(fp);
 
 	unlink(filelist);
 
