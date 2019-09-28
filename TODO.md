@@ -4,9 +4,7 @@
 	- default \*foo\*
 	- -e foo
 	- -r (-R ?) regexp foo.\*
-- make default -e for apps like quse/qdepends?
-
-- make set.c to array (xarray) instead of C-array (list)
+- make default -e for apps like quse/qdepends/qlist?
 
 - env vars only get expanded once, so this fails:<br>
   `ACCEPT_LICENSE="foo"`<br>
@@ -18,7 +16,14 @@
   cat?) to reduce search space
 
 - tree\_get\_atoms should return atoms iso string set, needs a rewrite
-  to use foreach\_pkg and get\_atom
+  to use foreach\_pkg and get\_atom -- set is ready for storing objects
+  now
+
+- implement our own iniparser so we *can* be dep-free
+
+- add applet/functionality to view latest version of package in tree
+  (functionality necessary for upgrade in qmerge, easy printing would
+  also allow to use q instead of eix from Puppet provider)
 
 # Atoms
 
@@ -58,10 +63,11 @@
 
 # qpkg
 
-- fix "would be freed" message when --pretend is *not* active
 - add a verbose output that describes why a package is cleaned
 	- newer binpkgs available
 	- newer installed version available
+- integrate qxpak and qtbz2 with this package (the latter are confusing,
+  and qpkg is doing parts of qtbz2's compose
 
 # qgrep
 
@@ -73,6 +79,7 @@
 
 # quse
 - make -v only print requested USE-flag when flags given
+- list each package only once (e.g. quse -e lz4)
 
 # qkeyword
 - drop -c argument? it can be fully expressed using -p cat/
@@ -87,3 +94,6 @@
   guestimate alternative to current time jumping
 - display excess time (+12:05) when overrunning guestimate to indicate
   longer run than last guestimate
+- read tail of file fro last merge/running?
+- multiple files support -- current opinion: don't do it
+- compressed file support, use guessing support from qmerge?
