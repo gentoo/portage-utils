@@ -171,8 +171,9 @@ qpkg_clean(char *dirp)
 	disp_units = KILOBYTE;
 	if ((num_all_bytes / KILOBYTE) > 1000)
 		disp_units = MEGABYTE;
-	qprintf(" %s*%s Total space that would be freed in packages "
-			"directory: %s%s %ciB%s\n", GREEN, NORM, RED,
+	qprintf(" %s*%s Total space %sfreed in packages "
+			"directory: %s%s %ciB%s\n", GREEN, NORM,
+			pretend ? "that would be " : "", RED,
 			make_human_readable_str(num_all_bytes, 1, disp_units),
 			disp_units == MEGABYTE ? 'M' : 'K', NORM);
 
@@ -297,10 +298,11 @@ qpkg_make(depend_atom *atom)
 	xpak_create(AT_FDCWD, tbz2, 1, xpak_argv, 1, verbose);
 
 	stat(tbz2, &st);
+	xpaksize = st.st_size - xpaksize;
 
 	/* save tbz2 tail: OOOOSTOP */
 	fp = fopen(tbz2, "a");
-	WRITE_BE_INT32(buf, st.st_size - xpaksize);
+	WRITE_BE_INT32(buf, xpaksize);
 	fwrite(buf, 1, 4, fp);
 	fwrite("STOP", 1, 4, fp);
 	fclose(fp);

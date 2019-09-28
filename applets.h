@@ -82,7 +82,7 @@ static const struct applet_t {
 	{"qmanifest", qmanifest_main, "<misc args>",     "verify or generate thick Manifest files"},
 #endif
 	{"qmerge",    qmerge_main,    "<pkgnames>",      "fetch and merge binary package"},
-	{"qpkg",      qpkg_main,      "<misc args>",     "manipulate Gentoo binpkgs"},
+	{"qpkg",      qpkg_main,      "<misc args>",     "create or manipulate Gentoo binpkgs"},
 	{"qsearch",   qsearch_main,   "<regex>",         "search pkgname/desc"},
 	{"qsize",     qsize_main,     "<pkgname>",       "calculate size usage"},
 	{"qtbz2",     qtbz2_main,     "<misc args>",     "manipulate tbz2 packages"},
