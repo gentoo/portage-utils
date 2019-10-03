@@ -32,6 +32,7 @@
   foo-(1234)\_alpha(56789)
 - these limits should not be an issue for all practical purposes
 - remove zalloc from atom explode (just initialise what needs to)
+- make PVR match PMS https://dev.gentoo.org/~ulm/pms/head/pms.html#x1-10800011
 
 # qmerge
 

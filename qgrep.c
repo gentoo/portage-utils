@@ -416,14 +416,15 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	/* cat/pkg/pkg-ver.ebuild */
-	snprintf(buf, sizeof(buf), "%s/%s/%s.ebuild",
-			patom->CATEGORY, patom->PN, patom->P);
+	snprintf(buf, sizeof(buf), "%s/%s/%s-%s.ebuild",
+			patom->CATEGORY, patom->PN, patom->PN,
+			patom->PR_int > 0 ? patom->PVR : patom->PV);
 
 	label = NULL;
 	if (data->show_name) {
 		if (data->show_repo)
 			patom = tree_get_atom(pkg_ctx, true);
-		atom_format_r(name, sizeof(name), "%[CATEGORY]%[P]%[REPO]", patom);
+		atom_format_r(name, sizeof(name), "%[CATEGORY]%[PF]%[REPO]", patom);
 		label = name;
 	} else if (data->show_filename) {
 		label = buf;
