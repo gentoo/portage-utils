@@ -171,6 +171,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	short *non_orphans = args->non_orphans;
 	int *results = args->results;
 	int found = 0;
+	size_t len;
 
 	/* If exclude_pkg is not NULL, check it.  We are looking for files
 	 * collisions, and must exclude one package. */
@@ -223,23 +224,22 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			if (non_orphans != NULL && non_orphans[i])
 				continue;
 
-			/* For optimization of qfile(), we also give it an array of
-			 * the first char of each basename.  This way we avoid
-			 * numerous strcmp() calls. */
+			/* Try to avoid numerous strcmp() calls. */
 			if (base[0] != base_names[i][0] || strcmp(base, base_names[i]) != 0)
 				continue;
 
 			path_ok = false;
 
-			if (dir_names[i] &&
-					strncmp(e->name, dir_names[i], dirname_len) == 0 &&
-					dir_names[i][dirname_len] == '\0')
+			if (dir_names[i] && (len = strlen(dir_names[i])) > 0 &&
+					len == dirname_len &&
+					memcmp(e->name, dir_names[i], len) == 0)
 			{
 				/* dir_name == dirname(CONTENTS) */
 				path_ok = true;
 			} else if (real_dir_names[i] &&
-					strncmp(e->name, real_dir_names[i], dirname_len) == 0 &&
-					real_dir_names[i][dirname_len] == '\0')
+					(len = strlen(real_dir_names[i])) > 0 &&
+					len == dirname_len &&
+					memcmp(e->name, real_dir_names[i], len) == 0)
 			{
 				/* real_dir_name == dirname(CONTENTS) */
 				path_ok = true;
@@ -276,19 +276,19 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				}
 			}
 
-			if (!path_ok && state->basename) {
+			if (!path_ok && state->basename)
 				path_ok = true;
-			}
 
 			if (!path_ok && state->pwd && dir_names[i] == NULL) {
 				/* try to match file in current directory */
-				if (strncmp(e->name, state->pwd, dirname_len) == 0 &&
-						state->pwd[dirname_len] == '\0')
+				if ((len = strlen(state->pwd)) > 0 &&
+						len == dirname_len &&
+						memcmp(e->name, state->pwd, len) == 0)
 					path_ok = true;
 			}
 
 			if (!path_ok && dir_names[i] == NULL && real_dir_names[i] == NULL) {
-				/* try basename match */
+				/* basename match */
 				if (e->type != CONTENTS_DIR)
 					path_ok = true;
 			}
@@ -357,7 +357,7 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	char **realdirnames = NULL;
 	int *results = NULL;
 	char tmppath[_Q_PATH_MAX];
-	char abspath[_Q_PATH_MAX];
+	char abspath[_Q_PATH_MAX * 2];
 
 	/* For each argument, we store its basename, its absolute dirname,
 	 * and the realpath of its dirname.  Dirnames and their realpaths
@@ -370,11 +370,15 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	results = xcalloc(argc, sizeof(int));
 
 	for (i = 0; i < argc; ++i) {
-		/* Record basename, but if it is ".", ".." or "/" */
-		/* copy so that "argv" can be "const" */
-		snprintf(tmppath, sizeof(tmppath), "%s", argv[i]);
+		/* copy so that "argv" can be "const", but skip trailing /
+		 * because our basename doesn't modify its input */
+		len = strlen(argv[i]);
+		if (len > 1 && argv[i][len - 1] == '/')
+			len--;
+		snprintf(tmppath, sizeof(tmppath), "%.*s", (int)len, argv[i]);
 		p = basename(tmppath);
-		len = strlen(p);
+
+		/* record basename, but if it is ".", ".." or "/" */
 		if ((len > 2) ||
 		    (strncmp(tmppath, "..", len) != 0 &&
 		     strncmp(tmppath, "/", len) != 0))
@@ -388,15 +392,15 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 
 		/* Make sure we have an absolute path available (with
 		 * "realpath(ROOT)" prefix) */
-		if (argv[i][0] == '/') {
+		if (tmppath[0] == '/') {
 			snprintf(abspath, sizeof(abspath), "%s%s",
-					state->assume_root_prefix ? "" : real_root, argv[i]);
+					state->assume_root_prefix ? "" : real_root, tmppath);
 		} else if (pwd) {
 			if (state->assume_root_prefix)
-				snprintf(abspath, sizeof(abspath), "%s/%s", pwd, argv[i]);
+				snprintf(abspath, sizeof(abspath), "%s/%s", pwd, tmppath);
 			else
 				snprintf(abspath, sizeof(abspath), "%s%s/%s",
-						real_root, pwd, argv[i]);
+						real_root, pwd, tmppath);
 		} else {
 			warn("$PWD was not found in environment, "
 					"or is not an absolute path");
@@ -424,11 +428,8 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 						tmppath, abspath);
 				goto skip_query_item;
 			}
-			snprintf(tmppath, sizeof(tmppath), "%s%s",
-					dirname(abspath),
-					abspath[real_root_len] == '\0' ? "/" : "");
-			if (strcmp(dirnames[i], tmppath + real_root_len))
-				realdirnames[i] = xstrdup(tmppath + real_root_len);
+			if (strcmp(dirnames[i], abspath + real_root_len))
+				realdirnames[i] = xstrdup(abspath + real_root_len);
 		} else {
 			/* No basename means we are looking for something like "/foo/bar/.."
 			 * Dirname is meaningless here, we can only get realpath of the full
@@ -442,8 +443,7 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 						abspath, tmppath);
 				goto skip_query_item;
 			}
-			snprintf(abspath, sizeof(abspath), "%s", tmppath);
-			basenames[i] = xstrdup(basename(abspath));
+			basenames[i] = xstrdup(basename(tmppath));
 			snprintf(abspath, sizeof(abspath), "%s%s",
 					dirname(tmppath),
 					tmppath[real_root_len] == '\0' ? "/" : "");
@@ -451,13 +451,13 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 		}
 		continue;
 
-		skip_query_item:
-			--nb_of_queries;
-			warn("Skipping query item \"%s\".", argv[i]);
-			free(basenames[i]);
-			free(dirnames[i]);
-			free(realdirnames[i]);
-			basenames[i] = dirnames[i] = realdirnames[i] = NULL;
+ skip_query_item:
+		--nb_of_queries;
+		warn("Skipping query item \"%s\".", argv[i]);
+		free(basenames[i]);
+		free(dirnames[i]);
+		free(realdirnames[i]);
+		basenames[i] = dirnames[i] = realdirnames[i] = NULL;
 	}
 
 	args->basenames = basenames;
