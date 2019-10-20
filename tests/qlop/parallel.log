@@ -1,0 +1,53 @@
+1568976528: Started emerge on: Sep 20, 2019 12:48:48
+1568976528:  *** emerge --autounmask-continue --autounmask-write --backtrack=100 --jobs=2 --load-average=8.0 --with-bdeps=y --sync
+1568976528:  === sync
+1568976528: >>> Syncing repository 'gentoo' into '/usr/portage'...
+1568976547: === Sync completed for gentoo
+1568976570:  *** terminating.
+1568976571: Started emerge on: Sep 20, 2019 12:49:31
+1568976571:  *** emerge --newuse --update --ask --autounmask-continue --autounmask-write --backtrack=100 --deep --jobs=2 --load-average=8.0 --with-bdeps=y --verbose @world
+1568982446:  >>> emerge (95 of 129) kde-frameworks/qqc2-desktop-style-5.62.0 to /
+1568982460:  >>> emerge (96 of 129) dev-qt/qtmultimedia-5.12.5 to /
+1568982460:  === (96 of 129) Cleaning (dev-qt/qtmultimedia-5.12.5::/usr/portage/dev-qt/qtmultimedia/qtmultimedia-5.12.5.ebuild)
+1568982460:  === (96 of 129) Compiling/Merging (dev-qt/qtmultimedia-5.12.5::/usr/portage/dev-qt/qtmultimedia/qtmultimedia-5.12.5.ebuild)
+1568982446:  === (95 of 129) Cleaning (kde-frameworks/qqc2-desktop-style-5.62.0::/usr/portage/kde-frameworks/qqc2-desktop-style/qqc2-desktop-style-5.62.0.ebuild)
+1568982446:  === (95 of 129) Compiling/Merging (kde-frameworks/qqc2-desktop-style-5.62.0::/usr/portage/kde-frameworks/qqc2-desktop-style/qqc2-desktop-style-5.62.0.ebuild)
+1568982462:  === (95 of 129) Merging (kde-frameworks/qqc2-desktop-style-5.62.0::/usr/portage/kde-frameworks/qqc2-desktop-style/qqc2-desktop-style-5.62.0.ebuild)
+1568982480:  === (95 of 129) Post-Build Cleaning (kde-frameworks/qqc2-desktop-style-5.62.0::/usr/portage/kde-frameworks/qqc2-desktop-style/qqc2-desktop-style-5.62.0.ebuild)
+1568982480:  ::: completed emerge (95 of 129) kde-frameworks/qqc2-desktop-style-5.62.0 to /
+1568982686:  === (96 of 129) Merging (dev-qt/qtmultimedia-5.12.5::/usr/portage/dev-qt/qtmultimedia/qtmultimedia-5.12.5.ebuild)
+1568982695:  >>> AUTOCLEAN: dev-qt/qtmultimedia:5
+1568982695:  === Unmerging... (dev-qt/qtmultimedia-5.12.4)
+1568982700:  >>> unmerge success: dev-qt/qtmultimedia-5.12.4
+1568982708:  === (96 of 129) Post-Build Cleaning (dev-qt/qtmultimedia-5.12.5::/usr/portage/dev-qt/qtmultimedia/qtmultimedia-5.12.5.ebuild)
+1568982708:  XXX completed emerge (96 of 129) dev-qt/qtmultimedia-5.12.5 to /
+1568988624: Started emerge on: Sep 20, 2019 16:10:23
+1568988624:  *** emerge --ask --autounmask-continue --autounmask-write --backtrack=100 --jobs=2 --load-average=8.0 --with-bdeps=y --verbose ktouch
+1568991194:  >>> emerge (1 of 2) kde-apps/kqtquickcharts-19.08.1 to /
+1568991195:  === (1 of 2) Cleaning (kde-apps/kqtquickcharts-19.08.1::/usr/portage/kde-apps/kqtquickcharts/kqtquickcharts-19.08.1.ebuild)
+1568991196:  === (1 of 2) Compiling/Merging (kde-apps/kqtquickcharts-19.08.1::/usr/portage/kde-apps/kqtquickcharts/kqtquickcharts-19.08.1.ebuild)
+1568991249:  === (1 of 2) Merging (kde-apps/kqtquickcharts-19.08.1::/usr/portage/kde-apps/kqtquickcharts/kqtquickcharts-19.08.1.ebuild)
+1568991259:  >>> AUTOCLEAN: kde-apps/kqtquickcharts:5
+1568991266:  === (1 of 2) Post-Build Cleaning (kde-apps/kqtquickcharts-19.08.1::/usr/portage/kde-apps/kqtquickcharts/kqtquickcharts-19.08.1.ebuild)
+1568991266:  ::: completed emerge (1 of 2) kde-apps/kqtquickcharts-19.08.1 to /
+1568991266:  >>> emerge (2 of 2) kde-apps/ktouch-19.08.1 to /
+1568991266:  === (2 of 2) Cleaning (kde-apps/ktouch-19.08.1::/usr/portage/kde-apps/ktouch/ktouch-19.08.1.ebuild)
+1568991266:  === (2 of 2) Compiling/Merging (kde-apps/ktouch-19.08.1::/usr/portage/kde-apps/ktouch/ktouch-19.08.1.ebuild)
+1568991378:  === (2 of 2) Merging (kde-apps/ktouch-19.08.1::/usr/portage/kde-apps/ktouch/ktouch-19.08.1.ebuild)
+1568991391:  >>> AUTOCLEAN: kde-apps/ktouch:5
+1568991400:  === (2 of 2) Updating world file (kde-apps/ktouch-19.08.1)
+1568991400:  === (2 of 2) Post-Build Cleaning (kde-apps/ktouch-19.08.1::/usr/portage/kde-apps/ktouch/ktouch-19.08.1.ebuild)
+1568991400:  ::: completed emerge (2 of 2) kde-apps/ktouch-19.08.1 to /
+1568991400:  *** Finished. Cleaning up...
+1568991404:  *** exiting successfully.
+1568991406:  *** terminating.
+1568996270:  >>> emerge (98 of 129) kde-frameworks/kxmlgui-5.62.0 to /
+1568996270:  === (98 of 129) Cleaning (kde-frameworks/kxmlgui-5.62.0::/usr/portage/kde-frameworks/kxmlgui/kxmlgui-5.62.0.ebuild)
+1568996271:  === (98 of 129) Compiling/Merging (kde-frameworks/kxmlgui-5.62.0::/usr/portage/kde-frameworks/kxmlgui/kxmlgui-5.62.0.ebuild)
+1568996308:  === (98 of 129) Merging (kde-frameworks/kxmlgui-5.62.0::/usr/portage/kde-frameworks/kxmlgui/kxmlgui-5.62.0.ebuild)
+1568996308:  >>> emerge (99 of 129) net-analyzer/wireshark-3.0.4 to /
+1568996308:  === (99 of 129) Cleaning (net-analyzer/wireshark-3.0.4::/usr/portage/net-analyzer/wireshark/wireshark-3.0.4.ebuild)
+1568996308:  === (99 of 129) Compiling/Merging (net-analyzer/wireshark-3.0.4::/usr/portage/net-analyzer/wireshark/wireshark-3.0.4.ebuild)
+1568996311:  >>> AUTOCLEAN: kde-frameworks/kxmlgui:5
+1568996311:  === Unmerging... (kde-frameworks/kxmlgui-5.61.0)
+1568996313:  >>> unmerge success: kde-frameworks/kxmlgui-5.61.0

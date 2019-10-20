@@ -46,6 +46,10 @@ test 08 0 "qlop -mv -f ${as}/sync.log -d 1104898893"
 # deal with aborted merges
 test 09 0 "qlop -Hacv automake -f ${as}/aborts.log"
 
+# https://bugs.gentoo.org/697068: a parallel emerge finishing should
+# wipe the outstanding emerges from other emerges
+test 10 0 "qlop -r -f ${as}/parallel.log"
+
 cleantmpdir
 
 end

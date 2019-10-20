@@ -474,8 +474,7 @@ static int do_emerge_log(
 		 * finished without knowledge of another instance */
 		if (flags->do_running &&
 				(strncmp(p, "  *** emerge ", 13) == 0 ||
-				 strncmp(p, "  *** terminating.", 18) == 0 ||
-				 strncmp(p, "  *** exiting ", 14) == 0))
+				 strncmp(p, "  *** terminating.", 18) == 0))
 		{
 			if (p[7] == 'm') {
 				parallel_emerge++;
