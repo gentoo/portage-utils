@@ -1237,8 +1237,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 				 * needed to decompress the file. See
 				 * https://bugs.gentoo.org/show_bug.cgi?id=634980 */
 				compr = "I zstd --long=31";
-				/*
-				 * If really tar -I would be used we would have to quote:
+				/* If really tar -I would be used we would have to quote:
 				 * compr = "I \"zstd --long=31\"";
 				 * But actually we use a pipe (see below) */
 			} else if (mlen >= 4 &&
