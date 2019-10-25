@@ -98,3 +98,4 @@
 - read tail of file fro last merge/running?
 - multiple files support -- current opinion: don't do it
 - compressed file support, use guessing support from qmerge?
+- make -r use /proc where available to find real running merges
