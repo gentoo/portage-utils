@@ -95,7 +95,5 @@
   guestimate alternative to current time jumping
 - display excess time (+12:05) when overrunning guestimate to indicate
   longer run than last guestimate
-- read tail of file fro last merge/running?
 - multiple files support -- current opinion: don't do it
 - compressed file support, use guessing support from qmerge?
-- make -r use /proc where available to find real running merges
