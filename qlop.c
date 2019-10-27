@@ -344,7 +344,6 @@ New format:
 1550953125:  *** exiting successfully.
 1550953125:  *** terminating.
 
-
 Currently running merges can be found in the /proc filesystem:
 - Linux: readlink(/proc/<pid>/fd/X)
 - Solaris: readlink(/proc/<pid>/path/X)
@@ -846,16 +845,18 @@ static int do_emerge_log(
 	if (flags->do_running) {
 		time_t cutofftime;
 
+		tstart = time(NULL);
+
 		/* emerge.log can be interrupted, incorrect and hopelessly lost,
 		 * so to eliminate some unfinished crap from there, we just
 		 * ignore anything that's > cutofftime, 10 days for now. */
 		cutofftime = 10 * 24 * 60 * 60;  /* when we consider entries stale */
+		cutofftime = (tbegin > 0 ? tbegin : tstart) - cutofftime;
 
 		/* can't report endtime for non-finished operations */
 		flags->do_endtime = 0;
-		tstart = time(NULL);
 		sync_time /= sync_cnt;
-		if (sync_start >= tstart - cutofftime) {
+		if (sync_start >= cutofftime) {
 			elapsed = tstart - sync_start;
 			if (elapsed >= sync_time)
 				sync_time = 0;
@@ -878,7 +879,7 @@ static int do_emerge_log(
 			time_t maxtime = 0;
 			bool isMax = false;
 
-			if (pkgw->tbegin < tstart - cutofftime)
+			if (pkgw->tbegin < cutofftime)
 				continue;
 
 			snprintf(afmt, sizeof(afmt), "%s/%s",
@@ -925,7 +926,7 @@ static int do_emerge_log(
 			time_t maxtime = 0;
 			bool isMax = false;
 
-			if (pkgw->tbegin < tstart - cutofftime)
+			if (pkgw->tbegin < cutofftime)
 				continue;
 
 			snprintf(afmt, sizeof(afmt), "%s/%s",
@@ -1140,6 +1141,7 @@ int qlop_main(int argc, char **argv)
 	char *q;
 	depend_atom *atom;
 	DECLARE_ARRAY(atoms);
+	int runningmode = 0;
 
 	start_time = 0;
 	end_time = LONG_MAX;
@@ -1173,7 +1175,8 @@ int qlop_main(int argc, char **argv)
 					  m.show_lastmerge = 1;
 					  m.show_emerge = 1;
 					  verbose = 1;          break;
-			case 'r': m.do_running = 1;     break;
+			case 'r': m.do_running = 1;
+					  runningmode++;        break;
 			case 'a': m.do_average = 1;     break;
 			case 'c': m.do_summary = 1;     break;
 			case 'H': m.do_human = 1;       break;
@@ -1312,14 +1315,14 @@ int qlop_main(int argc, char **argv)
 	if (m.do_running) {
 		array_t *new_atoms = probe_proc(atoms);
 
-		if (new_atoms != NULL && array_cnt(new_atoms) == 0) {
-			/* proc supported, found nothing running */
-			start_time = LONG_MAX;
-		} else {
+		if (runningmode > 1 || new_atoms == NULL) {
 			warn("/proc not available, deducing running "
 					"merges from emerge.log");
+		} else if (array_cnt(new_atoms) == 0) {
+			/* proc supported, found nothing running */
+			start_time = LONG_MAX;
 		}
-
+		/* NOTE: new_atoms == atoms when new_atoms != NULL */
 	}
 
 	if (start_time < LONG_MAX)
