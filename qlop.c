@@ -16,9 +16,11 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <limits.h>
+#include <sys/stat.h>
 
 #include "atom.h"
 #include "eat_file.h"
+#include "scandirat.h"
 #include "set.h"
 #include "xarray.h"
 #include "xasprintf.h"
@@ -51,7 +53,7 @@ static const char * const qlop_opts_help[] = {
 	"Print time taken to complete action",
 	"Print average time taken to complete action",
 	"Print elapsed time in human readable format (use with -t or -a)",
-	"Print elapsed time as seconds with no formatting",
+	"Print start/elapsed time as seconds with no formatting",
 	"Show merge history",
 	"Show unmerge history",
 	"Show autoclean unmerge history",
@@ -201,10 +203,15 @@ parse_date(const char *sdate, time_t *t)
 static char _date_buf[48];
 static char *fmt_date(struct qlop_mode *flags, time_t ts, time_t te)
 {
-	time_t t;
+	time_t t = flags->do_endtime ? te : ts;
 
-	t = flags->do_endtime ? te : ts;
-	strftime(_date_buf, sizeof(_date_buf), "%Y-%m-%dT%H:%M:%S", localtime(&t));
+	if (flags->do_machine)
+		snprintf(_date_buf, sizeof(_date_buf),
+				"%zd", (size_t)t);
+	else
+		strftime(_date_buf, sizeof(_date_buf),
+				"%Y-%m-%dT%H:%M:%S", localtime(&t));
+
 	return _date_buf;
 }
 
@@ -336,6 +343,21 @@ New format:
 1550953125:  >>> unmerge success: app-admin/pwgen-2.08
 1550953125:  *** exiting successfully.
 1550953125:  *** terminating.
+
+
+Currently running merges can be found in the /proc filesystem:
+- Linux: readlink(/proc/<pid>/fd/X)
+- Solaris: readlink(/proc/<pid>/path/X)
+from here a file should be there that points to the build.log file
+$CAT/$P/work/build.log.  If so, it's running for $CAT/$P.
+This requires being the portage user though, or root.
+
+Should there be no /proc, we can deduce from the log whether a package
+is being emerged, if and only if, there are no parallel merges, and
+portage never got interrupted in a way where it could not write its
+interruption to the log.  Unfortunately these scenarios happen a lot.
+As such, we can try to remedy this somewhat by using a rule of thumb
+that currently merging packages need to be withinin the last 10 days.
 */
 static int do_emerge_log(
 		const char *log,
@@ -463,6 +485,7 @@ static int do_emerge_log(
 		tbegin = last_merge;
 		tend = tstart;
 	}
+
 	/* loop over lines searching for atoms */
 	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		if ((p = strchr(buf, ':')) == NULL)
@@ -821,11 +844,19 @@ static int do_emerge_log(
 	}
 	fclose(fp);
 	if (flags->do_running) {
+		time_t cutofftime;
+
+		/* emerge.log can be interrupted, incorrect and hopelessly lost,
+		 * so to eliminate some unfinished crap from there, we just
+		 * ignore anything that's > cutofftime, 10 days for now. */
+		cutofftime = 10 * 24 * 60 * 60;  /* when we consider entries stale */
+
 		/* can't report endtime for non-finished operations */
 		flags->do_endtime = 0;
 		tstart = time(NULL);
 		sync_time /= sync_cnt;
-		if (sync_start > 0) {
+		if (sync_start >= tstart - cutofftime) {
+			elapsed = tstart - sync_start;
 			if (elapsed >= sync_time)
 				sync_time = 0;
 			if (flags->do_time) {
@@ -846,6 +877,9 @@ static int do_emerge_log(
 		array_for_each(merge_matches, i, pkgw) {
 			time_t maxtime = 0;
 			bool isMax = false;
+
+			if (pkgw->tbegin < tstart - cutofftime)
+				continue;
 
 			snprintf(afmt, sizeof(afmt), "%s/%s",
 					pkgw->atom->CATEGORY, pkgw->atom->PN);
@@ -890,6 +924,9 @@ static int do_emerge_log(
 		array_for_each(unmerge_matches, i, pkgw) {
 			time_t maxtime = 0;
 			bool isMax = false;
+
+			if (pkgw->tbegin < tstart - cutofftime)
+				continue;
 
 			snprintf(afmt, sizeof(afmt), "%s/%s",
 					pkgw->atom->CATEGORY, pkgw->atom->PN);
@@ -976,6 +1013,118 @@ static int do_emerge_log(
 		}
 	}
 	return 0;
+}
+
+/* scan through /proc for running merges, this requires portage user
+ * or root */
+static array_t *probe_proc(array_t *atoms)
+{
+	struct dirent **procs;
+	int procslen;
+	int pi;
+	struct dirent **links;
+	int linkslen;
+	int li;
+	struct dirent *d;
+	char npath[_Q_PATH_MAX * 2];
+	char rpath[_Q_PATH_MAX];
+	const char *subdir = NULL;
+	const char *pid;
+	ssize_t rpathlen;
+	char *p;
+	depend_atom *atom;
+	DECLARE_ARRAY(ret_atoms);
+	size_t i;
+
+	/* /proc/<pid>/path/<[0-9]+link>
+	 * /proc/<pid>/fd/<[0-9]+link> */
+	if ((procslen = scandir("/proc", &procs, NULL, NULL)) > 0) {
+		for (pi = 0; pi < procslen; pi++) {
+			d = procs[pi];
+			/* must be [0-9]+ */
+			if (d->d_name[0] < '0' || d->d_name[0] > '9')
+				continue;
+
+			if (subdir == NULL) {
+				struct stat st;
+
+				snprintf(npath, sizeof(npath), "/proc/%s/path", d->d_name);
+				if (stat(npath, &st) < 0)
+					subdir = "fd";
+				else
+					subdir = "path";
+			}
+
+			pid = d->d_name;
+			snprintf(npath, sizeof(npath), "/proc/%s/%s", pid, subdir);
+			if ((linkslen = scandir(npath, &links, NULL, NULL)) > 0) {
+				for (li = 0; li < linkslen; li++) {
+					d = links[li];
+					/* must be [0-9]+ */
+					if (d->d_name[0] < '0' || d->d_name[0] > '9')
+						continue;
+					snprintf(npath, sizeof(npath), "/proc/%s/%s/%s",
+							pid, subdir, d->d_name);
+					rpathlen = readlink(npath, rpath, sizeof(rpath));
+					if (rpathlen <= 0)
+						continue;
+					rpath[rpathlen] = '\0';
+					/* check if this points to a portage build:
+					 * <somepath>/portage/<cat>/<pf>/temp/build.log */
+					if (strcmp(rpath + rpathlen -
+								(sizeof("/temp/build.log") - 1),
+								"/temp/build.log") == 0 &&
+							(p = strstr(rpath, "/portage/")) != NULL)
+					{
+						p += sizeof("/portage/") - 1;
+						rpath[rpathlen - (sizeof("/temp/build.log") - 1)] =
+							'\0';
+						atom = atom_explode(p);
+						if (atom == NULL ||
+								atom->CATEGORY == NULL || atom->P == NULL)
+						{
+							if (atom != NULL)
+								atom_implode(atom);
+							continue;
+						}
+						xarraypush_ptr(ret_atoms, atom);
+					}
+				}
+				scandir_free(links, linkslen);
+			}
+		}
+		scandir_free(procs, procslen);
+	} else {
+		/* flag /proc doesn't exist */
+		return NULL;
+	}
+
+	if (array_cnt(atoms) > 0) {
+		size_t j;
+		depend_atom *atomr;
+
+		/* calculate intersection */
+		array_for_each(atoms, i, atom) {
+			array_for_each(ret_atoms, j, atomr) {
+				if (atom_compare(atomr, atom) != EQUAL) {
+					xarraydelete_ptr(ret_atoms, j);
+					atom_implode(atomr);
+					break;
+				}
+			}
+			atom_implode(atom);
+		}
+		xarrayfree_int(atoms);
+	}
+
+	/* ret_atoms is allocated on the stack, so copy into atoms which is
+	 * empty at this point */
+	array_for_each(ret_atoms, i, atom)
+		xarraypush_ptr(atoms, atom);
+
+	xarrayfree_int(ret_atoms);
+
+	return atoms;
 }
 
 int qlop_main(int argc, char **argv)
@@ -1160,7 +1309,21 @@ int qlop_main(int argc, char **argv)
 			m.fmt = "%[CATEGORY]%[PN]";
 	}
 
-	do_emerge_log(logfile, &m, atoms, start_time, end_time);
+	if (m.do_running) {
+		array_t *new_atoms = probe_proc(atoms);
+
+		if (new_atoms != NULL && array_cnt(new_atoms) == 0) {
+			/* proc supported, found nothing running */
+			start_time = LONG_MAX;
+		} else {
+			warn("/proc not available, deducing running "
+					"merges from emerge.log");
+		}
+
+	}
+
+	if (start_time < LONG_MAX)
+		do_emerge_log(logfile, &m, atoms, start_time, end_time);
 
 	array_for_each(atoms, i, atom)
 		atom_implode(atom);

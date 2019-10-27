@@ -501,7 +501,8 @@ read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 				source_len = strlen(sfile);
 
 				if (buflen <= source_len + file_path_len)
-					buf = xrealloc(buf, buflen = source_len + file_path_len + 1);
+					buf = xrealloc(buf,
+							buflen = source_len + file_path_len + 1);
 				memmove(buf + file_path_len, buf + 7, source_len + 1);
 				memcpy(buf, file, file_path_len);
 				sfile = buf;
