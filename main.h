@@ -14,15 +14,16 @@
 # include "config.h"  /* make sure we have EPREFIX, if set */
 #endif
 
+#include <errno.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <stdint.h>
-#include <limits.h>
 
-#include "i18n.h"
 #include "colors.h"
+#include "i18n.h"
 
 extern const char *argv0;
 
@@ -133,5 +134,19 @@ extern FILE *warnout;
 #define errf(fmt, args...) _err(warnf, fmt , ## args)
 #define errp(fmt, args...) _err(warnp, fmt , ## args)
 #define errfp(fmt, args...) _err(warnfp, fmt, ## args)
+
+typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR } var_types;
+typedef struct {
+	const char *name;
+	const size_t name_len;
+	const var_types type;
+	union {
+		char **s;
+		bool *b;
+	} value;
+	size_t value_len;
+	const char *default_value;
+} env_vars;
+extern env_vars vars_to_read[];
 
 #endif

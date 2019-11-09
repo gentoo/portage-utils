@@ -23,15 +23,17 @@
 #include "eat_file.h"
 #include "rmspace.h"
 
-#define Q_FLAGS "io" COMMON_FLAGS
+#define Q_FLAGS "ioe" COMMON_FLAGS
 static struct option const q_long_opts[] = {
 	{"install",       no_argument, NULL, 'i'},
 	{"overlays",      no_argument, NULL, 'o'},
+	{"envvar",        no_argument, NULL, 'e'},
 	COMMON_LONG_OPTS
 };
 static const char * const q_opts_help[] = {
 	"Install symlinks for applets",
 	"Print available overlays (read from repos.conf)",
+	"Print found environment variables and their values",
 	COMMON_OPTS_HELP
 };
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, NULL, lookup_applet_idx("q"))
@@ -78,6 +80,7 @@ int q_main(int argc, char **argv)
 	int i;
 	bool install;
 	bool print_overlays;
+	bool print_vars;
 	const char *p;
 	APPLET func;
 
@@ -96,11 +99,13 @@ int q_main(int argc, char **argv)
 
 	install = false;
 	print_overlays = false;
+	print_vars = false;
 	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
 		case 'i': install = true;        break;
 		case 'o': print_overlays = true; break;
+		case 'e': print_vars = true;     break;
 		}
 	}
 
@@ -181,6 +186,58 @@ int q_main(int argc, char **argv)
 			if (repo_name_len != 0) {
 				free(repo_name);
 				repo_name_len = 0;
+			}
+		}
+
+		return 0;
+	}
+
+	if (print_vars) {
+		env_vars *var;
+		int j;
+
+		if (argc == optind || argc - optind > 1) {
+			for (i = 0; vars_to_read[i].name; i++) {
+				var = &vars_to_read[i];
+
+				/* check if we want this variable */
+				for (j = optind; j < argc; j++)
+					if (strcmp(var->name, argv[j]) == 0)
+						break;
+				if (j == argc && optind != argc)
+					continue;
+
+				printf("%s%s%s=", BLUE, var->name, NORM);
+				switch (var->type) {
+					case _Q_BOOL:
+						printf("%s%s%s\n",
+								YELLOW, *var->value.b ? "1" : "0", NORM);
+						break;
+				case _Q_STR:
+				case _Q_ISTR:
+						printf("%s\"%s\"%s\n", RED, *var->value.s, NORM);
+						break;
+				}
+			}
+		} else {
+			/* single envvar printing, just output the value, like
+			 * portageq envvar does */
+			for (i = 0; vars_to_read[i].name; i++) {
+				var = &vars_to_read[i];
+
+				if (strcmp(var->name, argv[optind]) != 0)
+					continue;
+
+				switch (var->type) {
+					case _Q_BOOL:
+						printf("%s%s%s\n",
+								YELLOW, *var->value.b ? "1" : "0", NORM);
+						break;
+				case _Q_STR:
+				case _Q_ISTR:
+						printf("%s%s%s\n", RED, *var->value.s, NORM);
+						break;
+				}
 			}
 		}
 

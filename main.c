@@ -393,19 +393,6 @@ strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 	/* we should sort here */
 }
 
-typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR } var_types;
-typedef struct {
-	const char *name;
-	const size_t name_len;
-	const var_types type;
-	union {
-		char **s;
-		bool *b;
-	} value;
-	size_t value_len;
-	const char *default_value;
-} env_vars;
-
 static env_vars *
 get_portage_env_var(env_vars *vars, const char *name)
 {
@@ -619,49 +606,48 @@ read_portage_profile(const char *configroot, const char *profile, env_vars vars[
 	free(profile_file);
 }
 
+static bool nocolor = 0;
+env_vars vars_to_read[] = {
+#define _Q_EV(t, V, set, lset, d) \
+{ \
+	.name = #V, \
+	.name_len = strlen(#V), \
+	.type = _Q_##t, \
+	set, \
+	lset, \
+	.default_value = d, \
+},
+#define _Q_EVS(t, V, v, d) _Q_EV(t, V, .value.s = &v, .value_len = strlen(d), d)
+#define _Q_EVB(t, V, v, d) _Q_EV(t, V, .value.b = &v, .value_len = 0, d)
+
+	_Q_EVS(STR,  ROOT,                portroot,            "/")
+	_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      "")
+	_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        "")
+	_Q_EVS(ISTR, PKG_INSTALL_MASK,    pkg_install_mask,    "")
+	_Q_EVS(STR,  ARCH,                portarch,            "")
+	_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      "/etc")
+	_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
+	_Q_EVB(BOOL, NOCOLOR,             nocolor,             0)
+	_Q_EVS(ISTR, FEATURES,            features,            "")
+	_Q_EVS(STR,  EPREFIX,             eprefix,             CONFIG_EPREFIX)
+	_Q_EVS(STR,  EMERGE_LOG_DIR,      portlogdir,          CONFIG_EPREFIX "var/log")
+	_Q_EVS(STR,  PORTDIR,             main_overlay,        CONFIG_EPREFIX "var/db/repos/gentoo")
+	_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             DEFAULT_PORTAGE_BINHOST)
+	_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         CONFIG_EPREFIX "var/tmp/portage/")
+	_Q_EVS(STR,  PKGDIR,              pkgdir,              CONFIG_EPREFIX "var/cache/binpkgs/")
+	_Q_EVS(STR,  Q_VDB,               portvdb,             CONFIG_EPREFIX "var/db/pkg")
+	_Q_EVS(STR,  Q_EDB,               portedb,             CONFIG_EPREFIX "var/cache/edb")
+	{ NULL, 0, _Q_BOOL, { NULL }, 0, NULL, }
+
+#undef _Q_EV
+};
+
 static void
 initialize_portage_env(void)
 {
 	size_t i;
 	const char *s;
-
-	bool nocolor = 0;
-
 	env_vars *var;
-	env_vars vars_to_read[] = {
-#define _Q_EV(t, V, set, lset, d) \
-	{ \
-		.name = #V, \
-		.name_len = strlen(#V), \
-		.type = _Q_##t, \
-		set, \
-		lset, \
-		.default_value = d, \
-	},
-#define _Q_EVS(t, V, v, d) _Q_EV(t, V, .value.s = &v, .value_len = strlen(d), d)
-#define _Q_EVB(t, V, v, d) _Q_EV(t, V, .value.b = &v, .value_len = 0, d)
-
-		_Q_EVS(STR,  ROOT,                portroot,            "/")
-		_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      "")
-		_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        "")
-		_Q_EVS(ISTR, PKG_INSTALL_MASK,    pkg_install_mask,    "")
-		_Q_EVS(STR,  ARCH,                portarch,            "")
-		_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      "/etc")
-		_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
-		_Q_EVB(BOOL, NOCOLOR,             nocolor,             0)
-		_Q_EVS(ISTR, FEATURES,            features,            "")
-		_Q_EVS(STR,  EPREFIX,             eprefix,             CONFIG_EPREFIX)
-		_Q_EVS(STR,  EMERGE_LOG_DIR,      portlogdir,          CONFIG_EPREFIX "var/log")
-		_Q_EVS(STR,  PORTDIR,             main_overlay,        CONFIG_EPREFIX "var/db/repos/gentoo")
-		_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             DEFAULT_PORTAGE_BINHOST)
-		_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         CONFIG_EPREFIX "var/tmp/portage/")
-		_Q_EVS(STR,  PKGDIR,              pkgdir,              CONFIG_EPREFIX "var/cache/binpkgs/")
-		_Q_EVS(STR,  Q_VDB,               portvdb,             CONFIG_EPREFIX "var/db/pkg")
-		_Q_EVS(STR,  Q_EDB,               portedb,             CONFIG_EPREFIX "var/cache/edb")
-		{ NULL, 0, _Q_BOOL, { NULL }, 0, NULL, }
-
-#undef _Q_EV
-	};
 
 	/* initialize all the strings with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
