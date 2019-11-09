@@ -1014,8 +1014,10 @@ tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 				if (pkg_ctx->slot == NULL) {
 					tree_pkg_meta *meta = tree_pkg_read(pkg_ctx);
 					if (meta != NULL) {
-						pkg_ctx->slot = xstrdup(meta->SLOT);
-						pkg_ctx->slot_len = strlen(pkg_ctx->slot);
+						if (meta->SLOT != NULL) {
+							pkg_ctx->slot = xstrdup(meta->SLOT);
+							pkg_ctx->slot_len = strlen(pkg_ctx->slot);
+						}
 						tree_close_meta(meta);
 					}
 				}
