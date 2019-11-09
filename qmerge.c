@@ -1133,7 +1133,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	}
 
 	/* Get a handle on the main vdb repo */
-	vdb = tree_open(portroot, portvdb);
+	vdb = tree_open_vdb(portroot, portvdb);
 	if (!vdb)
 		return;
 	cat_ctx = tree_open_cat(vdb, pkg->CATEGORY);
