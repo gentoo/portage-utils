@@ -2123,8 +2123,8 @@ parse_packages(set *todo)
 	struct pkg_t Pkg;
 	depend_atom *pkg_atom;
 	char repo[sizeof(Pkg.REPO)];
-	depend_atom **todo_atoms;
-	size_t todo_cnt;
+	depend_atom **todo_atoms = NULL;
+	size_t todo_cnt = 0;
 	size_t i;
 
 	fp = open_binpkg_index();
@@ -2161,7 +2161,7 @@ parse_packages(set *todo)
 	strcpy(Pkg.SLOT, "0");
 
 	/* build list with exploded atoms for each access below */
-	{
+	if (todo != NULL) {
 		char **todo_strs;
 		todo_cnt = list_set(todo, &todo_strs);
 		todo_atoms = xmalloc(sizeof(*todo_atoms) * todo_cnt);
@@ -2419,7 +2419,7 @@ int qmerge_main(int argc, char **argv)
 	for (i = optind; i < argc; ++i)
 		todo = qmerge_add_set(argv[i], todo);
 
-	if (todo == NULL) {
+	if (search_pkgs == 0 && todo == NULL) {
 		warn("need package names to work with");
 		return EXIT_FAILURE;
 	}
@@ -2454,6 +2454,7 @@ int qmerge_main(int argc, char **argv)
 	}
 
 	ret = qmerge_run(todo);
-	free_set(todo);
+	if (todo != NULL)
+		free_set(todo);
 	return ret;
 }
