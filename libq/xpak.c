@@ -192,8 +192,8 @@ xpak_extract(
 	/* the xpak may be large (like when it has CONTENTS) #300744 */
 	x->data = (size_t)x->data_len < sizeof(ext) ? ext : xmalloc(x->data_len);
 	in = fread(x->data, 1, x->data_len, x->fp);
-	if (in != (size_t)x->index_len)
-		err("insufficient data read, got %zd, requested %d", in, x->index_len);
+	if (in != (size_t)x->data_len)
+		err("insufficient data read, got %zd, requested %d", in, x->data_len);
 
 	_xpak_walk_index(x, argc, argv, func);
 
