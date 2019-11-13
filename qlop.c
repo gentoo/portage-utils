@@ -204,13 +204,14 @@ static char _date_buf[48];
 static char *fmt_date(struct qlop_mode *flags, time_t ts, time_t te)
 {
 	time_t t = flags->do_endtime ? te : ts;
+	struct tm lt;
 
-	if (flags->do_machine)
+	if (flags->do_machine || localtime_r(&t, &lt) == NULL)
 		snprintf(_date_buf, sizeof(_date_buf),
 				"%zd", (size_t)t);
 	else
 		strftime(_date_buf, sizeof(_date_buf),
-				"%Y-%m-%dT%H:%M:%S", localtime(&t));
+				"%Y-%m-%dT%H:%M:%S", &lt);
 
 	return _date_buf;
 }
