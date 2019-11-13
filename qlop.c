@@ -225,7 +225,7 @@ static char *fmt_elapsedtime(struct qlop_mode *flags, time_t e)
 	time_t ss;
 	size_t bufpos = 0;
 
-	if (flags->do_machine) {
+	if (flags->do_machine || e < 0) {
 		snprintf(_elapsed_buf, sizeof(_elapsed_buf),
 				"%s%zd%s",
 				GREEN, (size_t)e, NORM);
