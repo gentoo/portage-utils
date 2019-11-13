@@ -268,6 +268,12 @@ values_set(set *q, array_t *ret)
 	return q->len;
 }
 
+size_t
+cnt_set(set *q)
+{
+	return q == NULL ? 0 : q->len;
+}
+
 /* clear out a set */
 void
 clear_set(set *q)
