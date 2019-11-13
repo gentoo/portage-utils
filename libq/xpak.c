@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <xalloc.h>
-#include <assert.h>
 
 #include "basename.h"
 #include "copy_file.h"
@@ -61,7 +60,9 @@ static void _xpak_walk_index(
 	p = x->index;
 	while ((p - x->index) < x->index_len) {
 		pathname_len = READ_BE_INT32((unsigned char*)p);
-		assert((size_t)pathname_len < sizeof(pathname));
+		if (pathname_len >= sizeof(pathname))
+			err("pathname length %d exceeds limit %zd",
+					pathname_len, sizeof(pathname));
 		p += 4;
 		memcpy(pathname, p, pathname_len);
 		pathname[pathname_len] = '\0';
@@ -151,9 +152,11 @@ xpak_list(
 
 	x->dir_fd = dir_fd;
 	x->index = buf;
-	assert((size_t)x->index_len < sizeof(buf));
+	if (x->index_len >= sizeof(buf))
+		err("index length %d exceeds limit %zd", x->index_len, sizeof(buf));
 	ret = fread(x->index, 1, x->index_len, x->fp);
-	assert(ret == (size_t)x->index_len);
+	if (ret != (size_t)x->index_len)
+		err("insufficient data read, got %zd, requested %d", ret, x->index_len);
 	_xpak_walk_index(x, argc, argv, func);
 
 	_xpak_close(x);
@@ -180,17 +183,17 @@ xpak_extract(
 	x->dir_fd = dir_fd;
 	x->index = buf;
 
-	assert((size_t)x->index_len < sizeof(buf));
+	if (x->index_len >= sizeof(buf))
+		err("index length %d exceeds limit %zd", x->index_len, sizeof(buf));
 	in = fread(x->index, 1, x->index_len, x->fp);
-	if ((int)in != x->index_len)
-		err("index chunk: read %i bytes, wanted %i bytes",
-				(int)in, x->index_len);
+	if (in != (size_t)x->index_len)
+		err("insufficient data read, got %zd, requested %d", in, x->index_len);
 
 	/* the xpak may be large (like when it has CONTENTS) #300744 */
 	x->data = (size_t)x->data_len < sizeof(ext) ? ext : xmalloc(x->data_len);
 	in = fread(x->data, 1, x->data_len, x->fp);
-	if ((int)in != x->data_len)
-		err("data chunk: read %i bytes, wanted %i bytes", (int)in, x->data_len);
+	if (in != (size_t)x->index_len)
+		err("insufficient data read, got %zd, requested %d", in, x->index_len);
 
 	_xpak_walk_index(x, argc, argv, func);
 
