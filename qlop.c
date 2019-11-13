@@ -426,9 +426,9 @@ static int do_emerge_log(
 
 			atom = NULL;
 			if (strncmp(p, "  >>> emerge ", 13) == 0 &&
-					(p = strchr(p + 13, ')')) != NULL)
+					(q = strchr(p + 13, ')')) != NULL)
 			{
-				p += 2;
+				p = q + 2;
 				q = strchr(p, ' ');
 				if (q != NULL) {
 					*q = '\0';
