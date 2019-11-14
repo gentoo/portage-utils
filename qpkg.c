@@ -29,6 +29,7 @@
 #include "xarray.h"
 #include "xasprintf.h"
 #include "xchdir.h"
+#include "xmkdir.h"
 #include "xpak.h"
 
 #define QPKG_FLAGS "cEpP:" COMMON_FLAGS
@@ -309,7 +310,13 @@ qpkg_make(depend_atom *atom)
 
 	unlink(filelist);
 
-	snprintf(buf, buflen, "%s/%s.tbz2", qpkg_bindir, atom_to_pvr(atom));
+	/* create dirs, if necessary */
+	snprintf(buf, buflen, "%s/%s",
+			qpkg_bindir, atom->CATEGORY);
+	mkdir_p(buf, 0755);
+
+	snprintf(buf, buflen, "%s/%s/%s.tbz2",
+			qpkg_bindir, atom->CATEGORY, atom_to_pvr(atom));
 	if (rename(tbz2, buf)) {
 		warnp("could not move '%s' to '%s'", tbz2, buf);
 		free(buf);
