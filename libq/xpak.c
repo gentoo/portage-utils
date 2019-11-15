@@ -39,23 +39,22 @@
 #define XPAK_END_MSG_LEN     8
 
 typedef struct {
-	int dir_fd;
+	void *ctx;
 	FILE *fp;
-	int index_len;
-	int data_len;
+	unsigned int index_len;
+	unsigned int data_len;
 	char *index, *data;
 } _xpak_archive;
 
-typedef void (*xpak_callback_t)(int,char*,int,int,int,char*);
-
 static void _xpak_walk_index(
 		_xpak_archive *x,
-		int argc,
-		char **argv,
 		xpak_callback_t func)
 {
-	int i, pathname_len, data_offset, data_len;
-	char *p, pathname[100];
+	unsigned int pathname_len;
+	unsigned int data_offset;
+	unsigned int data_len;
+	char *p;
+	char pathname[100];
 
 	p = x->index;
 	while ((p - x->index) < x->index_len) {
@@ -73,43 +72,26 @@ static void _xpak_walk_index(
 		p += 4;
 		data_len = READ_BE_INT32((unsigned char*)p);
 		p += 4;
-		if (argc) {
-			for (i = 0; i < argc; ++i) {
-				if (argv[i] && !strcmp(pathname, argv[i])) {
-					argv[i] = NULL;
-					break;
-				}
-			}
-			if (i == argc)
-				continue;
-		}
-		(*func)(x->dir_fd, pathname, pathname_len,
+		(*func)(x->ctx, pathname, pathname_len,
 				data_offset, data_len, x->data);
 	}
-
-	if (argc)
-		for (i = 0; i < argc; ++i)
-			if (argv[i])
-				warn("Could not locate '%s' in archive", argv[i]);
 }
 
-static _xpak_archive *_xpak_open(const char *file)
+static _xpak_archive *_xpak_open(const int fd)
 {
 	static _xpak_archive ret;
 	char buf[XPAK_START_LEN];
 
 	/* init the file */
 	memset(&ret, 0x00, sizeof(ret));
-	if (file[0] == '-' && file[1] == '\0')
-		ret.fp = stdin;
-	else if ((ret.fp = fopen(file, "r")) == NULL)
+	if ((ret.fp = fdopen(fd, "r")) == NULL)
 		return NULL;
 
 	/* verify this xpak doesnt suck */
 	if (fread(buf, 1, XPAK_START_LEN, ret.fp) != XPAK_START_LEN)
 		goto close_and_ret;
 	if (memcmp(buf, XPAK_START_MSG, XPAK_START_MSG_LEN)) {
-		warn("%s: Invalid xpak", file);
+		warn("Not an xpak file");
 		goto close_and_ret;
 	}
 
@@ -117,7 +99,7 @@ static _xpak_archive *_xpak_open(const char *file)
 	ret.index_len = READ_BE_INT32((unsigned char*)buf+XPAK_START_MSG_LEN);
 	ret.data_len = READ_BE_INT32((unsigned char*)buf+XPAK_START_MSG_LEN+4);
 	if (!ret.index_len || !ret.data_len) {
-		warn("Skipping empty archive '%s'", file);
+		warn("Skipping empty archive");
 		goto close_and_ret;
 	}
 
@@ -135,52 +117,21 @@ static void _xpak_close(_xpak_archive *x)
 }
 
 int
-xpak_list(
-		int dir_fd,
-		const char *file,
-		int argc,
-		char **argv,
-		xpak_callback_t func)
-{
-	_xpak_archive *x;
-	char buf[BUFSIZE];
-	size_t ret;
-
-	x = _xpak_open(file);
-	if (!x)
-		return 1;
-
-	x->dir_fd = dir_fd;
-	x->index = buf;
-	if (x->index_len >= sizeof(buf))
-		err("index length %d exceeds limit %zd", x->index_len, sizeof(buf));
-	ret = fread(x->index, 1, x->index_len, x->fp);
-	if (ret != (size_t)x->index_len)
-		err("insufficient data read, got %zd, requested %d", ret, x->index_len);
-	_xpak_walk_index(x, argc, argv, func);
-
-	_xpak_close(x);
-
-	return 0;
-}
-
-int
-xpak_extract(
-	int dir_fd,
-	const char *file,
-	int argc,
-	char **argv,
+xpak_process_fd(
+	int fd,
+	bool get_data,
+	void *ctx,
 	xpak_callback_t func)
 {
 	_xpak_archive *x;
 	char buf[BUFSIZE], ext[BUFSIZE*32];
 	size_t in;
 
-	x = _xpak_open(file);
+	x = _xpak_open(fd);
 	if (!x)
 		return 1;
 
-	x->dir_fd = dir_fd;
+	x->ctx = ctx;
 	x->index = buf;
 
 	if (x->index_len >= sizeof(buf))
@@ -189,20 +140,49 @@ xpak_extract(
 	if (in != (size_t)x->index_len)
 		err("insufficient data read, got %zd, requested %d", in, x->index_len);
 
-	/* the xpak may be large (like when it has CONTENTS) #300744 */
-	x->data = (size_t)x->data_len < sizeof(ext) ? ext : xmalloc(x->data_len);
-	in = fread(x->data, 1, x->data_len, x->fp);
-	if (in != (size_t)x->data_len)
-		err("insufficient data read, got %zd, requested %d", in, x->data_len);
+	if (get_data) {
+		/* the xpak may be large (like when it has CONTENTS) #300744 */
+		x->data = (size_t)x->data_len < sizeof(ext) ?
+			ext : xmalloc(x->data_len);
+		in = fread(x->data, 1, x->data_len, x->fp);
+		if (in != (size_t)x->data_len)
+			err("insufficient data read, got %zd, requested %d",
+					in, x->data_len);
+	} else {
+		x->data = NULL;
+		x->data_len = 0;
+	}
 
-	_xpak_walk_index(x, argc, argv, func);
+	_xpak_walk_index(x, func);
 
 	_xpak_close(x);
 
-	if (x->data != ext)
+	if (get_data && x->data != ext)
 		free(x->data);
 
 	return 0;
+}
+
+int
+xpak_process(
+	const char *file,
+	bool get_data,
+	void *ctx,
+	xpak_callback_t func)
+{
+	int fd = -1;
+	int ret;
+
+	if (file[0] == '-' && file[1] == '\0')
+		fd = 0;
+	else if ((fd = open(file, O_RDONLY | O_CLOEXEC)) == -1)
+		return -1;
+
+	ret = xpak_process_fd(fd, get_data, ctx, func);
+	if (ret != 0)
+		warn("Unable to open file '%s'", file);
+
+	return ret;
 }
 
 static void
@@ -279,7 +259,7 @@ xpak_create(
 		const char *file,
 		int argc,
 		char **argv,
-		char append,
+		bool append,
 		int verbose)
 {
 	FILE *findex, *fdata, *fout;
