@@ -18,7 +18,7 @@ typedef struct tree_pkg_ctx      tree_pkg_ctx;
 typedef struct tree_pkg_meta     tree_pkg_meta;
 typedef struct tree_metadata_xml tree_metadata_xml;
 
-/* VDB context */
+/* tree context */
 struct tree_ctx {
 	int portroot_fd;
 	int tree_fd;
@@ -35,11 +35,15 @@ struct tree_ctx {
 		CACHE_METADATA_PMS,
 		CACHE_EBUILD,
 		CACHE_VDB,
+		CACHE_PACKAGES,
+		CACHE_BINPKGS,
 	} cachetype:3;
 	tree_pkg_ctx *ebuilddir_pkg_ctx;
 	tree_cat_ctx *ebuilddir_cat_ctx;
 	tree_ctx *ebuilddir_ctx;
 	char *repo;
+	char *pkgs;
+	size_t pkgslen;
 };
 
 /* Category context */
@@ -90,6 +94,10 @@ struct tree_pkg_meta {
 	char *BDEPEND;
 	char *_eclasses_;
 	char *_md5_;
+	/* binpkgs/vdb */
+	char *CONTENTS;
+	char *USE;
+	char *repository;
 };
 
 /* Metadata.xml */
@@ -104,8 +112,9 @@ struct tree_metadata_xml {
 typedef int (tree_pkg_cb)(tree_pkg_ctx *, void *priv);
 typedef int (tree_cat_filter)(tree_cat_ctx *, void *priv);
 
-tree_ctx *tree_open_vdb(const char *sroot, const char *svdb);
 tree_ctx *tree_open(const char *sroot, const char *portdir);
+tree_ctx *tree_open_vdb(const char *sroot, const char *svdb);
+tree_ctx *tree_open_binpkg(const char *sroot, const char *spkg);
 void tree_close(tree_ctx *ctx);
 int tree_filter_cat(const struct dirent *de);
 tree_cat_ctx *tree_open_cat(tree_ctx *ctx, const char *name);

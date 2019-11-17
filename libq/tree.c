@@ -21,6 +21,7 @@
 #include "scandirat.h"
 #include "set.h"
 #include "tree.h"
+#include "xpak.h"
 
 #include <ctype.h>
 #include <xalloc.h>
@@ -30,7 +31,7 @@ static int tree_pkg_compar(const void *l, const void *r);
 static tree_ctx *
 tree_open_int(const char *sroot, const char *tdir, bool quiet)
 {
-	tree_ctx *ctx = xmalloc(sizeof(*ctx));
+	tree_ctx *ctx = xzalloc(sizeof(*ctx));
 
 	ctx->portroot_fd = open(sroot, O_RDONLY | O_CLOEXEC | O_PATH);
 	if (ctx->portroot_fd == -1) {
@@ -56,12 +57,8 @@ tree_open_int(const char *sroot, const char *tdir, bool quiet)
 		goto cv_error;
 
 	ctx->do_sort = false;
-	ctx->cat_de = NULL;
 	ctx->catsortfunc = alphasort;
 	ctx->pkgsortfunc = tree_pkg_compar;
-	ctx->repo = NULL;
-	ctx->ebuilddir_ctx = NULL;
-	ctx->ebuilddir_pkg_ctx = NULL;
 	return ctx;
 
  cv_error:
@@ -130,6 +127,24 @@ tree_open_vdb(const char *sroot, const char *svdb)
 	return ret;
 }
 
+static const char binpkg_packages[]  = "Packages";
+tree_ctx *
+tree_open_binpkg(const char *sroot, const char *spkg)
+{
+	tree_ctx *ret = tree_open_int(sroot, spkg, true);
+	char buf[_Q_PATH_MAX];
+
+	if (ret != NULL) {
+		ret->cachetype = CACHE_BINPKGS;
+
+		snprintf(buf, sizeof(buf), "%s%s/%s", sroot, spkg, binpkg_packages);
+		if (eat_file(buf, &ret->pkgs, &ret->pkgslen))
+			ret->cachetype = CACHE_PACKAGES;
+	}
+
+	return ret;
+}
+
 void
 tree_close(tree_ctx *ctx)
 {
@@ -141,6 +156,8 @@ tree_close(tree_ctx *ctx)
 		scandir_free(ctx->cat_de, ctx->cat_cnt);
 	if (ctx->repo != NULL)
 		free(ctx->repo);
+	if (ctx->pkgs != NULL)
+		free(ctx->pkgs);
 	if (ctx->ebuilddir_ctx != NULL)
 		free(ctx->ebuilddir_ctx);
 	free(ctx);
@@ -443,6 +460,13 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 				}
 			}
 		} while (ret == NULL);
+	} else if (ctx->cachetype == CACHE_BINPKGS) {
+		char *p = NULL;
+		do {
+			ret = tree_next_pkg_int(cat_ctx);
+		} while (ret != NULL && (p = strstr(ret->name, ".tbz2")) == NULL);
+		if (p != NULL)
+			*p = '\0';
 	} else {
 		ret = tree_next_pkg_int(cat_ctx);
 	}
@@ -805,22 +829,96 @@ err:
 	return NULL;
 }
 
+static void
+tree_read_file_binpkg_xpak_cb(
+	void *ctx,
+	char *pathname,
+	int pathname_len,
+	int data_offset,
+	int data_len,
+	char *data)
+{
+	tree_pkg_meta *m = (tree_pkg_meta *)ctx;
+	char **key;
+	size_t pos;
+	size_t len;
+
+#define match_path(K) \
+	else if (pathname_len == (sizeof(#K) - 1) && strcmp(pathname, #K) == 0) \
+		key = &m->K
+	if (1 == 0); /* dummy for syntax */
+	match_path(DEPEND);
+	match_path(RDEPEND);
+	match_path(SLOT);
+	match_path(SRC_URI);
+	match_path(RESTRICT);
+	match_path(HOMEPAGE);
+	match_path(DESCRIPTION);
+	match_path(KEYWORDS);
+	match_path(INHERITED);
+	match_path(IUSE);
+	match_path(CDEPEND);
+	match_path(PDEPEND);
+	match_path(PROVIDE);
+	match_path(EAPI);
+	match_path(PROPERTIES);
+	match_path(DEFINED_PHASES);
+	match_path(REQUIRED_USE);
+	match_path(BDEPEND);
+	match_path(CONTENTS);
+	match_path(USE);
+	match_path(repository);
+	else
+		return;
+#undef match_path
+
+	/* hijack unused members */
+	pos = (size_t)m->_eclasses_;
+	len = (size_t)m->_md5_;
+
+	/* trim whitespace (mostly trailing newline) */
+	while (isspace((int)data[data_offset + data_len - 1]))
+		data_len--;
+
+	if (len - pos < (size_t)data_len) {
+		len += (((data_len + 1) / BUFSIZ) + 1) * BUFSIZ;
+		m->_data = xrealloc(m->_data, len);
+		m->_md5_ = (char *)len;
+	}
+
+	*key = m->_data + pos;
+	snprintf(*key, len - pos, "%.*s", data_len, data + data_offset);
+	pos += data_len + 1;
+	m->_eclasses_ = (char *)pos;
+}
+
+static tree_pkg_meta *
+tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
+{
+	tree_pkg_meta *m = xzalloc(sizeof(tree_pkg_meta));
+
+	xpak_process_fd(pkg_ctx->fd, true, m, tree_read_file_binpkg_xpak_cb);
+	pkg_ctx->fd = -1;  /* closed by xpak_process_fd */
+
+	return m;
+}
+
 tree_pkg_meta *
 tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 {
 	tree_ctx *ctx = pkg_ctx->cat_ctx->ctx;
 
 	if (pkg_ctx->fd == -1) {
-		if (ctx->cachetype != CACHE_EBUILD) {
-			pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name,
-					O_RDONLY | O_CLOEXEC);
-		} else {
+		if (ctx->cachetype == CACHE_EBUILD || ctx->cachetype == CACHE_BINPKGS) {
 			char *p = (char *)pkg_ctx->name;
 			p += strlen(p);
 			*p = '.';
 			pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name,
 					O_RDONLY | O_CLOEXEC);
 			*p = '\0';
+		} else {
+			pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name,
+					O_RDONLY | O_CLOEXEC);
 		}
 		if (pkg_ctx->fd == -1)
 			return NULL;
@@ -832,6 +930,10 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 		return tree_read_file_pms(pkg_ctx);
 	} else if (ctx->cachetype == CACHE_EBUILD) {
 		return tree_read_file_ebuild(pkg_ctx);
+	} else if (ctx->cachetype == CACHE_BINPKGS) {
+		return tree_read_file_binpkg(pkg_ctx);
+	} else if (ctx->cachetype == CACHE_PACKAGES) {
+		return (tree_pkg_meta *)pkg_ctx->cat_ctx->ctx->pkgs;
 	}
 
 	warn("Unknown metadata cache type!");
@@ -841,8 +943,10 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 void
 tree_close_meta(tree_pkg_meta *cache)
 {
-	if (!cache)
+	if (cache == NULL)
 		errf("Cache is empty !");
+	if (cache->_data != NULL)
+		free(cache->_data);
 	free(cache);
 }
 
@@ -952,6 +1056,112 @@ tree_close_pkg(tree_pkg_ctx *pkg_ctx)
 	free(pkg_ctx);
 }
 
+static int
+tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
+{
+	char *p = ctx->pkgs;
+	char *q;
+	char *c;
+	size_t len = ctx->pkgslen;
+	int ret = 0;
+
+	/* reused for every entry */
+	tree_cat_ctx *cat = xzalloc(sizeof(tree_cat_ctx));
+	tree_pkg_ctx *pkg = xzalloc(sizeof(tree_pkg_ctx));
+	tree_pkg_meta *meta = xzalloc(sizeof(tree_pkg_meta));
+	depend_atom *atom = NULL;
+
+	cat->ctx = ctx;
+	pkg->cat_ctx = cat;
+
+	do {
+		/* find next line */
+		c = NULL;
+		for (q = p; len > 0 && *q != '\n'; q++, len--)
+			if (c == NULL && *q == ':')
+				c = q;
+
+		if (len == 0)
+			break;
+
+		/* empty line, end of a block */
+		if (p == q) {
+			/* make callback with populated atom */
+			if (atom != NULL) {
+				/* store meta ptr in repo->pkgs, such that get_pkg_meta
+				 * can grab it from there (for free) */
+				ctx->pkgs = (char *)meta;
+
+				cat->name = atom->CATEGORY;
+				pkg->name = atom->PN;
+				pkg->slot = meta->SLOT == NULL ? "0" : meta->SLOT;
+				pkg->repo = ctx->repo;
+				pkg->atom = atom;
+
+				/* do call callback with pkg_atom (populate cat and pkg) */
+				ret |= callback(pkg, priv);
+
+				atom_implode(atom);
+			}
+
+			memset(meta, 0, sizeof(meta[0]));
+			atom = NULL;
+			if (len > 0) {  /* hop over \n */
+				p++;
+				len--;
+			}
+			continue;
+		}
+
+		/* skip invalid lines */
+		if (c == NULL || q - c < 3 || c[1] != ' ')
+			continue;
+
+		/* NULL-terminate p and c, file should end with \n */
+		*q = '\0';
+		*c = '\0';
+		c += 2;         /* hop over ": " */
+		if (len > 0) {  /* hop over \n */
+			q++;
+			len--;
+		}
+
+		if (strcmp(p, "REPO") == 0) { /* from global section in older files */
+			ctx->repo = c;
+		} else if (strcmp(p, "CPV") == 0) {
+			if (atom != NULL)
+				atom_implode(atom);
+			atom = atom_explode(c);
+#define match_key(X) match_key2(X,X)
+#define match_key2(X,Y) \
+		} else if (strcmp(p, #X) == 0) { \
+			meta->Y = c
+		match_key(DEFINED_PHASES);
+		match_key(DEPEND);
+		match_key2(DESC, DESCRIPTION);
+		match_key(EAPI);
+		match_key(IUSE);
+		match_key(KEYWORDS);
+		match_key(LICENSE);
+		match_key2(MD5, _md5_);
+		match_key2(SHA1, _eclasses_);
+		match_key(RDEPEND);
+		match_key(SLOT);
+		match_key(USE);
+		match_key(PDEPEND);
+#undef match_key
+#undef match_key2
+		}
+
+		p = q;
+	} while (len > 0);
+
+	/* ensure we don't free a garbage pointer */
+	ctx->repo = NULL;
+
+	return ret;
+}
+
 int
 tree_foreach_pkg(tree_ctx *ctx,
 		tree_pkg_cb callback, void *priv, tree_cat_filter filter,
@@ -963,6 +1173,10 @@ tree_foreach_pkg(tree_ctx *ctx,
 
 	if (ctx == NULL)
 		return EXIT_FAILURE;
+
+	/* handle Packages (binpkgs index) file separately */
+	if (ctx->cachetype == CACHE_PACKAGES)
+		return tree_foreach_packages(ctx, callback, priv);
 
 	ctx->do_sort = sort;
 	if (catsortfunc != NULL)
@@ -1009,23 +1223,35 @@ tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 							&pkg_ctx->repo, &pkg_ctx->repo_len);
 				pkg_ctx->atom->REPO = pkg_ctx->repo;
 			}
-		} else { /* metadata or ebuild */
+		} else { /* metadata, ebuild, binpkg or Packages */
+			tree_pkg_meta *meta = NULL;
 			if (pkg_ctx->atom->SLOT == NULL) {
 				if (pkg_ctx->slot == NULL) {
-					tree_pkg_meta *meta = tree_pkg_read(pkg_ctx);
+					meta = tree_pkg_read(pkg_ctx);
 					if (meta != NULL) {
 						if (meta->SLOT != NULL) {
 							pkg_ctx->slot = xstrdup(meta->SLOT);
 							pkg_ctx->slot_len = strlen(pkg_ctx->slot);
 						}
-						tree_close_meta(meta);
 					}
 				}
 				pkg_ctx->atom->SLOT = pkg_ctx->slot;
 			}
 			/* repo is set from the tree, when found */
-			if (pkg_ctx->atom->REPO == NULL)
+			if (pkg_ctx->atom->REPO == NULL) {
+				if (pkg_ctx->repo == NULL && ctx->cachetype == CACHE_BINPKGS) {
+					if (meta == NULL)
+						meta = tree_pkg_read(pkg_ctx);
+					if (meta != NULL && meta->repository != NULL) {
+						pkg_ctx->repo = xstrdup(meta->repository);
+						pkg_ctx->repo_len = strlen(pkg_ctx->repo);
+					}
+				}
 				pkg_ctx->atom->REPO = pkg_ctx->repo;
+			}
+
+			if (meta != NULL)
+				tree_close_meta(meta);
 		}
 
 		/* this is a bit atom territory, but since we pulled in SLOT we
