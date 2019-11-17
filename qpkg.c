@@ -430,7 +430,8 @@ int qpkg_main(int argc, char **argv)
 			atom = tree_get_atom(pkg_ctx, false);
 			snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
 			for (i = optind; i < argc; ++i) {
-				if (!argv[i]) continue;
+				if (argv[i] == NULL)
+					continue;
 
 				if (!strcmp(argv[i], atom->PN) ||
 						!strcmp(argv[i], atom->P) ||
@@ -443,10 +444,6 @@ int qpkg_main(int argc, char **argv)
 		}
 	}
 
-	s = (argc - optind) - pkgs_made;
-	if (s && !pretend)
-		printf(" %s*%s %i package%s could not be matched :/\n",
-				RED, NORM, (int)s, (s > 1 ? "s" : ""));
 	if (pkgs_made)
 		qprintf(" %s*%s Packages can be found in %s\n",
 				GREEN, NORM, qpkg_bindir);
