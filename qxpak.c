@@ -80,7 +80,7 @@ _xpak_callback(
 		printf("%.*s: %d byte%s\n",
 				pathname_len, pathname,
 				data_len, (data_len > 1 ? "s" : ""));
-	else
+	else if (verbose != 0)
 		printf("%.*s: %d byte%s @ offset byte %d\n",
 				pathname_len, pathname,
 				data_len, (data_len > 1 ? "s" : ""), data_offset);
