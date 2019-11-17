@@ -13,8 +13,8 @@ test() {
 	local num=$1 exp=$2 ret=0
 	shift 2
 	eval "$@" > list || ret=$?
-	if ! diff -u list ${as}/list${num}.good ; then
-		tfail "output does not match"
+	if ! diff -u ${as}/list${num}.good list ; then
+		tfail "output does not match for: $*"
 	fi
 	if [[ ${exp} -ne ${ret} ]] ; then
 		tfail "exit code (${ret}) does not match expected (${exp})"
@@ -50,7 +50,7 @@ test 08 0 "qlist -C cpio"
 test 09 0 "qlist -C mtools -d"
 
 # ver test
-test 10 0 "qlist -Iv =mtools-4*"
+test 10 0 "qlist -ICv =mtools-4*"
 
 # repo test
 test 11 0 "qlist -ICR"
@@ -65,7 +65,7 @@ test 13 0 "qlist -Ce --showdebug app-arch/cpio:0::gentoo"
 test 14 0 "qlist -ICSS"
 
 # no matches
-test 15 1 "qlist -Iv lajsdflkjasdflkjasdfljasdf"
+test 15 1 "qlist -ICv lajsdflkjasdflkjasdfljasdf"
 
 # match test w/out sub-SLOT
 test 16 0 "qlist -ICSS virtual/sub-2:1"
