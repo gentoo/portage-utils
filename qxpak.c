@@ -75,7 +75,7 @@ _xpak_callback(
 	}
 
 	if (verbose == 0 + (xctx->extract ? 1 : 0))
-		printf("%.*s", pathname_len, pathname);
+		printf("%.*s\n", pathname_len, pathname);
 	else if (verbose == 1 + (xctx->extract ? 1 : 0))
 		printf("%.*s: %d byte%s\n",
 				pathname_len, pathname,
