@@ -336,23 +336,22 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	depend_atom *atom;
 
 	/* see if this cat/pkg is requested */
-	for (i = optind; i < state->argc; ++i)
-		if (qlist_match(pkg_ctx, state->argv[i],
-					&state->atoms[i - optind], state->exact))
-			break;
-	if ((i == state->argc) && (state->argc != optind))
-		return 0;
+	if (!state->all) {
+		for (i = optind; i < state->argc; ++i)
+			if (qlist_match(pkg_ctx, state->argv[i],
+						&state->atoms[i - optind], state->exact))
+				break;
+		if (i == state->argc)
+			return 0;
+	}
 
 	atom = tree_get_atom(pkg_ctx, state->need_full_atom);
 	if (state->just_pkgname) {
-		if ((state->all + state->just_pkgname) < 2) {
-			printf("%s%s\n",
-					atom_format(state->fmt, atom),
-					umapstr(state->show_umap, pkg_ctx));
-		}
+		printf("%s%s\n",
+				atom_format(state->fmt, atom),
+				umapstr(state->show_umap, pkg_ctx));
 
-		if (!state->all)
-			return 1;
+		return 1;
 	}
 
 	if (verbose)
@@ -449,7 +448,7 @@ int qlist_main(int argc, char **argv)
 	/* default to showing syms and objs */
 	if (!state.show_dir && !state.show_obj && !state.show_sym)
 		state.show_obj = state.show_sym = true;
-	if (argc == optind && !state.just_pkgname)
+	if (argc == optind && !state.all)
 		qlist_usage(EXIT_FAILURE);
 
 	if (state.fmt == NULL) {
