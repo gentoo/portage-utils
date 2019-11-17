@@ -4,6 +4,7 @@
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2019-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #include "main.h"
@@ -37,6 +38,10 @@
 #define XPAK_START_LEN       (8 + 4 + 4)
 #define XPAK_END_MSG         "XPAKSTOP"
 #define XPAK_END_MSG_LEN     8
+#define TBZ2_END_MSG         "STOP"
+#define TBZ2_END_MSG_LEN     4
+#define TBZ2_END_SIZE_LEN    4
+#define TBZ2_FOOTER_LEN      (TBZ2_END_MSG_LEN + TBZ2_END_SIZE_LEN)
 
 typedef struct {
 	void *ctx;
@@ -87,14 +92,36 @@ static _xpak_archive *_xpak_open(const int fd)
 	if ((ret.fp = fdopen(fd, "r")) == NULL)
 		return NULL;
 
-	/* verify this xpak doesnt suck */
+	/* verify this xpak doesn't suck */
 	if (fread(buf, 1, XPAK_START_LEN, ret.fp) != XPAK_START_LEN)
 		goto close_and_ret;
-	if (memcmp(buf, XPAK_START_MSG, XPAK_START_MSG_LEN)) {
+	if (memcmp(buf, XPAK_START_MSG, XPAK_START_MSG_LEN) != 0) {
+		/* stream not positioned at XPAKSTART, let's see if we can
+		 * reposition the stream */
+		if (fseek(ret.fp, -TBZ2_FOOTER_LEN, SEEK_END) == 0)
+		{
+			if (fread(buf, 1, TBZ2_FOOTER_LEN, ret.fp) != TBZ2_FOOTER_LEN)
+				goto close_and_ret;
+
+			if (memcmp(buf + TBZ2_END_SIZE_LEN,
+						TBZ2_END_MSG, TBZ2_END_MSG_LEN) == 0)
+			{
+				int xpaklen = READ_BE_INT32(buf);
+
+				if (fseek(ret.fp, -(xpaklen + TBZ2_FOOTER_LEN), SEEK_END) == 0)
+				{
+					if (fread(buf, 1, XPAK_START_LEN, ret.fp) != XPAK_START_LEN)
+						goto close_and_ret;
+					if (memcmp(buf, XPAK_START_MSG, XPAK_START_MSG_LEN) == 0)
+						goto setup_lens;
+				}
+			}
+		}
 		warn("Not an xpak file");
 		goto close_and_ret;
 	}
 
+setup_lens:
 	/* calc index and data sizes */
 	ret.index_len = READ_BE_INT32((unsigned char*)buf+XPAK_START_MSG_LEN);
 	ret.data_len = READ_BE_INT32((unsigned char*)buf+XPAK_START_MSG_LEN+4);
@@ -124,7 +151,7 @@ xpak_process_fd(
 	xpak_callback_t func)
 {
 	_xpak_archive *x;
-	char buf[BUFSIZE], ext[BUFSIZE*32];
+	char buf[BUFSIZE];
 	size_t in;
 
 	x = _xpak_open(fd);
@@ -142,8 +169,8 @@ xpak_process_fd(
 
 	if (get_data) {
 		/* the xpak may be large (like when it has CONTENTS) #300744 */
-		x->data = (size_t)x->data_len < sizeof(ext) ?
-			ext : xmalloc(x->data_len);
+		x->data = xmalloc(x->data_len);
+
 		in = fread(x->data, 1, x->data_len, x->fp);
 		if (in != (size_t)x->data_len)
 			err("insufficient data read, got %zd, requested %d",
@@ -157,7 +184,7 @@ xpak_process_fd(
 
 	_xpak_close(x);
 
-	if (get_data && x->data != ext)
+	if (get_data)
 		free(x->data);
 
 	return 0;
