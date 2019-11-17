@@ -56,13 +56,16 @@ extern const char *argv0;
 #endif
 
 #define READ_BE_INT32(P) \
-	(((P)[0] << 24) | ((P)[1] << 16) | ((P)[2] << 8 ) | (P)[3])
+	((((unsigned char *)(P))[0] << 24) | \
+	 (((unsigned char *)(P))[1] << 16) | \
+	 (((unsigned char *)(P))[2] << 8 ) | \
+	 (((unsigned char *)(P))[3]))
 #define WRITE_BE_INT32(P,I) \
 { \
-	(P)[0] = (I & 0xff000000) >> 24; \
-	(P)[1] = (I & 0x00ff0000) >> 16; \
-	(P)[2] = (I & 0x0000ff00) >> 8; \
-	(P)[3] = (I & 0x000000ff); \
+	((unsigned char *)(P))[0] = (I & 0xff000000) >> 24; \
+	((unsigned char *)(P))[1] = (I & 0x00ff0000) >> 16; \
+	((unsigned char *)(P))[2] = (I & 0x0000ff00) >> 8; \
+	((unsigned char *)(P))[3] = (I & 0x000000ff); \
 }
 
 /* Easy enough to glue to older versions */
