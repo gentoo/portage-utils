@@ -1,6 +1,8 @@
 installed: |
     Instead of listing the contents of a package, just print the package
     name if the package is currently installed.
+binpkgs: |
+    Operate on binary packages instead of installed packges.
 umap: |
     List USE-flags enabled when the package was installed.  This flag
     implies \fB\-I\fR.

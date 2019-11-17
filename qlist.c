@@ -21,16 +21,16 @@
 #include "tree.h"
 #include "xregex.h"
 
-#define QLIST_FLAGS "ISRUcDeadosF:" COMMON_FLAGS
+#define QLIST_FLAGS "IkSRUcDedosF:" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
+	{"binpkgs",   no_argument, NULL, 'k'},
 	{"slots",     no_argument, NULL, 'S'},
 	{"repo",      no_argument, NULL, 'R'},
 	{"umap",      no_argument, NULL, 'U'},
 	{"columns",   no_argument, NULL, 'c'},
 	{"showdebug", no_argument, NULL, 128},
 	{"exact",     no_argument, NULL, 'e'},
-	{"all",       no_argument, NULL, 'a'},
 	{"dir",       no_argument, NULL, 'd'},
 	{"obj",       no_argument, NULL, 'o'},
 	{"sym",       no_argument, NULL, 's'},
@@ -40,13 +40,13 @@ static struct option const qlist_long_opts[] = {
 };
 static const char * const qlist_opts_help[] = {
 	"Just show installed package names",
+	"Use binpkgs instead of installed packages",
 	"Display installed packages with slots (use twice for subslots)",
 	"Display installed packages with repository",
 	"Display installed packages with flags used",
 	"Display column view",
 	"Show /usr/lib/debug and /usr/src/debug files",
 	"Exact match (only CAT/PN or PN without PV)",
-	"Show every installed package",
 	"Only show directories",
 	"Only show objects",
 	"Only show symlinks",
@@ -410,6 +410,7 @@ int qlist_main(int argc, char **argv)
 	int show_slots = 0;
 	bool show_repo = false;
 	bool do_columns = false;
+	bool do_binpkgs = false;
 	char qfmt[128];
 	struct qlist_opt_state state = {
 		.argc = argc,
@@ -430,8 +431,8 @@ int qlist_main(int argc, char **argv)
 	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)
-		case 'a': state.all = true;                 /* fall through */
 		case 'I': state.just_pkgname = true;                    break;
+		case 'k': do_binpkgs = true;                            break;
 		case 'S': state.just_pkgname = true; show_slots++;      break;
 		case 'R': state.just_pkgname = show_repo = true;        break;
 		case 'U': state.just_pkgname = state.show_umap = true;  break;
@@ -448,8 +449,12 @@ int qlist_main(int argc, char **argv)
 	/* default to showing syms and objs */
 	if (!state.show_dir && !state.show_obj && !state.show_sym)
 		state.show_obj = state.show_sym = true;
-	if (argc == optind && !state.all)
-		qlist_usage(EXIT_FAILURE);
+	if (argc == optind) {
+		if (state.just_pkgname)
+			state.all = true;
+		else
+			qlist_usage(EXIT_FAILURE);
+	}
 
 	if (state.fmt == NULL) {
 		const char *l = "%[";
@@ -483,7 +488,10 @@ int qlist_main(int argc, char **argv)
 	state.buf = xmalloc(state.buflen);
 	state.atoms = xcalloc(argc - optind, sizeof(*state.atoms));
 	ret = 1;
-	vdb = tree_open_vdb(portroot, portvdb);
+	if (do_binpkgs)
+		vdb = tree_open_binpkg(portroot, pkgdir);
+	else
+		vdb = tree_open_vdb(portroot, portvdb);
 	if (vdb != NULL) {
 		ret = tree_foreach_pkg_sorted(vdb, qlist_cb, &state);
 		tree_close(vdb);
