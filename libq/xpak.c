@@ -77,6 +77,14 @@ static void _xpak_walk_index(
 		p += 4;
 		data_len = READ_BE_INT32((unsigned char*)p);
 		p += 4;
+
+		/* check offset and len individually to deal with overflow */
+		if (data_offset > x->index_len ||
+				data_len > x->index_len ||
+				data_offset + data_len > x->index_len)
+			err("Data for '%s' is out of bounds: offset=%u, len=%u\n",
+					pathname, data_len, data_offset);
+
 		(*func)(x->ctx, pathname, pathname_len,
 				data_offset, data_len, x->data);
 	}
