@@ -13,6 +13,7 @@
 #include <xalloc.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include "atom.h"
 #include "basename.h"
