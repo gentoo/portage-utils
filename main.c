@@ -570,9 +570,12 @@ read_portage_profile(const char *configroot, const char *profile, env_vars vars[
 	size_t configroot_len, profile_len, sub_len;
 	char *profile_file, *sub_file;
 	char *s;
+	char *buf = NULL;
+	size_t buf_len = 0;
+	char *saveptr;
 
-	static char *buf;
-	static size_t buf_len;
+	if (getenv("DEBUG"))
+		fprintf(stderr, "profile %s/%s\n", configroot, profile);
 
 	/* initialize the base profile path */
 	configroot_len = strlen(configroot);
@@ -593,13 +596,12 @@ read_portage_profile(const char *configroot, const char *profile, env_vars vars[
 	strcpy(sub_file, "parent");
 	if (eat_file(profile_file, &buf, &buf_len) == 0)
 		goto done;
-	rmspace(buf);
 
-	s = strtok(buf, "\n");
+	s = strtok_r(buf, "\n", &saveptr);
 	while (s) {
 		strncpy(sub_file, s, sub_len);
 		read_portage_profile("", profile_file, vars);
-		s = strtok(NULL, "\n");
+		s = strtok_r(NULL, "\n", &saveptr);
 	}
 
  done:
