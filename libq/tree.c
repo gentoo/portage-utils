@@ -1094,7 +1094,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 
 				cat->name = atom->CATEGORY;
 				pkg->name = atom->PN;
-				pkg->slot = meta->SLOT == NULL ? "0" : meta->SLOT;
+				pkg->slot = meta->SLOT == NULL ? (char *)"0" : meta->SLOT;
 				pkg->repo = ctx->repo;
 				pkg->atom = atom;
 
