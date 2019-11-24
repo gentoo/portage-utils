@@ -44,6 +44,7 @@ char *features;
 char *install_mask;
 DECLARE_ARRAY(overlays);
 DECLARE_ARRAY(overlay_names);
+DECLARE_ARRAY(overlay_src);
 
 static char *portarch;
 static char *portedb;
@@ -248,96 +249,6 @@ makeargv(const char *string, int *argc, char ***argv)
 	free(q);
 }
 
-/* Handle a single file in the repos.conf format. */
-static void
-read_one_repos_conf(const char *repos_conf)
-{
-	int nsec;
-	char *conf;
-	const char *main_repo, *repo, *path;
-	dictionary *dict;
-
-	if (getenv("DEBUG"))
-		fprintf(stderr, "  parse %s\n", repos_conf);
-
-	dict = iniparser_load(repos_conf);
-
-	main_repo = iniparser_getstring(dict, "DEFAULT:main-repo", NULL);
-
-	nsec = iniparser_getnsec(dict);
-	while (nsec-- > 0) {
-		repo = iniparser_getsecname(dict, nsec);
-		if (!strcmp(repo, "DEFAULT"))
-			continue;
-
-		xasprintf(&conf, "%s:location", repo);
-		path = iniparser_getstring(dict, conf, NULL);
-		if (path) {
-			void *ele = xarraypush_str(overlays, path);
-			xarraypush_str(overlay_names, repo);
-			if (main_repo && !strcmp(repo, main_repo))
-				main_overlay = ele;
-		}
-		free(conf);
-	}
-
-	iniparser_freedict(dict);
-}
-
-/* Handle a possible directory of files. */
-static void
-read_repos_conf(const char *configroot, const char *repos_conf)
-{
-	char *top_conf, *sub_conf;
-	int i, count;
-	struct dirent **confs;
-
-	xasprintf(&top_conf, "%s%s", configroot, repos_conf);
-	if (getenv("DEBUG"))
-		fprintf(stderr, "repos.conf.d scanner %s\n", top_conf);
-	count = scandir(top_conf, &confs, NULL, alphasort);
-	if (count == -1) {
-		if (errno == ENOTDIR)
-			read_one_repos_conf(top_conf);
-	} else {
-		for (i = 0; i < count; ++i) {
-			const char *name = confs[i]->d_name;
-
-			if (name[0] == '.' || name[0] == '\0')
-				continue;
-
-			/* Exclude backup files (aka files with ~ as postfix). */
-			if (name[strlen(name) - 1] == '~')
-				continue;
-
-#ifdef DT_UNKNOWN
-			if (confs[i]->d_type != DT_UNKNOWN &&
-			    confs[i]->d_type != DT_REG &&
-			    confs[i]->d_type != DT_LNK)
-				continue;
-#endif
-
-			xasprintf(&sub_conf, "%s/%s", top_conf, name);
-
-#ifdef DT_UNKNOWN
-			if (confs[i]->d_type != DT_REG)
-#endif
-			{
-				struct stat st;
-				if (stat(sub_conf, &st) || !S_ISREG(st.st_mode)) {
-					free(sub_conf);
-					continue;
-				}
-			}
-
-			read_one_repos_conf(sub_conf);
-			free(sub_conf);
-		}
-		scandir_free(confs, count);
-	}
-	free(top_conf);
-}
-
 static void
 strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 {
@@ -406,19 +317,33 @@ get_portage_env_var(env_vars *vars, const char *name)
 }
 
 static void
-set_portage_env_var(env_vars *var, const char *value)
+set_portage_env_var(env_vars *var, const char *value, const char *src)
 {
 	switch (var->type) {
 	case _Q_BOOL:
 		*var->value.b = 1;
+		free(var->src);
+		var->src = xstrdup(src);
 		break;
 	case _Q_STR:
 		free(*var->value.s);
 		*var->value.s = xstrdup(value);
 		var->value_len = strlen(value);
+		free(var->src);
+		var->src = xstrdup(src);
 		break;
 	case _Q_ISTR:
 		strincr_var(var->name, value, var->value.s, &var->value_len);
+		if (strcmp(var->src, "built-in default") == 0) {
+			free(var->src);
+			var->src = xstrdup(src);
+		} else {
+			size_t l = strlen(var->src) + 2 + strlen(src) + 1;
+			char *p = xmalloc(sizeof(char) * l);
+			snprintf(p, l, "%s, %s", var->src, src);
+			free(var->src);
+			var->src = p;
+		}
 		break;
 	}
 }
@@ -426,27 +351,22 @@ set_portage_env_var(env_vars *var, const char *value)
 /* Helper to read a portage env file (e.g. make.conf), or recursively if
  * it points to a directory */
 static void
-read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
+read_portage_env_file(const char *file, env_vars vars[])
 {
-	size_t i, buflen, line, configroot_len, file_len;
 	FILE *fp;
 	struct dirent **dents;
 	int dentslen;
-	char *buf, *s, *p;
+	char *s;
+	char *p;
+	char *buf = NULL;
+	size_t buflen = 0;
+	size_t line;
+	int i;
 
 	if (getenv("DEBUG"))
-		fprintf(stderr, "profile %s/%s\n", configroot, file);
+		fprintf(stderr, "profile %s\n", file);
 
-	configroot_len = strlen(configroot);
-	file_len = strlen(file);
-	buflen = configroot_len + file_len + 1;
-	buf = xmalloc(buflen);
-
-	memcpy(buf, configroot, configroot_len);
-	memcpy(buf + configroot_len, file, file_len);
-	buf[buflen - 1] = '\0';
-
-	if ((dentslen = scandir(buf, &dents, NULL, alphasort)) > 0) {
+	if ((dentslen = scandir(file, &dents, NULL, alphasort)) > 0) {
 		int di;
 		struct dirent *d;
 		char npath[_Q_PATH_MAX * 2];
@@ -458,44 +378,41 @@ read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 					d->d_name[strlen(d->d_name) - 1] == '~')
 				continue;
 			snprintf(npath, sizeof(npath), "%s/%s", file, d->d_name);
-			read_portage_env_file(configroot, npath, vars);
+			read_portage_env_file(npath, vars);
 		}
 		scandir_free(dents, dentslen);
 		goto done;
 	}
 
-	fp = fopen(buf, "r");
+	fp = fopen(file, "r");
 	if (fp == NULL)
 		goto done;
 
 	line = 0;
 	while (getline(&buf, &buflen, fp) != -1) {
-		++line;
+		line++;
 		rmspace(buf);
 		if (*buf == '#' || *buf == '\0')
 			continue;
 
 		/* Handle "source" keyword */
-		if (!strncmp(buf, "source ", 7)) {
+		if (strncmp(buf, "source ", 7) == 0) {
 			const char *sfile = buf + 7;
+			char npath[_Q_PATH_MAX * 2];
 
 			if (sfile[0] != '/') {
 				/* handle relative paths */
-				size_t file_path_len, source_len;
+				size_t file_path_len;
 
 				s = strrchr(file, '/');
 				file_path_len = s - file + 1;
-				source_len = strlen(sfile);
 
-				if (buflen <= source_len + file_path_len)
-					buf = xrealloc(buf,
-							buflen = source_len + file_path_len + 1);
-				memmove(buf + file_path_len, buf + 7, source_len + 1);
-				memcpy(buf, file, file_path_len);
-				sfile = buf;
+				snprintf(npath, sizeof(npath), "%.*s/%s",
+						(int)file_path_len, file, sfile);
+				sfile = npath;
 			}
 
-			read_portage_env_file(configroot, sfile, vars);
+			read_portage_env_file(sfile, vars);
 			continue;
 		}
 
@@ -506,7 +423,8 @@ read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 			if (strncmp(buf, vars[i].name, vars[i].name_len))
 				continue;
 
-			/* make sure we handle spaces between the varname, the =, and the value:
+			/* make sure we handle spaces between the varname, the =,
+			 * and the value:
 			 * VAR=val   VAR = val   VAR="val"
 			 */
 			s = buf + vars[i].name_len;
@@ -541,7 +459,8 @@ read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 					free(abuf);
 
 					if (!endq)
-						warn("%s:%zu: %s: quote mismatch", file, line, vars[i].name);
+						warn("%s:%zu: %s: quote mismatch",
+								file, line, vars[i].name);
 
 					s = buf + vars[i].name_len + 2;
 				} else {
@@ -554,7 +473,7 @@ read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 				s[off] = '\0';
 			}
 
-			set_portage_env_var(&vars[i], s);
+			set_portage_env_var(&vars[i], s, file);
 		}
 	}
 
@@ -565,47 +484,74 @@ read_portage_env_file(const char *configroot, const char *file, env_vars vars[])
 
 /* Helper to recursively read stacked make.defaults in profiles */
 static void
-read_portage_profile(const char *configroot, const char *profile, env_vars vars[])
+read_portage_profile(const char *profile, env_vars vars[])
 {
-	size_t configroot_len, profile_len, sub_len;
-	char *profile_file, *sub_file;
+	char profile_file[_Q_PATH_MAX * 3];
+	size_t profile_len;
 	char *s;
+	char *p;
 	char *buf = NULL;
 	size_t buf_len = 0;
 	char *saveptr;
 
 	if (getenv("DEBUG"))
-		fprintf(stderr, "profile %s/%s\n", configroot, profile);
+		fprintf(stderr, "profile %s\n", profile);
 
-	/* initialize the base profile path */
-	configroot_len = strlen(configroot);
-	profile_len = strlen(profile);
-	sub_len = 1024;	/* should be big enough for longest line in "parent" */
-	profile_file = xmalloc(configroot_len + profile_len + sub_len + 2);
+	/* create mutable/appendable copy */
+	profile_len = snprintf(profile_file, sizeof(profile_file), "%s/", profile);
 
-	memcpy(profile_file, configroot, configroot_len);
-	memcpy(profile_file + configroot_len, profile, profile_len);
-	sub_file = profile_file + configroot_len + profile_len + 1;
-	sub_file[-1] = '/';
+	/* check if we have enough space (should always be the case) */
+	if (sizeof(profile_file) - profile_len < sizeof("make.defaults"))
+		return;
 
 	/* first consume the profile's make.defaults */
-	strcpy(sub_file, "make.defaults");
-	read_portage_env_file("", profile_file, vars);
+	strcpy(profile_file + profile_len, "make.defaults");
+	read_portage_env_file(profile_file, vars);
 
 	/* now walk all the parents */
-	strcpy(sub_file, "parent");
+	strcpy(profile_file + profile_len, "parent");
 	if (eat_file(profile_file, &buf, &buf_len) == 0)
-		goto done;
+		return;
 
 	s = strtok_r(buf, "\n", &saveptr);
 	while (s) {
-		strncpy(sub_file, s, sub_len);
-		read_portage_profile("", profile_file, vars);
+		/* handle repo: notation (not in PMS, referenced in Wiki only?) */
+		if ((p = strchr(s, ':')) != NULL) {
+			char *overlay;
+			char *repo_name;
+			size_t n;
+
+			/* split repo from target */
+			*p++ = '\0';
+
+			/* match the repo */
+			repo_name = NULL;
+			array_for_each(overlays, n, overlay) {
+				repo_name = xarrayget(overlay_names, n);
+				if (strcmp(repo_name, s) == 0) {
+					snprintf(profile_file, sizeof(profile_file),
+							"%s/profiles/%s/", overlay, p);
+					break;
+				}
+				repo_name = NULL;
+			}
+			if (repo_name == NULL) {
+				warn("ignoring parent with unknown repo in profile: %s", s);
+				s = strtok_r(NULL, "\n", &saveptr);
+				continue;
+			}
+		} else {
+			snprintf(profile_file + profile_len,
+					sizeof(profile_file) - profile_len, "%s", s);
+		}
+		read_portage_profile(profile_file, vars);
+		/* restore original path in case we were repointed by profile */
+		if (p != NULL)
+			snprintf(profile_file, sizeof(profile_file), "%s/", profile);
 		s = strtok_r(NULL, "\n", &saveptr);
 	}
 
- done:
-	free(profile_file);
+	free(buf);
 }
 
 static bool nocolor = 0;
@@ -618,6 +564,7 @@ env_vars vars_to_read[] = {
 	set, \
 	lset, \
 	.default_value = d, \
+	.src = NULL, \
 },
 #define _Q_EVS(t, V, v, d) _Q_EV(t, V, .value.s = &v, .value_len = strlen(d), d)
 #define _Q_EVB(t, V, v, d) _Q_EV(t, V, .value.b = &v, .value_len = 0, d)
@@ -639,10 +586,104 @@ env_vars vars_to_read[] = {
 	_Q_EVS(STR,  PKGDIR,              pkgdir,              CONFIG_EPREFIX "var/cache/binpkgs/")
 	_Q_EVS(STR,  Q_VDB,               portvdb,             CONFIG_EPREFIX "var/db/pkg")
 	_Q_EVS(STR,  Q_EDB,               portedb,             CONFIG_EPREFIX "var/cache/edb")
-	{ NULL, 0, _Q_BOOL, { NULL }, 0, NULL, }
+	{ NULL, 0, _Q_BOOL, { NULL }, 0, NULL, NULL, }
 
 #undef _Q_EV
 };
+
+/* Handle a single file in the repos.conf format. */
+static void
+read_one_repos_conf(const char *repos_conf)
+{
+	int nsec;
+	char *conf;
+	const char *main_repo, *repo, *path;
+	dictionary *dict;
+
+	if (getenv("DEBUG"))
+		fprintf(stderr, "  parse %s\n", repos_conf);
+
+	dict = iniparser_load(repos_conf);
+
+	main_repo = iniparser_getstring(dict, "DEFAULT:main-repo", NULL);
+
+	nsec = iniparser_getnsec(dict);
+	while (nsec-- > 0) {
+		repo = iniparser_getsecname(dict, nsec);
+		if (!strcmp(repo, "DEFAULT"))
+			continue;
+
+		xasprintf(&conf, "%s:location", repo);
+		path = iniparser_getstring(dict, conf, NULL);
+		if (path) {
+			void *ele = xarraypush_str(overlays, path);
+			xarraypush_str(overlay_names, repo);
+			xarraypush_str(overlay_src, repos_conf);
+			if (main_repo && !strcmp(repo, main_repo)) {
+				main_overlay = ele;
+				set_portage_env_var(&vars_to_read[11] /* PORTDIR */,
+						main_overlay, repos_conf);
+			}
+		}
+		free(conf);
+	}
+
+	iniparser_freedict(dict);
+}
+
+/* Handle a possible directory of files. */
+static void
+read_repos_conf(const char *configroot, const char *repos_conf)
+{
+	char *top_conf, *sub_conf;
+	int i, count;
+	struct dirent **confs;
+
+	xasprintf(&top_conf, "%s%s", configroot, repos_conf);
+	if (getenv("DEBUG"))
+		fprintf(stderr, "repos.conf.d scanner %s\n", top_conf);
+	count = scandir(top_conf, &confs, NULL, alphasort);
+	if (count == -1) {
+		if (errno == ENOTDIR)
+			read_one_repos_conf(top_conf);
+	} else {
+		for (i = 0; i < count; ++i) {
+			const char *name = confs[i]->d_name;
+
+			if (name[0] == '.' || name[0] == '\0')
+				continue;
+
+			/* Exclude backup files (aka files with ~ as postfix). */
+			if (name[strlen(name) - 1] == '~')
+				continue;
+
+#ifdef DT_UNKNOWN
+			if (confs[i]->d_type != DT_UNKNOWN &&
+			    confs[i]->d_type != DT_REG &&
+			    confs[i]->d_type != DT_LNK)
+				continue;
+#endif
+
+			xasprintf(&sub_conf, "%s/%s", top_conf, name);
+
+#ifdef DT_UNKNOWN
+			if (confs[i]->d_type != DT_REG)
+#endif
+			{
+				struct stat st;
+				if (stat(sub_conf, &st) || !S_ISREG(st.st_mode)) {
+					free(sub_conf);
+					continue;
+				}
+			}
+
+			read_one_repos_conf(sub_conf);
+			free(sub_conf);
+		}
+		scandir_free(confs, count);
+	}
+	free(top_conf);
+}
 
 static void
 initialize_portage_env(void)
@@ -650,34 +691,71 @@ initialize_portage_env(void)
 	size_t i;
 	const char *s;
 	env_vars *var;
+	char pathbuf[_Q_PATH_MAX];
+	const char *configroot = getenv("PORTAGE_CONFIGROOT");
+	char *orig_main_overlay = main_overlay;
 
 	/* initialize all the strings with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
 		var = &vars_to_read[i];
 		if (var->type != _Q_BOOL)
 			*var->value.s = xstrdup(var->default_value);
+		var->src = xstrdup("built-in default");
 	}
 
 	/* figure out where to find our config files */
-	const char *configroot = getenv("PORTAGE_CONFIGROOT");
 	if (!configroot)
-		configroot = CONFIG_EPREFIX "/";
+		configroot = CONFIG_EPREFIX;
+
+	/* rstrip /-es */
+	i = strlen(configroot);
+	while (i > 0 && configroot[i - 1] == '/')
+		i--;
+
+	/* read overlays first so we can resolve repo references in profile
+	 * parent files */
+	snprintf(pathbuf, sizeof(pathbuf), "%.*s", (int)i, configroot);
+	read_repos_conf(pathbuf, "/usr/share/portage/config/repos.conf");
+	read_repos_conf(pathbuf, "/etc/portage/repos.conf");
+	if (orig_main_overlay != main_overlay)
+		free(orig_main_overlay);
+	if (array_cnt(overlays) == 0) {
+		xarraypush_ptr(overlays, main_overlay);
+		xarraypush_str(overlay_names, "<PORTDIR>");
+		xarraypush_str(overlay_src, "built-in default");
+	} else if (orig_main_overlay == main_overlay) {
+		/* if no explicit overlay was flagged as main, take the first one */
+		main_overlay = array_get_elem(overlays, 0);
+		set_portage_env_var(&vars_to_read[11] /* PORTDIR */, main_overlay,
+				(char *)array_get_elem(overlay_src, 0));
+	}
 
 	/* walk all the stacked profiles */
-	read_portage_profile(configroot, "/etc/make.profile", vars_to_read);
-	read_portage_profile(configroot, "/etc/portage/make.profile", vars_to_read);
+	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/make.profile",
+			(int)i, configroot);
+	read_portage_profile(pathbuf, vars_to_read);
+	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/portage/make.profile",
+			(int)i, configroot);
+	read_portage_profile(pathbuf, vars_to_read);
 
 	/* now read all the config files */
-	read_portage_env_file("", CONFIG_EPREFIX "usr/share/portage/config/make.globals", vars_to_read);
-	read_portage_env_file(configroot, "/etc/make.conf", vars_to_read);
-	read_portage_env_file(configroot, "/etc/portage/make.conf", vars_to_read);
+	snprintf(pathbuf, sizeof(pathbuf),
+			"%.*s/usr/share/portage/config/make.globals",
+			(int)i, configroot);
+	read_portage_env_file(pathbuf, vars_to_read);
+	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/make.conf",
+			(int)i, configroot);
+	read_portage_env_file(pathbuf, vars_to_read);
+	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/portage/make.conf",
+			(int)i, configroot);
+	read_portage_env_file(pathbuf, vars_to_read);
 
 	/* finally, check the env */
 	for (i = 0; vars_to_read[i].name; ++i) {
 		var = &vars_to_read[i];
 		s = getenv(var->name);
 		if (s != NULL)
-			set_portage_env_var(var, s);
+			set_portage_env_var(var, s, var->name);
 	}
 
 	/* expand any nested variables e.g. PORTDIR=${EPREFIX}/usr/portage */
@@ -734,7 +812,8 @@ initialize_portage_env(void)
 			*svar = byte;
 			slen = strlen(sval);
 			post_len = strlen(svar + !!brace);
-			*var->value.s = xrealloc(*var->value.s, pre_len + MAX(var_len, slen) + post_len + 1);
+			*var->value.s = xrealloc(*var->value.s,
+					pre_len + MAX(var_len, slen) + post_len + 1);
 
 			/*
 			 * VAR=XxXxX	(slen = 5)
@@ -756,18 +835,6 @@ initialize_portage_env(void)
 		portroot = xrealloc(portroot, var->value_len + 2);
 		portroot[var->value_len] = '/';
 		portroot[var->value_len + 1] = '\0';
-	}
-
-	char *orig_main_overlay = main_overlay;
-	read_repos_conf(configroot, "/etc/portage/repos.conf");
-	if (orig_main_overlay != main_overlay)
-		free(orig_main_overlay);
-	if (array_cnt(overlays) == 0) {
-		xarraypush_ptr(overlays, main_overlay);
-		xarraypush_str(overlay_names, "<PORTDIR>");
-	} else if (orig_main_overlay == main_overlay) {
-		/* if no explicit overlay was flagged as main, take the first one */
-		main_overlay = array_get_elem(overlays, 0);
 	}
 
 	if (getenv("DEBUG")) {

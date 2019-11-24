@@ -168,6 +168,7 @@ extern char *features;
 extern char *install_mask;
 extern DEFINE_ARRAY(overlays);
 extern DEFINE_ARRAY(overlay_names);
+extern DEFINE_ARRAY(overlay_src);
 extern char *main_overlay;
 extern int twidth;
 

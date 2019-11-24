@@ -33,7 +33,7 @@ static struct option const q_long_opts[] = {
 static const char * const q_opts_help[] = {
 	"Install symlinks for applets",
 	"Print available overlays (read from repos.conf)",
-	"Print found environment variables and their values",
+	"Print used variables and their found values",
 	COMMON_OPTS_HELP
 };
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, NULL, lookup_applet_idx("q"))
@@ -179,10 +179,14 @@ int q_main(int argc, char **argv)
 				if (repo_name != NULL)
 					rmspace(repo_name);
 			}
-			printf("%s%s%s: %s%s%s%s\n",
+			printf("%s%s%s: %s%s%s%s",
 					GREEN, repo_name == NULL ? "?unknown?" : repo_name,
 					NORM, overlay,
 					YELLOW, main_overlay == overlay ? " (main)" : "", NORM);
+			if (verbose)
+				printf(" [%s]\n", (char *)xarrayget(overlay_src, n));
+			else
+				printf("\n");
 			if (repo_name_len != 0) {
 				free(repo_name);
 				repo_name_len = 0;
@@ -210,14 +214,18 @@ int q_main(int argc, char **argv)
 				printf("%s%s%s=", BLUE, var->name, NORM);
 				switch (var->type) {
 					case _Q_BOOL:
-						printf("%s%s%s\n",
+						printf("%s%s%s",
 								YELLOW, *var->value.b ? "1" : "0", NORM);
 						break;
 				case _Q_STR:
 				case _Q_ISTR:
-						printf("%s\"%s\"%s\n", RED, *var->value.s, NORM);
+						printf("%s\"%s\"%s", RED, *var->value.s, NORM);
 						break;
 				}
+				if (verbose)
+					printf(" [%s]\n", var->src);
+				else
+					printf("\n");
 			}
 		} else {
 			/* single envvar printing, just output the value, like
@@ -238,6 +246,10 @@ int q_main(int argc, char **argv)
 						printf("%s%s%s\n", RED, *var->value.s, NORM);
 						break;
 				}
+				if (verbose)
+					printf(" [%s]\n", var->src);
+				else
+					printf("\n");
 			}
 		}
 

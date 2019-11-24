@@ -149,6 +149,7 @@ typedef struct {
 	} value;
 	size_t value_len;
 	const char *default_value;
+	char *src;
 } env_vars;
 extern env_vars vars_to_read[];
 
