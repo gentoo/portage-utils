@@ -20,10 +20,10 @@ for x in ${all} ; do
 	quse -eCD $x > x
 	sed -n -e "/^$x - /{s|^[^ ]* - |global[$x] |;p}" "$f" > good
 	cat good >> all.good
-	diff -u x good
+	diff -u good x
 done
 quse -eCD ${all} > x
-diff -u x all.good
+diff -u all.good x
 rm x good all.good
 tpass "use.desc"
 
@@ -34,10 +34,10 @@ for x in ${all} ; do
 	quse -eCD $x > x
 	sed -n -e "/^[^:]*:$x - /{s|^\([^:]*\):[^ ]* - |\1[$x] |;p}" "$f" > good
 	cat good >> all.good
-	diff -u x good
+	diff -u good x
 done
 quse -eCD ${all} > x
-diff -u x all.good
+diff -u all.good x
 rm x good all.good
 tpass "use.local.desc"
 
@@ -51,10 +51,10 @@ for x in ${all} ; do
 	dispf=${dispf^^}
 	sed -n -e "/^$x - /{s|^[^ ]* - |${dispf}[$x] |;p}" "$f" > good
 	cat good >> all.good
-	diff -u x good
+	diff -u good x
 done
 quse -eCD ${all} > x
-diff -u x all.good
+diff -u all.good x
 rm x good all.good
 tpass "desc/elibc.desc"
 
