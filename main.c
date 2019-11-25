@@ -638,8 +638,11 @@ read_one_repos_conf(const char *repos_conf)
 				xarraypush_str(overlay_names, repo);
 				xarraypush_str(overlay_src, repos_conf);
 			}
-			if (main_repo && strcmp(repo, main_repo) == 0)
+			if (main_repo && strcmp(repo, main_repo) == 0) {
 				main_overlay = ele;
+				free(vars_to_read[11 /* PORTDIR */].src);
+				vars_to_read[11 /* PORTDIR */].src = xstrdup(repos_conf);
+			}
 		}
 		free(conf);
 	}
