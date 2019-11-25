@@ -494,9 +494,6 @@ read_portage_profile(const char *profile, env_vars vars[])
 	size_t buf_len = 0;
 	char *saveptr;
 
-	if (getenv("DEBUG"))
-		fprintf(stderr, "profile %s\n", profile);
-
 	/* create mutable/appendable copy */
 	profile_len = snprintf(profile_file, sizeof(profile_file), "%s/", profile);
 
@@ -504,11 +501,9 @@ read_portage_profile(const char *profile, env_vars vars[])
 	if (sizeof(profile_file) - profile_len < sizeof("make.defaults"))
 		return;
 
-	/* first consume the profile's make.defaults */
-	strcpy(profile_file + profile_len, "make.defaults");
-	read_portage_env_file(profile_file, vars);
-
-	/* now walk all the parents */
+	/* first walk all the parents, PMS 5.2.1 defines that it should
+	 * treat parent profiles as defaults, that can be overridden by
+	 * *this* profile. */
 	strcpy(profile_file + profile_len, "parent");
 	if (eat_file(profile_file, &buf, &buf_len) == 0)
 		return;
@@ -552,6 +547,10 @@ read_portage_profile(const char *profile, env_vars vars[])
 	}
 
 	free(buf);
+
+	/* now consume *this* profile's make.defaults */
+	strcpy(profile_file + profile_len, "make.defaults");
+	read_portage_env_file(profile_file, vars);
 }
 
 static bool nocolor = 0;
@@ -749,6 +748,12 @@ initialize_portage_env(void)
 				(char *)array_get_elem(overlay_src, 0));
 	}
 
+	/* consider Portage's defaults */
+	snprintf(pathbuf, sizeof(pathbuf),
+			"%.*s/usr/share/portage/config/make.globals",
+			(int)i, configroot);
+	read_portage_env_file(pathbuf, vars_to_read);
+
 	/* walk all the stacked profiles */
 	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/make.profile",
 			(int)i, configroot);
@@ -758,10 +763,6 @@ initialize_portage_env(void)
 	read_portage_profile(pathbuf, vars_to_read);
 
 	/* now read all the config files */
-	snprintf(pathbuf, sizeof(pathbuf),
-			"%.*s/usr/share/portage/config/make.globals",
-			(int)i, configroot);
-	read_portage_env_file(pathbuf, vars_to_read);
 	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/make.conf",
 			(int)i, configroot);
 	read_portage_env_file(pathbuf, vars_to_read);
