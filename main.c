@@ -333,8 +333,7 @@ set_portage_env_var(env_vars *var, const char *value, const char *src)
 		var->src = xstrdup(src);
 		break;
 	case _Q_ISTR:
-		strincr_var(var->name, value, var->value.s, &var->value_len);
-		if (strcmp(var->src, "built-in default") == 0) {
+		if (*var->value.s == NULL) {
 			free(var->src);
 			var->src = xstrdup(src);
 		} else {
@@ -344,6 +343,7 @@ set_portage_env_var(env_vars *var, const char *value, const char *src)
 			free(var->src);
 			var->src = p;
 		}
+		strincr_var(var->name, value, var->value.s, &var->value_len);
 		break;
 	}
 }
@@ -616,14 +616,30 @@ read_one_repos_conf(const char *repos_conf)
 		xasprintf(&conf, "%s:location", repo);
 		path = iniparser_getstring(dict, conf, NULL);
 		if (path) {
-			void *ele = xarraypush_str(overlays, path);
-			xarraypush_str(overlay_names, repo);
-			xarraypush_str(overlay_src, repos_conf);
-			if (main_repo && !strcmp(repo, main_repo)) {
-				main_overlay = ele;
-				set_portage_env_var(&vars_to_read[11] /* PORTDIR */,
-						main_overlay, repos_conf);
+			void *ele;
+			size_t n;
+			char *overlay;
+
+			array_for_each(overlay_names, n, overlay) {
+				if (strcmp(overlay, repo) == 0)
+					break;
+				overlay = NULL;
 			}
+			if (overlay != NULL) {
+				/* replace overlay */
+				ele = array_get_elem(overlay_src, n);
+				free(ele);
+				array_get_elem(overlay_src, n) = xstrdup(repos_conf);
+				ele = array_get_elem(overlays, n);
+				free(ele);
+				ele = array_get_elem(overlays, n) = xstrdup(path);
+			} else {
+				ele = xarraypush_str(overlays, path);
+				xarraypush_str(overlay_names, repo);
+				xarraypush_str(overlay_src, repos_conf);
+			}
+			if (main_repo && strcmp(repo, main_repo) == 0)
+				main_overlay = ele;
 		}
 		free(conf);
 	}

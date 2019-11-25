@@ -13,10 +13,6 @@ entries() {
 	sed -e 's:#.*::' -e '/^$/d' "$1"
 }
 
-# temp for Travis debugging
-q -Cov
-q -Cev
-
 # check use.desc
 f="$d/use.desc"
 all=$(entries "$f" | awk '{print $1}')
