@@ -2,32 +2,22 @@
 
 . ../init.sh || exit 1
 
-qenv() {
-	# get q to dump its processed env so we can check
-	DEBUG= q -V 2>&1 >/dev/null
-}
-
 # Usage: <profile dir suffix> <variable> <value>
 tenv() {
 	local profile=$1 var=$2 exp=$3
 
 	export PORTAGE_CONFIGROOT=${as}/profile${profile}
-	local e=$(qenv)
-
-	res=$(echo "${e}" | sed -n "/^${var} = /{s:^${var} = ::;p}")
+	res=$(q -e "${var}")
 
 	[[ ${res} == "${exp}" ]]
 	if ! tend $? "(${profile}) ${var} = ${exp}" ; then
 		echo "we got: {${res}}"
-		echo "full env:"
-		echo "${e}" | while read line ; do
-			printf '\t{%s}\n' "${line}"
-		done
+		echo "full env: $(q -ev "${var}")"
 	fi
 }
 
 # clear out env vars that would affect our tests
-unset $(qenv | awk '{print $1}')
+unset $(q -e | cut -d= -f1)
 
 # test vars that should default to known values.
 # cannot test too many more as portage's default

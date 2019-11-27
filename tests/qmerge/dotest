@@ -4,6 +4,8 @@
 
 set -e
 
+unset CONFIG_PROTECT CONFIG_PROTECT_MASK EPREFIX
+
 export QMERGE=1
 export PKGDIR=${as}/packages
 export FEATURES='config-protect-if-modified'

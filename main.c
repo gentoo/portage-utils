@@ -51,6 +51,8 @@ static char *portedb;
 static char *eprefix;
 static char *accept_license;
 
+#define STR_DEFAULT "built-in default"
+
 /* helper functions for showing errors */
 const char *argv0;
 
@@ -333,15 +335,18 @@ set_portage_env_var(env_vars *var, const char *value, const char *src)
 		var->src = xstrdup(src);
 		break;
 	case _Q_ISTR:
-		if (*var->value.s == NULL) {
-			free(var->src);
-			var->src = xstrdup(src);
-		} else {
+		if (strcmp(var->src, STR_DEFAULT) != 0) {
 			size_t l = strlen(var->src) + 2 + strlen(src) + 1;
 			char *p = xmalloc(sizeof(char) * l);
 			snprintf(p, l, "%s, %s", var->src, src);
 			free(var->src);
 			var->src = p;
+		} else {
+			free(*var->value.s);
+			*var->value.s = NULL;
+			var->value_len = 0;
+			free(var->src);
+			var->src = xstrdup(src);
 		}
 		strincr_var(var->name, value, var->value.s, &var->value_len);
 		break;
@@ -718,7 +723,7 @@ initialize_portage_env(void)
 		var = &vars_to_read[i];
 		if (var->type != _Q_BOOL)
 			*var->value.s = xstrdup(var->default_value);
-		var->src = xstrdup("built-in default");
+		var->src = xstrdup(STR_DEFAULT);
 	}
 
 	/* figure out where to find our config files */
@@ -740,7 +745,7 @@ initialize_portage_env(void)
 	if (array_cnt(overlays) == 0) {
 		xarraypush_ptr(overlays, main_overlay);
 		xarraypush_str(overlay_names, "<PORTDIR>");
-		xarraypush_str(overlay_src, "built-in default");
+		xarraypush_str(overlay_src, STR_DEFAULT);
 	} else if (orig_main_overlay == main_overlay) {
 		/* if no explicit overlay was flagged as main, take the first one */
 		main_overlay = array_get_elem(overlays, 0);
