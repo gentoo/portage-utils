@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+# --errors-for-leak-kinds= drop possible due to Solaris libc/_findbuf
+valgrind \
+	--leak-check=full \
+	--track-fds=yes \
+	--malloc-fill=0xdb \
+	--free-fill=0xbd \
+	--log-file=q-valgrind.log \
+	--errors-for-leak-kinds=definite \
+	--error-exitcode=234 \
+	"${@}"
+ret=$?
+if [[ ${ret} == 234 ]] ; then
+	mv q-valgrind.log q-valgrind.$$.log
+	echo "valgrind log can be found at ${PWD}/q-valgrind.$$.log" > /dev/stderr
+else
+	rm q-valgrind.log
+fi
+
+exit ${ret}

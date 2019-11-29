@@ -31,6 +31,16 @@ export TZ='UTC 0'
 # create symlinks for applets
 q -i -q
 
+# inject valgrind wrapper if necessary
+if [[ -n ${Q_RUN_WITH_VALGRIND} ]] ; then
+	chmod 755 "@abs_top_srcdir@/tests/valgrind-wrapper/qvalgrind"
+	for f in @abs_top_builddir@/q?* ; do
+		[[ -L ${f} ]] || continue
+		f=${f##*/}
+		eval "$f() { "@abs_top_srcdir@/tests/valgrind-wrapper/qvalgrind" $f \"\${@}\" ; }"
+	done
+fi
+
 tret=0
 tpassed=0
 tfailed=0
