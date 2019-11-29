@@ -617,7 +617,7 @@ read_one_repos_conf(const char *repos_conf)
 	nsec = iniparser_getnsec(dict);
 	while (nsec-- > 0) {
 		repo = iniparser_getsecname(dict, nsec);
-		if (!strcmp(repo, "DEFAULT"))
+		if (strcmp(repo, "DEFAULT") == 0)  /* already handled above */
 			continue;
 
 		xasprintf(&conf, "%s:location", repo);
@@ -646,7 +646,6 @@ read_one_repos_conf(const char *repos_conf)
 				xarraypush_str(overlay_src, repos_conf);
 			}
 			if (main_repo && strcmp(repo, main_repo) == 0) {
-				free(main_overlay);
 				main_overlay = ele;
 				free(vars_to_read[11 /* PORTDIR */].src);
 				vars_to_read[11 /* PORTDIR */].src = xstrdup(repos_conf);
@@ -720,7 +719,7 @@ initialize_portage_env(void)
 	env_vars *var;
 	char pathbuf[_Q_PATH_MAX];
 	const char *configroot = getenv("PORTAGE_CONFIGROOT");
-	char *orig_main_overlay = main_overlay;
+	char *orig_main_overlay;
 
 	/* initialize all the strings with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
@@ -741,6 +740,7 @@ initialize_portage_env(void)
 
 	/* read overlays first so we can resolve repo references in profile
 	 * parent files */
+	orig_main_overlay = main_overlay;
 	snprintf(pathbuf, sizeof(pathbuf), "%.*s", (int)i, configroot);
 	read_repos_conf(pathbuf, "/usr/share/portage/config/repos.conf");
 	read_repos_conf(pathbuf, "/etc/portage/repos.conf");
@@ -752,6 +752,7 @@ initialize_portage_env(void)
 		xarraypush_str(overlay_src, STR_DEFAULT);
 	} else if (orig_main_overlay == main_overlay) {
 		/* if no explicit overlay was flagged as main, take the first one */
+		free(orig_main_overlay);
 		main_overlay = array_get_elem(overlays, 0);
 		set_portage_env_var(&vars_to_read[11] /* PORTDIR */, main_overlay,
 				(char *)array_get_elem(overlay_src, 0));
