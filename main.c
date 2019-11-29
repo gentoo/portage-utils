@@ -510,8 +510,11 @@ read_portage_profile(const char *profile, env_vars vars[])
 	 * treat parent profiles as defaults, that can be overridden by
 	 * *this* profile. */
 	strcpy(profile_file + profile_len, "parent");
-	if (eat_file(profile_file, &buf, &buf_len) == 0)
+	if (eat_file(profile_file, &buf, &buf_len) == 0) {
+		if (buf != NULL)
+			free(buf);
 		return;
+	}
 
 	s = strtok_r(buf, "\n", &saveptr);
 	while (s) {
@@ -643,6 +646,7 @@ read_one_repos_conf(const char *repos_conf)
 				xarraypush_str(overlay_src, repos_conf);
 			}
 			if (main_repo && strcmp(repo, main_repo) == 0) {
+				free(main_overlay);
 				main_overlay = ele;
 				free(vars_to_read[11 /* PORTDIR */].src);
 				vars_to_read[11 /* PORTDIR */].src = xstrdup(repos_conf);

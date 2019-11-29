@@ -187,5 +187,6 @@ int qsearch_main(int argc, char **argv)
 		}
 	}
 
+	regfree(&state.search_expr);
 	return ret;
 }
