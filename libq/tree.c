@@ -550,12 +550,11 @@ tree_read_file_pms(tree_pkg_ctx *pkg_ctx)
 
 	len = sizeof(*ret) + s.st_size + 1;
 	ret = xzalloc(len);
-	ptr = (char*)ret;
-	ret->_data = ptr + sizeof(*ret);
-	if ((off_t)fread(ret->_data, 1, s.st_size, f) != s.st_size)
+	ptr = (char*)ret + sizeof(*ret);
+	if ((off_t)fread(ptr, 1, s.st_size, f) != s.st_size)
 		goto err;
 
-	ret->DEPEND = ret->_data;
+	ret->DEPEND = ptr;
 #define next_line(curr, next) \
 	if ((ptr = strchr(ret->curr, '\n')) == NULL) { \
 		warn("Invalid cache file for '%s'", buf); \
@@ -618,9 +617,8 @@ tree_read_file_md5(tree_pkg_ctx *pkg_ctx)
 
 	len = sizeof(*ret) + s.st_size + 1;
 	ret = xzalloc(len);
-	ptr = (char*)ret;
-	ret->_data = ptr + sizeof(*ret);
-	if ((off_t)fread(ret->_data, 1, s.st_size, f) != s.st_size)
+	ptr = (char*)ret + sizeof(*ret);
+	if ((off_t)fread(ptr, 1, s.st_size, f) != s.st_size)
 		goto err;
 
 	/* We have a block of key=value\n data.
@@ -638,7 +636,6 @@ tree_read_file_md5(tree_pkg_ctx *pkg_ctx)
 #define assign_var(keyname) \
 	assign_var_cmp(keyname, #keyname);
 
-	ptr = ret->_data;
 	endptr = strchr(ptr, '\0');
 	if (endptr == NULL) {
 			warn("Invalid cache file for '%s/%s': "
@@ -731,12 +728,10 @@ tree_read_file_ebuild(tree_pkg_ctx *pkg_ctx)
 
 	len = sizeof(*ret) + s.st_size + 1;
 	ret = xzalloc(len);
-	p = (char *)ret;
-	ret->_data = p + sizeof(*ret);
-	if ((off_t)fread(ret->_data, 1, s.st_size, f) != s.st_size)
+	p = (char *)ret + sizeof(*ret);
+	if ((off_t)fread(p, 1, s.st_size, f) != s.st_size)
 		goto err;
 
-	p = ret->_data;
 	do {
 		q = p;
 		while (*p >= 'A' && *p <= 'Z')
