@@ -1014,6 +1014,42 @@ static int do_emerge_log(
 			printf("\n");
 		}
 	}
+
+	{
+		DECLARE_ARRAY(t);
+		values_set(merge_averages, t);
+		array_for_each(t, i, pkgw) {
+			atom_implode(pkgw->atom);
+			free(pkgw);
+		}
+		xarrayfree_int(t);
+		values_set(unmerge_averages, t);
+		array_for_each(t, i, pkgw) {
+			atom_implode(pkgw->atom);
+			free(pkgw);
+		}
+		xarrayfree_int(t);
+	}
+	free_set(merge_averages);
+	free_set(unmerge_averages);
+	array_for_each_rev(merge_matches, i, pkgw) {
+		atom_implode(pkgw->atom);
+		xarraydelete(merge_matches, i);
+	}
+	xarrayfree(merge_matches);
+	array_for_each_rev(unmerge_matches, i, pkgw) {
+		atom_implode(pkgw->atom);
+		xarraydelete(unmerge_matches, i);
+	}
+	xarrayfree(unmerge_matches);
+	if (atomset != NULL) {
+		DECLARE_ARRAY(t);
+		values_set(atomset, t);
+		array_for_each(t, i, atom)
+			atom_implode(atom);
+		xarrayfree_int(t);
+		free_set(atomset);
+	}
 	return 0;
 }
 
@@ -1073,7 +1109,8 @@ static array_t *probe_proc(array_t *atoms)
 					rpath[rpathlen] = '\0';
 					/* check if this points to a portage build:
 					 * <somepath>/portage/<cat>/<pf>/temp/build.log */
-					if (strcmp(rpath + rpathlen -
+					if (rpathlen > sizeof("/temp/build.log") &&
+								strcmp(rpath + rpathlen -
 								(sizeof("/temp/build.log") - 1),
 								"/temp/build.log") == 0 &&
 							(p = strstr(rpath, "/portage/")) != NULL)

@@ -752,6 +752,7 @@ process_dir_gen(void)
 		gerr = gpgme_signers_add(gctx, gkey);
 		if (gerr != GPG_ERR_NO_ERROR)
 			return "failed to add GPG key to sign list, is it a suitable key?";
+		gpgme_key_unref(gkey);
 
 		gpg_pass = NULL;
 		if (gpg_get_password) {
@@ -859,11 +860,6 @@ verify_gpg_sig(const char *path, verify_msg **msgs)
 	struct tm *ctime;
 	gpg_sig *ret = NULL;
 
-	if ((f = fopen(path, "r")) == NULL) {
-		msgs_add(msgs, path, NULL, "failed to open: %s", strerror(errno));
-		return NULL;
-	}
-
 	if (gpgme_new(&g_ctx) != GPG_ERR_NO_ERROR) {
 		msgs_add(msgs, path, NULL, "failed to create gpgme context");
 		return NULL;
@@ -871,17 +867,32 @@ verify_gpg_sig(const char *path, verify_msg **msgs)
 
 	if (gpgme_data_new(&out) != GPG_ERR_NO_ERROR) {
 		msgs_add(msgs, path, NULL, "failed to create gpgme data");
+		gpgme_release(g_ctx);
+		return NULL;
+	}
+
+	if ((f = fopen(path, "r")) == NULL) {
+		msgs_add(msgs, path, NULL, "failed to open: %s", strerror(errno));
+		gpgme_data_release(out);
+		gpgme_release(g_ctx);
 		return NULL;
 	}
 
 	if (gpgme_data_new_from_stream(&manifest, f) != GPG_ERR_NO_ERROR) {
 		msgs_add(msgs, path, NULL,
 				"failed to create new gpgme data from stream");
+		gpgme_data_release(out);
+		gpgme_release(g_ctx);
+		fclose(f);
 		return NULL;
 	}
 
 	if (gpgme_op_verify(g_ctx, manifest, NULL, out) != GPG_ERR_NO_ERROR) {
 		msgs_add(msgs, path, NULL, "failed to verify signature");
+		gpgme_data_release(out);
+		gpgme_data_release(manifest);
+		gpgme_release(g_ctx);
+		fclose(f);
 		return NULL;
 	}
 
@@ -891,6 +902,9 @@ verify_gpg_sig(const char *path, verify_msg **msgs)
 	if (vres == NULL || vres->signatures == NULL) {
 		msgs_add(msgs, path, NULL,
 				"verification failed due to a missing gpg keyring");
+		gpgme_data_release(out);
+		gpgme_data_release(manifest);
+		gpgme_release(g_ctx);
 		return NULL;
 	}
 
@@ -971,6 +985,8 @@ verify_gpg_sig(const char *path, verify_msg **msgs)
 		}
 	}
 
+	gpgme_data_release(out);
+	gpgme_data_release(manifest);
 	gpgme_release(g_ctx);
 
 	return ret;
@@ -1529,8 +1545,10 @@ process_dir_vrfy(void)
 	char *timestamp;
 	verify_msg topmsg;
 	verify_msg *walk = &topmsg;
+	verify_msg *next;
 	gpg_sig *gs;
 
+	walk->next = NULL;
 	gettimeofday(&startt, NULL);
 
 	snprintf(buf, sizeof(buf), "metadata/layout.conf");
@@ -1581,10 +1599,12 @@ process_dir_vrfy(void)
 	 *   be there
 	 * - recurse into directories for which Manifest files are defined
 	 */
-	walk->next = NULL;
 	if (verify_manifest(".\0", str_manifest, &walk) != 0)
 		ret = "manifest verification failed";
 
+	gettimeofday(&finisht, NULL);
+
+	/* produce a report */
 	{
 		char *mfest;
 		char *ebuild;
@@ -1593,7 +1613,6 @@ process_dir_vrfy(void)
 		char *lastebuild = (char *)"-";
 		char *msgline;
 		const char *pfx;
-		verify_msg *next;
 
 		for (walk = topmsg.next; walk != NULL; walk = walk->next) {
 			mfest = walk->msg;
@@ -1651,16 +1670,16 @@ process_dir_vrfy(void)
 				format_line(pfx, msg);
 			}
 		}
-
-		walk = topmsg.next;
-		while (walk != NULL) {
-			next = walk->next;
-			free(walk);
-			walk = next;
-		}
 	}
 
-	gettimeofday(&finisht, NULL);
+	/* clean up messages */
+	walk = topmsg.next;
+	while (walk != NULL) {
+		next = walk->next;
+		free(walk->msg);
+		free(walk);
+		walk = next;
+	}
 
 	etime = ((double)((finisht.tv_sec - startt.tv_sec) * 1000000 +
 				finisht.tv_usec) - (double)startt.tv_usec) / 1000000.0;

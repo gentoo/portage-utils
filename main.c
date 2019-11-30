@@ -224,14 +224,15 @@ makeargv(const char *string, int *argc, char ***argv)
 
 	*argc = 1;
 	(*argv)[0] = xstrdup(argv0);
-	q = xstrdup(string);
-	str = q;
 
 	/* shortcut empty strings */
 	while (isspace((int)*string))
 		string++;
 	if (*string == '\0')
 		return;
+
+	q = xstrdup(string);
+	str = q;
 
 	remove_extra_space(str);
 	rmspace(str);
@@ -744,18 +745,44 @@ initialize_portage_env(void)
 	snprintf(pathbuf, sizeof(pathbuf), "%.*s", (int)i, configroot);
 	read_repos_conf(pathbuf, "/usr/share/portage/config/repos.conf");
 	read_repos_conf(pathbuf, "/etc/portage/repos.conf");
-	if (orig_main_overlay != main_overlay)
+	/* special handling of PORTDIR envvar, else it comes too late, see
+	 * also below where we handle the environment */
+	if ((s = getenv("PORTDIR")) != NULL) {
+		char *overlay;
+
+		array_for_each(overlays, i, overlay) {
+			if (strcmp(overlay, s) == 0)
+				break;
+			overlay = NULL;
+		}
+		if (overlay == NULL) {
+			main_overlay = xarraypush_str(overlays, s);
+			xarraypush_str(overlay_names, "<PORTDIR>");
+			xarraypush_str(overlay_src, "PORTDIR");
+		} else {
+			free(array_get_elem(overlay_src, i));
+			array_get_elem(overlay_src, i) = xstrdup("PORTDIR");
+			main_overlay = overlay;
+		}
+		free(vars_to_read[11 /* PORTDIR */].src);
+		vars_to_read[11 /* PORTDIR */].src = xstrdup("PORTDIR");
+	}
+	if (orig_main_overlay != main_overlay) {
 		free(orig_main_overlay);
-	if (array_cnt(overlays) == 0) {
-		xarraypush_ptr(overlays, main_overlay);
-		xarraypush_str(overlay_names, "<PORTDIR>");
-		xarraypush_str(overlay_src, STR_DEFAULT);
-	} else if (orig_main_overlay == main_overlay) {
-		/* if no explicit overlay was flagged as main, take the first one */
-		free(orig_main_overlay);
-		main_overlay = array_get_elem(overlays, 0);
-		set_portage_env_var(&vars_to_read[11] /* PORTDIR */, main_overlay,
-				(char *)array_get_elem(overlay_src, 0));
+	} else {
+		if (array_cnt(overlays) == 0) {
+			xarraypush_ptr(overlays, main_overlay);
+			xarraypush_str(overlay_names, "<PORTDIR>");
+			xarraypush_str(overlay_src, STR_DEFAULT);
+		} else {
+			/* if no explicit overlay was flagged as main, take the
+			 * first one */
+			free(orig_main_overlay);
+			main_overlay = array_get_elem(overlays, 0);
+			free(vars_to_read[11 /* PORTDIR */].src);
+			vars_to_read[11 /* PORTDIR */].src =
+				xstrdup((char *)array_get_elem(overlay_src, 0));
+		}
 	}
 
 	/* consider Portage's defaults */
@@ -781,10 +808,11 @@ initialize_portage_env(void)
 	read_portage_env_file(pathbuf, vars_to_read);
 
 	/* finally, check the env */
-	for (i = 0; vars_to_read[i].name; ++i) {
+	for (i = 0; vars_to_read[i].name; i++) {
 		var = &vars_to_read[i];
 		s = getenv(var->name);
-		if (s != NULL)
+		/* PORTDIR was already added to overlays above, ignore it */
+		if (s != NULL && strcmp(var->name, "PORTDIR") != 0)
 			set_portage_env_var(var, s, var->name);
 	}
 

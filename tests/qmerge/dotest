@@ -20,17 +20,20 @@ mkdir -p "${ROOT}/var/db/pkg"
 
 set +e
 
+# sanity check on environment
+q -Cev
+
 # Do a merge into an empty tree.
 
 out=$(yes | qmerge -F qmerge-test)
-tend $? "qmerge-test: [N] basic merge" || echo "${out}"
+tend $? "qmerge-test: [N] basic merge" || die "${out}"
 
 [[ ${out} != *"FAIL"* ]]
-tend $? "qmerge-test: [N] FAIL messages" || echo "${out}"
+tend $? "qmerge-test: [N] FAIL messages" || die "${out}"
 
 order=$(echo "${out}" | awk '$1 == ">>>" && $2 ~ /^pkg_/ { printf "%s ", $NF }')
 [[ ${order} == "pkg_pretend pkg_setup pkg_preinst pkg_postinst " ]]
-tend $? "qmerge-test: [N] pkg_* order of execution" || printf '%s\n' "${order}" "${out}"
+tend $? "qmerge-test: [N] pkg_* order of execution" || die "$(printf '%s\n' "${order}" "${out}")"
 
 ls -d "${ROOT}"/var/db/pkg/sys-devel/qmerge-test-* >/dev/null
 tend $? "qmerge-test: [N] vdb installed"
@@ -38,25 +41,25 @@ tend $? "qmerge-test: [N] vdb installed"
 [[ -x ${ROOT}/usr/bin/qmerge-test && \
    -f ${ROOT}/etc/some.conf && \
    -f ${ROOT}/etc/another.conf ]]
-tend $? "qmerge-test: [N] installed expected files" || treedir "${ROOT}"
+tend $? "qmerge-test: [N] installed expected files" || die "$(treedir "${ROOT}")"
 
 # Now do a re-emerge.
 
 out=$(yes | qmerge -F qmerge-test)
-tend $? "qmerge-test: [R] re-emerge" || echo "${out}"
+tend $? "qmerge-test: [R] re-emerge" || die "${out}"
 
 [[ -x ${ROOT}/usr/bin/qmerge-test ]]
-tend $? "qmerge-test: [R] installed expected files" || treedir "${ROOT}"
+tend $? "qmerge-test: [R] installed expected files" || die "$(treedir "${ROOT}")"
 
 order=$(echo "${out}" | awk '$1 == ">>>" && $2 ~ /^pkg_/ { printf "%s ", $NF }')
 [[ ${order} == "pkg_pretend pkg_setup pkg_preinst pkg_postinst " ]]
-tend $? "qmerge-test: [R] pkg_* order of execution" || printf '%s\n' "${order}" "${out}"
+tend $? "qmerge-test: [R] pkg_* order of execution" || die "$(printf '%s\n' "${order}" "${out}")"
 
 [[ -x ${ROOT}/usr/bin/qmerge-test && \
    -f ${ROOT}/etc/some.conf && \
    -f ${ROOT}/etc/another.conf && \
    -f ${ROOT}/etc/._cfg0000_some.conf ]]
-tend $? "qmerge-test: [R] re-installed expected files" || treedir "${ROOT}"
+tend $? "qmerge-test: [R] re-installed expected files" || die "$(treedir "${ROOT}")"
 
 # Finally do an unmerge.
 
@@ -64,17 +67,17 @@ echo alkdsjfalksdf > "${ROOT}/etc/some.conf"
 
 rm -f "${ROOT}/etc/._cfg0000_some.conf"
 out=$(yes | qmerge -FU qmerge-test)
-tend $? "qmerge-test: [C] uninstall" || echo "${out}"
+tend $? "qmerge-test: [C] uninstall" || die "${out}"
 
 order=$(echo "${out}" | awk '$1 == ">>>" { printf "%s ", $NF }')
 [[ ${order} == "pkg_prerm pkg_postrm " ]]
-tend $? "qmerge-test: [C] pkg_* order of execution" || printf '%s\n' "${order}" "${out}"
+tend $? "qmerge-test: [C] pkg_* order of execution" || die "$(printf '%s\n' "${order}" "${out}")"
 
 [[ ! -x ${ROOT}/usr/bin/qmerge-test && \
      -f ${ROOT}/etc/some.conf && \
    ! -f ${ROOT}/etc/another.conf && \
    ! -d ${ROOT}/var/db/pkg/sys-devel ]]
-tend $? "qmerge-test: [C] uninstalled expected files" || treedir "${ROOT}"
+tend $? "qmerge-test: [C] uninstalled expected files" || die "$(treedir "${ROOT}")"
 
 set -e
 

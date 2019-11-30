@@ -8,6 +8,10 @@ mktmpdir
 
 mkportdir "${as}/portdir"
 
+# check inference of PORTDIR with repos.conf
+q -evC PORTDIR
+q -ovC
+
 d=${PORTDIR}/profiles
 entries() {
 	sed -e 's:#.*::' -e '/^$/d' "$1"

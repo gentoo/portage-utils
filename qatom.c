@@ -55,7 +55,7 @@ int qatom_main(int argc, char **argv)
 	if (action == _COMPARE && (argc - optind) % 2)
 		err("compare needs even number of arguments");
 
-	for (i = optind; i < argc; ++i) {
+	for (i = optind; i < argc; i++) {
 		atom = atom_explode(argv[i]);
 		if (atom == NULL) {
 			warnf("invalid atom: %s\n", argv[i]);

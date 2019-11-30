@@ -238,12 +238,12 @@ int q_main(int argc, char **argv)
 
 				switch (var->type) {
 					case _Q_BOOL:
-						printf("%s%s%s\n",
+						printf("%s%s%s",
 								YELLOW, *var->value.b ? "1" : "0", NORM);
 						break;
 				case _Q_STR:
 				case _Q_ISTR:
-						printf("%s%s%s\n", RED, *var->value.s, NORM);
+						printf("%s%s%s", RED, *var->value.s, NORM);
 						break;
 				}
 				if (verbose)

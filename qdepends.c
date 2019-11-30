@@ -345,17 +345,23 @@ int qdepends_main(int argc, char **argv)
 		state.qmode &= ~QMODE_INSTALLED;
 	}
 
-	if ((argc == optind) && !do_pretty)
+	if ((argc == optind) && !do_pretty) {
+		free_set(state.udeps);
 		qdepends_usage(EXIT_FAILURE);
+	}
 
 	if (do_pretty) {
+		ret = EXIT_SUCCESS;
 		while (optind < argc) {
-			if (!qdepends_print_depend(stdout, argv[optind++]))
-				return EXIT_FAILURE;
+			if (!qdepends_print_depend(stdout, argv[optind++])) {
+				ret = EXIT_FAILURE;
+				break;
+			}
 			if (optind < argc)
 				fprintf(stdout, "\n");
 		}
-		return EXIT_SUCCESS;
+		free_set(state.udeps);
+		return ret;
 	}
 
 	argc -= optind;

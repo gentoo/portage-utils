@@ -335,6 +335,11 @@ atom_implode(depend_atom *atom)
 {
 	if (!atom)
 		errf("Atom is empty !");
+	while (atom->usedeps != NULL) {
+		atom_usedep *n = atom->usedeps->next;
+		free(atom->usedeps);
+		atom->usedeps = n;
+	}
 	free(atom->suffixes);
 	free(atom);
 }

@@ -481,6 +481,7 @@ install_mask_check_dir(
 			*npth = '\0';
 		}
 	}
+	scandir_free(files, cnt);
 }
 
 static void
@@ -620,6 +621,9 @@ install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 		qpth[cnt] = '\0';
 
 	install_mask_check_dir(masksv, masksc, st, fd, 1, INCLUDE, qpth);
+
+	free(masks);
+	free(masksv);
 }
 
 static char
@@ -917,11 +921,13 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 
 			/* Make sure owner/mode is sane before we write out data */
 			if (fchown(fd_dstf, st.st_uid, st.st_gid)) {
-				warnp("could not set ownership %s", cpath);
+				warnp("could not set ownership (%zu/%zu) for %s",
+						(size_t)st.st_uid, (size_t)st.st_gid, cpath);
 				continue;
 			}
 			if (fchmod(fd_dstf, st.st_mode)) {
-				warnp("could not set permission %s", cpath);
+				warnp("could not set permission (%u) for %s",
+						(int)st.st_mode, cpath);
 				continue;
 			}
 
@@ -1439,6 +1445,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	printf("%s>>>%s %s%s%s/%s%s%s\n",
 			YELLOW, NORM, WHITE, atom->CATEGORY, NORM, CYAN, pkg->PF, NORM);
 
+	tree_close_cat(cat_ctx);
 	tree_close(vdb);
 }
 
