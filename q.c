@@ -174,8 +174,10 @@ int q_main(int argc, char **argv)
 			if (strcmp(repo_name, "<PORTDIR>") == 0) {
 				repo_name = NULL;
 				snprintf(buf, sizeof(buf), "%s/profiles/repo_name", overlay);
-				if (!eat_file(buf, &repo_name, &repo_name_len))
+				if (!eat_file(buf, &repo_name, &repo_name_len)) {
+					free(repo_name);
 					repo_name = NULL;
+				}
 				if (repo_name != NULL)
 					rmspace(repo_name);
 			}

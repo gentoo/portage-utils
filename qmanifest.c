@@ -1749,10 +1749,14 @@ qmanifest_main(int argc, char **argv)
 		array_for_each(overlays, n, overlay) {
 			repo = xarrayget(overlay_names, n);
 			if (strcmp(repo, "<PORTDIR>") == 0) {
+				repo = NULL;
+				repolen = 0;
 				snprintf(path, sizeof(path), "%s/profiles/repo_name", overlay);
 				if (eat_file(path, &repo, &repolen)) {
 					free(array_get_elem(overlays, n));
 					array_get_elem(overlays, n) = repo;
+				} else {
+					free(repo);
 				}
 			}
 		}

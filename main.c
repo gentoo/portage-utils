@@ -601,7 +601,7 @@ env_vars vars_to_read[] = {
 
 /* Handle a single file in the repos.conf format. */
 static void
-read_one_repos_conf(const char *repos_conf)
+read_one_repos_conf(const char *repos_conf, char **primary)
 {
 	int nsec;
 	char *conf;
@@ -643,14 +643,11 @@ read_one_repos_conf(const char *repos_conf)
 				ele = array_get_elem(overlays, n) = xstrdup(path);
 			} else {
 				ele = xarraypush_str(overlays, path);
-				xarraypush_str(overlay_names, repo);
+				overlay = xarraypush_str(overlay_names, repo);
 				xarraypush_str(overlay_src, repos_conf);
 			}
-			if (main_repo && strcmp(repo, main_repo) == 0) {
-				main_overlay = ele;
-				free(vars_to_read[11 /* PORTDIR */].src);
-				vars_to_read[11 /* PORTDIR */].src = xstrdup(repos_conf);
-			}
+			if (main_repo && strcmp(repo, main_repo) == 0)
+				*primary = overlay;
 		}
 		free(conf);
 	}
@@ -660,7 +657,7 @@ read_one_repos_conf(const char *repos_conf)
 
 /* Handle a possible directory of files. */
 static void
-read_repos_conf(const char *configroot, const char *repos_conf)
+read_repos_conf(const char *configroot, const char *repos_conf, char **primary)
 {
 	char *top_conf, *sub_conf;
 	int i, count;
@@ -672,7 +669,7 @@ read_repos_conf(const char *configroot, const char *repos_conf)
 	count = scandir(top_conf, &confs, NULL, alphasort);
 	if (count == -1) {
 		if (errno == ENOTDIR)
-			read_one_repos_conf(top_conf);
+			read_one_repos_conf(top_conf, primary);
 	} else {
 		for (i = 0; i < count; ++i) {
 			const char *name = confs[i]->d_name;
@@ -704,7 +701,7 @@ read_repos_conf(const char *configroot, const char *repos_conf)
 				}
 			}
 
-			read_one_repos_conf(sub_conf);
+			read_one_repos_conf(sub_conf, primary);
 			free(sub_conf);
 		}
 		scandir_free(confs, count);
@@ -720,7 +717,7 @@ initialize_portage_env(void)
 	env_vars *var;
 	char pathbuf[_Q_PATH_MAX];
 	const char *configroot = getenv("PORTAGE_CONFIGROOT");
-	char *orig_main_overlay;
+	char *primary_overlay = NULL;
 
 	/* initialize all the strings with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
@@ -741,49 +738,10 @@ initialize_portage_env(void)
 
 	/* read overlays first so we can resolve repo references in profile
 	 * parent files */
-	orig_main_overlay = main_overlay;
 	snprintf(pathbuf, sizeof(pathbuf), "%.*s", (int)i, configroot);
-	read_repos_conf(pathbuf, "/usr/share/portage/config/repos.conf");
-	read_repos_conf(pathbuf, "/etc/portage/repos.conf");
-	/* special handling of PORTDIR envvar, else it comes too late, see
-	 * also below where we handle the environment */
-	if ((s = getenv("PORTDIR")) != NULL) {
-		char *overlay;
-
-		array_for_each(overlays, i, overlay) {
-			if (strcmp(overlay, s) == 0)
-				break;
-			overlay = NULL;
-		}
-		if (overlay == NULL) {
-			main_overlay = xarraypush_str(overlays, s);
-			xarraypush_str(overlay_names, "<PORTDIR>");
-			xarraypush_str(overlay_src, "PORTDIR");
-		} else {
-			free(array_get_elem(overlay_src, i));
-			array_get_elem(overlay_src, i) = xstrdup("PORTDIR");
-			main_overlay = overlay;
-		}
-		free(vars_to_read[11 /* PORTDIR */].src);
-		vars_to_read[11 /* PORTDIR */].src = xstrdup("PORTDIR");
-	}
-	if (orig_main_overlay != main_overlay) {
-		free(orig_main_overlay);
-	} else {
-		if (array_cnt(overlays) == 0) {
-			xarraypush_ptr(overlays, main_overlay);
-			xarraypush_str(overlay_names, "<PORTDIR>");
-			xarraypush_str(overlay_src, STR_DEFAULT);
-		} else {
-			/* if no explicit overlay was flagged as main, take the
-			 * first one */
-			free(orig_main_overlay);
-			main_overlay = array_get_elem(overlays, 0);
-			free(vars_to_read[11 /* PORTDIR */].src);
-			vars_to_read[11 /* PORTDIR */].src =
-				xstrdup((char *)array_get_elem(overlay_src, 0));
-		}
-	}
+	read_repos_conf(pathbuf, "/usr/share/portage/config/repos.conf",
+			&primary_overlay);
+	read_repos_conf(pathbuf, "/etc/portage/repos.conf", &primary_overlay);
 
 	/* consider Portage's defaults */
 	snprintf(pathbuf, sizeof(pathbuf),
@@ -811,8 +769,7 @@ initialize_portage_env(void)
 	for (i = 0; vars_to_read[i].name; i++) {
 		var = &vars_to_read[i];
 		s = getenv(var->name);
-		/* PORTDIR was already added to overlays above, ignore it */
-		if (s != NULL && strcmp(var->name, "PORTDIR") != 0)
+		if (s != NULL)
 			set_portage_env_var(var, s, var->name);
 	}
 
@@ -885,6 +842,51 @@ initialize_portage_env(void)
 				post_len + 1);
 			memcpy(*var->value.s + pre_len, sval, slen);
 		}
+	}
+
+	/* handle PORTDIR and primary_overlay to get a unified
+	 * administration in overlays */
+	{
+		char *overlay;
+		var = &vars_to_read[11];  /* PORTDIR */
+
+		if (strcmp(var->src, STR_DEFAULT) != 0 || array_cnt(overlays) == 0) {
+			array_for_each(overlays, i, overlay) {
+				if (strcmp(overlay, main_overlay) == 0)
+					break;
+				overlay = NULL;
+			}
+			if (overlay == NULL) {  /* add PORTDIR to overlays */
+				xarraypush_ptr(overlays, main_overlay);
+				xarraypush_str(overlay_names, "<PORTDIR>");
+				xarraypush_str(overlay_src, var->src);
+			} else {
+				/* ignore make.conf and/or env setting origin if defined by
+				 * repos.conf since the former are deprecated */
+				free(main_overlay);
+			}
+			main_overlay = NULL;  /* now added to overlays */
+		} else {
+			free(main_overlay);
+		}
+
+		/* set main_overlay to the one pointed to by repos.conf, if any */
+		i = 0;
+		if (primary_overlay != NULL) {
+			array_for_each(overlay_names, i, overlay) {
+				if (overlay == primary_overlay)
+					break;
+				overlay = NULL;
+			}
+			/* if no explicit overlay was flagged as main, take the
+			 * first one */
+			if (overlay == NULL)
+				i = 0;
+		}
+		main_overlay = array_get_elem(overlays, i);
+		/* set source for PORTDIR var */
+		free(var->src);
+		var->src = xstrdup((char *)array_get_elem(overlay_src, i));
 	}
 
 	/* Make sure ROOT always ends in a slash */
