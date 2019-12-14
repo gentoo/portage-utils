@@ -152,6 +152,7 @@ static const struct applet_t {
 	case 'C': no_colors(); break; \
 	default: applet ## _usage(EXIT_FAILURE); break;
 
+extern char *portarch;
 extern char *portroot;
 extern int verbose;
 extern int quiet;

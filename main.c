@@ -31,6 +31,7 @@ int verbose = 0;
 int quiet = 0;
 int twidth;
 char pretend = 0;
+char *portarch;
 char *portroot;
 char *config_protect;
 char *config_protect_mask;
@@ -46,7 +47,6 @@ DECLARE_ARRAY(overlays);
 DECLARE_ARRAY(overlay_names);
 DECLARE_ARRAY(overlay_src);
 
-static char *portarch;
 static char *portedb;
 static char *eprefix;
 static char *accept_license;

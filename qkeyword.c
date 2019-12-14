@@ -762,11 +762,12 @@ int qkeyword_main(int argc, char **argv)
 		}
 	}
 
-	data.arch = NULL;
+	data.arch = portarch;
 	if (optind < argc)
 		data.arch = argv[optind];
 
-	if ((data.arch == NULL && action != 's') || optind + 1 < argc)
+	if (((data.arch == NULL || *data.arch == '\0') && action != 's') ||
+			optind + 1 < argc)
 		qkeyword_usage(EXIT_FAILURE);
 
 	if (cat != NULL) {
@@ -803,8 +804,7 @@ int qkeyword_main(int argc, char **argv)
 				  i = qkeyword_dropped(NULL, NULL);                     break;
 		case 't': i = qkeyword_traverse(qkeyword_testing_only, &data);
 				  i = qkeyword_testing_only(NULL, NULL);                break;
-		case 's': data.arch = "amd64";  /* doesn't matter, need to be set */
-				  i = qkeyword_traverse(qkeyword_stats, &data);
+		case 's': i = qkeyword_traverse(qkeyword_stats, &data);
 				  i = qkeyword_stats(NULL, NULL);                       break;
 		case 'a': i = qkeyword_traverse(qkeyword_all, &data);           break;
 		case 'n': i = qkeyword_traverse(qkeyword_not, &data);           break;
