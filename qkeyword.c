@@ -28,29 +28,35 @@
 /* Required portage-utils stuff                                     */
 /********************************************************************/
 
-#define QKEYWORD_FLAGS "p:c:m:idtans" COMMON_FLAGS
+#define QKEYWORD_FLAGS "p:c:m:idtsanSTF:" COMMON_FLAGS
 static struct option const qkeyword_long_opts[] = {
-	{"matchpkg", a_argument, NULL, 'p'},
-	{"matchcat", a_argument, NULL, 'c'},
-	{"matchmaint", a_argument, NULL, 'm'},
-	{"imlate",  no_argument, NULL, 'i'},
-	{"dropped", no_argument, NULL, 'd'},
-	{"testing", no_argument, NULL, 't'},
-	{"stats",   no_argument, NULL, 's'},
-	{"all",     no_argument, NULL, 'a'},
-	{"not",     no_argument, NULL, 'n'},
+	{"matchpkg",     a_argument, NULL, 'p'},
+	{"matchcat",     a_argument, NULL, 'c'},
+	{"matchmaint",   a_argument, NULL, 'm'},
+	{"imlate",      no_argument, NULL, 'i'},
+	{"dropped",     no_argument, NULL, 'd'},
+	{"needsstable", no_argument, NULL, 't'},
+	{"stats",       no_argument, NULL, 's'},
+	{"all",         no_argument, NULL, 'a'},
+	{"not",         no_argument, NULL, 'n'},
+	{"stable",      no_argument, NULL, 'S'},
+	{"testing",     no_argument, NULL, 'T'},
+	{"format",       a_argument, NULL, 'F'},
 	COMMON_LONG_OPTS
 };
 static const char * const qkeyword_opts_help[] = {
 	"match pkgname",
 	"match catname",
 	"match maintainer email from metadata.xml (slow)",
-	"list packages that can be marked stable on a given arch",
-	"list packages that have dropped keywords on a version bump on a given arch",
-	"list packages that have ~arch versions, but no stable versions on a given arch",
+	"list packages that can be marked stable for <arch>",
+	"list packages that have dropped keywords for <arch>",
+	"list packages that have ~arch versions, but no stable versions for <arch>",
 	"display statistics about the portage tree",
-	"list packages that have at least one version keyworded for on a given arch",
-	"list packages that aren't keyworded on a given arch.",
+	"list packages that have at least one version keyworded for <arch>",
+	"list packages that aren't keyworded for <arch>",
+	"list latest stable version per package for <arch>",
+	"list latest testing version per package for <arch>",
+	"Print latest atom using given format string",
 	COMMON_OPTS_HELP
 };
 #define qkeyword_usage(ret) usage(ret, QKEYWORD_FLAGS, qkeyword_long_opts, qkeyword_opts_help, NULL, lookup_applet_idx("qkeyword"))
@@ -63,6 +69,7 @@ typedef struct {
 	size_t keywordsbuflen;
 	const char *arch;
 	tree_pkg_cb *runfunc;
+	const char *fmt;
 } qkeyword_data;
 
 static set *archs = NULL;
@@ -213,6 +220,34 @@ qkeyword_imlate(tree_pkg_ctx *pkg_ctx, void *priv)
 
 				return EXIT_SUCCESS;
 			}
+	}
+
+	return EXIT_FAILURE;
+}
+
+static int
+qkeyword_lstable(tree_pkg_ctx *pkg_ctx, void *priv)
+{
+	qkeyword_data *data = (qkeyword_data *)priv;
+
+	if (data->keywordsbuf[qkeyword_test_arch] == stable)
+	{
+		printf("%s", atom_format(data->fmt, tree_get_atom(pkg_ctx, true)));
+		return EXIT_SUCCESS;
+	}
+
+	return EXIT_FAILURE;
+}
+
+static int
+qkeyword_ltesting(tree_pkg_ctx *pkg_ctx, void *priv)
+{
+	qkeyword_data *data = (qkeyword_data *)priv;
+
+	if (data->keywordsbuf[qkeyword_test_arch] == testing)
+	{
+		printf("%s\n", atom_format(data->fmt, tree_get_atom(pkg_ctx, true)));
+		return EXIT_SUCCESS;
 	}
 
 	return EXIT_FAILURE;
@@ -658,7 +693,6 @@ keyword_sort(const void *l, const void *r)
 	char *ld = strchr(*ls, '-');
 	char *rd = strchr(*rs, '-');
 
-	printf("%s vs %s\n", *ls, *rs);
 	if (ld == NULL && rd != NULL)
 		return -1;
 	else if (ld != NULL && rd == NULL)
@@ -729,7 +763,7 @@ qkeyword_traverse(tree_pkg_cb func, void *priv)
 	const char *overlay;
 	qkeyword_data *data = (qkeyword_data *)priv;
 
-	/* Preload all the arches. Not entirely correctly (as arches are bound
+	/* Preload all the arches. Not entirely correct (as arches are bound
 	 * to overlays if set), but oh well. */
 	array_for_each(overlays, n, overlay)
 		qkeyword_load_arches(overlay);
@@ -767,6 +801,7 @@ int qkeyword_main(int argc, char **argv)
 	char *cat = NULL;
 	char *maint = NULL;
 
+	data.fmt = NULL;
 	while ((i = GETOPT_LONG(QKEYWORD, qkeyword, "")) != -1) {
 		switch (i) {
 			case 'p': pkg = optarg; break;
@@ -778,10 +813,15 @@ int qkeyword_main(int argc, char **argv)
 			case 's':
 			case 'a':
 			case 'n':
-				if (action)
+			case 'S':
+			case 'T':
+				/* trying to use more than 1 action */
+				if (action != '\0')
 					qkeyword_usage(EXIT_FAILURE);
-					/* trying to use more than 1 action */
 				action = i;
+				break;
+			case 'F':
+				data.fmt = optarg;
 				break;
 
 			COMMON_GETOPTS_CASES(qkeyword)
@@ -815,6 +855,10 @@ int qkeyword_main(int argc, char **argv)
 		data.qatom = NULL;
 	}
 
+	/* set format if none given */
+	if ((action == 'S' || action == 'T') && data.fmt == NULL)
+		data.fmt = "%[CATEGORY]%[PF]";
+
 	archs = create_set();
 	archlist_count = 0;
 	arch_longest_len = 0;
@@ -834,6 +878,8 @@ int qkeyword_main(int argc, char **argv)
 				  i = qkeyword_stats(NULL, NULL);                       break;
 		case 'a': i = qkeyword_traverse(qkeyword_all, &data);           break;
 		case 'n': i = qkeyword_traverse(qkeyword_not, &data);           break;
+		case 'S': i = qkeyword_traverse(qkeyword_lstable, &data);       break;
+		case 'T': i = qkeyword_traverse(qkeyword_ltesting, &data);      break;
 		default:  i = -2;                                               break;
 	}
 
