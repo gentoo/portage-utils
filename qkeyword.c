@@ -650,6 +650,29 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	return EXIT_SUCCESS;
 }
 
+static int
+keyword_sort(const void *l, const void *r)
+{
+	const char **ls = (const char **)l;
+	const char **rs = (const char **)r;
+	char *ld = strchr(*ls, '-');
+	char *rd = strchr(*rs, '-');
+
+	printf("%s vs %s\n", *ls, *rs);
+	if (ld == NULL && rd != NULL)
+		return -1;
+	else if (ld != NULL && rd == NULL)
+		return 1;
+	else if (ld == NULL)
+		return strcmp(*ls, *rs);
+	else {
+		int ret = strcmp(ld + 1, rd + 1);
+		if (ret == 0)
+			ret = strcmp(*ls, *rs);
+		return ret;
+	}
+}
+
 static void
 qkeyword_load_arches(const char *overlay)
 {
@@ -689,6 +712,9 @@ qkeyword_load_arches(const char *overlay)
 	if (archlist != NULL)
 		free(archlist);
 	list_set(archs, &archlist);
+
+	/* sort so the output makes more 'sense' */
+	qsort(archlist, archlist_count, sizeof(char **), keyword_sort);
 
 	fclose(fp);
  done:
