@@ -1109,7 +1109,7 @@ static array_t *probe_proc(array_t *atoms)
 					rpath[rpathlen] = '\0';
 					/* check if this points to a portage build:
 					 * <somepath>/portage/<cat>/<pf>/temp/build.log */
-					if (rpathlen > sizeof("/temp/build.log") &&
+					if ((size_t)rpathlen > sizeof("/temp/build.log") &&
 								strcmp(rpath + rpathlen -
 								(sizeof("/temp/build.log") - 1),
 								"/temp/build.log") == 0 &&
