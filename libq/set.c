@@ -195,19 +195,26 @@ get_set(const char *name, set *q)
 	return NULL;
 }
 
-/* remove elem from a set. matches ->name and frees name,item */
-set *
+/* remove elem from a set. matches ->name and frees name,item, returns
+ * val if removed, NULL otherwise
+ * note that when val isn't set, NULL is returned, so the caller should
+ * use the removed argument to determine if something was removed from
+ * the set. */
+void *
 del_set(const char *s, set *q, bool *removed)
 {
 	unsigned int hash;
 	int pos;
 	elem *ll;
 	elem *w;
+	void *ret;
+	bool rmd;
 
 	hash = fnv1a32(s);
 	pos = hash % _SET_HASH_SIZE;
 
-	*removed = false;
+	ret = NULL;
+	rmd = false;
 	if (q->buckets[pos] != NULL) {
 		ll = NULL;
 		for (w = q->buckets[pos]; w != NULL; ll = w, w = w->next) {
@@ -217,17 +224,20 @@ del_set(const char *s, set *q, bool *removed)
 				} else {
 					ll->next = w->next;
 				}
+				ret = w->val;
 				free(w->name);
 				free(w);
-				*removed = true;
+				rmd = true;
 				break;
 			}
 		}
 	}
 
-	if (*removed)
+	if (rmd)
 		q->len--;
-	return q;
+	if (removed != NULL)
+		*removed = rmd;
+	return ret;
 }
 
 /* return the contents of a set as an array of strings

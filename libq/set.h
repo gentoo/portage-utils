@@ -34,7 +34,7 @@ set *add_set_unique(const char *name, set *q, bool *unique);
 void *add_set_value(const char *name, void *ptr, set *q);
 bool contains_set(const char *name, set *q);
 void *get_set(const char *name, set *q);
-set *del_set(const char *s, set *q, bool *removed);
+void *del_set(const char *s, set *q, bool *removed);
 size_t list_set(set *q, char ***l);
 size_t values_set(set *q, array_t *ret);
 size_t cnt_set(set *q);

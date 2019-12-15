@@ -2341,7 +2341,7 @@ qmerge_add_set_system(void *data, char *buf)
 		q = add_set(s + 1, q);
 	else if (s[0] == '-' && s[1] == '*') {
 		bool ok;
-		q = del_set(s + 2, q, &ok);
+		(void)del_set(s + 2, q, &ok);
 	}
 
 	return q;
