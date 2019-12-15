@@ -25,6 +25,7 @@ test() {
 }
 
 # verify we see our overlays
+DEBUG=1 q -ev
 test 00 0 "q -o"
 
 # simple run check (should do bad_tree)
