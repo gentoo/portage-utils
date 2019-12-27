@@ -263,6 +263,22 @@ list_set(set *q, char ***l)
 }
 
 size_t
+array_set(set *q, array_t *ret)
+{
+	int i;
+	set_elem *w;
+	array_t blank = array_init_decl;
+
+	*ret = blank;
+	for (i = 0; i < _SET_HASH_SIZE; i++) {
+		for (w = q->buckets[i]; w != NULL; w = w->next)
+			xarraypush_ptr(ret, w->name);
+	}
+
+	return q->len;
+}
+
+size_t
 values_set(set *q, array_t *ret)
 {
 	int i;

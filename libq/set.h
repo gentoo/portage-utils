@@ -36,6 +36,7 @@ bool contains_set(const char *name, set *q);
 void *get_set(const char *name, set *q);
 void *del_set(const char *s, set *q, bool *removed);
 size_t list_set(set *q, char ***l);
+size_t array_set(set *q, array_t *ret);
 size_t values_set(set *q, array_t *ret);
 size_t cnt_set(set *q);
 void free_set(set *q);
