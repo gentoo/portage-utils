@@ -76,8 +76,9 @@ static set *archs = NULL;
 static char **archlist = NULL;
 static size_t archlist_count;
 static size_t arch_longest_len;
-const char status[3] = {'-', '~', '+'};
-int qkeyword_test_arch = 0;
+static const char status[3] = {'-', '~', '+'};
+static int qkeyword_test_arch = 0;
+static set *pmasks = NULL;
 
 enum { none = 0, testing, stable, minus };
 
@@ -226,13 +227,33 @@ qkeyword_imlate(tree_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
-qkeyword_lstable(tree_pkg_ctx *pkg_ctx, void *priv)
+qkeyword_kw(tree_pkg_ctx *pkg_ctx, void *priv, int what)
 {
 	qkeyword_data *data = (qkeyword_data *)priv;
+	depend_atom *atom;
+	array_t *masks;
 
-	if (data->keywordsbuf[qkeyword_test_arch] == stable)
+	if (data->keywordsbuf[qkeyword_test_arch] == what)
 	{
-		printf("%s", atom_format(data->fmt, tree_get_atom(pkg_ctx, true)));
+		size_t n;
+		depend_atom *mask;
+
+		atom = tree_get_atom(pkg_ctx, false);
+		masks = get_set(atom_format("%[CAT]%[PN]", atom), pmasks);
+		if (masks != NULL) {
+			array_for_each(masks, n, mask) {
+				if (atom_compare(atom, mask) == EQUAL) {
+					if (verbose) {
+						printf("masked by %s: ", atom_to_string(mask));
+						printf("%s\n", atom_format(data->fmt,
+									tree_get_atom(pkg_ctx, true)));
+					}
+					return EXIT_FAILURE;
+				}
+			}
+		}
+
+		printf("%s\n", atom_format(data->fmt, tree_get_atom(pkg_ctx, true)));
 		return EXIT_SUCCESS;
 	}
 
@@ -240,17 +261,15 @@ qkeyword_lstable(tree_pkg_ctx *pkg_ctx, void *priv)
 }
 
 static int
+qkeyword_lstable(tree_pkg_ctx *pkg_ctx, void *priv)
+{
+	return qkeyword_kw(pkg_ctx, priv, stable);
+}
+
+static int
 qkeyword_ltesting(tree_pkg_ctx *pkg_ctx, void *priv)
 {
-	qkeyword_data *data = (qkeyword_data *)priv;
-
-	if (data->keywordsbuf[qkeyword_test_arch] == testing)
-	{
-		printf("%s\n", atom_format(data->fmt, tree_get_atom(pkg_ctx, true)));
-		return EXIT_SUCCESS;
-	}
-
-	return EXIT_FAILURE;
+	return qkeyword_kw(pkg_ctx, priv, testing);
 }
 
 static int
@@ -867,6 +886,32 @@ int qkeyword_main(int argc, char **argv)
 	data.keywordsbuf = NULL;
 	data.keywordsbuflen = 0;
 	data.qmaint = maint;
+
+	/* prepare masks for easy(er) matching by key-ing on CAT/PN */
+	{
+		DECLARE_ARRAY(masks);
+		array_t *bucket;
+		array_t *ebuck;
+		size_t n;
+		char *mask;
+		depend_atom *atom;
+
+		pmasks = create_set();
+
+		array_set(package_masks, masks);
+		array_for_each(masks, n, mask) {
+			if ((atom = atom_explode(mask)) == NULL)
+				continue;
+			bucket = xzalloc(sizeof(array_t));
+			xarraypush_ptr(bucket, atom);
+			ebuck = add_set_value(atom_format("%[CAT]%[PN]", atom),
+					bucket, pmasks);
+			if (ebuck != NULL) {
+				xarraypush_ptr(ebuck, atom);
+				xarrayfree_int(bucket);
+			}
+		}
+	}
 
 	switch (action) {
 		case 'i': i = qkeyword_traverse(qkeyword_imlate, &data);        break;

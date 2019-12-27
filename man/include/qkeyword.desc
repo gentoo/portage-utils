@@ -1,5 +1,5 @@
-\fIqkeyword\fR allows various searches based on KEYWORDS aimed at Gentoo
-developers.  Various modes allow to query which packages would be
+\fIqkeyword\fR allows various searches based on KEYWORDS.  Some uses are
+aimed at Gentoo developers, to allow querying which packages would be
 available, or are candidate for keywording.
 .P
 By default, the entire tree is traversed.  Since this process can be
@@ -12,3 +12,9 @@ as package in one go.  The \fB-m\fR maintainer match, while reducing the
 resulting set, is likely to slow down the query processing since the
 metadata.xml file has to be read for each package examined.  It is best
 used in combination with \fB-p\fR or \fB-c\fR.
+.P
+\fIqkeyword\fR uses the keyword found in the configured profile (ARCH)
+for its queries.  This keyword can be overridden by giving the desired
+keyword as argument.  Note that this does not change the profile in use,
+which most notably can result in incorrect masks being applied for the
+\fB-T\fR and \fB-S\fR options.

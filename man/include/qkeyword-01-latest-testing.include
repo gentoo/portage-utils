@@ -1,0 +1,23 @@
+.SH "RETRIEVING LATEST TESTING VERSION AVAILABLE"
+.PP
+To retrieve the latest available version in the ebuild tree marked as
+testing for the given ARCH, can be done with a combination of flags,
+mostly to restrict the search.  For instance, to find the latest version
+of \fIsys-devel/gcc\fR available, one could use:
+.nf
+$ qkeyword -p sys-devel/gcc -T
+sys-devel/gcc-8.3.0
+.fi
+It may be that there is a newer version available, but masked for the
+configured profile (via package.mask).  Using \fB-v\fR will inform about
+this scenario happening:
+.nf
+$ qkeyword -p dev-vcs/cvs -Tv
+masked by =dev-vcs/cvs-1.12.12*: dev-vcs/cvs-1.12.12-r12
+.fi
+Unrelated, but to locate the mask given, use verbose mode on \fIq\fR's
+mask listing:
+.nf
+$ q -mv dev-vcs/cvs
+=dev-vcs/cvs-1.12.12* [/repo/gentoo/profiles/prefix/sunos/solaris/package.mask]
+.fi

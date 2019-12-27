@@ -6,8 +6,8 @@ qkeyword \- list packages based on keywords
 .B qkeyword
 \fI[opts] <action> <args>\fR
 .SH DESCRIPTION
-\fIqkeyword\fR allows various searches based on KEYWORDS aimed at Gentoo
-developers.  Various modes allow to query which packages would be
+\fIqkeyword\fR allows various searches based on KEYWORDS.  Some uses are
+aimed at Gentoo developers, to allow querying which packages would be
 available, or are candidate for keywording.
 .P
 By default, the entire tree is traversed.  Since this process can be
@@ -20,6 +20,12 @@ as package in one go.  The \fB-m\fR maintainer match, while reducing the
 resulting set, is likely to slow down the query processing since the
 metadata.xml file has to be read for each package examined.  It is best
 used in combination with \fB-p\fR or \fB-c\fR.
+.P
+\fIqkeyword\fR uses the keyword found in the configured profile (ARCH)
+for its queries.  This keyword can be overridden by giving the desired
+keyword as argument.  Note that this does not change the profile in use,
+which most notably can result in incorrect masks being applied for the
+\fB-T\fR and \fB-S\fR options.
 .SH OPTIONS
 .TP
 \fB\-p\fR \fI<arg>\fR, \fB\-\-matchpkg\fR \fI<arg>\fR
@@ -75,7 +81,29 @@ Print this help and exit.
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit.
-
+.SH "RETRIEVING LATEST TESTING VERSION AVAILABLE"
+.PP
+To retrieve the latest available version in the ebuild tree marked as
+testing for the given ARCH, can be done with a combination of flags,
+mostly to restrict the search.  For instance, to find the latest version
+of \fIsys-devel/gcc\fR available, one could use:
+.nf
+$ qkeyword -p sys-devel/gcc -T
+sys-devel/gcc-8.3.0
+.fi
+It may be that there is a newer version available, but masked for the
+configured profile (via package.mask).  Using \fB-v\fR will inform about
+this scenario happening:
+.nf
+$ qkeyword -p dev-vcs/cvs -Tv
+masked by =dev-vcs/cvs-1.12.12*: dev-vcs/cvs-1.12.12-r12
+.fi
+Unrelated, but to locate the mask given, use verbose mode on \fIq\fR's
+mask listing:
+.nf
+$ q -mv dev-vcs/cvs
+=dev-vcs/cvs-1.12.12* [/repo/gentoo/profiles/prefix/sunos/solaris/package.mask]
+.fi
 .SH "REPORTING BUGS"
 Please report bugs via http://bugs.gentoo.org/
 .br
