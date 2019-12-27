@@ -119,7 +119,7 @@ static int qfile_check_plibreg(void *priv)
 	}
 
 	for (i = 0; i < args->length; i++) {
-		if (base_names[i] == NULL)
+		if (base_names[i] == NULL || base_names[i][0] == '\0')
 			continue;
 		if (non_orphans && non_orphans[i])
 			continue;
@@ -534,7 +534,7 @@ int qfile_main(int argc, char **argv)
 		 * (this one is just for qfile(...) output) */
 		size_t lastc = strlen(portroot) - 1;
 		state.root = xstrdup(portroot);
-		if (state.root[lastc] == '/')
+		if (lastc > 0 && state.root[lastc] == '/')
 			state.root[lastc] = '\0';
 	}
 
