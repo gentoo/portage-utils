@@ -12,19 +12,19 @@
 
 #include "xarray.h"
 
-typedef struct elem_t elem;
+typedef struct elem_t set_elem;
 typedef struct set_t set;
 
 struct elem_t {
 	char *name;
 	unsigned int hash;  /* FNV1a32 */
 	void *val;
-	elem *next;
+	set_elem *next;
 };
 
 #define _SET_HASH_SIZE 128
 struct set_t {
-	elem *buckets[_SET_HASH_SIZE];
+	set_elem *buckets[_SET_HASH_SIZE];
 	size_t len;
 };
 

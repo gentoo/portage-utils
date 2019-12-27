@@ -38,8 +38,8 @@ set *
 add_set(const char *name, set *q)
 {
 	int pos;
-	elem *ll = xmalloc(sizeof(*ll));
-	elem *w;
+	set_elem *ll = xmalloc(sizeof(*ll));
+	set_elem *w;
 
 	if (q == NULL)
 		q = create_set();
@@ -68,8 +68,8 @@ add_set_unique(const char *name, set *q, bool *unique)
 {
 	unsigned int hash;
 	int pos;
-	elem *ll;
-	elem *w;
+	set_elem *ll;
+	set_elem *w;
 	bool uniq = false;
 
 	if (q == NULL)
@@ -117,8 +117,8 @@ add_set_value(const char *name, void *ptr, set *q)
 {
 	unsigned int hash;
 	int pos;
-	elem *ll;
-	elem *w;
+	set_elem *ll;
+	set_elem *w;
 
 	hash = fnv1a32(name);
 	pos = hash % _SET_HASH_SIZE;
@@ -154,7 +154,7 @@ contains_set(const char *name, set *q)
 {
 	unsigned int hash;
 	int pos;
-	elem *w;
+	set_elem *w;
 	bool found;
 
 	hash = fnv1a32(name);
@@ -180,7 +180,7 @@ get_set(const char *name, set *q)
 {
 	unsigned int hash;
 	int pos;
-	elem *w;
+	set_elem *w;
 
 	hash = fnv1a32(name);
 	pos = hash % _SET_HASH_SIZE;
@@ -205,8 +205,8 @@ del_set(const char *s, set *q, bool *removed)
 {
 	unsigned int hash;
 	int pos;
-	elem *ll;
-	elem *w;
+	set_elem *ll;
+	set_elem *w;
 	void *ret;
 	bool rmd;
 
@@ -248,7 +248,7 @@ size_t
 list_set(set *q, char ***l)
 {
 	int i;
-	elem *w;
+	set_elem *w;
 	char **ret;
 
 	ret = *l = xmalloc(sizeof(char **) * (q->len + 1));
@@ -266,7 +266,7 @@ size_t
 values_set(set *q, array_t *ret)
 {
 	int i;
-	elem *w;
+	set_elem *w;
 	array_t blank = array_init_decl;
 
 	*ret = blank;
@@ -289,8 +289,8 @@ void
 clear_set(set *q)
 {
 	int i;
-	elem *w;
-	elem *e;
+	set_elem *w;
+	set_elem *e;
 
 	for (i = 0; i < _SET_HASH_SIZE; i++) {
 		for (w = q->buckets[i]; w != NULL; w = e) {
@@ -315,7 +315,7 @@ free_set(set *q)
 static void
 print_set(const set *q)
 {
-	elem *w;
+	set_elem *w;
 	int i;
 
 	for (i = 0; i < _SET_HASH_SIZE; i++) {
