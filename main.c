@@ -639,7 +639,10 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 {
 	int nsec;
 	char *conf;
-	const char *main_repo, *repo, *path;
+	char rrepo[_Q_PATH_MAX];
+	const char *main_repo;
+	const char *repo;
+	const char *path;
 	dictionary *dict;
 
 	if (getenv("DEBUG"))
@@ -661,6 +664,10 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 			void *ele;
 			size_t n;
 			char *overlay;
+
+			/* try not to get confused by symlinks etc. */
+			if (realpath(path, rrepo) != NULL)
+				path = rrepo;
 
 			array_for_each(overlay_names, n, overlay) {
 				if (strcmp(overlay, repo) == 0)
@@ -906,12 +913,18 @@ initialize_portage_env(void)
 		var = &vars_to_read[11];  /* PORTDIR */
 
 		if (strcmp(var->src, STR_DEFAULT) != 0 || array_cnt(overlays) == 0) {
+			char roverlay[_Q_PATH_MAX];
+			/* get cannonical path, we do so for repos.conf too */
+			if (realpath(main_overlay, roverlay) == NULL)
+				snprintf(roverlay, sizeof(roverlay), "%s", main_overlay);
 			array_for_each(overlays, i, overlay) {
-				if (strcmp(overlay, main_overlay) == 0)
+				if (strcmp(overlay, roverlay) == 0)
 					break;
 				overlay = NULL;
 			}
 			if (overlay == NULL) {  /* add PORTDIR to overlays */
+				free(main_overlay);
+				main_overlay = xstrdup(roverlay);
 				xarraypush_ptr(overlays, main_overlay);
 				xarraypush_str(overlay_names, "<PORTDIR>");
 				xarraypush_str(overlay_src, var->src);
