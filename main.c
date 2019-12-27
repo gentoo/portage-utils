@@ -22,6 +22,7 @@
 #include "eat_file.h"
 #include "rmspace.h"
 #include "scandirat.h"
+#include "set.h"
 #include "xasprintf.h"
 
 /* variables to control runtime behavior */
@@ -354,10 +355,12 @@ set_portage_env_var(env_vars *var, const char *value, const char *src)
 	}
 }
 
-/* Helper to read a portage env file (e.g. make.conf), or recursively if
- * it points to a directory */
+/* Helper to read a portage file (e.g. make.conf, package.mask), or
+ * recursively if it points to a directory (we don't care about EAPI for
+ * dirs, basically PMS 5.2.5 EAPI restriction is ignored) */
+enum portage_file_type { ENV_FILE, PMASK_FILE };
 static void
-read_portage_env_file(const char *file, env_vars vars[])
+read_portage_file(const char *file, enum portage_file_type type, void *data)
 {
 	FILE *fp;
 	struct dirent **dents;
@@ -368,6 +371,8 @@ read_portage_env_file(const char *file, env_vars vars[])
 	size_t buflen = 0;
 	size_t line;
 	int i;
+	env_vars *vars = data;
+	set *masks = data;
 
 	if (getenv("DEBUG"))
 		fprintf(stderr, "profile %s\n", file);
@@ -384,7 +389,7 @@ read_portage_env_file(const char *file, env_vars vars[])
 					d->d_name[strlen(d->d_name) - 1] == '~')
 				continue;
 			snprintf(npath, sizeof(npath), "%s/%s", file, d->d_name);
-			read_portage_env_file(npath, vars);
+			read_portage_file(npath, type, data);
 		}
 		scandir_free(dents, dentslen);
 		goto done;
@@ -402,84 +407,107 @@ read_portage_env_file(const char *file, env_vars vars[])
 			continue;
 
 		/* Handle "source" keyword */
-		if (strncmp(buf, "source ", 7) == 0) {
-			const char *sfile = buf + 7;
-			char npath[_Q_PATH_MAX * 2];
+		if (type == ENV_FILE) {
+			if (strncmp(buf, "source ", 7) == 0) {
+				const char *sfile = buf + 7;
+				char npath[_Q_PATH_MAX * 2];
 
-			if (sfile[0] != '/') {
-				/* handle relative paths */
-				size_t file_path_len;
+				if (sfile[0] != '/') {
+					/* handle relative paths */
+					size_t file_path_len;
 
-				s = strrchr(file, '/');
-				file_path_len = s - file + 1;
+					s = strrchr(file, '/');
+					file_path_len = s - file + 1;
 
-				snprintf(npath, sizeof(npath), "%.*s/%s",
-						(int)file_path_len, file, sfile);
-				sfile = npath;
-			}
-
-			read_portage_env_file(sfile, vars);
-			continue;
-		}
-
-		/* look for our desired variables and grab their value */
-		for (i = 0; vars[i].name; ++i) {
-			if (buf[vars[i].name_len] != '=' && buf[vars[i].name_len] != ' ')
-				continue;
-			if (strncmp(buf, vars[i].name, vars[i].name_len))
-				continue;
-
-			/* make sure we handle spaces between the varname, the =,
-			 * and the value:
-			 * VAR=val   VAR = val   VAR="val"
-			 */
-			s = buf + vars[i].name_len;
-			if ((p = strchr(s, '=')) != NULL)
-				s = p + 1;
-			while (isspace(*s))
-				++s;
-			if (*s == '"' || *s == '\'') {
-				char *endq;
-				char q = *s;
-
-				/* make sure we handle spacing/comments after the quote */
-				endq = strchr(s + 1, q);
-				if (!endq) {
-					/* If the last char is not a quote, then we span lines */
-					size_t abuflen;
-					char *abuf;
-
-					abuf = NULL;
-					while (getline(&abuf, &abuflen, fp) != -1) {
-						buf = xrealloc(buf, buflen + abuflen);
-						endq = strchr(abuf, q);
-						if (endq)
-							*endq = '\0';
-
-						strcat(buf, abuf);
-						buflen += abuflen;
-
-						if (endq)
-							break;
-					}
-					free(abuf);
-
-					if (!endq)
-						warn("%s:%zu: %s: quote mismatch",
-								file, line, vars[i].name);
-
-					s = buf + vars[i].name_len + 2;
-				} else {
-					*endq = '\0';
-					++s;
+					snprintf(npath, sizeof(npath), "%.*s/%s",
+							(int)file_path_len, file, sfile);
+					sfile = npath;
 				}
-			} else {
-				/* no quotes, so chop the spacing/comments ourselves */
-				size_t off = strcspn(s, "# \t\n");
-				s[off] = '\0';
+
+				read_portage_file(sfile, type, data);
+				continue;
 			}
 
-			set_portage_env_var(&vars[i], s, file);
+			/* look for our desired variables and grab their value */
+			for (i = 0; vars[i].name; i++) {
+				if (buf[vars[i].name_len] != '=' &&
+						buf[vars[i].name_len] != ' ')
+					continue;
+				if (strncmp(buf, vars[i].name, vars[i].name_len))
+					continue;
+
+				/* make sure we handle spaces between the varname, the =,
+				 * and the value:
+				 * VAR=val   VAR = val   VAR="val"
+				 */
+				s = buf + vars[i].name_len;
+				if ((p = strchr(s, '=')) != NULL)
+					s = p + 1;
+				while (isspace(*s))
+					s++;
+				if (*s == '"' || *s == '\'') {
+					char *endq;
+					char q = *s;
+
+					/* make sure we handle spacing/comments after the quote */
+					endq = strchr(s + 1, q);
+					if (!endq) {
+						/* if the last char is not a quote,
+						 * then we span lines */
+						size_t abuflen;
+						char *abuf;
+
+						abuf = NULL;
+						while (getline(&abuf, &abuflen, fp) != -1) {
+							buf = xrealloc(buf, buflen + abuflen);
+							endq = strchr(abuf, q);
+							if (endq)
+								*endq = '\0';
+
+							strcat(buf, abuf);
+							buflen += abuflen;
+
+							if (endq)
+								break;
+						}
+						free(abuf);
+
+						if (!endq)
+							warn("%s:%zu: %s: quote mismatch",
+									file, line, vars[i].name);
+
+						s = buf + vars[i].name_len + 2;
+					} else {
+						*endq = '\0';
+						s++;
+					}
+				} else {
+					/* no quotes, so chop the spacing/comments ourselves */
+					size_t off = strcspn(s, "# \t\n");
+					s[off] = '\0';
+				}
+
+				set_portage_env_var(&vars[i], s, file);
+			}
+		} else if (type == PMASK_FILE) {
+			/* trim leading space */
+			for (s = buf; isspace((int)*s); s++)
+				;
+			if (*s == '\0')
+				continue;
+			if (*s == '-') {
+				/* negation/removal, lookup and drop mask if it exists;
+				 * note that this only supports exact matches (PMS
+				 * 5.2.5) so we don't even have to parse and use
+				 * atom-compare here */
+				s++;
+				if ((p = del_set(s, masks, NULL)) != NULL)
+					free(p);
+			} else {
+				p = xstrdup(file);
+				if (add_set_value(s, p, masks) != NULL)
+					free(p);
+			}
 		}
 	}
 
@@ -490,9 +518,10 @@ read_portage_env_file(const char *file, env_vars vars[])
 
 /* Helper to recursively read stacked make.defaults in profiles */
 static void
-read_portage_profile(const char *profile, env_vars vars[])
+read_portage_profile(const char *profile, env_vars vars[], set *masks)
 {
 	char profile_file[_Q_PATH_MAX * 3];
+	char rpath[_Q_PATH_MAX];
 	size_t profile_len;
 	char *s;
 	char *p;
@@ -548,7 +577,9 @@ read_portage_profile(const char *profile, env_vars vars[])
 			snprintf(profile_file + profile_len,
 					sizeof(profile_file) - profile_len, "%s", s);
 		}
-		read_portage_profile(profile_file, vars);
+		read_portage_profile(
+				realpath(profile_file, rpath) == NULL ? profile_file : rpath,
+				vars, masks);
 		/* restore original path in case we were repointed by profile */
 		if (p != NULL)
 			snprintf(profile_file, sizeof(profile_file), "%s/", profile);
@@ -557,9 +588,11 @@ read_portage_profile(const char *profile, env_vars vars[])
 
 	free(buf);
 
-	/* now consume *this* profile's make.defaults */
+	/* now consume *this* profile's make.defaults and package.mask */
 	strcpy(profile_file + profile_len, "make.defaults");
-	read_portage_env_file(profile_file, vars);
+	read_portage_file(profile_file, ENV_FILE, vars);
+	strcpy(profile_file + profile_len, "package.mask");
+	read_portage_file(profile_file, PMASK_FILE, masks);
 }
 
 static bool nocolor = 0;
@@ -598,6 +631,7 @@ env_vars vars_to_read[] = {
 
 #undef _Q_EV
 };
+set *package_masks = NULL;
 
 /* Handle a single file in the repos.conf format. */
 static void
@@ -716,16 +750,19 @@ initialize_portage_env(void)
 	const char *s;
 	env_vars *var;
 	char pathbuf[_Q_PATH_MAX];
+	char rpathbuf[_Q_PATH_MAX];
 	const char *configroot = getenv("PORTAGE_CONFIGROOT");
 	char *primary_overlay = NULL;
 
-	/* initialize all the strings with their default value */
+	/* initialize all the properties with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
 		var = &vars_to_read[i];
 		if (var->type != _Q_BOOL)
 			*var->value.s = xstrdup(var->default_value);
 		var->src = xstrdup(STR_DEFAULT);
 	}
+
+	package_masks = create_set();
 
 	/* figure out where to find our config files */
 	if (!configroot)
@@ -737,7 +774,7 @@ initialize_portage_env(void)
 		i--;
 
 	/* read overlays first so we can resolve repo references in profile
-	 * parent files */
+	 * parent files (non PMS feature?) */
 	snprintf(pathbuf, sizeof(pathbuf), "%.*s", (int)i, configroot);
 	read_repos_conf(pathbuf, "/usr/share/portage/config/repos.conf",
 			&primary_overlay);
@@ -747,23 +784,41 @@ initialize_portage_env(void)
 	snprintf(pathbuf, sizeof(pathbuf),
 			"%.*s/usr/share/portage/config/make.globals",
 			(int)i, configroot);
-	read_portage_env_file(pathbuf, vars_to_read);
+	read_portage_file(pathbuf, ENV_FILE, vars_to_read);
+
+	/* start with base masks, Portage behaviour PMS 5.2.8 */
+	if (primary_overlay != NULL) {
+		char *overlay;
+		size_t n;
+		array_for_each(overlay_names, n, overlay) {
+			if (overlay == primary_overlay) {
+				snprintf(pathbuf, sizeof(pathbuf), "%s/profiles/package.mask",
+						(char *)array_get_elem(overlays, n));
+				read_portage_file(pathbuf, PMASK_FILE, package_masks);
+				break;
+			}
+		}
+	}
 
 	/* walk all the stacked profiles */
 	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/make.profile",
 			(int)i, configroot);
-	read_portage_profile(pathbuf, vars_to_read);
+	read_portage_profile(
+			realpath(pathbuf, rpathbuf) == NULL ? pathbuf : rpathbuf,
+			vars_to_read, package_masks);
 	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/portage/make.profile",
 			(int)i, configroot);
-	read_portage_profile(pathbuf, vars_to_read);
+	read_portage_profile(
+			realpath(pathbuf, rpathbuf) == NULL ? pathbuf : rpathbuf,
+			vars_to_read, package_masks);
 
-	/* now read all the config files */
+	/* now read all Portage's config files */
 	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/make.conf",
 			(int)i, configroot);
-	read_portage_env_file(pathbuf, vars_to_read);
+	read_portage_file(pathbuf, ENV_FILE, vars_to_read);
 	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/portage/make.conf",
 			(int)i, configroot);
-	read_portage_env_file(pathbuf, vars_to_read);
+	read_portage_file(pathbuf, ENV_FILE, vars_to_read);
 
 	/* finally, check the env */
 	for (i = 0; vars_to_read[i].name; i++) {

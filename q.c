@@ -19,21 +19,24 @@
 #include <libproc.h>
 #endif
 
+#include "atom.h"
 #include "basename.h"
 #include "eat_file.h"
 #include "rmspace.h"
 
-#define Q_FLAGS "ioe" COMMON_FLAGS
+#define Q_FLAGS "ioem" COMMON_FLAGS
 static struct option const q_long_opts[] = {
 	{"install",       no_argument, NULL, 'i'},
 	{"overlays",      no_argument, NULL, 'o'},
 	{"envvar",        no_argument, NULL, 'e'},
+	{"masks",         no_argument, NULL, 'm'},
 	COMMON_LONG_OPTS
 };
 static const char * const q_opts_help[] = {
 	"Install symlinks for applets",
 	"Print available overlays (read from repos.conf)",
 	"Print used variables and their found values",
+	"Print (package.)masks for the current profile",
 	COMMON_OPTS_HELP
 };
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, NULL, lookup_applet_idx("q"))
@@ -81,6 +84,7 @@ int q_main(int argc, char **argv)
 	bool install;
 	bool print_overlays;
 	bool print_vars;
+	bool print_masks;
 	const char *p;
 	APPLET func;
 
@@ -100,12 +104,14 @@ int q_main(int argc, char **argv)
 	install = false;
 	print_overlays = false;
 	print_vars = false;
+	print_masks = false;
 	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
 		case 'i': install = true;        break;
 		case 'o': print_overlays = true; break;
 		case 'e': print_vars = true;     break;
+		case 'm': print_masks = true;    break;
 		}
 	}
 
@@ -254,6 +260,54 @@ int q_main(int argc, char **argv)
 					printf("\n");
 			}
 		}
+
+		return 0;
+	}
+
+	if (print_masks) {
+		DECLARE_ARRAY(masks);
+		DECLARE_ARRAY(files);
+		char *mask;
+		size_t n;
+		int j;
+		bool match;
+		depend_atom *atom;
+		depend_atom *qatom;
+
+		array_set(package_masks, masks);
+		values_set(package_masks, files);
+
+		array_for_each(masks, n, mask) {
+			if ((atom = atom_explode(mask)) == NULL)
+				continue;
+
+			match = true;
+			if (argc > optind) {
+				match = false;
+				for (j = optind; j < argc; j++) {
+					qatom = atom_explode(argv[j]);
+					if (qatom != NULL && atom_compare(atom, qatom) == EQUAL)
+						match = true;
+					atom_implode(qatom);
+					if (match)
+						break;
+				}
+			}
+			if (!match)
+				continue;
+
+			printf("%s", atom_format(
+						"%[pfx]%[CAT]%[PF]%[SLOT]%[SUBSLOT]%[sfx]%[USE]%[REPO]",
+						atom));
+			if (verbose)
+				printf(" [%s]\n", (char *)array_get_elem(files, n));
+			else
+				printf("\n");
+			atom_implode(atom);
+		}
+
+		xarrayfree_int(masks);
+		xarrayfree_int(files);
 
 		return 0;
 	}

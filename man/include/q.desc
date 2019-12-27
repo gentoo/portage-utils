@@ -6,3 +6,5 @@ After version 0.74 of portage-utils, the cache functionality was removed
 in favour of using various trees directly, and optionally the caches
 therein.  As such the \fB-r\fR and \fB-m\fR options were removed.  It is
 no longer necessary to initialise the cache at any time.
+.P
+After version 0.82, the \fB-m\fR flag got repurposed for listing masks.

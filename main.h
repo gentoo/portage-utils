@@ -24,6 +24,7 @@
 
 #include "colors.h"
 #include "i18n.h"
+#include "set.h"
 
 extern const char *argv0;
 
@@ -152,5 +153,6 @@ typedef struct {
 	char *src;
 } env_vars;
 extern env_vars vars_to_read[];
+extern set *package_masks;
 
 #endif
