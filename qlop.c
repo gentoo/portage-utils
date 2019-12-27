@@ -371,6 +371,7 @@ static int do_emerge_log(
 	char *p;
 	char *q;
 	time_t tstart = LONG_MAX;
+	time_t tlast = tbegin;
 	time_t tstart_emerge = 0;
 	time_t last_merge = 0;
 	time_t sync_start = 0;
@@ -531,6 +532,9 @@ static int do_emerge_log(
 		}
 
 		tstart = atol(buf);
+		if (tstart < tlast)
+			continue;
+		tlast = tstart;
 		if (tstart < tbegin || tstart > tend)
 			continue;
 
@@ -845,6 +849,7 @@ static int do_emerge_log(
 	fclose(fp);
 	if (flags->do_running) {
 		time_t cutofftime;
+		set *pkgs_seen = create_set();
 
 		tstart = time(NULL);
 
@@ -856,7 +861,8 @@ static int do_emerge_log(
 
 		/* can't report endtime for non-finished operations */
 		flags->do_endtime = 0;
-		sync_time /= sync_cnt;
+		if (sync_time > 0)
+			sync_time /= sync_cnt;
 		if (sync_start >= cutofftime) {
 			elapsed = tstart - sync_start;
 			if (elapsed >= sync_time)
@@ -876,15 +882,21 @@ static int do_emerge_log(
 							fmt_elapsedtime(flags, sync_time - elapsed));
 			}
 		}
-		array_for_each(merge_matches, i, pkgw) {
+		array_for_each_rev(merge_matches, i, pkgw) {
 			time_t maxtime = 0;
 			bool isMax = false;
+			bool notseen;
 
 			if (pkgw->tbegin < cutofftime)
 				continue;
 
 			snprintf(afmt, sizeof(afmt), "%s/%s",
 					pkgw->atom->CATEGORY, pkgw->atom->PN);
+
+			/* eliminate dups, bug #701392 */
+			add_set_unique(afmt, pkgs_seen, &notseen);
+			if (!notseen)
+				continue;
 
 			elapsed = tstart - pkgw->tbegin;
 			pkg = get_set(afmt, merge_averages);
@@ -923,15 +935,22 @@ static int do_emerge_log(
 					maxtime > 0 && verbose ?
 						isMax ? " (longest run)" : " (average run)" : "");
 		}
+		clear_set(pkgs_seen);
 		array_for_each(unmerge_matches, i, pkgw) {
 			time_t maxtime = 0;
 			bool isMax = false;
+			bool notseen;
 
 			if (pkgw->tbegin < cutofftime)
 				continue;
 
 			snprintf(afmt, sizeof(afmt), "%s/%s",
 					pkgw->atom->CATEGORY, pkgw->atom->PN);
+
+			/* eliminate dups, bug #701392 */
+			add_set_unique(afmt, pkgs_seen, &notseen);
+			if (!notseen)
+				continue;
 
 			elapsed = tstart - pkgw->tbegin;
 			pkg = get_set(afmt, unmerge_averages);
@@ -959,6 +978,7 @@ static int do_emerge_log(
 					maxtime > 0 && verbose ?
 						isMax ? " (longest run)" : " (average run)" : "");
 		}
+		free_set(pkgs_seen);
 	} else if (flags->do_average) {
 		size_t total_merges = 0;
 		size_t total_unmerges = 0;
@@ -1135,7 +1155,20 @@ static array_t *probe_proc(array_t *atoms)
 		scandir_free(procs, procslen);
 	} else {
 		/* flag /proc doesn't exist */
+		warn("/proc doesn't exist, running merges are based on heuristics");
 		return NULL;
+	}
+
+	if (array_cnt(ret_atoms) == 0) {
+		/* if we didn't find anything, this is either because nothing is
+		 * running, or because we didn't have appropriate permissions --
+		 * try to figure out which of the two is it (there is no good
+		 * way) */
+		if (geteuid() != 0) {
+			warn("insufficient privileges for full /proc access, "
+					"running merges are based on heuristics");
+			return NULL;
+		}
 	}
 
 	if (array_cnt(atoms) > 0) {
@@ -1351,12 +1384,15 @@ int qlop_main(int argc, char **argv)
 	}
 
 	if (m.do_running) {
-		array_t *new_atoms = probe_proc(atoms);
+		array_t *new_atoms = NULL;
 
-		if (runningmode > 1 || new_atoms == NULL) {
-			warn("/proc not available, deducing running "
-					"merges from emerge.log");
-		} else if (array_cnt(new_atoms) == 0) {
+		if (runningmode > 1) {
+			warn("running without /proc scanning, heuristics only");
+		} else {
+			new_atoms = probe_proc(atoms);
+		}
+
+		if (new_atoms != NULL && array_cnt(new_atoms) == 0) {
 			/* proc supported, found nothing running */
 			start_time = LONG_MAX;
 		}
