@@ -903,7 +903,9 @@ static int do_emerge_log(
 			if (pkg != NULL) {
 				maxtime = pkg->time / pkg->cnt;
 				if (elapsed >= maxtime) {
-					maxtime = elapsed >= pkg->tbegin ? 0 : pkg->tbegin;
+					maxtime = pkg->tbegin;
+					if (elapsed >= maxtime)
+						maxtime -= elapsed;
 					isMax = true;
 				}
 			}
@@ -928,12 +930,15 @@ static int do_emerge_log(
 						fmt_date(flags, pkgw->tbegin, 0),
 						atom_format(flags->fmt, pkgw->atom));
 			}
-			printf("...%s ETA: %s%s\n",
-					p == NULL ? "" : p,
-					maxtime == 0 ? "unknown" :
-						fmt_elapsedtime(flags, maxtime - elapsed),
-					maxtime > 0 && verbose ?
-						isMax ? " (longest run)" : " (average run)" : "");
+			if (maxtime < 0)
+				printf("... +%s\n", fmt_elapsedtime(flags, -maxtime));
+			else
+				printf("...%s ETA: %s%s\n",
+						p == NULL ? "" : p,
+						maxtime == 0 ? "unknown" :
+							fmt_elapsedtime(flags, maxtime - elapsed),
+						maxtime > 0 && verbose ?
+							isMax ? " (longest run)" : " (average run)" : "");
 		}
 		clear_set(pkgs_seen);
 		array_for_each(unmerge_matches, i, pkgw) {
@@ -957,7 +962,9 @@ static int do_emerge_log(
 			if (pkg != NULL) {
 				maxtime = pkg->time / pkg->cnt;
 				if (elapsed >= maxtime) {
-					maxtime = elapsed >= pkg->tbegin ? 0 : pkg->tbegin;
+					maxtime = pkg->tbegin;
+					if (elapsed >= maxtime)
+						maxtime -= elapsed;
 					isMax = true;
 				}
 			}
@@ -972,11 +979,14 @@ static int do_emerge_log(
 						fmt_date(flags, pkgw->tbegin, 0),
 						atom_format(flags->fmt, pkgw->atom));
 			}
-			printf("... ETA: %s%s\n",
-					maxtime == 0 ? "unknown" :
-					fmt_elapsedtime(flags, maxtime - elapsed),
-					maxtime > 0 && verbose ?
-						isMax ? " (longest run)" : " (average run)" : "");
+			if (maxtime < 0)
+				printf("... +%s\n", fmt_elapsedtime(flags, -maxtime));
+			else
+				printf("... ETA: %s%s\n",
+						maxtime == 0 ? "unknown" :
+							fmt_elapsedtime(flags, maxtime - elapsed),
+						maxtime > 0 && verbose ?
+							isMax ? " (longest run)" : " (average run)" : "");
 		}
 		free_set(pkgs_seen);
 	} else if (flags->do_average) {
