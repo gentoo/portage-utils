@@ -525,7 +525,7 @@ atom_compare(const depend_atom *data, const depend_atom *query)
 	if (sfx_op == ATOM_OP_STAR) {
 		if (query->letter)
 			ver_bits |= (1 << 0);
-		if (query->suffixes[0].suffix != VER_NORM)
+		if (query->suffixes && query->suffixes[0].suffix != VER_NORM)
 			ver_bits |= (1 << 1);
 		/* This doesn't handle things like foo-1.0-r0*, but that atom
 		 * doesn't ever show up in practice, so who cares. */
