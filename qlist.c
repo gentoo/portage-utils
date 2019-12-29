@@ -19,6 +19,7 @@
 #include "atom.h"
 #include "contents.h"
 #include "tree.h"
+#include "xpak.h"
 #include "xregex.h"
 
 #define QLIST_FLAGS "IkSRUcDedosF:" COMMON_FLAGS
@@ -315,6 +316,7 @@ struct qlist_opt_state {
 	depend_atom **atoms;
 	bool exact:1;
 	bool all:1;
+	bool do_binpkgs:1;
 	bool just_pkgname:1;
 	bool show_dir:1;
 	bool show_obj:1;
@@ -327,6 +329,33 @@ struct qlist_opt_state {
 	const char *fmt;
 };
 
+struct qlist_xpakcbctx {
+	const char *key;
+	char *retdata;
+	size_t retlen;
+};
+
+static void
+_qlist_xpakcb(
+	void *ctx,
+	char *pathname,
+	int pathname_len,
+	int data_offset,
+	int data_len,
+	char *data)
+{
+	struct qlist_xpakcbctx *xctx = ctx;
+	(void)pathname_len;
+
+	/* see if this path matches what we're looking for */
+	if (strcmp(pathname, xctx->key) != 0)
+		return;
+
+	xctx->retdata = xrealloc(xctx->retdata, data_len + 1);
+	memcpy(xctx->retdata, data + data_offset, data_len + 1);
+	xctx->retlen = data_len;
+}
+
 static int
 qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
@@ -334,6 +363,11 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int i;
 	FILE *fp;
 	depend_atom *atom;
+	struct qlist_xpakcbctx cbctx = {
+		.key = "CONTENTS",
+		.retdata = NULL,
+		.retlen = 0,
+	};
 
 	/* see if this cat/pkg is requested */
 	if (!state->all) {
@@ -358,7 +392,31 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		printf("%s %sCONTENTS%s:\n",
 				atom_format(state->fmt, atom), DKBLUE, NORM);
 
-	fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
+	if (state->do_binpkgs) {
+		char xpak[_Q_PATH_MAX];
+		int ret;
+		snprintf(xpak, sizeof(xpak), "%s/%s/%s/%s-%s.tbz2",
+				portroot, pkgdir, atom->CATEGORY, atom->PN,
+				atom->PR_int > 0 ? atom->PVR : atom->PV);
+		ret = xpak_extract(xpak, &cbctx, &_qlist_xpakcb);
+		if (ret != 0 || cbctx.retdata == NULL)
+			fp = NULL;
+		else
+#ifdef HAVE_FMEMOPEN
+			fp = fmemopen(cbctx.retdata, cbctx.retlen, "r");
+#else
+		{
+			/* resort to writing a file in tmpspace */
+			fp = tmpfile();
+			if (fp != NULL) {
+				fwrite(cbctx.retdata, 1, cbctx.retlen, fp);
+				fseek(fp, 0, SEEK_SET);
+			}
+		}
+#endif
+	} else {
+		fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
+	}
 	if (fp == NULL)
 		return 1;
 
@@ -398,6 +456,8 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		}
 	}
 	fclose(fp);
+	if (state->do_binpkgs && cbctx.retdata != NULL)
+		free(cbctx.retdata);
 
 	return 1;
 }
@@ -410,13 +470,13 @@ int qlist_main(int argc, char **argv)
 	int show_slots = 0;
 	bool show_repo = false;
 	bool do_columns = false;
-	bool do_binpkgs = false;
 	char qfmt[128];
 	struct qlist_opt_state state = {
 		.argc = argc,
 		.argv = argv,
 		.exact = false,
 		.all = false,
+		.do_binpkgs = false,
 		.just_pkgname = false,
 		.show_dir = false,
 		.show_obj = false,
@@ -432,7 +492,7 @@ int qlist_main(int argc, char **argv)
 		switch (i) {
 		COMMON_GETOPTS_CASES(qlist)
 		case 'I': state.just_pkgname = true;                    break;
-		case 'k': do_binpkgs = true;                            break;
+		case 'k': state.do_binpkgs = true;                      break;
 		case 'S': state.just_pkgname = true; show_slots++;      break;
 		case 'R': state.just_pkgname = show_repo = true;        break;
 		case 'U': state.just_pkgname = state.show_umap = true;  break;
@@ -488,7 +548,7 @@ int qlist_main(int argc, char **argv)
 	state.buf = xmalloc(state.buflen);
 	state.atoms = xcalloc(argc - optind, sizeof(*state.atoms));
 	ret = 1;
-	if (do_binpkgs)
+	if (state.do_binpkgs)
 		vdb = tree_open_binpkg(portroot, pkgdir);
 	else
 		vdb = tree_open_vdb(portroot, portvdb);

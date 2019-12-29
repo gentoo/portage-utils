@@ -19,7 +19,8 @@ LT_INIT
 AC_SUBST([LIBTOOL_DEPS])
 
 AC_CHECK_FUNCS_ONCE(m4_flatten([
-       scandirat
+	   fmemopen
+	   scandirat
 ]))
 
 AC_ARG_WITH([eprefix], [AS_HELP_STRING([--with-eprefix], [path for Gentoo/Prefix project])])
