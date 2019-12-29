@@ -474,7 +474,7 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 	return ret;
 }
 
-int
+static int
 tree_pkg_vdb_openat(
 		tree_pkg_ctx *pkg_ctx,
 		const char *file,

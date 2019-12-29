@@ -123,7 +123,6 @@ void tree_close_cat(tree_cat_ctx *cat_ctx);
 int tree_filter_pkg(const struct dirent *de);
 tree_pkg_ctx *tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name);
 tree_pkg_ctx *tree_next_pkg(tree_cat_ctx *cat_ctx);
-int tree_pkg_vdb_openat(tree_pkg_ctx *pkg_ctx, const char *file, int flags, mode_t mode);
 FILE *tree_pkg_vdb_fopenat(tree_pkg_ctx *pkg_ctx, const char *file,
 	int flags, mode_t mode, const char *fmode);
 #define tree_pkg_vdb_fopenat_ro(pkg_ctx, file) \

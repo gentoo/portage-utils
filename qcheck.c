@@ -72,7 +72,6 @@ struct qcheck_opt_state {
 static int
 qcheck_process_contents(tree_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 {
-	int fd_contents;
 	FILE *fp_contents, *fp_contents_update;
 	size_t num_files, num_files_ok, num_files_unknown, num_files_ignored;
 	char *buffer, *line;
@@ -85,18 +84,9 @@ qcheck_process_contents(tree_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	fp_contents_update = NULL;
 
 	/* Open contents */
-	fd_contents = tree_pkg_vdb_openat(pkg_ctx, "CONTENTS",
-			O_RDONLY | O_CLOEXEC, 0);
-	if (fd_contents == -1)
+	fp_contents = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
+	if ((fp_contents = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
 		return EXIT_SUCCESS;
-	if (fstat(fd_contents, &cst)) {
-		close(fd_contents);
-		return EXIT_SUCCESS;
-	}
-	if ((fp_contents = fdopen(fd_contents, "r")) == NULL) {
-		close(fd_contents);
-		return EXIT_SUCCESS;
-	}
 
 	/* Open contents_update, if needed */
 	atom = tree_get_atom(pkg_ctx, false);
@@ -322,11 +312,17 @@ qcheck_process_contents(tree_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 	}
 
 	if (state->qc_update) {
-		if (fchown(fd_contents, cst.st_uid, cst.st_gid)) {
-			/* meh */;
-		}
-		if (fchmod(fd_contents, cst.st_mode)) {
-			/* meh */;
+		int fd_contents = fileno(fp_contents);
+		int fd_update = fileno(fp_contents_update);
+
+		/* copy original ownership and mode */
+		if (fstat(fd_contents, &cst) == 0) {
+			if (fchown(fd_update, cst.st_uid, cst.st_gid)) {
+				/* meh */;
+			}
+			if (fchmod(fd_update, cst.st_mode)) {
+				/* meh */;
+			}
 		}
 		fclose(fp_contents_update);
 		if (renameat(pkg_ctx->fd, "CONTENTS~", pkg_ctx->fd, "CONTENTS"))
