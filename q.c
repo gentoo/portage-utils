@@ -48,24 +48,41 @@ APPLET lookup_applet(const char *applet)
 	if (strlen(applet) < 1)
 		return NULL;
 
-	for (i = 0; applets[i].name; ++i) {
-		if (strcmp(applets[i].name, applet) == 0) {
+	if (applet[0] == 'q')
+		applet++;
+
+	/* simple case, e.g. something like "qlop" or "q lop" both being "lop"  */
+	for (i = 0; applets[i].desc != NULL; i++) {
+		if (strcmp(applets[i].name + 1, applet) == 0) {
 			argv0 = applets[i].name;
-			if (i && applets[i].desc != NULL)
-				++argv0; /* chop the leading 'q' */
 			return applets[i].func;
 		}
 	}
 
-	/* No applet found? Search by shortname then... */
-	for (i = 1; applets[i].desc != NULL; ++i) {
-		if (strcmp(applets[i].name + 1, applet) == 0) {
-			argv0 = applets[i].name + 1;
-			return applets[i].func;
+	/* this is possibly an alias like "belongs"
+	 * NOTE: we continue where the previous loop left, e.g. on the first
+	 * alias (desc == NULL) */
+	for ( ; applets[i].name != NULL; i++) {
+		if (strcmp(applets[i].name, applet) == 0) {
+			unsigned int j;
+
+			/* lookup the real name for this alias */
+			for (j = 1; applets[j].desc != NULL; j++) {
+				if (applets[j].func == applets[i].func) {
+					argv0 = applets[j].name;
+					return applets[j].func;
+				}
+			}
+
+			/* this shouldn't happen and means our array from applets.h
+			 * is inconsistent */
+			warn("invalid applet alias '%s': target applet unknown", applet);
+			return NULL;
 		}
 	}
+
 	/* still nothing ?  those bastards ... */
-	warn("Unknown applet '%s'", applet);
+	warn("unknown applet: %s", applet);
 	return NULL;
 }
 

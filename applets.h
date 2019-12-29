@@ -102,7 +102,6 @@ static const struct applet_t {
 	/*"glsa"*/
 	{"hasuse",    quse_main,      NULL, NULL},
 	/*"list"*/
-	{"size",      qsize_main,     NULL, NULL},
 	/*"stats"*/
 	/*"uses"*/
 	/*"which"*/
