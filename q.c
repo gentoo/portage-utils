@@ -62,7 +62,7 @@ APPLET lookup_applet(const char *applet)
 	/* this is possibly an alias like "belongs"
 	 * NOTE: we continue where the previous loop left, e.g. on the first
 	 * alias (desc == NULL) */
-	for ( ; applets[i].name != NULL; i++) {
+	for (/*i*/; applets[i].name != NULL; i++) {
 		if (strcmp(applets[i].name, applet) == 0) {
 			unsigned int j;
 
