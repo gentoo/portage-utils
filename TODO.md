@@ -21,17 +21,12 @@
 
 - implement our own iniparser so we *can* be dep-free
 
-- add applet/functionality to view latest version of package in tree
-  (functionality necessary for upgrade in qmerge, easy printing would
-  also allow to use q instead of eix from Puppet provider)
-
 # Atoms
 
 - only 32bit values are supported for revision (-r#)
 - only 64bit values are supported in any individual version component
   foo-(1234)\_alpha(56789)
 - these limits should not be an issue for all practical purposes
-- remove zalloc from atom explode (just initialise what needs to)
 - make PVR match PMS https://dev.gentoo.org/~ulm/pms/head/pms.html#x1-10800011
 
 # qmerge

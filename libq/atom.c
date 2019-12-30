@@ -54,8 +54,9 @@ atom_explode(const char *atom)
 	 * PVR needs 3 extra bytes for possible implicit '-r0'. */
 	slen = strlen(atom);
 	len = sizeof(*ret) + (slen + 1) * sizeof(*atom) * 3 + 3;
-	ret = xzalloc(len);
-	ptr = (char*)ret;
+	ret = xmalloc(len);
+	memset(ret, '\0', sizeof(*ret));
+	ptr = (char *)ret;
 	ret->P = ptr + sizeof(*ret);
 	ret->PVR = ret->P + slen + 1;
 	ret->CATEGORY = ret->PVR + slen + 1 + 3;
