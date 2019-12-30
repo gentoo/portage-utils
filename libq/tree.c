@@ -876,9 +876,19 @@ tree_read_file_binpkg_xpak_cb(
 		data_len--;
 
 	if (len - pos < (size_t)data_len) {
+		char *old_data = m->_data;
 		len += (((data_len + 1) / BUFSIZ) + 1) * BUFSIZ;
 		m->_data = xrealloc(m->_data, len);
 		m->_md5_ = (char *)len;
+
+		/* re-position existing keys */
+		if (old_data != NULL && m->_data != old_data) {
+			char **newdata = (char **)m;
+			int elems = sizeof(tree_pkg_meta) / sizeof(char *);
+			while (elems-- > 0)
+				if (newdata[elems] != NULL)
+					newdata[elems] = m->_data + (newdata[elems] - old_data);
+		}
 	}
 
 	*key = m->_data + pos;
