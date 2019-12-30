@@ -8,6 +8,7 @@
 
 #include <dirent.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "atom.h"
 #include "set.h"
@@ -67,37 +68,38 @@ struct tree_pkg_ctx {
 	int fd;
 	tree_cat_ctx *cat_ctx;
 	depend_atom *atom;
+	tree_pkg_meta *meta;
 };
 
 /* Ebuild data */
 struct tree_pkg_meta {
-	char *_data;
-	char *DEPEND;        /* line 1 */
-	char *RDEPEND;
-	char *SLOT;
-	char *SRC_URI;
-	char *RESTRICT;      /* line 5 */
-	char *HOMEPAGE;
-	char *LICENSE;
-	char *DESCRIPTION;
-	char *KEYWORDS;
-	char *INHERITED;     /* line 10 */
-	char *IUSE;
-	char *CDEPEND;
-	char *PDEPEND;
-	char *PROVIDE;       /* line 14 */
-	char *EAPI;
-	char *PROPERTIES;
+	char *Q__data;
+	char *Q_DEPEND;        /* line 1 */
+	char *Q_RDEPEND;
+	char *Q_SLOT;
+	char *Q_SRC_URI;
+	char *Q_RESTRICT;      /* line 5 */
+	char *Q_HOMEPAGE;
+	char *Q_LICENSE;
+	char *Q_DESCRIPTION;
+	char *Q_KEYWORDS;
+	char *Q_INHERITED;     /* line 10 */
+	char *Q_IUSE;
+	char *Q_CDEPEND;
+	char *Q_PDEPEND;
+	char *Q_PROVIDE;       /* line 14 */
+	char *Q_EAPI;
+	char *Q_PROPERTIES;
 	/* These are MD5-Cache only */
-	char *DEFINED_PHASES;
-	char *REQUIRED_USE;
-	char *BDEPEND;
-	char *_eclasses_;
-	char *_md5_;
+	char *Q_DEFINED_PHASES;
+	char *Q_REQUIRED_USE;
+	char *Q_BDEPEND;
+	char *Q__eclasses_;
+	char *Q__md5_;
 	/* binpkgs/vdb */
-	char *CONTENTS;
-	char *USE;
-	char *repository;
+	char *Q_CONTENTS;
+	char *Q_USE;
+	char *Q_repository;
 };
 
 /* Metadata.xml */
@@ -132,6 +134,9 @@ FILE *tree_pkg_vdb_fopenat(tree_pkg_ctx *pkg_ctx, const char *file,
 bool tree_pkg_vdb_eat(tree_pkg_ctx *pkg_ctx, const char *file, char **bufptr, size_t *buflen);
 tree_pkg_meta *tree_pkg_read(tree_pkg_ctx *pkg_ctx);
 void tree_close_meta(tree_pkg_meta *cache);
+char *tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *key);
+#define tree_pkg_meta_get(P,X) \
+	tree_pkg_meta_get_int(P, offsetof(tree_pkg_meta, Q_##X), #X)
 tree_metadata_xml *tree_pkg_metadata(tree_pkg_ctx *pkg_ctx);
 void tree_close_metadata(tree_metadata_xml *meta_ctx);
 void tree_close_pkg(tree_pkg_ctx *pkg_ctx);

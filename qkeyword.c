@@ -643,7 +643,6 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	qkeyword_data *data = (qkeyword_data *)priv;
 	char buf[_Q_PATH_MAX];
 	depend_atom *patom = NULL;
-	tree_pkg_meta *meta;
 	tree_metadata_xml *metadata;
 	struct elist *emailw;
 	int ret;
@@ -679,11 +678,8 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	keywords = data->keywordsbuf;
-	meta = tree_pkg_read(pkg_ctx);
-	if (meta == NULL)
-		return EXIT_FAILURE;
 
-	if (read_keywords(meta->KEYWORDS, keywords) < 0) {
+	if (read_keywords(tree_pkg_meta_get(pkg_ctx, KEYWORDS), keywords) < 0) {
 		if (verbose)
 			warn("Failed to read keywords for %s%s/%s%s%s",
 				BOLD, pkg_ctx->cat_ctx->name, BLUE, pkg_ctx->name, NORM);

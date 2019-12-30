@@ -412,7 +412,6 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	struct quse_state *state = (struct quse_state *)priv;
 	depend_atom *atom = NULL;  /* pacify compiler */
 	char buf[8192];
-	tree_pkg_meta *meta;
 	set *use = NULL;
 	bool match;
 	char *p;
@@ -439,52 +438,38 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		}
 	}
 
-	if (state->overlay != NULL) {
-		meta = tree_pkg_read(pkg_ctx);
-		if (meta == NULL)
+	if (!state->do_licence) {
+		if (tree_pkg_meta_get(pkg_ctx, IUSE) == NULL)
 			return 0;
-		if (meta->IUSE == NULL)
-			return 0;
+
+		if (state->do_describe) {
+			portdirfd = openat(pkg_ctx->cat_ctx->ctx->portroot_fd,
+					state->overlay == NULL ? main_overlay : state->overlay,
+					O_RDONLY | O_CLOEXEC | O_PATH);
+			if (portdirfd == -1)
+				return 0;
+		}
+
+		/* available when dealing with VDB or binpkgs */
+		if ((p = tree_pkg_meta_get(pkg_ctx, USE)) != NULL) {
+			while ((q = strchr(p, (int)' ')) != NULL) {
+				*q++ = '\0';
+				use = add_set(p, use);
+				p = q;
+			}
+			if (*p != '\0')
+				use = add_set(p, use);
+		}
 	} else {
-		size_t dummy;
-
-		meta = xzalloc(sizeof(*meta));
-
-		dummy = 0;
-		if (!tree_pkg_vdb_eat(pkg_ctx, "IUSE", &meta->IUSE, &dummy)) {
-			free(meta);
-			return 0;
-		}
-
-		dummy = 0;
-		tree_pkg_vdb_eat(pkg_ctx, "LICENSE", &meta->LICENSE, &dummy);
-
-		s = NULL;
-		dummy = 0;
-		tree_pkg_vdb_eat(pkg_ctx, "USE", &s, &dummy);
-		p = s;
-		while ((q = strchr(p, (int)' ')) != NULL) {
-			*q++ = '\0';
-			use = add_set(p, use);
-			p = q;
-		}
-		if (*p != '\0')
-			use = add_set(p, use);
-		free(s);
-	}
-
-	if (state->do_describe) {
-		portdirfd = openat(pkg_ctx->cat_ctx->ctx->portroot_fd,
-				state->overlay == NULL ? main_overlay : state->overlay,
-				O_RDONLY | O_CLOEXEC | O_PATH);
-		if (portdirfd == -1)
+		if (tree_pkg_meta_get(pkg_ctx, LICENSE) == NULL)
 			return 0;
 	}
 
 	maxlen = 0;
 	cnt = 0;
 	match = false;
-	q = p = state->do_licence ? meta->LICENSE : meta->IUSE;
+	q = p = state->do_licence ?
+		tree_pkg_meta_get(pkg_ctx, LICENSE) : tree_pkg_meta_get(pkg_ctx, IUSE);
 	buf[0] = '\0';
 	v = buf;
 	w = buf + sizeof(buf);
@@ -567,7 +552,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 			printf("%s\n", atom_format(state->fmt, atom));
 
-			q = p = meta->IUSE;
+			q = p = tree_pkg_meta_get(pkg_ctx, IUSE);
 			buf[0] = '\0';
 			v = buf;
 			w = buf + sizeof(buf);
@@ -652,16 +637,8 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		}
 	}
 
-	if (state->overlay != NULL) {
-		tree_close_meta(meta);
-	} else {
-		free(meta->IUSE);
-		if (meta->LICENSE != NULL)
-			free(meta->LICENSE);
-		free(meta);
-		if (use != NULL)
-			free_set(use);
-	}
+	if (use != NULL)
+		free_set(use);
 	if (state->do_describe)
 		close(portdirfd);
 

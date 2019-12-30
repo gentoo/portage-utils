@@ -114,7 +114,6 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int ret = 0;
 	dep_node *dep_tree;
 	char **d;
-	tree_pkg_meta *meta = NULL;
 	char *depstr;
 
 	/* matrix consists of:
@@ -155,27 +154,17 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	xarrayfree_int(state->deps);
 	clear_set(state->udeps);
 
-	if (state->qmode & QMODE_TREE)
-		if ((meta = tree_pkg_read(pkg_ctx)) == NULL)
-			return ret;
 	dfile = depend_files;
 	for (i = QMODE_DEPEND; i <= QMODE_BDEPEND; i <<= 1, dfile++) {
 		if (!(state->qmode & i))
 			continue;
 
-		if (state->qmode & QMODE_INSTALLED) {
-			if (!tree_pkg_vdb_eat(pkg_ctx, *dfile,
-						&state->depend, &state->depend_len))
-				continue;
-			depstr = state->depend;
-		} else {
-			depstr = i == 1<<0 ? meta->DEPEND :
-					 i == 1<<1 ? meta->RDEPEND :
-					 i == 1<<2 ? meta->PDEPEND :
-					 i == 1<<3 ? meta->BDEPEND : NULL;
-			if (depstr == NULL)
-				continue;
-		}
+		depstr = i == 1<<0 ? tree_pkg_meta_get(pkg_ctx, DEPEND) :
+				 i == 1<<1 ? tree_pkg_meta_get(pkg_ctx, RDEPEND) :
+				 i == 1<<2 ? tree_pkg_meta_get(pkg_ctx, PDEPEND) :
+				 i == 1<<3 ? tree_pkg_meta_get(pkg_ctx, BDEPEND) : NULL;
+		if (depstr == NULL)
+			continue;
 		dep_tree = dep_grow_tree(depstr);
 		if (dep_tree == NULL)
 			continue;
@@ -188,10 +177,13 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				tree_pkg_ctx *vpkg =
 					tree_open_pkg(vcat, pkg_ctx->name);
 				if (vpkg != NULL) {
-					if (tree_pkg_vdb_eat(vpkg, *dfile,
-							&state->depend, &state->depend_len))
-					{
-						dep_node *dep_vdb = dep_grow_tree(state->depend);
+					depstr = i == 1<<0 ? tree_pkg_meta_get(vpkg, DEPEND) :
+							 i == 1<<1 ? tree_pkg_meta_get(vpkg, RDEPEND) :
+							 i == 1<<2 ? tree_pkg_meta_get(vpkg, PDEPEND) :
+							 i == 1<<3 ? tree_pkg_meta_get(vpkg, BDEPEND) :
+							 NULL;
+					if (depstr != NULL) {
+						dep_node *dep_vdb = dep_grow_tree(depstr);
 						if (dep_vdb != NULL)
 							dep_flatten_tree(dep_vdb, state->deps);
 					}
@@ -299,8 +291,6 @@ int qdepends_main(int argc, char **argv)
 		.deps = deps,
 		.udeps = create_set(),
 		.qmode = 0,
-		.depend = NULL,
-		.depend_len = 0,
 		.format = "%[CATEGORY]%[PF]",
 		.vdb = NULL,
 	};

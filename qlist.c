@@ -329,45 +329,14 @@ struct qlist_opt_state {
 	const char *fmt;
 };
 
-struct qlist_xpakcbctx {
-	const char *key;
-	char *retdata;
-	size_t retlen;
-};
-
-static void
-_qlist_xpakcb(
-	void *ctx,
-	char *pathname,
-	int pathname_len,
-	int data_offset,
-	int data_len,
-	char *data)
-{
-	struct qlist_xpakcbctx *xctx = ctx;
-	(void)pathname_len;
-
-	/* see if this path matches what we're looking for */
-	if (strcmp(pathname, xctx->key) != 0)
-		return;
-
-	xctx->retdata = xrealloc(xctx->retdata, data_len + 1);
-	memcpy(xctx->retdata, data + data_offset, data_len + 1);
-	xctx->retlen = data_len;
-}
-
 static int
 qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qlist_opt_state *state = priv;
 	int i;
-	FILE *fp;
+	char *contents;
+	char *line;
 	depend_atom *atom;
-	struct qlist_xpakcbctx cbctx = {
-		.key = "CONTENTS",
-		.retdata = NULL,
-		.retlen = 0,
-	};
 
 	/* see if this cat/pkg is requested */
 	if (!state->all) {
@@ -392,38 +361,15 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		printf("%s %sCONTENTS%s:\n",
 				atom_format(state->fmt, atom), DKBLUE, NORM);
 
-	if (state->do_binpkgs) {
-		char xpak[_Q_PATH_MAX];
-		int ret;
-		snprintf(xpak, sizeof(xpak), "%s/%s/%s/%s-%s.tbz2",
-				portroot, pkgdir, atom->CATEGORY, atom->PN,
-				atom->PR_int > 0 ? atom->PVR : atom->PV);
-		ret = xpak_extract(xpak, &cbctx, &_qlist_xpakcb);
-		if (ret != 0 || cbctx.retdata == NULL)
-			fp = NULL;
-		else
-#ifdef HAVE_FMEMOPEN
-			fp = fmemopen(cbctx.retdata, cbctx.retlen, "r");
-#else
-		{
-			/* resort to writing a file in tmpspace */
-			fp = tmpfile();
-			if (fp != NULL) {
-				fwrite(cbctx.retdata, 1, cbctx.retlen, fp);
-				fseek(fp, 0, SEEK_SET);
-			}
-		}
-#endif
-	} else {
-		fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
-	}
-	if (fp == NULL)
+	if ((contents = tree_pkg_meta_get(pkg_ctx, CONTENTS)) == NULL)
 		return 1;
 
-	while (getline(&state->buf, &state->buflen, fp) != -1) {
+	while ((line = strtok(contents, "\n")) != NULL) {
 		contents_entry *e;
 
-		e = contents_parse_line(state->buf);
+		contents = NULL;  /* for strtok */
+
+		e = contents_parse_line(line);
 		if (!e)
 			continue;
 
@@ -455,9 +401,6 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				break;
 		}
 	}
-	fclose(fp);
-	if (state->do_binpkgs && cbctx.retdata != NULL)
-		free(cbctx.retdata);
 
 	return 1;
 }

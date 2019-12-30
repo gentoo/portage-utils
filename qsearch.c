@@ -66,7 +66,6 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	struct qsearch_state *state = (struct qsearch_state *)priv;
 	depend_atom *atom;
-	tree_pkg_meta *meta;
 	char *desc;
 	bool match;
 
@@ -84,17 +83,13 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		match = true;
 
 	desc = NULL;
-	meta = NULL;
 	if ((match && (state->show_homepage || state->show_desc)) ||
 			(!match && state->search_desc))
 	{
-		meta = tree_pkg_read(pkg_ctx);
-		if (meta != NULL) {
-			if (state->show_homepage)
-				desc = meta->HOMEPAGE;
-			else if (state->show_desc)
-				desc = meta->DESCRIPTION;
-		}
+		if (state->show_homepage)
+			desc = tree_pkg_meta_get(pkg_ctx, HOMEPAGE);
+		else if (state->show_desc)
+			desc = tree_pkg_meta_get(pkg_ctx, DESCRIPTION);
 	}
 
 	if (!match && state->search_desc && desc != NULL &&
@@ -108,9 +103,6 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				(state->show_name ? "" : ": "),
 				(state->show_name ? "" : desc ? desc : ""));
 	}
-
-	if (meta != NULL)
-		tree_close_meta(meta);
 
 	if (last_atom != NULL)
 		atom_implode(last_atom);
