@@ -73,7 +73,6 @@ q_CPPFLAGS = \
 q_LDADD = \
 	$(top_builddir)/libq/libq.la \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
-	-liniparser \
 	$(LIBSSL) \
 	$(LIBBL2) \
 	$(LIBZ) \
