@@ -26,7 +26,7 @@ coverity_scan() {
 }
 
 main() {
-	# For local deps like iniparser.
+	# For local deps like blake2b.
 	export CPPFLAGS="-I${PWD}/../sysroot"
 	export LDFLAGS="-L${PWD}/../sysroot"
 

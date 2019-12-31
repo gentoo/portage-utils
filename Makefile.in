@@ -1610,9 +1610,9 @@ q_CPPFLAGS = -I$(top_srcdir)/libq -I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib $(NULL) $(am__append_2) \
 	$(am__append_7)
 q_LDADD = $(top_builddir)/libq/libq.la \
-	$(top_builddir)/autotools/gnulib/libgnu.a -liniparser \
-	$(LIBSSL) $(LIBBL2) $(LIBZ) $(GPGME_LIBS) $(LIB_CLOCK_GETTIME) \
-	$(LIB_EACCESS) $(NULL) $(am__append_3) $(am__append_8)
+	$(top_builddir)/autotools/gnulib/libgnu.a $(LIBSSL) $(LIBBL2) \
+	$(LIBZ) $(GPGME_LIBS) $(LIB_CLOCK_GETTIME) $(LIB_EACCESS) \
+	$(NULL) $(am__append_3) $(am__append_8)
 EXTRA_DIST = \
 	autotools/m4/gnulib-cache.m4 \
 	applets.h \
