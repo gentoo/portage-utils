@@ -26,6 +26,5 @@ addons:
     - gnupg2
 
 before_install:
-  - ./travis/install-iniparser.sh
   - ./travis/install-blake2.sh
 script: ./travis/main.sh
