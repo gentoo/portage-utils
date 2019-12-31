@@ -19,7 +19,8 @@
   to use foreach\_pkg and get\_atom -- set is ready for storing objects
   now
 
-- implement our own iniparser so we *can* be dep-free
+- replace all strtok by strtok\_r, because the latter is already used,
+  so we can
 
 # Atoms
 

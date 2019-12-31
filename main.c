@@ -10,7 +10,6 @@
 #include "main.h"
 #include "applets.h"
 
-#include <iniparser.h>
 #include <xalloc.h>
 #include <assert.h>
 #include <ctype.h>
@@ -540,7 +539,7 @@ read_portage_profile(const char *profile, env_vars vars[], set *masks)
 	 * treat parent profiles as defaults, that can be overridden by
 	 * *this* profile. */
 	strcpy(profile_file + profile_len, "parent");
-	if (eat_file(profile_file, &buf, &buf_len) == 0) {
+	if (!eat_file(profile_file, &buf, &buf_len)) {
 		if (buf != NULL)
 			free(buf);
 		return;
@@ -637,37 +636,82 @@ set *package_masks = NULL;
 static void
 read_one_repos_conf(const char *repos_conf, char **primary)
 {
-	int nsec;
-	char *conf;
 	char rrepo[_Q_PATH_MAX];
-	const char *main_repo;
-	const char *repo;
-	const char *path;
-	dictionary *dict;
+	char *main_repo;
+	char *repo;
+	char *buf = NULL;
+	size_t buf_len = 0;
+	char *s;
+	char *p;
+	char *q;
+	char *r;
+	char *e;
+	bool do_trim;
+	bool is_default;
 
 	if (getenv("DEBUG"))
 		fprintf(stderr, "  parse %s\n", repos_conf);
 
-	dict = iniparser_load(repos_conf);
+	if (!eat_file(repos_conf, &buf, &buf_len)) {
+		if (buf != NULL)
+			free(buf);
+		return;
+	}
 
-	main_repo = iniparser_getstring(dict, "DEFAULT:main-repo", NULL);
+	main_repo = NULL;
+	repo = NULL;
+	for (p = strtok_r(buf, "\n", &s); p != NULL; p = strtok_r(NULL, "\n", &s))
+	{
+		/* trim trailing whitespace, remove comments, locate = */
+		do_trim = true;
+		e = NULL;
+		for (r = q = s - 2; q >= p; q--) {
+			if (do_trim && isspace((int)*q)) {
+				*q = '\0';
+				r = q - 1;
+			} else if (*q == '#') {
+				do_trim = true;
+				*q = '\0';
+				r = q - 1;
+			} else {
+				if (*q == '=')
+					e = q;
+				do_trim = false;
+			}
+		}
+		/* make q point to the last char */
+		q = r;
 
-	nsec = iniparser_getnsec(dict);
-	while (nsec-- > 0) {
-		repo = iniparser_getsecname(dict, nsec);
-		if (strcmp(repo, "DEFAULT") == 0)  /* already handled above */
+		if (*p == '[' && *q == ']') {  /* section header */
+			repo = p + 1;
+			*q = '\0';
+			is_default = strcmp(repo, "DEFAULT") == 0;
 			continue;
+		} else if (*p == '\0') {       /* empty line */
+			continue;
+		} else if (e == NULL) {        /* missing = */
+			continue;
+		} else if (repo == NULL) {     /* not in a section */
+			continue;
+		}
 
-		xasprintf(&conf, "%s:location", repo);
-		path = iniparser_getstring(dict, conf, NULL);
-		if (path) {
+		/* trim off whitespace before = */
+		for (r = e - 1; r >= p && isspace((int)*r); r--)
+			*r = '\0';
+		/* and after the = */
+		for (e++; e < q && isspace((int)*e); e++)
+			;
+
+		if (is_default && strcmp(p, "main-repo") == 0) {
+			main_repo = e;
+		} else if (!is_default && strcmp(p, "location") == 0) {
 			void *ele;
 			size_t n;
 			char *overlay;
 
 			/* try not to get confused by symlinks etc. */
-			if (realpath(path, rrepo) != NULL)
-				path = rrepo;
+			if (realpath(e, rrepo) != NULL)
+				e = rrepo;
 
 			array_for_each(overlay_names, n, overlay) {
 				if (strcmp(overlay, repo) == 0)
@@ -681,19 +725,18 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 				array_get_elem(overlay_src, n) = xstrdup(repos_conf);
 				ele = array_get_elem(overlays, n);
 				free(ele);
-				ele = array_get_elem(overlays, n) = xstrdup(path);
+				ele = array_get_elem(overlays, n) = xstrdup(e);
 			} else {
-				ele = xarraypush_str(overlays, path);
+				ele = xarraypush_str(overlays, e);
 				overlay = xarraypush_str(overlay_names, repo);
 				xarraypush_str(overlay_src, repos_conf);
 			}
 			if (main_repo && strcmp(repo, main_repo) == 0)
 				*primary = overlay;
 		}
-		free(conf);
 	}
 
-	iniparser_freedict(dict);
+	free(buf);
 }
 
 /* Handle a possible directory of files. */
