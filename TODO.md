@@ -79,6 +79,9 @@
 
 # qkeyword
 - drop -c argument? it can be fully expressed using -p cat/
+- add mode to list which packages needs to be keyworded (deps), talk to
+  Kent Fredric on details, 20191229000543.001631d9@katipo2.lan
+  Re: [gentoo-dev] Keywordreqs and slacking arch team
 
 # qmanifest
 - use openat in most places
