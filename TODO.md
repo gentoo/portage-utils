@@ -48,9 +48,6 @@
 
 # qdepends
 
-- add -S/-v/-R behavior like qlist #574934
-- bring back -k?  (but seems solved by using qlist -IF%{SLOT} pkg)
-- -Qt acts weird (if not, incorrect)
 - -v should lookup whether packages are installed for || cases/colouring
 
 # qpkg

@@ -110,7 +110,8 @@ dep_grow_tree(const char *depend)
 
 #define _maybe_consume_word(t) \
 	do { \
-		if (!word) break; \
+		if (word == NULL) \
+			break; \
 		new_node = _dep_grow_node(t, word, ptr-word); \
 		if (!ret) \
 			ret = curr_node = new_node; \
@@ -124,8 +125,8 @@ dep_grow_tree(const char *depend)
 	} while (0)
 
 	saw_whitespace = true;
-	for (ptr = depend; *ptr; ++ptr) {
-		if (isspace(*ptr)) {
+	for (ptr = depend; *ptr != '\0'; ptr++) {
+		if (isspace((int)*ptr)) {
 			saw_whitespace = true;
 			_maybe_consume_word(DEP_NORM);
 			continue;
@@ -183,6 +184,13 @@ dep_grow_tree(const char *depend)
 			}
 			curr_node = curr_node->parent;
 			curr_attach = _DEP_NEIGH;
+			break;
+		}
+		case '[': {
+			/* USE-dep, seek to matching ']', since they cannot be
+			 * nested, this is simple */
+			while (*ptr != '\0' && *ptr != ']')
+				ptr++;
 			break;
 		}
 		default:
