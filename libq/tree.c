@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -1196,8 +1196,8 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 						tree_close_cat(cat);
 					pkg->cat_ctx = cat = tree_open_cat(ctx, atom->CATEGORY);
 				}
-				pkgnamelen = snprintf(pkgname, sizeof(pkgname), "%s-%s.tbz2",
-						atom->PN, atom->PR_int > 0 ? atom->PVR : atom->PV);
+				pkgnamelen = snprintf(pkgname, sizeof(pkgname),
+						"%s.tbz2", atom->PF);
 				pkgname[pkgnamelen - (sizeof(".tbz2") - 1)] = '\0';
 				pkg->name = pkgname;
 				pkg->slot = meta->Q_SLOT == NULL ? (char *)"0" : meta->Q_SLOT;
@@ -1389,9 +1389,7 @@ static int tree_get_atoms_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	char abuf[BUFSIZ];
 
 	if (state->fullcpv) {
-		snprintf(abuf, sizeof(abuf), "%s/%s-%s",
-				atom->CATEGORY, atom->PN,
-				atom->PR_int > 0 ? atom->PVR : atom->PV);
+		snprintf(abuf, sizeof(abuf), "%s/%s", atom->CATEGORY, atom->PF);
 		state->cpf = add_set(abuf, state->cpf);
 	} else {
 		snprintf(abuf, sizeof(abuf), "%s/%s", atom->CATEGORY, atom->PN);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005      Petteri Räty    - <betelgeuse@gentoo.org>
@@ -416,9 +416,8 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	/* cat/pkg/pkg-ver.ebuild */
-	snprintf(buf, sizeof(buf), "%s/%s/%s-%s.ebuild",
-			patom->CATEGORY, patom->PN, patom->PN,
-			patom->PR_int > 0 ? patom->PVR : patom->PV);
+	snprintf(buf, sizeof(buf), "%s/%s/%s.ebuild",
+			patom->CATEGORY, patom->PN, patom->PF);
 
 	label = NULL;
 	if (data->show_name) {

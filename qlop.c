@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -654,10 +654,8 @@ static int do_emerge_log(
 							snprintf(afmt, sizeof(afmt), "%s/%s",
 								pkgw->atom->CATEGORY, pkgw->atom->PN);
 						} else {
-							snprintf(afmt, sizeof(afmt), "%s/%s-%s",
-								pkgw->atom->CATEGORY, pkgw->atom->PN,
-								pkgw->atom->PR_int > 0 ?
-								pkgw->atom->PVR : pkgw->atom->PV);
+							snprintf(afmt, sizeof(afmt), "%s/%s",
+								pkgw->atom->CATEGORY, pkgw->atom->PF);
 						}
 
 						pkg = add_set_value(afmt, pkgw, merge_averages);
@@ -798,10 +796,8 @@ static int do_emerge_log(
 							snprintf(afmt, sizeof(afmt), "%s/%s",
 								pkgw->atom->CATEGORY, pkgw->atom->PN);
 						} else {
-							snprintf(afmt, sizeof(afmt), "%s/%s-%s",
-								pkgw->atom->CATEGORY, pkgw->atom->PN,
-								pkgw->atom->PR_int > 0 ?
-								pkgw->atom->PVR : pkgw->atom->PV);
+							snprintf(afmt, sizeof(afmt), "%s/%s",
+								pkgw->atom->CATEGORY, pkgw->atom->PF);
 						}
 
 						pkg = add_set_value(afmt, pkgw, unmerge_averages);

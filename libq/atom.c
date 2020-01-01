@@ -794,10 +794,7 @@ atom_format_r(
 					append_buf(buf, buflen, "%s%s%s", BLUE, atom->PN, NORM);
 					if (atom->PV)
 						append_buf(buf, buflen, "%s-%s%s",
-								CYAN, atom->PV, NORM);
-					if (atom->PR_int)
-						append_buf(buf, buflen,"%s-r%d%s",
-								CYAN, atom->PR_int, NORM);
+								CYAN, atom->PVR, NORM);
 				} else if (!strncmp("PR", fmt, len)) {
 					if (showit || atom->PR_int)
 						append_buf(buf, buflen, "%sr%d%s",

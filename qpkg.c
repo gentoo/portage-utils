@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd	       - <solar@gentoo.org>
@@ -53,11 +53,6 @@ extern char pretend;
 
 static char *qpkg_bindir = NULL;
 static int eclean = 0;
-
-static char *
-atom_to_pvr(depend_atom *atom) {
-	return (atom->PR_int == 0 ? atom->P : atom->PVR );
-}
 
 /* checks to make sure this is a .tbz2 file. used by scandir() */
 static int
@@ -228,7 +223,7 @@ qpkg_make(depend_atom *atom)
 	buf = xmalloc(buflen);
 
 	snprintf(buf, buflen, "%s/%s/%s/CONTENTS",
-			portvdb, atom->CATEGORY, atom_to_pvr(atom));
+			portvdb, atom->CATEGORY, atom->PF);
 	if ((fp = fopen(buf, "r")) == NULL) {
 		free(buf);
 		return -1;
@@ -293,7 +288,7 @@ qpkg_make(depend_atom *atom)
 	xpaksize = st.st_size;
 
 	snprintf(buf, buflen, "%s/%s/%s",
-			portvdb, atom->CATEGORY, atom_to_pvr(atom));
+			portvdb, atom->CATEGORY, atom->PF);
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
 	xpak_create(AT_FDCWD, tbz2, 1, xpak_argv, 1, verbose);
@@ -316,7 +311,7 @@ qpkg_make(depend_atom *atom)
 	mkdir_p(buf, 0755);
 
 	snprintf(buf, buflen, "%s/%s/%s.tbz2",
-			qpkg_bindir, atom->CATEGORY, atom_to_pvr(atom));
+			qpkg_bindir, atom->CATEGORY, atom->PF);
 	if (rename(tbz2, buf)) {
 		warnp("could not move '%s' to '%s'", tbz2, buf);
 		free(buf);

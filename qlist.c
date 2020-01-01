@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005 Martin Schlemmer     - <azarah@gentoo.org>
@@ -262,10 +262,9 @@ qlist_match(
 	if (exact) {
 		int i;
 
-		snprintf(buf, sizeof(buf), "%s/%s-%s%s%s%s%s%s%s",
+		snprintf(buf, sizeof(buf), "%s/%s%s%s%s%s%s%s",
 			atom->CATEGORY,
-			atom->PN,
-			atom->PVR,
+			atom->PF,
 			atom->SLOT != NULL ? ":" : "",
 			atom->SLOT != NULL ? atom->SLOT : "",
 			atom->SUBSLOT != NULL ? "/" : "",
@@ -273,10 +272,10 @@ qlist_match(
 			atom->REPO != NULL ? "::" : "",
 			atom->REPO != NULL ? atom->REPO : "");
 
-		/* exact match: CAT/PN-PVR[:SLOT][::REPO] */
+		/* exact match: CAT/PF[:SLOT][::REPO] */
 		if (strcmp(name, buf) == 0)
 			return true;
-		/* exact match: PN-PVR[:SLOT][::REPO] */
+		/* exact match: PF[:SLOT][::REPO] */
 		if (strcmp(name, strstr(buf, "/") + 1) == 0)
 			return true;
 
@@ -294,15 +293,14 @@ qlist_match(
 		if (strcmp(name, strstr(buf, "/") + 1) == 0)
 			return true;
 	} else {
-		/* partial leading match: CAT/PN-PVR */
-		snprintf(buf, sizeof(buf), "%s/%s-%s",
-				atom->CATEGORY, atom->PN, atom->PVR);
+		/* partial leading match: CAT/PF */
+		snprintf(buf, sizeof(buf), "%s/%s",
+				atom->CATEGORY, atom->PF);
 		if (strncmp(name, buf, pf_len) == 0 ||
 				rematch(name, buf, REG_EXTENDED) == 0)
 			return true;
-		/* partial leading match: PN-PVR */
-		snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PVR);
-		if (strncmp(name, buf, pf_len) == 0 ||
+		/* partial leading match: PF */
+		if (strncmp(name, atom->PF, pf_len) == 0 ||
 				rematch(name, buf, REG_EXTENDED) == 0)
 			return true;
 	}
