@@ -1,32 +1,25 @@
 # Common
-
 - unify match behavior:
 	- default \*foo\*
 	- -e foo
 	- -r (-R ?) regexp foo.\*
 - make default -e for apps like quse/qdepends/qlist?
-
 - env vars only get expanded once, so this fails:<br>
   `ACCEPT_LICENSE="foo"`<br>
   `ACCEPT_LICENSE="${ACCEPT_LICENSE} bar"`<br>
   we end up getting just:<br>
   `ACCEPT_LICENSE=" bar"`
-
 - tree\_foreach\_pkg should have variant that takes an atom (or just
   cat?) to reduce search space
-
 - tree\_get\_atoms should return atoms iso string set, needs a rewrite
   to use foreach\_pkg and get\_atom -- set is ready for storing objects
   now
-
 - replace all strtok by strtok\_r, because the latter is already used,
   so we can
-
 - parse package.accept\_keywords such that we can provide the latest
   "available" version like Portage
 
 # qmerge
-
 - dep resolver needs spanktastic love.
 - needs safe deleting (merge in place rather than unmerge;merge)
 - multiple binary repos (talk to zmedico)
@@ -47,11 +40,9 @@
   not-forcing things
 
 # qdepends
-
 - -v should lookup whether packages are installed for || cases/colouring
 
 # qpkg
-
 - add a verbose output that describes why a package is cleaned
 	- newer binpkgs available
 	- newer installed version available
@@ -59,12 +50,7 @@
   and qpkg is doing parts of qtbz2's compose
 
 # qgrep
-
 - make it use standard xarray instead of its own buf\_list
-
-# qlist
-- have -F for use with -I so one can do things like print SLOT for
-  package X
 
 # quse
 - make -v only print requested USE-flag when flags given
@@ -84,7 +70,5 @@
 - guestimate runtime based on best-matching pkg (e.g. with gcc)
 - calculate or take some "smooth" factor just added on top of the
   guestimate alternative to current time jumping
-- display excess time (+12:05) when overrunning guestimate to indicate
-  longer run than last guestimate
 - multiple files support -- current opinion: don't do it
 - compressed file support, use guessing support from qmerge?
