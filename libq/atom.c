@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -39,6 +39,9 @@ const char * const atom_op_str[] = {
 
 const char * const booga[] = {"!!!", "!=", "==", ">", "<"};
 
+/* split string into individual components, known as an atom
+ * for a definition of which variable contains what, see:
+ * https://dev.gentoo.org/~ulm/pms/head/pms.html#x1-10800011 */
 depend_atom *
 atom_explode(const char *atom)
 {
@@ -48,18 +51,33 @@ atom_explode(const char *atom)
 	size_t slen;
 	size_t idx;
 	size_t sidx;
+	char *lastpv = NULL;
+	char *pv;
 
-	/* we allocate mem for atom struct and two strings (strlen(atom)).
-	 * the first string is for CAT/PN/PV while the second is for PVR.
-	 * PVR needs 3 extra bytes for possible implicit '-r0'. */
-	slen = strlen(atom);
-	len = sizeof(*ret) + (slen + 1) * sizeof(*atom) * 3 + 3;
+	/* PMS 11.1 recap:
+	 * CAT  The package’s category                    app-editors
+	 * PF   Package name, version, and revision (if any)          vim-7.0.174-r1
+	 * PVR  Package version and revision (if any)                     7.0.174-r1
+	 * P    Package name and version, without the revision part   vim-7.0.174
+	 * PV   Package version, with no revision                         7.0.174
+	 * PN   Package name                                          vim
+	 * PR   Package revision, or r0 if none exists                            r1
+	 *
+	 * Thus, CAT/PF is the full allocation of the input string, for the
+	 * rest (P, PN, PV, PR, PVR) we need copies.  We represent PR as an
+	 * integer, which leaves the set to PN, P and PV.
+	 * PVR is an offset inside PF, likewise, PV is an offset inside P.
+	 * We allocate memory for atom struct, one string for CAT/PF + PVR,
+	 * another to cover PN and a final one for P + PV. */
+	slen = strlen(atom) + 1;
+	len = sizeof(*ret) + (slen * 3);
 	ret = xmalloc(len);
 	memset(ret, '\0', sizeof(*ret));
-	ptr = (char *)ret;
-	ret->P = ptr + sizeof(*ret);
-	ret->PVR = ret->P + slen + 1;
-	ret->CATEGORY = ret->PVR + slen + 1 + 3;
+
+	/* assign pointers to the three storage containers */
+	ret->CATEGORY = (char *)ret + sizeof(*ret);     /* CAT PF PVR */
+	ret->P        = ret->CATEGORY + slen;           /* P   PV     */
+	ret->PN       = ret->P + slen;                  /* PN         */
 
 	/* check for blocker operators */
 	ret->blocker = ATOM_BL_NONE;
@@ -95,13 +113,15 @@ atom_explode(const char *atom)
 		ret->pfx_op += ATOM_OP_EQUAL;
 		atom++;
 	}
+
+	/* fill in full block */
 	strcpy(ret->CATEGORY, atom);
 
 	/* eat file name crap when given an (autocompleted) path */
 	if ((ptr = strstr(ret->CATEGORY, ".ebuild")) != NULL)
 		*ptr = '\0';
 
-	/* chip off the trailing [::REPO] as needed */
+	/* chip off the trailing ::REPO as needed */
 	if ((ptr = strstr(ret->CATEGORY, "::")) != NULL) {
 		ret->REPO = ptr + 2;
 		*ptr = '\0';
@@ -172,7 +192,7 @@ atom_explode(const char *atom)
 		*ptr++ = '\0';
 	}
 
-	/* chip off the trailing [:SLOT] as needed */
+	/* chip off the trailing :SLOT as needed */
 	if ((ptr = strrchr(ret->CATEGORY, ':')) != NULL) {
 		*ptr++ = '\0';
 		ret->SLOT = ptr;
@@ -205,14 +225,14 @@ atom_explode(const char *atom)
 		*ptr = '\0';
 	}
 
-	/* break up the CATEGORY and PVR */
+	/* break up the CATEGORY, PF and PVR */
 	if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL) {
-		ret->PN = ptr + 1;
-		*ptr = '\0';
+		*ptr++ = '\0';
+		ret->PF = ptr;
 
 		/* set PN to NULL if there's nothing */
-		if (ret->PN[0] == '\0')
-			ret->PN = NULL;
+		if (ret->PF[0] == '\0')
+			ret->PF = NULL;
 
 		/* eat extra crap in case it exists, this is a feature to allow
 		 * /path/to/pkg.ebuild, doesn't work with prefix operators
@@ -220,75 +240,81 @@ atom_explode(const char *atom)
 		if ((ptr = strrchr(ret->CATEGORY, '/')) != NULL)
 			ret->CATEGORY = ptr + 1;
 	} else {
-		ret->PN = ret->CATEGORY;
+		ret->PF = ret->CATEGORY;
 		ret->CATEGORY = NULL;
 	}
 
-	if (ret->PN == NULL) {
+	if (ret->PF == NULL) {
 		/* atom has no name, this is it */
 		ret->P = NULL;
+		ret->PN = NULL;
 		ret->PVR = NULL;
+
 		return ret;
 	}
 
-	/* CATEGORY should be all set here, PN contains everything up to
+	/* CATEGORY should be all set here, PF contains everything up to
 	 * SLOT, REPO or '*'
-	 * PN must not end in a hyphen followed by anything matching version
-	 * syntax, version syntax starts with a number, so "-[0-9]" is a
-	 * separator from PN to PV* -- except it doesn't when the thing
-	 * doesn't validate as version :( */
+	 * PMS 3.1.2 says PN must not end in a hyphen followed by
+	 * anything matching version syntax.  PMS 3.2 version syntax
+	 * starts with a number, so "-[0-9]" is a separator from PN to
+	 * PV* -- except it doesn't when the thing doesn't validate as
+	 * version :( */
 
-	ptr = ret->PN;
-	{
-		char *lastpv = NULL;
-		char *pv;
+	ptr = ret->PF;
+	while ((ptr = strchr(ptr, '-')) != NULL) {
+		ptr++;
+		if (!isdigit(*ptr))
+			continue;
 
-		while ((ptr = strchr(ptr, '-')) != NULL) {
-			ptr++;
-			if (!isdigit(*ptr))
-				continue;
-
-			/* so we should have something like "-2" here, see if this
-			 * checks out as valid version string */
-			pv = ptr;
-			while (*++ptr != '\0') {
-				if (*ptr != '.' && !isdigit(*ptr))
-					break;
-			}
-			/* allow for 1 optional suffix letter */
-			if (*ptr >= 'a' && *ptr <= 'z')
-				ret->letter = *ptr++;
-			if (*ptr == '_' || *ptr == '-' || *ptr == '\0') {
-				lastpv = pv;
-				continue;  /* valid, keep searching */
-			}
-			ret->letter = '\0';
+		/* so we should have something like "-2" here, see if this
+		 * checks out as valid version string */
+		pv = ptr;
+		while (*++ptr != '\0') {
+			if (*ptr != '.' && !isdigit(*ptr))
+				break;
 		}
-		ptr = lastpv;
+		/* allow for 1 optional suffix letter */
+		if (*ptr >= 'a' && *ptr <= 'z')
+			ret->letter = *ptr++;
+		if (*ptr == '_' || *ptr == '-' || *ptr == '\0') {
+			lastpv = pv;
+			continue;  /* valid, keep searching */
+		}
+		ret->letter = '\0';
 	}
+	ptr = lastpv;
 
 	if (ptr == NULL) {
 		/* atom has no version, this is it */
-		strcpy(ret->P, ret->PN);
-		ret->PVR = NULL;
+		ret->P = ret->PN = ret->PF;
+		ret->PV = ret->PVR = NULL;
+
 		return ret;
 	}
-	ret->PV = ptr;
+
+	ret->PVR = ptr;
+	snprintf(ret->PN, slen, "%.*s", (int)(ret->PVR - 1 - ret->PF), ret->PF);
 
 	/* find -r# */
-	ptr = ret->PV + strlen(ret->PV) - 1;
-	while (*ptr && ptr > ret->PV) {
-		if (!isdigit(*ptr)) {
+	pv = NULL;
+	ptr = ret->PVR + strlen(ret->PVR) - 1;
+	while (*ptr && ptr > ret->PVR) {
+		if (!isdigit((int)*ptr)) {
 			if (ptr[0] == 'r' && ptr[-1] == '-') {
 				ret->PR_int = atoi(ptr + 1);
-				ptr[-1] = '\0';
+				pv = &ptr[-1];
 			}
 			break;
 		}
 		ptr--;
 	}
-	strcpy(ret->P, ret->PN);
-	ret->PV[-1] = '\0';
+	if (pv != NULL) {
+		snprintf(ret->P, slen, "%.*s", (int)(pv - ret->PF), ret->PF);
+	} else {
+		ret->P = ret->PF;
+	}
+	ret->PV = ret->P + (ret->PVR - ret->PF);
 
 	/* break out all the suffixes */
 	sidx = 0;
@@ -324,9 +350,6 @@ atom_explode(const char *atom)
 		ret->suffixes[sidx] = ret->suffixes[idx];
 		ret->suffixes[idx] = t;
 	}
-
-	/* size is malloced above with the required space in mind */
-	sprintf(ret->PVR, "%s-r%i", ret->PV, ret->PR_int);
 
 	return ret;
 }

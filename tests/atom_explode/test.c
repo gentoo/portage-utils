@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -19,9 +19,23 @@ FILE *warnout;
 
 static inline void boom(depend_atom *a, char *s)
 {
-	printf("%s -> %s / [%s] %s - %s [%s] [r%i]\n",
-	       s, (a->CATEGORY?:"null"), a->P, a->PN,
-	       a->PVR, a->PV, a->PR_int);
+	/* python code:
+	 *  CATEGORY = cpv[0]
+	 *  PN = cpv[1]
+	 *  PV = cpv[2]
+	 *  PR_int = cpv[3]
+	 *  P = PN + "-" + PV
+	 *  PVR = PV + "-" + cpv[3]
+	 *  print(a+" -> "+CATEGORY+" / ["+P+"] "+PN+" - "+PVR+" ["+PV+"] ["+PR_int+"]")
+	 * this most notably doesn't test PVR in compliance with PMS */
+	printf("%s -> %s / [%s] %s - %s%s [%s] [r%i]\n",
+			s,
+			(a->CATEGORY ? a->CATEGORY : "null"),
+			a->P,
+			a->PN,
+			a->PVR, (a->PVR != NULL && a->PR_int == 0) ? "-r0" : "",
+			a->PV,
+			a->PR_int);
 }
 
 int main(int argc, char *argv[])

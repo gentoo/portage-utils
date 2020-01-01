@@ -74,6 +74,7 @@ typedef struct {
 	char *CATEGORY;
 	char *PN;
 	char *PV;
+	char *PF;
 	unsigned int PR_int;
 	char letter;
 	atom_suffix *suffixes;

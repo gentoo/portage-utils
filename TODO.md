@@ -22,13 +22,8 @@
 - replace all strtok by strtok\_r, because the latter is already used,
   so we can
 
-# Atoms
-
-- only 32bit values are supported for revision (-r#)
-- only 64bit values are supported in any individual version component
-  foo-(1234)\_alpha(56789)
-- these limits should not be an issue for all practical purposes
-- make PVR match PMS https://dev.gentoo.org/~ulm/pms/head/pms.html#x1-10800011
+- parse package.accept\_keywords such that we can provide the latest
+  "available" version like Portage
 
 # qmerge
 
