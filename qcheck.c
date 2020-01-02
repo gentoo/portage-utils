@@ -305,7 +305,6 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 	free(line);
 	free(buffer);
-	fclose(fp_contents);
 
 	if (!state->chk_config_protect) {
 		freeargv(cp_argc, cp_argv);
@@ -328,9 +327,12 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		fclose(fp_contents_update);
 		if (renameat(pkg_ctx->fd, "CONTENTS~", pkg_ctx->fd, "CONTENTS"))
 			unlinkat(pkg_ctx->fd, "CONTENTS~", 0);
-		if (!verbose)
+		if (!verbose) {
+			fclose(fp_contents);
 			return EXIT_SUCCESS;
+		}
 	}
+	fclose(fp_contents);
 	if (state->bad_only && num_files_ok != num_files)
 		printf("%s\n", atom_format(state->fmt, atom));
 	qcprintf("  %2$s*%1$s %3$s%4$zu%1$s out of %3$s%5$zu%1$s file%6$s are good",
