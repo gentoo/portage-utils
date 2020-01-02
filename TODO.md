@@ -18,6 +18,10 @@
   so we can
 - parse package.accept\_keywords such that we can provide the latest
   "available" version like Portage
+- check timestamps in libq/tree for choosing which method to take:
+	- ignore Packages when it is older than the last directory change
+	- ignore metadata when ebuild is modified
+	- add some method to skip these checks and assume everything is right
 
 # qmerge
 - dep resolver needs spanktastic love.
@@ -65,6 +69,7 @@
 # qmanifest
 - use openat in most places
 - parse timestamps and print in local timezone
+- implement python module for gemato interface (to use with Portage)
 
 # qlop
 - guestimate runtime based on best-matching pkg (e.g. with gcc)

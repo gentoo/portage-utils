@@ -41,8 +41,8 @@ static struct option const qpkg_long_opts[] = {
 	COMMON_LONG_OPTS
 };
 static const char * const qpkg_opts_help[] = {
-	"clean pkgdir of unused binary files",
-	"clean pkgdir of files not in the tree anymore (slow)",
+	"clean pkgdir of files that are not installed",
+	"clean pkgdir of files that are not in the tree anymore",
 	"pretend only",
 	"alternate package directory",
 	COMMON_OPTS_HELP
@@ -134,12 +134,6 @@ qpkg_clean(char *dirp)
 	if ((count = scandir(".", &dnames, filter_hidden, alphasort)) < 0)
 		return 1;
 
-	t = tree_open_vdb(portroot, portvdb);
-	if (t != NULL) {
-		vdb = tree_get_atoms(t, true, vdb);
-		tree_close(t);
-	}
-
 	if (eclean) {
 		size_t n;
 		const char *overlay;
@@ -150,6 +144,12 @@ qpkg_clean(char *dirp)
 				vdb = tree_get_atoms(t, true, vdb);
 				tree_close(t);
 			}
+		}
+	} else {
+		t = tree_open_vdb(portroot, portvdb);
+		if (t != NULL) {
+			vdb = tree_get_atoms(t, true, vdb);
+			tree_close(t);
 		}
 	}
 
