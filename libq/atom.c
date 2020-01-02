@@ -118,7 +118,8 @@ atom_explode(const char *atom)
 	strcpy(ret->CATEGORY, atom);
 
 	/* eat file name crap when given an (autocompleted) path */
-	if ((ptr = strstr(ret->CATEGORY, ".ebuild")) != NULL)
+	if ((ptr = strstr(ret->CATEGORY, ".ebuild")) != NULL ||
+			(ptr = strstr(ret->CATEGORY, ".tbz2")) != NULL)
 		*ptr = '\0';
 
 	/* chip off the trailing ::REPO as needed */
