@@ -35,7 +35,7 @@ q -i -q
 # used by Travis segfaults on qmanifest, so disable there to be able to
 # run the rest regularly
 dovalgrind=${Q_RUN_WITH_VALGRIND}
-[[ ${TRAVIS_OS_NAME}:${a} == linux:qmanifest ]] && dovalgrind=
+[[ ${TRAVIS_OS_NAME}:${as##*/} == linux:qmanifest ]] && dovalgrind=
 if [[ -n ${dovalgrind} ]] ; then
 	chmod 755 "@abs_top_srcdir@/tests/valgrind-wrapper/qvalgrind"
 	for f in @abs_top_builddir@/q?* ; do
