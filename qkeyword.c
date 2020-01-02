@@ -799,7 +799,8 @@ qkeyword_traverse(tree_pkg_cb func, void *priv)
 	array_for_each(overlays, n, overlay) {
 		tree_ctx *t = tree_open(portroot, overlay);
 		if (t != NULL) {
-			ret |= tree_foreach_pkg_sorted(t, qkeyword_results_cb, priv, NULL);
+			ret |= tree_foreach_pkg_sorted(t,
+					qkeyword_results_cb, priv, data->qatom);
 			tree_close(t);
 		}
 	}
