@@ -50,8 +50,8 @@ main() {
 	do_run ${DEFARGS} --disable-qmanifest --disable-qtegrity
 
 	if [[ ${TRAVIS_OS_NAME} == linux ]] ; then
-		do_run CFLAGS=-g Q_RUN_WITH_VALGRIND=1 \
-			${DEFARGS} --enable-qmanifest --enable-qtegrity
+		export Q_RUN_WITH_VALGRIND=1
+		do_run CFLAGS=-g ${DEFARGS} --enable-qmanifest --enable-qtegrity
 	fi
 
 	# LSan needs sudo, which we don't use at the moment
