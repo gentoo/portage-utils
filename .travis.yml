@@ -24,6 +24,7 @@ addons:
     packages:
     - libgpgme11-dev
     - gnupg2
+    - valgrind
 
 before_install:
   - ./travis/install-blake2.sh
