@@ -970,6 +970,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 		}
 	}
 
+	closedir(dir);
 	ret = 0;
 
  done:
