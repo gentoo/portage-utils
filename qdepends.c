@@ -375,14 +375,28 @@ int qdepends_main(int argc, char **argv)
 		array_for_each(overlays, n, overlay) {
 			t = tree_open(portroot, overlay);
 			if (t != NULL) {
-				ret = tree_foreach_pkg_sorted(t,
-						qdepends_results_cb, &state, NULL);
+				if (!(state.qmode & QMODE_REVERSE) && array_cnt(atoms) > 0) {
+					array_for_each(atoms, i, atom) {
+						ret = tree_foreach_pkg_sorted(t,
+								qdepends_results_cb, &state, atom);
+					}
+				} else {
+					ret = tree_foreach_pkg_sorted(t,
+							qdepends_results_cb, &state, NULL);
+				}
 				tree_close(t);
 			}
 		}
 	} else {
-		ret = tree_foreach_pkg_fast(state.vdb,
-				qdepends_results_cb, &state, NULL);
+		if (!(state.qmode & QMODE_REVERSE) && array_cnt(atoms) > 0) {
+			array_for_each(atoms, i, atom) {
+				ret = tree_foreach_pkg_fast(state.vdb,
+						qdepends_results_cb, &state, atom);
+			}
+		} else {
+			ret = tree_foreach_pkg_fast(state.vdb,
+					qdepends_results_cb, &state, NULL);
+		}
 	}
 
 	if (state.vdb != NULL)
