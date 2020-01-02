@@ -1339,6 +1339,11 @@ tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 		tree_close_cat(cat_ctx);
 	}
 
+	/* allow foreach to be called again on the same open tree */
+	ctx->cat_de = NULL;
+	ctx->cat_cur = 0;
+	ctx->cat_cnt = 0;
+
 	return ret;
 }
 
