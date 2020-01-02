@@ -641,7 +641,7 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 	char *repo;
 	char *buf = NULL;
 	size_t buf_len = 0;
-	char *s;
+	char *s = NULL;  /* pacify compiler */
 	char *p;
 	char *q;
 	char *r;
