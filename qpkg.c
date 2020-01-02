@@ -54,115 +54,79 @@ extern char pretend;
 static char *qpkg_bindir = NULL;
 static int eclean = 0;
 
-/* checks to make sure this is a .tbz2 file. used by scandir() */
-static int
-filter_tbz2(const struct dirent *dentry)
-{
-	if (dentry->d_name[0] == '.')
-		return 0;
-	if (strlen(dentry->d_name) < 6)
-		return 0;
-	return !strcmp(".tbz2", dentry->d_name + strlen(dentry->d_name) - 5);
-}
-
-/* process a single dir for cleaning. dir can be a $PKGDIR, $PKGDIR/All/, $PKGDIR/$CAT */
-static uint64_t
-qpkg_clean_dir(char *dirp, set *vdb)
-{
-	set *ll = NULL;
-	struct dirent **fnames;
-	int i, count;
-	char buf[_Q_PATH_MAX * 2];
-	struct stat st;
-	uint64_t num_all_bytes = 0;
-	size_t disp_units = 0;
-	char **t;
-	bool ignore;
-
-	if (dirp == NULL)
-		return 0;
-	if (chdir(dirp) != 0)
-		return 0;
-	if ((count = scandir(".", &fnames, filter_tbz2, alphasort)) < 0)
-		return 0;
-
-	/* create copy of vdb with only basenames */
-	for ((void)list_set(vdb, &t); *t != NULL; t++)
-		ll = add_set_unique(basename(*t), ll, &ignore);
-
-	for (i = 0; i < count; i++) {
-		fnames[i]->d_name[strlen(fnames[i]->d_name)-5] = 0;
-		if (contains_set(fnames[i]->d_name, ll))
-			continue;
-		snprintf(buf, sizeof(buf), "%s.tbz2", fnames[i]->d_name);
-		if (lstat(buf, &st) != -1) {
-			if (S_ISREG(st.st_mode)) {
-				disp_units = KILOBYTE;
-				if ((st.st_size / KILOBYTE) > 1000)
-					disp_units = MEGABYTE;
-				num_all_bytes += st.st_size;
-				qprintf(" %s[%s %3s %s %s] %s%s%s\n",
-						DKBLUE, GREEN,
-						make_human_readable_str(st.st_size, 1, disp_units),
-						disp_units == MEGABYTE ? "MiB" : "KiB",
-						DKBLUE, BLUE, fnames[i]->d_name, NORM);
-			}
-			if (!pretend)
-				unlink(buf);
-		}
-	}
-
-	free_set(ll);
-	scandir_free(fnames, count);
-
-	return num_all_bytes;
-}
-
 /* figure out what dirs we want to process for cleaning and display results. */
 static int
 qpkg_clean(char *dirp)
 {
-	int i, count;
+	size_t n;
 	size_t disp_units = 0;
-	uint64_t num_all_bytes;
-	struct dirent **dnames;
-	set *vdb = NULL;
+	uint64_t num_all_bytes = 0;
+	set *known_pkgs = NULL;
+	set *bin_pkgs = NULL;
+	DECLARE_ARRAY(bins);
 	tree_ctx *t;
+	tree_ctx *pkgs;
+	char *binatomstr;
+	depend_atom *atom;
+	char buf[_Q_PATH_MAX];
+	struct stat st;
 
-	if (chdir(dirp) != 0)
+	pkgs = tree_open_binpkg(portroot, dirp);
+	if (pkgs == NULL)
 		return 1;
-	if ((count = scandir(".", &dnames, filter_hidden, alphasort)) < 0)
-		return 1;
+
+	bin_pkgs = tree_get_atoms(pkgs, true, bin_pkgs);
+	array_set(bin_pkgs, bins);
 
 	if (eclean) {
-		size_t n;
 		const char *overlay;
 
 		array_for_each(overlays, n, overlay) {
 			t = tree_open(portroot, overlay);
 			if (t != NULL) {
-				vdb = tree_get_atoms(t, true, vdb);
+				known_pkgs = tree_get_atoms(t, true, known_pkgs);
 				tree_close(t);
 			}
 		}
 	} else {
 		t = tree_open_vdb(portroot, portvdb);
 		if (t != NULL) {
-			vdb = tree_get_atoms(t, true, vdb);
+			known_pkgs = tree_get_atoms(t, true, known_pkgs);
 			tree_close(t);
 		}
 	}
 
-	num_all_bytes = qpkg_clean_dir(dirp, vdb);
-
-	for (i = 0; i < count; i++) {
-		char buf[_Q_PATH_MAX * 2];
-		snprintf(buf, sizeof(buf), "%s/%s", dirp, dnames[i]->d_name);
-		num_all_bytes += qpkg_clean_dir(buf, vdb);
+	/* check which binpkgs exist in the known_pkgs (vdb or trees), such
+	 * that the remainder is what we would clean */
+	array_for_each(bins, n, binatomstr) {
+		if (contains_set(binatomstr, known_pkgs))
+			xarraydelete_ptr(bins, n--);
 	}
-	scandir_free(dnames, count);
 
-	free_set(vdb);
+	free_set(known_pkgs);
+
+	array_for_each(bins, n, binatomstr) {
+		snprintf(buf, sizeof(buf), "%s/%s.tbz2", dirp, binatomstr);
+		atom = atom_explode(binatomstr);
+		if (lstat(buf, &st) != -1) {
+			if (S_ISREG(st.st_mode)) {
+				disp_units = KILOBYTE;
+				if ((st.st_size / KILOBYTE) > 1000)
+					disp_units = MEGABYTE;
+				num_all_bytes += st.st_size;
+				qprintf(" %s[%s %3s %s %s]%s %s\n",
+						DKBLUE, GREEN,
+						make_human_readable_str(st.st_size, 1, disp_units),
+						disp_units == MEGABYTE ? "MiB" : "KiB",
+						DKBLUE, NORM, atom_format("%[CAT]/%[PF]", atom));
+			}
+			if (!pretend)
+				unlink(buf);
+		}
+	}
+
+	xarrayfree_int(bins);
+	free_set(bin_pkgs);
 
 	disp_units = KILOBYTE;
 	if ((num_all_bytes / KILOBYTE) > 1000)
@@ -328,15 +292,23 @@ qpkg_make(depend_atom *atom)
 	return 0;
 }
 
+static int
+qpkg_cb(tree_pkg_ctx *pkg, void *priv)
+{
+	size_t *pkgs_made = priv;
+
+	if (qpkg_make(tree_get_atom(pkg, false)) == 0)
+		(*pkgs_made)++;
+
+	return 0;
+}
+
 int qpkg_main(int argc, char **argv)
 {
 	tree_ctx *ctx;
-	tree_cat_ctx *cat_ctx;
-	tree_pkg_ctx *pkg_ctx;
 	size_t s, pkgs_made;
 	int i;
 	struct stat st;
-	char buf[BUFSIZE];
 	depend_atom *atom;
 	int restrict_chmod = 0;
 	int qclean = 0;
@@ -417,27 +389,21 @@ int qpkg_main(int argc, char **argv)
 	if (!ctx)
 		return EXIT_FAILURE;
 
-	/* scan all the categories */
-	while ((cat_ctx = tree_next_cat(ctx))) {
-		/* scan all the packages in this category */
-		while ((pkg_ctx = tree_next_pkg(cat_ctx))) {
-			/* see if user wants any of these packages */
-			atom = tree_get_atom(pkg_ctx, false);
-			snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
-			for (i = optind; i < argc; ++i) {
-				if (argv[i] == NULL)
-					continue;
-
-				if (!strcmp(argv[i], atom->PN) ||
-						!strcmp(argv[i], atom->P) ||
-						!strcmp(argv[i], buf) ||
-						!strcmp(argv[i], "world"))
-					if (!qpkg_make(atom))
-						++pkgs_made;
-			}
-			tree_close_pkg(pkg_ctx);
+	for (i = optind; i < argc; ++i) {
+		if (argv[i] == NULL)
+			continue;
+		if (strcmp(argv[i], "world") == 0) {
+			/* we're basically done, this means all */
+			tree_foreach_pkg_fast(ctx, qpkg_cb, &pkgs_made, NULL);
 		}
+		atom = atom_explode(argv[i]);
+		if (atom == NULL)
+			continue;
+
+		tree_foreach_pkg_fast(ctx, qpkg_cb, &pkgs_made, atom);
+		atom_implode(atom);
 	}
+	tree_close(ctx);
 
 	if (pkgs_made)
 		qprintf(" %s*%s Packages can be found in %s\n",
