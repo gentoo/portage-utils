@@ -346,7 +346,7 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			(num_files_ignored > 1 ? "s were" : " was"));
 	qcprintf("\n");
 
-	if (num_files_ok != num_files)
+	if (num_files_ok != num_files && !state->qc_update)
 		return EXIT_FAILURE;
 	else
 		return EXIT_SUCCESS;
@@ -410,6 +410,7 @@ int qcheck_main(int argc, char **argv)
 	ret = -1;
 	if (vdb != NULL) {
 		if (array_cnt(atoms) != 0) {
+			ret = 0;
 			array_for_each(atoms, i, atom) {
 				ret |= tree_foreach_pkg_sorted(vdb, qcheck_cb, &state, atom);
 			}
@@ -427,5 +428,5 @@ int qcheck_main(int argc, char **argv)
 	array_for_each(atoms, i, atom)
 		atom_implode(atom);
 	xarrayfree_int(atoms);
-	return ret;
+	return ret != 0;
 }
