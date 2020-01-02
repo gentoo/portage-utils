@@ -426,16 +426,9 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int portdirfd = -1;  /* pacify compiler */
 
 	if (state->match || state->do_describe) {
-		atom = tree_get_atom(pkg_ctx, 0);
+		atom = tree_get_atom(pkg_ctx, false);
 		if (atom == NULL)
 			return 0;
-
-		if (state->match) {
-			match = atom_compare(atom, state->match) == EQUAL;
-
-			if (!match)
-				return 0;
-		}
 	}
 
 	if (!state->do_licence) {
@@ -719,14 +712,15 @@ int quse_main(int argc, char **argv)
 	} else if (state.do_installed) {
 		tree_ctx *t = tree_open_vdb(portroot, portvdb);
 		state.overlay = NULL;
-		tree_foreach_pkg_sorted(t, quse_results_cb, &state, NULL);
+		tree_foreach_pkg_sorted(t, quse_results_cb, &state, state.match);
 		tree_close(t);
 	} else {
 		array_for_each(overlays, n, overlay) {
 			tree_ctx *t = tree_open(portroot, overlay);
 			state.overlay = overlay;
 			if (t != NULL) {
-				tree_foreach_pkg_sorted(t, quse_results_cb, &state, NULL);
+				tree_foreach_pkg_sorted(t, quse_results_cb,
+						&state, state.match);
 				tree_close(t);
 			}
 		}
