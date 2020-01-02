@@ -922,7 +922,7 @@ tree_read_file_binpkg_xpak_cb(
 		if (old_data != NULL && m->Q__data != old_data) {
 			char **newdata = (char **)m;
 			int elems = sizeof(tree_pkg_meta) / sizeof(char *);
-			while (elems-- > 0)
+			while (elems-- > 1)  /* skip Q__data itself */
 				if (newdata[elems] != NULL)
 					newdata[elems] = m->Q__data + (newdata[elems] - old_data);
 		}
@@ -999,7 +999,8 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 	char **key;
 
 	/* offset is a byte offset in the tree_pkg_meta struct, pointing to
-	 * key, the tree_pkg_meta_get macro takes care of this */
+	 * key, the tree_pkg_meta_get macro as called by the user takes care
+	 * of offset and keyn pointing to the same thing */
 
 	if (ctx->cachetype == CACHE_VDB) {
 		if (pkg_ctx->meta == NULL)
@@ -1037,7 +1038,7 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 				if (old_data != NULL && m->Q__data != old_data) {
 					char **newdata = (char **)m;
 					int elems = sizeof(tree_pkg_meta) / sizeof(char *);
-					while (elems-- > 0)
+					while (elems-- > 1)  /* skip Q__data itself */
 						if (newdata[elems] != NULL)
 							newdata[elems] =
 								m->Q__data + (newdata[elems] - old_data);
