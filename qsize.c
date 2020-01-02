@@ -109,22 +109,6 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	FILE *fp;
 	size_t num_files, num_nonfiles, num_ignored;
 	uint64_t num_bytes;
-	bool showit = false;
-
-	/* see if this cat/pkg is requested */
-	if (array_cnt(state->atoms)) {
-		depend_atom *qatom;
-
-		qatom = tree_get_atom(pkg_ctx, 0);
-		array_for_each(state->atoms, i, atom)
-			if (atom_compare(qatom, atom) == EQUAL) {
-				showit = true;
-				break;
-			}
-	} else
-		showit = true;
-	if (!showit)
-		return EXIT_SUCCESS;
 
 	if ((fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
 		return EXIT_SUCCESS;
@@ -248,7 +232,13 @@ int qsize_main(int argc, char **argv)
 
 	vdb = tree_open_vdb(portroot, portvdb);
 	if (vdb != NULL) {
-		ret = tree_foreach_pkg_fast(vdb, qsize_cb, &state, NULL);
+		if (array_cnt(atoms) > 0) {
+			array_for_each(atoms, i, atom) {
+				ret = tree_foreach_pkg_fast(vdb, qsize_cb, &state, atom);
+			}
+		} else {
+			ret = tree_foreach_pkg_fast(vdb, qsize_cb, &state, NULL);
+		}
 		tree_close(vdb);
 	}
 
