@@ -70,8 +70,9 @@ struct qcheck_opt_state {
 };
 
 static int
-qcheck_process_contents(tree_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
+qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
+	struct qcheck_opt_state *state = priv;
 	FILE *fp_contents, *fp_contents_update;
 	size_t num_files, num_files_ok, num_files_unknown, num_files_ignored;
 	char *buffer, *line;
@@ -334,7 +335,7 @@ qcheck_process_contents(tree_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 		printf("%s\n", atom_format(state->fmt, atom));
 	qcprintf("  %2$s*%1$s %3$s%4$zu%1$s out of %3$s%5$zu%1$s file%6$s are good",
 		NORM, BOLD, BLUE, num_files_ok, num_files,
-		(num_files > 1 ? "s" : ""));
+		(num_files != 1 ? "s" : ""));
 	if (num_files_unknown)
 		qcprintf(" (Unable to digest %2$s%3$zu%1$s file%4$s)",
 			NORM, BLUE, num_files_unknown,
@@ -349,32 +350,6 @@ qcheck_process_contents(tree_pkg_ctx *pkg_ctx, struct qcheck_opt_state *state)
 		return EXIT_FAILURE;
 	else
 		return EXIT_SUCCESS;
-}
-
-static int
-qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
-{
-	struct qcheck_opt_state *state = priv;
-	bool showit = false;
-
-	/* see if this cat/pkg is requested */
-	if (array_cnt(state->atoms)) {
-		size_t i;
-		depend_atom *qatom;
-		depend_atom *atom;
-
-		qatom = tree_get_atom(pkg_ctx, false);
-		array_for_each(state->atoms, i, atom) {
-			if (atom_compare(qatom, atom) == EQUAL) {
-				showit = true;
-				break;
-			}
-		}
-	} else {
-		showit = true;
-	}
-
-	return showit ? qcheck_process_contents(pkg_ctx, priv) : 0;
 }
 
 int qcheck_main(int argc, char **argv)
@@ -434,7 +409,13 @@ int qcheck_main(int argc, char **argv)
 	vdb = tree_open_vdb(portroot, portvdb);
 	ret = -1;
 	if (vdb != NULL) {
-		ret = tree_foreach_pkg_sorted(vdb, qcheck_cb, &state, NULL);
+		if (array_cnt(atoms) != 0) {
+			array_for_each(atoms, i, atom) {
+				ret |= tree_foreach_pkg_sorted(vdb, qcheck_cb, &state, atom);
+			}
+		} else {
+			ret = tree_foreach_pkg_sorted(vdb, qcheck_cb, &state, NULL);
+		}
 		tree_close(vdb);
 	}
 	if (array_cnt(regex_arr) > 0) {
