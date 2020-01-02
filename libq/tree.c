@@ -1192,8 +1192,7 @@ tree_close_pkg(tree_pkg_ctx *pkg_ctx)
 }
 
 static int
-tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback,
-		void *priv, depend_atom *query)
+tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 {
 	char *p = ctx->pkgs;
 	char *q;
@@ -1201,6 +1200,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback,
 	char pkgname[_Q_PATH_MAX];
 	size_t len = ctx->pkgslen;
 	int ret = 0;
+	depend_atom *query = ctx->query_atom;
 
 	/* reused for every entry */
 	tree_cat_ctx *cat = NULL;
@@ -1323,11 +1323,12 @@ tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 	if (ctx == NULL)
 		return EXIT_FAILURE;
 
+	ctx->do_sort = sort;
+	ctx->query_atom = query;
+
 	/* handle Packages (binpkgs index) file separately */
 	if (ctx->cachetype == CACHE_PACKAGES)
-		return tree_foreach_packages(ctx, callback, priv, query);
-
-	ctx->do_sort = sort;
+		return tree_foreach_packages(ctx, callback, priv);
 
 	ret = 0;
 	while ((cat_ctx = tree_next_cat(ctx))) {
