@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2006      Thomas A. Cort - <tcort@gentoo.org>
@@ -799,7 +799,7 @@ qkeyword_traverse(tree_pkg_cb func, void *priv)
 	array_for_each(overlays, n, overlay) {
 		tree_ctx *t = tree_open(portroot, overlay);
 		if (t != NULL) {
-			ret |= tree_foreach_pkg_sorted(t, qkeyword_results_cb, priv);
+			ret |= tree_foreach_pkg_sorted(t, qkeyword_results_cb, priv, NULL);
 			tree_close(t);
 		}
 	}

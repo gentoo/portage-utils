@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Authors
+ * Copyright 2005-2020 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -272,37 +272,15 @@ qmerge_initialize(void)
 	free(buf);
 }
 
-struct qmerge_bv_state {
-	const char *catname;
-	const char *pkgname;
-	const char *slot;
-	char buf[4096];
-	char *retbuf;
-};
-
-static int
-qmerge_filter_cat(tree_cat_ctx *cat_ctx, void *priv)
-{
-	struct qmerge_bv_state *state = priv;
-	return !state->catname || strcmp(cat_ctx->name, state->catname) == 0;
-}
-
-/* HACK: pull this in, knowing that qlist will be in the final link, we
- * should however figure out how to do what match does here from e.g.
- * atom */
-extern bool qlist_match(
-		tree_pkg_ctx *pkg_ctx,
-		const char *name,
-		depend_atom **name_atom,
-		bool exact);
-
+static char _best_version_retbuf[4096];
 static int
 qmerge_best_version_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
-	struct qmerge_bv_state *state = priv;
-	if (qlist_match(pkg_ctx, state->buf, NULL, true))
-		snprintf(state->retbuf, sizeof(state->buf), "%s/%s:%s",
-			 pkg_ctx->cat_ctx->name, pkg_ctx->name, state->slot);
+	depend_atom *sa = priv;
+	depend_atom *a = tree_get_atom(pkg_ctx, true);  /* need SLOT */
+	if (atom_compare(a, sa) == EQUAL)
+		snprintf(_best_version_retbuf, sizeof(_best_version_retbuf),
+				"%s/%s:%s", a->CATEGORY, a->PF, a->SLOT);
 	return 0;
 }
 
@@ -310,15 +288,7 @@ static char *
 best_version(const char *catname, const char *pkgname, const char *slot)
 {
 	static int vdb_check = 1;
-	static char retbuf[4096];
-
 	tree_ctx *vdb;
-	struct qmerge_bv_state state = {
-		.catname = catname,
-		.pkgname = pkgname,
-		.slot = slot,
-		.retbuf = retbuf,
-	};
 
 	/* Make sure these dirs exist before we try walking them */
 	switch (vdb_check) {
@@ -336,18 +306,18 @@ best_version(const char *catname, const char *pkgname, const char *slot)
 			goto done;
 	}
 
-	retbuf[0] = '\0';
-	snprintf(state.buf, sizeof(state.buf), "%s%s%s:%s",
-		 catname ? : "", catname ? "/" : "", pkgname, slot);
+	snprintf(_best_version_retbuf, sizeof(_best_version_retbuf),
+			"%s%s%s:%s", catname ? : "", catname ? "/" : "", pkgname, slot);
 	vdb = tree_open_vdb(portroot, portvdb);
 	if (vdb != NULL) {
-		tree_foreach_pkg_fast(vdb,
-				qmerge_best_version_cb, &state, qmerge_filter_cat);
+		depend_atom *sa = atom_explode(_best_version_retbuf);
+		tree_foreach_pkg_fast(vdb, qmerge_best_version_cb, sa, sa);
 		tree_close(vdb);
+		atom_implode(sa);
 	}
 
  done:
-	return retbuf;
+	return _best_version_retbuf;
 }
 
 static int
@@ -1809,6 +1779,15 @@ print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 		}
 	}
 }
+
+/* HACK: pull this in, knowing that qlist will be in the final link, we
+ * should however figure out how to do what match does here from e.g.
+ * atom */
+extern bool qlist_match(
+		tree_pkg_ctx *pkg_ctx,
+		const char *name,
+		depend_atom **name_atom,
+		bool exact);
 
 static int
 qmerge_unmerge_cb(tree_pkg_ctx *pkg_ctx, void *priv)

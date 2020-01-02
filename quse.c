@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -719,14 +719,14 @@ int quse_main(int argc, char **argv)
 	} else if (state.do_installed) {
 		tree_ctx *t = tree_open_vdb(portroot, portvdb);
 		state.overlay = NULL;
-		tree_foreach_pkg_sorted(t, quse_results_cb, &state);
+		tree_foreach_pkg_sorted(t, quse_results_cb, &state, NULL);
 		tree_close(t);
 	} else {
 		array_for_each(overlays, n, overlay) {
 			tree_ctx *t = tree_open(portroot, overlay);
 			state.overlay = overlay;
 			if (t != NULL) {
-				tree_foreach_pkg_sorted(t, quse_results_cb, &state);
+				tree_foreach_pkg_sorted(t, quse_results_cb, &state, NULL);
 				tree_close(t);
 			}
 		}

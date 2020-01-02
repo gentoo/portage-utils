@@ -494,7 +494,7 @@ int qlist_main(int argc, char **argv)
 	else
 		vdb = tree_open_vdb(portroot, portvdb);
 	if (vdb != NULL) {
-		ret = tree_foreach_pkg_sorted(vdb, qlist_cb, &state);
+		ret = tree_foreach_pkg_sorted(vdb, qlist_cb, &state, NULL);
 		tree_close(vdb);
 	}
 	free(state.buf);

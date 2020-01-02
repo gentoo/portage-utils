@@ -9,8 +9,6 @@
   `ACCEPT_LICENSE="${ACCEPT_LICENSE} bar"`<br>
   we end up getting just:<br>
   `ACCEPT_LICENSE=" bar"`
-- tree\_foreach\_pkg should have variant that takes an atom (or just
-  cat?) to reduce search space
 - tree\_get\_atoms should return atoms iso string set, needs a rewrite
   to use foreach\_pkg and get\_atom -- set is ready for storing objects
   now

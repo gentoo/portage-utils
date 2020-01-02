@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -434,7 +434,7 @@ int qcheck_main(int argc, char **argv)
 	vdb = tree_open_vdb(portroot, portvdb);
 	ret = -1;
 	if (vdb != NULL) {
-		ret = tree_foreach_pkg_sorted(vdb, qcheck_cb, &state);
+		ret = tree_foreach_pkg_sorted(vdb, qcheck_cb, &state, NULL);
 		tree_close(vdb);
 	}
 	if (array_cnt(regex_arr) > 0) {

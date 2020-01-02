@@ -57,8 +57,6 @@ tree_open_int(const char *sroot, const char *tdir, bool quiet)
 		goto cv_error;
 
 	ctx->do_sort = false;
-	ctx->catsortfunc = alphasort;
-	ctx->pkgsortfunc = tree_pkg_compar;
 	return ctx;
 
  cv_error:
@@ -237,29 +235,42 @@ tree_next_cat(tree_ctx *ctx)
 {
 	/* search for a category directory */
 	tree_cat_ctx *cat_ctx = NULL;
+	const struct dirent *de;
 
 	if (ctx->do_sort) {
 		if (ctx->cat_de == NULL) {
 			ctx->cat_cnt = scandirat(ctx->tree_fd,
-					".", &ctx->cat_de, tree_filter_cat, ctx->catsortfunc);
+					".", &ctx->cat_de, tree_filter_cat, alphasort);
 			ctx->cat_cur = 0;
 		}
 
 		while (ctx->cat_cur < ctx->cat_cnt) {
-			cat_ctx = tree_open_cat(ctx, ctx->cat_de[ctx->cat_cur++]->d_name);
+			de = ctx->cat_de[ctx->cat_cur++];
+
+			/* match if cat is requested */
+			if (ctx->query_atom != NULL && ctx->query_atom->CATEGORY != NULL &&
+					strcmp(ctx->query_atom->CATEGORY, de->d_name) != 0)
+				continue;
+
+			cat_ctx = tree_open_cat(ctx, de->d_name);
 			if (!cat_ctx)
 				continue;
+
 			break;
 		}
 	} else {
 		/* cheaper "streaming" variant */
-		const struct dirent *de;
 		do {
 			de = readdir(ctx->dir);
 			if (!de)
 				break;
 
 			if (tree_filter_cat(de) == 0)
+				continue;
+
+			/* match if cat is requested */
+			if (ctx->query_atom != NULL && ctx->query_atom->CATEGORY != NULL &&
+					strcmp(ctx->query_atom->CATEGORY, de->d_name) != 0)
 				continue;
 
 			cat_ctx = tree_open_cat(ctx, de->d_name);
@@ -327,6 +338,17 @@ tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name)
 	pkg_ctx->cat_ctx = cat_ctx;
 	pkg_ctx->atom = NULL;
 	pkg_ctx->meta = NULL;
+
+	/* see if this pkg matches the query, here we can finally check
+	 * version conditions like >=, etc. */
+	if (cat_ctx->ctx->query_atom != NULL) {
+		(void)tree_get_atom(pkg_ctx, false);
+		if (atom_compare(pkg_ctx->atom, cat_ctx->ctx->query_atom) != EQUAL) {
+			tree_close_pkg(pkg_ctx);
+			return NULL;
+		}
+	}
+
 	return pkg_ctx;
 }
 
@@ -348,6 +370,7 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 {
 	tree_pkg_ctx *pkg_ctx = NULL;
 	const struct dirent *de;
+	depend_atom *qa = cat_ctx->ctx->query_atom;
 
 	if (cat_ctx->ctx->do_sort) {
 		if (cat_ctx->pkg_ctxs == NULL) {
@@ -360,11 +383,22 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 				if (tree_filter_pkg(de) == 0)
 					continue;
 
+				/* perform package name check, for we don't have an atom
+				 * yet, and creating it is expensive, which we better
+				 * defer to pkg time, and filter most stuff out here
+				 * note that we might over-match, but that's easier than
+				 * trying to deal with end of string or '-' here (which
+				 * still wouldn't be 100% because name rules are complex) */
+				if (qa != NULL && qa->PN != NULL &&
+						strncmp(qa->PN, de->d_name, strlen(qa->PN)) != 0)
+					continue;
+
 				if (cat_ctx->pkg_cnt == pkg_size) {
 					pkg_size += 256;
 					cat_ctx->pkg_ctxs = xrealloc(cat_ctx->pkg_ctxs,
 								sizeof(*cat_ctx->pkg_ctxs) * pkg_size);
 				}
+
 				name = xstrdup(de->d_name);
 				pkg_ctx = cat_ctx->pkg_ctxs[cat_ctx->pkg_cnt++] =
 					tree_open_pkg(cat_ctx, name);
@@ -374,9 +408,9 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 				}
 			}
 
-			if (cat_ctx->ctx->pkgsortfunc != NULL && cat_ctx->pkg_cnt > 1) {
+			if (cat_ctx->pkg_cnt > 1) {
 				qsort(cat_ctx->pkg_ctxs, cat_ctx->pkg_cnt,
-						sizeof(*cat_ctx->pkg_ctxs), cat_ctx->ctx->pkgsortfunc);
+						sizeof(*cat_ctx->pkg_ctxs), tree_pkg_compar);
 			}
 		}
 
@@ -390,6 +424,11 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 				break;
 
 			if (tree_filter_pkg(de) == 0)
+				continue;
+
+			/* perform package name check as for the sorted variant */
+			if (qa != NULL && qa->PN != NULL &&
+					strncmp(qa->PN, de->d_name, strlen(qa->PN)) != 0)
 				continue;
 
 			pkg_ctx = tree_open_pkg(cat_ctx, de->d_name);
@@ -428,8 +467,6 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 				pkgdir->portroot_fd = -1;
 				pkgdir->tree_fd = cat_ctx->fd;
 				pkgdir->do_sort = ctx->do_sort;
-				pkgdir->catsortfunc = ctx->catsortfunc;
-				pkgdir->pkgsortfunc = ctx->pkgsortfunc;
 				pkgdir->repo = ctx->repo;
 				pkgdir->cachetype = ctx->cachetype;
 
@@ -440,7 +477,7 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 				 * directory or something */
 				if (ctx->ebuilddir_cat_ctx == NULL) {
 					ctx->ebuilddir_pkg_ctx = NULL;
-					return NULL;
+					continue;
 				}
 
 				/* "zap" the pkg such that it looks like CAT/P */
@@ -1155,7 +1192,8 @@ tree_close_pkg(tree_pkg_ctx *pkg_ctx)
 }
 
 static int
-tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
+tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback,
+		void *priv, depend_atom *query)
 {
 	char *p = ctx->pkgs;
 	char *q;
@@ -1239,6 +1277,11 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 			if (atom != NULL)
 				atom_implode(atom);
 			atom = atom_explode(c);
+			/* pretend this entry is bogus if it doesn't match query */
+			if (query != NULL && atom_compare(atom, query) != EQUAL) {
+				atom_implode(atom);
+				atom = NULL;
+			}
 #define match_key(X) match_key2(X,X)
 #define match_key2(X,Y) \
 		} else if (strcmp(p, #X) == 0) { \
@@ -1270,9 +1313,8 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 }
 
 int
-tree_foreach_pkg(tree_ctx *ctx,
-		tree_pkg_cb callback, void *priv, tree_cat_filter filter,
-		bool sort, void *catsortfunc, void *pkgsortfunc)
+tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
+		bool sort, depend_atom *query)
 {
 	tree_cat_ctx *cat_ctx;
 	tree_pkg_ctx *pkg_ctx;
@@ -1283,18 +1325,12 @@ tree_foreach_pkg(tree_ctx *ctx,
 
 	/* handle Packages (binpkgs index) file separately */
 	if (ctx->cachetype == CACHE_PACKAGES)
-		return tree_foreach_packages(ctx, callback, priv);
+		return tree_foreach_packages(ctx, callback, priv, query);
 
 	ctx->do_sort = sort;
-	if (catsortfunc != NULL)
-		ctx->catsortfunc = catsortfunc;
-	if (pkgsortfunc != NULL)
-		ctx->pkgsortfunc = pkgsortfunc;
 
 	ret = 0;
 	while ((cat_ctx = tree_next_cat(ctx))) {
-		if (filter && !filter(cat_ctx, priv))
-			continue;
 		while ((pkg_ctx = tree_next_pkg(cat_ctx))) {
 			ret |= callback(pkg_ctx, priv);
 			tree_close_pkg(pkg_ctx);
@@ -1319,6 +1355,7 @@ tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 		tree_ctx *ctx = pkg_ctx->cat_ctx->ctx;
 		if (ctx->cachetype == CACHE_VDB) {
 			if (pkg_ctx->atom->SLOT == NULL) {
+				/* FIXME: use tree_meta_get !!! */
 				if (pkg_ctx->slot == NULL)
 					tree_pkg_vdb_eat(pkg_ctx, "SLOT",
 							&pkg_ctx->slot, &pkg_ctx->slot_len);

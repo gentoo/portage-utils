@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -27,8 +27,6 @@ struct tree_ctx {
 	struct dirent **cat_de;
 	size_t cat_cnt;
 	size_t cat_cur;
-	void *catsortfunc;
-	void *pkgsortfunc;
 	bool do_sort:1;
 	enum {
 		CACHE_UNSET = 0,
@@ -45,6 +43,7 @@ struct tree_ctx {
 	char *repo;
 	char *pkgs;
 	size_t pkgslen;
+	depend_atom *query_atom;
 };
 
 /* Category context */
@@ -110,9 +109,8 @@ struct tree_metadata_xml {
 	} *email;
 };
 
-/* Global helpers */
+/* foreach pkg callback function signature */
 typedef int (tree_pkg_cb)(tree_pkg_ctx *, void *priv);
-typedef int (tree_cat_filter)(tree_cat_ctx *, void *priv);
 
 tree_ctx *tree_open(const char *sroot, const char *portdir);
 tree_ctx *tree_open_vdb(const char *sroot, const char *svdb);
@@ -140,13 +138,12 @@ char *tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *ke
 tree_metadata_xml *tree_pkg_metadata(tree_pkg_ctx *pkg_ctx);
 void tree_close_metadata(tree_metadata_xml *meta_ctx);
 void tree_close_pkg(tree_pkg_ctx *pkg_ctx);
-int tree_foreach_pkg(tree_ctx *ctx,
-		tree_pkg_cb callback, void *priv, tree_cat_filter filter,
-		bool sort, void *catsortfunc, void *pkgsortfunc);
-#define tree_foreach_pkg_fast(ctx, cb, priv, filter) \
-	tree_foreach_pkg(ctx, cb, priv, filter, false, NULL, NULL);
-#define tree_foreach_pkg_sorted(ctx, cb, priv) \
-	tree_foreach_pkg(ctx, cb, priv, NULL, true, NULL, NULL);
+int tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
+		bool sort, depend_atom *query);
+#define tree_foreach_pkg_fast(ctx, cb, priv, query) \
+	tree_foreach_pkg(ctx, cb, priv, false, query);
+#define tree_foreach_pkg_sorted(ctx, cb, priv, query) \
+	tree_foreach_pkg(ctx, cb, priv, true, query);
 struct dirent *tree_get_next_dir(DIR *dir);
 set *tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms);
 depend_atom *tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete);

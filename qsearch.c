@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Authors
+ * Copyright 2005-2020 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -174,7 +174,7 @@ int qsearch_main(int argc, char **argv)
 	array_for_each(overlays, n, overlay) {
 		tree_ctx *t = tree_open(portroot, overlay);
 		if (t != NULL) {
-			ret |= tree_foreach_pkg_sorted(t, qsearch_cb, &state);
+			ret |= tree_foreach_pkg_sorted(t, qsearch_cb, &state, NULL);
 			tree_close(t);
 		}
 	}
