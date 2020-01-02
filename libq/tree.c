@@ -912,7 +912,7 @@ tree_read_file_binpkg_xpak_cb(
 	while (isspace((int)data[data_offset + data_len - 1]))
 		data_len--;
 
-	if (len - pos < (size_t)data_len) {
+	if (len - pos < (size_t)(data_len + 1)) {
 		char *old_data = m->Q__data;
 		len += (((data_len + 1) / BUFSIZ) + 1) * BUFSIZ;
 		m->Q__data = xrealloc(m->Q__data, len);
@@ -1028,7 +1028,7 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 			len = (size_t)m->Q__md5_;
 
 			/* TODO: this is an exact copy from tree_read_file_binpkg_xpak_cb */
-			if (len - pos < (size_t)s.st_size) {
+			if (len - pos < (size_t)(s.st_size + 1)) {
 				char *old_data = m->Q__data;
 				len += (((s.st_size + 1) / BUFSIZ) + 1) * BUFSIZ;
 				m->Q__data = xrealloc(m->Q__data, len);
@@ -1049,7 +1049,7 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 				char *p = *key = m->Q__data + pos;
 				p[s.st_size] = '\0';
 				while (s.st_size > 0 && isspace((int)p[s.st_size - 1]))
-					p[s.st_size--] = '\0';
+					p[--s.st_size] = '\0';
 				pos += s.st_size + 1;
 				m->Q__eclasses_ = (char *)pos;
 			}
