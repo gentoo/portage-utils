@@ -24,7 +24,7 @@ if [[ ${CC} == coverity ]] ; then
   # ensure we end up with an existing compiler
   export CC=gcc
   v ./configure ${DEFARGS} --enable-qmanifest --enable-qtegrity
-  curl -s 'https://scan.coverity.com/scripts/travisci_build_coverity_scan.sh' | bash
+  curl -s 'https://scan.coverity.com/scripts/travisci_build_coverity_scan.sh' | bash || true
 elif [[ ${CC} == valgrind ]] ; then
   export CC=gcc
   do_run CFLAGS=-g ${DEFARGS} --enable-qmanifest --enable-qtegrity
