@@ -573,15 +573,15 @@ install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 	}
 
 #if EBUG
-	printf("applying install masks:\n");
+	fprintf(warnout, "applying install masks:\n");
 	for (cnt = 0; cnt < masksc; cnt++) {
 		ssize_t plen = (ssize_t)masksv[cnt][0];
-		printf("%3zd  ", plen);
+		fprintf(warnout, "%3zd  ", plen);
 		if (plen < 0)
 			plen = -plen;
 		for (i = 1; i <= plen; i++)
-			printf("%s ", masksv[cnt][i]);
-		printf(" %zd\n", (size_t)masksv[cnt][i]);
+			fprintf(warnout, "%s ", masksv[cnt][i]);
+		fprintf(warnout, " %zd\n", (size_t)masksv[cnt][i]);
 	}
 #endif
 

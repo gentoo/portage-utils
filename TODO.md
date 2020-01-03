@@ -40,6 +40,7 @@
 - test should work on local vdb (so TRAVIS can test it too)
 - fixup lame misnaming of force\_download (--fetch/--force) actually
   not-forcing things
+- use xpak.h instead of shelling out to qxpak binary
 
 # qdepends
 - -v should lookup whether packages are installed for || cases/colouring
@@ -50,6 +51,8 @@
 	- newer installed version available
 - integrate qxpak and qtbz2 with this package (the latter are confusing,
   and qpkg is doing parts of qtbz2's compose
+- share install\_mask code from qmerge to handle negatives from
+  pkg\_install\_mask too
 
 # qgrep
 - make it use standard xarray instead of its own buf\_list

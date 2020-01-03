@@ -29,7 +29,7 @@ out=$(yes | qmerge -F qmerge-test)
 tend $? "qmerge-test: [N] basic merge" || die "${out}"
 
 [[ ${out} != *"FAIL"* ]]
-tend $? "qmerge-test: [N] FAIL messages" || die "${out}"
+tend $? "qmerge-test: [N] no FAIL messages" || die "${out}"
 
 order=$(echo "${out}" | awk '$1 == ">>>" && $2 ~ /^pkg_/ { printf "%s ", $NF }')
 [[ ${order} == "pkg_pretend pkg_setup pkg_preinst pkg_postinst " ]]
@@ -104,6 +104,19 @@ out=$(yes | qmerge -FU qmerge-test)
 tend $? "qmerge-test: [M] uninstall" || die "${out}"
 [[ ! -e ${ROOT}/etc ]]
 tend $? "qmerge-test: [M] /etc removed" || die "$(treedir "${ROOT}")"
+
+export INSTALL_MASK="/usr -/usr/bin/dummy"
+out=$(yes | qmerge -F qmerge-test)
+tend $? "qmerge-test: [M] install only /usr/bin/dummy" || die "${out}"
+[[ -e ${ROOT}/usr/bin/dummy ]]
+tend $? "qmerge-test: [M] found /usr/bin/dummy" || die "$(treedir "${ROOT}")"
+[[ ! -e ${ROOT}/usr/bin/qmerge-test ]]
+tend $? "qmerge-test: [M] /usr/bin/qmerge-test absent" || die "$(treedir "${ROOT}")"
+
+out=$(yes | qmerge -FU qmerge-test)
+tend $? "qmerge-test: [M] uninstall" || die "${out}"
+[[ ! -e ${ROOT}/usr/bin/dummy ]]
+tend $? "qmerge-test: [M] /usr/bin/dummy removed" || die "$(treedir "${ROOT}")"
 
 set -e
 
