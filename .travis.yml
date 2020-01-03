@@ -2,18 +2,32 @@
 # https://docs.travis-ci.com/
 
 language: c
-# Order here matters for implicit matrix generation and coverity scan.
-# See travis/main.sh for details.
-compiler:
-  - gcc
-  - clang
-
 sudo: false
 
-# Order here matters; see compiler comment above.
-os:
-  - linux
-dist: xenial
+matrix:
+  include:
+    - compiler: gcc
+      os: linux
+      dist: bionic
+    - compiler: clang
+      os: linux
+      dist: bionic
+    - compiler: coverity
+      os: linux
+      dist: bionic
+      env:
+        - COVERITY_SCAN_PROJECT_NAME="$TRAVIS_REPO_SLUG"
+        - COVERITY_SCAN_BRANCH_PATTERN="master"
+        - COVERITY_SCAN_NOTIFICATION_EMAIL="grobian@gentoo.org"
+        - COVERITY_SCAN_BUILD_COMMAND="make"
+    - compiler: valgrind
+      os: linux
+      dist: bionic
+      env:
+        - CFLAGS="-g"
+        - Q_RUN_WITH_VALGRIND=1
+    - compiler: clang
+      os: osx
 
 env:
   global:
@@ -25,6 +39,11 @@ addons:
     - libgpgme11-dev
     - gnupg2
     - valgrind
+  homebrew:
+    packages:
+    - gpgme
+    - gnupg
+    #update: true
 
 before_install:
   - ./travis/install-blake2.sh
