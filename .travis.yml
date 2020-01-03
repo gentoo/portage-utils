@@ -46,6 +46,7 @@ addons:
     - gpgme
     - gnupg
     - gnu-sed
+    - coreutils
     #update: true
 
 before_install:
