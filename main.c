@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -373,9 +373,6 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 	env_vars *vars = data;
 	set *masks = data;
 
-	if (getenv("DEBUG"))
-		fprintf(stderr, "profile %s\n", file);
-
 	if ((dentslen = scandir(file, &dents, NULL, alphasort)) > 0) {
 		int di;
 		struct dirent *d;
@@ -513,6 +510,9 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 	fclose(fp);
  done:
 	free(buf);
+
+	if (getenv("DEBUG"))
+		fprintf(stderr, "read profile %s\n", file);
 }
 
 /* Helper to recursively read stacked make.defaults in profiles */
@@ -539,53 +539,48 @@ read_portage_profile(const char *profile, env_vars vars[], set *masks)
 	 * treat parent profiles as defaults, that can be overridden by
 	 * *this* profile. */
 	strcpy(profile_file + profile_len, "parent");
-	if (!eat_file(profile_file, &buf, &buf_len)) {
-		if (buf != NULL)
-			free(buf);
-		return;
-	}
+	if (eat_file(profile_file, &buf, &buf_len)) {
+		s = strtok_r(buf, "\n", &saveptr);
+		for (; s != NULL; s = strtok_r(NULL, "\n", &saveptr)) {
+			/* handle repo: notation (not in PMS, referenced in Wiki only?) */
+			if ((p = strchr(s, ':')) != NULL) {
+				char *overlay;
+				char *repo_name;
+				size_t n;
 
-	s = strtok_r(buf, "\n", &saveptr);
-	while (s) {
-		/* handle repo: notation (not in PMS, referenced in Wiki only?) */
-		if ((p = strchr(s, ':')) != NULL) {
-			char *overlay;
-			char *repo_name;
-			size_t n;
+				/* split repo from target */
+				*p++ = '\0';
 
-			/* split repo from target */
-			*p++ = '\0';
-
-			/* match the repo */
-			repo_name = NULL;
-			array_for_each(overlays, n, overlay) {
-				repo_name = xarrayget(overlay_names, n);
-				if (strcmp(repo_name, s) == 0) {
-					snprintf(profile_file, sizeof(profile_file),
-							"%s/profiles/%s/", overlay, p);
-					break;
-				}
+				/* match the repo */
 				repo_name = NULL;
+				array_for_each(overlays, n, overlay) {
+					repo_name = xarrayget(overlay_names, n);
+					if (strcmp(repo_name, s) == 0) {
+						snprintf(profile_file, sizeof(profile_file),
+								"%s/profiles/%s/", overlay, p);
+						break;
+					}
+					repo_name = NULL;
+				}
+				if (repo_name == NULL) {
+					warn("ignoring parent with unknown repo in profile: %s", s);
+					continue;
+				}
+			} else {
+				snprintf(profile_file + profile_len,
+						sizeof(profile_file) - profile_len, "%s", s);
 			}
-			if (repo_name == NULL) {
-				warn("ignoring parent with unknown repo in profile: %s", s);
-				s = strtok_r(NULL, "\n", &saveptr);
-				continue;
-			}
-		} else {
-			snprintf(profile_file + profile_len,
-					sizeof(profile_file) - profile_len, "%s", s);
+			read_portage_profile(
+					realpath(profile_file, rpath) == NULL ?
+					profile_file : rpath, vars, masks);
+			/* restore original path in case we were repointed by profile */
+			if (p != NULL)
+				snprintf(profile_file, sizeof(profile_file), "%s/", profile);
 		}
-		read_portage_profile(
-				realpath(profile_file, rpath) == NULL ? profile_file : rpath,
-				vars, masks);
-		/* restore original path in case we were repointed by profile */
-		if (p != NULL)
-			snprintf(profile_file, sizeof(profile_file), "%s/", profile);
-		s = strtok_r(NULL, "\n", &saveptr);
 	}
 
-	free(buf);
+	if (buf != NULL)
+		free(buf);
 
 	/* now consume *this* profile's make.defaults and package.mask */
 	strcpy(profile_file + profile_len, "make.defaults");
