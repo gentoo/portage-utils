@@ -118,6 +118,18 @@ tend $? "qmerge-test: [M] uninstall" || die "${out}"
 [[ ! -e ${ROOT}/usr/bin/dummy ]]
 tend $? "qmerge-test: [M] /usr/bin/dummy removed" || die "$(treedir "${ROOT}")"
 
+export INSTALL_MASK="/usr -/usr/bin /usr/bin/dummy"
+out=$(yes | qmerge -F qmerge-test)
+tend $? "qmerge-test: [M] install except /usr/bin/dummy" || die "${out}"
+[[ ! -e ${ROOT}/usr/bin/dummy ]]
+tend $? "qmerge-test: [M] found no /usr/bin/dummy" || die "$(treedir "${ROOT}")"
+[[ -e ${ROOT}/usr/bin/qmerge-test ]]
+tend $? "qmerge-test: [M] found /usr/bin/qmerge-test" || die "$(treedir "${ROOT}")"
+
+out=$(yes | qmerge -FU qmerge-test)
+tend $? "qmerge-test: [M] uninstall" || die "${out}"
+[[ ! -e ${ROOT}/usr/bin/qmerge-test ]]
+tend $? "qmerge-test: [M] /usr/bin/qmerge-test removed" || die "$(treedir "${ROOT}")"
 set -e
 
 cleantmpdir
