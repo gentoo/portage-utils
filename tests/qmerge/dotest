@@ -79,6 +79,32 @@ tend $? "qmerge-test: [C] pkg_* order of execution" || die "$(printf '%s\n' "${o
    ! -d ${ROOT}/var/db/pkg/sys-devel ]]
 tend $? "qmerge-test: [C] uninstalled expected files" || die "$(treedir "${ROOT}")"
 
+# cleanup
+rm -Rf "${ROOT}"/etc
+
+# check if INSTALL_MASK is applied well
+export INSTALL_MASK="/etc"
+out=$(yes | qmerge -F qmerge-test)
+tend $? "qmerge-test: [M] install no /etc" || die "${out}"
+[[ ! -e ${ROOT}/etc ]]
+tend $? "qmerge-test: [M] found no /etc" || die "$(treedir "${ROOT}")"
+
+out=$(yes | qmerge -FU qmerge-test)
+tend $? "qmerge-test: [M] uninstall" || die "${out}"
+[[ ! -e ${ROOT}/etc ]]
+tend $? "qmerge-test: [M] /etc removed" || die "$(treedir "${ROOT}")"
+
+export INSTALL_MASK="/etc -/etc/some.conf"
+out=$(yes | qmerge -F qmerge-test)
+tend $? "qmerge-test: [M] install only /etc/some.conf" || die "${out}"
+[[ ! -e ${ROOT}/etc/another.conf ]]
+tend $? "qmerge-test: [M] found /etc/another.conf" || die "$(treedir "${ROOT}")"
+
+out=$(yes | qmerge -FU qmerge-test)
+tend $? "qmerge-test: [M] uninstall" || die "${out}"
+[[ ! -e ${ROOT}/etc ]]
+tend $? "qmerge-test: [M] /etc removed" || die "$(treedir "${ROOT}")"
+
 set -e
 
 cleantmpdir
