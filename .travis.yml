@@ -28,6 +28,8 @@ matrix:
         - Q_RUN_WITH_VALGRIND=1
     - compiler: clang
       os: osx
+      env:
+        - PATH="$(brew --prefix)/opt/gnu-sed/libexec/gnubin:$PATH"
 
 env:
   global:
@@ -43,6 +45,7 @@ addons:
     packages:
     - gpgme
     - gnupg
+    - gnu-sed
     #update: true
 
 before_install:
