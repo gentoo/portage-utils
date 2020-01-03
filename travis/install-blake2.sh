@@ -26,4 +26,8 @@ main() {
 	v rm -rf libb2*
 	travis_fold end dep-blake2
 }
+
+if [[ ${CC} == valgrind || ${CC} == coverity ]] ; then
+	export CC=gcc
+fi
 main "$@"
