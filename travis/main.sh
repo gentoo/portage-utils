@@ -21,9 +21,6 @@ do_run() {
 
 if [[ ${CC} == coverity ]] ; then
   [[ -n ${COVERITY_SCAN_TOKEN} ]] || exit 0;  # don't fail on this for PRs
-  # Do scans last as they like to dirty the tree and some tests
-  # expect a clean tree (like code style checks).
-  v --fold="coverity_scan" coverity_scan
   # ensure we end up with an existing compiler
   export CC=gcc
   v ./configure ${DEFARGS} --enable-qmanifest --enable-qtegrity
