@@ -30,6 +30,7 @@ matrix:
       os: osx
       env:
         - PATH="$(brew --prefix)/opt/gnu-sed/libexec/gnubin:$PATH"
+        - PATH="$(brew --prefix)/opt/coreutils/libexec/gnubin:$PATH"
 
 env:
   global:
