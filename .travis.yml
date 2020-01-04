@@ -49,6 +49,7 @@ addons:
     - gnu-sed
     - coreutils
     - bash
+    - libressl
     #update: true
 
 before_install:
