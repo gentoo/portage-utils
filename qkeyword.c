@@ -190,13 +190,13 @@ read_keywords(char *s, int *keywords)
 	if (!slen)
 		return 0;
 
-	arch = strtok_r(s, delim, &savep);
-	do {
+	while ((arch = strtok_r(s, delim, &savep)) != NULL) {
+		s = NULL;  /* for strtok_r */
 		i = decode_arch(arch);
 		if (i == -1)
 			continue;
 		keywords[i] = decode_status(arch[0]);
-	} while ((arch = strtok_r(NULL, delim, &savep)));
+	}
 
 	return 0;
 }
