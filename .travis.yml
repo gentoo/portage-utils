@@ -48,6 +48,7 @@ addons:
     - gnupg
     - gnu-sed
     - coreutils
+    - bash
     #update: true
 
 before_install:
