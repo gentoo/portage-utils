@@ -12,8 +12,6 @@
 - tree\_get\_atoms should return atoms iso string set, needs a rewrite
   to use foreach\_pkg and get\_atom -- set is ready for storing objects
   now
-- replace all strtok by strtok\_r, because the latter is already used,
-  so we can
 - parse package.accept\_keywords such that we can provide the latest
   "available" version like Portage
 - check timestamps in libq/tree for choosing which method to take:
@@ -78,3 +76,6 @@
   guestimate alternative to current time jumping
 - multiple files support -- current opinion: don't do it
 - compressed file support, use guessing support from qmerge?
+
+# qfile
+- stop searching when absolute path argument was found?

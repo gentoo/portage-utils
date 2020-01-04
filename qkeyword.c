@@ -169,7 +169,9 @@ print_keywords(const char *category, const char *ebuild, int *keywords)
 static int
 read_keywords(char *s, int *keywords)
 {
-	char *arch, delim[2] = { ' ', '\0' };
+	char *arch;
+	char delim[2] = { ' ', '\0' };
+	char *savep;
 	size_t slen;
 	size_t a;
 	int i;
@@ -188,13 +190,13 @@ read_keywords(char *s, int *keywords)
 	if (!slen)
 		return 0;
 
-	arch = strtok(s, delim);
+	arch = strtok_r(s, delim, &savep);
 	do {
 		i = decode_arch(arch);
 		if (i == -1)
 			continue;
 		keywords[i] = decode_status(arch[0]);
-	} while ((arch = strtok(NULL, delim)));
+	} while ((arch = strtok_r(NULL, delim, &savep)));
 
 	return 0;
 }

@@ -334,6 +334,7 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int i;
 	char *contents;
 	char *line;
+	char *savep;
 	depend_atom *atom;
 
 	/* see if this cat/pkg is requested */
@@ -362,10 +363,10 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if ((contents = tree_pkg_meta_get(pkg_ctx, CONTENTS)) == NULL)
 		return 1;
 
-	while ((line = strtok(contents, "\n")) != NULL) {
+	while ((line = strtok_r(contents, "\n", &savep)) != NULL) {
 		contents_entry *e;
 
-		contents = NULL;  /* for strtok */
+		contents = NULL;  /* for strtok_r */
 
 		e = contents_parse_line(line);
 		if (!e)
