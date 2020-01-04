@@ -29,6 +29,8 @@ matrix:
     - compiler: clang
       os: osx
       env:
+        - LDFLAGS="-L/usr/local/opt/libressl/lib"
+        - CPPFLAGS="-I/usr/local/opt/libressl/include"
         - PATH="$(brew --prefix)/opt/gnu-sed/libexec/gnubin:$PATH"
         - PATH="$(brew --prefix)/opt/coreutils/libexec/gnubin:$PATH"
 
