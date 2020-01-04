@@ -3,8 +3,8 @@
 . "${0%/*}"/lib.sh
 
 # For local deps like blake2b.
-export CPPFLAGS="-I${PWD}/../sysroot"
-export LDFLAGS="-L${PWD}/../sysroot"
+export CPPFLAGS="${CPPFLAGS} -I${PWD}/../sysroot"
+export LDFLAGS="${LDFLAGS} -L${PWD}/../sysroot"
 
 # ignore timestamps which git doesn't preserve
 # disable openmp because Clang's libomp isn't installed
