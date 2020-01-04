@@ -56,6 +56,13 @@ extern const char *argv0;
 # define MAX(x, y) ((x) < (y) ? (y) : (x))
 #endif
 
+#ifdef HAVE_STRUCT_STAT_ST_ATIMESPEC_TV_NSEC
+# define st_mtim st_mtimespec
+#endif
+#ifdef HAVE_STRUCT_STAT_ST_ATIM_ST__TIM_TV_NSEC
+# define st_mtim st_mtim.st__tim
+#endif
+
 #define READ_BE_INT32(P) \
 	((((unsigned char *)(P))[0] << 24) | \
 	 (((unsigned char *)(P))[1] << 16) | \
