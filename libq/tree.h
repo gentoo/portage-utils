@@ -121,8 +121,6 @@ tree_cat_ctx *tree_open_cat(tree_ctx *ctx, const char *name);
 void tree_close_cat(tree_cat_ctx *cat_ctx);
 tree_pkg_ctx *tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name);
 tree_pkg_ctx *tree_next_pkg(tree_cat_ctx *cat_ctx);
-tree_pkg_meta *tree_pkg_read(tree_pkg_ctx *pkg_ctx);
-void tree_close_meta(tree_pkg_meta *cache);
 char *tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *key);
 #define tree_pkg_meta_get(P,X) \
 	tree_pkg_meta_get_int(P, offsetof(tree_pkg_meta, Q_##X), #X)
@@ -135,7 +133,6 @@ int tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 	tree_foreach_pkg(ctx, cb, priv, false, query);
 #define tree_foreach_pkg_sorted(ctx, cb, priv, query) \
 	tree_foreach_pkg(ctx, cb, priv, true, query);
-struct dirent *tree_get_next_dir(DIR *dir);
 set *tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms);
 depend_atom *tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete);
 

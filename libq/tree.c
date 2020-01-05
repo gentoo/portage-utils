@@ -27,6 +27,8 @@
 #include <xalloc.h>
 
 static int tree_pkg_compar(const void *l, const void *r);
+static tree_pkg_ctx * tree_next_pkg_int(tree_cat_ctx *cat_ctx);
+static void tree_close_meta(tree_pkg_meta *cache);
 
 static tree_ctx *
 tree_open_int(const char *sroot, const char *tdir, bool quiet)
@@ -363,8 +365,6 @@ tree_pkg_compar(const void *l, const void *r)
 	return atom_compar_cb(al, ar);
 }
 
-static tree_pkg_ctx *
-tree_next_pkg_int(tree_cat_ctx *cat_ctx);
 static tree_pkg_ctx *
 tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 {
@@ -926,7 +926,7 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 	return m;
 }
 
-tree_pkg_meta *
+static tree_pkg_meta *
 tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 {
 	tree_ctx *ctx = pkg_ctx->cat_ctx->ctx;
@@ -963,7 +963,7 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 	return NULL;
 }
 
-void
+static void
 tree_close_meta(tree_pkg_meta *cache)
 {
 	if (cache == NULL)
