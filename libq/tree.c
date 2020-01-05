@@ -995,11 +995,12 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 			struct stat s;
 			size_t pos;
 			size_t len;
+			char *p;
 			tree_pkg_meta *m = pkg_ctx->meta;
 
 			if (fd < 0)
 				return NULL;
-			if (fstat(fd, &s) != 0 || s.st_size == 0) {
+			if (fstat(fd, &s) != 0) {
 				close(fd);
 				return NULL;
 			}
@@ -1010,24 +1011,23 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 
 			/* TODO: this is an exact copy from tree_read_file_binpkg_xpak_cb */
 			if (len - pos < (size_t)(s.st_size + 1)) {
-				char *old_data = m->Q__data;
+				p = m->Q__data;
 				len += (((s.st_size + 1) / BUFSIZ) + 1) * BUFSIZ;
 				m->Q__data = xrealloc(m->Q__data, len);
 				m->Q__md5_ = (char *)len;
 
 				/* re-position existing keys */
-				if (old_data != NULL && m->Q__data != old_data) {
+				if (p != NULL && m->Q__data != p) {
 					char **newdata = (char **)m;
 					int elems = sizeof(tree_pkg_meta) / sizeof(char *);
 					while (elems-- > 1)  /* skip Q__data itself */
 						if (newdata[elems] != NULL)
-							newdata[elems] =
-								m->Q__data + (newdata[elems] - old_data);
+							newdata[elems] = m->Q__data + (newdata[elems] - p);
 				}
 			}
 
-			if (read(fd, &m->Q__data[pos], s.st_size) == (ssize_t)s.st_size) {
-				char *p = *key = m->Q__data + pos;
+			p = *key = m->Q__data + pos;
+			if (read(fd, p, s.st_size) == (ssize_t)s.st_size) {
 				p[s.st_size] = '\0';
 				while (s.st_size > 0 && isspace((int)p[s.st_size - 1]))
 					p[--s.st_size] = '\0';
