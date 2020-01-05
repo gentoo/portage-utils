@@ -1425,19 +1425,16 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
 	tree_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
-	size_t buflen;
-	static char *phases;
-	static size_t phases_len;
-	char *eprefix = NULL;
-	size_t eprefix_len = 0;
+	char *phases;
+	char *eprefix;
+	size_t eprefix_len;
 	const char *T;
 	char *buf;
-	FILE *fp;
-	int ret, portroot_fd;
+	char *savep;
+	int portroot_fd;
 	llist_char *dirs = NULL;
 	bool unmerge_config_protected;
 
-	ret = 1;
 	buf = phases = NULL;
 	T = "${PWD}/temp";
 
@@ -1448,28 +1445,31 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 		return 0;
 
 	/* First get a handle on the things to clean up */
-	fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
-	if (fp == NULL)
-		return ret;
+	buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
+	if (buf == NULL)
+		return 1;
 
 	portroot_fd = cat_ctx->ctx->portroot_fd;
 
 	/* Then execute the pkg_prerm step */
 	if (!pretend) {
-		tree_pkg_vdb_eat(pkg_ctx, "DEFINED_PHASES", &phases, &phases_len);
-		mkdirat(pkg_ctx->fd, "temp", 0755);
-		pkg_run_func_at(pkg_ctx->fd, ".", phases, "pkg_prerm", T, T);
+		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
+		if (phases != NULL) {
+			mkdirat(pkg_ctx->fd, "temp", 0755);
+			pkg_run_func_at(pkg_ctx->fd, ".", phases, "pkg_prerm", T, T);
+		}
 	}
 
-	if (!tree_pkg_vdb_eat(pkg_ctx, "EPREFIX", &eprefix, &eprefix_len))
+	eprefix = tree_pkg_meta_get(pkg_ctx, EPREFIX);
+	if (eprefix == NULL)
 		eprefix_len = 0;
-	if (eprefix != NULL)
-		free(eprefix);
+	else
+		eprefix_len = strlen(eprefix);
 
 	unmerge_config_protected =
 		strstr(features, "config-protect-if-modified") != NULL;
 
-	while (getline(&buf, &buflen, fp) != -1) {
+	for (; (buf = strtok_r(buf, "\n", &savep)) != NULL; buf = NULL) {
 		bool del;
 		contents_entry *e;
 		char zing[20];
@@ -1567,8 +1567,6 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 		}
 	}
 
-	fclose(fp);
-
 	/* Then remove all dirs in reverse order */
 	while (dirs != NULL) {
 		llist_char *list = dirs;
@@ -1596,11 +1594,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 		unlinkat(cat_ctx->ctx->tree_fd, cat_ctx->name, AT_REMOVEDIR);
 	}
 
-	ret = 0;
-	free(phases);
-	free(buf);
-
-	return ret;
+	return 0;
 }
 
 static int
