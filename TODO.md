@@ -24,6 +24,7 @@
     or parsing Packages)
   - cached, such that repeated matches for the same thing are served off
     the cache (set), as frequently happens in dependency calculations
+  - tree\_{open,close}\_cat can be made static afterwards
 
 # qmerge
 - dep resolver needs spanktastic love.

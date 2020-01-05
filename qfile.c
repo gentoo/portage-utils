@@ -160,7 +160,8 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	struct qfile_opt_state *state = priv;
 	const char *catname = pkg_ctx->cat_ctx->name;
 	qfile_args_t *args = &state->args;
-	FILE *fp;
+	char *line;
+	char *savep;
 	const char *base;
 	depend_atom *atom = NULL;
 	int i;
@@ -196,16 +197,16 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
  dont_skip_pkg: /* End of the package exclusion tests. */
 
-	fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
-	if (fp == NULL)
+	line = tree_pkg_meta_get(pkg_ctx, CONTENTS);
+	if (line == NULL)
 		goto qlist_done;
 
 	/* Run through CONTENTS file */
-	while (getline(&state->buf, &state->buflen, fp) != -1) {
+	for (; (line = strtok_r(line, "\n", &savep)) != NULL; line = NULL) {
 		size_t dirname_len;
 		contents_entry *e;
 
-		e = contents_parse_line(state->buf);
+		e = contents_parse_line(line);
 		if (!e)
 			continue;
 
@@ -314,7 +315,6 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			found++;
 		}
 	}
-	fclose(fp);
 
  qlist_done:
 	return found;

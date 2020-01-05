@@ -93,9 +93,6 @@ struct qsize_opt_state {
 	const char *fmt;
 	bool need_full_atom:1;
 
-	size_t buflen;
-	char *buf;
-
 	size_t num_all_files, num_all_nonfiles, num_all_ignored;
 	uint64_t num_all_bytes;
 };
@@ -106,28 +103,30 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	struct qsize_opt_state *state = priv;
 	size_t i;
 	depend_atom *atom;
-	FILE *fp;
+	char *line;
+	char *savep;
 	size_t num_files, num_nonfiles, num_ignored;
 	uint64_t num_bytes;
 
-	if ((fp = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
+	if ((line = tree_pkg_meta_get(pkg_ctx, CONTENTS)) == NULL)
 		return EXIT_SUCCESS;
 
 	num_ignored = num_files = num_nonfiles = num_bytes = 0;
-	while (getline(&state->buf, &state->buflen, fp) != -1) {
+	for (; (line = strtok_r(line, "\n", &savep)) != NULL; line = NULL) {
 		contents_entry *e;
 		regex_t *regex;
 		int ok = 0;
 
-		e = contents_parse_line(state->buf);
+		e = contents_parse_line(line);
 		if (!e)
 			continue;
 
-		array_for_each(state->ignore_regexp, i, regex)
-			if (!regexec(regex, state->buf, 0, NULL, 0)) {
-				num_ignored += 1;
+		array_for_each(state->ignore_regexp, i, regex) {
+			if (!regexec(regex, e->name, 0, NULL, 0)) {
+				num_ignored++;
 				ok = 1;
 			}
+		}
 		if (ok)
 			continue;
 
@@ -141,7 +140,6 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		} else
 			++num_nonfiles;
 	}
-	fclose(fp);
 	state->num_all_bytes += num_bytes;
 	state->num_all_files += num_files;
 	state->num_all_nonfiles += num_nonfiles;
@@ -227,9 +225,6 @@ int qsize_main(int argc, char **argv)
 			state.fmt = "%[CATEGORY]%[PN]";
 	}
 
-	state.buflen = _Q_PATH_MAX;
-	state.buf = xmalloc(state.buflen);
-
 	vdb = tree_open_vdb(portroot, portvdb);
 	if (vdb != NULL) {
 		if (array_cnt(atoms) > 0) {
@@ -257,7 +252,6 @@ int qsize_main(int argc, char **argv)
 		atom_implode(atom);
 	xarrayfree_int(state.atoms);
 	xarrayfree(state.ignore_regexp);
-	free(state.buf);
 
 	return ret;
 }

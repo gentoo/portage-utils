@@ -161,7 +161,7 @@ tree_close(tree_ctx *ctx)
 	free(ctx);
 }
 
-int
+static int
 tree_filter_cat(const struct dirent *de)
 {
 	int i;
@@ -230,7 +230,7 @@ tree_open_cat(tree_ctx *ctx, const char *name)
 	return cat_ctx;
 }
 
-tree_cat_ctx *
+static tree_cat_ctx *
 tree_next_cat(tree_ctx *ctx)
 {
 	/* search for a category directory */
@@ -295,7 +295,7 @@ tree_close_cat(tree_cat_ctx *cat_ctx)
 	free(cat_ctx);
 }
 
-int
+static int
 tree_filter_pkg(const struct dirent *de)
 {
 	int i;
@@ -527,29 +527,7 @@ tree_pkg_vdb_openat(
 	return openat(pkg_ctx->fd, file, flags | O_CLOEXEC, mode);
 }
 
-FILE *
-tree_pkg_vdb_fopenat(
-		tree_pkg_ctx *pkg_ctx,
-		const char *file,
-		int flags,
-		mode_t mode,
-		const char *fmode)
-{
-	FILE *fp;
-	int fd;
-
-	fd = tree_pkg_vdb_openat(pkg_ctx, file, flags, mode);
-	if (fd == -1)
-		return NULL;
-
-	fp = fdopen(fd, fmode);
-	if (!fp)
-		close(fd);
-
-	return fp;
-}
-
-bool
+static bool
 tree_pkg_vdb_eat(
 		tree_pkg_ctx *pkg_ctx,
 		const char *file,
@@ -721,6 +699,7 @@ tree_read_file_md5(tree_pkg_ctx *pkg_ctx)
 		assign_var(DEFINED_PHASES);
 		assign_var(REQUIRED_USE);
 		assign_var(BDEPEND);
+		assign_var(EPREFIX);
 		assign_var(_eclasses_);
 		assign_var(_md5_);
 		warn("Cache file for '%s/%s' has unknown key %s",
@@ -794,6 +773,7 @@ tree_read_file_ebuild(tree_pkg_ctx *pkg_ctx)
 			match_key(PDEPEND);
 			match_key(EAPI);
 			match_key(REQUIRED_USE);
+			match_key(BDEPEND);
 #undef match_key
 		}
 
@@ -899,6 +879,7 @@ tree_read_file_binpkg_xpak_cb(
 	match_path(BDEPEND);
 	match_path(CONTENTS);
 	match_path(USE);
+	match_path(EPREFIX);
 	match_path(repository);
 	else
 		return;

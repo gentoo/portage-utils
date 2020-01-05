@@ -89,16 +89,17 @@ struct tree_pkg_meta {
 	char *Q_PROVIDE;       /* line 14 */
 	char *Q_EAPI;
 	char *Q_PROPERTIES;
-	/* These are MD5-Cache only */
+	char *Q_BDEPEND;
+	/* binpkgs/vdb */
 	char *Q_DEFINED_PHASES;
 	char *Q_REQUIRED_USE;
-	char *Q_BDEPEND;
-	char *Q__eclasses_;
-	char *Q__md5_;
-	/* binpkgs/vdb */
 	char *Q_CONTENTS;
 	char *Q_USE;
+	char *Q_EPREFIX;
 	char *Q_repository;
+	/* These are MD5-Cache only */
+	char *Q__eclasses_;
+	char *Q__md5_;
 };
 
 /* Metadata.xml */
@@ -116,20 +117,10 @@ tree_ctx *tree_open(const char *sroot, const char *portdir);
 tree_ctx *tree_open_vdb(const char *sroot, const char *svdb);
 tree_ctx *tree_open_binpkg(const char *sroot, const char *spkg);
 void tree_close(tree_ctx *ctx);
-int tree_filter_cat(const struct dirent *de);
 tree_cat_ctx *tree_open_cat(tree_ctx *ctx, const char *name);
-tree_cat_ctx *tree_next_cat(tree_ctx *ctx);
 void tree_close_cat(tree_cat_ctx *cat_ctx);
-int tree_filter_pkg(const struct dirent *de);
 tree_pkg_ctx *tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name);
 tree_pkg_ctx *tree_next_pkg(tree_cat_ctx *cat_ctx);
-FILE *tree_pkg_vdb_fopenat(tree_pkg_ctx *pkg_ctx, const char *file,
-	int flags, mode_t mode, const char *fmode);
-#define tree_pkg_vdb_fopenat_ro(pkg_ctx, file) \
-	tree_pkg_vdb_fopenat(pkg_ctx, file, O_RDONLY, 0, "r")
-#define tree_pkg_vdb_fopenat_rw(pkg_ctx, file) \
-	tree_pkg_vdb_fopenat(pkg_ctx, file, O_RDWR | O_CREAT | O_TRUNC, 0644, "w")
-bool tree_pkg_vdb_eat(tree_pkg_ctx *pkg_ctx, const char *file, char **bufptr, size_t *buflen);
 tree_pkg_meta *tree_pkg_read(tree_pkg_ctx *pkg_ctx);
 void tree_close_meta(tree_pkg_meta *cache);
 char *tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *key);
