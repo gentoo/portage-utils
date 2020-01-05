@@ -133,25 +133,11 @@ tree_open_binpkg(const char *sroot, const char *spkg)
 	char buf[_Q_PATH_MAX];
 
 	if (ret != NULL) {
-		struct stat st;
-		struct timespec pkgstim;
-
 		ret->cachetype = CACHE_BINPKGS;
 
 		snprintf(buf, sizeof(buf), "%s%s/%s", sroot, spkg, binpkg_packages);
-		if (eat_file(buf, &ret->pkgs, &ret->pkgslen)) {
-			if (stat(buf, &st) == 0)
-				memcpy(&pkgstim, &st.st_mtim, sizeof(st.st_mtim));
-			else
-				memset(&pkgstim, 0, sizeof(pkgstim));
-
-			/* if the Packages file seems outdated, don't trust/use it */
-			if (fstat(ret->tree_fd, &st) != 0 ||
-					st.st_mtim.tv_sec < pkgstim.tv_sec ||  /* impossible? */
-					(st.st_mtim.tv_sec == pkgstim.tv_sec &&
-					 st.st_mtim.tv_nsec <= pkgstim.tv_nsec))
-				ret->cachetype = CACHE_PACKAGES;
-		}
+		if (eat_file(buf, &ret->pkgs, &ret->pkgslen))
+			ret->cachetype = CACHE_PACKAGES;
 	}
 
 	return ret;
