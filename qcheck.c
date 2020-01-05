@@ -17,6 +17,7 @@
 
 #include "atom.h"
 #include "contents.h"
+#include "copy_file.h"
 #include "md5_sha1_sum.h"
 #include "prelink.h"
 #include "tree.h"
@@ -73,33 +74,39 @@ static int
 qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qcheck_opt_state *state = priv;
-	FILE *fp_contents, *fp_contents_update;
-	size_t num_files, num_files_ok, num_files_unknown, num_files_ignored;
-	char *buffer, *line;
-	size_t linelen;
-	struct stat st, cst;
-	int cp_argc, cpm_argc;
-	char **cp_argv, **cpm_argv;
+	FILE *fp_contents_update;
+	size_t num_files;
+	size_t num_files_ok;
+	size_t num_files_unknown;
+	size_t num_files_ignored;
+	struct stat st;
+	char *buffer;
+	char *line;
+	char *savep;
+	int cp_argc;
+	int cpm_argc;
+	char **cp_argv;
+	char **cpm_argv;
 	depend_atom *atom;
 
 	fp_contents_update = NULL;
 
 	/* Open contents */
-	fp_contents = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS");
-	if ((fp_contents = tree_pkg_vdb_fopenat_ro(pkg_ctx, "CONTENTS")) == NULL)
-		return EXIT_SUCCESS;
+	line = tree_pkg_meta_get(pkg_ctx, CONTENTS);
+	if (line == NULL)
+		return EXIT_FAILURE;
 
-	/* Open contents_update, if needed */
 	atom = tree_get_atom(pkg_ctx, false);
 	num_files = num_files_ok = num_files_unknown = num_files_ignored = 0;
 	qcprintf("%sing %s ...\n",
 		(state->qc_update ? "Updat" : "Check"),
 		atom_format(state->fmt, atom));
+
+	/* Open contents_update, if needed */
 	if (state->qc_update) {
-		fp_contents_update = tree_pkg_vdb_fopenat_rw(pkg_ctx, "CONTENTS~");
+		fp_contents_update = tmpfile();
 		if (fp_contents_update == NULL) {
-			fclose(fp_contents);
-			warnp("unable to fopen(%s/%s, w)", atom->P, "CONTENTS~");
+			warnp("unable to temp file");
 			return EXIT_FAILURE;
 		}
 	}
@@ -109,14 +116,13 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 	}
 
-	buffer = line = NULL;
-	while (getline(&line, &linelen, fp_contents) != -1) {
+	buffer = NULL;
+	for (; (line = strtok_r(line, "\n", &savep)) != NULL; line = NULL) {
 		contents_entry *entry;
 		free(buffer);
 		buffer = xstrdup(line);
 
 		entry = contents_parse_line(line);
-
 		if (!entry)
 			continue;
 
@@ -148,7 +154,7 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				--num_files;
 				++num_files_ignored;
 				if (state->qc_update)
-					fputs(buffer, fp_contents_update);
+					fprintf(fp_contents_update, "%s\n", buffer);
 			}
 			continue;
 		}
@@ -179,7 +185,7 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			--num_files;
 			++num_files_ignored;
 			if (state->qc_update)
-				fputs(buffer, fp_contents_update);
+				fprintf(fp_contents_update, "%s\n", buffer);
 
 			continue;
 		}
@@ -211,7 +217,7 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					--num_files;
 					++num_files_ignored;
 					if (state->qc_update)
-						fputs(buffer, fp_contents_update);
+						fprintf(fp_contents_update, "%s\n", buffer);
 				}
 				continue;
 			}
@@ -229,7 +235,7 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				free(f_digest);
 
 				if (state->qc_update)
-					fputs(buffer, fp_contents_update);
+					fprintf(fp_contents_update, "%s\n", buffer);
 
 				if (verbose)
 					qcprintf(" %sPERM %4o%s: %s\n",
@@ -264,7 +270,7 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					--num_files;
 					++num_files_ignored;
 					if (state->qc_update)
-						fputs(buffer, fp_contents_update);
+						fprintf(fp_contents_update, "%s\n", buffer);
 				}
 
 				free(f_digest);
@@ -299,11 +305,10 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 		/* Success! */
 		if (state->qc_update)
-			fputs(buffer, fp_contents_update);
+			fprintf(fp_contents_update, "%s\n", buffer);
 
 		num_files_ok++;
 	}
-	free(line);
 	free(buffer);
 
 	if (!state->chk_config_protect) {
@@ -312,27 +317,31 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	if (state->qc_update) {
-		int fd_contents = fileno(fp_contents);
-		int fd_update = fileno(fp_contents_update);
+		int fd_contents;
+		FILE *fp_contents;
 
-		/* copy original ownership and mode */
-		if (fstat(fd_contents, &cst) == 0) {
-			if (fchown(fd_update, cst.st_uid, cst.st_gid)) {
-				/* meh */;
-			}
-			if (fchmod(fd_update, cst.st_mode)) {
-				/* meh */;
-			}
+		/* O_TRUNC truncates, but file owner and mode are unchanged */
+		fd_contents = openat(pkg_ctx->fd, "CONTENTS", O_WRONLY | O_TRUNC);
+		if (fd_contents < 0 ||
+				(fp_contents = fdopen(fd_contents, "w")) == NULL)
+		{
+			fclose(fp_contents_update);
+			warn("could not open CONTENTS for writing");
+			return EXIT_FAILURE;
 		}
+
+		/* rewind tempfile */
+		fseek(fp_contents_update, 0, SEEK_SET);
+
+		copy_file(fp_contents_update, fp_contents);
+
 		fclose(fp_contents_update);
-		if (renameat(pkg_ctx->fd, "CONTENTS~", pkg_ctx->fd, "CONTENTS"))
-			unlinkat(pkg_ctx->fd, "CONTENTS~", 0);
-		if (!verbose) {
-			fclose(fp_contents);
+		fclose(fp_contents);
+
+		if (!verbose)
 			return EXIT_SUCCESS;
-		}
 	}
-	fclose(fp_contents);
+
 	if (state->bad_only && num_files_ok != num_files)
 		printf("%s\n", atom_format(state->fmt, atom));
 	qcprintf("  %2$s*%1$s %3$s%4$zu%1$s out of %3$s%5$zu%1$s file%6$s are good",
