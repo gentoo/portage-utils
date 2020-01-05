@@ -17,6 +17,12 @@
 - check timestamps in libq/tree for choosing which method to take:
 	- ignore metadata when ebuild is modified
 	- add some method to skip these checks and assume everything is right
+- add interface to retrieve a list/set of atoms from a tree
+  - pkg\_ctx for each found match, NULL otherwise
+  - more efficient than traversing the entire tree every time (scandir
+    or parsing Packages)
+  - cached, such that repeated matches for the same thing are served off
+    the cache (set), as frequently happens in dependency calculations
 
 # qmerge
 - dep resolver needs spanktastic love.
