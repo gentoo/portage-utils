@@ -104,8 +104,6 @@ umapstr(char display, tree_pkg_ctx *pkg_ctx)
 	char *bufp = _umapstr_buf;
 	char *use = NULL;
 	char *iuse = NULL;
-	size_t use_len;
-	size_t iuse_len;
 	int use_argc = 0;
 	int iuse_argc = 0;
 	char **use_argv = NULL;
@@ -118,11 +116,11 @@ umapstr(char display, tree_pkg_ctx *pkg_ctx)
 	if (!display)
 		return bufp;
 
-	tree_pkg_vdb_eat(pkg_ctx, "USE", &use, &use_len);
-	if (!use[0])
+	use = tree_pkg_meta_get(pkg_ctx, USE);
+	if (use == NULL || *use == '\0')
 		return bufp;
-	tree_pkg_vdb_eat(pkg_ctx, "IUSE", &iuse, &iuse_len);
-	if (!iuse[0])
+	iuse = tree_pkg_meta_get(pkg_ctx, IUSE);
+	if (iuse == NULL || *iuse == '\0')
 		return bufp;
 
 	/* strip out possible leading +/- flags in IUSE */
@@ -167,8 +165,6 @@ umapstr(char display, tree_pkg_ctx *pkg_ctx)
 
 	freeargv(iuse_argc, iuse_argv);
 	freeargv(use_argc, use_argv);
-	free(iuse);
-	free(use);
 
 	return _umapstr_buf;
 }
