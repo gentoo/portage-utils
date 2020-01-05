@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -24,21 +24,13 @@ contents_parse_line(char *line)
 	static contents_entry e;
 	char *p;
 
-	if (!line || !*line || *line == '\n')
+	if (line == NULL || *line == '\0' || *line == '\n')
 		return NULL;
 
 	/* chop trailing newline */
-	if ((p = strrchr(line, '\n')) != NULL)
+	p = &line[strlen(line) - 1];
+	if (*p == '\n')
 		*p = '\0';
-
-	/* ferringb wants to break portage/vdb by using tabs vs spaces
-	 * so filenames can have lame ass spaces in them..
-	 * (I smell Windows near by)
-	 * Anyway we just convert that crap to a space so we can still
-	 * parse quickly */
-	p = line;
-	while ((p = strchr(p, '\t')) != NULL)
-		*p = ' ';
 
 	memset(&e, 0x00, sizeof(e));
 	e._data = line;
