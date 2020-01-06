@@ -28,7 +28,7 @@
 static struct option const qgrep_long_opts[] = {
 	{"invert-match",  no_argument, NULL, 'I'},
 	{"ignore-case",   no_argument, NULL, 'i'},
-	{"with-name",     no_argument, NULL, 'N'},
+	{"atom-name",     no_argument, NULL, 'N'},
 	{"count",         no_argument, NULL, 'c'},
 	{"list",          no_argument, NULL, 'l'},
 	{"invert-list",   no_argument, NULL, 'L'},
@@ -46,7 +46,7 @@ static struct option const qgrep_long_opts[] = {
 static const char * const qgrep_opts_help[] = {
 	"Select non-matching lines",
 	"Ignore case distinctions",
-	"Print the filename for each match",
+	"Print the atom instead of filename for each match",
 	"Only print a count of matching lines per FILE",
 	"Only print FILE names containing matches",
 	"Only print FILE names containing no match",
