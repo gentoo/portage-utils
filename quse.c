@@ -432,7 +432,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	if (!state->do_licence) {
-		if ((q = tree_pkg_meta_get(pkg_ctx, IUSE)) == NULL)
+		if ((s = tree_pkg_meta_get(pkg_ctx, IUSE)) == NULL)
 			return 0;
 
 		if (state->do_describe) {
@@ -454,14 +454,14 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				use = add_set(p, use);
 		}
 	} else {
-		if ((q = tree_pkg_meta_get(pkg_ctx, LICENSE)) == NULL)
+		if ((s = tree_pkg_meta_get(pkg_ctx, LICENSE)) == NULL)
 			return 0;
 	}
 
 	maxlen = 0;
 	cnt = 0;
 	match = false;
-	p = q;  /* set to IUSE or LICENSE above */
+	p = q = s;  /* set to IUSE or LICENSE above */
 	buf[0] = '\0';
 	v = buf;
 	w = buf + sizeof(buf);
@@ -631,7 +631,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	if (use != NULL)
 		free_set(use);
-	if (state->do_describe)
+	if (state->do_describe && !state->do_licence)
 		close(portdirfd);
 
 	return EXIT_SUCCESS;
