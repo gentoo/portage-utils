@@ -104,11 +104,16 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	/* Open contents_update, if needed */
 	if (state->qc_update) {
-		fp_contents_update = tmpfile();
-		if (fp_contents_update == NULL) {
+		char tempfile[] = "qcheck-tmp-XXXXXX";
+		int fd = mkstemp(tempfile);
+		if (fd == -1 || (fp_contents_update = fdopen(fd, "w+")) == NULL) {
+			if (fd >= 0)
+				close(fd);
 			warnp("unable to temp file");
 			return EXIT_FAILURE;
 		}
+		/* like tmpfile() does, but Coverity thinks it is unsafe */
+		unlink(tempfile);
 	}
 
 	if (!state->chk_config_protect) {

@@ -432,7 +432,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	if (!state->do_licence) {
-		if (tree_pkg_meta_get(pkg_ctx, IUSE) == NULL)
+		if ((q = tree_pkg_meta_get(pkg_ctx, IUSE)) == NULL)
 			return 0;
 
 		if (state->do_describe) {
@@ -454,15 +454,14 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				use = add_set(p, use);
 		}
 	} else {
-		if (tree_pkg_meta_get(pkg_ctx, LICENSE) == NULL)
+		if ((q = tree_pkg_meta_get(pkg_ctx, LICENSE)) == NULL)
 			return 0;
 	}
 
 	maxlen = 0;
 	cnt = 0;
 	match = false;
-	q = p = state->do_licence ?
-		tree_pkg_meta_get(pkg_ctx, LICENSE) : tree_pkg_meta_get(pkg_ctx, IUSE);
+	p = q;  /* set to IUSE or LICENSE above */
 	buf[0] = '\0';
 	v = buf;
 	w = buf + sizeof(buf);
