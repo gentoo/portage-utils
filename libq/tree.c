@@ -403,7 +403,7 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 				pkg_ctx = cat_ctx->pkg_ctxs[cat_ctx->pkg_cnt++] =
 					tree_open_pkg(cat_ctx, name);
 				if (pkg_ctx == NULL) {
-					free(name);
+					/* name was freed by tree_close_pkg on fail */
 					cat_ctx->pkg_cnt--;
 				}
 			}
