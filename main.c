@@ -667,6 +667,7 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 			} else if (*q == '#') {
 				do_trim = true;
 				*q = '\0';
+				e = NULL;
 				r = q - 1;
 			} else {
 				if (*q == '=')
