@@ -43,6 +43,7 @@
 # define S_BLKSIZE 512
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -51,6 +52,7 @@
 #include "atom.h"
 #include "contents.h"
 #include "human_readable.h"
+#include "set.h"
 #include "tree.h"
 #include "xarray.h"
 #include "xregex.h"
@@ -93,9 +95,20 @@ struct qsize_opt_state {
 	const char *fmt;
 	bool need_full_atom:1;
 
-	size_t num_all_files, num_all_nonfiles, num_all_ignored;
+	size_t num_all_files, num_all_unique_files, num_all_nonfiles, num_all_ignored;
 	uint64_t num_all_bytes;
+
+	set *inodes;
 };
+
+/* Returns whether the dev,inode pair is a new pair that hasn't been seen so far */
+static bool add_inode(struct qsize_opt_state *state, dev_t dev, ino_t inode) {
+	char key[2*sizeof(unsigned long long) + 1 + 2*sizeof(unsigned long long) + 1];
+	assert(sprintf(key, "%llx/%llx", (unsigned long long)dev, (unsigned long long)inode) < (ssize_t)sizeof(key));
+	bool new_pair;
+	state->inodes = add_set_unique(key, state->inodes, &new_pair);
+	return new_pair;
+}
 
 static int
 qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
@@ -105,13 +118,13 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	depend_atom *atom;
 	char *line;
 	char *savep;
-	size_t num_files, num_nonfiles, num_ignored;
+	size_t num_files, num_unique_files, num_nonfiles, num_ignored;
 	uint64_t num_bytes;
 
 	if ((line = tree_pkg_meta_get(pkg_ctx, CONTENTS)) == NULL)
 		return EXIT_SUCCESS;
 
-	num_ignored = num_files = num_nonfiles = num_bytes = 0;
+	num_ignored = num_files = num_unique_files = num_nonfiles = num_bytes = 0;
 	for (; (line = strtok_r(line, "\n", &savep)) != NULL; line = NULL) {
 		contents_entry *e;
 		regex_t *regex;
@@ -133,23 +146,32 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		if (e->type == CONTENTS_OBJ || e->type == CONTENTS_SYM) {
 			struct stat st;
 			++num_files;
+			++num_unique_files;
 			if (!fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd,
-						e->name + 1, &st, AT_SYMLINK_NOFOLLOW))
-				num_bytes +=
-					state->fs_size ? st.st_blocks * S_BLKSIZE : st.st_size;
+						e->name + 1, &st, AT_SYMLINK_NOFOLLOW)) {
+				if (add_inode(state, st.st_dev, st.st_ino)) {
+					num_bytes +=
+						state->fs_size ? st.st_blocks * S_BLKSIZE : st.st_size;
+				}
+				else {
+					--num_unique_files;
+				}
+			}
 		} else
 			++num_nonfiles;
 	}
 	state->num_all_bytes += num_bytes;
 	state->num_all_files += num_files;
+	state->num_all_unique_files += num_unique_files;
 	state->num_all_nonfiles += num_nonfiles;
 	state->num_all_ignored += num_ignored;
 
 	if (!state->summary_only) {
 		atom = tree_get_atom(pkg_ctx, state->need_full_atom);
-		printf("%s: %zu files, %zu non-files, ",
-				atom_format(state->fmt, atom),
-				num_files, num_nonfiles);
+		printf("%s: %zu files, ", atom_format(state->fmt, atom), num_files);
+		if (num_unique_files != num_files)
+			printf("%zu unique files, ", num_unique_files);
+		printf("%zu non-files, ", num_nonfiles);
 		if (num_ignored)
 			printf("%zu names-ignored, ", num_ignored);
 		printf("%s %s\n",
@@ -225,8 +247,10 @@ int qsize_main(int argc, char **argv)
 	}
 
 	if (state.summary) {
-		printf(" %sTotals%s: %zu files, %zu non-files, ", BOLD, NORM,
-		       state.num_all_files, state.num_all_nonfiles);
+		printf(" %sTotals%s: %zu files, ", BOLD, NORM, state.num_all_files);
+		if (state.num_all_unique_files != state.num_all_files)
+			printf("%zu unique files, ", state.num_all_unique_files);
+		printf("%zu non-files, ", state.num_all_nonfiles);
 		if (state.num_all_ignored)
 			printf("%zu names-ignored, ", state.num_all_ignored);
 		printf("%s %s\n",
@@ -239,6 +263,9 @@ int qsize_main(int argc, char **argv)
 		atom_implode(atom);
 	xarrayfree_int(state.atoms);
 	xarrayfree(state.ignore_regexp);
+	if (state.inodes != NULL) {
+		free_set(state.inodes);
+	}
 
 	return ret;
 }
