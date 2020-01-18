@@ -168,22 +168,9 @@ int qsize_main(int argc, char **argv)
 	DECLARE_ARRAY(ignore_regexp);
 	depend_atom *atom;
 	DECLARE_ARRAY(atoms);
-	struct qsize_opt_state state = {
-		.atoms = atoms,
-		.search_all = 0,
-		.fs_size = 0,
-		.summary = 0,
-		.summary_only = 0,
-		.disp_units = 0,
-		.str_disp_units = NULL,
-		.ignore_regexp = ignore_regexp,
-		.num_all_bytes = 0,
-		.num_all_files = 0,
-		.num_all_nonfiles = 0,
-		.num_all_ignored = 0,
-		.need_full_atom = false,
-		.fmt = NULL,
-	};
+	struct qsize_opt_state state = {};
+	state.atoms = atoms;
+	state.ignore_regexp = ignore_regexp;
 
 	while ((ret = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
 		switch (ret) {
