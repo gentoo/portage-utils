@@ -64,10 +64,10 @@ extern const char *argv0;
 #endif
 
 #define READ_BE_INT32(P) \
-	((((unsigned char *)(P))[0] << 24) | \
-	 (((unsigned char *)(P))[1] << 16) | \
-	 (((unsigned char *)(P))[2] << 8 ) | \
-	 (((unsigned char *)(P))[3]))
+	(((unsigned int)((unsigned char *)(P))[0] << 24) | \
+	 ((unsigned int)((unsigned char *)(P))[1] << 16) | \
+	 ((unsigned int)((unsigned char *)(P))[2] << 8 ) | \
+	 ((unsigned int)((unsigned char *)(P))[3]))
 #define WRITE_BE_INT32(P,I) \
 { \
 	((unsigned char *)(P))[0] = (I & 0xff000000) >> 24; \
