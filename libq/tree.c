@@ -1164,13 +1164,14 @@ tree_pkg_metadata(tree_pkg_ctx *pkg_ctx)
 	}
 
 	len = sizeof(*ret) + s.st_size + 1;
-	p = xbuf = xzalloc(len);
+	p = xbuf = xmalloc(len);
 	if ((off_t)fread(p, 1, s.st_size, f) != s.st_size) {
 		free(p);
 		fclose(f);
 		pkg_ctx->fd = -1;
 		return NULL;
 	}
+	p[s.st_size] = '\0';
 
 	ret = xmalloc(sizeof(*ret));
 	ret->email = NULL;
