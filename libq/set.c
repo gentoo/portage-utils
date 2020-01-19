@@ -252,7 +252,7 @@ list_set(set *q, char ***l)
 	set_elem *w;
 	char **ret;
 
-	ret = *l = xmalloc(sizeof(char **) * (q->len + 1));
+	ret = *l = xmalloc(sizeof(char *) * (q->len + 1));
 	for (i = 0; i < _SET_HASH_SIZE; i++) {
 		for (w = q->buckets[i]; w != NULL; w = w->next) {
 			*ret = w->name;
