@@ -147,11 +147,11 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	if (!state->summary_only) {
 		atom = tree_get_atom(pkg_ctx, state->need_full_atom);
-		printf("%s: %'zu files, %'zu non-files, ",
+		printf("%s: %zu files, %zu non-files, ",
 				atom_format(state->fmt, atom),
 				num_files, num_nonfiles);
 		if (num_ignored)
-			printf("%'zu names-ignored, ", num_ignored);
+			printf("%zu names-ignored, ", num_ignored);
 		printf("%s %s\n",
 			   make_human_readable_str(num_bytes, 1, state->disp_units),
 			   state->disp_units ? state->str_disp_units : "");
