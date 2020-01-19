@@ -138,8 +138,12 @@ tree_open_binpkg(const char *sroot, const char *spkg)
 		ret->cachetype = CACHE_BINPKGS;
 
 		snprintf(buf, sizeof(buf), "%s%s/%s", sroot, spkg, binpkg_packages);
-		if (eat_file(buf, &ret->pkgs, &ret->pkgslen))
+		if (eat_file(buf, &ret->pkgs, &ret->pkgslen)) {
 			ret->cachetype = CACHE_PACKAGES;
+		} else if (ret->pkgs != NULL) {
+			free(ret->pkgs);
+			ret->pkgs = NULL;
+		}
 	}
 
 	return ret;
@@ -1237,9 +1241,11 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 
 	/* reused for every entry */
 	tree_cat_ctx *cat = NULL;
-	tree_pkg_ctx *pkg = xzalloc(sizeof(tree_pkg_ctx));
-	tree_pkg_meta *meta = xzalloc(sizeof(tree_pkg_meta));
+	tree_pkg_ctx pkg;
+	tree_pkg_meta meta;
 	depend_atom *atom = NULL;
+
+	memset(&meta, 0, sizeof(meta));
 
 	do {
 		/* find next line */
@@ -1257,32 +1263,41 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 			if (atom != NULL) {
 				size_t pkgnamelen;
 
+				memset(&pkg, 0, sizeof(pkg));
+
 				/* store meta ptr in repo->pkgs, such that get_pkg_meta
 				 * can grab it from there (for free) */
-				ctx->pkgs = (char *)meta;
+				c = ctx->pkgs;
+				ctx->pkgs = (char *)&meta;
 
 				if (cat == NULL || strcmp(cat->name, atom->CATEGORY) != 0)
 				{
-					if (cat != NULL)
+					if (cat != NULL) {
+						atom_implode((depend_atom *)cat->pkg_ctxs);
+						cat->pkg_ctxs = NULL;
 						tree_close_cat(cat);
-					pkg->cat_ctx = cat = tree_open_cat(ctx, atom->CATEGORY);
+					}
+					pkg.cat_ctx = cat = tree_open_cat(ctx, atom->CATEGORY);
+					cat->pkg_ctxs = (tree_pkg_ctx **)atom;  /* for name */
 				}
 				pkgnamelen = snprintf(pkgname, sizeof(pkgname),
 						"%s.tbz2", atom->PF);
 				pkgname[pkgnamelen - (sizeof(".tbz2") - 1)] = '\0';
-				pkg->name = pkgname;
-				pkg->slot = meta->Q_SLOT == NULL ? (char *)"0" : meta->Q_SLOT;
-				pkg->repo = ctx->repo;
-				pkg->atom = atom;
-				pkg->fd = 0;  /* intentional, meta has already been read */
+				pkg.name = pkgname;
+				pkg.slot = meta.Q_SLOT == NULL ? (char *)"0" : meta.Q_SLOT;
+				pkg.repo = ctx->repo;
+				pkg.atom = atom;
+				pkg.fd = 0;  /* intentional, meta has already been read */
 
 				/* do call callback with pkg_atom (populate cat and pkg) */
-				ret |= callback(pkg, priv);
+				ret |= callback(&pkg, priv);
 
-				atom_implode(atom);
+				ctx->pkgs = c;
+				if (atom != (depend_atom *)cat->pkg_ctxs)
+					atom_implode(atom);
 			}
 
-			memset(meta, 0, sizeof(meta[0]));
+			memset(&meta, 0, sizeof(meta));
 			atom = NULL;
 			if (len > 0) {  /* hop over \n */
 				p++;
@@ -1318,7 +1333,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 #define match_key(X) match_key2(X,X)
 #define match_key2(X,Y) \
 		} else if (strcmp(p, #X) == 0) { \
-			meta->Q_##Y = c
+			meta.Q_##Y = c
 		match_key(DEFINED_PHASES);
 		match_key(DEPEND);
 		match_key2(DESC, DESCRIPTION);
@@ -1339,8 +1354,15 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		p = q;
 	} while (len > 0);
 
+	if (cat != NULL) {
+		atom_implode((depend_atom *)cat->pkg_ctxs);
+		cat->pkg_ctxs = NULL;
+		tree_close_cat(cat);
+	}
+
 	/* ensure we don't free a garbage pointer */
 	ctx->repo = NULL;
+	ctx->do_sort = false;
 
 	return ret;
 }
