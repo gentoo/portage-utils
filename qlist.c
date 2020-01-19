@@ -277,9 +277,9 @@ qlist_match(
 
 		/* let's try exact matching w/out the PV */
 		i = snprintf(buf, sizeof(buf), "%s/%s", atom->CATEGORY, atom->PN);
-		if (uslot[0] != '\0' && i <= (int)sizeof(buf))
+		if (uslot[0] != '\0' && i < (int)sizeof(buf))
 			i += snprintf(buf + i, sizeof(buf) - i, ":%s", atom->SLOT);
-		if (urepo && i <= (int)sizeof(buf))
+		if (urepo && i < (int)sizeof(buf))
 			i += snprintf(buf + i, sizeof(buf) - i, "::%s", atom->REPO);
 
 		/* exact match: CAT/PN[:SLOT][::REPO] */
