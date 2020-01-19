@@ -289,19 +289,24 @@ quse_search_profiles_desc(
 			continue;
 
 		namelen = strlen(de->d_name);
-		if (namelen <= 5 || strcmp(de->d_name + namelen - 5, ".desc") != 0)
-			return false;
+		if (namelen <= 5 || strcmp(de->d_name + namelen - 5, ".desc") != 0) {
+			ret = false;
+			break;
+		}
 
 		snprintf(_quse_getline_buf, _quse_getline_buflen,
 				"profiles/desc/%s", de->d_name);
 		dfd = openat(portdirfd, _quse_getline_buf, O_RDONLY | O_CLOEXEC);
-		if (dfd == -1)
-			return false;
+		if (dfd == -1) {
+			ret = false;
+			break;
+		}
 
 		f = fdopen(dfd, "r");
 		if (f == NULL) {
 			close(fd);
-			return false;
+			ret = false;
+			break;
 		}
 
 		/* remove trailing .desc */
