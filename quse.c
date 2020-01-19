@@ -304,7 +304,6 @@ quse_search_profiles_desc(
 
 		f = fdopen(dfd, "r");
 		if (f == NULL) {
-			close(fd);
 			ret = false;
 			break;
 		}
