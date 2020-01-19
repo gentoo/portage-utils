@@ -1069,6 +1069,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 						if (strlen(resolved) < 1) {
 							warn("Cant find a binpkg for %s from rdepend(%s)",
 									name, pkg->RDEPEND);
+							atom_implode(subatom);
 							continue;
 						}
 
