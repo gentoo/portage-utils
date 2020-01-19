@@ -1129,7 +1129,7 @@ static array_t *probe_proc(array_t *atoms)
 						continue;
 					snprintf(npath, sizeof(npath), "/proc/%s/%s/%s",
 							pid, subdir, d->d_name);
-					rpathlen = readlink(npath, rpath, sizeof(rpath));
+					rpathlen = readlink(npath, rpath, sizeof(rpath) - 1);
 					if (rpathlen <= 0)
 						continue;
 					rpath[rpathlen] = '\0';
