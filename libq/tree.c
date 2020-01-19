@@ -618,10 +618,11 @@ tree_read_file_pms(tree_pkg_ctx *pkg_ctx)
 		goto err;
 
 	len = sizeof(*ret) + s.st_size + 1;
-	ret = xzalloc(len);
+	ret = xmalloc(len);
 	ptr = (char*)ret + sizeof(*ret);
 	if ((off_t)fread(ptr, 1, s.st_size, f) != s.st_size)
 		goto err;
+	ptr[s.st_size] = '\0';
 
 	ret->Q_DEPEND = ptr;
 #define next_line(curr, next) \
