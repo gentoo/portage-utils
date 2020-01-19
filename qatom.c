@@ -8,36 +8,37 @@
  */
 
 #include "main.h"
-
-#include <stdlib.h>
-#include <stdbool.h>
+#include "applets.h"
 
 #include "atom.h"
-#include "applets.h"
+#include "tree.h"
 
 #define QATOM_FORMAT "%{CATEGORY} %{PN} %{PV} %[PR] %[SLOT] %[pfx] %[sfx]"
 
-#define QATOM_FLAGS "F:cp" COMMON_FLAGS
+#define QATOM_FLAGS "F:cpl" COMMON_FLAGS
 static struct option const qatom_long_opts[] = {
 	{"format",     a_argument, NULL, 'F'},
 	{"compare",   no_argument, NULL, 'c'},
 	{"print",     no_argument, NULL, 'p'},
+	{"lookup",    no_argument, NULL, 'l'},
 	COMMON_LONG_OPTS
 };
 static const char * const qatom_opts_help[] = {
 	"Custom output format (default: " QATOM_FORMAT ")",
 	"Compare two atoms",
 	"Print reconstructed atom",
+	"Lookup atom in tree",
 	COMMON_OPTS_HELP
 };
 #define qatom_usage(ret) usage(ret, QATOM_FLAGS, qatom_long_opts, qatom_opts_help, NULL, lookup_applet_idx("qatom"))
 
 int qatom_main(int argc, char **argv)
 {
-	enum qatom_atom { _EXPLODE=0, _COMPARE, _PRINT } action = _EXPLODE;
+	enum qatom_atom { _EXPLODE=0, _COMPARE, _PRINT, _LOOKUP } action = _EXPLODE;
 	const char *format = QATOM_FORMAT;
 	depend_atom *atom;
 	depend_atom *atomc;
+	tree_ctx *tree = NULL;
 	int i;
 
 	while ((i = GETOPT_LONG(QATOM, qatom, "")) != -1) {
@@ -45,6 +46,7 @@ int qatom_main(int argc, char **argv)
 		case 'F': format = optarg;   break;
 		case 'c': action = _COMPARE; break;
 		case 'p': action = _PRINT;   break;
+		case 'l': action = _LOOKUP;  break;
 		COMMON_GETOPTS_CASES(qatom)
 		}
 	}
@@ -54,6 +56,12 @@ int qatom_main(int argc, char **argv)
 
 	if (action == _COMPARE && (argc - optind) % 2)
 		err("compare needs even number of arguments");
+
+	if (action == _LOOKUP) {
+		tree = tree_open(portroot, main_overlay);
+		if (tree == NULL)
+			err("failed to open tree");
+	}
 
 	for (i = optind; i < argc; i++) {
 		atom = atom_explode(argv[i]);
@@ -101,10 +109,23 @@ int qatom_main(int argc, char **argv)
 		case _PRINT:
 			printf("%s\n", atom_to_string(atom));
 			break;
+		case _LOOKUP:
+			{
+				tree_pkg_ctx *pkg = tree_match_atom(tree, atom);
+				if (pkg != NULL) {
+					atomc = tree_get_atom(pkg, true);
+					if (!quiet)
+						printf("%s: ", atom_to_string(atom));
+					printf("%s\n", atom_format(format, atomc));
+				}
+			}
 		}
 
 		atom_implode(atom);
 	}
+
+	if (action == _LOOKUP)
+		tree_close(tree);
 
 	return EXIT_SUCCESS;
 }
