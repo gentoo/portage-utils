@@ -7,7 +7,6 @@
 #define _SET_H 1
 
 #include <stdlib.h>
-#include <stdbool.h>
 #include <unistd.h>
 
 #include "xarray.h"
@@ -32,7 +31,7 @@ set *create_set(void);
 set *add_set(const char *name, set *q);
 set *add_set_unique(const char *name, set *q, bool *unique);
 void *add_set_value(const char *name, void *ptr, set *q);
-bool contains_set(const char *name, set *q);
+const char *contains_set(const char *name, set *q);
 void *get_set(const char *name, set *q);
 void *del_set(const char *s, set *q, bool *removed);
 size_t list_set(set *q, char ***l);

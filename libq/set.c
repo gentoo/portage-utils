@@ -148,23 +148,24 @@ add_set_value(const char *name, void *ptr, set *q)
 	return NULL;
 }
 
-/* returns whether s is in set */
-bool
+/* returns whether name is in set, and if so, the set-internal key
+ * representation (an internal copy of name made during addition) */
+const char *
 contains_set(const char *name, set *q)
 {
 	unsigned int hash;
 	int pos;
 	set_elem *w;
-	bool found;
+	const char *found;
 
 	hash = fnv1a32(name);
 	pos = hash % _SET_HASH_SIZE;
 
-	found = false;
+	found = NULL;
 	if (q->buckets[pos] != NULL) {
 		for (w = q->buckets[pos]; w != NULL; w = w->next) {
 			if (w->hash == hash && strcmp(w->name, name) == 0) {
-				found = true;
+				found = w->name;
 				break;
 			}
 		}
