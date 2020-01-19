@@ -262,6 +262,8 @@ tree_open_cat(tree_ctx *ctx, const char *name)
 	cat_ctx->dir = dir;
 	cat_ctx->ctx = ctx;
 	cat_ctx->pkg_ctxs = NULL;
+	cat_ctx->pkg_cur = 0;
+	cat_ctx->pkg_cnt = 0;
 
 	if (ctx->cache.categories != NULL) {
 		add_set_value(name, cat_ctx, ctx->cache.categories);
