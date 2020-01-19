@@ -148,6 +148,24 @@ tree_open_binpkg(const char *sroot, const char *spkg)
 void
 tree_close(tree_ctx *ctx)
 {
+	if (ctx->cache.categories != NULL) {
+		DECLARE_ARRAY(t);
+		size_t n;
+		tree_cat_ctx *cat;
+
+		values_set(ctx->cache.categories, t);
+		free_set(ctx->cache.categories);
+		ctx->cache.categories = NULL;  /* must happen before close_cat */
+
+		array_for_each(t, n, cat) {
+			/* ensure we cleanup all pkgs */
+			cat->pkg_cur = 0;
+			tree_close_cat(cat);
+		}
+
+		xarrayfree_int(t);
+	}
+
 	closedir(ctx->dir);
 	/* closedir() above does this for us: */
 	/* close(ctx->tree_fd); */
@@ -212,6 +230,21 @@ tree_open_cat(tree_ctx *ctx, const char *name)
 	int fd;
 	DIR *dir;
 
+	/* lookup in the cache, if any */
+	if (ctx->cache.categories != NULL) {
+		cat_ctx = get_set(name, ctx->cache.categories);
+		if (cat_ctx != NULL) {
+			/* reset state so it can be re-iterated (sort benefits the
+			 * most here) */
+			if (ctx->do_sort) {
+				cat_ctx->pkg_cur = 0;
+			} else {
+				rewinddir(cat_ctx->dir);
+			}
+			return cat_ctx;
+		}
+	}
+
 	/* Cannot use O_PATH as we want to use fdopendir() */
 	fd = openat(ctx->tree_fd, name, O_RDONLY | O_CLOEXEC);
 	if (fd == -1)
@@ -229,6 +262,13 @@ tree_open_cat(tree_ctx *ctx, const char *name)
 	cat_ctx->dir = dir;
 	cat_ctx->ctx = ctx;
 	cat_ctx->pkg_ctxs = NULL;
+
+	if (ctx->cache.categories != NULL) {
+		add_set_value(name, cat_ctx, ctx->cache.categories);
+		/* ensure name doesn't expire after this instantiation is closed */
+		cat_ctx->name = contains_set(name, ctx->cache.categories);
+	}
+
 	return cat_ctx;
 }
 
@@ -289,6 +329,14 @@ tree_next_cat(tree_ctx *ctx)
 void
 tree_close_cat(tree_cat_ctx *cat_ctx)
 {
+	if (cat_ctx->ctx->cache.categories != NULL &&
+			contains_set(cat_ctx->name, cat_ctx->ctx->cache.categories))
+		return;
+
+	/* cleanup unreturned pkgs when sorted (or cache in use) */
+	while (cat_ctx->pkg_cur < cat_ctx->pkg_cnt)
+		tree_close_pkg(cat_ctx->pkg_ctxs[cat_ctx->pkg_cur++]);
+
 	closedir(cat_ctx->dir);
 	/* closedir() above does this for us: */
 	/* close(ctx->fd); */
@@ -1438,4 +1486,36 @@ tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms)
 	tree_foreach_pkg_fast(ctx, tree_get_atoms_cb, &state, NULL);
 
 	return state.cpf;
+}
+
+tree_pkg_ctx *
+tree_match_atom(tree_ctx *ctx, depend_atom *a)
+{
+	tree_cat_ctx *cat_ctx;
+	tree_pkg_ctx *pkg_ctx;
+	depend_atom *atom;
+
+	if (ctx->cache.categories == NULL)
+		ctx->cache.categories = create_set();
+
+	if (a->P == NULL) {
+		return NULL;
+	} else if (a->CATEGORY == NULL) {
+		/* loop through all cats and recurse */
+		/* TODO: some day */
+		return NULL;
+	} else {
+		/* try CAT, and PN for latest version */
+		if ((cat_ctx = tree_open_cat(ctx, a->CATEGORY)) == NULL)
+			return NULL;
+		ctx->do_sort = true;     /* sort uses buffer, which cache relies on */
+		ctx->query_atom = NULL;  /* ensure the cache contains ALL pkgs */
+		while ((pkg_ctx = tree_next_pkg(cat_ctx)) != NULL) {
+			atom = tree_get_atom(pkg_ctx, a->SLOT != NULL);
+			if (atom_compare(atom, a) == EQUAL)
+				return pkg_ctx;
+		}
+
+		return NULL;
+	}
 }

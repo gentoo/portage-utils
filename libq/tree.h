@@ -44,6 +44,9 @@ struct tree_ctx {
 	char *pkgs;
 	size_t pkgslen;
 	depend_atom *query_atom;
+	struct tree_cache {
+		set *categories;
+	} cache;
 };
 
 /* Category context */
@@ -135,5 +138,6 @@ int tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 	tree_foreach_pkg(ctx, cb, priv, true, query);
 set *tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms);
 depend_atom *tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete);
+tree_pkg_ctx *tree_match_atom(tree_ctx *t, depend_atom *a);
 
 #endif
