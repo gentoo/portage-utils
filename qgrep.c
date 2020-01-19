@@ -240,10 +240,7 @@ qgrep_grepat(int fd, const char *file, const char *label,
 		return status;
 
 	count = 0;
-	/* if there have been some matches already, then a
-	 * separator will be needed */
-	need_separator =
-		!status && (a->num_lines_before || a->num_lines_after);
+	need_separator = 0;
 	/* whatever is in the circular buffers list is no more a
 	 * valid context */
 	qgrep_buf_list_invalidate(a->buf_list);
