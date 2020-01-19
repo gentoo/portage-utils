@@ -162,7 +162,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		depstr = i == 1<<0 ? tree_pkg_meta_get(pkg_ctx, DEPEND) :
 				 i == 1<<1 ? tree_pkg_meta_get(pkg_ctx, RDEPEND) :
 				 i == 1<<2 ? tree_pkg_meta_get(pkg_ctx, PDEPEND) :
-				 i == 1<<3 ? tree_pkg_meta_get(pkg_ctx, BDEPEND) : NULL;
+				             tree_pkg_meta_get(pkg_ctx, BDEPEND);
 		if (depstr == NULL)
 			continue;
 		dep_tree = dep_grow_tree(depstr);
@@ -180,8 +180,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					depstr = i == 1<<0 ? tree_pkg_meta_get(vpkg, DEPEND) :
 							 i == 1<<1 ? tree_pkg_meta_get(vpkg, RDEPEND) :
 							 i == 1<<2 ? tree_pkg_meta_get(vpkg, PDEPEND) :
-							 i == 1<<3 ? tree_pkg_meta_get(vpkg, BDEPEND) :
-							 NULL;
+							             tree_pkg_meta_get(vpkg, BDEPEND);
 					if (depstr != NULL) {
 						dep_node *dep_vdb = dep_grow_tree(depstr);
 						if (dep_vdb != NULL)
