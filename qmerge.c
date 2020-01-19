@@ -2233,6 +2233,8 @@ parse_packages(set *todo)
 					snprintf(Pkg.CATEGORY, sizeof(Pkg.CATEGORY), "%.*s",
 							(int)sizeof(Pkg.CATEGORY) - 1, p);
 				if (strcmp(buf, "CPV") == 0) {
+					if (pkg_atom != NULL)  /* hypothetical Coverity case */
+						atom_implode(pkg_atom);
 					if ((pkg_atom = atom_explode(p)) != NULL) {
 						if (pkg_atom->PR_int)
 							snprintf(Pkg.PF, sizeof(Pkg.PF), "%s-%s-r%i",
