@@ -96,14 +96,16 @@ qpkg_clean(char *dirp)
 		}
 	}
 
-	/* check which binpkgs exist in the known_pkgs (vdb or trees), such
-	 * that the remainder is what we would clean */
-	array_for_each(bins, n, binatomstr) {
-		if (contains_set(binatomstr, known_pkgs))
-			xarraydelete_ptr(bins, n--);
-	}
+	if (known_pkgs != NULL) {
+		/* check which binpkgs exist in the known_pkgs (vdb or trees), such
+		 * that the remainder is what we would clean */
+		array_for_each(bins, n, binatomstr) {
+			if (contains_set(binatomstr, known_pkgs))
+				xarraydelete_ptr(bins, n--);
+		}
 
-	free_set(known_pkgs);
+		free_set(known_pkgs);
+	}
 
 	array_for_each(bins, n, binatomstr) {
 		snprintf(buf, sizeof(buf), "%s/%s.tbz2", dirp, binatomstr);
