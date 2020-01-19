@@ -262,7 +262,12 @@ qpkg_make(depend_atom *atom)
 	xpaksize = st.st_size - xpaksize;
 
 	/* save tbz2 tail: OOOOSTOP */
-	fp = fopen(tbz2, "a");
+	if ((fp = fopen(tbz2, "a")) == NULL) {
+		warnp("could not open '%s': %s", tbz2, strerror(errno));
+		free(buf);
+		return 1;
+	}
+
 	WRITE_BE_INT32(buf, xpaksize);
 	fwrite(buf, 1, 4, fp);
 	fwrite("STOP", 1, 4, fp);
