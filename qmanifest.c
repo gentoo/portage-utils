@@ -365,7 +365,6 @@ parse_layout_conf(const char *path)
 			last_nl++;  /* skip \n */
 			len = last_nl - buf;
 			memmove(buf, last_nl, len);
-			last_nl = buf;
 		} else {
 			/* skip too long line */
 			len = 0;
