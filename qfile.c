@@ -143,6 +143,7 @@ static int qfile_check_plibreg(void *priv)
 
 	if (line)
 		free(line);
+	fclose(fp_plibreg);
 
 	return found;
 }
