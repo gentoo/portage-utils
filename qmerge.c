@@ -767,7 +767,8 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 		return ret;
 	}
 
-	dir = fdopendir(subfd_src);
+	i = dup(subfd_src);  /* fdopendir closes its argument */
+	dir = fdopendir(i);
 	if (!dir)
 		goto done;
 
