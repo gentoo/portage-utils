@@ -793,10 +793,11 @@ tree_read_file_ebuild(tree_pkg_ctx *pkg_ctx)
 		goto err;
 
 	len = sizeof(*ret) + s.st_size + 1;
-	ret = xzalloc(len);
+	ret = xmalloc(len);
 	p = (char *)ret + sizeof(*ret);
 	if ((off_t)fread(p, 1, s.st_size, f) != s.st_size)
 		goto err;
+	p[s.st_size] = '\0';
 
 	do {
 		q = p;
