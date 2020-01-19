@@ -123,6 +123,7 @@ qpkg_clean(char *dirp)
 			if (!pretend)
 				unlink(buf);
 		}
+		atom_implode(atom);
 	}
 
 	xarrayfree_int(bins);
