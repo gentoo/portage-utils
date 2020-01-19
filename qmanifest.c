@@ -541,8 +541,10 @@ generate_dir(const char *dir, enum type_manifest mtype)
 			}
 		}
 
-		if (list_dir(&dentries, &dentrieslen, dir) != 0)
+		if (list_dir(&dentries, &dentrieslen, dir) != 0) {
+			gzclose(mf);
 			return NULL;
+		}
 
 		for (i = 0; i < dentrieslen; i++) {
 			/* ignore existing Manifests */
