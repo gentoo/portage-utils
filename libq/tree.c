@@ -553,7 +553,10 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 		} while (ret == NULL);
 	} else if (ctx->cachetype == CACHE_BINPKGS) {
 		char *p = NULL;
+		ret = NULL;
 		do {
+			if (ret != NULL)
+				tree_close_pkg(ret);
 			ret = tree_next_pkg_int(cat_ctx);
 		} while (ret != NULL && (p = strstr(ret->name, ".tbz2")) == NULL);
 		if (p != NULL)
