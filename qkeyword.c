@@ -765,7 +765,7 @@ qkeyword_load_arches(const char *overlay)
 	list_set(archs, &archlist);
 
 	/* sort so the output makes more 'sense' */
-	qsort(archlist, archlist_count, sizeof(char **), keyword_sort);
+	qsort(archlist, archlist_count, sizeof(archlist[0]), keyword_sort);
 
 	fclose(fp);
  done:
