@@ -530,7 +530,11 @@ generate_dir(const char *dir, enum type_manifest mtype)
 					"IGNORE timestamp.chk\n"
 					"IGNORE timestamp.commit\n"
 					"IGNORE timestamp.x\n");
-			gzwrite(mf, path, len);
+			if (gzwrite(mf, path, len) == 0) {
+				fprintf(stderr, "failed to write to file '%s/%s': %s\n",
+						dir, str_manifest_gz, strerror(errno));
+				return NULL;
+			}
 		}
 
 		if (list_dir(&dentries, &dentrieslen, dir) != 0)
