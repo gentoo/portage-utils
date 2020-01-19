@@ -570,6 +570,7 @@ generate_dir(const char *dir, enum type_manifest mtype)
 	} else if (mtype == CATEGORY_MANIFEST) {
 		const char *mfest;
 		gzFile mf;
+		const char *ret = str_manifest_gz;
 
 		snprintf(path, sizeof(path), "%s/%s", dir, str_manifest_gz);
 		if ((mf = gzopen(path, "wb9")) == NULL) {
@@ -596,13 +597,13 @@ generate_dir(const char *dir, enum type_manifest mtype)
 					if (mfest == NULL) {
 						fprintf(stderr, "generating Manifest for %s failed!\n",
 								path);
-						gzclose(mf);
-						return NULL;
+						tv[0].tv_sec = 0;
+						ret = NULL;
+					} else {
+						snprintf(path, sizeof(path), "%s/%s",
+								dentries[i], mfest);
+						write_hashes(tv, dir, path, "MANIFEST", NULL, mf);
 					}
-
-					snprintf(path, sizeof(path), "%s/%s",
-							dentries[i], mfest);
-					write_hashes(tv, dir, path, "MANIFEST", NULL, mf);
 				} else if (s.st_mode & S_IFREG) {
 					write_hashes(tv, dir, dentries[i], "DATA", NULL, mf);
 				} /* ignore other "things" (like symlinks) as they
@@ -624,7 +625,7 @@ generate_dir(const char *dir, enum type_manifest mtype)
 			utimes(dir, tv);
 		}
 
-		return str_manifest_gz;
+		return ret;
 	} else if (mtype == EBUILD_MANIFEST) {
 		char newmanifest[8192];
 		FILE *m;
