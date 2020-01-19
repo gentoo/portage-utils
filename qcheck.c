@@ -105,7 +105,12 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	/* Open contents_update, if needed */
 	if (state->qc_update) {
 		char tempfile[] = "qcheck-tmp-XXXXXX";
-		int fd = mkstemp(tempfile);
+		mode_t mask;
+		int fd;
+
+		mask = umask(0077);
+		fd = mkstemp(tempfile);
+		umask(mask);
 		if (fd == -1 || (fp_contents_update = fdopen(fd, "w+")) == NULL) {
 			if (fd >= 0)
 				close(fd);
