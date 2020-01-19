@@ -220,8 +220,8 @@ write_hashes(
 
 	if (m != NULL)
 		fwrite(data, len, 1, m);
-	if (gm != NULL)
-		gzwrite(gm, data, len);
+	if (gm != NULL && gzwrite(gm, data, len) == 0)
+		fprintf(stderr, "failed to write to compressed stream\n");
 }
 
 /**
@@ -430,7 +430,11 @@ generate_dir(const char *dir, enum type_manifest mtype)
 				"IGNORE lost+found\n"
 				"IGNORE packages\n"
 				"IGNORE snapshots\n");
-		gzwrite(mf, path, len);
+		if (gzwrite(mf, path, len) == 0) {
+			fprintf(stderr, "failed to write to file '%s/%s': %s\n",
+					dir, str_manifest_files_gz, strerror(errno));
+			return NULL;
+		}
 
 		if (list_dir(&dentries, &dentrieslen, dir) != 0)
 			return NULL;
