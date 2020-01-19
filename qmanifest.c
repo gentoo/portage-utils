@@ -159,7 +159,8 @@ list_dir(char ***retlist, size_t *retcnt, const char *path)
 		}
 		closedir(d);
 
-		qsort(rlist, rlen, sizeof(rlist[0]), compare_strings);
+		if (rlen > 1)
+			qsort(rlist, rlen, sizeof(rlist[0]), compare_strings);
 
 		*retlist = rlist;
 		*retcnt = rlen;
