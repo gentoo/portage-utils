@@ -1770,8 +1770,10 @@ qmanifest_main(int argc, char **argv)
 		}
 	}
 
-	if ((curdirfd = open(".", O_RDONLY)) < 0)
+	if ((curdirfd = open(".", O_RDONLY)) < 0) {
 		warn("cannot open current directory?!? %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
 
 	ret = EXIT_SUCCESS;
 	argc -= optind;
