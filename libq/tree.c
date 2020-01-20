@@ -1366,6 +1366,9 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		tree_close_cat(cat);
 	}
 
+	if (atom != NULL)
+		atom_implode(atom);
+
 	/* ensure we don't free a garbage pointer */
 	ctx->repo = NULL;
 	ctx->do_sort = false;
