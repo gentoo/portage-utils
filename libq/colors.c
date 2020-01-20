@@ -102,8 +102,9 @@ color_remap(void)
 					int found = 0;
 					for (n = 0; n < ARRAY_SIZE(color_pairs); n++) {
 						if (strcmp(color_pairs[n].name, p) == 0) {
-							strncpy(color_pairs[i].value,
-									color_pairs[n].origval, CPAIR_VALUE_LEN);
+							snprintf(color_pairs[i].value,
+									sizeof(color_pairs[i].value),
+									"%s", color_pairs[n].origval);
 							found = 1;
 							break;
 						}
@@ -111,7 +112,7 @@ color_remap(void)
 
 					if (!found)
 						snprintf(color_pairs[i].value,
-								sizeof(color_pairs[i].origval), "\e[%s", p);
+								sizeof(color_pairs[i].value), "\e[%s", p);
 				}
 			}
 		}
