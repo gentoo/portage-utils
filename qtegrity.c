@@ -306,14 +306,13 @@ int qtegrity_main(int argc, char **argv)
 			get_digest_from_line(buffered_line, recorded_digest,
 					recorded_digest_size, 50);
 
-			if (recorded_fname == NULL || recorded_digest == NULL) {
+			if (recorded_fname == NULL || *recorded_digest == '\0') {
 				printf("Empty recorded filename: %s\n", line);
 
 				if (recorded_fname != NULL)
 					free(recorded_fname);
 
-				if (recorded_digest != NULL)
-					free(recorded_digest);
+				free(recorded_digest);
 
 				continue;
 			}
