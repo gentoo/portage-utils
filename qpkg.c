@@ -179,6 +179,7 @@ qpkg_make(depend_atom *atom)
 	int i;
 	char *xpak_argv[2];
 	struct stat st;
+	mode_t mask;
 
 	if (pretend) {
 		printf(" %s-%s %s:\n",
@@ -197,7 +198,10 @@ qpkg_make(depend_atom *atom)
 	}
 
 	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", qpkg_bindir);
-	if ((i = mkstemp(tmpdir)) == -1) {
+	mask = umask(0077);
+	i = mkstemp(tmpdir);
+	umask(mask);
+	if (i == -1) {
 		fclose(fp);
 		free(buf);
 		return -2;
