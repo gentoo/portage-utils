@@ -1671,7 +1671,10 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	unlink_empty(buf);
 
 	snprintf(str, sizeof(str), "%s/%s", pkgdir, pkg->CATEGORY);
-	mkdir(str, 0755);
+	if (mkdir(str, 0755) == -1) {
+		warn("Failed to create %s", str);
+		return;
+	}
 
 	/* XXX: should do a size check here for partial downloads */
 
