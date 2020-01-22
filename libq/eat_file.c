@@ -40,7 +40,7 @@ eat_file_fd(int fd, char **bufptr, size_t *bufsize)
 		/* We assume a min allocation size so that repeat calls don't
 		 * hit ugly ramp ups -- if you read a file that is 1 byte, then
 		 * 5 bytes, then 10 bytes, then 20 bytes, ... you'll allocate
-		 * constantly.  So we round up a few pages as wasiting virtual
+		 * constantly.  So we round up a few pages as wasting virtual
 		 * memory is cheap when it is unused.  */
 		*bufsize = ((read_size + 1) + BUFSIZE - 1) & -BUFSIZE;
 		*bufptr = xrealloc(*bufptr, *bufsize);
@@ -55,9 +55,9 @@ eat_file_fd(int fd, char **bufptr, size_t *bufsize)
 				return false;
 			buf[read_size] = '\0';
 		} else {
-			if (read(fd, buf, read_size) == 0)
+			if ((read_size = read(fd, buf, read_size)) <= 0)
 				return false;
-			buf[read_size - 1] = '\0';
+			buf[read_size] = '\0';
 		}
 	}
 
