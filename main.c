@@ -220,7 +220,7 @@ makeargv(const char *string, int *argc, char ***argv)
 {
 	int curc = 2;
 	char *q, *p, *str;
-	(*argv) = xmalloc(sizeof(char **) * curc);
+	(*argv) = xmalloc(sizeof(char *) * curc);
 
 	*argc = 1;
 	(*argv)[0] = xstrdup(argv0);
