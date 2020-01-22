@@ -178,7 +178,7 @@ dep_grow_tree(const char *depend)
 				break;
 			_maybe_consume_word(DEP_NORM);
 
-			if (curr_node->parent == NULL) {
+			if (curr_node == NULL || curr_node->parent == NULL) {
 				warnf("Group lacks a parent");
 				goto error_out;
 			}
