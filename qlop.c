@@ -138,7 +138,7 @@ parse_date(const char *sdate, time_t *t)
 			/* Handle the formats:
 			 * <#> <day|week|month|year>[s] [ago]
 			 */
-			len = strlen(sdate);
+			len = strlen(sdate) + 1;
 
 			unsigned long num;
 			char dur[len];
