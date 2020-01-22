@@ -251,7 +251,11 @@ qpkg_make(depend_atom *atom)
 	pclose(fp);
 
 	/* get offset where xpak will start */
-	stat(tbz2, &st);
+	if (stat(tbz2, &st) == -1) {
+		warnp("could not stat '%s': %s", tbz2, strerror(errno));
+		free(buf);
+		return 1;
+	}
 	xpaksize = st.st_size;
 
 	snprintf(buf, buflen, "%s/%s/%s",
@@ -260,7 +264,12 @@ qpkg_make(depend_atom *atom)
 	xpak_argv[1] = NULL;
 	xpak_create(AT_FDCWD, tbz2, 1, xpak_argv, 1, verbose);
 
-	stat(tbz2, &st);
+	/* calculate the number of bytes taken by the xpak archive */
+	if (stat(tbz2, &st) == -1) {
+		warnp("could not stat '%s': %s", tbz2, strerror(errno));
+		free(buf);
+		return 1;
+	}
 	xpaksize = st.st_size - xpaksize;
 
 	/* save tbz2 tail: OOOOSTOP */
