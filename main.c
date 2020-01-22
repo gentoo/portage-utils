@@ -243,7 +243,7 @@ makeargv(const char *string, int *argc, char ***argv)
 
 		if (*argc == curc) {
 			curc *= 2;
-			(*argv) = xrealloc(*argv, sizeof(char **) * curc);
+			(*argv) = xrealloc(*argv, sizeof(char *) * curc);
 		}
 		(*argv)[*argc] = xstrdup(str);
 		(*argc)++;
