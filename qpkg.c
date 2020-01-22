@@ -356,8 +356,7 @@ int qpkg_main(int argc, char **argv)
 		err("'%s' is not a valid package destination", qpkg_bindir);
 	for (i = 0; i <= 1; i++) {
 		if (mkdir(qpkg_bindir, 0750) == -1) {
-			lstat(qpkg_bindir, &st);
-			if (!S_ISDIR(st.st_mode)) {
+			if (lstat(qpkg_bindir, &st) == 0 && !S_ISDIR(st.st_mode)) {
 				unlink(qpkg_bindir);
 				continue;
 			}
