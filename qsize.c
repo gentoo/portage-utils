@@ -238,10 +238,10 @@ int qsize_main(int argc, char **argv)
 	}
 
 	if (state.summary) {
-		printf(" %sTotals%s: %'zu files, %'zu non-files, ", BOLD, NORM,
+		printf(" %sTotals%s: %zu files, %zu non-files, ", BOLD, NORM,
 		       state.num_all_files, state.num_all_nonfiles);
 		if (state.num_all_ignored)
-			printf("%'zu names-ignored, ", state.num_all_ignored);
+			printf("%zu names-ignored, ", state.num_all_ignored);
 		printf("%s %s\n",
 			   make_human_readable_str(
 				   state.num_all_bytes, 1, state.disp_units),
