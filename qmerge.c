@@ -2026,6 +2026,7 @@ find_binpkg(const char *name)
 		return best_match;
 
 	fp = open_binpkg_index();
+	PF[0] = CATEGORY[0] = '\0';
 
 	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		if (*buf == '\n') {
