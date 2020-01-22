@@ -198,18 +198,21 @@ qpkg_make(depend_atom *atom)
 
 	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", qpkg_bindir);
 	if ((i = mkstemp(tmpdir)) == -1) {
+		fclose(fp);
 		free(buf);
 		return -2;
 	}
 	close(i);
 	unlink(tmpdir);
 	if (mkdir(tmpdir, 0750)) {
+		fclose(fp);
 		free(buf);
 		return -3;
 	}
 
 	snprintf(filelist, sizeof(filelist), "%s/filelist", tmpdir);
 	if ((out = fopen(filelist, "w")) == NULL) {
+		fclose(fp);
 		free(buf);
 		return -4;
 	}
