@@ -1671,7 +1671,7 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	unlink_empty(buf);
 
 	snprintf(str, sizeof(str), "%s/%s", pkgdir, pkg->CATEGORY);
-	if (mkdir(str, 0755) == -1) {
+	if (mkdir(str, 0755) == -1 && errno != EEXIST) {
 		warn("Failed to create %s", str);
 		return;
 	}
