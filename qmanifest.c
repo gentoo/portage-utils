@@ -1489,7 +1489,8 @@ verify_manifest(
 	 * - Manifest at top-level, needs to be igored as it only points to
 	 *   the larger Manifest.files.gz
 	 */
-	qsort(elems, elemslen, sizeof(elems[0]), compare_elems);
+	if (compare_elems > 1)
+		qsort(elems, elemslen, sizeof(elems[0]), compare_elems);
 	snprintf(buf, sizeof(buf), "%s/%s", dir, manifest);
 	ret = verify_dir(dir, elems, elemslen, 0, buf + 2, msgs);
 	checked_manifests++;
