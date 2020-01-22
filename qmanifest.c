@@ -690,7 +690,11 @@ generate_dir(const char *dir, enum type_manifest mtype)
 		fclose(m);
 
 		snprintf(path, sizeof(path), "%s/%s", dir, str_manifest);
-		rename(newmanifest, path);
+		if (rename(newmanifest, path) == -1) {
+			fprintf(stderr, "failed to rename file '%s' to '%s': %s\n",
+					newmanifest, path, strerror(errno));
+			return NULL;
+		}
 
 		if (tv[0].tv_sec != 0) {
 			/* set Manifest and dir mtime to most recent file we found */
