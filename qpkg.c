@@ -308,7 +308,12 @@ qpkg_make(depend_atom *atom)
 
 	rmdir(tmpdir);
 
-	stat(buf, &st);
+	if (stat(buf, &st) == -1) {
+		warnp("could not stat '%s': %s", buf strerror(errno));
+		free(buf);
+		return 1;
+	}
+
 	printf("%s%s%s KiB\n",
 			RED, make_human_readable_str(st.st_size, 1, KILOBYTE), NORM);
 
