@@ -434,6 +434,7 @@ generate_dir(const char *dir, enum type_manifest mtype)
 		if (gzwrite(mf, path, len) == 0) {
 			fprintf(stderr, "failed to write to file '%s/%s': %s\n",
 					dir, str_manifest_files_gz, strerror(errno));
+			gzclose(mf);
 			return NULL;
 		}
 
