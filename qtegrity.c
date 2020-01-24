@@ -442,7 +442,9 @@ int qtegrity_main(int argc, char **argv)
 				skip = ((recorded_digest_size == SHA256_DIGEST_LENGTH) ||
 						(recorded_digest_size == SHA512_DIGEST_LENGTH)) ?
 					recorded_digest_size+6+8 : recorded_digest_size+6+6;
-				fseek(fp_qtegrity_custom, -skip-strlen(fname), SEEK_CUR);
+				if (fseek(fp_qtegrity_custom,
+							-skip-strlen(fname), SEEK_CUR) == -1)
+					err("seek failed: %s\n", strerror(errno));
 				free(fname);
 				break;
 			}
