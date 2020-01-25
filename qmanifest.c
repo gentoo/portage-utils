@@ -472,6 +472,9 @@ generate_dir(const char *dir, enum type_manifest mtype)
 						fprintf(stderr, "generating Manifest for %s failed!\n",
 								path);
 						gzclose(mf);
+						for (; i < dentrieslen; i++)
+							free(dentries[i]);
+						free(dentries);
 						return NULL;
 					}
 
