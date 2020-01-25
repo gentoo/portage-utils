@@ -257,9 +257,16 @@ qpkg_make(depend_atom *atom)
 	}
 	pclose(fp);
 
+	if ((i = open(tbz2, O_WRONLY)) < 0) {
+		warnp("failed to open '%s': %s", tbz2, strerror(errno));
+		free(buf);
+		return 1;
+	}
+
 	/* get offset where xpak will start */
-	if (stat(tbz2, &st) == -1) {
+	if (fstat(i, &st) == -1) {
 		warnp("could not stat '%s': %s", tbz2, strerror(errno));
+		close(i);
 		free(buf);
 		return 1;
 	}
@@ -270,12 +277,6 @@ qpkg_make(depend_atom *atom)
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
 	xpak_create(AT_FDCWD, tbz2, 1, xpak_argv, 1, verbose);
-
-	if ((i = open(tbz2, O_WRONLY | O_APPEND)) < 0) {
-		warnp("failed to open '%s': %s", tbz2, strerror(errno));
-		free(buf);
-		return 1;
-	}
 
 	/* calculate the number of bytes taken by the xpak archive */
 	if (fstat(i, &st) == -1) {
