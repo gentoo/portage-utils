@@ -389,7 +389,8 @@ int qpkg_main(int argc, char **argv)
 			if (fchmod(fd, 0750) < 0)
 				errp("could not chmod(0750) temp bindir '%s'", qpkg_bindir);
 	}
-	close(fd);
+	if (fd >= 0)
+		close(fd);
 
 	/* we have to change to the root so that we can feed the full paths
 	 * to tar when we create the binary package. */
