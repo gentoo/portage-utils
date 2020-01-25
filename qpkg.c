@@ -309,7 +309,7 @@ qpkg_make(depend_atom *atom)
 	rmdir(tmpdir);
 
 	if (stat(buf, &st) == -1) {
-		warnp("could not stat '%s': %s", buf strerror(errno));
+		warnp("could not stat '%s': %s", buf, strerror(errno));
 		free(buf);
 		return 1;
 	}
