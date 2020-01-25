@@ -271,17 +271,25 @@ qpkg_make(depend_atom *atom)
 	xpak_argv[1] = NULL;
 	xpak_create(AT_FDCWD, tbz2, 1, xpak_argv, 1, verbose);
 
+	if ((i = open(tbz2, O_WRONLY | O_APPEND)) < 0) {
+		warnp("failed to open '%s': %s", tbz2, strerror(errno));
+		free(buf);
+		return 1;
+	}
+
 	/* calculate the number of bytes taken by the xpak archive */
-	if (stat(tbz2, &st) == -1) {
+	if (fstat(i, &st) == -1) {
 		warnp("could not stat '%s': %s", tbz2, strerror(errno));
+		close(i);
 		free(buf);
 		return 1;
 	}
 	xpaksize = st.st_size - xpaksize;
 
 	/* save tbz2 tail: OOOOSTOP */
-	if ((fp = fopen(tbz2, "a")) == NULL) {
+	if ((fp = fdopen(i, "a")) == NULL) {
 		warnp("could not open '%s': %s", tbz2, strerror(errno));
+		close(i);
 		free(buf);
 		return 1;
 	}
@@ -294,8 +302,7 @@ qpkg_make(depend_atom *atom)
 	unlink(filelist);
 
 	/* create dirs, if necessary */
-	snprintf(buf, buflen, "%s/%s",
-			qpkg_bindir, atom->CATEGORY);
+	snprintf(buf, buflen, "%s/%s", qpkg_bindir, atom->CATEGORY);
 	mkdir_p(buf, 0755);
 
 	snprintf(buf, buflen, "%s/%s/%s.tbz2",
