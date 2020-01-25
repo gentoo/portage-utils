@@ -349,6 +349,7 @@ int qpkg_main(int argc, char **argv)
 	depend_atom *atom;
 	int restrict_chmod = 0;
 	int qclean = 0;
+	int fd;
 
 	qpkg_bindir = pkgdir;
 	while ((i = GETOPT_LONG(QPKG, qpkg, "")) != -1) {
@@ -374,20 +375,21 @@ int qpkg_main(int argc, char **argv)
 	/* setup temp dirs */
 	if (qpkg_bindir[0] != '/')
 		err("'%s' is not a valid package destination", qpkg_bindir);
-	for (i = 0; i <= 1; i++) {
-		if (mkdir(qpkg_bindir, 0750) == -1) {
-			if (lstat(qpkg_bindir, &st) == 0 && !S_ISDIR(st.st_mode)) {
-				unlink(qpkg_bindir);
-				continue;
-			}
-			if (!restrict_chmod)
-				if (chmod(qpkg_bindir, 0750))
-					errp("could not chmod(0750) temp bindir '%s'", qpkg_bindir);
-		}
-		break;
-	}
-	if (i == 2)
+	/* brute force just unlink any file or symlink, if this fails, it's
+	 * actually good ;) */
+	unlink(qpkg_bindir);
+	fd = open(qpkg_bindir, O_RDONLY);
+	if ((fd == -1 && mkdir(qpkg_bindir, 0750) == -1) ||
+			(fd != -1 && (fstat(fd, &st) == -1 || !S_ISDIR(st.st_mode))))
+	{
 		errp("could not create temp bindir '%s'", qpkg_bindir);
+	} else {
+		/* fd is valid, pointing to a directory */
+		if (!restrict_chmod)
+			if (fchmod(fd, 0750) < 0)
+				errp("could not chmod(0750) temp bindir '%s'", qpkg_bindir);
+	}
+	close(fd);
 
 	/* we have to change to the root so that we can feed the full paths
 	 * to tar when we create the binary package. */
