@@ -376,7 +376,7 @@ int qpkg_main(int argc, char **argv)
 	if (qpkg_bindir[0] != '/')
 		err("'%s' is not a valid package destination", qpkg_bindir);
 	/* brute force just unlink any file or symlink, if this fails, it's
-	 * actually good ;) */
+	 * actually good :) */
 	unlink(qpkg_bindir);
 	fd = open(qpkg_bindir, O_RDONLY);
 	if ((fd == -1 && mkdir(qpkg_bindir, 0750) == -1) ||
