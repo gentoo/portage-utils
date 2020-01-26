@@ -223,7 +223,7 @@ xpak_process(
 
 static void
 _xpak_add_file(
-		int dir_fd,
+		int fd,
 		const char *filename,
 		struct stat *st,
 		FILE *findex,
@@ -236,7 +236,7 @@ _xpak_add_file(
 	unsigned char intbuf[4];
 	unsigned char *p = intbuf;
 	const char *basefile;
-	int fd, in_len;
+	int in_len;
 
 	basefile = basename(filename);
 
@@ -259,28 +259,24 @@ _xpak_add_file(
 
 	/* now open the file, get (data_len),
 	 * and append the file to the data file */
-	fd = openat(dir_fd, filename, O_RDONLY|O_CLOEXEC);
-	if (fd < 0) {
- open_fail:
+	if ((fin = fdopen(fd, "r")) == NULL) {
 		warnp("could not open for reading: %s", filename);
- fake_data_len:
 		WRITE_BE_INT32(p, 0);
 		fwrite(p, 1, 4, findex);
 		return;
 	}
-	fin = fdopen(fd, "r");
-	if (!fin) {
-		close(fd);
-		goto open_fail;
-	}
+
 	in_len = st->st_size;
 	/* the xpak format can only store files whose size is a 32bit int
 	 * so we have to make sure we don't store a big file */
 	if (in_len != st->st_size) {
 		warnf("File is too big: %zu", (size_t)st->st_size);
 		fclose(fin);
-		goto fake_data_len;
+		WRITE_BE_INT32(p, 0);
+		fwrite(p, 1, 4, findex);
+		return;
 	}
+
 	WRITE_BE_INT32(p, in_len);
 	fwrite(p, 1, 4, findex);
 	copy_file(fin, fdata);
@@ -333,6 +329,8 @@ xpak_create(
 
 	index_len = data_len = 0;
 	for (i = 0; i < argc; ++i) {
+		int fd;
+
 		if (fstatat(dir_fd, argv[i], &st, 0)) {
 			warnp("fstatat(%s) failed", argv[i]);
 			continue;
@@ -344,22 +342,32 @@ xpak_create(
 			for (fidx = 0; fidx < numfiles; ++fidx) {
 				int ret = snprintf(path, sizeof(path), "%s/%s",
 						argv[i], dir[fidx]->d_name);
+
 				if (ret < 0 || (size_t)ret >= sizeof(path)) {
 					warn("skipping path too long: %s/%s",
 							argv[i], dir[fidx]->d_name);
 					continue;
 				}
-				if (stat(path, &st) < 0) {
+
+				fd = openat(dir_fd, path, O_RDONLY|O_CLOEXEC);
+				if (fd < 0 || fstat(fd, &st) < 0) {
 					warnp("could not read %s", path);
 					continue;
 				}
-				_xpak_add_file(dir_fd, path, &st,
+				_xpak_add_file(fd, path, &st,
 						findex, &index_len, fdata, &data_len, verbose);
+				close(fd);
 			}
 			scandir_free(dir, numfiles);
 		} else if (S_ISREG(st.st_mode)) {
-			_xpak_add_file(dir_fd, argv[i], &st,
+			fd = openat(dir_fd, argv[i], O_RDONLY|O_CLOEXEC);
+			if (fd < 0 || fstat(fd, &st) < 0) {
+				warnp("could not read %s", path);
+				continue;
+			}
+			_xpak_add_file(fd, argv[i], &st,
 					findex, &index_len, fdata, &data_len, verbose);
+			close(fd);
 		} else
 			warn("Skipping non file/directory '%s'", argv[i]);
 	}
