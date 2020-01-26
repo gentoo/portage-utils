@@ -1711,7 +1711,8 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		snprintf(buf, sizeof(buf), "%s/%s.tbz2", atom->CATEGORY, pkg->PF);
 		fetch(str, buf);
 	}
-	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
+	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2",
+			pkgdir, atom->CATEGORY, pkg->PF);
 	if (access(buf, R_OK) != 0) {
 		snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
 		fetch(str, buf);
@@ -1719,7 +1720,8 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	}
 
 	/* verify the pkg exists now. unlink if zero bytes */
-	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
+	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2",
+			pkgdir, atom->CATEGORY, pkg->PF);
 	unlink_empty(buf);
 
 	if (access(buf, R_OK) != 0) {
@@ -1728,7 +1730,8 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		return;
 	}
 
-	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, atom->CATEGORY, pkg->PF);
+	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2",
+			pkgdir, atom->CATEGORY, pkg->PF);
 	if (pkg_verify_checksums(buf, pkg, atom, qmerge_strict, !quiet) == 0) {
 		pkg_merge(0, atom, pkg);
 		return;
