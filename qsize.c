@@ -93,7 +93,10 @@ struct qsize_opt_state {
 	const char *fmt;
 	bool need_full_atom:1;
 
-	size_t num_all_files, num_all_nonfiles, num_all_ignored;
+	set *uniq_files;
+	size_t num_all_files;
+	size_t num_all_nonfiles;
+	size_t num_all_ignored;
 	uint64_t num_all_bytes;
 };
 
@@ -107,6 +110,11 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	char *savep;
 	size_t num_files, num_nonfiles, num_ignored;
 	uint64_t num_bytes;
+	struct stat st;
+	bool ok = false;
+	char ikey[2 * (sizeof(size_t) * 2) + 1];  /* hex rep */
+	size_t cur_uniq = cnt_set(state->uniq_files);
+	bool isuniq;
 
 	if ((line = tree_pkg_meta_get(pkg_ctx, CONTENTS)) == NULL)
 		return EXIT_SUCCESS;
@@ -115,8 +123,8 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	for (; (line = strtok_r(line, "\n", &savep)) != NULL; line = NULL) {
 		contents_entry *e;
 		regex_t *regex;
-		int ok = 0;
 
+		ok = false;
 		e = contents_parse_line(line);
 		if (!e)
 			continue;
@@ -124,21 +132,27 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		array_for_each(state->ignore_regexp, i, regex) {
 			if (!regexec(regex, e->name, 0, NULL, 0)) {
 				num_ignored++;
-				ok = 1;
+				ok = true;
 			}
 		}
 		if (ok)
 			continue;
 
 		if (e->type == CONTENTS_OBJ || e->type == CONTENTS_SYM) {
-			struct stat st;
-			++num_files;
-			if (!fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd,
-						e->name + 1, &st, AT_SYMLINK_NOFOLLOW))
-				num_bytes +=
-					state->fs_size ? st.st_blocks * S_BLKSIZE : st.st_size;
-		} else
-			++num_nonfiles;
+			num_files++;
+			if (fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd,
+						e->name + 1, &st, AT_SYMLINK_NOFOLLOW) == 0)
+			{
+				snprintf(ikey, sizeof(ikey), "%zx%zx",
+						(size_t)st.st_dev, (size_t)st.st_ino);
+				add_set_unique(ikey, state->uniq_files, &isuniq);
+				if (isuniq)
+					num_bytes +=
+						state->fs_size ? st.st_blocks * S_BLKSIZE : st.st_size;
+			}
+		} else {
+			num_nonfiles++;
+		}
 	}
 	state->num_all_bytes += num_bytes;
 	state->num_all_files += num_files;
@@ -146,10 +160,19 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	state->num_all_ignored += num_ignored;
 
 	if (!state->summary_only) {
+		char uniqbuf[32];
+
+		cur_uniq = cnt_set(state->uniq_files) - cur_uniq;
 		atom = tree_get_atom(pkg_ctx, state->need_full_atom);
-		printf("%s: %zu files, %zu non-files, ",
+
+		if (cur_uniq != num_files)
+			snprintf(uniqbuf, sizeof(uniqbuf), " (%zu unique)", cur_uniq);
+		else
+			uniqbuf[0] = '\0';
+
+		printf("%s: %zu files%s, %zu non-files, ",
 				atom_format(state->fmt, atom),
-				num_files, num_nonfiles);
+				num_files, uniqbuf, num_nonfiles);
 		if (num_ignored)
 			printf("%zu names-ignored, ", num_ignored);
 		printf("%s %s\n",
@@ -177,10 +200,11 @@ int qsize_main(int argc, char **argv)
 		.disp_units = 0,
 		.str_disp_units = NULL,
 		.ignore_regexp = ignore_regexp,
-		.num_all_bytes = 0,
+		.uniq_files = create_set(),
 		.num_all_files = 0,
 		.num_all_nonfiles = 0,
 		.num_all_ignored = 0,
+		.num_all_bytes = 0,
 		.need_full_atom = false,
 		.fmt = NULL,
 	};
@@ -238,8 +262,16 @@ int qsize_main(int argc, char **argv)
 	}
 
 	if (state.summary) {
-		printf(" %sTotals%s: %zu files, %zu non-files, ", BOLD, NORM,
-		       state.num_all_files, state.num_all_nonfiles);
+		char uniqbuf[32];
+		size_t uniq_files = cnt_set(state.uniq_files);
+
+		if (uniq_files != state.num_all_files)
+			snprintf(uniqbuf, sizeof(uniqbuf), " (%zu unique)", uniq_files);
+		else
+			uniqbuf[0] = '\0';
+
+		printf(" %sTotals%s: %zu files%s, %zu non-files, ", BOLD, NORM,
+		       state.num_all_files, uniqbuf, state.num_all_nonfiles);
 		if (state.num_all_ignored)
 			printf("%zu names-ignored, ", state.num_all_ignored);
 		printf("%s %s\n",
@@ -252,6 +284,7 @@ int qsize_main(int argc, char **argv)
 		atom_implode(atom);
 	xarrayfree_int(state.atoms);
 	xarrayfree(state.ignore_regexp);
+	free_set(state.uniq_files);
 
 	return ret;
 }
