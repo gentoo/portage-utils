@@ -145,7 +145,8 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			{
 				snprintf(ikey, sizeof(ikey), "%zx%zx",
 						(size_t)st.st_dev, (size_t)st.st_ino);
-				add_set_unique(ikey, state->uniq_files, &isuniq);
+				state->uniq_files =
+					add_set_unique(ikey, state->uniq_files, &isuniq);
 				if (isuniq)
 					num_bytes +=
 						state->fs_size ? st.st_blocks * S_BLKSIZE : st.st_size;
