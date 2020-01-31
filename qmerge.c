@@ -1604,14 +1604,15 @@ unlink_empty(const char *buf)
 {
 	struct stat st;
 	int fd;
+	int ret = -1;
 
 	fd = open(buf, O_RDONLY);
 	if (fd != -1 && stat(buf, &st) != -1) {
 		if (st.st_size == 0)
-			return unlink(buf);
+			ret = unlink(buf);
 		close(fd);
 	}
-	return -1;
+	return ret;
 }
 
 static int
