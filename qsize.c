@@ -112,7 +112,7 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	uint64_t num_bytes;
 	struct stat st;
 	bool ok = false;
-	char ikey[2 * (sizeof(size_t) * 2) + 1];  /* hex rep */
+	char ikey[2 * (sizeof(size_t) * 2) + 1 + 1];  /* hex rep */
 	size_t cur_uniq = cnt_set(state->uniq_files);
 	bool isuniq;
 
@@ -143,7 +143,7 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			if (fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd,
 						e->name + 1, &st, AT_SYMLINK_NOFOLLOW) == 0)
 			{
-				snprintf(ikey, sizeof(ikey), "%zx%zx",
+				snprintf(ikey, sizeof(ikey), "%zx:%zx",
 						(size_t)st.st_dev, (size_t)st.st_ino);
 				state->uniq_files =
 					add_set_unique(ikey, state->uniq_files, &isuniq);
