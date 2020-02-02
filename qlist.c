@@ -412,18 +412,7 @@ int qlist_main(int argc, char **argv)
 	struct qlist_opt_state state = {
 		.argc = argc,
 		.argv = argv,
-		.exact = false,
-		.all = false,
-		.do_binpkgs = false,
-		.just_pkgname = false,
-		.show_dir = false,
-		.show_obj = false,
-		.show_sym = false,
-		.need_full_atom = false,
-		.show_umap = false,
-		.show_dbg = false,
 		.buflen = _Q_PATH_MAX,
-		.fmt = NULL,
 	};
 
 	while ((i = GETOPT_LONG(QLIST, qlist, "")) != -1) {

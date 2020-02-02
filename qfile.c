@@ -478,12 +478,6 @@ int qfile_main(int argc, char **argv)
 {
 	struct qfile_opt_state state = {
 		.buflen = _Q_PATH_MAX,
-		.need_full_atom = false,
-		.basename = false,
-		.orphans = false,
-		.assume_root_prefix = false,
-		.skip_plibreg = false,
-		.format = NULL,
 	};
 	int i, nb_of_queries, found = 0;
 	char *p;

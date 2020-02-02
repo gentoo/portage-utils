@@ -447,22 +447,8 @@ int qgrep_main(int argc, char **argv)
 	char *overlay;
 
 	struct qgrep_grepargs args = {
-		.do_count = false,
-		.do_regex = false,
-		.do_list = false,
 		.show_filename = true,
-		.show_name = false,
-		.skip_comments = false,
-		.invert_list = false,
-		.invert_match = false,
-		.skip_pattern = NULL,
-		.num_lines_before = 0,
-		.num_lines_after = 0,
-		.buf_list = NULL,
-		.query = NULL,
 		.strfunc = strstr,
-		.include_atoms = NULL,
-		.portdir = NULL,
 	};
 
 	do_eclass = do_installed = 0;

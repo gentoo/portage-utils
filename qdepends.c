@@ -289,9 +289,7 @@ int qdepends_main(int argc, char **argv)
 		.atoms = atoms,
 		.deps = deps,
 		.udeps = create_set(),
-		.qmode = 0,
 		.format = "%[CATEGORY]%[PF]",
-		.vdb = NULL,
 	};
 	size_t i;
 	int ret;

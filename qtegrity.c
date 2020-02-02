@@ -232,12 +232,6 @@ int qtegrity_main(int argc, char **argv)
 
 	struct qtegrity_opt_state state = {
 		.ima = true,
-		.add = false,
-		.ignore_non_exist = false,
-		.show_matches = false,
-/* TODO
-		.convert = false;
-*/
 	};
 
 	while ((i = GETOPT_LONG(QTEGRITY, qtegrity, "")) != -1) {

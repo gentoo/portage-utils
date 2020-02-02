@@ -384,14 +384,10 @@ int qcheck_main(int argc, char **argv)
 	struct qcheck_opt_state state = {
 		.atoms = atoms,
 		.regex_arr = regex_arr,
-		.bad_only = false,
-		.qc_update = false,
 		.chk_afk = true,
 		.chk_hash = true,
 		.chk_mtime = true,
 		.chk_config_protect = true,
-		.undo_prelink = false,
-		.fmt = NULL,
 	};
 
 	while ((ret = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {

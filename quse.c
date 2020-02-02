@@ -648,15 +648,7 @@ int quse_main(int argc, char **argv)
 	const char *overlay;
 	char *match = NULL;
 	struct quse_state state = {
-		.do_all         = false,
-		.do_regex       = true,
-		.do_describe    = false,
-		.do_licence     = false,
-		.do_installed   = false,
-		.need_full_atom = false,
-		.match          = NULL,
-		.overlay        = NULL,
-		.fmt            = NULL,
+		.do_regex = true,
 	};
 
 	while ((i = GETOPT_LONG(QUSE, quse, "")) != -1) {

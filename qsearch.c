@@ -119,15 +119,7 @@ int qsearch_main(int argc, char **argv)
 	int i;
 	const char *overlay;
 	size_t n;
-	struct qsearch_state state = {
-		.show_homepage  = false,
-		.show_name      = false,
-		.show_desc      = false,
-		.search_desc    = false,
-		.search_name    = false,
-		.need_full_atom = false,
-		.fmt            = NULL,
-	};
+	struct qsearch_state state = {};
 
 	while ((i = GETOPT_LONG(QSEARCH, qsearch, "")) != -1) {
 		switch (i) {

@@ -1209,9 +1209,9 @@ int qlop_main(int argc, char **argv)
 {
 	size_t i;
 	int ret;
-	time_t start_time;
-	time_t end_time;
-	struct qlop_mode m;
+	time_t start_time = 0;
+	time_t end_time = LONG_MAX;
+	struct qlop_mode m = {};
 	char *logfile = NULL;
 	char *atomfile = NULL;
 	char *p;
@@ -1219,23 +1219,6 @@ int qlop_main(int argc, char **argv)
 	depend_atom *atom;
 	DECLARE_ARRAY(atoms);
 	int runningmode = 0;
-
-	start_time = 0;
-	end_time = LONG_MAX;
-	m.do_time = 0;
-	m.do_merge = 0;
-	m.do_unmerge = 0;
-	m.do_autoclean = 0;
-	m.do_sync = 0;
-	m.do_running = 0;
-	m.do_average = 0;
-	m.do_summary = 0;
-	m.do_human = 0;
-	m.do_machine = 0;
-	m.do_endtime = 0;
-	m.show_lastmerge = 0;
-	m.show_emerge = 0;
-	m.fmt = NULL;
 
 	while ((ret = GETOPT_LONG(QLOP, qlop, "")) != -1) {
 		switch (ret) {
