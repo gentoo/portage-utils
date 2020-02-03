@@ -689,8 +689,9 @@ tree_read_file_md5(tree_pkg_ctx *pkg_ctx)
 		goto err;
 
 	len = sizeof(*ret) + s.st_size + 1;
-	ret = xzalloc(len);
-	ptr = (char*)ret + sizeof(*ret);
+	ret = xmalloc(len);
+	memset(ret, 0, sizeof(*ret));
+	ptr = (char *)ret + sizeof(*ret);
 	if ((off_t)fread(ptr, 1, s.st_size, f) != s.st_size)
 		goto err;
 	ptr[s.st_size] = '\0';
@@ -802,7 +803,8 @@ tree_read_file_ebuild(tree_pkg_ctx *pkg_ctx)
 		goto err;
 
 	len = sizeof(*ret) + s.st_size + 1;
-	ret = xzalloc(len);
+	ret = xmalloc(len);
+	memset(ret, 0, sizeof(*ret));
 	p = (char *)ret + sizeof(*ret);
 	if ((off_t)fread(p, 1, s.st_size, f) != s.st_size)
 		goto err;
