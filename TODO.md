@@ -26,6 +26,10 @@
     the cache (set), as frequently happens in dependency calculations
   - tree\_{open,close}\_cat can be made static afterwards
 
+# tests
+- add test for qsearch to avoid repetitions like
+  https://bugs.gentoo.org/701470
+
 # qmerge
 - dep resolver needs spanktastic love.
 - needs safe deleting (merge in place rather than unmerge;merge)
