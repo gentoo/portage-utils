@@ -452,6 +452,7 @@ int qgrep_main(int argc, char **argv)
 		.do_list = false,
 		.show_filename = true,
 		.show_name = false,
+		.show_repo = false,
 		.skip_comments = false,
 		.invert_list = false,
 		.invert_match = false,

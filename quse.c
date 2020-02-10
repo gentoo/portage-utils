@@ -653,6 +653,7 @@ int quse_main(int argc, char **argv)
 		.do_describe    = false,
 		.do_licence     = false,
 		.do_installed   = false,
+		.do_list        = false,
 		.need_full_atom = false,
 		.match          = NULL,
 		.overlay        = NULL,
