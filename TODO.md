@@ -46,7 +46,6 @@
 - support TTL field in binpkgs file
 - merge duplicate atoms on the CLI (`qmerge -Uq nano nano nano`)
 - unmerging should clean out @world set
-- test should work on local vdb (so TRAVIS can test it too)
 - fixup lame misnaming of force\_download (--fetch/--force) actually
   not-forcing things
 - use xpak.h instead of shelling out to qxpak binary

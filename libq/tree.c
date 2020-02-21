@@ -398,7 +398,7 @@ tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name)
 	/* see if this pkg matches the query, here we can finally check
 	 * version conditions like >=, etc. */
 	if (cat_ctx->ctx->query_atom != NULL) {
-		(void)tree_get_atom(pkg_ctx, false);
+		(void)tree_get_atom(pkg_ctx, cat_ctx->ctx->query_atom->SLOT != NULL);
 		if (atom_compare(pkg_ctx->atom, cat_ctx->ctx->query_atom) != EQUAL) {
 			tree_close_pkg(pkg_ctx);
 			return NULL;
