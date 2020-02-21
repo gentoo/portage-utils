@@ -52,7 +52,7 @@ addons:
     - coreutils
     - bash
     - libressl
-    #update: true
+    update: true   # working around unknown bundle command
 
 before_install:
   - ./travis/install-blake2.sh
