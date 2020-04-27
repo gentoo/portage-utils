@@ -25,6 +25,9 @@
   - cached, such that repeated matches for the same thing are served off
     the cache (set), as frequently happens in dependency calculations
   - tree\_{open,close}\_cat can be made static afterwards
+- make tree\_get\_metadata also retrieve maintainer type, such that
+  qlist can query for maintainer email or type, ideally to do
+  qlist -Iv $(portageq --repo gentoo --orphaned) in one step (bug 711466#c3)
 
 # tests
 - add test for qsearch to avoid repetitions like
