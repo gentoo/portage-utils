@@ -58,7 +58,7 @@ static const char * const qlop_opts_help[] = {
 	"Show unmerge history",
 	"Show autoclean unmerge history",
 	"Show sync history",
-	"Show last merge like how emerge(1) -v would show it",
+	"Show last merge similar to how emerge(1) -v would show it",
 	"Report time at which the operation finished (iso started)",
 	"Show current emerging packages",
 	"Limit selection to this time (1st -d is start, 2nd -d is end)",
@@ -1367,7 +1367,8 @@ int qlop_main(int argc, char **argv)
 
 	/* handle -l / -d conflict */
 	if (start_time != 0 && m.show_lastmerge) {
-		warn("-l and -d cannot be used together, dropping -l");
+		if (m.show_emerge)
+			warn("-l and -d cannot be used together, dropping -l");
 		m.show_lastmerge = 0;
 	}
 
