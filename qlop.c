@@ -825,6 +825,22 @@ static int do_emerge_log(
 								flags->do_time ? ": " : "",
 								flags->do_time ?
 									fmt_elapsedtime(flags, elapsed) : "");
+					} else if (flags->show_emerge) {
+						/* emerge never lists packages it unmerges, only
+						 * when part of installation of another package,
+						 * so there is nothing to follow here.  We could
+						 * use D(elete), R(emove) or (U)nmerge here,
+						 * which all three are already in use.  I've
+						 * chosen to use D in the first column here,
+						 * because D is only used together with U, so it
+						 * is the only distinquishable choice, appearing
+						 * in the place of N(ew). */
+						printf("%sD%s    %s", RED, NORM,
+								atom_format(flags->fmt, pkgw->atom));
+						if (flags->do_time)
+							printf(": %s\n", fmt_elapsedtime(flags, elapsed));
+						else
+							printf("\n");
 					} else if (flags->do_time) {
 						printf("%s <<< %s: %s\n",
 								fmt_date(flags, pkgw->tbegin, tstart),
