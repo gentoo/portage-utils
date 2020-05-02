@@ -55,3 +55,16 @@ running: |
     observed, or no previous occurrences for the operation exist,
     \fIunknown\fR is printed.  When combined with \fB-t\fR the
     elapsed time is also displayed.
+emerge: |
+    Immitate \fBemerge\fR(1) output, as if \fBemerge -pv\fR had been
+    run.  This produces a list of packages that were installed (N),
+    upgraded (U), downgraded (UD), re-installed (R) or unmerged (D).
+    The list always includes the version numbers, and for up/downgrades
+    the previous version is listed between square brackets after the
+    package.  When \fB-v\fR is used, the \fBemerge\fR invocations are
+    printed as well, to really show what happened.  When concurrent
+    merges are present in the displayed timeframe, the output will be
+    hard to read.  This is a limitation of the \fIemerge.log\fR format.
+    It is possible to combine this flag with the \fB-d\fR flag, in which
+    case the default behaviour of displaying the last merge (\fB-l\fR)
+    is disabled.

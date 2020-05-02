@@ -539,7 +539,82 @@ static int do_emerge_log(
 			continue;
 
 		/* are we interested in this line? */
-		if (flags->do_sync && (
+		if (flags->show_emerge && verbose && (
+					strncmp(p, "  *** emerge ", 13) == 0))
+		{
+			char shortopts[8];  /* must hold as many opts converted below */
+			int numopts = 0;
+
+			printf("emerge");
+			for (p += 13; (q = strtok(p, " \n")) != NULL; p = NULL) {
+				if (strncmp(q, "--", 2) == 0) {
+					/* portage seems to normalise options given into
+					 * their long forms always; I don't want to keep a
+					 * mapping table to short forms here, but it's
+					 * tempting, so I just do a few of the often used
+					 * ones */
+					q += 2;
+					if (strcmp(q, "ask") == 0) {
+						shortopts[numopts++] = 'a';
+					} else if (strcmp(q, "verbose") == 0) {
+						shortopts[numopts++] = 'v';
+					} else if (strcmp(q, "oneshot") == 0) {
+						shortopts[numopts++] = '1';
+					} else if (strcmp(q, "deep") == 0) {
+						shortopts[numopts++] = 'D';
+					} else if (strcmp(q, "update") == 0) {
+						shortopts[numopts++] = 'u';
+					} else if (strcmp(q, "depclean") == 0) {
+						shortopts[numopts++] = 'c';
+					} else if (strcmp(q, "unmerge") == 0) {
+						shortopts[numopts++] = 'C';
+					} else {
+						q = NULL;
+					}
+
+					/* process next token */
+					if (q != NULL)
+						continue;
+				}
+
+				/* if we're here, we've assembled opts whatever we could */
+				if (numopts > 0) {
+					printf(" %s-%.*s%s",
+							GREEN, numopts, shortopts, NORM);
+					numopts = 0;
+				}
+
+				if (*q == '\0') {
+					/* skip empty token, likely the trailing \n */
+					continue;
+				}
+
+				if (strncmp(q, "--", 2) == 0) {
+					printf(" %s--%s%s", GREEN, q, NORM);
+				} else if (strcmp(q, "@world") == 0 ||
+						strcmp(q, "@system") == 0)
+				{
+					printf(" %s%s%s", YELLOW, q, NORM);
+				} else if (strcmp(q, "world") == 0 ||
+						strcmp(q, "system") == 0)
+				{
+					printf(" %s@%s%s", YELLOW, q, NORM);
+				} else {
+					/* this should be an atom */
+					atom = atom_explode(q);
+					if (atom == NULL) {
+						/* or not ... just print it */
+						printf(" %s", q);
+					} else {
+						printf(" %s", atom_format(
+									"%[pfx]%[CAT]%[PF]%[sfx]"
+									"%[SLOT]%[SUBSLOT]%[REPO]", atom));
+						atom_implode(atom);
+					}
+				}
+			}
+			printf("\n");
+		} else if (flags->do_sync && (
 					strncmp(p, " === Sync completed ", 20) == 0 ||
 					strcmp(p, "  === sync\n") == 0))
 		{
@@ -702,7 +777,7 @@ static int do_emerge_log(
 								printf("  %sU%sD%s ", BLUE, DKBLUE, NORM);
 								break;
 						}
-						printf("%s", atom_format(flags->fmt, pkgw->atom));
+						printf("%s", atom_format("%[CAT]%[PF]", pkgw->atom));
 						if (state == NEWER || state == OLDER)
 							printf(" %s[%s%s%s]%s", DKBLUE, NORM,
 									atom_format("%[PVR]", upgrade_atom),
@@ -836,7 +911,7 @@ static int do_emerge_log(
 						 * is the only distinquishable choice, appearing
 						 * in the place of N(ew). */
 						printf("%sD%s    %s", RED, NORM,
-								atom_format(flags->fmt, pkgw->atom));
+								atom_format("%[CAT]%[PF]", pkgw->atom));
 						if (flags->do_time)
 							printf(": %s\n", fmt_elapsedtime(flags, elapsed));
 						else
@@ -1266,8 +1341,7 @@ int qlop_main(int argc, char **argv)
 					  m.do_unmerge = 1;
 					  m.do_autoclean = 1;
 					  m.show_lastmerge = 1;
-					  m.show_emerge = 1;
-					  verbose = 1;          break;
+					  m.show_emerge = 1;    break;
 			case 'r': m.do_running = 1;
 					  runningmode++;        break;
 			case 'a': m.do_average = 1;     break;
