@@ -601,8 +601,10 @@ env_vars vars_to_read[] = {
 	.default_value = d, \
 	.src = NULL, \
 },
-#define _Q_EVS(t, V, v, d) _Q_EV(t, V, .value.s = &v, .value_len = strlen(d), d)
-#define _Q_EVB(t, V, v, d) _Q_EV(t, V, .value.b = &v, .value_len = 0, d)
+#define _Q_EVS(t, V, v, d) \
+	_Q_EV(t, V, .value.s = &v, .value_len = sizeof(d) - 1, d)
+#define _Q_EVB(t, V, v, d) \
+	_Q_EV(t, V, .value.b = &v, .value_len = 0, d)
 
 	_Q_EVS(STR,  ROOT,                portroot,            "/")
 	_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      "")
