@@ -57,6 +57,7 @@ struct quse_state {
 	char **argv;
 	char **retv;
 	const char *overlay;
+	const char *repo;
 	bool do_all:1;
 	bool do_regex:1;
 	bool do_describe:1;
@@ -139,6 +140,7 @@ quse_search_use_local_desc(int portdirfd, struct quse_state *state)
 			if ((atom = atom_explode(buf)) == NULL)
 				continue;
 
+			atom->REPO = (char *)state->repo;
 			if (state->match == NULL ||
 					atom_compare(atom, state->match) == EQUAL)
 			{
@@ -228,8 +230,10 @@ quse_search_use_desc(int portdirfd, struct quse_state *state)
 			if (state->do_list) {
 				state->retv[i] = xstrdup(p);
 			} else {
-				printf("%sglobal%s[%s%s%s] %s\n",
-						BOLD, NORM, MAGENTA, buf, NORM, p);
+				printf("%sglobal%s%s%s%s[%s%s%s] %s\n",
+						BOLD, NORM,
+						GREEN, state->repo == NULL ? "" : state->repo, NORM,
+						MAGENTA, buf, NORM, p);
 			}
 
 			ret = true;
@@ -366,8 +370,10 @@ quse_search_profiles_desc(
 						*s++ = (char)toupper((int)*r);
 					} while (++r < (de->d_name + namelen));
 					*s = '\0';
-					printf("%s%s%s[%s%s%s] %s\n",
-							BOLD, ubuf, NORM, MAGENTA, buf, NORM, p);
+					printf("%s%s%s%s%s%s[%s%s%s] %s\n",
+							BOLD, ubuf, NORM,
+							GREEN, state->repo == NULL ? "" : state->repo, NORM,
+							MAGENTA, buf, NORM, p);
 				}
 
 				ret = true;
@@ -710,12 +716,21 @@ int quse_main(int argc, char **argv)
 	}
 
 	if (state.do_describe && state.match == NULL) {
-		array_for_each(overlays, n, overlay)
+		array_for_each(overlays, n, overlay) {
+			tree_ctx *t = NULL;
+			if (state.need_full_atom)
+				t = tree_open(portroot, overlay);  /* used for repo */
+			if (t != NULL)
+				state.repo = t->repo;
 			quse_describe_flag(portroot, overlay, &state);
+			if (t != NULL)
+				tree_close(t);
+		}
 	} else if (state.do_installed) {
 		tree_ctx *t = tree_open_vdb(portroot, portvdb);
 		if (t != NULL) {
 			state.overlay = NULL;
+			state.repo = NULL;
 			tree_foreach_pkg_sorted(t, quse_results_cb, &state, state.match);
 			tree_close(t);
 		}
@@ -724,6 +739,7 @@ int quse_main(int argc, char **argv)
 			tree_ctx *t = tree_open(portroot, overlay);
 			state.overlay = overlay;
 			if (t != NULL) {
+				state.repo = state.need_full_atom ? t->repo : NULL;
 				tree_foreach_pkg_sorted(t, quse_results_cb,
 						&state, state.match);
 				tree_close(t);
