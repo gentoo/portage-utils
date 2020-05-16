@@ -141,12 +141,14 @@ quse_search_use_local_desc(int portdirfd, struct quse_state *state)
 				continue;
 
 			atom->REPO = (char *)state->repo;
+			atom->SLOT = state->match->SLOT;  /* fake match */
 			if (state->match == NULL ||
 					atom_compare(atom, state->match) == EQUAL)
 			{
 				if (state->do_list) {
 					state->retv[i] = xstrdup(q);
 				} else {
+					atom->SLOT = NULL;  /* reset fake slot */
 					printf("%s[%s%s%s] %s\n",
 							atom_format(state->fmt, atom),
 							MAGENTA, p, NORM, q);
@@ -546,6 +548,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				.do_describe = false,
 				.do_list = true,
 				.match = atom,
+				.repo = state->repo,
 				.argc = cnt,
 				.argv = xmalloc(sizeof(char *) * cnt),
 				.retv = xzalloc(sizeof(char *) * cnt),
