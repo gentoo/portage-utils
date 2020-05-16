@@ -305,8 +305,12 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				printf("%s", atom_format(state->format, atom));
 				if (quiet)
 					puts("");
+				else if (verbose && e->type == CONTENTS_SYM)
+					printf(": %s%s -> %s\n",
+							state->root ? state->root : "",
+							e->name, e->sym_target);
 				else
-					printf(": %s%s\n", state->root ? : "", e->name);
+					printf(": %s%s\n", state->root ? state->root : "", e->name);
 			} else {
 				non_orphans[i] = 1;
 			}
