@@ -91,23 +91,13 @@ host_triplet = @host@
 bin_PROGRAMS = q$(EXEEXT)
 @QMANIFEST_ENABLED_TRUE@am__append_1 = qmanifest.c
 @QMANIFEST_ENABLED_TRUE@am__append_2 = \
-@QMANIFEST_ENABLED_TRUE@	$(OPENMP_CFLAGS) \
 @QMANIFEST_ENABLED_TRUE@	$(GPGME_CFLAGS)
 
-@QMANIFEST_ENABLED_TRUE@am__append_3 = \
-@QMANIFEST_ENABLED_TRUE@	$(OPENMP_CFLAGS)
-
-@QMANIFEST_ENABLED_TRUE@am__append_4 = man/qmanifest.1
-@QMANIFEST_ENABLED_TRUE@am__append_5 = qmanifest
-@QTEGRITY_ENABLED_TRUE@am__append_6 = qtegrity.c
-@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_TRUE@am__append_7 = \
-@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_TRUE@	$(OPENMP_CFLAGS)
-
-@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_TRUE@am__append_8 = \
-@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_TRUE@	$(OPENMP_CFLAGS)
-
-@QTEGRITY_ENABLED_TRUE@am__append_9 = man/qtegrity.1
-@QTEGRITY_ENABLED_TRUE@am__append_10 = qtegrity
+@QMANIFEST_ENABLED_TRUE@am__append_3 = man/qmanifest.1
+@QMANIFEST_ENABLED_TRUE@am__append_4 = qmanifest
+@QTEGRITY_ENABLED_TRUE@am__append_5 = qtegrity.c
+@QTEGRITY_ENABLED_TRUE@am__append_6 = man/qtegrity.1
+@QTEGRITY_ENABLED_TRUE@am__append_7 = qtegrity
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
@@ -278,14 +268,12 @@ am_q_OBJECTS = q-main.$(OBJEXT) q-q.$(OBJEXT) q-qatom.$(OBJEXT) \
 	$(am__objects_2)
 q_OBJECTS = $(am_q_OBJECTS)
 am__DEPENDENCIES_1 =
-@QMANIFEST_ENABLED_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
-@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_TRUE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
 q_DEPENDENCIES = $(top_builddir)/libq/libq.la \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_3)
+	$(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -1598,21 +1586,29 @@ SUBDIRS = \
 
 APPLETS = q qatom qcheck qdepends qfile qgrep qkeyword qlist qlop \
 	qmerge qpkg qsearch qsize qtbz2 quse qxpak $(NULL) \
-	$(am__append_5) $(am__append_10)
+	$(am__append_4) $(am__append_7)
 dist_man_MANS = man/q.1 man/qatom.1 man/qcheck.1 man/qdepends.1 \
 	man/qfile.1 man/qgrep.1 man/qkeyword.1 man/qlist.1 man/qlop.1 \
 	man/qmerge.1 man/qpkg.1 man/qsearch.1 man/qsize.1 man/qtbz2.1 \
-	man/quse.1 man/qxpak.1 $(NULL) $(am__append_4) $(am__append_9)
+	man/quse.1 man/qxpak.1 $(NULL) $(am__append_3) $(am__append_6)
 q_SOURCES = main.c q.c qatom.c qcheck.c qdepends.c qfile.c qgrep.c \
 	qkeyword.c qlist.c qlop.c qmerge.c qpkg.c qsearch.c qsize.c \
-	qtbz2.c quse.c qxpak.c $(NULL) $(am__append_1) $(am__append_6)
+	qtbz2.c quse.c qxpak.c $(NULL) $(am__append_1) $(am__append_5)
 q_CPPFLAGS = -I$(top_srcdir)/libq -I$(top_builddir)/autotools/gnulib \
-	-I$(top_srcdir)/autotools/gnulib $(NULL) $(am__append_2) \
-	$(am__append_7)
-q_LDADD = $(top_builddir)/libq/libq.la \
-	$(top_builddir)/autotools/gnulib/libgnu.a $(LIBSSL) $(LIBBL2) \
-	$(LIBZ) $(GPGME_LIBS) $(LIB_CLOCK_GETTIME) $(LIB_EACCESS) \
-	$(NULL) $(am__append_3) $(am__append_8)
+	-I$(top_srcdir)/autotools/gnulib $(OPENMP_CFLAGS) $(NULL) \
+	$(am__append_2)
+q_LDADD = \
+	$(top_builddir)/libq/libq.la \
+	$(top_builddir)/autotools/gnulib/libgnu.a \
+	$(OPENMP_CFLAGS) \
+	$(LIBSSL) \
+	$(LIBBL2) \
+	$(LIBZ) \
+	$(GPGME_LIBS) \
+	$(LIB_CLOCK_GETTIME) \
+	$(LIB_EACCESS) \
+	$(NULL)
+
 EXTRA_DIST = \
 	autotools/m4/gnulib-cache.m4 \
 	applets.h \

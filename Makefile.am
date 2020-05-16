@@ -69,10 +69,12 @@ q_CPPFLAGS = \
 	-I$(top_srcdir)/libq \
 	-I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib \
+	$(OPENMP_CFLAGS) \
 	$(NULL)
 q_LDADD = \
 	$(top_builddir)/libq/libq.la \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
+	$(OPENMP_CFLAGS) \
 	$(LIBSSL) \
 	$(LIBBL2) \
 	$(LIBZ) \
@@ -84,21 +86,12 @@ q_LDADD = \
 if QMANIFEST_ENABLED
 q_SOURCES += qmanifest.c
 q_CPPFLAGS += \
-	$(OPENMP_CFLAGS) \
 	$(GPGME_CFLAGS)
-q_LDADD += \
-	$(OPENMP_CFLAGS)
 dist_man_MANS += man/qmanifest.1
 APPLETS += qmanifest
 endif
 if QTEGRITY_ENABLED
 q_SOURCES += qtegrity.c
-if !QMANIFEST_ENABLED
-q_CPPFLAGS += \
-	$(OPENMP_CFLAGS)
-q_LDADD += \
-	$(OPENMP_CFLAGS)
-endif
 dist_man_MANS += man/qtegrity.1
 APPLETS += qtegrity
 endif

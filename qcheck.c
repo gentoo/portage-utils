@@ -18,7 +18,7 @@
 #include "atom.h"
 #include "contents.h"
 #include "copy_file.h"
-#include "md5_sha1_sum.h"
+#include "hash.h"
 #include "prelink.h"
 #include "tree.h"
 #include "xarray.h"
@@ -233,8 +233,8 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			}
 
 			hash_cb_t hash_cb =
-				state->undo_prelink ? hash_cb_prelink_undo : hash_cb_default;
-			f_digest = (char *)hash_file_at_cb(
+				state->undo_prelink ? hash_cb_prelink_undo : NULL;
+			f_digest = hash_file_at_cb(
 					pkg_ctx->cat_ctx->ctx->portroot_fd,
 					entry->name + 1, hash_algo, hash_cb);
 
@@ -242,7 +242,6 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			 * Can we get a digest of the file? */
 			if (!f_digest) {
 				++num_files_unknown;
-				free(f_digest);
 
 				if (state->qc_update)
 					fprintf(fp_contents_update, "%s\n", buffer);
@@ -283,11 +282,8 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 						fprintf(fp_contents_update, "%s\n", buffer);
 				}
 
-				free(f_digest);
 				continue;
 			}
-
-			free(f_digest);
 		}
 
 		/* Validate mtimes */

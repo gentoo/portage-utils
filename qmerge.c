@@ -24,8 +24,8 @@
 #include "copy_file.h"
 #include "contents.h"
 #include "eat_file.h"
+#include "hash.h"
 #include "human_readable.h"
-#include "md5_sha1_sum.h"
 #include "profile.h"
 #include "rmspace.h"
 #include "scandirat.h"
@@ -828,7 +828,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			/* Migrate a file */
 			struct timespec times[2];
 			int fd_srcf, fd_dstf;
-			unsigned char *hash;
+			char *hash;
 			const char *tmpname, *dname;
 			char buf[_Q_PATH_MAX * 2];
 			struct stat ignore;
@@ -838,7 +838,6 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			if (!pretend)
 				fprintf(contents, "obj %s %s %zu""\n",
 						cpath, hash, (size_t)st.st_mtime);
-			free(hash);
 
 			/* Check CONFIG_PROTECT */
 			if (config_protected(cpath + eprefix_len,
@@ -1502,10 +1501,9 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 			case CONTENTS_OBJ:
 				if (protected && unmerge_config_protected) {
 					/* If the file wasn't modified, unmerge it */
-					unsigned char *hash = hash_file_at(portroot_fd,
+					char *hash = hash_file_at(portroot_fd,
 							e->name + 1, HASH_MD5);
 					protected = strcmp(e->digest, (const char *)hash);
-					free(hash);
 				}
 				break;
 
@@ -1623,7 +1621,7 @@ pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *at
 	int ret = 0;
 
 	if (pkg->MD5[0]) {
-		if ((hash = (char*) hash_file(fname, HASH_MD5)) == NULL) {
+		if ((hash = hash_file(fname, HASH_MD5)) == NULL) {
 			errf("hash is NULL for %s", fname);
 		}
 		if (strcmp(hash, pkg->MD5) == 0) {
@@ -1634,11 +1632,10 @@ pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *at
 				warn("MD5:  [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->MD5, atom->CATEGORY, pkg->PF);
 			ret++;
 		}
-		free(hash);
 	}
 
 	if (pkg->SHA1[0]) {
-		hash = (char*) hash_file(fname, HASH_SHA1);
+		hash = hash_file(fname, HASH_SHA1);
 		if (strcmp(hash, pkg->SHA1) == 0) {
 			if (display)
 				qprintf("SHA1: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
@@ -1647,7 +1644,6 @@ pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *at
 				warn("SHA1: [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->SHA1, atom->CATEGORY, pkg->PF);
 			ret++;
 		}
-		free(hash);
 	}
 
 	if (!pkg->SHA1[0] && !pkg->MD5[0])

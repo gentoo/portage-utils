@@ -88,6 +88,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_FALSE@am__append_1 = hash_md5_sha1.c hash_md5_sha1.h
 subdir = libq
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
@@ -241,16 +242,25 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libq_la_LIBADD =
-am__objects_1 = libq_la-atom.lo libq_la-basename.lo libq_la-colors.lo \
+am__libq_la_SOURCES_DIST = atom.c atom.h basename.c basename.h \
+	busybox.h colors.c colors.h contents.c contents.h copy_file.c \
+	copy_file.h dep.c dep.h eat_file.c eat_file.h hash.c hash.h \
+	human_readable.c human_readable.h i18n.h prelink.c prelink.h \
+	profile.c profile.h rmspace.c rmspace.h safe_io.c safe_io.h \
+	scandirat.c scandirat.h set.c set.h tree.c tree.h xarray.c \
+	xarray.h xasprintf.h xchdir.c xchdir.h xmkdir.c xmkdir.h \
+	xpak.c xpak.h xregex.c xregex.h xsystem.c xsystem.h \
+	hash_md5_sha1.c hash_md5_sha1.h
+@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_FALSE@am__objects_1 = libq_la-hash_md5_sha1.lo
+am__objects_2 = libq_la-atom.lo libq_la-basename.lo libq_la-colors.lo \
 	libq_la-contents.lo libq_la-copy_file.lo libq_la-dep.lo \
-	libq_la-eat_file.lo libq_la-hash.lo libq_la-hash_fd.lo \
-	libq_la-human_readable.lo libq_la-md5_sha1_sum.lo \
+	libq_la-eat_file.lo libq_la-hash.lo libq_la-human_readable.lo \
 	libq_la-prelink.lo libq_la-profile.lo libq_la-rmspace.lo \
 	libq_la-safe_io.lo libq_la-scandirat.lo libq_la-set.lo \
 	libq_la-tree.lo libq_la-xarray.lo libq_la-xchdir.lo \
 	libq_la-xmkdir.lo libq_la-xpak.lo libq_la-xregex.lo \
-	libq_la-xsystem.lo
-am_libq_la_OBJECTS = $(am__objects_1)
+	libq_la-xsystem.lo $(am__objects_1)
+am_libq_la_OBJECTS = $(am__objects_2)
 libq_la_OBJECTS = $(am_libq_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -277,9 +287,8 @@ am__depfiles_remade = ./$(DEPDIR)/libq_la-atom.Plo \
 	./$(DEPDIR)/libq_la-contents.Plo \
 	./$(DEPDIR)/libq_la-copy_file.Plo ./$(DEPDIR)/libq_la-dep.Plo \
 	./$(DEPDIR)/libq_la-eat_file.Plo ./$(DEPDIR)/libq_la-hash.Plo \
-	./$(DEPDIR)/libq_la-hash_fd.Plo \
+	./$(DEPDIR)/libq_la-hash_md5_sha1.Plo \
 	./$(DEPDIR)/libq_la-human_readable.Plo \
-	./$(DEPDIR)/libq_la-md5_sha1_sum.Plo \
 	./$(DEPDIR)/libq_la-prelink.Plo \
 	./$(DEPDIR)/libq_la-profile.Plo \
 	./$(DEPDIR)/libq_la-rmspace.Plo \
@@ -309,7 +318,7 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libq_la_SOURCES)
-DIST_SOURCES = $(libq_la_SOURCES)
+DIST_SOURCES = $(am__libq_la_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -1470,36 +1479,14 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-QFILES = \
-	atom.c atom.h \
-	basename.c basename.h \
-	busybox.h \
-	colors.c colors.h \
-	contents.c contents.h \
-	copy_file.c copy_file.h \
-	dep.c dep.h \
-	eat_file.c eat_file.h \
-	hash.c hash.h \
-	hash_fd.c hash_fd.h \
-	human_readable.c human_readable.h \
-	i18n.h \
-	md5_sha1_sum.c md5_sha1_sum.h \
-	prelink.c prelink.h \
-	profile.c profile.h \
-	rmspace.c rmspace.h \
-	safe_io.c safe_io.h \
-	scandirat.c scandirat.h \
-	set.c set.h \
-	tree.c tree.h \
-	xarray.c xarray.h \
-	xasprintf.h \
-	xchdir.c xchdir.h \
-	xmkdir.c xmkdir.h \
-	xpak.c xpak.h \
-	xregex.c xregex.h \
-	xsystem.c xsystem.h \
-	$(NULL)
-
+QFILES = atom.c atom.h basename.c basename.h busybox.h colors.c \
+	colors.h contents.c contents.h copy_file.c copy_file.h dep.c \
+	dep.h eat_file.c eat_file.h hash.c hash.h human_readable.c \
+	human_readable.h i18n.h prelink.c prelink.h profile.c \
+	profile.h rmspace.c rmspace.h safe_io.c safe_io.h scandirat.c \
+	scandirat.h set.c set.h tree.c tree.h xarray.c xarray.h \
+	xasprintf.h xchdir.c xchdir.h xmkdir.c xmkdir.h xpak.c xpak.h \
+	xregex.c xregex.h xsystem.c xsystem.h $(NULL) $(am__append_1)
 noinst_LTLIBRARIES = libq.la
 libq_la_SOURCES = $(QFILES)
 libq_la_CPPFLAGS = \
@@ -1569,9 +1556,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-dep.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-eat_file.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-hash.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-hash_fd.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-hash_md5_sha1.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-human_readable.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-md5_sha1_sum.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-prelink.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-profile.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_la-rmspace.Plo@am__quote@ # am--include-marker
@@ -1669,26 +1655,12 @@ libq_la-hash.lo: hash.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-hash.lo `test -f 'hash.c' || echo '$(srcdir)/'`hash.c
 
-libq_la-hash_fd.lo: hash_fd.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-hash_fd.lo -MD -MP -MF $(DEPDIR)/libq_la-hash_fd.Tpo -c -o libq_la-hash_fd.lo `test -f 'hash_fd.c' || echo '$(srcdir)/'`hash_fd.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_la-hash_fd.Tpo $(DEPDIR)/libq_la-hash_fd.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='hash_fd.c' object='libq_la-hash_fd.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-hash_fd.lo `test -f 'hash_fd.c' || echo '$(srcdir)/'`hash_fd.c
-
 libq_la-human_readable.lo: human_readable.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-human_readable.lo -MD -MP -MF $(DEPDIR)/libq_la-human_readable.Tpo -c -o libq_la-human_readable.lo `test -f 'human_readable.c' || echo '$(srcdir)/'`human_readable.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_la-human_readable.Tpo $(DEPDIR)/libq_la-human_readable.Plo
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='human_readable.c' object='libq_la-human_readable.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-human_readable.lo `test -f 'human_readable.c' || echo '$(srcdir)/'`human_readable.c
-
-libq_la-md5_sha1_sum.lo: md5_sha1_sum.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-md5_sha1_sum.lo -MD -MP -MF $(DEPDIR)/libq_la-md5_sha1_sum.Tpo -c -o libq_la-md5_sha1_sum.lo `test -f 'md5_sha1_sum.c' || echo '$(srcdir)/'`md5_sha1_sum.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_la-md5_sha1_sum.Tpo $(DEPDIR)/libq_la-md5_sha1_sum.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='md5_sha1_sum.c' object='libq_la-md5_sha1_sum.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-md5_sha1_sum.lo `test -f 'md5_sha1_sum.c' || echo '$(srcdir)/'`md5_sha1_sum.c
 
 libq_la-prelink.lo: prelink.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-prelink.lo -MD -MP -MF $(DEPDIR)/libq_la-prelink.Tpo -c -o libq_la-prelink.lo `test -f 'prelink.c' || echo '$(srcdir)/'`prelink.c
@@ -1780,6 +1752,13 @@ libq_la-xsystem.lo: xsystem.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xsystem.c' object='libq_la-xsystem.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-xsystem.lo `test -f 'xsystem.c' || echo '$(srcdir)/'`xsystem.c
+
+libq_la-hash_md5_sha1.lo: hash_md5_sha1.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_la-hash_md5_sha1.lo -MD -MP -MF $(DEPDIR)/libq_la-hash_md5_sha1.Tpo -c -o libq_la-hash_md5_sha1.lo `test -f 'hash_md5_sha1.c' || echo '$(srcdir)/'`hash_md5_sha1.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_la-hash_md5_sha1.Tpo $(DEPDIR)/libq_la-hash_md5_sha1.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='hash_md5_sha1.c' object='libq_la-hash_md5_sha1.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_la-hash_md5_sha1.lo `test -f 'hash_md5_sha1.c' || echo '$(srcdir)/'`hash_md5_sha1.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -1920,9 +1899,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/libq_la-dep.Plo
 	-rm -f ./$(DEPDIR)/libq_la-eat_file.Plo
 	-rm -f ./$(DEPDIR)/libq_la-hash.Plo
-	-rm -f ./$(DEPDIR)/libq_la-hash_fd.Plo
+	-rm -f ./$(DEPDIR)/libq_la-hash_md5_sha1.Plo
 	-rm -f ./$(DEPDIR)/libq_la-human_readable.Plo
-	-rm -f ./$(DEPDIR)/libq_la-md5_sha1_sum.Plo
 	-rm -f ./$(DEPDIR)/libq_la-prelink.Plo
 	-rm -f ./$(DEPDIR)/libq_la-profile.Plo
 	-rm -f ./$(DEPDIR)/libq_la-rmspace.Plo
@@ -1989,9 +1967,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/libq_la-dep.Plo
 	-rm -f ./$(DEPDIR)/libq_la-eat_file.Plo
 	-rm -f ./$(DEPDIR)/libq_la-hash.Plo
-	-rm -f ./$(DEPDIR)/libq_la-hash_fd.Plo
+	-rm -f ./$(DEPDIR)/libq_la-hash_md5_sha1.Plo
 	-rm -f ./$(DEPDIR)/libq_la-human_readable.Plo
-	-rm -f ./$(DEPDIR)/libq_la-md5_sha1_sum.Plo
 	-rm -f ./$(DEPDIR)/libq_la-prelink.Plo
 	-rm -f ./$(DEPDIR)/libq_la-profile.Plo
 	-rm -f ./$(DEPDIR)/libq_la-rmspace.Plo

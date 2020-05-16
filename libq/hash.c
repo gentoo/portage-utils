@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019 Gentoo Foundation
+ * Copyright 2018-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
@@ -13,11 +13,14 @@
 #include "main.h"
 
 #ifdef HAVE_SSL
-#include <openssl/sha.h>
-#include <openssl/whrlpool.h>
+# include <openssl/md5.h>
+# include <openssl/sha.h>
+# include <openssl/whrlpool.h>
+#else
+# include "hash_md5_sha1.h"
 #endif
 #ifdef HAVE_BLAKE2B
-#include <blake2.h>
+# include <blake2.h>
 #endif
 
 #include "hash.h"
@@ -26,6 +29,28 @@ void
 hash_hex(char *out, const unsigned char *buf, const int length)
 {
 	switch (length) {
+		/* MD5_DIGEST_LENGTH */
+		case 16:
+			snprintf(out, 32 + 1,
+					"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
+					"%02x%02x%02x%02x%02x%02x",
+					buf[ 0], buf[ 1], buf[ 2], buf[ 3], buf[ 4],
+					buf[ 5], buf[ 6], buf[ 7], buf[ 8], buf[ 9],
+					buf[10], buf[11], buf[12], buf[13], buf[14],
+					buf[15]
+					);
+			break;
+		/* SHA1_DIGEST_LENGTH */
+		case 20:
+			snprintf(out, 40 + 1,
+					"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
+					"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+					buf[ 0], buf[ 1], buf[ 2], buf[ 3], buf[ 4],
+					buf[ 5], buf[ 6], buf[ 7], buf[ 8], buf[ 9],
+					buf[10], buf[11], buf[12], buf[13], buf[14],
+					buf[15], buf[16], buf[17], buf[18], buf[19]
+					);
+			break;
 		/* SHA256_DIGEST_LENGTH */
 		case 32:
 			snprintf(out, 64 + 1,
@@ -89,8 +114,10 @@ hash_hex(char *out, const unsigned char *buf, const int length)
  * the file pointed to by fname is returned in the flen argument.
  */
 void
-hash_compute_file(
-		const char *fname,
+hash_multiple_file_fd(
+		int fd,
+		char *md5,
+		char *sha1,
 		char *sha256,
 		char *sha512,
 		char *whrlpl,
@@ -102,10 +129,14 @@ hash_compute_file(
 	char data[8192];
 	size_t len;
 #ifdef HAVE_SSL
+	MD5_CTX m5;
+	SHA_CTX s1;
 	SHA256_CTX s256;
 	SHA512_CTX s512;
 	WHIRLPOOL_CTX whrl;
 #else
+	struct md5_ctx_t m5;
+	struct sha1_ctx_t s1;
 	(void)sha256;
 	(void)sha512;
 	(void)whrlpl;
@@ -116,13 +147,18 @@ hash_compute_file(
 	(void)blak2b;
 #endif
 
-	if ((f = fopen(fname, "r")) == NULL)
+	if ((f = fdopen(fd, "r")) == NULL)
 		return;
 
 #ifdef HAVE_SSL
+	MD5_Init(&m5);
+	SHA1_Init(&s1);
 	SHA256_Init(&s256);
 	SHA512_Init(&s512);
 	WHIRLPOOL_Init(&whrl);
+#else
+	md5_begin(&m5);
+	sha1_begin(&s1);
 #endif
 #ifdef HAVE_BLAKE2B
 	blake2b_init(&bl2b, BLAKE2B_OUTBYTES);
@@ -130,10 +166,19 @@ hash_compute_file(
 
 	while ((len = fread(data, 1, sizeof(data), f)) > 0) {
 		*flen += len;
-#if defined(HAVE_SSL) || defined(HAVE_BLAKE2B)
 #pragma omp parallel sections
 		{
 #ifdef HAVE_SSL
+#pragma omp section
+			{
+				if (hashes & HASH_MD5)
+					MD5_Update(&m5, data, len);
+			}
+#pragma omp section
+			{
+				if (hashes & HASH_SHA1)
+					SHA1_Update(&s1, data, len);
+			}
 #pragma omp section
 			{
 				if (hashes & HASH_SHA256)
@@ -149,6 +194,17 @@ hash_compute_file(
 				if (hashes & HASH_WHIRLPOOL)
 					WHIRLPOOL_Update(&whrl, data, len);
 			}
+#else
+#pragma omp section
+			{
+				if (hashes & HASH_MD5)
+					md5_hash(data, len, &m5);
+			}
+#pragma omp section
+			{
+				if (hashes & HASH_SHA1)
+					sha1_hash(data, len, &s1);
+			}
 #endif
 #ifdef HAVE_BLAKE2B
 #pragma omp section
@@ -158,14 +214,29 @@ hash_compute_file(
 			}
 #endif
 		}
-#endif /* HAVE_SSL || HAVE_BLAKE2B */
 	}
 	fclose(f);
 
-#if defined(HAVE_SSL) || defined(HAVE_BLAKE2B)
 #pragma omp parallel sections
 	{
 #ifdef HAVE_SSL
+#pragma omp section
+		{
+			if (hashes & HASH_MD5) {
+				unsigned char md5buf[MD5_DIGEST_LENGTH];
+				MD5_Final(md5buf, &m5);
+				hash_hex(md5, md5buf, MD5_DIGEST_LENGTH);
+			}
+		}
+#pragma omp section
+		{
+			if (hashes & HASH_SHA1) {
+				unsigned char sha1buf[SHA_DIGEST_LENGTH];
+				SHA1_Final(sha1buf, &s1);
+				hash_hex(sha1, sha1buf, SHA_DIGEST_LENGTH);
+			}
+		}
+#pragma omp section
 		{
 			if (hashes & HASH_SHA256) {
 				unsigned char sha256buf[SHA256_DIGEST_LENGTH];
@@ -189,6 +260,23 @@ hash_compute_file(
 				hash_hex(whrlpl, whrlplbuf, WHIRLPOOL_DIGEST_LENGTH);
 			}
 		}
+#else
+#pragma omp section
+		{
+			if (hashes & HASH_MD5) {
+				unsigned char md5buf[16];
+				md5_end(md5buf, &m5);
+				hash_hex(md5, md5buf, 16);
+			}
+		}
+#pragma omp section
+		{
+			if (hashes & HASH_SHA1) {
+				unsigned char sha1buf[20];
+				sha1_end(sha1buf, &s1);
+				hash_hex(sha1, sha1buf, 20);
+			}
+		}
 #endif
 #ifdef HAVE_BLAKE2B
 #pragma omp section
@@ -201,5 +289,60 @@ hash_compute_file(
 		}
 #endif
 	}
-#endif /* HAVE_SSL || HAVE_BLAKE2B */
+
+	fclose(f);
+}
+
+void
+hash_multiple_file_at_cb(
+		int pfd,
+		const char *fname,
+		hash_cb_t cb,
+		char *md5,
+		char *sha1,
+		char *sha256,
+		char *sha512,
+		char *whrlpl,
+		char *blak2b,
+		size_t *flen,
+		int hashes)
+{
+	int fd = openat(pfd, fname, O_RDONLY | O_CLOEXEC);
+	if (fd == -1) {
+		*flen = 0;
+		return;
+	}
+
+	if (cb != NULL)
+		fd = cb(fd, fname);
+
+	hash_multiple_file_fd(fd, md5, sha1, sha256, sha512,
+			whrlpl, blak2b, flen, hashes);
+
+	close(fd);
+}
+
+static char _hash_file_buf[128 + 1];
+char *
+hash_file_at_cb(int pfd, const char *fname, int hash, hash_cb_t cb)
+{
+	size_t dummy;
+
+	switch (hash) {
+		case HASH_MD5:
+		case HASH_SHA1:
+		case HASH_SHA256:
+		case HASH_SHA512:
+		case HASH_WHIRLPOOL:
+		case HASH_BLAKE2B:
+			hash_multiple_file_at_cb(pfd, fname, cb,
+					_hash_file_buf, _hash_file_buf, _hash_file_buf,
+					_hash_file_buf, _hash_file_buf, _hash_file_buf,
+					&dummy, hash);
+			break;
+		default:
+			return NULL;
+	}
+
+	return _hash_file_buf;
 }

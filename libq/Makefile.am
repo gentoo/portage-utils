@@ -9,10 +9,8 @@ QFILES = \
 	dep.c dep.h \
 	eat_file.c eat_file.h \
 	hash.c hash.h \
-	hash_fd.c hash_fd.h \
 	human_readable.c human_readable.h \
 	i18n.h \
-	md5_sha1_sum.c md5_sha1_sum.h \
 	prelink.c prelink.h \
 	profile.c profile.h \
 	rmspace.c rmspace.h \
@@ -28,6 +26,12 @@ QFILES = \
 	xregex.c xregex.h \
 	xsystem.c xsystem.h \
 	$(NULL)
+
+if !QMANIFEST_ENABLED
+if !QTEGRITY_ENABLED
+QFILES += hash_md5_sha1.c hash_md5_sha1.h
+endif
+endif
 
 noinst_LTLIBRARIES = libq.la
 libq_la_SOURCES = $(QFILES)

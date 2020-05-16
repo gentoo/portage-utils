@@ -21,8 +21,8 @@
 #include "atom.h"
 #include "basename.h"
 #include "contents.h"
+#include "hash.h"
 #include "human_readable.h"
-#include "md5_sha1_sum.h"
 #include "scandirat.h"
 #include "set.h"
 #include "tree.h"
@@ -228,14 +228,13 @@ qpkg_make(depend_atom *atom)
 			continue;
 		if (check_pkg_install_mask(e->name) != 0)
 			continue;
-		fprintf(out, "%s\n", e->name+1); /* dont output leading / */
+		fprintf(out, "%s\n", e->name+1); /* don't output leading / */
 		if (e->type == CONTENTS_OBJ && verbose) {
-			char *hash = (char *)hash_file(e->name, HASH_MD5);
+			char *hash = hash_file(e->name, HASH_MD5);
 			if (hash != NULL) {
 				if (strcmp(e->digest, hash) != 0)
 					warn("MD5: mismatch expected %s got %s for %s",
 							e->digest, hash, e->name);
-				free(hash);
 			}
 		}
 	}
