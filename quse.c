@@ -141,7 +141,8 @@ quse_search_use_local_desc(int portdirfd, struct quse_state *state)
 				continue;
 
 			atom->REPO = (char *)state->repo;
-			atom->SLOT = state->match->SLOT;  /* fake match */
+			if (state->match != NULL)
+				atom->SLOT = state->match->SLOT;  /* fake match */
 			if (state->match == NULL ||
 					atom_compare(atom, state->match) == EQUAL)
 			{
