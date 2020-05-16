@@ -15,10 +15,11 @@
 
 #define QATOM_FORMAT "%{CATEGORY} %{PN} %{PV} %[PR] %[SLOT] %[pfx] %[sfx]"
 
-#define QATOM_FLAGS "F:cpl" COMMON_FLAGS
+#define QATOM_FLAGS "F:cspl" COMMON_FLAGS
 static struct option const qatom_long_opts[] = {
 	{"format",     a_argument, NULL, 'F'},
 	{"compare",   no_argument, NULL, 'c'},
+	{"scompare",  no_argument, NULL, 's'},
 	{"print",     no_argument, NULL, 'p'},
 	{"lookup",    no_argument, NULL, 'l'},
 	COMMON_LONG_OPTS
@@ -26,6 +27,7 @@ static struct option const qatom_long_opts[] = {
 static const char * const qatom_opts_help[] = {
 	"Custom output format (default: " QATOM_FORMAT ")",
 	"Compare two atoms",
+	"Compare two atoms in the given order data, query",
 	"Print reconstructed atom",
 	"Lookup atom in tree",
 	COMMON_OPTS_HELP
@@ -34,7 +36,13 @@ static const char * const qatom_opts_help[] = {
 
 int qatom_main(int argc, char **argv)
 {
-	enum qatom_atom { _EXPLODE=0, _COMPARE, _PRINT, _LOOKUP } action = _EXPLODE;
+	enum qatom_atom {
+		_EXPLODE = 0,
+		_COMPARE,
+		_SCOMPARE,
+		_PRINT,
+		_LOOKUP
+	} action = _EXPLODE;
 	const char *format = QATOM_FORMAT;
 	depend_atom *atom;
 	depend_atom *atomc;
@@ -43,10 +51,11 @@ int qatom_main(int argc, char **argv)
 
 	while ((i = GETOPT_LONG(QATOM, qatom, "")) != -1) {
 		switch (i) {
-		case 'F': format = optarg;   break;
-		case 'c': action = _COMPARE; break;
-		case 'p': action = _PRINT;   break;
-		case 'l': action = _LOOKUP;  break;
+		case 'F': format = optarg;    break;
+		case 'c': action = _COMPARE;  break;
+		case 's': action = _SCOMPARE; break;
+		case 'p': action = _PRINT;    break;
+		case 'l': action = _LOOKUP;   break;
 		COMMON_GETOPTS_CASES(qatom)
 		}
 	}
@@ -54,7 +63,7 @@ int qatom_main(int argc, char **argv)
 	if (argc == optind)
 		qatom_usage(EXIT_FAILURE);
 
-	if (action == _COMPARE && (argc - optind) % 2)
+	if ((action == _COMPARE || action == _SCOMPARE) && (argc - optind) % 2)
 		err("compare needs even number of arguments");
 
 	if (action == _LOOKUP) {
@@ -71,7 +80,8 @@ int qatom_main(int argc, char **argv)
 		}
 
 		switch (action) {
-		case _COMPARE: {
+		case _COMPARE:
+		case _SCOMPARE: {
 			int r;
 
 			i++;
@@ -81,7 +91,8 @@ int qatom_main(int argc, char **argv)
 				break;
 			}
 
-			if (atomc->blocker != ATOM_BL_NONE ||
+			if (action == _SCOMPARE ||
+					atomc->blocker != ATOM_BL_NONE ||
 					atomc->pfx_op != ATOM_OP_NONE ||
 					atomc->sfx_op != ATOM_OP_NONE ||
 					(atomc->CATEGORY == NULL &&
