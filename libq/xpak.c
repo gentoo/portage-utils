@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -46,9 +46,11 @@
 typedef struct {
 	void *ctx;
 	FILE *fp;
+	unsigned int xpakstart;  /* offset in the file for XPAKPACK */
 	unsigned int index_len;
 	unsigned int data_len;
-	char *index, *data;
+	char *index;
+	char *data;
 } _xpak_archive;
 
 static void _xpak_walk_index(
@@ -119,6 +121,7 @@ static _xpak_archive *_xpak_open(const int fd)
 
 				if (fseek(ret.fp, -(xpaklen + TBZ2_FOOTER_LEN), SEEK_END) == 0)
 				{
+					ret.xpakstart = (unsigned int)ftell(ret.fp);
 					if (fread(buf, 1, XPAK_START_LEN, ret.fp) != XPAK_START_LEN)
 						goto close_and_ret;
 					if (memcmp(buf, XPAK_START_MSG, XPAK_START_MSG_LEN) == 0)
@@ -129,6 +132,7 @@ static _xpak_archive *_xpak_open(const int fd)
 		warn("Not an xpak file");
 		goto close_and_ret;
 	}
+	ret.xpakstart = 0;  /* pure xpak file */
 
 setup_lens:
 	/* calc index and data sizes */
@@ -165,7 +169,7 @@ xpak_process_fd(
 
 	x = _xpak_open(fd);
 	if (!x)
-		return 1;
+		return -1;
 
 	x->ctx = ctx;
 	x->index = buf;
@@ -196,7 +200,7 @@ xpak_process_fd(
 	if (get_data)
 		free(x->data);
 
-	return 0;
+	return x->xpakstart;
 }
 
 int
@@ -215,7 +219,7 @@ xpak_process(
 		return -1;
 
 	ret = xpak_process_fd(fd, get_data, ctx, func);
-	if (ret != 0)
+	if (ret < 0)
 		warn("Unable to open file '%s'", file);
 
 	return ret;
