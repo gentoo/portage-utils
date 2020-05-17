@@ -16,7 +16,6 @@ jobs:
         - COVERITY_SCAN_NOTIFICATION_EMAIL="grobian@gentoo.org"
         - COVERITY_SCAN_BUILD_COMMAND="make"
     - compiler: valgrind
-      dist: xenial
       env:
         - CFLAGS="-g"
         - Q_RUN_WITH_VALGRIND=1
