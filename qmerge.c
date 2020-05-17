@@ -34,6 +34,7 @@
 #include "xasprintf.h"
 #include "xchdir.h"
 #include "xmkdir.h"
+#include "xpak.h"
 #include "xsystem.h"
 
 #ifndef GLOB_BRACE
@@ -135,46 +136,6 @@ prompt(const char *p)
 	default:
 		return false;
 	}
-}
-
-static int run_applet_l(const char *arg, ...)
-{
-	int (*applet)(int, char **);
-	va_list ap;
-	int ret, optind_saved, argc;
-	char **argv;
-	const char *argv0_saved;
-
-	optind_saved = optind;
-	argv0_saved = argv0;
-
-	applet = lookup_applet(arg);
-	if (!applet)
-		return -1;
-
-	/* This doesn't NULL terminate argv, but you should be using argc */
-	va_start(ap, arg);
-	argc = 0;
-	argv = NULL;
-	while (arg) {
-		argv = xrealloc(argv, sizeof(*argv) * ++argc);
-		argv[argc - 1] = xstrdup(arg);
-		arg = va_arg(ap, const char *);
-	}
-	va_end(ap);
-
-	optind = 0;
-	argv0 = argv[0];
-	ret = applet(argc, argv);
-
-	while (argc--)
-		free(argv[argc]);
-	free(argv);
-
-	optind = optind_saved;
-	argv0 = argv0_saved;
-
-	return ret;
 }
 
 static void
@@ -980,6 +941,32 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 	return ret;
 }
 
+static void
+pkg_extract_xpak_cb(
+	void *ctx,
+	char *pathname,
+	int pathname_len,
+	int data_offset,
+	int data_len,
+	char *data)
+{
+	FILE *out;
+	int *destdirfd = (int *)ctx;
+	(void)pathname_len;
+
+	int fd = openat(*destdirfd, pathname,
+			O_WRONLY | O_CLOEXEC | O_CREAT | O_TRUNC, 0644);
+	if (fd < 0)
+		return;
+	out = fdopen(fd, "w");
+	if (!out)
+		return;
+
+	fwrite(data + data_offset, 1, data_len, out);
+
+	fclose(out);
+}
+
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
 static void
 pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
@@ -1006,6 +993,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	int cpm_argc;
 	char **cp_argv;
 	char **cpm_argv;
+	int tbz2size;
 
 	if (!install || !pkg || !atom)
 		return;
@@ -1142,24 +1130,23 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	mkdir("temp", 0755);
 	mkdir_p(portroot, 0755);
 
-	/* XXX: maybe some day we should have this step operate on the
-	 *      tarball directly rather than unpacking it first. */
-
-	/* split the tbz and xpak data */
 	xasprintf(&tbz2, "%s/%s/%s.tbz2", pkgdir, pkg->CATEGORY, pkg->PF);
-	if (run_applet_l("qtbz2", "-s", tbz2, NULL) != 0)
-		err("`qtbz2 -s %s` failed", tbz2);
+	tbz2size = 0;
 
 	mkdir("vdb", 0755);
-	sprintf(tbz2, "%s.xpak", pkg->PF);
-	if (run_applet_l("qxpak", "-d", "vdb", "-x", tbz2, NULL) != 0)
-		err("`qxpak -d vdb -x %s` failed", tbz2);
+	{
+		int vdbfd = open("vdb", O_RDONLY);
+		if (vdbfd == -1)
+			err("failed to open vdb extraction directory");
+		tbz2size = xpak_extract(tbz2, &vdbfd, pkg_extract_xpak_cb);
+	}
+	if (tbz2size <= 0)
+		err("%s appears not to be a valid tbz2 file", tbz2);
 
 	/* figure out if the data is compressed differently from what the
 	 * name suggests, bug #660508, usage of BINPKG_COMPRESS,
 	 * due to the minimal nature of where we run, we cannot rely on file
 	 * or GNU tar, so have to do some laymans MAGIC hunting ourselves */
-	compr = "I brotli"; /* default: brotli; has no magic header */
 	{
 		/* bz2: 3-byte: 'B' 'Z' 'h'              at byte 0
 		 * gz:  2-byte:  1f  8b                  at byte 0
@@ -1173,7 +1160,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		unsigned char magic[257+6];
 		FILE *mfd;
 
-		sprintf(tbz2, "%s.tar.bz2", pkg->PF);
+		compr = "brotli -dc"; /* default: brotli; has no magic header */
 		mfd = fopen(tbz2, "r");
 		if (mfd != NULL) {
 			size_t mlen = fread(magic, 1, sizeof(magic), mfd);
@@ -1182,16 +1169,16 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 			if (mlen >= 3 && magic[0] == 'B' && magic[1] == 'Z' &&
 					magic[2] == 'h')
 			{
-				compr = "j";
+				compr = "bzip2 -dc";
 			} else if (mlen >= 2 &&
 					magic[0] == 037 && magic[1] == 0213)
 			{
-				compr = "z";
+				compr = "gzip -dc";
 			} else if (mlen >= 5 &&
 					magic[1] == '7' && magic[2] == 'z' &&
 					magic[3] == 'X' && magic[4] == 'Z')
 			{
-				compr = "J";
+				compr = "xz -dc";
 			} else if (mlen == 257+6 &&
 					magic[257] == 'u' && magic[258] == 's' &&
 					magic[259] == 't' && magic[260] == 'a' &&
@@ -1202,7 +1189,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 					magic[0] == 0x04 && magic[1] == 0x22 &&
 					magic[2] == 0x4D && magic[3] == 0x18)
 			{
-				compr = "I lz4";
+				compr = "lz4 -dc";
 			} else if (mlen >= 4 &&
 					magic[0] >= 0x22 && magic[0] <= 0x28 &&
 					magic[1] == 0xB5 && magic[2] == 0x2F &&
@@ -1214,7 +1201,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 				 * that not more memory is allocated than what is really
 				 * needed to decompress the file. See
 				 * https://bugs.gentoo.org/show_bug.cgi?id=634980 */
-				compr = "I zstd --long=31";
+				compr = "zstd --long=31 -dc";
 				/* If really tar -I would be used we would have to quote:
 				 * compr = "I \"zstd --long=31\"";
 				 * But actually we use a pipe (see below) */
@@ -1222,7 +1209,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 					magic[0] == 'L' && magic[1] == 'Z' &&
 					magic[2] == 'I' && magic[3] == 'P')
 			{
-				compr = "I lzip";
+				compr = "lzip -dc";
 			} else if (mlen >= 9 &&
 					magic[0] == 0x89 && magic[1] == 'L' &&
 					magic[2] == 'Z' && magic[3] == 'O' &&
@@ -1230,30 +1217,27 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 					magic[6] == 0x0A && magic[7] == 0x1A &&
 					magic[8] == 0x0A)
 			{
-				compr = "I lzop";
+				compr = "lzop -dc";
 			}
+			fclose(mfd);
 		}
 	}
 
-	free(tbz2);
-
 	/* extract the binary package data */
 	mkdir("image", 0755);
-	if (compr[0] != 'I') {
-		snprintf(buf, sizeof(buf),
-			BUSYBOX " tar -x%s%s -f %s.tar.bz2 -C image/",
-			((verbose > 1) ? "v" : ""), compr, pkg->PF);
-	} else {
-		/* busybox's tar has no -I option. Thus, although we possibly
-		 * use busybox's shell and tar, we thus pipe, expecting the
-		 * corresponding (de)compression tool to be in PATH; if not,
-		 * a failure will occur.
-		 * Since some tools (e.g. zstd) complain about the .bz2
-		 * extension, we feed the tool by input redirection. */
-		snprintf(buf, sizeof(buf),
-			BUSYBOX " sh -c '%s -dc <%s.tar.bz2 | tar -x%sf - -C image/'",
-			compr + 2, pkg->PF, ((verbose > 1) ? "v" : ""));
-	}
+	/* busybox's tar has no -I option. Thus, although we possibly
+	 * use busybox's shell and tar, we thus pipe, expecting the
+	 * corresponding (de)compression tool to be in PATH; if not,
+	 * a failure will occur.
+	 * Since some tools (e.g. zstd) complain about the .bz2
+	 * extension, we feed the tool by input redirection. */
+	snprintf(buf, sizeof(buf),
+		BUSYBOX " sh -c 'dd status=none if=%s bs=1 count=%d %s%s | "
+		"tar -x%sf - -C image/'",
+		tbz2, tbz2size, compr[0] == '\0' ? "" : "| ", compr,
+		((verbose > 1) ? "v" : ""));
+
+	free(tbz2);
 	xsystem(buf);
 	fflush(stdout);
 
