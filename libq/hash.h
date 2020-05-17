@@ -30,10 +30,10 @@ enum hash_impls {
 typedef int (*hash_cb_t) (int, const char *);
 
 void hash_hex(char *out, const unsigned char *buf, const int length);
-void hash_multiple_file_fd(
+int hash_multiple_file_fd(
 		int fd, char *md5, char *sha1, char *sha256, char *sha512,
 		char *whrlpl, char *blak2b, size_t *flen, int hashes);
-void hash_multiple_file_at_cb(
+int hash_multiple_file_at_cb(
 		int pfd, const char *fname, hash_cb_t cb, char *md5,
 		char *sha1, char *sha256, char *sha512, char *whrlpl,
 		char *blak2b, size_t *flen, int hashes);

@@ -113,7 +113,7 @@ hash_hex(char *out, const unsigned char *buf, const int length)
  * left untouched, e.g. they can be NULL.  The number of bytes read from
  * the file pointed to by fname is returned in the flen argument.
  */
-void
+int
 hash_multiple_file_fd(
 		int fd,
 		char *md5,
@@ -148,7 +148,7 @@ hash_multiple_file_fd(
 #endif
 
 	if ((f = fdopen(fd, "r")) == NULL)
-		return;
+		return -1;
 
 #ifdef HAVE_SSL
 	MD5_Init(&m5);
@@ -164,6 +164,7 @@ hash_multiple_file_fd(
 	blake2b_init(&bl2b, BLAKE2B_OUTBYTES);
 #endif
 
+	*flen = 0;
 	while ((len = fread(data, 1, sizeof(data), f)) > 0) {
 		*flen += len;
 #pragma omp parallel sections
@@ -291,9 +292,10 @@ hash_multiple_file_fd(
 	}
 
 	fclose(f);
+	return 0;
 }
 
-void
+int
 hash_multiple_file_at_cb(
 		int pfd,
 		const char *fname,
@@ -307,19 +309,23 @@ hash_multiple_file_at_cb(
 		size_t *flen,
 		int hashes)
 {
+	int ret;
 	int fd = openat(pfd, fname, O_RDONLY | O_CLOEXEC);
-	if (fd == -1) {
-		*flen = 0;
-		return;
+
+	if (fd == -1)
+		return -1;
+
+	if (cb != NULL) {
+		fd = cb(fd, fname);
+		if (fd == -1)
+			return -1;
 	}
 
-	if (cb != NULL)
-		fd = cb(fd, fname);
-
-	hash_multiple_file_fd(fd, md5, sha1, sha256, sha512,
+	ret = hash_multiple_file_fd(fd, md5, sha1, sha256, sha512,
 			whrlpl, blak2b, flen, hashes);
 
 	close(fd);
+	return ret;
 }
 
 static char _hash_file_buf[128 + 1];
@@ -335,10 +341,11 @@ hash_file_at_cb(int pfd, const char *fname, int hash, hash_cb_t cb)
 		case HASH_SHA512:
 		case HASH_WHIRLPOOL:
 		case HASH_BLAKE2B:
-			hash_multiple_file_at_cb(pfd, fname, cb,
+			if (hash_multiple_file_at_cb(pfd, fname, cb,
 					_hash_file_buf, _hash_file_buf, _hash_file_buf,
 					_hash_file_buf, _hash_file_buf, _hash_file_buf,
-					&dummy, hash);
+					&dummy, hash) != 0)
+				return NULL;
 			break;
 		default:
 			return NULL;
