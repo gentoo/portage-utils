@@ -1598,34 +1598,51 @@ unlink_empty(const char *buf)
 }
 
 static int
-pkg_verify_checksums(char *fname, const struct pkg_t *pkg, const depend_atom *atom,
-                     int strict, int display)
+pkg_verify_checksums(
+		char *fname,
+		const struct pkg_t *pkg,
+		const depend_atom *atom,
+		int strict,
+		int display)
 {
-	char *hash = NULL;
 	int ret = 0;
+	char md5[32+1];
+	char sha1[40+1];
+	size_t flen;
+
+	if (hash_multiple_file(fname, md5, sha1, NULL, NULL, NULL, NULL,
+			&flen, HASH_MD5 | HASH_SHA1) == -1)
+		errf("failed to compute hashes for %s/%s: %s\n",
+				atom->CATEGORY, pkg->PF, strerror(errno));
+
+	if (flen != pkg->SIZE) {
+		warn("filesize %zu doesn't match requested size %zu for %s/%s\n",
+				flen, pkg->SIZE, atom->CATEGORY, pkg->PF);
+		ret++;
+	}
 
 	if (pkg->MD5[0]) {
-		if ((hash = hash_file(fname, HASH_MD5)) == NULL) {
-			errf("hash is NULL for %s", fname);
-		}
-		if (strcmp(hash, pkg->MD5) == 0) {
+		if (md5 != NULL && strcmp(md5, pkg->MD5) == 0) {
 			if (display)
-				printf("MD5:  [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
+				printf("MD5:  [%sOK%s] %s %s/%s\n",
+						GREEN, NORM, md5, atom->CATEGORY, pkg->PF);
 		} else {
 			if (display)
-				warn("MD5:  [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->MD5, atom->CATEGORY, pkg->PF);
+				warn("MD5:  [%sER%s] (%s) != (%s) %s/%s",
+						RED, NORM, md5, pkg->MD5, atom->CATEGORY, pkg->PF);
 			ret++;
 		}
 	}
 
-	if (pkg->SHA1[0]) {
-		hash = hash_file(fname, HASH_SHA1);
-		if (strcmp(hash, pkg->SHA1) == 0) {
+	if (sha1 != NULL && pkg->SHA1[0]) {
+		if (strcmp(sha1, pkg->SHA1) == 0) {
 			if (display)
-				qprintf("SHA1: [%sOK%s] %s %s/%s\n", GREEN, NORM, hash, atom->CATEGORY, pkg->PF);
+				qprintf("SHA1: [%sOK%s] %s %s/%s\n",
+						GREEN, NORM, sha1, atom->CATEGORY, pkg->PF);
 		} else {
 			if (display)
-				warn("SHA1: [%sER%s] (%s) != (%s) %s/%s", RED, NORM, hash, pkg->SHA1, atom->CATEGORY, pkg->PF);
+				warn("SHA1: [%sER%s] (%s) != (%s) %s/%s",
+						RED, NORM, sha1, pkg->SHA1, atom->CATEGORY, pkg->PF);
 			ret++;
 		}
 	}
