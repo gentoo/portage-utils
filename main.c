@@ -594,7 +594,7 @@ env_vars vars_to_read[] = {
 #define _Q_EV(t, V, set, lset, d) \
 { \
 	.name = #V, \
-	.name_len = strlen(#V), \
+	.name_len = sizeof(#V) - 1, \
 	.type = _Q_##t, \
 	set, \
 	lset, \
@@ -626,6 +626,8 @@ env_vars vars_to_read[] = {
 	{ NULL, 0, _Q_BOOL, { NULL }, 0, NULL, NULL, }
 
 #undef _Q_EV
+#undef _Q_EVS
+#undef _Q_EVB
 };
 set *package_masks = NULL;
 
