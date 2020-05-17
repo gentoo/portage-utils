@@ -2,26 +2,20 @@
 # https://docs.travis-ci.com/
 
 language: c
-sudo: false
+dist: bionic
+os: linux
 
-matrix:
+jobs:
   include:
     - compiler: gcc
-      os: linux
-      dist: bionic
     - compiler: clang
-      os: linux
-      dist: bionic
     - compiler: coverity
-      os: linux
-      dist: bionic
       env:
         - COVERITY_SCAN_PROJECT_NAME="$TRAVIS_REPO_SLUG"
         - COVERITY_SCAN_BRANCH_PATTERN="master"
         - COVERITY_SCAN_NOTIFICATION_EMAIL="grobian@gentoo.org"
         - COVERITY_SCAN_BUILD_COMMAND="make"
     - compiler: valgrind
-      os: linux
       dist: xenial
       env:
         - CFLAGS="-g"
