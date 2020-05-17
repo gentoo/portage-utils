@@ -154,8 +154,9 @@ int qxpak_main(int argc, char **argv)
 		ret = xpak_create(cbctx.dir_fd, xpak, argc, argv, 0, verbose);
 		break;
 	default:
-		ret = EXIT_FAILURE;
+		ret = -1;
 	}
+	ret = ret < 0 ? EXIT_FAILURE : 0;
 
 	if (cbctx.dir_fd != AT_FDCWD)
 		close(cbctx.dir_fd);
