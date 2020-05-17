@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2020 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -83,8 +83,6 @@ tbz2_compose(int dir_fd, const char *tarbz2, const char *xpak, const char *tbz2)
 		fclose(out);
 		return ret;
 	}
-	if (pread(fd, buf, 3, 0) != 3 || memcmp(buf, "BZh", 3))
-			warn("%s: does not appear to be a .tar.bz2", tarbz2);
 	in_tarbz2 = fdopen(fd, "r");
 	if (in_tarbz2 == NULL) {
 		fclose(out);
