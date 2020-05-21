@@ -1457,7 +1457,7 @@ int qlop_main(int argc, char **argv)
 
 	/* handle -l / -d conflict */
 	if (start_time != 0 && m.show_lastmerge) {
-		if (m.show_emerge)
+		if (!m.show_emerge)
 			warn("-l and -d cannot be used together, dropping -l");
 		m.show_lastmerge = 0;
 	}
