@@ -1293,6 +1293,22 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 	tree_pkg_meta meta;
 	depend_atom *atom = NULL;
 
+	/* re-read the contents, this is necessary to make it possible to
+	 * call this function multiple times
+	 * TODO: generate an internal in-memory tree when cache is enabled */
+	if (ctx->pkgs == NULL || ctx->pkgs[0] == '\0') {
+		int fd = openat(ctx->tree_fd, binpkg_packages, O_RDONLY | O_CLOEXEC);
+		if (!eat_file_fd(fd, &ctx->pkgs, &ctx->pkgslen)) {
+			if (ctx->pkgs != NULL) {
+				free(ctx->pkgs);
+				ctx->pkgs = NULL;
+			}
+			close(fd);
+			return 1;
+		}
+		close(fd);
+	}
+
 	memset(&meta, 0, sizeof(meta));
 
 	do {
