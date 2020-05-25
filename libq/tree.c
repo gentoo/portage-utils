@@ -1744,7 +1744,7 @@ tree_match_close(tree_match_ctx *match)
 		if (match->free_atom)
 			atom_implode(match->atom);
 		if (match->meta != NULL)
-			free(match->meta);
+			tree_close_meta(match->meta);
 		free(match);
 	}
 }
