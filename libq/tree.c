@@ -1277,11 +1277,11 @@ tree_close_pkg(tree_pkg_ctx *pkg_ctx)
 static int
 tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 {
-	char *p = ctx->pkgs;
+	char *p;
 	char *q;
 	char *c;
 	char pkgname[_Q_PATH_MAX];
-	size_t len = ctx->pkgslen;
+	size_t len;
 	int ret = 0;
 	depend_atom *query = ctx->query_atom;
 
@@ -1306,6 +1306,9 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		}
 		close(fd);
 	}
+
+	p = ctx->pkgs;
+	len = strlen(ctx->pkgs);  /* sucks, need eat_file change */
 
 	memset(&meta, 0, sizeof(meta));
 
