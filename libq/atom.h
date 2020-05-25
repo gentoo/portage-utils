@@ -97,6 +97,7 @@ typedef enum {
 } atom_equality;
 
 depend_atom *atom_explode(const char *atom);
+depend_atom *atom_clone(depend_atom *atom);
 void atom_implode(depend_atom *atom);
 atom_equality atom_compare(const depend_atom *a1, const depend_atom *a2);
 atom_equality atom_compare_str(const char * const s1, const char * const s2);

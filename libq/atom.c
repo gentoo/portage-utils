@@ -355,6 +355,112 @@ atom_explode(const char *atom)
 	return ret;
 }
 
+depend_atom *
+atom_clone(depend_atom *atom)
+{
+	depend_atom *ret;
+	char *p;
+	size_t alen;
+	size_t clen = 0;
+	size_t flen = 0;
+	size_t plen = 0;
+	size_t nlen = 0;
+	size_t slen = 0;
+	size_t rlen = 0;
+
+	if (atom->REPO != NULL)
+		rlen = strlen(atom->REPO) + 1;
+	if (atom->SLOT != NULL)
+		slen = strlen(atom->SLOT) + 1;
+	if (atom->CATEGORY != NULL)
+		clen = strlen(atom->CATEGORY) + 1;
+	if (atom->PF != NULL)
+		flen = strlen(atom->PF) + 1;  /* should include PVR */
+	if (atom->P != NULL)
+		plen = strlen(atom->P) + 1;  /* should include PV */
+	if (atom->PN != NULL)
+		nlen = strlen(atom->PN) + 1;
+
+	alen = sizeof(*ret) + clen + flen + plen + nlen + rlen + slen;
+	ret = xmalloc(alen);
+	memset(ret, '\0', sizeof(*ret));
+
+	/* build up main storage pointers, see explode */
+	p = (char *)ret + sizeof(*ret);
+	if (atom->CATEGORY != NULL) {
+		ret->CATEGORY = p;
+		memcpy(ret->CATEGORY, atom->CATEGORY, clen);
+		p += clen;
+	}
+	if (atom->PF != NULL) {
+		ret->PF = p;
+		memcpy(ret->PF, atom->PF, flen);
+		p += flen;
+	}
+	if (atom->PVR > atom->PF && atom->PVR < (atom->PF + flen))
+		ret->PVR = ret->PF + (atom->PVR - atom->PF);
+	if (atom->P != NULL) {
+		ret->P = p;
+		memcpy(ret->P, atom->P, plen);
+		p += plen;
+	}
+	if (atom->PV > atom->P && atom->PV < (atom->P + plen))
+		ret->PV = ret->P + (atom->PV - atom->P);
+	if (atom->PN != NULL) {
+		ret->PN = p;
+		memcpy(ret->PN, atom->PN, nlen);
+		p += nlen;
+	}
+	if (atom->SLOT != NULL) {
+		ret->SLOT = p;
+		memcpy(ret->SLOT, atom->SLOT, slen);
+		p += slen;
+	}
+	if (atom->SUBSLOT > atom->SLOT && atom->SUBSLOT < (atom->SLOT + slen))
+		ret->SUBSLOT = ret->SLOT + (atom->SUBSLOT - atom->SLOT);
+	if (atom->REPO != NULL) {
+		ret->REPO = p;
+		memcpy(ret->REPO, atom->REPO, rlen);
+		p += rlen;
+	}
+
+	ret->blocker = atom->blocker;
+	ret->pfx_op = atom->pfx_op;
+	ret->sfx_op = atom->pfx_op;
+	ret->PR_int = atom->PR_int;
+	ret->letter = atom->letter;
+	ret->slotdep = atom->slotdep;
+
+	if (atom->suffixes != NULL) {
+		for (slen = 0; atom->suffixes[slen].suffix != VER_NORM; slen++)
+			;
+		slen++;
+		ret->suffixes = xmalloc(sizeof(ret->suffixes[0]) * slen);
+		memcpy(ret->suffixes, atom->suffixes, sizeof(ret->suffixes[0]) * slen);
+	}
+
+	if (atom->usedeps) {
+		atom_usedep *w;
+		atom_usedep *n = NULL;
+
+		for (w = atom->usedeps; w != NULL; w = w->next) {
+			nlen = w->use != NULL ? strlen(w->use) + 1 : 0;
+			if (n == NULL) {
+				atom->usedeps = n = xmalloc(sizeof(*n) + nlen);
+			} else {
+				n = n->next = xmalloc(sizeof(*n) + nlen);
+			}
+			n->next = NULL;
+			n->pfx_cond = w->pfx_cond;
+			n->sfx_cond = w->sfx_cond;
+			n->use = (char *)n + sizeof(*n);
+			memcpy(n->use, w->use, nlen);
+		}
+	}
+
+	return ret;
+}
+
 void
 atom_implode(depend_atom *atom)
 {
