@@ -17,6 +17,7 @@
 
 #include "atom.h"
 #include "eat_file.h"
+#include "hash.h"
 #include "rmspace.h"
 #include "scandirat.h"
 #include "set.h"
@@ -982,9 +983,47 @@ static tree_pkg_meta *
 tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 {
 	tree_pkg_meta *m = xzalloc(sizeof(tree_pkg_meta));
+	int newfd = dup(pkg_ctx->fd);
 
 	xpak_process_fd(pkg_ctx->fd, true, m, tree_read_file_binpkg_xpak_cb);
 	pkg_ctx->fd = -1;  /* closed by xpak_process_fd */
+
+	/* fill in some properties which are not available, but would be in
+	 * Packages, and used to verify the package ... this is somewhat
+	 * fake, but allows to transparantly use a dir of binpkgs */
+	if (newfd != -1) {
+		size_t fsize;
+		size_t needlen = 40 + 1 + 19 + 1;
+		size_t pos = (size_t)m->Q__eclasses_;
+		size_t len = (size_t)m->Q__md5_;
+
+		if (len - pos < needlen) {
+			char *old_data = m->Q__data;
+			len += ((needlen / BUFSIZ) + 1) * BUFSIZ;
+			m->Q__data = xrealloc(m->Q__data, len);
+			m->Q__md5_ = (char *)len;
+
+			/* re-position existing keys */
+			if (old_data != NULL && m->Q__data != old_data) {
+				char **newdata = (char **)m;
+				int elems = sizeof(tree_pkg_meta) / sizeof(char *);
+				while (elems-- > 1)  /* skip Q__data itself */
+					if (newdata[elems] != NULL)
+						newdata[elems] =
+							m->Q__data + (newdata[elems] - old_data);
+			}
+		}
+
+		m->Q_SHA1 = m->Q__data + pos;
+		m->Q_SIZE = m->Q_SHA1 + 40 + 1;
+		pos += needlen;
+		m->Q__eclasses_ = (char *)pos;
+
+		lseek(newfd, 0, SEEK_SET);  /* reposition at the whole file */
+		if (hash_multiple_file_fd(newfd, NULL, m->Q_SHA1, NULL, NULL,
+				NULL, NULL, &fsize, HASH_SHA1) == 0)
+			snprintf(m->Q_SIZE, 19 + 1, "%zu", fsize);
+	}
 
 	return m;
 }
