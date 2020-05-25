@@ -37,6 +37,7 @@ q -i -q
 dovalgrind=${Q_RUN_WITH_VALGRIND}
 [[ ${TRAVIS_OS_NAME}:${as##*/} == linux:qmanifest ]] && dovalgrind=
 [[ ${TRAVIS_OS_NAME}:${as##*/} == linux:qcheck ]] && dovalgrind=
+[[ ${TRAVIS_OS_NAME}:${as##*/} == linux:qmerge ]] && dovalgrind=
 if [[ -n ${dovalgrind} ]] ; then
 	chmod 755 "@abs_top_srcdir@/tests/valgrind-wrapper/qvalgrind"
 	for f in @abs_top_builddir@/q?* ; do
