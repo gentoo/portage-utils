@@ -1975,7 +1975,7 @@ qmerge_run(set *todo)
 	if (uninstall) {
 		return unmerge_packages(todo);
 	} else {
-		if (todo == NULL && search_pkgs) {
+		if (todo == NULL || search_pkgs) {
 			/* disputable, this should be qlist -kIv or something */
 			warn("please use qlist -kI");
 
