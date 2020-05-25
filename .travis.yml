@@ -37,6 +37,11 @@ addons:
     - libgpgme11-dev
     - gnupg2
     - valgrind
+    - liblz4-tool
+    - lzop
+    - zstd
+    - lzip
+    - brotli
   homebrew:
     packages:
     - gpgme
