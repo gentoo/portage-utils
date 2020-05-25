@@ -37,8 +37,8 @@ There's also a [HACKING](./HACKING.md) doc to help you get started.
 * find orphan files not owned by any package in /lib and /usr/lib<br>
   `qfile -o {,/usr}/lib/*`
 	
-* get PORTDIR<br>
-  `env DEBUG=: q -Ch 2>&1 | grep ^PORTDIR | awk '{print $3}`
+* get PORTDIR and see where it is defined<br>
+  `q -ev PORTDIR`
 
 * verify all packages<br>
   `qcheck`
@@ -46,12 +46,15 @@ There's also a [HACKING](./HACKING.md) doc to help you get started.
 * check validity of the Manifest files for the main tree<br>
   `qmanifest`
 
+* get an overview of what the last emerge call did<br>
+  `qlop -E`
+
 ## Contact
 
 ### Bugs
 
 Please file bugs at:
-	https://bugs.gentoo.org/enter_bug.cgi?product=Portage%20Development&component=Tools&format=guided
+	https://bugs.gentoo.org/enter_bug.cgi?product=Portage%20Development&component=Unclassified&assigned_to=portage-utils@gentoo.org&format=guided
 
 ### Developers
 
