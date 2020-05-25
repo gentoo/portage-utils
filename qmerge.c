@@ -1587,7 +1587,6 @@ static int
 pkg_verify_checksums(
 		char *fname,
 		const struct pkg_t *pkg,
-		const depend_atom *atom,
 		int strict,
 		int display)
 {
@@ -1669,7 +1668,7 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	if (force_download && (access(buf, R_OK) == 0) &&
 			(pkg->SHA1[0] || pkg->MD5[0]))
 	{
-		if (pkg_verify_checksums(buf, pkg, atom, 0, 0) != 0)
+		if (pkg_verify_checksums(buf, pkg, 0, 0) != 0)
 			if (getenv("QMERGE") == NULL)
 				unlink(buf);
 	}
@@ -1678,7 +1677,7 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 			warn("No checksum data for %s (try `emaint binhost --fix`)", buf);
 			return;
 		} else {
-			if (pkg_verify_checksums(buf, pkg, atom, qmerge_strict, !quiet)
+			if (pkg_verify_checksums(buf, pkg, qmerge_strict, !quiet)
 					== 0)
 			{
 				pkg_merge(0, atom, pkg);
@@ -1716,7 +1715,7 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2",
 			pkgdir, atom->CATEGORY, pkg->PF);
-	if (pkg_verify_checksums(buf, pkg, atom, qmerge_strict, !quiet) == 0) {
+	if (pkg_verify_checksums(buf, pkg, qmerge_strict, !quiet) == 0) {
 		pkg_merge(0, atom, pkg);
 		return;
 	}
