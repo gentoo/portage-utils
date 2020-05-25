@@ -291,7 +291,6 @@ hash_multiple_file_fd(
 #endif
 	}
 
-	fclose(f);
 	return 0;
 }
 
