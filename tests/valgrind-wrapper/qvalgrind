@@ -4,6 +4,7 @@
 valgrind \
 	--leak-check=full \
 	--track-fds=yes \
+	--track-origins=yes \
 	--malloc-fill=0xdb \
 	--free-fill=0xbd \
 	--log-file=q-valgrind.log \
