@@ -1852,7 +1852,6 @@ grab_binpkg_info(depend_atom *atom)
 			return NULL;
 	}
 
-
 	tpkg = tree_match_atom(tree, atom,
 			TREE_MATCH_FIRST | TREE_MATCH_VIRTUAL | TREE_MATCH_METADATA);
 	if (tpkg != NULL) {
