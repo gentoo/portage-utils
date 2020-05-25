@@ -1599,11 +1599,11 @@ pkg_verify_checksums(
 	if (hash_multiple_file(fname, md5, sha1, NULL, NULL, NULL, NULL,
 			&flen, HASH_MD5 | HASH_SHA1) == -1)
 		errf("failed to compute hashes for %s/%s: %s\n",
-				atom->CATEGORY, pkg->PF, strerror(errno));
+				pkg->CATEGORY, pkg->PF, strerror(errno));
 
 	if (flen != pkg->SIZE) {
 		warn("filesize %zu doesn't match requested size %zu for %s/%s\n",
-				flen, pkg->SIZE, atom->CATEGORY, pkg->PF);
+				flen, pkg->SIZE, pkg->CATEGORY, pkg->PF);
 		ret++;
 	}
 
@@ -1611,11 +1611,11 @@ pkg_verify_checksums(
 		if (strcmp(md5, pkg->MD5) == 0) {
 			if (display)
 				printf("MD5:  [%sOK%s] %s %s/%s\n",
-						GREEN, NORM, md5, atom->CATEGORY, pkg->PF);
+						GREEN, NORM, md5, pkg->CATEGORY, pkg->PF);
 		} else {
 			if (display)
 				warn("MD5:  [%sER%s] (%s) != (%s) %s/%s",
-						RED, NORM, md5, pkg->MD5, atom->CATEGORY, pkg->PF);
+						RED, NORM, md5, pkg->MD5, pkg->CATEGORY, pkg->PF);
 			ret++;
 		}
 	}
@@ -1624,11 +1624,11 @@ pkg_verify_checksums(
 		if (strcmp(sha1, pkg->SHA1) == 0) {
 			if (display)
 				qprintf("SHA1: [%sOK%s] %s %s/%s\n",
-						GREEN, NORM, sha1, atom->CATEGORY, pkg->PF);
+						GREEN, NORM, sha1, pkg->CATEGORY, pkg->PF);
 		} else {
 			if (display)
 				warn("SHA1: [%sER%s] (%s) != (%s) %s/%s",
-						RED, NORM, sha1, pkg->SHA1, atom->CATEGORY, pkg->PF);
+						RED, NORM, sha1, pkg->SHA1, pkg->CATEGORY, pkg->PF);
 			ret++;
 		}
 	}
