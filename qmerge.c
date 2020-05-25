@@ -120,8 +120,7 @@ typedef struct llist_char_t llist_char;
 static void pkg_fetch(int, const depend_atom *, const struct pkg_t *);
 static void pkg_merge(int, const depend_atom *, const struct pkg_t *);
 static int pkg_unmerge(tree_pkg_ctx *, set *, int, char **, int, char **);
-static struct pkg_t *grab_binpkg_info(const char *);
-static char *find_binpkg(const char *);
+static struct pkg_t *grab_binpkg_info(depend_atom *);
 
 static bool
 prompt(const char *p)
@@ -129,12 +128,12 @@ prompt(const char *p)
 	printf("%s? [Y/n] ", p);
 	fflush(stdout);
 	switch (getc(stdin)) {
-	case '\n':
-	case 'y':
-	case 'Y':
-		return true;
-	default:
-		return false;
+		case '\n':
+		case 'y':
+		case 'Y':
+			return true;
+		default:
+			return false;
 	}
 }
 
@@ -579,7 +578,7 @@ qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	} else {
 		depend_atom *subatom = atom_explode(p);
 		if (subatom != NULL) {
-			ret = atom_compare(atom, subatom);
+			ret = atom_compare(subatom, atom);
 			switch (ret) {
 				case EQUAL: c = 'R'; break;
 				case NEWER: c = 'U'; break;
@@ -1009,7 +1008,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		if (((c == 'R') || (c == 'D')) && update_only)
 			return;
 
-	if (pkg->RDEPEND[0] && follow_rdepends) {
+	if (pkg->RDEPEND[0] != '\0' && follow_rdepends) {
 		const char *rdepend;
 
 		IF_DEBUG(fprintf(stderr, "\n+Parent: %s/%s\n", pkg->CATEGORY, pkg->PF));
@@ -1040,29 +1039,16 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 				case '\0':
 					break;
 				default:
-					if (*name == '~') {
-						name = ARGV[i] + 1;
-						/* warn("newname = %s", name); */
-					}
 					if ((subatom = atom_explode(name)) != NULL) {
 						struct pkg_t *subpkg;
-						char *resolved = NULL;
 
-						resolved = find_binpkg(name);
-
-						IF_DEBUG(fprintf(stderr,
-									"+Atom: argv0(%s) resolved(%s)\n",
-									name, resolved));
-
-						if (strlen(resolved) < 1) {
-							warn("Cant find a binpkg for %s from rdepend(%s)",
+						subpkg = grab_binpkg_info(subatom); /* free me later */
+						if (subpkg == NULL) {
+							warn("Cannot find a binpkg for %s from rdepend(%s)",
 									name, pkg->RDEPEND);
 							atom_implode(subatom);
 							continue;
 						}
-
-						/* ratom = atom_explode(resolved); */
-						subpkg = grab_binpkg_info(resolved); /* free me later */
 
 						assert(subpkg != NULL);
 						IF_DEBUG(fprintf(stderr, "+Subpkg: %s/%s\n",
@@ -1182,7 +1168,8 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 			} else if (mlen == 257+6 &&
 					magic[257] == 'u' && magic[258] == 's' &&
 					magic[259] == 't' && magic[260] == 'a' &&
-					magic[261] == 'r' && magic[262] == '\0')
+					magic[261] == 'r' &&
+					(magic[262] == '\0' || magic[262] == ' '))
 			{
 				compr = "";
 			} else if (mlen >= 4 &&
@@ -1399,7 +1386,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	rmdir("../qmerge");
 
 	printf("%s>>>%s %s%s%s/%s%s%s\n",
-			YELLOW, NORM, WHITE, atom->CATEGORY, NORM, CYAN, pkg->PF, NORM);
+			YELLOW, NORM, WHITE, pkg->CATEGORY, NORM, CYAN, pkg->PF, NORM);
 
 	tree_close_cat(cat_ctx);
 	tree_close(vdb);
@@ -1622,7 +1609,7 @@ pkg_verify_checksums(
 	}
 
 	if (pkg->MD5[0]) {
-		if (md5 != NULL && strcmp(md5, pkg->MD5) == 0) {
+		if (strcmp(md5, pkg->MD5) == 0) {
 			if (display)
 				printf("MD5:  [%sOK%s] %s %s/%s\n",
 						GREEN, NORM, md5, atom->CATEGORY, pkg->PF);
@@ -1634,7 +1621,7 @@ pkg_verify_checksums(
 		}
 	}
 
-	if (sha1 != NULL && pkg->SHA1[0]) {
+	if (pkg->SHA1[0]) {
 		if (strcmp(sha1, pkg->SHA1) == 0) {
 			if (display)
 				qprintf("SHA1: [%sOK%s] %s %s/%s\n",
@@ -1663,7 +1650,8 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	/* qmerge -pv patch */
 	if (pretend) {
-		if (!install) install++;
+		if (!install)
+			install++;
 		/* qprint_tree_node(level, atom, pkg); */
 		pkg_merge(level, atom, pkg);
 		return;
@@ -1679,13 +1667,12 @@ pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		return;
 	}
 
-	/* XXX: should do a size check here for partial downloads */
-
 	if (force_download && (access(buf, R_OK) == 0) &&
 			(pkg->SHA1[0] || pkg->MD5[0]))
 	{
 		if (pkg_verify_checksums(buf, pkg, atom, 0, 0) != 0)
-			unlink(buf);
+			if (getenv("QMERGE") == NULL)
+				unlink(buf);
 	}
 	if (access(buf, R_OK) == 0) {
 		if (!pkg->SHA1[0] && !pkg->MD5[0]) {
@@ -1742,7 +1729,7 @@ print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 	char *p = NULL;
 	char buf[512];
 
-	printf("%s%s/%s%s:%s%s%s%s%s\n", BOLD, atom->CATEGORY, BLUE, pkg->PF, pkg->SLOT, NORM,
+	printf("%s%s%s%s\n", atom_format("%[CAT]%[PF]%[SLOT]", atom),
 		!quiet ? " [" : "",
 		!quiet ? make_human_readable_str(pkg->SIZE, 1, KILOBYTE) : "",
 		!quiet ? " KiB]" : "");
@@ -1757,7 +1744,8 @@ print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 	if (pkg->MD5[0])
 		printf(" %sMd5%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->MD5);
 	if (!pkg->MD5[0] && !pkg->SHA1[0])
-		printf(" %sSums%s:%s %s(MISSING!)%s\n", DKGREEN, YELLOW, NORM, RED, NORM);
+		printf(" %sSums%s:%s %s(MISSING!)%s\n",
+				DKGREEN, YELLOW, NORM, RED, NORM);
 	if (pkg->SLOT[0])
 		printf(" %sSlot%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->SLOT);
 	if (pkg->LICENSE[0])
@@ -1781,7 +1769,8 @@ print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
 				case OLDER: icolor = BLUE;   break;
 				default:    icolor = NORM;   break;
 			}
-			printf(" %sInstalled%s:%s %s%s%s\n", DKGREEN, YELLOW, NORM, icolor, p, NORM);
+			printf(" %sInstalled%s:%s %s%s%s\n",
+					DKGREEN, YELLOW, NORM, icolor, p, NORM);
 		}
 	}
 }
@@ -1833,453 +1822,70 @@ unmerge_packages(set *todo)
 	return ret;
 }
 
-static FILE *
-open_binpkg_index(void)
-{
-	FILE *fp;
-	char *path;
-
-	xasprintf(&path, "%s/portage/%s", port_tmpdir, Packages);
-	fp = fopen(path, "r");
-	if (fp)
-		goto done;
-	free(path);
-
-	xasprintf(&path, "%s/%s", pkgdir, Packages);
-	fp = fopen(path, "r");
-	if (fp)
-		goto done;
-
-	/* This is normal when installing from local repo only. */
-	warnp("Unable to open package file %s in %s/portage or %s",
-		Packages, port_tmpdir, pkgdir);
-	warn("Attempting to manually regen via `emaint binhost`");
-
-	pid_t p;
-	int status;
-
-	char argv_emaint[] = "emaint";
-	char argv_binhost[] = "binhost";
-	char argv_fix[] = "--fix";
-	char *argv[] = {
-		argv_emaint,
-		argv_binhost,
-		argv_fix,
-		NULL,
-	};
-
-	p = vfork();
-	switch (p) {
-	case 0:
-		_exit(execvp(argv[0], argv));
-	case -1:
-		errp("vfork failed");
-	}
-	waitpid(p, &status, 0);
-
-	fp = fopen(path, "r");
-
- done:
-	free(path);
-	return fp;
-}
-
+static tree_ctx *_grab_binpkg_info_tree = NULL;
 static struct pkg_t *
-grab_binpkg_info(const char *name)
+grab_binpkg_info(depend_atom *atom)
 {
-	FILE *fp;
-	char buf[BUFSIZ];
-	char *p;
-	depend_atom *atom;
+	tree_ctx *tree = _grab_binpkg_info_tree;
+	tree_match_ctx *tpkg;
+	struct pkg_t *pkg = NULL;
+	char path[BUFSIZ];
+	FILE *d;
 
-	struct pkg_t Pkg;
-	struct pkg_t *pkg = xzalloc(sizeof(struct pkg_t));
-	struct pkg_t *rpkg = xzalloc(sizeof(struct pkg_t));
-
-	static char best_match[sizeof(Pkg.PF)+2+sizeof(Pkg.CATEGORY)];
-
-	best_match[0] = 0;
-	strcpy(pkg->SLOT,"0");
-
-	fp = open_binpkg_index();
-
-	while (fgets(buf, sizeof(buf), fp) != NULL) {
-		if (*buf == '\n') {
-			if (pkg->PF[0] && pkg->CATEGORY[0]) {
-				int ret;
-
-				snprintf(buf, sizeof(buf), "%s/%s", pkg->CATEGORY, pkg->PF);
-				if (strstr(buf, name) != NULL) {
-					if (!best_match[0])
-						snprintf(best_match, sizeof(best_match), "%.*s",
-								(int)sizeof(best_match) - 1, buf);
-
-					atom = atom_explode(buf);
-					if (atom->PR_int) {
-						snprintf(buf, sizeof(buf), "%s/%s-%s-r%i",
-								atom->CATEGORY, atom->PN,
-								atom->PV, atom->PR_int);
-					} else {
-						snprintf(buf, sizeof(buf), "%s/%s-%s",
-								atom->CATEGORY, atom->PN, atom->PV);
-					}
-					ret = atom_compare_str(name, buf);
-					IF_DEBUG(fprintf(stderr,
-								"=== atom_compare(%s, %s) = %d %s\n",
-								name, buf, ret, booga[ret]));
-					/* buf(%s) depend(%s)\n", ret, pkg->CATEGORY,
-					 * pkg->PF, name, pkg->RDEPEND); */
-					switch (ret) {
-						case EQUAL:
-						case NEWER:
-							snprintf(buf, sizeof(buf), "%s/%s",
-									pkg->CATEGORY, pkg->PF);
-							ret = atom_compare_str(buf, best_match);
-							if (ret == NEWER || ret == EQUAL) {
-								snprintf(best_match, sizeof(best_match), "%.*s",
-										(int)sizeof(best_match) - 1, buf);
-								memcpy(rpkg, pkg, sizeof(struct pkg_t));
-								IF_DEBUG(fprintf(stderr,
-											"--- %s/%s depend(%s)\n",
-											rpkg->CATEGORY, rpkg->PF,
-											rpkg->RDEPEND));
-							}
-						case OLDER: break;
-						default:
-							break;
-					}
-					atom_implode(atom);
-				}
-				memset(pkg, 0, sizeof(struct pkg_t));
-				strcpy(pkg->SLOT,"0");
-			}
-			continue;
+	/* reuse previously opened tree, so we really employ the cache
+	 * from libq/tree */
+	if (tree == NULL) {
+		snprintf(path, sizeof(path), "%s/portage/Packages", port_tmpdir);
+		/* we don't use ROOT on package tree here, operating on ROOT
+		 * should be for package merges/unmerges, but be able to pull
+		 * binpkgs from current system */
+		if ((d = fopen(path, "r")) != NULL) {
+			fclose(d);
+			snprintf(path, sizeof(path), "%s/portage", port_tmpdir);
+			tree = tree_open_binpkg("/", path);
+		} else {
+			tree = tree_open_binpkg("/", pkgdir);
 		}
+		_grab_binpkg_info_tree = tree;
 
-		if ((p = strchr(buf, '\n')) != NULL)
-			*p = 0;
-		if ((p = strchr(buf, ':')) == NULL)
-			continue;
-		if (p[1] != ' ')
-			continue;
-		*p = 0;
-		p += 2;
-
-		if (*buf) {
-			/* we dont need all the info */
-			if (strcmp(buf, "RDEPEND") == 0)
-				snprintf(pkg->RDEPEND, sizeof(Pkg.RDEPEND), "%.*s",
-						(int)sizeof(Pkg.RDEPEND) - 1, p);
-			if (strcmp(buf, "PF") == 0)
-				snprintf(pkg->PF, sizeof(Pkg.PF), "%.*s",
-						(int)sizeof(Pkg.PF) - 1, p);
-			if (strcmp(buf, "CATEGORY") == 0)
-				snprintf(pkg->CATEGORY, sizeof(Pkg.CATEGORY), "%.*s",
-						(int)sizeof(Pkg.CATEGORY) - 1, p);
-			if (strcmp(buf, "REPO") == 0)
-				snprintf(pkg->REPO, sizeof(Pkg.REPO), "%.*s",
-						(int)sizeof(Pkg.REPO) - 1, p);
-
-			if (strcmp(buf, "CPV") == 0) {
-				if ((atom = atom_explode(p)) != NULL) {
-					if (atom->PR_int) {
-						snprintf(buf, sizeof(buf), "%s-%s-r%i",
-								atom->PN, atom->PV, atom->PR_int);
-					} else {
-						snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
-					}
-					snprintf(pkg->PF, sizeof(Pkg.PF), "%.*s",
-							(int)sizeof(Pkg.PF) - 1, buf);
-					snprintf(pkg->CATEGORY, sizeof(Pkg.CATEGORY), "%.*s",
-							(int)sizeof(Pkg.CATEGORY) - 1, atom->CATEGORY);
-					atom_implode(atom);
-				}
-			}
-			if (strcmp(buf, "SLOT") == 0)
-				snprintf(pkg->SLOT, sizeof(Pkg.SLOT), "%.*s",
-						(int)sizeof(Pkg.SLOT) - 1, p);
-			if (strcmp(buf, "USE") == 0)
-				snprintf(pkg->USE, sizeof(Pkg.USE), "%.*s",
-						(int)sizeof(Pkg.USE) - 1, p);
-			/* checksums. We must have 1 or the other unless --*/
-			if (strcmp(buf, "MD5") == 0)
-				snprintf(pkg->MD5, sizeof(Pkg.MD5), "%.*s",
-						(int)sizeof(Pkg.MD5) - 1, p);
-			if (strcmp(buf, "SHA1") == 0)
-				snprintf(pkg->SHA1, sizeof(Pkg.SHA1), "%.*s",
-						(int)sizeof(Pkg.SHA1) - 1, p);
-		}
-	}
-	fclose(fp);
-	free(pkg);
-	return rpkg;
-}
-
-static char *
-find_binpkg(const char *name)
-{
-	FILE *fp;
-	char buf[BUFSIZ];
-	char *p;
-	struct pkg_t Pkg;
-	char PF[sizeof(Pkg.PF)];
-	char CATEGORY[sizeof(Pkg.CATEGORY)];
-
-	static char best_match[sizeof(Pkg.PF)+2+sizeof(Pkg.CATEGORY)];
-
-	best_match[0] = 0;
-	if (NULL == name)
-		return best_match;
-
-	fp = open_binpkg_index();
-	PF[0] = CATEGORY[0] = '\0';
-
-	while (fgets(buf, sizeof(buf), fp) != NULL) {
-		if (*buf == '\n') {
-			if (PF[0] && CATEGORY[0]) {
-				int ret;
-				snprintf(buf, sizeof(buf), "%s/%s", CATEGORY, PF);
-				if (strstr(buf, name) != NULL) {
-					depend_atom *atom;
-
-					if (!best_match[0])
-						snprintf(best_match, sizeof(best_match), "%.*s",
-								(int)sizeof(best_match) - 1, buf);
-
-					atom = atom_explode(buf);
-					snprintf(buf, sizeof(buf), "%s/%s",
-							atom->CATEGORY, atom->PN);
-					ret = atom_compare_str(name, buf);
-					switch (ret) {
-						case OLDER: break;
-						case NEWER:
-						case EQUAL:
-							snprintf(buf, sizeof(buf), "%s/%s", CATEGORY, PF);
-							ret = atom_compare_str(buf, best_match);
-							if (ret == NEWER || ret == EQUAL)
-								snprintf(best_match, sizeof(best_match), "%.*s",
-										(int)sizeof(best_match) - 1, buf);
-							/* printf("[%s == %s] = %d; %s/%s\n",
-							 * name, buf, ret, CATEGORY, PF); */
-						default:
-							break;
-					}
-					atom_implode(atom);
-				}
-			}
-			continue;
-		}
-
-		if ((p = strchr(buf, '\n')) != NULL)
-			*p = 0;
-		if ((p = strchr(buf, ':')) == NULL)
-			continue;
-		if (p[1] != ' ')
-			continue;
-		*p = 0;
-		p += 2;
-
-		if (*buf) {
-			if (strcmp(buf, "CPV") == 0) {
-				depend_atom *atom;
-				if ((atom = atom_explode(p)) != NULL) {
-					if (atom->PR_int) {
-						snprintf(buf, sizeof(buf), "%s-%s-r%i",
-								atom->PN, atom->PV, atom->PR_int);
-					} else {
-						snprintf(buf, sizeof(buf), "%s-%s", atom->PN, atom->PV);
-					}
-					snprintf(PF, sizeof(PF), "%.*s", (int)sizeof(PF) - 1, buf);
-					snprintf(CATEGORY, sizeof(CATEGORY), "%.*s",
-							(int)sizeof(CATEGORY) - 1, atom->CATEGORY);
-					atom_implode(atom);
-				}
-			}
-			if (strcmp(buf, "PF") == 0)
-				snprintf(PF, sizeof(PF), "%.*s", (int)sizeof(PF) - 1, p);
-			if (strcmp(buf, "CATEGORY") == 0)
-				snprintf(CATEGORY, sizeof(CATEGORY), "%.*s",
-						(int)sizeof(CATEGORY) - 1, p);
-		}
-	}
-	fclose(fp);
-	return best_match;
-}
-
-static int
-parse_packages(set *todo)
-{
-	FILE *fp;
-	int linelen;
-	size_t buflen;
-	char *buf, *p;
-	struct pkg_t Pkg;
-	depend_atom *pkg_atom;
-	char repo[sizeof(Pkg.REPO)];
-	depend_atom **todo_atoms = NULL;
-	size_t todo_cnt = 0;
-	size_t i;
-
-	fp = open_binpkg_index();
-	if (fp == NULL)
-		return EXIT_FAILURE;
-
-	buf = NULL;
-	buflen = 0;  /* make getline allocate */
-	repo[0] = '\0';
-
-	/* First consume the header with the common data. */
-	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
-		rmspace_len(buf, (size_t)linelen);
-		if (buf[0] == '\0')
-			break;
-
-		if ((p = strchr(buf, ':')) == NULL)
-			continue;
-		if (p[1] != ' ')
-			continue;
-		*p = 0;
-		p += 2;
-
-		switch (*buf) {
-		case 'R':
-			if (!strcmp(buf, "REPO"))
-				snprintf(repo, sizeof(repo), "%.*s", (int)sizeof(repo) - 1, p);
-			break;
-		}
+		/* if opening the tree failed somehow, we can't return anything */
+		if (tree == NULL)
+			return NULL;
 	}
 
-	pkg_atom = NULL;
-	memset(&Pkg, 0, sizeof(Pkg));
-	strcpy(Pkg.SLOT, "0");
 
-	/* build list with exploded atoms for each access below */
-	if (todo != NULL) {
-		char **todo_strs;
-		todo_cnt = list_set(todo, &todo_strs);
-		todo_atoms = xmalloc(sizeof(*todo_atoms) * todo_cnt);
-		for (i = 0; i < todo_cnt; i++)
-			todo_atoms[i] = atom_explode(todo_strs[i]);
-		free(todo_strs);
+	tpkg = tree_match_atom(tree, atom,
+			TREE_MATCH_FIRST | TREE_MATCH_VIRTUAL | TREE_MATCH_METADATA);
+	if (tpkg != NULL) {
+		depend_atom *tatom = tpkg->atom;
+		tree_pkg_meta *meta = tpkg->meta;
+		pkg = xzalloc(sizeof(struct pkg_t));
+
+		snprintf(pkg->PF, sizeof(pkg->PF), "%s", tatom->PF);
+		snprintf(pkg->CATEGORY, sizeof(pkg->CATEGORY), "%s", tatom->CATEGORY);
+		if (meta->Q_DESCRIPTION != NULL)
+			snprintf(pkg->DESC, sizeof(pkg->DESC), "%s", meta->Q_DESCRIPTION);
+		if (meta->Q_LICENSE != NULL)
+			snprintf(pkg->LICENSE, sizeof(pkg->LICENSE), "%s", meta->Q_LICENSE);
+		if (meta->Q_RDEPEND != NULL)
+			snprintf(pkg->RDEPEND, sizeof(pkg->RDEPEND), "%s", meta->Q_RDEPEND);
+		if (meta->Q_MD5 != NULL)
+			snprintf(pkg->MD5, sizeof(pkg->MD5), "%s", meta->Q_MD5);
+		if (meta->Q_SHA1 != NULL)
+			snprintf(pkg->SHA1, sizeof(pkg->SHA1), "%s", meta->Q_SHA1);
+		if (meta->Q_USE != NULL)
+			snprintf(pkg->USE, sizeof(pkg->USE), "%s", meta->Q_USE);
+		if (meta->Q_repository != NULL)
+			snprintf(pkg->REPO, sizeof(pkg->REPO), "%s", meta->Q_repository);
+		if (meta->Q_SLOT != NULL)
+			snprintf(pkg->REPO, sizeof(pkg->REPO), "%s", meta->Q_SLOT);
+		if (meta->Q_SIZE != NULL)
+			pkg->SIZE = atoi(meta->Q_SIZE);
+
+		tree_match_close(tpkg);
 	}
 
-	/* Then walk all the package entries. */
-	while (getline(&buf, &buflen, fp) != -1) {
-		if (*buf == '\n') {
-			if (pkg_atom) {
-				if (search_pkgs && !todo) {
-					print_Pkg(verbose, pkg_atom, &Pkg);
-				} else {
-					for (i = 0; i < todo_cnt; i++) {
-						pkg_atom->REPO = todo_atoms[i]->REPO ? Pkg.REPO : NULL;
-						pkg_atom->SLOT = todo_atoms[i]->SLOT ? Pkg.SLOT : NULL;
-						if (atom_compare(pkg_atom, todo_atoms[i]) == EQUAL) {
-							if (search_pkgs)
-								print_Pkg(verbose, pkg_atom, &Pkg);
-							else
-								pkg_fetch(0, pkg_atom, &Pkg);
-						}
-					}
-				}
-
-				atom_implode(pkg_atom);
-				pkg_atom = NULL;
-			}
-			memset(&Pkg, 0, sizeof(Pkg));
-			strcpy(Pkg.SLOT, "0");
-			strcpy(Pkg.REPO, repo);
-			continue;
-		}
-
-		if ((p = strchr(buf, '\n')) != NULL)
-			*p = 0;
-		if ((p = strchr(buf, ':')) == NULL)
-			continue;
-		if (p[1] != ' ')
-			continue;
-		*p = 0;
-		p += 2;
-
-		switch (*buf) {
-			case 'U':
-				if (strcmp(buf, "USE") == 0)
-					snprintf(Pkg.USE, sizeof(Pkg.USE), "%.*s",
-							(int)sizeof(Pkg.USE) - 1, p);
-				break;
-			case 'P':
-				if (strcmp(buf, "PF") == 0)
-					snprintf(Pkg.PF, sizeof(Pkg.PF), "%.*s",
-							(int)sizeof(Pkg.PF) - 1, p);
-				break;
-			case 'S':
-				if (strcmp(buf, "SIZE") == 0)
-					Pkg.SIZE = atol(p);
-				if (strcmp(buf, "SLOT") == 0)
-					snprintf(Pkg.SLOT, sizeof(Pkg.SLOT), "%.*s",
-							(int)sizeof(Pkg.SLOT) - 1, p);
-				if (strcmp(buf, "SHA1") == 0)
-					snprintf(Pkg.SHA1, sizeof(Pkg.SHA1), "%.*s",
-							(int)sizeof(Pkg.SHA1) - 1, p);
-				break;
-			case 'M':
-				if (strcmp(buf, "MD5") == 0)
-					snprintf(Pkg.MD5, sizeof(Pkg.MD5), "%.*s",
-							(int)sizeof(Pkg.MD5) - 1, p);
-				break;
-			case 'R':
-				if (strcmp(buf, "REPO") == 0)
-					snprintf(Pkg.REPO, sizeof(Pkg.REPO), "%.*s",
-							(int)sizeof(Pkg.REPO) - 1, p);
-				if (strcmp(buf, "RDEPEND") == 0)
-					snprintf(Pkg.RDEPEND, sizeof(Pkg.RDEPEND), "%.*s",
-							(int)sizeof(Pkg.RDEPEND) - 1, p);
-				break;
-			case 'L':
-				if (strcmp(buf, "LICENSE") == 0)
-					snprintf(Pkg.LICENSE, sizeof(Pkg.LICENSE), "%.*s",
-							(int)sizeof(Pkg.LICENSE) - 1, p);
-				break;
-			case 'C':
-				if (strcmp(buf, "CATEGORY") == 0)
-					snprintf(Pkg.CATEGORY, sizeof(Pkg.CATEGORY), "%.*s",
-							(int)sizeof(Pkg.CATEGORY) - 1, p);
-				if (strcmp(buf, "CPV") == 0) {
-					if (pkg_atom != NULL)  /* hypothetical Coverity case */
-						atom_implode(pkg_atom);
-					if ((pkg_atom = atom_explode(p)) != NULL) {
-						if (pkg_atom->PR_int)
-							snprintf(Pkg.PF, sizeof(Pkg.PF), "%s-%s-r%i",
-									pkg_atom->PN, pkg_atom->PV,
-									pkg_atom->PR_int);
-						else
-							snprintf(Pkg.PF, sizeof(Pkg.PF), "%s-%s",
-									pkg_atom->PN, pkg_atom->PV);
-						snprintf(Pkg.CATEGORY, sizeof(Pkg.CATEGORY),
-								"%.*s", (int)sizeof(Pkg.CATEGORY) - 1,
-								pkg_atom->CATEGORY);
-					}
-				}
-				break;
-			case 'D':
-				if (strcmp(buf, "DESC") == 0)
-					snprintf(Pkg.DESC, sizeof(Pkg.DESC), "%.*s",
-							(int)sizeof(Pkg.DESC) - 1, p);
-				break;
-			default:
-				break;
-		}
-	}
-
-	free(buf);
-	fclose(fp);
-	if (pkg_atom)
-		atom_implode(pkg_atom);
-
-	for (i = 0; i < todo_cnt; i++)
-		atom_implode(todo_atoms[i]);
-	free(todo_atoms);
-
-	return EXIT_SUCCESS;
+	return pkg;
 }
 
 static set *
@@ -2366,10 +1972,40 @@ qmerge_add_set(char *buf, set *q)
 static int
 qmerge_run(set *todo)
 {
-	if (uninstall)
+	if (uninstall) {
 		return unmerge_packages(todo);
-	else
-		return parse_packages(todo);
+	} else {
+		if (todo == NULL && search_pkgs) {
+			/* disputable, this should be qlist -kIv or something */
+			warn("please use qlist -kI");
+
+			return EXIT_SUCCESS;
+		} else {
+			char **todo_strs;
+			size_t todo_cnt = list_set(todo, &todo_strs);
+			size_t i;
+			depend_atom *atom;
+			struct pkg_t *pkg;
+			int ret = EXIT_FAILURE;
+
+			for (i = 0; i < todo_cnt; i++) {
+				atom = atom_explode(todo_strs[i]);
+				pkg = grab_binpkg_info(atom);
+				if (pkg != NULL) {
+					if (search_pkgs)
+						print_Pkg(verbose, atom, pkg);
+					else
+						pkg_fetch(0, atom, pkg);
+					free(pkg);
+					ret = EXIT_SUCCESS;
+				}
+				atom_implode(atom);
+			}
+			free(todo_strs);
+
+			return ret;
+		}
+	}
 }
 
 int qmerge_main(int argc, char **argv)
@@ -2437,10 +2073,10 @@ int qmerge_main(int argc, char **argv)
 
 		if (uninstall) {
 			if (!prompt("OK to unmerge these packages"))
-				return 0;
+				return EXIT_FAILURE;
 		} else {
 			if (!prompt("OK to merge these packages"))
-				return 0;
+				return EXIT_FAILURE;
 		}
 
 		pretend = save_pretend;
