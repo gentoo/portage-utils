@@ -939,12 +939,20 @@ atom_format_r(
 				} else if (!strncmp("USE", fmt, len)) {
 					if (showit || atom->usedeps) {
 						atom_usedep *ud;
-						append_buf(buf, buflen, "%s", "[");
-						for (ud = atom->usedeps; ud != NULL; ud = ud->next)
-							append_buf(buf, buflen, "%s%s%s%s%s%s",
-									MAGENTA, atom_usecond_str[ud->pfx_cond],
-									ud->use, atom_usecond_str[ud->sfx_cond],
-									NORM, ud->next == NULL ? "]" : ",");
+						if (atom->usedeps == NULL) {
+							append_buf(buf, buflen, "%s", "<unset>");
+						} else {
+							if (connected)
+								append_buf(buf, buflen, "%s", "[");
+							for (ud = atom->usedeps; ud != NULL; ud = ud->next)
+								append_buf(buf, buflen, "%s%s%s%s%s%s",
+										MAGENTA, atom_usecond_str[ud->pfx_cond],
+										ud->use, atom_usecond_str[ud->sfx_cond],
+										NORM, ud->next == NULL ? "" :
+										(connected ? "," : " "));
+							if (connected)
+								append_buf(buf, buflen, "%s", "]");
+						}
 					}
 				} else
 					append_buf(buf, buflen, "<BAD:%.*s>", (int)len, fmt);
