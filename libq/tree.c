@@ -27,7 +27,7 @@
 #include <xalloc.h>
 
 static int tree_pkg_compar(const void *l, const void *r);
-static tree_pkg_ctx * tree_next_pkg_int(tree_cat_ctx *cat_ctx);
+static tree_pkg_ctx *tree_next_pkg_int(tree_cat_ctx *cat_ctx);
 static void tree_close_meta(tree_pkg_meta *cache);
 
 static tree_ctx *
@@ -132,18 +132,19 @@ tree_ctx *
 tree_open_binpkg(const char *sroot, const char *spkg)
 {
 	tree_ctx *ret = tree_open_int(sroot, spkg, true);
-	char buf[_Q_PATH_MAX];
+	int fd;
 
 	if (ret != NULL) {
 		ret->cachetype = CACHE_BINPKGS;
 
-		snprintf(buf, sizeof(buf), "%s%s/%s", sroot, spkg, binpkg_packages);
-		if (eat_file(buf, &ret->pkgs, &ret->pkgslen)) {
+		fd = openat(ret->tree_fd, binpkg_packages, O_RDONLY | O_CLOEXEC);
+		if (eat_file_fd(fd, &ret->pkgs, &ret->pkgslen)) {
 			ret->cachetype = CACHE_PACKAGES;
 		} else if (ret->pkgs != NULL) {
 			free(ret->pkgs);
 			ret->pkgs = NULL;
 		}
+		close(fd);
 	}
 
 	return ret;
