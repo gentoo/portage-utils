@@ -18,6 +18,7 @@ typedef struct tree_cat_ctx      tree_cat_ctx;
 typedef struct tree_pkg_ctx      tree_pkg_ctx;
 typedef struct tree_pkg_meta     tree_pkg_meta;
 typedef struct tree_metadata_xml tree_metadata_xml;
+typedef struct tree_match_ctx    tree_match_ctx;
 
 /* tree context */
 struct tree_ctx {
@@ -100,6 +101,9 @@ struct tree_pkg_meta {
 	char *Q_USE;
 	char *Q_EPREFIX;
 	char *Q_repository;
+	char *Q_MD5;
+	char *Q_SHA1;
+#define Q_SIZE Q_SRC_URI
 	/* These are MD5-Cache only */
 	char *Q__eclasses_;
 	char *Q__md5_;
@@ -111,6 +115,15 @@ struct tree_metadata_xml {
 		char *addr;
 		struct elist *next;
 	} *email;
+};
+
+/* used with tree_match_atom, both atom and meta are fully materialised
+ * (populated and deep copied) when set */
+struct tree_match_ctx {
+	depend_atom *atom;
+	tree_pkg_meta *meta;
+	tree_match_ctx *next;
+	int free_atom;
 };
 
 /* foreach pkg callback function signature */
@@ -138,6 +151,12 @@ int tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 	tree_foreach_pkg(ctx, cb, priv, true, query);
 set *tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms);
 depend_atom *tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete);
-tree_pkg_ctx *tree_match_atom(tree_ctx *t, depend_atom *a);
+tree_match_ctx *tree_match_atom(tree_ctx *t, depend_atom *q, int flags);
+#define TREE_MATCH_FULL_ATOM   1<<1
+#define TREE_MATCH_METADATA    1<<2
+#define TREE_MATCH_FIRST       1<<3
+#define TREE_MATCH_VIRTUAL     1<<4
+#define TREE_MATCH_DEFAULT     TREE_MATCH_VIRTUAL
+void tree_match_close(tree_match_ctx *t);
 
 #endif

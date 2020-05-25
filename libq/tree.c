@@ -388,14 +388,11 @@ tree_filter_pkg(const struct dirent *de)
 tree_pkg_ctx *
 tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name)
 {
-	tree_pkg_ctx *pkg_ctx = xmalloc(sizeof(*pkg_ctx));
+	tree_pkg_ctx *pkg_ctx = xzalloc(sizeof(*pkg_ctx));
 	pkg_ctx->name = name;
-	pkg_ctx->slot = NULL;
 	pkg_ctx->repo = cat_ctx->ctx->repo;
 	pkg_ctx->fd = -1;
 	pkg_ctx->cat_ctx = cat_ctx;
-	pkg_ctx->atom = NULL;
-	pkg_ctx->meta = NULL;
 
 	/* see if this pkg matches the query, here we can finally check
 	 * version conditions like >=, etc. */
@@ -1405,12 +1402,14 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		match_key(IUSE);
 		match_key(KEYWORDS);
 		match_key(LICENSE);
-		match_key2(MD5, _md5_);
-		match_key2(SHA1, _eclasses_);
+		match_key(MD5);
+		match_key(SHA1);
 		match_key(RDEPEND);
 		match_key(SLOT);
 		match_key(USE);
 		match_key(PDEPEND);
+		match_key2(REPO, repository);
+		match_key(SIZE);
 #undef match_key
 #undef match_key2
 		}
@@ -1430,6 +1429,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 	/* ensure we don't free a garbage pointer */
 	ctx->repo = NULL;
 	ctx->do_sort = false;
+	ctx->pkgs[0] = '\0';
 
 	return ret;
 }
@@ -1580,34 +1580,167 @@ tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms)
 	return state.cpf;
 }
 
-tree_pkg_ctx *
-tree_match_atom(tree_ctx *ctx, depend_atom *a)
+struct tree_match_pkgs_cb_ctx {
+	int flags;
+	tree_match_ctx *ret;
+};
+
+static int
+tree_match_atom_packages_cb(tree_pkg_ctx *ctx, void *priv)
+{
+	struct tree_match_pkgs_cb_ctx *rctx = priv;
+	depend_atom *a;
+	tree_match_ctx *n;
+
+	/* skip anything after finding first match */
+	if (rctx->flags & TREE_MATCH_FIRST && rctx->ret != NULL)
+		return 1;
+
+	a = tree_get_atom(ctx, rctx->flags & TREE_MATCH_FULL_ATOM);
+
+	/* skip virtual category if not requested */
+	if (!(rctx->flags & TREE_MATCH_VIRTUAL) &&
+			strcmp(a->CATEGORY, "virtual") == 0)
+		return 1;
+
+	n = xzalloc(sizeof(tree_match_ctx));
+	n->free_atom = true;
+	n->atom = atom_clone(a);
+	if (rctx->flags & TREE_MATCH_METADATA) {
+		n->meta = xmalloc(sizeof(*n->meta));
+		/* for Packages, all pointers to meta here are to the in memory
+		 * copy of the Packages file, so these pointers can just be
+		 * copied since the tree has to remain open, thus the pointers
+		 * will stay valid */
+		memcpy(n->meta, ctx->cat_ctx->ctx->pkgs, sizeof(*n->meta));
+	}
+
+	n->next = rctx->ret;
+	rctx->ret = n;
+
+	return 0;
+}
+
+static int
+tree_match_atom_binpkg_cb(tree_pkg_ctx *ctx, void *priv)
+{
+	struct tree_match_pkgs_cb_ctx *rctx = priv;
+	depend_atom *a;
+	tree_match_ctx *n;
+
+	/* skip anything after finding first match */
+	if (rctx->flags & TREE_MATCH_FIRST && rctx->ret != NULL)
+		return 1;
+
+	a = tree_get_atom(ctx, rctx->flags & TREE_MATCH_FULL_ATOM);
+
+	/* skip virtual category if not requested */
+	if (!(rctx->flags & TREE_MATCH_VIRTUAL) &&
+			strcmp(a->CATEGORY, "virtual") == 0)
+		return 1;
+
+	n = xzalloc(sizeof(tree_match_ctx));
+	n->free_atom = true;
+	n->atom = atom_clone(a);
+	if (rctx->flags & TREE_MATCH_METADATA)
+		n->meta = tree_pkg_read(ctx);
+
+	n->next = rctx->ret;
+	rctx->ret = n;
+
+	return 0;
+}
+
+tree_match_ctx *
+tree_match_atom(tree_ctx *ctx, depend_atom *query, int flags)
 {
 	tree_cat_ctx *cat_ctx;
 	tree_pkg_ctx *pkg_ctx;
+	tree_match_ctx *ret = NULL;
 	depend_atom *atom;
 
+	if (ctx->cachetype == CACHE_PACKAGES) {
+		struct tree_match_pkgs_cb_ctx rctx;
+		/* Packages needs to be serviced separately because it doesn't
+		 * use a tree internally, but reads off of the Packages file */
+		rctx.flags = flags;
+		rctx.ret = NULL;
+		ctx->query_atom = query;
+		tree_foreach_packages(ctx, tree_match_atom_packages_cb, &rctx);
+		ctx->query_atom = NULL;
+		return rctx.ret;
+	} else if (ctx->cachetype == CACHE_BINPKGS) {
+		struct tree_match_pkgs_cb_ctx rctx;
+		/* this sulks, but binpkgs modify the pkg_ctx->name to strip off
+		 * .tbz2, and that makes it non-reusable */
+		rctx.flags = flags;
+		rctx.ret = NULL;
+		tree_foreach_pkg(ctx, tree_match_atom_binpkg_cb, &rctx, true, query);
+		return rctx.ret;
+	}
+
+	/* activate cache for future lookups, tree_match_atom relies on
+	 * cache behaviour from tree, which means all categories and
+	 * packages remain in memory until tree_close is being called */
 	if (ctx->cache.categories == NULL)
 		ctx->cache.categories = create_set();
 
-	if (a->P == NULL) {
-		return NULL;
-	} else if (a->CATEGORY == NULL) {
-		/* loop through all cats and recurse */
-		/* TODO: some day */
-		return NULL;
+	ctx->do_sort = true;     /* sort uses buffer, which cache relies on */
+	ctx->query_atom = NULL;  /* ensure the cache contains ALL pkgs */
+
+#define search_cat(C) \
+{ \
+	while ((pkg_ctx = tree_next_pkg(C)) != NULL) { \
+		atom = tree_get_atom(pkg_ctx, \
+				query->SLOT != NULL || flags & TREE_MATCH_FULL_ATOM); \
+fprintf(stderr, "fbg: %s\n", atom_to_string(atom)); \
+		if (flags & TREE_MATCH_VIRTUAL || \
+				strcmp(atom->CATEGORY, "virtual") != 0) \
+			if (atom_compare(atom, query) == EQUAL) { \
+				tree_match_ctx *n; \
+				n = xzalloc(sizeof(tree_match_ctx)); \
+				n->free_atom = false; \
+				n->atom = atom; \
+				if (flags & TREE_MATCH_METADATA) \
+					n->meta = tree_pkg_read(pkg_ctx); \
+				n->next = ret; \
+				ret = n; \
+			} \
+			if (flags & TREE_MATCH_FIRST && ret != NULL) \
+				break; \
+	} \
+	C->pkg_cur = 0;  /* reset to allow another traversal */ \
+}
+
+	if (query->CATEGORY == NULL) {
+		/* loop through all cats */
+		while ((cat_ctx = tree_next_cat(ctx)) != NULL) {
+			search_cat(cat_ctx);
+			if (ret != NULL && flags & TREE_MATCH_FIRST)
+				break;
+		}
+		/* allow running again through the cats */
+		ctx->cat_cur = 0;
 	} else {
 		/* try CAT, and PN for latest version */
-		if ((cat_ctx = tree_open_cat(ctx, a->CATEGORY)) == NULL)
-			return NULL;
-		ctx->do_sort = true;     /* sort uses buffer, which cache relies on */
-		ctx->query_atom = NULL;  /* ensure the cache contains ALL pkgs */
-		while ((pkg_ctx = tree_next_pkg(cat_ctx)) != NULL) {
-			atom = tree_get_atom(pkg_ctx, a->SLOT != NULL);
-			if (atom_compare(atom, a) == EQUAL)
-				return pkg_ctx;
-		}
+		if ((cat_ctx = tree_open_cat(ctx, query->CATEGORY)) != NULL)
+			search_cat(cat_ctx);
+	}
 
-		return NULL;
+	return ret;
+}
+
+void
+tree_match_close(tree_match_ctx *match)
+{
+	tree_match_ctx *w;
+
+	for (w = NULL; match != NULL; match = w) {
+		w = match->next;
+		if (match->free_atom)
+			atom_implode(match->atom);
+		if (match->meta != NULL)
+			free(match->meta);
+		free(match);
 	}
 }
