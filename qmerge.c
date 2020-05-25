@@ -1206,7 +1206,6 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 			{
 				compr = "lzop -dc";
 			}
-			fclose(mfd);
 		}
 	}
 
