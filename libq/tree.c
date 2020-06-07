@@ -957,9 +957,8 @@ tree_read_file_binpkg_xpak_cb(
 
 	if (len - pos < (size_t)(data_len + 1)) {
 		char *old_data = m->Q__data;
-		len += (((data_len + 1) / BUFSIZ) + 1) * BUFSIZ;
+		len += (((data_len + 1 - (len - pos)) / BUFSIZ) + 1) * BUFSIZ;
 		m->Q__data = xrealloc(m->Q__data, len);
-		m->Q__md5_ = (char *)len;
 
 		/* re-position existing keys */
 		if (old_data != NULL && m->Q__data != old_data) {
@@ -969,6 +968,10 @@ tree_read_file_binpkg_xpak_cb(
 				if (newdata[elems] != NULL)
 					newdata[elems] = m->Q__data + (newdata[elems] - old_data);
 		}
+
+		/* set after repositioning! */
+		m->Q__md5_ = (char *)len;
+		m->Q__eclasses_ = (char *)pos;
 	}
 
 	*key = m->Q__data + pos;
@@ -997,9 +1000,8 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 
 		if (len - pos < needlen) {
 			char *old_data = m->Q__data;
-			len += ((needlen / BUFSIZ) + 1) * BUFSIZ;
+			len += (((needlen - (len - pos)) / BUFSIZ) + 1) * BUFSIZ;
 			m->Q__data = xrealloc(m->Q__data, len);
-			m->Q__md5_ = (char *)len;
 
 			/* re-position existing keys */
 			if (old_data != NULL && m->Q__data != old_data) {
@@ -1010,6 +1012,10 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 						newdata[elems] =
 							m->Q__data + (newdata[elems] - old_data);
 			}
+
+			/* set after repositioning! */
+			m->Q__md5_ = (char *)len;
+			m->Q__eclasses_ = (char *)pos;
 		}
 
 		m->Q_SHA1 = m->Q__data + pos;
@@ -1112,9 +1118,8 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 			/* TODO: this is an exact copy from tree_read_file_binpkg_xpak_cb */
 			if (len - pos < (size_t)(s.st_size + 1)) {
 				p = m->Q__data;
-				len += (((s.st_size + 1) / BUFSIZ) + 1) * BUFSIZ;
+				len += (((s.st_size + 1 - (len - pos)) / BUFSIZ) + 1) * BUFSIZ;
 				m->Q__data = xrealloc(m->Q__data, len);
-				m->Q__md5_ = (char *)len;
 
 				/* re-position existing keys */
 				if (p != NULL && m->Q__data != p) {
@@ -1124,6 +1129,10 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 						if (newdata[elems] != NULL)
 							newdata[elems] = m->Q__data + (newdata[elems] - p);
 				}
+
+				/* set after repositioning! */
+				m->Q__md5_ = (char *)len;
+				m->Q__eclasses_ = (char *)pos;
 			}
 
 			p = *key = m->Q__data + pos;
