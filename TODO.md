@@ -64,6 +64,7 @@
   and qpkg is doing parts of qtbz2's compose
 - share install\_mask code from qmerge to handle negatives from
   pkg\_install\_mask too
+- make world agument really read world file, add @all?
 
 # qgrep
 - make it use standard xarray instead of its own buf\_list

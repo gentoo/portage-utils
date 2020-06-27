@@ -395,7 +395,10 @@ int qpkg_main(int argc, char **argv)
 	 * to tar when we create the binary package. */
 	xchdir(portroot);
 
-	/* first process any arguments which point to /var/db/pkg */
+	/* first process any arguments which point to /var/db/pkg, an
+	 * undocumented method to allow easily tab-completing into vdb as
+	 * arguments, the trailing / needs to be present for this (as tab
+	 * completion would do) */
 	pkgs_made = 0;
 	s = strlen(portvdb);
 	for (i = optind; i < argc; ++i) {
@@ -404,22 +407,31 @@ int qpkg_main(int argc, char **argv)
 			argv[i] = NULL;
 			continue;
 		}
-		if (argv[i][asize-1] == '/')
-			argv[i][asize-1] = '\0';
-		if (!strncmp(portvdb, argv[i], s))
-			memmove(argv[i], argv[i]+s+1, asize-s);
-		else if (argv[i][0] == '/' && !strncmp(portvdb, argv[i]+1, s))
-			memmove(argv[i], argv[i]+s+2, asize-s-1);
-		else
-			continue;
+		if (asize > s && argv[i][0] == '/' && argv[i][asize - 1] == '/') {
+			char *path = argv[i];
 
-		atom = atom_explode(argv[i]);
-		if (atom) {
-			if (!qpkg_make(atom)) ++pkgs_made;
-			atom_implode(atom);
-		} else
-			warn("could not explode '%s'", argv[i]);
-		argv[i] = NULL;
+			/* chop off trailing / */
+			argv[i][asize - 1] = '\0';
+
+			/* eliminate duplicate leading /, we know it starts with / */
+			while (path[1] == '/')
+				path++;
+
+			if (strncmp(portvdb, path, s) == 0) {
+				path += s + 1 /* also eat / after portvdb */;
+
+				atom = atom_explode(path);
+				if (atom) {
+					if (!qpkg_make(atom))
+						pkgs_made++;
+					atom_implode(atom);
+				} else
+					warn("could not explode '%s'", path);
+				argv[i] = NULL;
+			} else {
+				argv[i][asize - 1] = '/';  /* restore, it may be a cat match */
+			}
+		}
 	}
 
 	/* now try to run through vdb and locate matches for user inputs */
@@ -431,14 +443,19 @@ int qpkg_main(int argc, char **argv)
 		if (argv[i] == NULL)
 			continue;
 		if (strcmp(argv[i], "world") == 0) {
-			/* we're basically done, this means all */
+			/* this is a crude hack, we include all packages for this,
+			 * which isn't exactly @world, but all its deps too */
 			tree_foreach_pkg_fast(ctx, qpkg_cb, &pkgs_made, NULL);
+			break;  /* no point in continuing since we did everything */
 		}
 		atom = atom_explode(argv[i]);
 		if (atom == NULL)
 			continue;
 
+		s = pkgs_made;
 		tree_foreach_pkg_fast(ctx, qpkg_cb, &pkgs_made, atom);
+		if (s == pkgs_made)
+			warn("no match for '%s'", argv[i]);
 		atom_implode(atom);
 	}
 	tree_close(ctx);
