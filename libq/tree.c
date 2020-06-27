@@ -1477,6 +1477,8 @@ tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 	/* allow foreach to be called again on the same open tree */
 	if (ctx->do_sort)
 		scandir_free(ctx->cat_de, ctx->cat_cnt);
+	else
+		rewinddir(ctx->dir);
 	ctx->cat_de = NULL;
 	ctx->cat_cur = 0;
 	ctx->cat_cnt = 0;
