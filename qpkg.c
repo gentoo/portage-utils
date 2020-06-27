@@ -382,14 +382,14 @@ int qpkg_main(int argc, char **argv)
 			(fd != -1 && (fstat(fd, &st) == -1 || !S_ISDIR(st.st_mode))))
 	{
 		errp("could not create temp bindir '%s'", qpkg_bindir);
-	} else {
+	}
+	if (fd >= 0) {
 		/* fd is valid, pointing to a directory */
 		if (!restrict_chmod)
 			if (fchmod(fd, 0750) < 0)
 				errp("could not chmod(0750) temp bindir '%s'", qpkg_bindir);
-	}
-	if (fd >= 0)
 		close(fd);
+	}
 
 	/* we have to change to the root so that we can feed the full paths
 	 * to tar when we create the binary package. */
