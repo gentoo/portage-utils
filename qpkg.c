@@ -174,11 +174,10 @@ qpkg_make(tree_pkg_ctx *pkg)
 	char tmpdir[BUFSIZE];
 	char filelist[BUFSIZE + 32];
 	char tbz2[BUFSIZE + 32];
-	size_t buflen;
+	char buf[BUFSIZE * 4];
 	size_t xpaksize;
 	char *line;
 	char *savep;
-	char *buf;
 	int i;
 	char *xpak_argv[2];
 	struct stat st;
@@ -191,9 +190,6 @@ qpkg_make(tree_pkg_ctx *pkg)
 		return 0;
 	}
 
-	buflen = _Q_PATH_MAX;
-	buf = xmalloc(buflen);
-
 	line = tree_pkg_meta_get(pkg, CONTENTS);
 	if (line == NULL)
 		return -1;
@@ -202,22 +198,16 @@ qpkg_make(tree_pkg_ctx *pkg)
 	mask = umask(0077);
 	i = mkstemp(tmpdir);
 	umask(mask);
-	if (i == -1) {
-		free(buf);
+	if (i == -1)
 		return -2;
-	}
 	close(i);
 	unlink(tmpdir);
-	if (mkdir(tmpdir, 0750)) {
-		free(buf);
+	if (mkdir(tmpdir, 0750))
 		return -3;
-	}
 
 	snprintf(filelist, sizeof(filelist), "%s/filelist", tmpdir);
-	if ((out = fopen(filelist, "w")) == NULL) {
-		free(buf);
+	if ((out = fopen(filelist, "w")) == NULL)
 		return -4;
-	}
 
 	for (; (line = strtok_r(line, "\n", &savep)) != NULL; line = NULL) {
 		contents_entry *e;
@@ -244,18 +234,14 @@ qpkg_make(tree_pkg_ctx *pkg)
 	fflush(stdout);
 
 	snprintf(tbz2, sizeof(tbz2), "%s/bin.tbz2", tmpdir);
-	if (snprintf(buf, buflen, "tar jcf '%s' --files-from='%s' "
-			"--no-recursion >/dev/null 2>&1", tbz2, filelist) > (int)buflen ||
-			(fp = popen(buf, "r")) == NULL)
-	{
-		free(buf);
+	if (snprintf(buf, sizeof(buf), "tar jcf '%s' --files-from='%s' "
+			"--no-recursion >/dev/null 2>&1", tbz2, filelist) >
+			(int)sizeof(buf) || (fp = popen(buf, "r")) == NULL)
 		return 2;
-	}
 	pclose(fp);
 
 	if ((i = open(tbz2, O_WRONLY)) < 0) {
 		warnp("failed to open '%s': %s", tbz2, strerror(errno));
-		free(buf);
 		return 1;
 	}
 
@@ -263,12 +249,11 @@ qpkg_make(tree_pkg_ctx *pkg)
 	if (fstat(i, &st) == -1) {
 		warnp("could not stat '%s': %s", tbz2, strerror(errno));
 		close(i);
-		free(buf);
 		return 1;
 	}
 	xpaksize = st.st_size;
 
-	snprintf(buf, buflen, "%s%s/%s/%s",
+	snprintf(buf, sizeof(buf), "%s%s/%s/%s",
 			portroot, portvdb, atom->CATEGORY, atom->PF);
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
@@ -278,7 +263,6 @@ qpkg_make(tree_pkg_ctx *pkg)
 	if (fstat(i, &st) == -1) {
 		warnp("could not stat '%s': %s", tbz2, strerror(errno));
 		close(i);
-		free(buf);
 		return 1;
 	}
 	xpaksize = st.st_size - xpaksize;
@@ -287,7 +271,6 @@ qpkg_make(tree_pkg_ctx *pkg)
 	if ((fp = fdopen(i, "a")) == NULL) {
 		warnp("could not open '%s': %s", tbz2, strerror(errno));
 		close(i);
-		free(buf);
 		return 1;
 	}
 
@@ -299,14 +282,13 @@ qpkg_make(tree_pkg_ctx *pkg)
 	unlink(filelist);
 
 	/* create dirs, if necessary */
-	snprintf(buf, buflen, "%s/%s", qpkg_bindir, atom->CATEGORY);
+	snprintf(buf, sizeof(buf), "%s/%s", qpkg_bindir, atom->CATEGORY);
 	mkdir_p(buf, 0755);
 
-	snprintf(buf, buflen, "%s/%s/%s.tbz2",
+	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2",
 			qpkg_bindir, atom->CATEGORY, atom->PF);
 	if (rename(tbz2, buf)) {
 		warnp("could not move '%s' to '%s'", tbz2, buf);
-		free(buf);
 		return 1;
 	}
 
@@ -314,14 +296,12 @@ qpkg_make(tree_pkg_ctx *pkg)
 
 	if (stat(buf, &st) == -1) {
 		warnp("could not stat '%s': %s", buf, strerror(errno));
-		free(buf);
 		return 1;
 	}
 
 	printf("%s%s%s KiB\n",
 			RED, make_human_readable_str(st.st_size, 1, KILOBYTE), NORM);
 
-	free(buf);
 	return 0;
 }
 
