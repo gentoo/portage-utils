@@ -167,19 +167,23 @@ check_pkg_install_mask(char *name)
 }
 
 static int
-qpkg_make(depend_atom *atom)
+qpkg_make(tree_pkg_ctx *pkg)
 {
-	FILE *fp, *out;
+	FILE *out;
+	FILE *fp;
 	char tmpdir[BUFSIZE];
 	char filelist[BUFSIZE + 32];
 	char tbz2[BUFSIZE + 32];
 	size_t buflen;
 	size_t xpaksize;
+	char *line;
+	char *savep;
 	char *buf;
 	int i;
 	char *xpak_argv[2];
 	struct stat st;
 	mode_t mask;
+	depend_atom *atom = tree_get_atom(pkg, false);
 
 	if (pretend) {
 		printf(" %s-%s %s:\n",
@@ -190,40 +194,34 @@ qpkg_make(depend_atom *atom)
 	buflen = _Q_PATH_MAX;
 	buf = xmalloc(buflen);
 
-	snprintf(buf, buflen, "%s/%s/%s/CONTENTS",
-			portvdb, atom->CATEGORY, atom->PF);
-	if ((fp = fopen(buf, "r")) == NULL) {
-		free(buf);
+	line = tree_pkg_meta_get(pkg, CONTENTS);
+	if (line == NULL)
 		return -1;
-	}
 
 	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", qpkg_bindir);
 	mask = umask(0077);
 	i = mkstemp(tmpdir);
 	umask(mask);
 	if (i == -1) {
-		fclose(fp);
 		free(buf);
 		return -2;
 	}
 	close(i);
 	unlink(tmpdir);
 	if (mkdir(tmpdir, 0750)) {
-		fclose(fp);
 		free(buf);
 		return -3;
 	}
 
 	snprintf(filelist, sizeof(filelist), "%s/filelist", tmpdir);
 	if ((out = fopen(filelist, "w")) == NULL) {
-		fclose(fp);
 		free(buf);
 		return -4;
 	}
 
-	while (getline(&buf, &buflen, fp) != -1) {
+	for (; (line = strtok_r(line, "\n", &savep)) != NULL; line = NULL) {
 		contents_entry *e;
-		e = contents_parse_line(buf);
+		e = contents_parse_line(line);
 		if (!e || e->type == CONTENTS_DIR)
 			continue;
 		if (check_pkg_install_mask(e->name) != 0)
@@ -240,7 +238,6 @@ qpkg_make(depend_atom *atom)
 	}
 
 	fclose(out);
-	fclose(fp);
 
 	printf(" %s-%s %s: ", GREEN, NORM,
 			atom_format("%[CATEGORY]%[PF]", atom));
@@ -271,8 +268,8 @@ qpkg_make(depend_atom *atom)
 	}
 	xpaksize = st.st_size;
 
-	snprintf(buf, buflen, "%s/%s/%s",
-			portvdb, atom->CATEGORY, atom->PF);
+	snprintf(buf, buflen, "%s%s/%s/%s",
+			portroot, portvdb, atom->CATEGORY, atom->PF);
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
 	xpak_create(AT_FDCWD, tbz2, 1, xpak_argv, 1, verbose);
@@ -333,7 +330,7 @@ qpkg_cb(tree_pkg_ctx *pkg, void *priv)
 {
 	size_t *pkgs_made = priv;
 
-	if (qpkg_make(tree_get_atom(pkg, false)) == 0)
+	if (qpkg_make(pkg) == 0)
 		(*pkgs_made)++;
 
 	return 0;
@@ -395,6 +392,10 @@ int qpkg_main(int argc, char **argv)
 	 * to tar when we create the binary package. */
 	xchdir(portroot);
 
+	ctx = tree_open_vdb(portroot, portvdb);
+	if (!ctx)
+		return EXIT_FAILURE;
+
 	/* first process any arguments which point to /var/db/pkg, an
 	 * undocumented method to allow easily tab-completing into vdb as
 	 * arguments, the trailing / needs to be present for this (as tab
@@ -419,15 +420,7 @@ int qpkg_main(int argc, char **argv)
 
 			if (strncmp(portvdb, path, s) == 0) {
 				path += s + 1 /* also eat / after portvdb */;
-
-				atom = atom_explode(path);
-				if (atom) {
-					if (!qpkg_make(atom))
-						pkgs_made++;
-					atom_implode(atom);
-				} else
-					warn("could not explode '%s'", path);
-				argv[i] = NULL;
+				argv[i] = path;
 			} else {
 				argv[i][asize - 1] = '/';  /* restore, it may be a cat match */
 			}
@@ -435,10 +428,6 @@ int qpkg_main(int argc, char **argv)
 	}
 
 	/* now try to run through vdb and locate matches for user inputs */
-	ctx = tree_open_vdb(portroot, portvdb);
-	if (!ctx)
-		return EXIT_FAILURE;
-
 	for (i = optind; i < argc; ++i) {
 		if (argv[i] == NULL)
 			continue;
