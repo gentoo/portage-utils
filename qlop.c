@@ -545,7 +545,7 @@ static int do_emerge_log(
 			char shortopts[8];  /* must hold as many opts converted below */
 			int numopts = 0;
 
-			printf("emerge");
+			printf("%semerge%s", DKBLUE, NORM);
 			for (p += 13; (q = strtok(p, " \n")) != NULL; p = NULL) {
 				if (strncmp(q, "--", 2) == 0) {
 					/* portage seems to normalise options given into
@@ -556,24 +556,31 @@ static int do_emerge_log(
 					q += 2;
 					if (strcmp(q, "ask") == 0) {
 						shortopts[numopts++] = 'a';
+						q = NULL;
 					} else if (strcmp(q, "verbose") == 0) {
 						shortopts[numopts++] = 'v';
+						q = NULL;
 					} else if (strcmp(q, "oneshot") == 0) {
 						shortopts[numopts++] = '1';
+						q = NULL;
 					} else if (strcmp(q, "deep") == 0) {
 						shortopts[numopts++] = 'D';
+						q = NULL;
 					} else if (strcmp(q, "update") == 0) {
 						shortopts[numopts++] = 'u';
+						q = NULL;
 					} else if (strcmp(q, "depclean") == 0) {
 						shortopts[numopts++] = 'c';
+						q = NULL;
 					} else if (strcmp(q, "unmerge") == 0) {
 						shortopts[numopts++] = 'C';
-					} else {
 						q = NULL;
+					} else {
+						q -= 2;
 					}
 
 					/* process next token */
-					if (q != NULL)
+					if (q == NULL)
 						continue;
 				}
 
@@ -590,7 +597,7 @@ static int do_emerge_log(
 				}
 
 				if (strncmp(q, "--", 2) == 0) {
-					printf(" %s--%s%s", GREEN, q, NORM);
+					printf(" %s%s%s", GREEN, q, NORM);
 				} else if (strcmp(q, "@world") == 0 ||
 						strcmp(q, "@system") == 0)
 				{
