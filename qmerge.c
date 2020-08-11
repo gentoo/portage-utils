@@ -651,7 +651,7 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		"debug-print-section() { :; }\n"
 		/* Not quite right */
 		"has_version() { [ -n \"$(qlist -ICqe \"$1\")\" ]; }\n"
-		/* best_version() */
+		"best_version() { qlist -ICqev \"$1\" }\n"
 		"use() { useq \"$@\"; }\n"
 		"usex() { useq \"$1\" && echo \"${2-yes}$4\" || echo \"${3-no}$5\"; }\n"
 		"useq() { hasq \"$1\" ${USE}; }\n"
