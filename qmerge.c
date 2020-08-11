@@ -660,6 +660,7 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		"hasq() { local h=$1; shift; case \" $* \" in *\" $h \"*) return 0;; *) return 1;; esac; }\n"
 		"hasv() { hasq \"$@\" && echo \"$1\"; }\n"
 		"elog() { printf ' * %%b\\n' \"$*\"; }\n"
+		"einfon() { printf ' * %%b' \"$*\"; }\n"
 		"einfo() { elog \"$@\"; }\n"
 		"ewarn() { elog \"$@\"; }\n"
 		"eqawarn() { elog \"QA: \"\"$@\"; }\n"
