@@ -529,8 +529,10 @@ int qlist_main(int argc, char **argv)
 
 		array_for_each(overlays, n, overlay) {
 			vdb = tree_open(portroot, overlay);
-			ret |= tree_foreach_pkg_sorted(vdb, qlist_cb, &state, NULL);
-			tree_close(vdb);
+			if (vdb != NULL) {
+				ret |= tree_foreach_pkg_sorted(vdb, qlist_cb, &state, NULL);
+				tree_close(vdb);
+			}
 		}
 	} else {
 		if (state.do_binpkgs)
