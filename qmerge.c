@@ -1781,7 +1781,8 @@ extern bool qlist_match(
 		tree_pkg_ctx *pkg_ctx,
 		const char *name,
 		depend_atom **name_atom,
-		bool exact);
+		bool exact,
+		bool applymasks);
 
 static int
 qmerge_unmerge_cb(tree_pkg_ctx *pkg_ctx, void *priv)
@@ -1798,7 +1799,7 @@ qmerge_unmerge_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	(void)list_set(priv, &todo);
 	for (p = todo; *p != NULL; p++) {
-		if (qlist_match(pkg_ctx, *p, NULL, true))
+		if (qlist_match(pkg_ctx, *p, NULL, true, false))
 			pkg_unmerge(pkg_ctx, NULL, cp_argc, cp_argv, cpm_argc, cpm_argv);
 	}
 

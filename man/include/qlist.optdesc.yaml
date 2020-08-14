@@ -3,6 +3,8 @@ installed: |
     name if the package is currently installed.
 binpkgs: |
     Operate on binary packages instead of installed packges.
+tree: |
+    Used with \fB\-I\fR to list packages available in the tree.
 umap: |
     List USE-flags enabled when the package was installed.  This flag
     implies \fB\-I\fR.
@@ -16,6 +18,10 @@ columns: |
     Like \fB\-Iv\fR, but package name and version are separated by a
     space for easy consumption by e.g.\ shell scripts which can read
     space-separated columns.
+masks: |
+    Filter matches for packages that are masked via the profiles.  In
+    particular useful in combination with \fB\-Itv\fR to find the latest
+    available version of a given package.
 verbose: |
     When used with \fB\-I\fR, print the package version next to name.
     When listing the package contents, \fB\-v\fR displays symlinks with

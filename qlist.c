@@ -22,14 +22,16 @@
 #include "xpak.h"
 #include "xregex.h"
 
-#define QLIST_FLAGS "IkSRUcDedosF:" COMMON_FLAGS
+#define QLIST_FLAGS "IktSRUcmDedosF:" COMMON_FLAGS
 static struct option const qlist_long_opts[] = {
 	{"installed", no_argument, NULL, 'I'},
 	{"binpkgs",   no_argument, NULL, 'k'},
+	{"tree",      no_argument, NULL, 't'},
 	{"slots",     no_argument, NULL, 'S'},
 	{"repo",      no_argument, NULL, 'R'},
 	{"umap",      no_argument, NULL, 'U'},
 	{"columns",   no_argument, NULL, 'c'},
+	{"masks",     no_argument, NULL, 'm'},
 	{"showdebug", no_argument, NULL, 128},
 	{"exact",     no_argument, NULL, 'e'},
 	{"dir",       no_argument, NULL, 'd'},
@@ -42,10 +44,12 @@ static struct option const qlist_long_opts[] = {
 static const char * const qlist_opts_help[] = {
 	"Just show installed package names",
 	"Use binpkgs instead of installed packages",
+	"Use available packages in the tree instead of installed",
 	"Display installed packages with slots (use twice for subslots)",
 	"Display installed packages with repository",
 	"Display installed packages with flags used",
 	"Display column view",
+	"Exclude matches masked by profiles",
 	"Show /usr/lib/debug and /usr/src/debug files",
 	"Exact match (only CAT/PN or PN without PV)",
 	"Only show directories",
@@ -175,13 +179,15 @@ qlist_match(
 		tree_pkg_ctx *pkg_ctx,
 		const char *name,
 		depend_atom **name_atom,
-		bool exact);
+		bool exact,
+		bool applymasks);
 bool
 qlist_match(
 		tree_pkg_ctx *pkg_ctx,
 		const char *name,
 		depend_atom **name_atom,
-		bool exact)
+		bool exact,
+		bool applymasks)
 {
 	char buf[_Q_PATH_MAX];
 	char uslot[32];
@@ -255,6 +261,30 @@ qlist_match(
 			return false;
 	}
 
+	if (applymasks) {
+		DECLARE_ARRAY(masks);
+		depend_atom *matom;
+		char *mask;
+		size_t n;
+		bool match = false;
+
+		array_set(package_masks, masks);
+
+		array_for_each(masks, n, mask) {
+			if ((matom = atom_explode(mask)) == NULL)
+				continue;
+			match = atom_compare(atom, matom) == EQUAL;
+			atom_implode(matom);
+			if (match)
+				break;
+		}
+
+		xarrayfree_int(masks);
+
+		if (match)
+			return false;
+	}
+
 	if (exact) {
 		int i;
 
@@ -311,10 +341,12 @@ struct qlist_opt_state {
 	bool exact:1;
 	bool all:1;
 	bool do_binpkgs:1;
+	bool do_tree:1;
 	bool just_pkgname:1;
 	bool show_dir:1;
 	bool show_obj:1;
 	bool show_sym:1;
+	bool apply_masks:1;
 	bool need_full_atom:1;
 	bool show_umap:1;
 	bool show_dbg:1;
@@ -337,7 +369,8 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (!state->all) {
 		for (i = optind; i < state->argc; ++i)
 			if (qlist_match(pkg_ctx, state->argv[i],
-						&state->atoms[i - optind], state->exact))
+						&state->atoms[i - optind], state->exact,
+						state->apply_masks))
 				break;
 		if (i == state->argc)
 			return 0;
@@ -415,10 +448,12 @@ int qlist_main(int argc, char **argv)
 		.exact = false,
 		.all = false,
 		.do_binpkgs = false,
+		.do_tree = false,
 		.just_pkgname = false,
 		.show_dir = false,
 		.show_obj = false,
 		.show_sym = false,
+		.apply_masks = false,
 		.need_full_atom = false,
 		.show_umap = false,
 		.show_dbg = false,
@@ -431,6 +466,7 @@ int qlist_main(int argc, char **argv)
 		COMMON_GETOPTS_CASES(qlist)
 		case 'I': state.just_pkgname = true;                    break;
 		case 'k': state.do_binpkgs = true;                      break;
+		case 't': state.do_tree = true;                         break;
 		case 'S': state.just_pkgname = true; show_slots++;      break;
 		case 'R': state.just_pkgname = show_repo = true;        break;
 		case 'U': state.just_pkgname = state.show_umap = true;  break;
@@ -440,6 +476,7 @@ int qlist_main(int argc, char **argv)
 		case 'o': state.show_obj = true;                        break;
 		case 's': state.show_sym = true;                        break;
 		case 'c': do_columns = true;                            break;
+		case 'm': state.apply_masks = true;                     break;
 		case 'F': state.fmt = optarg;                           break;
 		}
 	}
@@ -486,13 +523,24 @@ int qlist_main(int argc, char **argv)
 	state.buf = xmalloc(state.buflen);
 	state.atoms = xcalloc(argc - optind, sizeof(*state.atoms));
 	ret = 1;
-	if (state.do_binpkgs)
-		vdb = tree_open_binpkg(portroot, pkgdir);
-	else
-		vdb = tree_open_vdb(portroot, portvdb);
-	if (vdb != NULL) {
-		ret = tree_foreach_pkg_sorted(vdb, qlist_cb, &state, NULL);
-		tree_close(vdb);
+	if (state.do_tree) {
+		size_t n;
+		const char *overlay;
+
+		array_for_each(overlays, n, overlay) {
+			vdb = tree_open(portroot, overlay);
+			ret |= tree_foreach_pkg_sorted(vdb, qlist_cb, &state, NULL);
+			tree_close(vdb);
+		}
+	} else {
+		if (state.do_binpkgs)
+			vdb = tree_open_binpkg(portroot, pkgdir);
+		else
+			vdb = tree_open_vdb(portroot, portvdb);
+		if (vdb != NULL) {
+			ret = tree_foreach_pkg_sorted(vdb, qlist_cb, &state, NULL);
+			tree_close(vdb);
+		}
 	}
 	free(state.buf);
 	for (i = optind; i < state.argc; ++i)
