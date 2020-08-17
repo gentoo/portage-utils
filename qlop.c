@@ -1231,10 +1231,13 @@ static array_t *probe_proc(array_t *atoms)
 					if (rpathlen <= 0)
 						continue;
 					rpath[rpathlen] = '\0';
+
 					/* check if this points to a portage build:
-					 * <somepath>/portage/<cat>/<pf>/temp/build.log */
+					 * <somepath>/portage/<cat>/<pf>/temp/build.log
+					 * <somepath>/<cat>:<pf>:YYYYMMDD-HHMMSS.log */
+					atom = NULL;
 					if ((size_t)rpathlen > sizeof("/temp/build.log") &&
-								strcmp(rpath + rpathlen -
+							strcmp(rpath + rpathlen -
 								(sizeof("/temp/build.log") - 1),
 								"/temp/build.log") == 0 &&
 							(p = strstr(rpath, "/portage/")) != NULL)
@@ -1243,15 +1246,32 @@ static array_t *probe_proc(array_t *atoms)
 						rpath[rpathlen - (sizeof("/temp/build.log") - 1)] =
 							'\0';
 						atom = atom_explode(p);
-						if (atom == NULL ||
-								atom->CATEGORY == NULL || atom->P == NULL)
-						{
-							if (atom != NULL)
-								atom_implode(atom);
-							continue;
-						}
-						xarraypush_ptr(ret_atoms, atom);
+					} else if ((size_t)rpathlen > sizeof(".log") &&
+							strcmp(rpath + rpathlen -
+								(sizeof(".log") - 1), ".log") == 0 &&
+							(p = strchr(rpath, ':')) != NULL &&
+							(p = strchr(p + 1, ':')) != NULL &&
+							(p = strrchr(rpath, '/')) != NULL)
+					{
+						char *q;
+
+						p++;  /* skip / */
+						q = strchr(p, ':');  /* checked above to exist */
+						*q++ = '/';
+						q = strchr(q, ':');  /* checked above to exist */
+						*q = '\0';
+
+						atom = atom_explode(p);
 					}
+
+					if (atom->CATEGORY == NULL || atom->P == NULL) {
+						atom_implode(atom);
+						continue;
+					}
+					if (atom == NULL)
+						continue;
+
+					xarraypush_ptr(ret_atoms, atom);
 				}
 				scandir_free(links, linkslen);
 			}
