@@ -686,6 +686,9 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		"D=\"%5$s\"\n"
 		"ED=\"${D%%/}/${EPREFIX%%/}/\"\n"
 		"T=\"%6$s\"\n"
+		/* we do not support preserve-libs yet, so force
+		 * preserve_old_lib instead */
+		"FEATURES=\"${FEATURES/preserve-libs/disabled}\"\n"
 		/* Finally run the func */
 		"%7$s%2$s\n"
 		/* Ignore func return values (not exit values) */
