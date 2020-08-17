@@ -1249,27 +1249,26 @@ static array_t *probe_proc(array_t *atoms)
 					} else if ((size_t)rpathlen > sizeof(".log") &&
 							strcmp(rpath + rpathlen -
 								(sizeof(".log") - 1), ".log") == 0 &&
-							(p = strchr(rpath, ':')) != NULL &&
-							(p = strchr(p + 1, ':')) != NULL &&
 							(p = strrchr(rpath, '/')) != NULL)
 					{
 						char *q;
 
 						p++;  /* skip / */
-						q = strchr(p, ':');  /* checked above to exist */
-						*q++ = '/';
-						q = strchr(q, ':');  /* checked above to exist */
-						*q = '\0';
-
-						atom = atom_explode(p);
+						if ((q = strchr(p, ':')) != NULL) {
+							*q++ = '/';
+							if ((q = strchr(q, ':')) != NULL) {
+								*q = '\0';
+								atom = atom_explode(p);
+							}
+						}
 					}
 
+					if (atom == NULL)
+						continue;
 					if (atom->CATEGORY == NULL || atom->P == NULL) {
 						atom_implode(atom);
 						continue;
 					}
-					if (atom == NULL)
-						continue;
 
 					xarraypush_ptr(ret_atoms, atom);
 				}
