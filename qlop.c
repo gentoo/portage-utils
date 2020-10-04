@@ -1197,6 +1197,8 @@ static array_t *probe_proc(array_t *atoms)
 	depend_atom *atom;
 	DECLARE_ARRAY(ret_atoms);
 	size_t i;
+	char *cmdline = NULL;
+	size_t cmdlinesize = 0;
 
 	/* /proc/<pid>/path/<[0-9]+link>
 	 * /proc/<pid>/fd/<[0-9]+link> */
@@ -1218,6 +1220,33 @@ static array_t *probe_proc(array_t *atoms)
 			}
 
 			pid = d->d_name;
+
+			/* first try old-fashioned (good old) sandbox approach; this
+			 * one may not have a long life in Gentoo any more, but for
+			 * now it's still being used quite a lot, and the advantage
+			 * is that it doesn't require root access, for cmdline can
+			 * be read by anyone */
+			snprintf(npath, sizeof(npath), "/proc/%s/cmdline", pid);
+			if (eat_file(npath, &cmdline, &cmdlinesize)) {
+				if (cmdlinesize > 0 && cmdline[0] == '[' &&
+						(p = strchr(cmdline, ']')) != NULL &&
+						strncmp(p, "] sandbox", sizeof("] sandbox") - 1) == 0)
+				{
+					*p = '\0';
+					atom = atom_explode(cmdline + 1);
+
+					if (atom != NULL) {
+						if (atom->CATEGORY == NULL || atom->P == NULL) {
+							atom_implode(atom);
+						} else {
+							xarraypush_ptr(ret_atoms, atom);
+							continue;
+						}
+					}
+				}
+			}
+
+			/* now try and see if Portage opened a build log somewhere */
 			snprintf(npath, sizeof(npath), "/proc/%s/%s", pid, subdir);
 			if ((linkslen = scandir(npath, &links, NULL, NULL)) > 0) {
 				for (li = 0; li < linkslen; li++) {
