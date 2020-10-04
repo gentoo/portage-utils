@@ -1232,6 +1232,20 @@ static array_t *probe_proc(array_t *atoms)
 						continue;
 					rpath[rpathlen] = '\0';
 
+					/* in bug #745798, it seems Portage optionally
+					 * compresses the buildlog -- to make matching below
+					 * here easier, strip such compression extension off
+					 * first here, leaving .log */
+					if ((size_t)rpathlen > sizeof(".log.gz") &&
+							(p = strrchr(rpath, '.')) != NULL &&
+							p - (sizeof(".log") - 1) > rpath &&
+							strncmp(p - (sizeof(".log") - 1), ".log",
+								sizeof(".log") - 1) == 0)
+					{
+						*p = '\0';
+						rpathlen -= rpath - p;
+					}
+
 					/* check if this points to a portage build:
 					 * <somepath>/portage/<cat>/<pf>/temp/build.log
 					 * <somepath>/<cat>:<pf>:YYYYMMDD-HHMMSS.log */
