@@ -1353,12 +1353,6 @@ static array_t *probe_proc(array_t *atoms)
 					xarraydelete_ptr(ret_atoms, j);
 					atom_implode(atomr);
 					break;
-				} else {
-					/* bug #731122: match running packages without
-					 * version */
-					atomr->PV = NULL;
-					atomr->PVR = NULL;
-					atomr->PR_int = 0;
 				}
 			}
 			atom_implode(atom);
@@ -1369,7 +1363,14 @@ static array_t *probe_proc(array_t *atoms)
 	/* ret_atoms is allocated on the stack, so copy into atoms which is
 	 * empty at this point */
 	array_for_each(ret_atoms, i, atom)
+	{
+		/* bug #731122: match running packages without version */
+		atom->PV = NULL;
+		atom->PVR = NULL;
+		atom->PR_int = 0;
+		printf("proc: %s\n", atom_to_string(atom));
 		xarraypush_ptr(atoms, atom);
+	}
 
 	xarrayfree_int(ret_atoms);
 
