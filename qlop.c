@@ -1002,6 +1002,9 @@ static int do_emerge_log(
 			pkg = get_set(afmt, merge_averages);
 			if (pkg != NULL) {
 				maxtime = pkg->time / pkg->cnt;
+				/* add 14% of the diff between avg and max, to avoid
+				 * frequently swapping to maxtime */
+				maxtime += (pkg->tbegin - maxtime) / 7;
 				if (elapsed >= maxtime) {
 					maxtime = pkg->tbegin;
 					if (elapsed >= maxtime)
