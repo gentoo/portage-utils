@@ -1305,6 +1305,12 @@ static array_t *probe_proc(array_t *atoms)
 					xarraydelete_ptr(ret_atoms, j);
 					atom_implode(atomr);
 					break;
+				} else {
+					/* bug #731122: match running packages without
+					 * version */
+					atomr->PV = NULL;
+					atomr->PVR = NULL;
+					atomr->PR_int = 0;
 				}
 			}
 			atom_implode(atom);
