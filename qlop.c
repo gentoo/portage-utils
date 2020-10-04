@@ -508,7 +508,7 @@ static int do_emerge_log(
 			if (p[7] == 'm') {
 				parallel_emerge++;
 			} else if (parallel_emerge > 0) {
-				if (p[7] != 'e' || tstart != last_exit)
+				if (p[7] != 'e' || (tstart - 4) <= last_exit)
 					parallel_emerge--;
 				if (p[7] == 'x')
 					last_exit = tstart;
