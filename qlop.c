@@ -374,6 +374,7 @@ static int do_emerge_log(
 	time_t tlast = tbegin;
 	time_t tstart_emerge = 0;
 	time_t last_merge = 0;
+	time_t last_exit = 0;
 	time_t sync_start = 0;
 	time_t sync_time = 0;
 	size_t sync_cnt = 0;
@@ -392,6 +393,7 @@ static int do_emerge_log(
 	char afmt[BUFSIZ];
 	struct pkg_match *pkg;
 	struct pkg_match *pkgw;
+#define strpfx(X, Y)  strncmp(X, Y, sizeof(Y) - 1)
 
 	/* support relative path in here and now, when using ROOT, stick to
 	 * it, turning relative into a moot point */
@@ -420,14 +422,14 @@ static int do_emerge_log(
 				continue;
 
 			if (flags->show_lastmerge) {
-				if (strncmp(p, "  *** emerge ", 13) == 0)
+				if (strpfx(p, "  *** emerge ") == 0)
 					tstart_emerge = tstart;
 				if (!all_atoms)
 					continue;
 			}
 
 			atom = NULL;
-			if (strncmp(p, "  >>> emerge ", 13) == 0 &&
+			if (strpfx(p, "  >>> emerge ") == 0 &&
 					(q = strchr(p + 13, ')')) != NULL)
 			{
 				p = q + 2;
@@ -436,8 +438,8 @@ static int do_emerge_log(
 					*q = '\0';
 					atom = atom_explode(p);
 				}
-			} else if (strncmp(p, "  === Unmerging... (", 20) == 0 ||
-					strncmp(p, " === Unmerging... (", 19) == 0)
+			} else if (strpfx(p, "  === Unmerging... (") == 0 ||
+					strpfx(p, " === Unmerging... (") == 0)
 			{
 				if (p[1] == ' ')
 					p++;
@@ -493,17 +495,23 @@ static int do_emerge_log(
 			continue;
 		*p++ = '\0';
 
+		tstart = atol(buf);
+
 		/* keeping track of parallel merges needs to be done before
 		 * applying dates, for a subset of the log might show emerge
 		 * finished without knowledge of another instance */
 		if (flags->do_running &&
-				(strncmp(p, "  *** emerge ", 13) == 0 ||
-				 strncmp(p, "  *** terminating.", 18) == 0))
+				(strpfx(p, "  *** emerge ") == 0 ||
+				 strpfx(p, "  *** exiting ") == 0 ||
+				 strpfx(p, "  *** terminating.") == 0))
 		{
 			if (p[7] == 'm') {
 				parallel_emerge++;
 			} else if (parallel_emerge > 0) {
-				parallel_emerge--;
+				if (p[7] != 'e' || tstart != last_exit)
+					parallel_emerge--;
+				if (p[7] == 'x')
+					last_exit = tstart;
 			}
 
 			/* for bug #687508, this cannot be in the else if case
@@ -531,7 +539,6 @@ static int do_emerge_log(
 			}
 		}
 
-		tstart = atol(buf);
 		if (tstart < tlast)
 			continue;
 		tlast = tstart;
@@ -539,15 +546,14 @@ static int do_emerge_log(
 			continue;
 
 		/* are we interested in this line? */
-		if (flags->show_emerge && verbose && (
-					strncmp(p, "  *** emerge ", 13) == 0))
+		if (flags->show_emerge && verbose && (strpfx(p, "  *** emerge ") == 0))
 		{
 			char shortopts[8];  /* must hold as many opts converted below */
 			int numopts = 0;
 
 			printf("%semerge%s", DKBLUE, NORM);
 			for (p += 13; (q = strtok(p, " \n")) != NULL; p = NULL) {
-				if (strncmp(q, "--", 2) == 0) {
+				if (strpfx(q, "--") == 0) {
 					/* portage seems to normalise options given into
 					 * their long forms always; I don't want to keep a
 					 * mapping table to short forms here, but it's
@@ -596,7 +602,7 @@ static int do_emerge_log(
 					continue;
 				}
 
-				if (strncmp(q, "--", 2) == 0) {
+				if (strpfx(q, "--") == 0) {
 					printf(" %s%s%s", GREEN, q, NORM);
 				} else if (strcmp(q, "@world") == 0 ||
 						strcmp(q, "@system") == 0)
@@ -622,7 +628,7 @@ static int do_emerge_log(
 			}
 			printf("\n");
 		} else if (flags->do_sync && (
-					strncmp(p, " === Sync completed ", 20) == 0 ||
+					strpfx(p, " === Sync completed ") == 0 ||
 					strcmp(p, "  === sync\n") == 0))
 		{
 			/* sync start or stop, we have nothing to detect parallel
@@ -636,7 +642,7 @@ static int do_emerge_log(
 				elapsed = tstart - sync_start;
 
 				p += 20;
-				if (strncmp(p, "for ", 4) == 0) {
+				if (strpfx(p, "for ") == 0) {
 					p += 4;
 				} else {  /* "with " */
 					p += 5;
@@ -670,8 +676,8 @@ static int do_emerge_log(
 				sync_start = 0;  /* reset */
 			}
 		} else if (flags->do_merge && (
-					strncmp(p, "  >>> emerge (", 14) == 0 ||
-					strncmp(p, "  ::: completed emerge (", 24) == 0))
+					strpfx(p, "  >>> emerge (") == 0 ||
+					strpfx(p, "  ::: completed emerge (") == 0))
 		{
 			/* merge start/stop (including potential unmerge of old pkg) */
 			if (p[3] == '>') {  /* >>> emerge */
@@ -810,11 +816,11 @@ static int do_emerge_log(
 			}
 		} else if (
 				(flags->do_unmerge &&
-				 strncmp(p, " === Unmerging... (", 19) == 0) ||
+				 strpfx(p, " === Unmerging... (") == 0) ||
 				(flags->do_autoclean &&
-				 strncmp(p, "  === Unmerging... (", 20) == 0) ||
+				 strpfx(p, "  === Unmerging... (") == 0) ||
 				((flags->do_unmerge || flags->do_autoclean) &&
-				 strncmp(p, "  >>> unmerge success: ", 23) == 0))
+				 strpfx(p, "  >>> unmerge success: ") == 0))
 		{
 			/* unmerge action */
 			if (p[2] == '=') {
@@ -1230,7 +1236,7 @@ static array_t *probe_proc(array_t *atoms)
 			if (eat_file(npath, &cmdline, &cmdlinesize)) {
 				if (cmdlinesize > 0 && cmdline[0] == '[' &&
 						(p = strchr(cmdline, ']')) != NULL &&
-						strncmp(p, "] sandbox", sizeof("] sandbox") - 1) == 0)
+						strpfx(p, "] sandbox") == 0)
 				{
 					*p = '\0';
 					atom = atom_explode(cmdline + 1);
@@ -1268,8 +1274,7 @@ static array_t *probe_proc(array_t *atoms)
 					if ((size_t)rpathlen > sizeof(".log.gz") &&
 							(p = strrchr(rpath, '.')) != NULL &&
 							p - (sizeof(".log") - 1) > rpath &&
-							strncmp(p - (sizeof(".log") - 1), ".log",
-								sizeof(".log") - 1) == 0)
+							strpfx(p - (sizeof(".log") - 1), ".log") == 0)
 					{
 						*p = '\0';
 						rpathlen -= rpath - p;
