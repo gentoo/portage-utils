@@ -1368,7 +1368,6 @@ static array_t *probe_proc(array_t *atoms)
 		atom->PV = NULL;
 		atom->PVR = NULL;
 		atom->PR_int = 0;
-		printf("proc: %s\n", atom_to_string(atom));
 		xarraypush_ptr(atoms, atom);
 	}
 
