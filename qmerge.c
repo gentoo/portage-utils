@@ -1231,13 +1231,59 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	 * Since some tools (e.g. zstd) complain about the .bz2
 	 * extension, we feed the tool by input redirection. */
 	snprintf(buf, sizeof(buf),
-		BUSYBOX " sh -c 'dd status=none if=%s bs=1 count=%d %s%s | "
+		BUSYBOX " sh -c '%s%s"
 		"tar -x%sf - -C image/'",
-		tbz2, tbz2size, compr[0] == '\0' ? "" : "| ", compr,
+		compr, compr[0] == '\0' ? "" : " | ",
 		((verbose > 1) ? "v" : ""));
 
+	/* start the tar pipe and copy tbz2size binpkg bytes into it
+	 * "manually" rather than depending on dd or head */
+	{
+		FILE *tarpipe, *tbz2f;
+		unsigned char iobuf[8192];
+		int piped = 0;
+		size_t n, rd, wr;
+
+		tarpipe = popen(buf, "w");
+		if (NULL == tarpipe)
+			errp("popen(%s)", buf);
+
+		tbz2f = fopen(tbz2, "r");
+		if (NULL == tbz2f)
+			errp("fopen(%s)", tbz2);
+
+		for (piped = wr = 0; piped < tbz2size; piped += wr) {
+			n = MIN(tbz2size - piped, (ssize_t)sizeof iobuf);
+			rd = fread(iobuf, 1, n, tbz2f);
+			if (0 == rd) {
+				errno = ferror(tbz2f);
+				if (errno)
+					errp("fread(%s)", tbz2);
+
+				if (feof(tbz2f))
+					err("%s: unexpected EOF; corrupted binpkg", tbz2);
+			}
+
+			for (wr = n = 0; wr < rd; wr += n) {
+				n = fwrite(iobuf + wr, 1, rd - wr, tarpipe);
+				if (n != rd - wr) {
+					errno = ferror(tarpipe);
+					if (errno)
+						errp("fwrite(%s)", buf);
+
+					if (feof(tarpipe))
+						err("%s pipe: unexpected EOF", buf);
+				}
+			}
+		}
+
+		fclose(tbz2f);
+
+		if (-1 == pclose(tarpipe))
+			errp("pclose(%s)", buf);
+	}
+
 	free(tbz2);
-	xsystem(buf);
 	fflush(stdout);
 
 	eat_file("vdb/DEFINED_PHASES", &phases, &phases_len);
