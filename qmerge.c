@@ -1191,8 +1191,17 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 				 * --long=xx where xx>27. The option is "safe" in the sense
 				 * that not more memory is allocated than what is really
 				 * needed to decompress the file. See
-				 * https://bugs.gentoo.org/show_bug.cgi?id=634980 */
+				 * https://bugs.gentoo.org/show_bug.cgi?id=634980,
+				 * however, on 32-bits arches this yields an parameter
+				 * out of bound error:
+				 * https://bugs.gentoo.org/show_bug.cgi?id=710444
+				 * https://bugs.gentoo.org/show_bug.cgi?id=754102
+				 * so only do this on 64-bits systems */
+#if SIZEOF_SIZE_T >= 8
 				compr = "zstd --long=31 -dc";
+#else
+				compr = "zstd -dc";
+#endif
 				/* If really tar -I would be used we would have to quote:
 				 * compr = "I \"zstd --long=31\"";
 				 * But actually we use a pipe (see below) */

@@ -18,6 +18,16 @@ AM_PROG_AR
 LT_INIT
 AC_SUBST([LIBTOOL_DEPS])
 
+headers='#ifdef HAVE_STDDEF_H
+#include <stddef.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+'
+AC_CHECK_HEADERS([stddef.h unistd.h])
+AC_COMPILE_CHECK_SIZEOF([size_t], [${headers}])
+
 AC_CHECK_FUNCS_ONCE(m4_flatten([
 	   fmemopen
 	   scandirat
