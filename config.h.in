@@ -670,6 +670,9 @@
 /* Define if you have ssl */
 #undef HAVE_SSL
 
+/* Define to 1 if you have the <stddef.h> header file. */
+#undef HAVE_STDDEF_H
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
@@ -986,6 +989,9 @@
 /* Define to l, ll, u, ul, ull, etc., as suitable for constants of type
    'sig_atomic_t'. */
 #undef SIG_ATOMIC_T_SUFFIX
+
+/* The number of bytes in type size_t */
+#undef SIZEOF_SIZE_T
 
 /* Define as the maximum value of type 'size_t', if the system doesn't define
    it. */
