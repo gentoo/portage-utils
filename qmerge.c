@@ -1231,56 +1231,58 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	 * Since some tools (e.g. zstd) complain about the .bz2
 	 * extension, we feed the tool by input redirection. */
 	snprintf(buf, sizeof(buf),
-		BUSYBOX " sh -c '%s%s"
-		"tar -x%sf - -C image/'",
+		BUSYBOX " sh -c '%s%star -x%sf - -C image/'",
 		compr, compr[0] == '\0' ? "" : " | ",
 		((verbose > 1) ? "v" : ""));
 
 	/* start the tar pipe and copy tbz2size binpkg bytes into it
 	 * "manually" rather than depending on dd or head */
 	{
-		FILE *tarpipe, *tbz2f;
+		FILE *tarpipe;
+		FILE *tbz2f;
 		unsigned char iobuf[8192];
 		int piped = 0;
-		size_t n, rd, wr;
+		int err;
+		size_t n;
+		size_t rd;
+		size_t wr;
 
-		tarpipe = popen(buf, "w");
-		if (NULL == tarpipe)
-			errp("popen(%s)", buf);
+		if ((tarpipe = popen(buf, "w")) == NULL)
+			errp("failed to start %s", buf);
 
-		tbz2f = fopen(tbz2, "r");
-		if (NULL == tbz2f)
-			errp("fopen(%s)", tbz2);
+		if ((tbz2f = fopen(tbz2, "r")) == NULL)
+			errp("failed to open %s for reading", tbz2);
 
 		for (piped = wr = 0; piped < tbz2size; piped += wr) {
 			n = MIN(tbz2size - piped, (ssize_t)sizeof iobuf);
 			rd = fread(iobuf, 1, n, tbz2f);
 			if (0 == rd) {
-				errno = ferror(tbz2f);
-				if (errno)
-					errp("fread(%s)", tbz2);
+				if ((err = ferror(tbz2f)) != 0)
+					err("reading %s failed: %s", tbz2, strerror(errno));
 
 				if (feof(tbz2f))
-					err("%s: unexpected EOF; corrupted binpkg", tbz2);
+					err("unexpected EOF in %s: corrupted binpkg", tbz2);
 			}
 
 			for (wr = n = 0; wr < rd; wr += n) {
 				n = fwrite(iobuf + wr, 1, rd - wr, tarpipe);
 				if (n != rd - wr) {
-					errno = ferror(tarpipe);
-					if (errno)
-						errp("fwrite(%s)", buf);
+					if ((err = ferror(tarpipe)) != 0)
+						err("failed to unpack binpkg: %s", strerror(errno));
 
 					if (feof(tarpipe))
-						err("%s pipe: unexpected EOF", buf);
+						err("unexpected EOF trying to unpack binpkg");
 				}
 			}
 		}
 
 		fclose(tbz2f);
 
-		if (-1 == pclose(tarpipe))
-			errp("pclose(%s)", buf);
+		err = pclose(tarpipe);
+		if (err > 0)
+			err("finishing unpack binpkg exited with status %d", err);
+		else if (err < 0)
+			errp("finishing unpack binpkg unsuccessful");
 	}
 
 	free(tbz2);
