@@ -1258,7 +1258,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 			rd = fread(iobuf, 1, n, tbz2f);
 			if (0 == rd) {
 				if ((err = ferror(tbz2f)) != 0)
-					err("reading %s failed: %s", tbz2, strerror(errno));
+					err("reading %s failed: %s", tbz2, strerror(err));
 
 				if (feof(tbz2f))
 					err("unexpected EOF in %s: corrupted binpkg", tbz2);
@@ -1268,7 +1268,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 				n = fwrite(iobuf + wr, 1, rd - wr, tarpipe);
 				if (n != rd - wr) {
 					if ((err = ferror(tarpipe)) != 0)
-						err("failed to unpack binpkg: %s", strerror(errno));
+						err("failed to unpack binpkg: %s", strerror(err));
 
 					if (feof(tarpipe))
 						err("unexpected EOF trying to unpack binpkg");
