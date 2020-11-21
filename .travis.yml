@@ -2,7 +2,7 @@
 # https://docs.travis-ci.com/
 
 language: c
-dist: bionic
+dist: focal
 os: linux
 
 jobs:
@@ -26,6 +26,10 @@ jobs:
         - CPPFLAGS="-I/usr/local/opt/libressl/include"
         - PATH="$(brew --prefix)/opt/gnu-sed/libexec/gnubin:$PATH"
         - PATH="$(brew --prefix)/opt/coreutils/libexec/gnubin:$PATH"
+    - compiler: gcc
+      arch: arm64-graviton2
+      virt: lxd
+      group: edge
 
 env:
   global:
