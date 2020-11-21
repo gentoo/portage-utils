@@ -8,14 +8,24 @@ os: linux
 jobs:
   include:
     - compiler: gcc
+      arch: amd64
+    - compiler: gcc
+      arch: arm64
+    - compiler: gcc
+      arch: ppc64le
+    - compiler: gcc
+      arch: s390x
     - compiler: clang
+      arch: amd64
     - compiler: coverity
+      arch: amd64
       env:
         - COVERITY_SCAN_PROJECT_NAME="$TRAVIS_REPO_SLUG"
         - COVERITY_SCAN_BRANCH_PATTERN="master"
         - COVERITY_SCAN_NOTIFICATION_EMAIL="grobian@gentoo.org"
         - COVERITY_SCAN_BUILD_COMMAND="make"
     - compiler: valgrind
+      arch: amd64
       env:
         - CFLAGS="-g"
         - Q_RUN_WITH_VALGRIND=1
@@ -26,10 +36,6 @@ jobs:
         - CPPFLAGS="-I/usr/local/opt/libressl/include"
         - PATH="$(brew --prefix)/opt/gnu-sed/libexec/gnubin:$PATH"
         - PATH="$(brew --prefix)/opt/coreutils/libexec/gnubin:$PATH"
-    - compiler: gcc
-      arch: arm64-graviton2
-      virt: lxd
-      group: edge
 
 env:
   global:
