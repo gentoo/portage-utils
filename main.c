@@ -109,7 +109,7 @@ usage(int status, const char *flags, struct option const opts[],
 		fprintf(fp, "%scurrently defined applets:%s\n", GREEN, NORM);
 		for (i = 0; applets[i].desc; ++i)
 			if (applets[i].func)
-				fprintf(fp, " %s%8s%s %s%-16s%s%s:%s %s\n",
+				fprintf(fp, " %s%9s%s %s%-16s%s%s:%s %s\n",
 					YELLOW, applets[i].name, NORM,
 					DKBLUE, applets[i].opts, NORM,
 					RED, NORM, _(applets[i].desc));
