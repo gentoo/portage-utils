@@ -147,6 +147,7 @@ hash_multiple_file_fd(
 	(void)blak2b;
 #endif
 
+	*flen = 0;
 	if ((f = fdopen(fd, "r")) == NULL)
 		return -1;
 
@@ -164,7 +165,6 @@ hash_multiple_file_fd(
 	blake2b_init(&bl2b, BLAKE2B_OUTBYTES);
 #endif
 
-	*flen = 0;
 	while ((len = fread(data, 1, sizeof(data), f)) > 0) {
 		*flen += len;
 #pragma omp parallel sections
@@ -323,7 +323,9 @@ hash_multiple_file_at_cb(
 	ret = hash_multiple_file_fd(fd, md5, sha1, sha256, sha512,
 			whrlpl, blak2b, flen, hashes);
 
-	close(fd);
+	if (ret != 0)
+		close(fd);
+
 	return ret;
 }
 
