@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -116,14 +116,17 @@ parse_date(const char *sdate, time_t *t)
 	} else {
 		/* Handle automatic formats:
 		 * - "12315128"            -> %s
+		 * - "@12315128"            -> %s
 		 * - "2015-12-24"          -> %Y-%m-%d
 		 * - "2019-03-28T13:52:31" -> %Y-%m-%dT%H:%M:%s"
 		 * - human readable format (see below)
 		 */
-		size_t len = strspn(sdate, "0123456789-:T");
+		size_t len = strspn(sdate, "0123456789-:T@");
 		if (sdate[len] == '\0') {
 			const char *fmt;
-			if (strchr(sdate, '-') == NULL) {
+			if (sdate[0] == '@') {
+				fmt = "@%s";
+			} else if (strchr(sdate, '-') == NULL) {
 				fmt = "%s";
 			} else if ((s = strchr(sdate, 'T')) == NULL) {
 				fmt = "%Y-%m-%d";
@@ -1394,8 +1397,8 @@ int qlop_main(int argc, char **argv)
 	DECLARE_ARRAY(atoms);
 	int runningmode = 0;
 
-	start_time = 0;
-	end_time = LONG_MAX;
+	start_time = -1;
+	end_time = -1;
 	m.do_time = 0;
 	m.do_merge = 0;
 	m.do_unmerge = 0;
@@ -1435,10 +1438,10 @@ int qlop_main(int argc, char **argv)
 			case 'l': m.show_lastmerge = 1; break;
 			case 'F': m.fmt = optarg;       break;
 			case 'd':
-				if (start_time == 0) {
+				if (start_time == -1) {
 					if (!parse_date(optarg, &start_time))
 						err("invalid date: %s", optarg);
-				} else if (end_time == LONG_MAX) {
+				} else if (end_time == -1) {
 					if (!parse_date(optarg, &end_time))
 						err("invalid date: %s", optarg);
 				} else
@@ -1539,7 +1542,7 @@ int qlop_main(int argc, char **argv)
 	}
 
 	/* handle -l / -d conflict */
-	if (start_time != 0 && m.show_lastmerge) {
+	if (start_time != -1 && m.show_lastmerge) {
 		if (!m.show_emerge)
 			warn("-l and -d cannot be used together, dropping -l");
 		m.show_lastmerge = 0;
@@ -1562,6 +1565,12 @@ int qlop_main(int argc, char **argv)
 		else
 			m.fmt = "%[CATEGORY]%[PN]";
 	}
+
+	/* adjust time ranges when unset */
+	if (start_time == -1)
+		start_time = 0;
+	if (end_time == -1)
+		end_time = LONG_MAX;
 
 	if (m.do_running) {
 		array_t *new_atoms = NULL;
