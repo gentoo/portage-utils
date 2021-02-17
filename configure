@@ -3878,12 +3878,7 @@ program_transform_name=`$as_echo "$program_transform_name" | sed "$ac_script"`
 am_aux_dir=`cd "$ac_aux_dir" && pwd`
 
 if test x"${MISSING+set}" != xset; then
-  case $am_aux_dir in
-  *\ * | *\	*)
-    MISSING="\${SHELL} \"$am_aux_dir/missing\"" ;;
-  *)
-    MISSING="\${SHELL} $am_aux_dir/missing" ;;
-  esac
+  MISSING="\${SHELL} '$am_aux_dir/missing'"
 fi
 # Use eval to expand $SHELL
 if eval "$MISSING --is-lightweight"; then
@@ -30029,7 +30024,7 @@ $as_echo "$lt_cv_ld_force_load" >&6; }
 	  _lt_dar_allow_undefined='$wl-undefined ${wl}dynamic_lookup' ;;
 	10.[012][,.]*)
 	  _lt_dar_allow_undefined='$wl-flat_namespace $wl-undefined ${wl}suppress' ;;
-	10.*)
+	10.*|11.*)
 	  _lt_dar_allow_undefined='$wl-undefined ${wl}dynamic_lookup' ;;
       esac
     ;;
@@ -32841,7 +32836,7 @@ BEGIN {RS = " "; FS = "/|\n";} {
     mingw* | cegcc*) lt_search_path_spec=`$ECHO "$lt_search_path_spec" |\
       $SED 's|/\([A-Za-z]:\)|\1|g'` ;;
   esac
-  sys_lib_search_path_spec=`$ECHO "/gentoo/prefix64l/lib /gentoo/prefix64l/usr/lib $lt_search_path_spec" | $lt_NL2SP`
+  sys_lib_search_path_spec=`$ECHO "/gentoo/prefix64/lib /gentoo/prefix64/usr/lib $lt_search_path_spec" | $lt_NL2SP`
 else
   sys_lib_search_path_spec="/lib /usr/lib /usr/local/lib"
 fi

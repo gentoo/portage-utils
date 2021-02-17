@@ -56,6 +56,7 @@ DECLARE_APPLET(qsize)
 DECLARE_APPLET(qtbz2)
 DECLARE_APPLET(qtegrity)
 DECLARE_APPLET(quse)
+DECLARE_APPLET(qwhich)
 DECLARE_APPLET(qxpak)
 #undef DECLARE_APPLET
 
@@ -90,6 +91,7 @@ static const struct applet_t {
 	{"qtegrity",  qtegrity_main,  "<misc args>",     "verify files with IMA"},
 #endif
 	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
+	{"qwhich",    qwhich_main,    "<useflag>",       "find path to pkg"},
 	{"qxpak",     qxpak_main,     "<misc args>",     "manipulate xpak archives"},
 
 	/* aliases for equery compatibility */
@@ -104,7 +106,7 @@ static const struct applet_t {
 	/*"list"*/
 	/*"stats"*/
 	/*"uses"*/
-	/*"which"*/
+	{"which",     qwhich_main,    NULL, NULL},
 
 	/* alias for quickpkg */
 	{"uickpkg",   qpkg_main,      NULL, NULL},
