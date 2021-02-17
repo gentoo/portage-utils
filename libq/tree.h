@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -24,6 +24,7 @@ typedef struct tree_match_ctx    tree_match_ctx;
 struct tree_ctx {
 	int portroot_fd;
 	int tree_fd;
+	char path[_Q_PATH_MAX];
 	DIR *dir;
 	struct dirent **cat_de;
 	size_t cat_cnt;
@@ -122,6 +123,7 @@ struct tree_metadata_xml {
 struct tree_match_ctx {
 	depend_atom *atom;
 	tree_pkg_meta *meta;
+	char path[_Q_PATH_MAX + 48];
 	tree_match_ctx *next;
 	int free_atom;
 };
@@ -131,6 +133,7 @@ typedef int (tree_pkg_cb)(tree_pkg_ctx *, void *priv);
 
 tree_ctx *tree_open(const char *sroot, const char *portdir);
 tree_ctx *tree_open_vdb(const char *sroot, const char *svdb);
+tree_ctx *tree_open_ebuild(const char *sroot, const char *portdir);
 tree_ctx *tree_open_binpkg(const char *sroot, const char *spkg);
 void tree_close(tree_ctx *ctx);
 tree_cat_ctx *tree_open_cat(tree_ctx *ctx, const char *name);

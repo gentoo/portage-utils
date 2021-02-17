@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -54,6 +54,10 @@ tree_open_int(const char *sroot, const char *tdir, bool quiet)
 			warnp("could not open tree: %s (in root %s)", tdir, sroot);
 		goto cp_error;
 	}
+
+	if (sroot[0] == '/' && sroot[1] == '\0')
+		sroot = "";
+	snprintf(ctx->path, sizeof(ctx->path), "%s/%s", sroot, tdir);
 
 	ctx->dir = fdopendir(ctx->tree_fd);
 	if (ctx->dir == NULL)
@@ -125,6 +129,25 @@ tree_open_vdb(const char *sroot, const char *svdb)
 	tree_ctx *ret = tree_open_int(sroot, svdb, false);
 	if (ret != NULL)
 		ret->cachetype = CACHE_VDB;
+	return ret;
+}
+
+tree_ctx *
+tree_open_ebuild(const char *sroot, const char *portdir)
+{
+	tree_ctx *ret = tree_open_int(sroot, portdir, true);
+	if (ret != NULL) {
+		char buf[_Q_PATH_MAX];
+		char *repo = NULL;
+		size_t repolen = 0;
+
+		snprintf(buf, sizeof(buf), "%s%s/%s", sroot, portdir, portrepo_name);
+		if (eat_file(buf, &repo, &repolen)) {
+			(void)rmspace(repo);
+			ret->repo = repo;
+		}
+		ret->cachetype = CACHE_EBUILD;
+	}
 	return ret;
 }
 
@@ -1491,10 +1514,10 @@ depend_atom *
 tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 {
 	if (pkg_ctx->atom == NULL) {
-		pkg_ctx->atom = atom_explode(pkg_ctx->name);
+		pkg_ctx->atom =
+			atom_explode_cat(pkg_ctx->name, (char *)pkg_ctx->cat_ctx->name);
 		if (pkg_ctx->atom == NULL)
 			return NULL;
-		pkg_ctx->atom->CATEGORY = (char *)pkg_ctx->cat_ctx->name;
 	}
 
 	if (complete) {
@@ -1708,14 +1731,15 @@ tree_match_atom(tree_ctx *ctx, depend_atom *query, int flags)
 	while ((pkg_ctx = tree_next_pkg(C)) != NULL) { \
 		atom = tree_get_atom(pkg_ctx, \
 				query->SLOT != NULL || flags & TREE_MATCH_FULL_ATOM); \
-fprintf(stderr, "fbg: %s\n", atom_to_string(atom)); \
 		if (flags & TREE_MATCH_VIRTUAL || \
-				strcmp(atom->CATEGORY, "virtual") != 0) \
+				strcmp(atom->CATEGORY, "virtual") != 0) { \
 			if (atom_compare(atom, query) == EQUAL) { \
-				tree_match_ctx *n; \
-				n = xzalloc(sizeof(tree_match_ctx)); \
-				n->free_atom = false; \
+				tree_match_ctx *n = xzalloc(sizeof(tree_match_ctx)); \
 				n->atom = atom; \
+				snprintf(n->path, sizeof(n->path), "%s/%s/%s%s", \
+						(char *)C->ctx->path, C->name, pkg_ctx->name, \
+						C->ctx->cachetype == CACHE_EBUILD ? ".ebuild" : \
+						C->ctx->cachetype == CACHE_BINPKGS ? ".tbz2" : ""); \
 				if (flags & TREE_MATCH_METADATA) \
 					n->meta = tree_pkg_read(pkg_ctx); \
 				n->next = ret; \
@@ -1723,6 +1747,7 @@ fprintf(stderr, "fbg: %s\n", atom_to_string(atom)); \
 			} \
 			if (flags & TREE_MATCH_FIRST && ret != NULL) \
 				break; \
+		} \
 	} \
 	C->pkg_cur = 0;  /* reset to allow another traversal */ \
 }
