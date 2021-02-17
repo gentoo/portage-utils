@@ -23,6 +23,7 @@ APPLETS = \
 	qsize \
 	qtbz2 \
 	quse \
+	qwhich \
 	qxpak \
 	$(NULL)
 
@@ -42,6 +43,7 @@ dist_man_MANS = \
 	man/qsize.1 \
 	man/qtbz2.1 \
 	man/quse.1 \
+	man/qwhich.1 \
 	man/qxpak.1 \
 	$(NULL)
 
@@ -63,6 +65,7 @@ q_SOURCES = \
 	qsize.c \
 	qtbz2.c \
 	quse.c \
+	qwhich.c \
 	qxpak.c \
 	$(NULL)
 q_CPPFLAGS = \
