@@ -855,12 +855,9 @@ int qkeyword_main(int argc, char **argv)
 		qkeyword_usage(EXIT_FAILURE);
 
 	if (cat != NULL) {
-		char buf[_Q_PATH_MAX];
-
-		snprintf(buf, sizeof(buf), "%s/%s", cat, pkg == NULL ? "" : pkg);
-		data.qatom = atom_explode(buf);
+		data.qatom = atom_explode_cat(pkg == NULL ? "" : pkg, cat);
 		if (data.qatom == NULL) {
-			warnf("invalid cat/pkg: %s\n", buf);
+			warnf("invalid cat/pkg: %s/%s\n", cat, pkg == NULL ? "" : pkg);
 			return EXIT_FAILURE;
 		}
 	} else if (pkg != NULL) {
