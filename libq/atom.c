@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -43,7 +43,7 @@ const char * const booga[] = {"!!!", "!=", "==", ">", "<"};
  * for a definition of which variable contains what, see:
  * https://dev.gentoo.org/~ulm/pms/head/pms.html#x1-10800011 */
 depend_atom *
-atom_explode(const char *atom)
+atom_explode_cat(const char *atom, const char *cat)
 {
 	depend_atom *ret;
 	char *ptr;
@@ -70,14 +70,14 @@ atom_explode(const char *atom)
 	 * We allocate memory for atom struct, one string for CAT/PF + PVR,
 	 * another to cover PN and a final one for P + PV. */
 	slen = strlen(atom) + 1;
-	len = sizeof(*ret) + (slen * 3);
-	ret = xmalloc(len);
+	len = cat != NULL ? strlen(cat) + 1 : 0;
+	ret = xmalloc(sizeof(*ret) + (slen * 3) + len);
 	memset(ret, '\0', sizeof(*ret));
 
 	/* assign pointers to the three storage containers */
-	ret->CATEGORY = (char *)ret + sizeof(*ret);     /* CAT PF PVR */
-	ret->P        = ret->CATEGORY + slen;           /* P   PV     */
-	ret->PN       = ret->P + slen;                  /* PN         */
+	ret->CATEGORY = (char *)ret + sizeof(*ret) + len;     /* CAT PF PVR */
+	ret->P        = ret->CATEGORY + slen;                 /* P   PV     */
+	ret->PN       = ret->P + slen;                        /* PN         */
 
 	/* check for blocker operators */
 	ret->blocker = ATOM_BL_NONE;
@@ -243,6 +243,13 @@ atom_explode(const char *atom)
 	} else {
 		ret->PF = ret->CATEGORY;
 		ret->CATEGORY = NULL;
+	}
+
+	/* inject separate CATEGORY when given, this will override any found
+	 * CATEGORY, which is what it could be used for too */
+	if (cat != NULL) {
+		ret->CATEGORY = (char *)ret + sizeof(*ret);
+		memcpy(ret->CATEGORY, cat, len);
 	}
 
 	if (ret->PF == NULL) {

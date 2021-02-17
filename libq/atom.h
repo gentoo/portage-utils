@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -96,7 +96,8 @@ typedef enum {
 	OLDER
 } atom_equality;
 
-depend_atom *atom_explode(const char *atom);
+depend_atom *atom_explode_cat(const char *atom, const char *cat);
+#define atom_explode(A) atom_explode_cat(A, NULL)
 depend_atom *atom_clone(depend_atom *atom);
 void atom_implode(depend_atom *atom);
 atom_equality atom_compare(const depend_atom *a1, const depend_atom *a2);
