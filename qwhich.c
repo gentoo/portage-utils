@@ -19,13 +19,14 @@
 #include "atom.h"
 #include "tree.h"
 
-#define QWHICH_FLAGS "IbtpdflF:" COMMON_FLAGS
+#define QWHICH_FLAGS "IbtpdRflF:" COMMON_FLAGS
 static struct option const qwhich_long_opts[] = {
 	{"vdb",      no_argument, NULL, 'I'},
 	{"binpkg",   no_argument, NULL, 'b'},
 	{"tree",     no_argument, NULL, 't'},
 	{"pretty",   no_argument, NULL, 'p'},
 	{"dir",      no_argument, NULL, 'd'},
+	{"repo",     no_argument, NULL, 'R'},
 	{"first",    no_argument, NULL, 'f'},
 	{"latest",   no_argument, NULL, 'l'},
 	{"format",    a_argument, NULL, 'F'},
@@ -37,6 +38,7 @@ static const char * const qwhich_opts_help[] = {
 	"Look in main tree and overlays",
 	"Print (pretty) atom instead of path for use with -F",
 	"Print directory instead of path",
+	"Print repository name instead of path for tree/overlay matches",
 	"Stop searching after first match (implies -l)",
 	"Only return latest version for each match",
 	"Print matched using given format string",
@@ -52,6 +54,7 @@ struct qwhich_mode {
 	char do_tree:1;
 	char print_atom:1;
 	char print_path:1;
+	char print_repo:1;
 	char match_first:1;
 	char match_latest:1;
 	const char *fmt;
@@ -71,6 +74,7 @@ int qwhich_main(int argc, char **argv)
 	size_t n;
 	int ret;
 	tree_ctx *t;
+	char *repo;
 	int repolen;
 
 	memset(&m, 0, sizeof(m));
@@ -84,6 +88,7 @@ int qwhich_main(int argc, char **argv)
 			case 't': m.do_tree = true;      break;
 			case 'p': m.print_atom = true;   break;
 			case 'd': m.print_path = true;   break;
+			case 'R': m.print_repo = true;   break;
 			case 'f': m.match_first = true;  break;
 			case 'l': m.match_latest = true; break;
 			case 'F': m.fmt = optarg;        break;
@@ -146,12 +151,20 @@ int qwhich_main(int argc, char **argv)
 
 	/* at least keep the IO constrained to a tree at a time */
 	array_for_each(trees, j, t) {
-		if (t->cachetype == CACHE_METADATA_MD5)
-			repolen = strlen(t->path) - (sizeof("/metadata/md5-cache") - 1);
-		else if (t->cachetype == CACHE_METADATA_PMS)
-			repolen = strlen(t->path) - (sizeof("/metadata/cache") - 1);
-		else
-			repolen = 0;
+		if (m.print_repo) {
+			repo = t->repo;
+			repolen = strlen(repo);
+		} else {
+			repo = t->path;
+			if (t->cachetype == CACHE_METADATA_MD5)
+				repolen = strlen(t->path) - (sizeof("/metadata/md5-cache") - 1);
+			else if (t->cachetype == CACHE_METADATA_PMS)
+				repolen = strlen(t->path) - (sizeof("/metadata/cache") - 1);
+			else if (t->cachetype == CACHE_EBUILD)
+				repolen = strlen(t->path);
+			else
+				repolen = 0;
+		}
 
 		array_for_each(atoms, i, atom) {
 			tmc = tree_match_atom(t, atom, TREE_MATCH_DEFAULT |
@@ -162,17 +175,20 @@ int qwhich_main(int argc, char **argv)
 					printf("%s\n", atom_format(m.fmt, tmcw->atom));
 				} else {
 					if (t->cachetype == CACHE_METADATA_MD5 ||
-							t->cachetype == CACHE_METADATA_PMS)
+							t->cachetype == CACHE_METADATA_PMS ||
+							t->cachetype == CACHE_EBUILD)
 					{
 						if (m.print_path)
-							printf("%s%.*s/%s%s/%s%s%s\n",
-									GREEN, repolen, t->path,
+							printf("%s%.*s%s%s%s/%s%s%s\n",
+									GREEN, repolen, repo,
+									m.print_repo ? "::" : "/",
 									BOLD, tmcw->atom->CATEGORY,
 									DKBLUE, tmcw->atom->PN,
 									NORM);
 						else
-							printf("%s%.*s/%s%s/%s%s/%s%s%s.ebuild%s\n",
-									DKGREEN, repolen, t->path,
+							printf("%s%.*s%s%s%s/%s%s/%s%s%s.ebuild%s\n",
+									DKGREEN, repolen, repo,
+									m.print_repo ? "::" : "/",
 									BOLD, tmcw->atom->CATEGORY,
 									DKBLUE, tmcw->atom->PN,
 									BLUE, tmcw->atom->P,
