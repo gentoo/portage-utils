@@ -19,17 +19,19 @@
 #include "atom.h"
 #include "tree.h"
 
-#define QWHICH_FLAGS "IbtpdRflF:" COMMON_FLAGS
+#define QWHICH_FLAGS "IbtpdRflTAF:" COMMON_FLAGS
 static struct option const qwhich_long_opts[] = {
-	{"vdb",      no_argument, NULL, 'I'},
-	{"binpkg",   no_argument, NULL, 'b'},
-	{"tree",     no_argument, NULL, 't'},
-	{"pretty",   no_argument, NULL, 'p'},
-	{"dir",      no_argument, NULL, 'd'},
-	{"repo",     no_argument, NULL, 'R'},
-	{"first",    no_argument, NULL, 'f'},
-	{"latest",   no_argument, NULL, 'l'},
-	{"format",    a_argument, NULL, 'F'},
+	{"vdb",       no_argument, NULL, 'I'},
+	{"binpkg",    no_argument, NULL, 'b'},
+	{"tree",      no_argument, NULL, 't'},
+	{"pretty",    no_argument, NULL, 'p'},
+	{"dir",       no_argument, NULL, 'd'},
+	{"repo",      no_argument, NULL, 'R'},
+	{"first",     no_argument, NULL, 'f'},
+	{"latest",    no_argument, NULL, 'l'},
+	{"novirtual", no_argument, NULL, 'T'},
+	{"noacct",    no_argument, NULL, 'A'},
+	{"format",     a_argument, NULL, 'F'},
 	COMMON_LONG_OPTS
 };
 static const char * const qwhich_opts_help[] = {
@@ -41,6 +43,8 @@ static const char * const qwhich_opts_help[] = {
 	"Print repository name instead of path for tree/overlay matches",
 	"Stop searching after first match (implies -l)",
 	"Only return latest version for each match",
+	"Skip virtual category",
+	"Skip acct-user and acct-group categories",
 	"Print matched using given format string",
 	COMMON_OPTS_HELP
 };
@@ -57,6 +61,8 @@ struct qwhich_mode {
 	char print_repo:1;
 	char match_first:1;
 	char match_latest:1;
+	char skip_virtual:1;
+	char skip_acct:1;
 	const char *fmt;
 };
 
@@ -91,6 +97,8 @@ int qwhich_main(int argc, char **argv)
 			case 'R': m.print_repo = true;   break;
 			case 'f': m.match_first = true;  break;
 			case 'l': m.match_latest = true; break;
+			case 'T': m.skip_virtual = true; break;
+			case 'A': m.skip_acct = true;    break;
 			case 'F': m.fmt = optarg;        break;
 		}
 	}
@@ -167,9 +175,11 @@ int qwhich_main(int argc, char **argv)
 		}
 
 		array_for_each(atoms, i, atom) {
-			tmc = tree_match_atom(t, atom, TREE_MATCH_DEFAULT |
-					(m.match_latest ? TREE_MATCH_LATEST : 0) |
-					(m.match_first  ? TREE_MATCH_FIRST  : 0));
+			tmc = tree_match_atom(t, atom,
+					(m.match_latest ? TREE_MATCH_LATEST : 0 ) |
+					(m.match_first  ? TREE_MATCH_FIRST  : 0 ) |
+					(m.skip_virtual ? 0 : TREE_MATCH_VIRTUAL) |
+					(m.skip_acct    ? 0 : TREE_MATCH_ACCT   ));
 			for (tmcw = tmc; tmcw != NULL; tmcw = tmcw->next) {
 				if (m.print_atom) {
 					printf("%s\n", atom_format(m.fmt, tmcw->atom));
