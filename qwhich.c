@@ -19,7 +19,7 @@
 #include "atom.h"
 #include "tree.h"
 
-#define QWHICH_FLAGS "IbtpdfF:" COMMON_FLAGS
+#define QWHICH_FLAGS "IbtpdflF:" COMMON_FLAGS
 static struct option const qwhich_long_opts[] = {
 	{"vdb",      no_argument, NULL, 'I'},
 	{"binpkg",   no_argument, NULL, 'b'},
@@ -27,6 +27,7 @@ static struct option const qwhich_long_opts[] = {
 	{"pretty",   no_argument, NULL, 'p'},
 	{"dir",      no_argument, NULL, 'd'},
 	{"first",    no_argument, NULL, 'f'},
+	{"latest",   no_argument, NULL, 'l'},
 	{"format",    a_argument, NULL, 'F'},
 	COMMON_LONG_OPTS
 };
@@ -36,7 +37,8 @@ static const char * const qwhich_opts_help[] = {
 	"Look in main tree and overlays",
 	"Print (pretty) atom instead of path for use with -F",
 	"Print directory instead of path",
-	"Stop searching after first match",
+	"Stop searching after first match (implies -l)",
+	"Only return latest version for each match",
 	"Print matched using given format string",
 	COMMON_OPTS_HELP
 };
@@ -51,6 +53,7 @@ struct qwhich_mode {
 	char print_atom:1;
 	char print_path:1;
 	char match_first:1;
+	char match_latest:1;
 	const char *fmt;
 };
 
@@ -76,28 +79,29 @@ int qwhich_main(int argc, char **argv)
 		switch (ret) {
 			COMMON_GETOPTS_CASES(qwhich)
 
-			case 'I': m.do_vdb = true;      break;
-			case 'b': m.do_binpkg = true;   break;
-			case 't': m.do_tree = true;     break;
-			case 'p': m.print_atom = true;  break;
-			case 'd': m.print_path = true;  break;
-			case 'f': m.match_first = true; break;
-			case 'F': m.fmt = optarg;       break;
+			case 'I': m.do_vdb = true;       break;
+			case 'b': m.do_binpkg = true;    break;
+			case 't': m.do_tree = true;      break;
+			case 'p': m.print_atom = true;   break;
+			case 'd': m.print_path = true;   break;
+			case 'f': m.match_first = true;  break;
+			case 'l': m.match_latest = true; break;
+			case 'F': m.fmt = optarg;        break;
 		}
 	}
 
-	/* defaults: no options at all, enable first match,
+	/* defaults: no options at all, enable latest match,
 	 *           no selectors, enable tree + overlays */
 	if (!m.do_vdb && !m.do_binpkg && !m.do_tree) {
 		if (!m.print_atom && !m.print_path && !m.match_first && m.fmt == NULL)
-			m.match_first = true;
+			m.match_latest = true;
 		m.do_tree = true;
 	}
 
 	/* when printing path, we better just match the first, else we get a
 	 * lot of dups */
-	if (m.print_path)
-		m.match_first = true;
+	if (m.print_path || m.match_first)
+		m.match_latest = true;
 
 	/* set format if none given */
 	if (m.fmt == NULL) {
@@ -150,8 +154,9 @@ int qwhich_main(int argc, char **argv)
 			repolen = 0;
 
 		array_for_each(atoms, i, atom) {
-			tmc = tree_match_atom(t, atom,
-					m.match_first ? TREE_MATCH_FIRST : TREE_MATCH_DEFAULT);
+			tmc = tree_match_atom(t, atom, TREE_MATCH_DEFAULT |
+					(m.match_latest ? TREE_MATCH_LATEST : 0) |
+					(m.match_first  ? TREE_MATCH_FIRST  : 0));
 			for (tmcw = tmc; tmcw != NULL; tmcw = tmcw->next) {
 				if (m.print_atom) {
 					printf("%s\n", atom_format(m.fmt, tmcw->atom));
@@ -172,6 +177,11 @@ int qwhich_main(int argc, char **argv)
 									DKBLUE, tmcw->atom->PN,
 									BLUE, tmcw->atom->P,
 									DKGREEN, NORM);
+					} else if (t->cachetype == CACHE_VDB && !m.print_path) {
+						printf("%s%s/%s%s%s.ebuild%s\n",
+								DKBLUE, tmcw->path,
+								BLUE, tmcw->atom->P,
+								DKGREEN, NORM);
 					} else {
 						printf("%s%s%s\n", DKBLUE, tmcw->path, NORM);
 					}
