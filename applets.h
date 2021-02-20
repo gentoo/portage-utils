@@ -91,7 +91,7 @@ static const struct applet_t {
 	{"qtegrity",  qtegrity_main,  "<misc args>",     "verify files with IMA"},
 #endif
 	{"quse",      quse_main,      "<useflag>",       "find pkgs using useflags"},
-	{"qwhich",    qwhich_main,    "<useflag>",       "find path to pkg"},
+	{"qwhich",    qwhich_main,    "<pkg ...>",       "find path to pkg"},
 	{"qxpak",     qxpak_main,     "<misc args>",     "manipulate xpak archives"},
 
 	/* aliases for equery compatibility */

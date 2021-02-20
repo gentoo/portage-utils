@@ -1,0 +1,15 @@
+.I qwhich
+returns the paths to the ebuilds matching the given atoms.  Searching is
+done by default over the main ebuild repository and all configured
+overlays.  When requested, a search can be made over the repository of
+installed packages (VDB) or binpkg repos.
+.P
+The default action is to print the full path to the latest ebuild for
+each package.  This can be changed using \fB-d\fR to print the directory
+the ebuild is in instead.  E.g\. one could \fBcd\fR(1) to this
+directory.  Alternatively, one can request to stop searching after the
+first match using \fB-f\fR, which means at most one match per repo is
+returned.
+.P
+\fIqwhich\fR accepts atoms to search for, which can be any valid atom,
+including e.g\. version specifications to narrow the search.

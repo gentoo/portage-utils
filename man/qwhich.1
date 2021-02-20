@@ -4,9 +4,23 @@
 qwhich \- find path to pkg
 .SH SYNOPSIS
 .B qwhich
-\fI[opts] <useflag>\fR
+\fI[opts] <pkg ...>\fR
 .SH DESCRIPTION
-
+.I qwhich
+returns the paths to the ebuilds matching the given atoms.  Searching is
+done by default over the main ebuild repository and all configured
+overlays.  When requested, a search can be made over the repository of
+installed packages (VDB) or binpkg repos.
+.P
+The default action is to print the full path to the latest ebuild for
+each package.  This can be changed using \fB-d\fR to print the directory
+the ebuild is in instead.  E.g\. one could \fBcd\fR(1) to this
+directory.  Alternatively, one can request to stop searching after the
+first match using \fB-f\fR, which means at most one match per repo is
+returned.
+.P
+\fIqwhich\fR accepts atoms to search for, which can be any valid atom,
+including e.g\. version specifications to narrow the search.
 .SH OPTIONS
 .TP
 \fB\-I\fR, \fB\-\-vdb\fR
@@ -24,8 +38,20 @@ Print (pretty) atom instead of path for use with -F.
 \fB\-d\fR, \fB\-\-dir\fR
 Print directory instead of path.
 .TP
+\fB\-R\fR, \fB\-\-repo\fR
+Print repository name instead of path for tree/overlay matches.
+.TP
 \fB\-f\fR, \fB\-\-first\fR
-Stop searching after first match.
+Stop searching after first match (implies -l).
+.TP
+\fB\-l\fR, \fB\-\-latest\fR
+Only return latest version for each match.
+.TP
+\fB\-T\fR, \fB\-\-novirtual\fR
+Skip virtual category.
+.TP
+\fB\-A\fR, \fB\-\-noacct\fR
+Skip acct-user and acct-group categories.
 .TP
 \fB\-F\fR \fI<arg>\fR, \fB\-\-format\fR \fI<arg>\fR
 Print matched using given format string.
