@@ -155,10 +155,11 @@ int tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 set *tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms);
 depend_atom *tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete);
 tree_match_ctx *tree_match_atom(tree_ctx *t, depend_atom *q, int flags);
-#define TREE_MATCH_FULL_ATOM   1<<1
-#define TREE_MATCH_METADATA    1<<2
-#define TREE_MATCH_FIRST       1<<3
-#define TREE_MATCH_VIRTUAL     1<<4
+#define TREE_MATCH_FULL_ATOM  (1<<1)
+#define TREE_MATCH_METADATA   (1<<2)
+#define TREE_MATCH_LATEST     (1<<3)
+#define TREE_MATCH_VIRTUAL    (1<<4)
+#define TREE_MATCH_FIRST      (1<<5)
 #define TREE_MATCH_DEFAULT     TREE_MATCH_VIRTUAL
 void tree_match_close(tree_match_ctx *t);
 

@@ -1728,26 +1728,36 @@ tree_match_atom(tree_ctx *ctx, depend_atom *query, int flags)
 
 #define search_cat(C) \
 { \
+	char *lastpn = NULL; \
 	while ((pkg_ctx = tree_next_pkg(C)) != NULL) { \
 		atom = tree_get_atom(pkg_ctx, \
 				query->SLOT != NULL || flags & TREE_MATCH_FULL_ATOM); \
-		if (flags & TREE_MATCH_VIRTUAL || \
-				strcmp(atom->CATEGORY, "virtual") != 0) { \
-			if (atom_compare(atom, query) == EQUAL) { \
-				tree_match_ctx *n = xzalloc(sizeof(tree_match_ctx)); \
-				n->atom = atom; \
-				snprintf(n->path, sizeof(n->path), "%s/%s/%s%s", \
-						(char *)C->ctx->path, C->name, pkg_ctx->name, \
-						C->ctx->cachetype == CACHE_EBUILD ? ".ebuild" : \
-						C->ctx->cachetype == CACHE_BINPKGS ? ".tbz2" : ""); \
-				if (flags & TREE_MATCH_METADATA) \
-					n->meta = tree_pkg_read(pkg_ctx); \
-				n->next = ret; \
-				ret = n; \
-			} \
-			if (flags & TREE_MATCH_FIRST && ret != NULL) \
-				break; \
+		/* skip virtual/ package as requested */ \
+		if (!(flags & TREE_MATCH_VIRTUAL || \
+				strcmp(atom->CATEGORY, "virtual") != 0)) \
+			continue; \
+		/* see if this atom matches the query */ \
+		if (atom_compare(atom, query) == EQUAL) { \
+			tree_match_ctx *n; \
+			/* skip over additional versions for match latest */ \
+			if (flags & TREE_MATCH_LATEST && lastpn != NULL && \
+					strcmp(lastpn, atom->PN) == 0) \
+				continue; \
+			/* create a new match result */ \
+			n = xzalloc(sizeof(tree_match_ctx)); \
+			n->atom = atom; \
+			snprintf(n->path, sizeof(n->path), "%s/%s/%s%s", \
+					(char *)C->ctx->path, C->name, pkg_ctx->name, \
+					C->ctx->cachetype == CACHE_EBUILD ? ".ebuild" : \
+					C->ctx->cachetype == CACHE_BINPKGS ? ".tbz2" : ""); \
+			if (flags & TREE_MATCH_METADATA) \
+				n->meta = tree_pkg_read(pkg_ctx); \
+			n->next = ret; \
+			ret = n; \
 		} \
+		lastpn = atom->PN; \
+		if (flags & TREE_MATCH_FIRST && ret != NULL) \
+			break; \
 	} \
 	C->pkg_cur = 0;  /* reset to allow another traversal */ \
 }
