@@ -1736,6 +1736,10 @@ tree_match_atom(tree_ctx *ctx, depend_atom *query, int flags)
 		if (!(flags & TREE_MATCH_VIRTUAL || \
 				strcmp(atom->CATEGORY, "virtual") != 0)) \
 			continue; \
+		/* skip acct-* package as requested */ \
+		if (!(flags & TREE_MATCH_ACCT || \
+				strncmp(atom->CATEGORY, "acct-", sizeof("acct-") - 1) != 0)) \
+			continue; \
 		/* see if this atom matches the query */ \
 		if (atom_compare(atom, query) == EQUAL) { \
 			tree_match_ctx *n; \
