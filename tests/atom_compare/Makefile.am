@@ -4,7 +4,7 @@ s = $(abs_top_srcdir)/$(this_subdir)
 atb = $(abs_top_builddir)
 mkdir = $(if $(wildcard $(dir $(1))),:,mkdir -p "$(dir $(1))")
 
-check-local: static static.q portage
+check-local: static static.q
 
 t = \
 	@set -f && \
