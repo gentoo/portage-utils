@@ -1617,7 +1617,7 @@ uninstall-am:
 .PRECIOUS: Makefile
 
 
-check-local: static static.q portage
+check-local: static static.q
 
 static: $(s)/static.tests $(atb)/q
 	$(call t,atom -c)
