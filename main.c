@@ -369,6 +369,10 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 	char *buf = NULL;
 	size_t buflen = 0;
 	size_t line;
+	bool incomment;
+	size_t cbeg;
+	size_t cend;
+	char npath[_Q_PATH_MAX * 2];
 	int i;
 	env_vars *vars = data;
 	set *masks = data;
@@ -376,7 +380,6 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 	if ((dentslen = scandir(file, &dents, NULL, alphasort)) > 0) {
 		int di;
 		struct dirent *d;
-		char npath[_Q_PATH_MAX * 2];
 
 		/* recurse through all files */
 		for (di = 0; di < dentslen; di++) {
@@ -396,17 +399,32 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 		goto done;
 
 	line = 0;
+	incomment = false;
+	cbeg = 0;
+	cend = 0;
 	while (getline(&buf, &buflen, fp) != -1) {
 		line++;
 		rmspace(buf);
-		if (*buf == '#' || *buf == '\0')
+		if (*buf == '#') {
+			if (!incomment)
+				cbeg = cend = line;
+			else
+				cend = line;
+			incomment = true;
 			continue;
+		}
+		incomment = false;
+		if (*buf == '\0') {
+			cbeg = cend = 0;
+			continue;
+		}
 
 		/* Handle "source" keyword */
 		if (type == ENV_FILE) {
+			size_t curline = line;
+
 			if (strncmp(buf, "source ", 7) == 0) {
 				const char *sfile = buf + 7;
-				char npath[_Q_PATH_MAX * 2];
 
 				if (sfile[0] != '/') {
 					/* handle relative paths */
@@ -455,6 +473,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 
 						abuf = NULL;
 						while (getline(&abuf, &abuflen, fp) != -1) {
+							line++;
 							buf = xrealloc(buf, buflen + abuflen);
 							endq = strchr(abuf, q);
 							if (endq)
@@ -483,25 +502,23 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 					s[off] = '\0';
 				}
 
-				set_portage_env_var(&vars[i], s, file);
+				snprintf(npath, sizeof(npath), "%s:%zu:%zu-%zu",
+						file, curline, cbeg, cend);
+				set_portage_env_var(&vars[i], s, npath);
 			}
 		} else if (type == PMASK_FILE) {
-			/* trim leading space */
-			for (s = buf; isspace((int)*s); s++)
-				;
-			if (*s == '\0')
-				continue;
-			if (*s == '-') {
+			if (*buf == '-') {
 				/* negation/removal, lookup and drop mask if it exists;
 				 * note that this only supports exact matches (PMS
 				 * 5.2.5) so we don't even have to parse and use
 				 * atom-compare here */
-				s++;
-				if ((p = del_set(s, masks, NULL)) != NULL)
+				if ((p = del_set(buf + 1, masks, NULL)) != NULL)
 					free(p);
 			} else {
-				p = xstrdup(file);
-				if (add_set_value(s, p, masks) != NULL)
+				snprintf(npath, sizeof(npath), "%s:%zu:%zu-%zu",
+						file, line, cbeg, cend);
+				p = xstrdup(npath);
+				if (add_set_value(buf, p, masks) != NULL)
 					free(p);
 			}
 		}
@@ -660,6 +677,7 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 
 	main_repo = NULL;
 	repo = NULL;
+	line = 0;
 	for (p = strtok_r(buf, "\n", &s); p != NULL; p = strtok_r(NULL, "\n", &s))
 	{
 		/* trim trailing whitespace, remove comments, locate = */
