@@ -1758,8 +1758,8 @@ tree_match_atom(tree_ctx *ctx, depend_atom *query, int flags)
 				n->meta = tree_pkg_read(pkg_ctx); \
 			n->next = ret; \
 			ret = n; \
+			lastpn = atom->PN; \
 		} \
-		lastpn = atom->PN; \
 		if (flags & TREE_MATCH_FIRST && ret != NULL) \
 			break; \
 	} \
