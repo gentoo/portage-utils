@@ -677,7 +677,6 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 
 	main_repo = NULL;
 	repo = NULL;
-	line = 0;
 	for (p = strtok_r(buf, "\n", &s); p != NULL; p = strtok_r(NULL, "\n", &s))
 	{
 		/* trim trailing whitespace, remove comments, locate = */

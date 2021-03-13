@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -288,6 +288,11 @@ int q_main(int argc, char **argv)
 		size_t n;
 		int j;
 		bool match;
+		char *lastmfile = NULL;
+		long lastcbeg = 0;
+		long lastcend = 0;
+		char *buf = NULL;
+		size_t buflen = 0;
 		depend_atom *atom;
 		depend_atom *qatom;
 
@@ -313,15 +318,62 @@ int q_main(int argc, char **argv)
 			if (!match)
 				continue;
 
+			if (verbose > 1) {
+				char *mfile = (char *)array_get_elem(files, n);
+				char *l;
+				char *s = NULL;
+				long line = 0;
+				long cbeg = 0;
+				long cend = 0;
+
+				s = l = strchr(mfile, ':');
+				/* p cannot be NULL, just crash if something's wrong */
+				(void)strtol(l + 1, &l, 10);
+				if (*l == ':')
+					cbeg = strtol(l + 1, &l, 10);
+				if (*l == '-')
+					cend = strtol(l + 1, &l, 10);
+				if (cend < cbeg)
+					cend = cbeg = 0;
+
+				if (lastmfile == NULL ||
+						strncmp(lastmfile, mfile, s - mfile + 1) != 0 ||
+						lastcbeg != cbeg || lastcend != cend)
+				{
+					*s = '\0';
+					if (buf != NULL)
+						*buf = '\0';
+					eat_file(mfile, &buf, &buflen);
+					*s = ':';
+
+					line = 0;
+					for (l = buf; (s = strchr(l, '\n')) != NULL; l = s + 1)
+					{
+						line++;
+						if (line >= cbeg && line <= cend)
+							printf("%.*s\n", (int)(s - l), l);
+						if (line > cend)
+							break;
+					}
+				}
+				lastmfile = mfile;
+				lastcbeg = cbeg;
+				lastcend = cend;
+			}
 			printf("%s", atom_format(
 						"%[pfx]%[CAT]%[PF]%[SLOT]%[SUBSLOT]%[sfx]%[USE]%[REPO]",
 						atom));
-			if (verbose)
+
+			if (verbose == 1) {
 				printf(" [%s]\n", (char *)array_get_elem(files, n));
-			else
+			} else {
 				printf("\n");
+			}
 			atom_implode(atom);
 		}
+
+		if (buf != NULL)
+			free(buf);
 
 		xarrayfree_int(masks);
 		xarrayfree_int(files);

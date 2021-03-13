@@ -10,5 +10,6 @@ envvar: |
     variable name and the value is printed as a shell-style declaration.
 masks: |
     Print the masks from package.mask files found.  Use \fI-v\fR to see
-    the source (file) where the mask was declared.  Additional arguments
-    are treated as atom selectors which must match the masks.
+    the source (file) where the mask was declared.  Use multiple
+    \fI-v\fR to print the comment right before the mask.  Additional
+    arguments are treated as atom selectors which must match the masks.
