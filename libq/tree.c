@@ -1383,6 +1383,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 							p++;
 							len--;
 						}
+						ctx->pkgs = c;
 						continue;
 					}
 					cat->pkg_ctxs = (tree_pkg_ctx **)atom;  /* for name */
