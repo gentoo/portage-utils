@@ -1374,18 +1374,13 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 						cat->pkg_ctxs = NULL;
 						tree_close_cat(cat);
 					}
-					pkg.cat_ctx = cat = tree_open_cat(ctx, atom->CATEGORY);
+					cat = tree_open_cat(ctx, atom->CATEGORY);
 					if (cat == NULL) {
-						/* probably dir doesn't exist or something, skip
-						 * this one */
-						memset(&meta, 0, sizeof(meta));
-						if (len > 0) {  /* hop over \n */
-							p++;
-							len--;
-						}
-						ctx->pkgs = c;
-						continue;
+						/* probably dir doesn't exist or something,
+						 * generate a dummy cat */
+						cat = tree_open_cat(ctx, ".");
 					}
+					pkg.cat_ctx = cat;
 					cat->pkg_ctxs = (tree_pkg_ctx **)atom;  /* for name */
 				}
 				pkgnamelen = snprintf(pkgname, sizeof(pkgname),
