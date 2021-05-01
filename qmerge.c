@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Authors
+ * Copyright 2005-2021 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -666,6 +666,8 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		"eqawarn() { elog \"QA: \"\"$@\"; }\n"
 		"eerror() { elog \"$@\"; }\n"
 		"die() { eerror \"$@\"; exit 1; }\n"
+		"fowners() { local f a=$1; shift; for f in \"$@\" ; do chown $a \"${ED}/${f}\" ; done ; }\n"
+		"fperms() { local f a=$1; shift; for f in \"$@\" ; do chmod $a \"${ED}/${f}\" ; done ; }\n"
 		/* TODO: This should suppress `die` */
 		"nonfatal() { \"$@\"; }\n"
 		"ebegin() { printf ' * %%b ...' \"$*\"; }\n"
@@ -1895,7 +1897,7 @@ grab_binpkg_info(depend_atom *atom)
 	/* reuse previously opened tree, so we really employ the cache
 	 * from libq/tree */
 	if (tree == NULL) {
-		snprintf(path, sizeof(path), "%s/portage/Packages", port_tmpdir);
+		snprintf(path, sizeof(path), "%s/portage/%s", port_tmpdir, Packages);
 		/* we don't use ROOT on package tree here, operating on ROOT
 		 * should be for package merges/unmerges, but be able to pull
 		 * binpkgs from current system */
@@ -2100,7 +2102,9 @@ int qmerge_main(int argc, char **argv)
 	if (install && !pretend) {
 		if (follow_rdepends && getenv("QMERGE") == NULL) {
 			install = 0;
-			warn("Using these options are likely to break your system at this point. export QMERGE=1; if you think you know what your doing.");
+			warn("Using these options are likely to break your "
+					"system at this point. export QMERGE=1; "
+					"if you think you know what your doing.");
 		}
 	}
 
