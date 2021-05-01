@@ -201,12 +201,12 @@ int qwhich_main(int argc, char **argv)
 									m.print_repo ? "::" : "/",
 									BOLD, tmcw->atom->CATEGORY,
 									DKBLUE, tmcw->atom->PN,
-									BLUE, tmcw->atom->P,
+									BLUE, tmcw->atom->PF,
 									DKGREEN, NORM);
 					} else if (t->cachetype == CACHE_VDB && !m.print_path) {
 						printf("%s%s/%s%s%s.ebuild%s\n",
 								DKBLUE, tmcw->path,
-								BLUE, tmcw->atom->P,
+								BLUE, tmcw->atom->PF,
 								DKGREEN, NORM);
 					} else {
 						printf("%s%s%s\n", DKBLUE, tmcw->path, NORM);
