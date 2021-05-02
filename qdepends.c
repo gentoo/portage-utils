@@ -166,8 +166,10 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		if (depstr == NULL)
 			continue;
 		dep_tree = dep_grow_tree(depstr);
-		if (dep_tree == NULL)
+		if (dep_tree == NULL) {
+			warn("failed to parse depstring from %s\n", atom_to_string(datom));
 			continue;
+		}
 
 		if (state->qmode & QMODE_TREE && verbose) {
 			/* pull in flags in use if possible */
@@ -185,6 +187,9 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 						dep_node *dep_vdb = dep_grow_tree(depstr);
 						if (dep_vdb != NULL)
 							dep_flatten_tree(dep_vdb, state->deps);
+						else
+							warn("failed to parse VDB depstring from %s\n",
+									atom_to_string(datom));
 					}
 					tree_close_pkg(vpkg);
 				}
