@@ -666,8 +666,8 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		"eqawarn() { elog \"QA: \"\"$@\"; }\n"
 		"eerror() { elog \"$@\"; }\n"
 		"die() { eerror \"$@\"; exit 1; }\n"
-		"fowners() { local f a=$1; shift; for f in \"$@\" ; do chown $a \"${ED}/${f}\" ; done ; }\n"
-		"fperms() { local f a=$1; shift; for f in \"$@\" ; do chmod $a \"${ED}/${f}\" ; done ; }\n"
+		"fowners() { local f a=$1; shift; for f in \"$@\"; do chown $a \"${ED}/${f}\"; done; }\n"
+		"fperms() { local f a=$1; shift; for f in \"$@\"; do chmod $a \"${ED}/${f}\"; done; }\n"
 		/* TODO: This should suppress `die` */
 		"nonfatal() { \"$@\"; }\n"
 		"ebegin() { printf ' * %%b ...' \"$*\"; }\n"
