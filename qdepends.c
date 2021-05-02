@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Authors
+ * Copyright 2005-2021 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -366,6 +366,7 @@ int qdepends_main(int argc, char **argv)
 
 	if (state.qmode & QMODE_INSTALLED || verbose)
 		state.vdb = tree_open_vdb(portroot, portvdb);
+	ret = 0;
 	if (state.qmode & QMODE_TREE) {
 		char *overlay;
 		size_t n;
@@ -376,11 +377,11 @@ int qdepends_main(int argc, char **argv)
 			if (t != NULL) {
 				if (!(state.qmode & QMODE_REVERSE) && array_cnt(atoms) > 0) {
 					array_for_each(atoms, i, atom) {
-						ret = tree_foreach_pkg_sorted(t,
+						ret |= tree_foreach_pkg_sorted(t,
 								qdepends_results_cb, &state, atom);
 					}
 				} else {
-					ret = tree_foreach_pkg_sorted(t,
+					ret |= tree_foreach_pkg_sorted(t,
 							qdepends_results_cb, &state, NULL);
 				}
 				tree_close(t);
@@ -389,11 +390,11 @@ int qdepends_main(int argc, char **argv)
 	} else {
 		if (!(state.qmode & QMODE_REVERSE) && array_cnt(atoms) > 0) {
 			array_for_each(atoms, i, atom) {
-				ret = tree_foreach_pkg_fast(state.vdb,
+				ret |= tree_foreach_pkg_fast(state.vdb,
 						qdepends_results_cb, &state, atom);
 			}
 		} else {
-			ret = tree_foreach_pkg_fast(state.vdb,
+			ret |= tree_foreach_pkg_fast(state.vdb,
 					qdepends_results_cb, &state, NULL);
 		}
 	}
