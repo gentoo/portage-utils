@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2019-     Fabian Groffen  - <grobian@gentoo.org>
@@ -22,5 +22,6 @@ extern const char *BRYELLOW;
 extern const char *WHITE;
 
 void color_remap(void);
+void color_clear(void);
 
 #endif
