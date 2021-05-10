@@ -1,9 +1,10 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2019-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #ifndef _APPLETS_H_
@@ -133,6 +134,7 @@ static const struct applet_t {
 	{"verbose",   no_argument, NULL, 'v'}, \
 	{"quiet",     no_argument, NULL, 'q'}, \
 	{"nocolor",   no_argument, NULL, 'C'}, \
+	{"color",     no_argument, NULL, 0x2}, \
 	{"help",      no_argument, NULL, 'h'}, \
 	{"version",   no_argument, NULL, 'V'}, \
 	{NULL,        no_argument, NULL, 0x0}
@@ -141,6 +143,7 @@ static const struct applet_t {
 	"Report full package versions, emit more elaborate output", \
 	"Tighter output; suppress warnings", \
 	"Don't output color", \
+	"Force color in output", \
 	"Print this help and exit", \
 	"Print version and exit", \
 	NULL
@@ -150,8 +153,9 @@ static const struct applet_t {
 	case 'q': setup_quiet(); break; \
 	case 'V': version_barf(); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
-	case 'C': no_colors(); break; \
-	default: applet ## _usage(EXIT_FAILURE); break;
+	case 'C': color_clear(); setenv("NOCOLOR", "true", 1); break; \
+	case 0x2: color_remap(); unsetenv("NOCOLOR"); break; \
+	default:  applet ## _usage(EXIT_FAILURE); break;
 
 extern char *portarch;
 extern char *portroot;

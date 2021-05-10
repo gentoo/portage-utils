@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -69,14 +69,6 @@ init_coredumps(void)
 	setrlimit(RLIMIT_CORE, &rl);
 }
 #endif
-
-void
-no_colors(void)
-{
-	BOLD = NORM = BLUE = DKBLUE = CYAN = GREEN = DKGREEN = \
-		   MAGENTA = RED = YELLOW = BRYELLOW = WHITE = "";
-	setenv("NOCOLOR", "true", 1);
-}
 
 void
 setup_quiet(void)
@@ -1041,10 +1033,13 @@ initialize_portage_env(void)
 	if (getenv("PORTAGE_QUIET") != NULL)
 		setup_quiet();
 
-	if (nocolor)
-		no_colors();
-	else
+	if (nocolor) {
+		color_clear();
+		setenv("NOCOLOR", "true", 1);
+	} else {
 		color_remap();
+		unsetenv("NOCOLOR");
+	}
 }
 
 int main(int argc, char **argv)
@@ -1063,11 +1058,11 @@ int main(int argc, char **argv)
 	twidth = 0;
 	if (fstat(fileno(stdout), &st) != -1) {
 		if (!isatty(fileno(stdout))) {
-			no_colors();
+			nocolor = 1;
 		} else {
 			if ((getenv("TERM") == NULL) ||
 					(strcmp(getenv("TERM"), "dumb") == 0))
-				no_colors();
+				nocolor = 1;
 			if (ioctl(0, TIOCGWINSZ, &winsz) == 0 && winsz.ws_col > 0)
 				twidth = (int)winsz.ws_col;
 		}
