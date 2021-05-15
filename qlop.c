@@ -27,11 +27,12 @@
 
 #define QLOP_DEFAULT_LOGFILE "emerge.log"
 
-#define QLOP_FLAGS "ctaHMmuUsElerd:f:w:F:" COMMON_FLAGS
+#define QLOP_FLAGS "ctapHMmuUsElerd:f:w:F:" COMMON_FLAGS
 static struct option const qlop_long_opts[] = {
 	{"summary",   no_argument, NULL, 'c'},
 	{"time",      no_argument, NULL, 't'},
 	{"average",   no_argument, NULL, 'a'},
+	{"predict",   no_argument, NULL, 'p'},
 	{"human",     no_argument, NULL, 'H'},
 	{"machine",   no_argument, NULL, 'M'},
 	{"merge",     no_argument, NULL, 'm'},
@@ -52,6 +53,7 @@ static const char * const qlop_opts_help[] = {
 	"Print summary of average merges (implies -a)",
 	"Print time taken to complete action",
 	"Print average time taken to complete action",
+	"Print prediction of time it takes to complete action",
 	"Print elapsed time in human readable format (use with -t or -a)",
 	"Print start/elapsed time as seconds with no formatting",
 	"Show merge history",
@@ -85,6 +87,7 @@ struct qlop_mode {
 	char do_sync:1;
 	char do_running:1;
 	char do_average:1;
+	char do_predict:1;
 	char do_summary:1;
 	char do_human:1;
 	char do_machine:1;
@@ -361,6 +364,47 @@ portage never got interrupted in a way where it could not write its
 interruption to the log.  Unfortunately these scenarios happen a lot.
 As such, we can try to remedy this somewhat by using a rule of thumb
 that currently merging packages need to be withinin the last 10 days.
+
+Averages
+Compile time of packages typically changes over time (assuming the
+machine stays the same).  New major releases introduce extra code, or
+improve stuff considerably.  New compilers might take more or less time
+compiling the code.  The environment (like the toolchain) we cannot take
+into account, packages themselves, we could do something with.
+Portage unfortunately does not record the SLOT of the package it
+emerges, so we cannot use SLOT.
+- Gentoo revisions (-rX) typically do not change the code a lot
+- minor and below revisions usually are part of the same code branch
+- major revisions typically indicate a next generation of the code
+So when there is a running emerge:
+1. we value most an identical version, minus Gentoo revisions
+2. we look for merges with the same major version
+3. when there's still not enough (or anything) to balance an average
+   off, we look at merges for the same package (older major versions)
+Think of this value system as something like the weight of 1 is 5x, 2 is
+3x and 3 is just 1x.
+While this might sound really cool, it often results in the same average
+as a normal average, and so it is useless.  In particular: the best
+prediction is the most recent matching version.  If there is no exact
+match (ignoring Gentoo revisions), a projection of runtimes for previous
+merges is the next best thing, ignoring major or minor revisions, e.g.
+for GCC major versions would hold very well, but for binutils, the
+minors differ a lot (for it's on major version 2 for ages).
+
+So it seems what it boils down to, is that prediction of the simplest
+kind is probably the best here.  What we do, is we order the merge
+history of the package, and try to extrapolate the growth between the
+two last merges, e.g. 10 and 12 becomes 12 + (12 - 10) = 14.
+Now if there is only one point of history here, there's nothing to
+predict, and we best just take the value and add a 10% fuzz.
+There's two cases in this setup:
+1. predict for a version that we already have merge history for,
+   ignoring revisions, or
+2. predict for a version that's different from what we've seen before
+In case of 1. we only look at the same versions, and apply extrapolation
+based on the revisions, e.g. -r2 -> -r4.  In case of 2. we only look at
+versions that are older than the version we're predicting for.  This to
+deal with e.g. merging python-3.6 with 3.9 installed as well.
 */
 static int do_emerge_log(
 		const char *log,
@@ -653,7 +697,8 @@ static int do_emerge_log(
 				if ((q = strchr(p, '\n')) != NULL)
 					*q = '\0';
 
-				if (flags->do_average || flags->do_running)
+				if (flags->do_predict || flags->do_average ||
+						flags->do_running)
 				{
 					sync_cnt++;
 					sync_time += elapsed;
@@ -708,11 +753,15 @@ static int do_emerge_log(
 				/* see if we need this atom */
 				atomw = NULL;
 				if (atomset == NULL) {
+					int orev = atom->PR_int;
+					if (flags->do_predict)
+						atom->PR_int = 0;  /* allow matching a revision */
 					array_for_each(atoms, i, atomw) {
 						if (atom_compare(atom, atomw) == EQUAL)
 							break;
 						atomw = NULL;
 					}
+					atom->PR_int = orev;
 				} else {
 					snprintf(afmt, sizeof(afmt), "%s/%s",
 							atom->CATEGORY, atom->PN);
@@ -738,15 +787,16 @@ static int do_emerge_log(
 					/* found, do report */
 					elapsed = tstart - pkgw->tbegin;
 
-					if (flags->do_average || flags->do_running)
+					if (flags->do_average || flags->do_predict
+							|| flags->do_running)
 					{
 						/* find in list of averages */
-						if (!verbose || flags->do_running) {
+						if (flags->do_predict || verbose) {
 							snprintf(afmt, sizeof(afmt), "%s/%s",
-								pkgw->atom->CATEGORY, pkgw->atom->PN);
+									pkgw->atom->CATEGORY, pkgw->atom->PF);
 						} else {
 							snprintf(afmt, sizeof(afmt), "%s/%s",
-								pkgw->atom->CATEGORY, pkgw->atom->PF);
+									pkgw->atom->CATEGORY, pkgw->atom->PN);
 						}
 
 						pkg = add_set_value(afmt, pkgw, merge_averages);
@@ -880,15 +930,16 @@ static int do_emerge_log(
 					/* found, do report */
 					elapsed = tstart - pkgw->tbegin;
 
-					if (flags->do_average || flags->do_running)
+					if (flags->do_average || flags->do_predict
+							|| flags->do_running)
 					{
 						/* find in list of averages */
-						if (!verbose || flags->do_running) {
+						if (flags->do_predict || verbose) {
 							snprintf(afmt, sizeof(afmt), "%s/%s",
-								pkgw->atom->CATEGORY, pkgw->atom->PN);
+									pkgw->atom->CATEGORY, pkgw->atom->PF);
 						} else {
 							snprintf(afmt, sizeof(afmt), "%s/%s",
-								pkgw->atom->CATEGORY, pkgw->atom->PF);
+									pkgw->atom->CATEGORY, pkgw->atom->PN);
 						}
 
 						pkg = add_set_value(afmt, pkgw, unmerge_averages);
@@ -1149,6 +1200,119 @@ static int do_emerge_log(
 						GREEN, sync_cnt, NORM, sync_cnt == 1 ? "" : "s");
 			printf("\n");
 		}
+	} else if (flags->do_predict) {
+		DECLARE_ARRAY(avgs);
+		enum { P_INIT = 0, P_SREV, P_SRCH } pkgstate;
+		size_t j;
+		time_t ptime;
+		char found;
+
+		values_set(merge_averages, avgs);
+		xarraysort(avgs, pkg_sort_cb);
+		xarraysort(atoms, atom_compar_cb);
+
+		/* each atom has its own matches in here, but since it's all
+		 * sorted, we basically can go around here jumping from CAT-PN
+		 * to CAT-PN (yes this means python-3.6 python-3.9 will result
+		 * in a single record) */
+		array_for_each(atoms, i, atom) {
+			pkgstate = P_INIT;
+			pkgw = NULL;
+			found = 0;
+
+			/* we added "<=" to the atoms in main() to make sure we
+			 * would collect version ranges, but here we want to know if
+			 * the atom is equal or newer, older, etc. so strip it off
+			 * again */
+			if (atom->pfx_op == ATOM_OP_OLDER_EQUAL)
+				atom->pfx_op = ATOM_OP_NONE;
+
+			array_for_each(avgs, j, pkg) {
+				if (pkgstate == P_INIT) {
+					int orev = pkg->atom->PR_int;
+					atom_equality eq;
+					pkg->atom->PR_int = 0;
+					eq = atom_compare(pkg->atom, atom);
+					pkg->atom->PR_int = orev;
+					switch (eq) {
+						case EQUAL:
+							/* version-less atoms equal any versioned
+							 * atom, so check if atom (user input) was
+							 * versioned */
+							if (atom->PV != NULL)
+							{
+								/* 100% match, there's no better
+								 * prediction */
+								found = 1;
+								ptime = pkg->time / pkg->cnt;
+								break;
+							} else {
+								pkgstate = P_SRCH;
+								pkgw = pkg;
+								continue;
+							}
+						case NEWER:
+							if (atom->pfx_op != ATOM_OP_NEWER ||
+									atom->pfx_op != ATOM_OP_NEWER_EQUAL)
+								continue;
+							/* fall through */
+						case OLDER:
+							if (atom->PV != NULL && pkg->atom->PV != NULL &&
+									strcmp(atom->PV, pkg->atom->PV) == 0)
+								pkgstate = P_SREV;
+							else
+								pkgstate = P_SRCH;
+							pkgw = pkg;
+							continue;
+						default:
+							continue;
+					}
+				} else { /* P_SREV, P_SRCH */
+					if (atom_compare(pkg->atom, pkgw->atom) == OLDER) {
+						if (pkgstate == P_SREV) {
+							/* in here, we only compute a diff if we
+							 * have another (previous) revision,
+							 * else we stick to the version we have,
+							 * because we're compiling a new
+							 * revision, so likely to be the same */
+							if (pkg->atom->PV != NULL &&
+									pkgw->atom->PV != NULL &&
+									strcmp(pkg->atom->PV,
+										pkgw->atom->PV) == 0)
+							{
+								time_t wtime;
+								/* take diff with previous revision */
+								wtime = pkgw->time / pkgw->cnt;
+								ptime = pkg->time / pkg->cnt;
+								ptime = wtime + (wtime - ptime);
+							} else {
+								ptime = pkgw->time / pkgw->cnt;
+							}
+						} else {
+							time_t wtime;
+							/* we got another version, just compute
+							 * the diff, and return it */
+							wtime = pkgw->time / pkgw->cnt;
+							ptime = pkg->time / pkg->cnt;
+							ptime = wtime + (wtime - ptime);
+						}
+						found = 1;
+					} else {
+						/* it cannot be newer (because we
+						 * applied sort) and it cannot be equal
+						 * (because it comes from a set) */
+						break;
+					}
+				}
+
+				if (found) {
+					printf("%s: prediction %s\n",
+							atom_format(flags->fmt, atom),
+							fmt_elapsedtime(flags, ptime));
+					break;
+				}
+			}
+		}
 	}
 
 	{
@@ -1406,6 +1570,7 @@ int qlop_main(int argc, char **argv)
 	m.do_sync = 0;
 	m.do_running = 0;
 	m.do_average = 0;
+	m.do_predict = 0;
 	m.do_summary = 0;
 	m.do_human = 0;
 	m.do_machine = 0;
@@ -1431,6 +1596,7 @@ int qlop_main(int argc, char **argv)
 			case 'r': m.do_running = 1;
 					  runningmode++;        break;
 			case 'a': m.do_average = 1;     break;
+			case 'p': m.do_predict = 1;     break;
 			case 'c': m.do_summary = 1;     break;
 			case 'H': m.do_human = 1;       break;
 			case 'M': m.do_machine = 1;     break;
@@ -1499,6 +1665,7 @@ int qlop_main(int argc, char **argv)
 			m.do_sync == 0 &&
 			m.do_running == 0 &&
 			m.do_average == 0 &&
+			m.do_predict == 0 &&
 			m.do_summary == 0
 		)
 	{
@@ -1516,16 +1683,23 @@ int qlop_main(int argc, char **argv)
 	if (m.do_summary)
 		m.do_average = 1;
 
-	/* handle -a / -t conflict */
-	if (m.do_average && m.do_time) {
-		warn("-a (or -c) and -t cannot be used together, dropping -t");
+	/* handle -a / -p conflict */
+	if (m.do_average && m.do_predict) {
+		warn("-a and -p cannot be used together, dropping -a");
+		m.do_average = 0;
+	}
+
+	/* handle -a / -p / -t conflict */
+	if ((m.do_average || m.do_predict) && m.do_time) {
+		warn("-a/-p (or -c) and -t cannot be used together, dropping -t");
 		m.do_time = 0;
 	}
 
 	/* handle -a / -r conflict */
-	if (m.do_average && m.do_running) {
-		warn("-a (or -c) and -r cannot be used together, dropping -a");
+	if ((m.do_average || m.do_predict) && m.do_running) {
+		warn("-a/-p (or -c) and -r cannot be used together, dropping -a/-p");
 		m.do_average = 0;
+		m.do_predict = 0;
 	}
 
 	/* handle -H / -M conflict */
@@ -1541,6 +1715,12 @@ int qlop_main(int argc, char **argv)
 		m.do_sync = 0;
 	}
 
+	/* handle -p without atoms */
+	if (m.do_predict && array_cnt(atoms) == 0) {
+		err("-p requires at least one atom");
+		return EXIT_FAILURE;
+	}
+
 	/* handle -l / -d conflict */
 	if (start_time != -1 && m.show_lastmerge) {
 		if (!m.show_emerge)
@@ -1548,8 +1728,8 @@ int qlop_main(int argc, char **argv)
 		m.show_lastmerge = 0;
 	}
 
-	/* set default for -t, -a or -r */
-	if ((m.do_average || m.do_time || m.do_running) &&
+	/* set default for -t, -a, -p or -r */
+	if ((m.do_average || m.do_predict || m.do_time || m.do_running) &&
 			!(m.do_merge || m.do_unmerge || m.do_autoclean || m.do_sync))
 	{
 		m.do_merge = 1;
@@ -1586,6 +1766,19 @@ int qlop_main(int argc, char **argv)
 			start_time = LONG_MAX;
 		}
 		/* NOTE: new_atoms == atoms when new_atoms != NULL */
+	}
+
+	if (m.do_predict) {
+		/* turn non-ranged atoms into a <= match such that the
+		 * prediction magic has something to compare against when a
+		 * version is listed */
+		array_for_each(atoms, i, atom) {
+			if (atom->pfx_op == ATOM_OP_NONE ||
+					atom->pfx_op == ATOM_OP_EQUAL ||
+					atom->pfx_op == ATOM_OP_PV_EQUAL ||
+					atom->pfx_op == ATOM_OP_STAR)
+				atom->pfx_op = ATOM_OP_OLDER_EQUAL;
+		}
 	}
 
 	if (start_time < LONG_MAX)
