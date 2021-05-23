@@ -785,8 +785,8 @@ tree_read_file_md5(tree_pkg_ctx *pkg_ctx)
 		assign_var(EPREFIX);
 		assign_var(_eclasses_);
 		assign_var(_md5_);
-		warn("Cache file for '%s/%s' has unknown key %s",
-				pkg_ctx->cat_ctx->name, pkg_ctx->name, keyptr);
+		IF_DEBUG(warn("Cache file for '%s/%s' has unknown key %s",
+					pkg_ctx->cat_ctx->name, pkg_ctx->name, keyptr));
 	}
 #undef assign_var
 #undef assign_var_cmp
