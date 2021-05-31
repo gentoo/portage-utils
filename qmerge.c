@@ -684,9 +684,9 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		"FILESDIR=/.does/not/exist/anywhere\n"
 		"MERGE_TYPE=binary\n"
 		"ROOT='%4$s'\n"
-		"EROOT=\"/${ROOT#/}/${EPREFIX%%/}/\"\n"
+		"EROOT=\"${ROOT%%/}${EPREFIX%%/}/\"\n"
 		"D=\"%5$s\"\n"
-		"ED=\"${D%%/}/${EPREFIX%%/}/\"\n"
+		"ED=\"${D%%/}${EPREFIX%%/}/\"\n"
 		"T=\"%6$s\"\n"
 		/* we do not support preserve-libs yet, so force
 		 * preserve_old_lib instead */
@@ -1092,8 +1092,17 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	/* Get a handle on the main vdb repo */
 	vdb = tree_open_vdb(portroot, portvdb);
-	if (!vdb)
-		return;
+	if (vdb == NULL) {
+		if (pretend)
+			return;
+		/* try to create a vdb if none exists yet */
+		xasprintf(&p, "%s/%s", portroot, portvdb);
+		mkdir_p(p, 0755);
+		free(p);
+		vdb = tree_open_vdb(portroot, portvdb);
+	}
+	if (vdb == NULL)
+		errf("need access to root, check permissions to access %s", portroot);
 	cat_ctx = tree_open_cat(vdb, pkg->CATEGORY);
 	if (!cat_ctx) {
 		if (errno != ENOENT) {
@@ -1347,11 +1356,10 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	makeargv(config_protect, &cp_argc, &cp_argv);
 	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
-	if ((contents = fopen("vdb/CONTENTS", "w")) == NULL)
-		errf("come on wtf?");
-
 	objs = NULL;
-	{
+	if ((contents = fopen("vdb/CONTENTS", "w")) == NULL) {
+		errf("could not open vdb/CONTENTS for writing");
+	} else {
 		char *cpath;
 		int ret;
 
@@ -1365,8 +1373,9 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 		if (ret != 0)
 			errp("failed to merge to %s", portroot);
+
+		fclose(contents);
 	}
-	fclose(contents);
 
 	/* run postinst */
 	if (!pretend)
