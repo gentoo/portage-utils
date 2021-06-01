@@ -1380,7 +1380,6 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 						 * generate a dummy cat */
 						cat = tree_open_cat(ctx, ".");
 					}
-					pkg.cat_ctx = cat;
 					cat->pkg_ctxs = (tree_pkg_ctx **)atom;  /* for name */
 				}
 				pkgnamelen = snprintf(pkgname, sizeof(pkgname),
@@ -1390,6 +1389,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 				pkg.slot = meta.Q_SLOT == NULL ? (char *)"0" : meta.Q_SLOT;
 				pkg.repo = ctx->repo;
 				pkg.atom = atom;
+				pkg.cat_ctx = cat;
 				pkg.fd = 0;  /* intentional, meta has already been read */
 
 				/* do call callback with pkg_atom (populate cat and pkg) */
@@ -1650,6 +1650,8 @@ tree_match_atom_packages_cb(tree_pkg_ctx *ctx, void *priv)
 	n = xzalloc(sizeof(tree_match_ctx));
 	n->free_atom = true;
 	n->atom = atom_clone(a);
+	snprintf(n->path, sizeof(n->path), "%s/%s/%s.tbz2",
+			(char *)ctx->cat_ctx->ctx->path, ctx->cat_ctx->name, ctx->name);
 	if (rctx->flags & TREE_MATCH_METADATA) {
 		n->meta = xmalloc(sizeof(*n->meta));
 		/* for Packages, all pointers to meta here are to the in memory
@@ -1686,6 +1688,8 @@ tree_match_atom_binpkg_cb(tree_pkg_ctx *ctx, void *priv)
 	n = xzalloc(sizeof(tree_match_ctx));
 	n->free_atom = true;
 	n->atom = atom_clone(a);
+	snprintf(n->path, sizeof(n->path), "%s/%s/%s.tbz2",
+			(char *)ctx->cat_ctx->ctx->path, ctx->cat_ctx->name, ctx->name);
 	if (rctx->flags & TREE_MATCH_METADATA)
 		n->meta = tree_pkg_read(ctx);
 
