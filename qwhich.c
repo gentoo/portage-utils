@@ -82,6 +82,7 @@ int qwhich_main(int argc, char **argv)
 	tree_ctx *t;
 	char *repo;
 	int repolen;
+	const char *ext;
 
 	memset(&m, 0, sizeof(m));
 
@@ -144,7 +145,7 @@ int qwhich_main(int argc, char **argv)
 			xarraypush_ptr(trees, t);
 	}
 	if (m.do_binpkg) {
-		t = tree_open_binpkg(portroot, pkgdir);
+		t = tree_open_binpkg("/", pkgdir);
 		if (t != NULL)
 			xarraypush_ptr(trees, t);
 	}
@@ -159,7 +160,7 @@ int qwhich_main(int argc, char **argv)
 
 	/* at least keep the IO constrained to a tree at a time */
 	array_for_each(trees, j, t) {
-		if (m.print_repo) {
+		if (m.print_repo && t->repo != NULL) {
 			repo = t->repo;
 			repolen = strlen(repo);
 		} else {
@@ -168,10 +169,22 @@ int qwhich_main(int argc, char **argv)
 				repolen = strlen(t->path) - (sizeof("/metadata/md5-cache") - 1);
 			else if (t->cachetype == CACHE_METADATA_PMS)
 				repolen = strlen(t->path) - (sizeof("/metadata/cache") - 1);
-			else if (t->cachetype == CACHE_EBUILD)
+			else if (t->cachetype == CACHE_EBUILD ||
+					t->cachetype == CACHE_BINPKGS ||
+					t->cachetype == CACHE_PACKAGES)
 				repolen = strlen(t->path);
 			else
 				repolen = 0;
+		}
+
+		switch (t->cachetype) {
+			case CACHE_BINPKGS:
+			case CACHE_PACKAGES:
+				ext = "tbz2";
+				break;
+			default:
+				ext = "ebuild";
+				break;
 		}
 
 		array_for_each(atoms, i, atom) {
@@ -186,7 +199,9 @@ int qwhich_main(int argc, char **argv)
 				} else {
 					if (t->cachetype == CACHE_METADATA_MD5 ||
 							t->cachetype == CACHE_METADATA_PMS ||
-							t->cachetype == CACHE_EBUILD)
+							t->cachetype == CACHE_EBUILD ||
+							t->cachetype == CACHE_BINPKGS ||
+							t->cachetype == CACHE_PACKAGES)
 					{
 						if (m.print_path)
 							printf("%s%.*s%s%s%s/%s%s%s\n",
@@ -196,13 +211,13 @@ int qwhich_main(int argc, char **argv)
 									DKBLUE, tmcw->atom->PN,
 									NORM);
 						else
-							printf("%s%.*s%s%s%s/%s%s/%s%s%s.ebuild%s\n",
+							printf("%s%.*s%s%s%s/%s%s/%s%s%s.%s%s\n",
 									DKGREEN, repolen, repo,
 									m.print_repo ? "::" : "/",
 									BOLD, tmcw->atom->CATEGORY,
 									DKBLUE, tmcw->atom->PN,
 									BLUE, tmcw->atom->PF,
-									DKGREEN, NORM);
+									DKGREEN, ext, NORM);
 					} else if (t->cachetype == CACHE_VDB && !m.print_path) {
 						printf("%s%s/%s%s%s.ebuild%s\n",
 								DKBLUE, tmcw->path,
