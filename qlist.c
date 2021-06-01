@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005 Martin Schlemmer     - <azarah@gentoo.org>
@@ -536,7 +536,7 @@ int qlist_main(int argc, char **argv)
 		}
 	} else {
 		if (state.do_binpkgs)
-			vdb = tree_open_binpkg(portroot, pkgdir);
+			vdb = tree_open_binpkg("/", pkgdir);
 		else
 			vdb = tree_open_vdb(portroot, portvdb);
 		if (vdb != NULL) {
