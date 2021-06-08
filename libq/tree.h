@@ -48,6 +48,7 @@ struct tree_ctx {
 	depend_atom *query_atom;
 	struct tree_cache {
 		set *categories;
+		bool all_categories:1;
 	} cache;
 };
 

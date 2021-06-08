@@ -312,8 +312,29 @@ tree_next_cat(tree_ctx *ctx)
 
 	if (ctx->do_sort) {
 		if (ctx->cat_de == NULL) {
-			ctx->cat_cnt = scandirat(ctx->tree_fd,
-					".", &ctx->cat_de, tree_filter_cat, alphasort);
+			if (ctx->cache.all_categories) {
+				char **cats;
+				size_t i;
+				size_t len;
+				struct dirent **ret;
+
+				/* exploit the cache instead of reading from directory */
+				ctx->cat_cnt = cnt_set(ctx->cache.categories);
+				ctx->cat_de = ret = xmalloc(sizeof(*ret) * ctx->cat_cnt);
+				list_set(ctx->cache.categories, &cats);
+				for (i = 0; i < ctx->cat_cnt; i++) {
+					len = strlen(cats[i]) + 1;
+					ret[i] = xzalloc(sizeof(*de) + len);
+					snprintf(ret[i]->d_name, len, "%s", cats[i]);
+				}
+				if (i > 1)
+					qsort(ret, ctx->cat_cnt, sizeof(*ret),
+							(int (*)(const void *, const void *))alphasort);
+				free(cats);
+			} else {
+				ctx->cat_cnt = scandirat(ctx->tree_fd,
+						".", &ctx->cat_de, tree_filter_cat, alphasort);
+			}
 			ctx->cat_cur = 0;
 		}
 
@@ -1511,7 +1532,7 @@ tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 	ctx->cat_de = NULL;
 	ctx->cat_cur = 0;
 	ctx->cat_cnt = 0;
-	ctx->do_sort = 0;
+	ctx->do_sort = false;
 
 	return ret;
 }
@@ -1624,77 +1645,33 @@ tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms)
 	return state.cpf;
 }
 
-struct tree_match_pkgs_cb_ctx {
-	int flags;
-	tree_match_ctx *ret;
-};
-
 static int
-tree_match_atom_packages_cb(tree_pkg_ctx *ctx, void *priv)
+tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 {
-	struct tree_match_pkgs_cb_ctx *rctx = priv;
-	depend_atom *a;
-	tree_match_ctx *n;
+	set *cache = priv;
+	tree_cat_ctx *cat_ctx;
+	tree_pkg_ctx *pkg;
+	tree_ctx *tctx = ctx->cat_ctx->ctx;
+	depend_atom *atom = tree_get_atom(ctx, true);
 
-	/* skip anything after finding first match */
-	if (rctx->flags & TREE_MATCH_FIRST && rctx->ret != NULL)
-		return 1;
+	(void)priv;
 
-	a = tree_get_atom(ctx, rctx->flags & TREE_MATCH_FULL_ATOM);
-
-	/* skip virtual category if not requested */
-	if (!(rctx->flags & TREE_MATCH_VIRTUAL) &&
-			strcmp(a->CATEGORY, "virtual") == 0)
-		return 1;
-
-	n = xzalloc(sizeof(tree_match_ctx));
-	n->free_atom = true;
-	n->atom = atom_clone(a);
-	snprintf(n->path, sizeof(n->path), "%s/%s/%s.tbz2",
-			(char *)ctx->cat_ctx->ctx->path, ctx->cat_ctx->name, ctx->name);
-	if (rctx->flags & TREE_MATCH_METADATA) {
-		n->meta = xmalloc(sizeof(*n->meta));
-		/* for Packages, all pointers to meta here are to the in memory
-		 * copy of the Packages file, so these pointers can just be
-		 * copied since the tree has to remain open, thus the pointers
-		 * will stay valid */
-		memcpy(n->meta, ctx->cat_ctx->ctx->pkgs, sizeof(*n->meta));
+	cat_ctx = get_set(atom->CATEGORY, cache);
+	if (cat_ctx == NULL) {
+		cat_ctx = tree_open_cat(tctx, ".");
+		add_set_value(atom->CATEGORY, cat_ctx, cache);
+		/* get a pointer from the set */
+		cat_ctx->name = contains_set(atom->CATEGORY, cache);
 	}
 
-	n->next = rctx->ret;
-	rctx->ret = n;
-
-	return 0;
-}
-
-static int
-tree_match_atom_binpkg_cb(tree_pkg_ctx *ctx, void *priv)
-{
-	struct tree_match_pkgs_cb_ctx *rctx = priv;
-	depend_atom *a;
-	tree_match_ctx *n;
-
-	/* skip anything after finding first match */
-	if (rctx->flags & TREE_MATCH_FIRST && rctx->ret != NULL)
-		return 1;
-
-	a = tree_get_atom(ctx, rctx->flags & TREE_MATCH_FULL_ATOM);
-
-	/* skip virtual category if not requested */
-	if (!(rctx->flags & TREE_MATCH_VIRTUAL) &&
-			strcmp(a->CATEGORY, "virtual") == 0)
-		return 1;
-
-	n = xzalloc(sizeof(tree_match_ctx));
-	n->free_atom = true;
-	n->atom = atom_clone(a);
-	snprintf(n->path, sizeof(n->path), "%s/%s/%s.tbz2",
-			(char *)ctx->cat_ctx->ctx->path, ctx->cat_ctx->name, ctx->name);
-	if (rctx->flags & TREE_MATCH_METADATA)
-		n->meta = tree_pkg_read(ctx);
-
-	n->next = rctx->ret;
-	rctx->ret = n;
+	/* FIXME: this really could use a set */
+	cat_ctx->pkg_cnt++;
+	cat_ctx->pkg_ctxs = xrealloc(cat_ctx->pkg_ctxs,
+			sizeof(*cat_ctx->pkg_ctxs) * cat_ctx->pkg_cnt);
+	cat_ctx->pkg_ctxs[cat_ctx->pkg_cnt - 1] =
+		pkg = tree_open_pkg(cat_ctx, atom->PF);
+	pkg->atom = atom_clone(atom);
+	pkg->name = pkg->atom->PF;
 
 	return 0;
 }
@@ -1707,24 +1684,48 @@ tree_match_atom(tree_ctx *ctx, depend_atom *query, int flags)
 	tree_match_ctx *ret = NULL;
 	depend_atom *atom;
 
-	if (ctx->cachetype == CACHE_PACKAGES) {
-		struct tree_match_pkgs_cb_ctx rctx;
-		/* Packages needs to be serviced separately because it doesn't
-		 * use a tree internally, but reads off of the Packages file */
-		rctx.flags = flags;
-		rctx.ret = NULL;
-		ctx->query_atom = query;
-		tree_foreach_packages(ctx, tree_match_atom_packages_cb, &rctx);
-		ctx->query_atom = NULL;
-		return rctx.ret;
-	} else if (ctx->cachetype == CACHE_BINPKGS) {
-		struct tree_match_pkgs_cb_ctx rctx;
-		/* this sulks, but binpkgs modify the pkg_ctx->name to strip off
-		 * .tbz2, and that makes it non-reusable */
-		rctx.flags = flags;
-		rctx.ret = NULL;
-		tree_foreach_pkg(ctx, tree_match_atom_binpkg_cb, &rctx, true, query);
-		return rctx.ret;
+	ctx->do_sort = true;     /* sort uses buffer, which cache relies on */
+	ctx->query_atom = NULL;  /* ensure the cache contains ALL pkgs */
+
+	if ((ctx->cachetype == CACHE_PACKAGES || ctx->cachetype == CACHE_BINPKGS)
+			&& ctx->cache.categories == NULL)
+	{
+		set *cache;
+		DECLARE_ARRAY(cats);
+		size_t n;
+
+		/* Reading these formats requires us to traverse the tree for
+		 * each operation, so we better cache the entire thing in one
+		 * go.  Packages in addition may not store the atoms sorted
+		 * (it's a file with content after all) and since we rely on
+		 * this for latest and first match, it is important that we sort
+		 * the contents so we're sure */
+
+		cache = ctx->cache.categories;
+		if (ctx->cache.categories != NULL)
+			ctx->cache.categories = NULL;
+		else
+			cache = create_set();
+
+		if (ctx->cachetype == CACHE_PACKAGES)
+			tree_foreach_packages(ctx,
+					tree_match_atom_cache_populate_cb, cache);
+		else  /* BINPKG */
+			tree_foreach_pkg(ctx,
+					tree_match_atom_cache_populate_cb, cache, true, NULL);
+		ctx->do_sort = true;  /* turn it back on */
+		ctx->cache.all_categories = true;
+
+		ctx->cache.categories = cache;
+
+		/* loop through all categories, and sort the pkgs */
+		values_set(cache, cats);
+		array_for_each(cats, n, cat_ctx) {
+			if (cat_ctx->pkg_cnt > 1) {
+				qsort(cat_ctx->pkg_ctxs, cat_ctx->pkg_cnt,
+						sizeof(*cat_ctx->pkg_ctxs), tree_pkg_compar);
+			}
+		}
 	}
 
 	/* activate cache for future lookups, tree_match_atom relies on
@@ -1732,9 +1733,6 @@ tree_match_atom(tree_ctx *ctx, depend_atom *query, int flags)
 	 * packages remain in memory until tree_close is being called */
 	if (ctx->cache.categories == NULL)
 		ctx->cache.categories = create_set();
-
-	ctx->do_sort = true;     /* sort uses buffer, which cache relies on */
-	ctx->query_atom = NULL;  /* ensure the cache contains ALL pkgs */
 
 #define search_cat(C) \
 { \
