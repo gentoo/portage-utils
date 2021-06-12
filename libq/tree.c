@@ -1221,7 +1221,7 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 			ctx->cachetype = CACHE_PACKAGES;
 			if (pkg_ctx->meta == NULL) {
 				/* hrmffff. */
-				pkg_ctx->fd = 0;
+				pkg_ctx->fd = -2;
 				pkg_ctx->meta = tree_pkg_read(pkg_ctx);
 			}
 			key = (char **)((char *)&pkg_ctx->meta->Q__data + offset);
@@ -1324,7 +1324,7 @@ tree_close_metadata(tree_metadata_xml *meta_ctx)
 void
 tree_close_pkg(tree_pkg_ctx *pkg_ctx)
 {
-	if (pkg_ctx->fd != -1)
+	if (pkg_ctx->fd >= 0)
 		close(pkg_ctx->fd);
 	if (pkg_ctx->atom != NULL)
 		atom_implode(pkg_ctx->atom);
@@ -1424,7 +1424,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 				pkg.repo = ctx->repo;
 				pkg.atom = atom;
 				pkg.cat_ctx = cat;
-				pkg.fd = 0;  /* intentional, meta has already been read */
+				pkg.fd = -2;  /* intentional, meta has already been read */
 
 				/* do call callback with pkg_atom (populate cat and pkg) */
 				ret |= callback(&pkg, priv);
@@ -1690,7 +1690,8 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 	if (meta != NULL) {
 		pkg->meta = xmalloc(sizeof(*pkg->meta));
 		memcpy(pkg->meta, meta, sizeof(*pkg->meta));
-		pkg->fd = 0;  /* don't try to read, we already got it */
+		pkg->meta->Q__data = NULL;  /* avoid free here */
+		pkg->fd = -2;  /* don't try to read, we already got it */
 	} else {
 		pkg->meta = NULL;
 	}
