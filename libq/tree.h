@@ -47,6 +47,8 @@ struct tree_ctx {
 	size_t pkgslen;
 	depend_atom *query_atom;
 	struct tree_cache {
+		char *store;
+		size_t storesize;
 		set *categories;
 		bool all_categories:1;
 	} cache;
@@ -126,7 +128,8 @@ struct tree_match_ctx {
 	tree_pkg_meta *meta;
 	char path[_Q_PATH_MAX + 48];
 	tree_match_ctx *next;
-	int free_atom;
+	char free_atom:1;
+	char free_meta:1;
 };
 
 /* foreach pkg callback function signature */

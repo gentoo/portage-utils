@@ -162,11 +162,11 @@ tree_open_binpkg(const char *sroot, const char *spkg)
 		ret->cachetype = CACHE_BINPKGS;
 
 		fd = openat(ret->tree_fd, binpkg_packages, O_RDONLY | O_CLOEXEC);
-		if (eat_file_fd(fd, &ret->pkgs, &ret->pkgslen)) {
+		if (eat_file_fd(fd, &ret->cache.store, &ret->cache.storesize)) {
 			ret->cachetype = CACHE_PACKAGES;
-		} else if (ret->pkgs != NULL) {
-			free(ret->pkgs);
-			ret->pkgs = NULL;
+		} else if (ret->cache.store != NULL) {
+			free(ret->cache.store);
+			ret->cache.store = NULL;
 		}
 		close(fd);
 	}
@@ -1358,14 +1358,13 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 	depend_atom *atom = NULL;
 
 	/* re-read the contents, this is necessary to make it possible to
-	 * call this function multiple times
-	 * TODO: generate an internal in-memory tree when cache is enabled */
-	if (ctx->pkgs == NULL || ctx->pkgs[0] == '\0') {
+	 * call this function multiple times */
+	if (ctx->cache.store == NULL || ctx->cache.store[0] == '\0') {
 		int fd = openat(ctx->tree_fd, binpkg_packages, O_RDONLY | O_CLOEXEC);
-		if (!eat_file_fd(fd, &ctx->pkgs, &ctx->pkgslen)) {
-			if (ctx->pkgs != NULL) {
-				free(ctx->pkgs);
-				ctx->pkgs = NULL;
+		if (!eat_file_fd(fd, &ctx->cache.store, &ctx->cache.storesize)) {
+			if (ctx->cache.store != NULL) {
+				free(ctx->cache.store);
+				ctx->cache.store = NULL;
 			}
 			close(fd);
 			return 1;
@@ -1373,8 +1372,8 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		close(fd);
 	}
 
-	p = ctx->pkgs;
-	len = strlen(ctx->pkgs);  /* sucks, need eat_file change */
+	p = ctx->cache.store;
+	len = strlen(ctx->cache.store);  /* sucks, need eat_file change */
 
 	memset(&meta, 0, sizeof(meta));
 
@@ -1396,9 +1395,8 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 
 				memset(&pkg, 0, sizeof(pkg));
 
-				/* store meta ptr in repo->pkgs, such that get_pkg_meta
+				/* store meta ptr in ctx->pkgs, such that get_pkg_meta
 				 * can grab it from there (for free) */
-				c = ctx->pkgs;
 				ctx->pkgs = (char *)&meta;
 
 				if (cat == NULL || strcmp(cat->name, atom->CATEGORY) != 0)
@@ -1429,7 +1427,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 				/* do call callback with pkg_atom (populate cat and pkg) */
 				ret |= callback(&pkg, priv);
 
-				ctx->pkgs = c;
+				ctx->pkgs = NULL;
 				if (atom != (depend_atom *)cat->pkg_ctxs)
 					atom_implode(atom);
 			}
@@ -1505,7 +1503,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 	/* ensure we don't free a garbage pointer */
 	ctx->repo = NULL;
 	ctx->do_sort = false;
-	ctx->pkgs[0] = '\0';
+	ctx->cache.store[0] = '\0';
 
 	return ret;
 }
@@ -1690,7 +1688,7 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 	if (meta != NULL) {
 		pkg->meta = xmalloc(sizeof(*pkg->meta));
 		memcpy(pkg->meta, meta, sizeof(*pkg->meta));
-		pkg->meta->Q__data = NULL;  /* avoid free here */
+		pkg->meta->Q__data = NULL;  /* avoid free here (just to be sure) */
 		pkg->fd = -2;  /* don't try to read, we already got it */
 	} else {
 		pkg->meta = NULL;
@@ -1788,6 +1786,9 @@ tree_match_atom(tree_ctx *ctx, depend_atom *query, int flags)
 					C->ctx->cachetype == CACHE_PACKAGES ? ".tbz2" : ""); \
 			if (flags & TREE_MATCH_METADATA) \
 				n->meta = tree_pkg_read(pkg_ctx); \
+			if (C->ctx->cachetype == CACHE_BINPKGS || \
+					C->ctx->cachetype == CACHE_PACKAGES) \
+				n->free_atom = n->free_meta = 0; \
 			n->next = ret; \
 			ret = n; \
 			lastpn = atom->PN; \
@@ -1825,7 +1826,7 @@ tree_match_close(tree_match_ctx *match)
 		w = match->next;
 		if (match->free_atom)
 			atom_implode(match->atom);
-		if (match->meta != NULL)
+		if (match->free_meta && match->meta != NULL)
 			tree_close_meta(match->meta);
 		free(match);
 	}
