@@ -1080,6 +1080,10 @@ static tree_pkg_meta *
 tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 {
 	tree_ctx *ctx = pkg_ctx->cat_ctx->ctx;
+	tree_pkg_meta *ret = NULL;
+
+	if (pkg_ctx->meta != NULL)
+		return pkg_ctx->meta;
 
 	if (pkg_ctx->fd == -1) {
 		if (ctx->cachetype == CACHE_EBUILD || ctx->cachetype == CACHE_BINPKGS) {
@@ -1098,19 +1102,22 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 	}
 
 	if (ctx->cachetype == CACHE_METADATA_MD5) {
-		return tree_read_file_md5(pkg_ctx);
+		ret = tree_read_file_md5(pkg_ctx);
 	} else if (ctx->cachetype == CACHE_METADATA_PMS) {
-		return tree_read_file_pms(pkg_ctx);
+		ret = tree_read_file_pms(pkg_ctx);
 	} else if (ctx->cachetype == CACHE_EBUILD) {
-		return tree_read_file_ebuild(pkg_ctx);
+		ret = tree_read_file_ebuild(pkg_ctx);
 	} else if (ctx->cachetype == CACHE_BINPKGS) {
-		return tree_read_file_binpkg(pkg_ctx);
+		ret = tree_read_file_binpkg(pkg_ctx);
 	} else if (ctx->cachetype == CACHE_PACKAGES) {
-		return (tree_pkg_meta *)pkg_ctx->cat_ctx->ctx->pkgs;
+		ret = (tree_pkg_meta *)pkg_ctx->cat_ctx->ctx->pkgs;
 	}
 
-	warn("Unknown/unsupported metadata cache type!");
-	return NULL;
+	pkg_ctx->meta = ret;
+
+	if (ret == NULL)
+		warn("Unknown/unsupported metadata cache type!");
+	return ret;
 }
 
 static void
@@ -1204,6 +1211,12 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 		if (*key == NULL && ctx->cachetype == CACHE_PACKAGES) {
 			ctx->cachetype = CACHE_BINPKGS;
 			pkg_ctx->fd = -1;
+
+			/* trigger tree_pkg_read to do something */
+			if ((void *)pkg_ctx->meta != (void *)pkg_ctx->cat_ctx->ctx->pkgs)
+				free(pkg_ctx->meta);
+			pkg_ctx->meta = NULL;
+
 			pkg_ctx->meta = tree_pkg_read(pkg_ctx);
 			ctx->cachetype = CACHE_PACKAGES;
 			if (pkg_ctx->meta == NULL) {
@@ -1653,6 +1666,7 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 	tree_pkg_ctx *pkg;
 	tree_ctx *tctx = ctx->cat_ctx->ctx;
 	depend_atom *atom = tree_get_atom(ctx, true);
+	tree_pkg_meta *meta = tree_pkg_read(ctx);
 
 	(void)priv;
 
@@ -1671,7 +1685,15 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 	cat_ctx->pkg_ctxs[cat_ctx->pkg_cnt - 1] =
 		pkg = tree_open_pkg(cat_ctx, atom->PF);
 	pkg->atom = atom_clone(atom);
-	pkg->name = pkg->atom->PF;
+	pkg->name = xstrdup(pkg->atom->PF);
+	pkg->repo = tctx->repo != NULL ? xstrdup(tctx->repo) : NULL;
+	if (meta != NULL) {
+		pkg->meta = xmalloc(sizeof(*pkg->meta));
+		memcpy(pkg->meta, meta, sizeof(*pkg->meta));
+		pkg->fd = 0;  /* don't try to read, we already got it */
+	} else {
+		pkg->meta = NULL;
+	}
 
 	return 0;
 }
@@ -1761,7 +1783,8 @@ tree_match_atom(tree_ctx *ctx, depend_atom *query, int flags)
 			snprintf(n->path, sizeof(n->path), "%s/%s/%s%s", \
 					(char *)C->ctx->path, C->name, pkg_ctx->name, \
 					C->ctx->cachetype == CACHE_EBUILD ? ".ebuild" : \
-					C->ctx->cachetype == CACHE_BINPKGS ? ".tbz2" : ""); \
+					C->ctx->cachetype == CACHE_BINPKGS ? ".tbz2" : \
+					C->ctx->cachetype == CACHE_PACKAGES ? ".tbz2" : ""); \
 			if (flags & TREE_MATCH_METADATA) \
 				n->meta = tree_pkg_read(pkg_ctx); \
 			n->next = ret; \
