@@ -468,7 +468,7 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 {
 	tree_pkg_ctx *pkg_ctx = NULL;
 	const struct dirent *de;
-	depend_atom *qa = cat_ctx->ctx->query_atom;
+	const depend_atom *qa = cat_ctx->ctx->query_atom;
 
 	if (cat_ctx->ctx->do_sort) {
 		if (cat_ctx->pkg_ctxs == NULL) {
@@ -1349,7 +1349,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 	char pkgname[_Q_PATH_MAX];
 	size_t len;
 	int ret = 0;
-	depend_atom *query = ctx->query_atom;
+	const depend_atom *query = ctx->query_atom;
 
 	/* reused for every entry */
 	tree_cat_ctx *cat = NULL;
@@ -1510,7 +1510,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 
 int
 tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
-		bool sort, depend_atom *query)
+		bool sort, const depend_atom *query)
 {
 	tree_cat_ctx *cat_ctx;
 	tree_pkg_ctx *pkg_ctx;
@@ -1698,7 +1698,7 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 }
 
 tree_match_ctx *
-tree_match_atom(tree_ctx *ctx, depend_atom *query, int flags)
+tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
 {
 	tree_cat_ctx *cat_ctx;
 	tree_pkg_ctx *pkg_ctx;
@@ -1779,6 +1779,7 @@ tree_match_atom(tree_ctx *ctx, depend_atom *query, int flags)
 			/* create a new match result */ \
 			n = xzalloc(sizeof(tree_match_ctx)); \
 			n->atom = atom; \
+			n->pkg = pkg_ctx; \
 			snprintf(n->path, sizeof(n->path), "%s/%s/%s%s", \
 					(char *)C->ctx->path, C->name, pkg_ctx->name, \
 					C->ctx->cachetype == CACHE_EBUILD ? ".ebuild" : \
