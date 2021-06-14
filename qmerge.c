@@ -49,8 +49,6 @@
 /* #define BUSYBOX "/bin/busybox" */
 #define BUSYBOX ""
 
-int old_repo = 0;
-
 #define QMERGE_FLAGS "fFsKUpuyO" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
 	{"fetch",   no_argument, NULL, 'f'},
@@ -91,25 +89,6 @@ char update_only = 0;
 bool debug = false;
 const char Packages[] = "Packages";
 
-/*
-	"CHOST", "DEPEND", "DESCRIPTION", "EAPI",
-	"IUSE", "KEYWORDS", "LICENSE", "PDEPEND",
-	"PROVIDE", "RDEPEND", "SLOT", "USE"
-*/
-struct pkg_t {
-	char PF[64];
-	char CATEGORY[64];
-	char DESC[126];
-	char LICENSE[64];
-	char RDEPEND[BUFSIZ];
-	char MD5[34];
-	char SHA1[42];
-	char SLOT[64];
-	size_t SIZE;
-	char USE[BUFSIZ];
-	char REPO[64];
-};
-
 struct llist_char_t {
 	char *data;
 	struct llist_char_t *next;
@@ -117,17 +96,16 @@ struct llist_char_t {
 
 typedef struct llist_char_t llist_char;
 
-static void pkg_fetch(int, const depend_atom *, const struct pkg_t *);
-static void pkg_merge(int, const depend_atom *, const struct pkg_t *);
+static void pkg_fetch(int, const depend_atom *, const tree_match_ctx *);
+static void pkg_merge(int, const depend_atom *, const tree_match_ctx *);
 static int pkg_unmerge(tree_pkg_ctx *, set *, int, char **, int, char **);
-static struct pkg_t *grab_binpkg_info(depend_atom *);
 
 static bool
-prompt(const char *p)
+qmerge_prompt(const char *p)
 {
 	printf("%s? [Y/n] ", p);
 	fflush(stdout);
-	switch (getc(stdin)) {
+	switch (fgetc(stdin)) {
 		case '\n':
 		case 'y':
 		case 'Y':
@@ -143,8 +121,7 @@ fetch(const char *destdir, const char *src)
 	if (!binhost[0])
 		return;
 
-	fflush(stdout);
-	fflush(stderr);
+	fflush(NULL);
 
 #if 0
 	if (getenv("FETCHCOMMAND") != NULL) {
@@ -161,18 +138,15 @@ fetch(const char *destdir, const char *src)
 
 		xasprintf(&path, "%s/%s", binhost, src);
 
+		/* wget -c -q -P <dir> <uri> */
 		char prog[] = "wget";
-		char argv_c[] = "-c";
-		char argv_P[] = "-P";
-		char argv_q[] = "-q";
-		char *argv_dir = xstrdup(destdir);
-		char *argv[] = {
+		char *const argv[] = {
 			prog,
-			argv_c,
-			argv_P,
-			argv_dir,
+			(char *)"-c",
+			(char *)"-P",
+			(char *)destdir,
 			path,
-			quiet ? argv_q : NULL,
+			quiet ? (char *)"-q" : NULL,
 			NULL,
 		};
 		if (!(force_download || install) && pretend)
@@ -187,7 +161,6 @@ fetch(const char *destdir, const char *src)
 		}
 
 		free(path);
-		free(argv_dir);
 
 		waitpid(p, &status, 0);
 #if 0
@@ -205,7 +178,7 @@ qmerge_initialize(void)
 {
 	char *buf;
 
-	if (strlen(BUSYBOX))
+	if (strlen(BUSYBOX) > 0)
 		if (access(BUSYBOX, X_OK) != 0)
 			err(BUSYBOX " must be installed");
 
@@ -232,52 +205,78 @@ qmerge_initialize(void)
 	free(buf);
 }
 
-static char _best_version_retbuf[4096];
-static int
-qmerge_best_version_cb(tree_pkg_ctx *pkg_ctx, void *priv)
+static tree_ctx *_qmerge_vdb_tree    = NULL;
+static tree_ctx *_qmerge_binpkg_tree = NULL;
+#define BV_INSTALLED BV_VDB
+#define BV_BINARY    BV_BINPKG
+#define BV_EBUILD    (1<<0)  /* not yet supported */
+#define BV_VDB       (1<<1)
+#define BV_BINPKG    (1<<2)
+static tree_match_ctx *
+best_version(const depend_atom *atom, int mode)
 {
-	depend_atom *sa = priv;
-	depend_atom *a = tree_get_atom(pkg_ctx, true);  /* need SLOT */
-	if (atom_compare(a, sa) == EQUAL)
-		snprintf(_best_version_retbuf, sizeof(_best_version_retbuf),
-				"%s/%s:%s", a->CATEGORY, a->PF, a->SLOT);
-	return 0;
-}
+	tree_ctx       *vdb    = _qmerge_vdb_tree;
+	tree_ctx       *binpkg = _qmerge_binpkg_tree;
+	tree_match_ctx *tmv    = NULL;
+	tree_match_ctx *tmp    = NULL;
+	tree_match_ctx *ret;
+	int             r;
 
-static char *
-best_version(const char *catname, const char *pkgname, const char *slot)
-{
-	static int vdb_check = 1;
-	tree_ctx *vdb;
-
-	/* Make sure these dirs exist before we try walking them */
-	switch (vdb_check) {
-	case 1: {
-		int fd = open(portroot, O_RDONLY|O_CLOEXEC|O_PATH);
-		if (fd >= 0) {
-			/* skip leading slash */
-			vdb_check = faccessat(fd, portvdb + 1, X_OK, 0);
-			close(fd);
-		} else
-			vdb_check = -1;
+	if (mode & BV_EBUILD) {
+		warn("BV_EBUILD not yet supported");
+		return NULL;
 	}
-		if (vdb_check)
-	case -1:
-			goto done;
+	if (mode == 0) {
+		warn("mode needs to be set");
+		return NULL;
 	}
 
-	snprintf(_best_version_retbuf, sizeof(_best_version_retbuf),
-			"%s%s%s:%s", catname ? : "", catname ? "/" : "", pkgname, slot);
-	vdb = tree_open_vdb(portroot, portvdb);
-	if (vdb != NULL) {
-		depend_atom *sa = atom_explode(_best_version_retbuf);
-		tree_foreach_pkg_fast(vdb, qmerge_best_version_cb, sa, sa);
-		tree_close(vdb);
-		atom_implode(sa);
+	if (mode & BV_VDB) {
+		if (vdb == NULL) {
+			vdb = tree_open_vdb(portroot, portvdb);
+			if (vdb == NULL)
+				return NULL;
+			_qmerge_vdb_tree = vdb;
+		}
+		tmv = tree_match_atom(vdb, atom,
+				TREE_MATCH_LATEST | TREE_MATCH_FIRST);
 	}
 
- done:
-	return _best_version_retbuf;
+	if (mode & BV_BINPKG) {
+		if (binpkg == NULL) {
+			binpkg = tree_open_binpkg("/", pkgdir);
+			if (binpkg == NULL) {
+				if (tmv != NULL)
+					tree_match_close(tmv);
+				if (vdb != NULL)
+					tree_close(vdb);
+				return NULL;
+			}
+			_qmerge_binpkg_tree = binpkg;
+		}
+		tmp = tree_match_atom(binpkg, atom,
+				TREE_MATCH_LATEST | TREE_MATCH_FIRST | TREE_MATCH_METADATA);
+	}
+
+	if (tmv == NULL && tmp == NULL)
+		ret = NULL;
+	else if (tmv == NULL && tmp != NULL)
+		ret = tmp;
+	else if (tmv != NULL && tmp == NULL)
+		ret = tmv;
+	else {
+		if ((r = atom_compare(tmv->atom, tmp->atom)) == EQUAL || r == OLDER)
+			ret = tmp;
+		else
+			ret = tmv;
+	}
+
+	if (tmv != NULL && tmv != ret)
+		tree_match_close(tmv);
+	if (tmp != NULL && tmp != ret)
+		tree_match_close(tmp);
+
+	return ret;
 }
 
 static int
@@ -557,50 +556,47 @@ install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 }
 
 static char
-qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
+qprint_tree_node(
+		int                   level,
+		const tree_match_ctx *mpkg,
+		const tree_match_ctx *bpkg,
+		int                   replacing)
 {
-	char buf[1024];
-	char *p;
-	int i, ret;
-
-	char install_ver[126] = "";
-	char c = 'N';
-	const char *color;
+	char            buf[1024];
+	int             i;
+	char            install_ver[126] = "";
+	char            c                = 'N';
+	const char     *color;
 
 	if (!pretend)
 		return 0;
 
-	p = best_version(pkg->CATEGORY, atom->PN, pkg->SLOT);
-
-	if (strlen(p) < 1) {
+	if (bpkg == NULL) {
 		c = 'N';
 		snprintf(buf, sizeof(buf), "%sN%s", GREEN, NORM);
 	} else {
-		depend_atom *subatom = atom_explode(p);
-		if (subatom != NULL) {
-			ret = atom_compare(subatom, atom);
-			switch (ret) {
+		if (bpkg != NULL) {
+			switch (replacing) {
 				case EQUAL: c = 'R'; break;
 				case NEWER: c = 'U'; break;
 				case OLDER: c = 'D'; break;
-				default: c = '?'; break;
+				default:    c = '?'; break;
 			}
 			snprintf(install_ver, sizeof(install_ver), "[%s%.*s%s] ",
 					DKBLUE,
 					(int)(sizeof(install_ver) - 4 -
 						sizeof(DKBLUE) - sizeof(NORM)),
-					subatom->P, NORM);
-			atom_implode(subatom);
+					bpkg->atom->PVR, NORM);
 		}
 		if (update_only && c != 'U')
 			return c;
 		if ((c == 'R' || c == 'D') && update_only && level)
 			return c;
 		switch (c) {
-		case 'R': color = YELLOW; break;
-		case 'U': color = BLUE; break;
-		case 'D': color = DKBLUE; break;
-		default: color = RED; break;
+			case 'R': color = YELLOW; break;
+			case 'U': color = BLUE;   break;
+			case 'D': color = DKBLUE; break;
+			default:  color = RED;    break;
 		}
 		snprintf(buf, sizeof(buf), "%s%c%s", color, c, NORM);
 #if 0
@@ -615,14 +611,19 @@ qprint_tree_node(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		}
 #endif
 	}
+
 	printf("[%s] ", buf);
 	for (i = 0; i < level; ++i)
 		putchar(' ');
-	if (verbose)
-		printf("%s%s/%s%s %s%s%s%s%s%s\n", DKGREEN, pkg->CATEGORY, pkg->PF, NORM,
-			install_ver, strlen(pkg->USE) > 0 ? "(" : "", RED, pkg->USE, NORM, strlen(pkg->USE) > 0 ? ")" : "");
-	else
-		printf("%s%s/%s%s\n", DKGREEN, pkg->CATEGORY, pkg->PF, NORM);
+	if (verbose) {
+		char *use = mpkg->meta->Q_USE;  /* TODO: compute difference */
+		printf("%s %s%s%s%s%s%s\n",
+				atom_format("%[CAT]%[PF]", mpkg->atom),
+				install_ver, use != NULL ? "(" : "",
+				RED, use, NORM, use != NULL ? ")" : "");
+	} else {
+		printf("%s\n", atom_format("%[CAT]%[PF]", mpkg->atom));
+	}
 	return c;
 }
 
@@ -641,7 +642,7 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		return;
 	}
 
-	qprintf(">>> %s\n", func);
+	qprintf("@@@ %s\n", func);
 
 	xasprintf(&script,
 		/* Provide funcs required by the PMS */
@@ -681,16 +682,16 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		/* Load the main env */
 		". '%1$s/environment'\n"
 		/* Reload env vars that matter to us */
-		"FILESDIR=/.does/not/exist/anywhere\n"
-		"MERGE_TYPE=binary\n"
-		"ROOT='%4$s'\n"
-		"EROOT=\"${ROOT%%/}${EPREFIX%%/}/\"\n"
-		"D=\"%5$s\"\n"
-		"ED=\"${D%%/}${EPREFIX%%/}/\"\n"
-		"T=\"%6$s\"\n"
+		"export FILESDIR=/.does/not/exist/anywhere\n"
+		"export MERGE_TYPE=binary\n"
+		"export ROOT='%4$s'\n"
+		"export EROOT=\"${ROOT%%/}${EPREFIX%%/}/\"\n"
+		"export D=\"%5$s\"\n"
+		"export ED=\"${D%%/}${EPREFIX%%/}/\"\n"
+		"export T=\"%6$s\"\n"
 		/* we do not support preserve-libs yet, so force
 		 * preserve_old_lib instead */
-		"FEATURES=\"${FEATURES/preserve-libs/disabled}\"\n"
+		"export FEATURES=\"${FEATURES/preserve-libs/disabled}\"\n"
 		/* Finally run the func */
 		"%7$s%2$s\n"
 		/* Ignore func return values (not exit values) */
@@ -778,7 +779,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			if (!pretend)
 				fprintf(contents, "dir %s\n", cpath);
 			*objs = add_set(cpath, *objs);
-			qprintf("%s>>>%s %s%s%s/\n", GREEN, NORM, DKBLUE, cpath, NORM);
+			qprintf("%s---%s %s%s%s/\n", GREEN, NORM, DKBLUE, cpath, NORM);
 
 			/* Copy all of these contents */
 			merge_tree_at(subfd_src, name,
@@ -973,67 +974,78 @@ pkg_extract_xpak_cb(
 }
 
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
+static char  *pm_phases;
+static size_t pm_phases_len;
 static void
-pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
+pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 {
-	set *objs;
-	tree_ctx *vdb;
-	tree_cat_ctx *cat_ctx;
-	FILE *fp, *contents;
-	static char *phases;
-	static size_t phases_len;
-	char *eprefix = NULL;
-	size_t eprefix_len = 0;
-	char buf[1024];
-	char *tbz2, *p, *D, *T;
-	int i;
-	char **ARGV;
-	int ARGC;
-	struct stat st;
-	char **iargv;
-	char c;
-	int iargc;
-	const char *compr;
-	int cp_argc;
-	int cpm_argc;
-	char **cp_argv;
-	char **cpm_argv;
-	int tbz2size;
+	set            *objs;
+	tree_ctx       *vdb;
+	tree_cat_ctx   *cat_ctx;
+	tree_match_ctx *bpkg;
+	tree_match_ctx *previnst;
+	depend_atom    *slotatom;
+	FILE           *fp;
+	FILE           *contents;
+	char           *eprefix = NULL;
+	size_t          eprefix_len = 0;
+	char            buf[1024];
+	char           *p;
+	char           *D;
+	char           *T;
+	int             i;
+	char          **ARGV;
+	int             ARGC;
+	struct stat     st;
+	char          **iargv;
+	int             iargc;
+	const char     *compr;
+	int             cp_argc;
+	int             cpm_argc;
+	char          **cp_argv;
+	char          **cpm_argv;
+	int             tbz2size;
+	int             replacing = 0;
 
-	if (!install || !pkg || !atom)
+	if (!install || !mpkg || !qatom)
 		return;
 
-	if (!pkg->PF[0] || !pkg->CATEGORY[0]) {
-		if (verbose) warn("CPF is really NULL at level %d", level);
-		return;
-	}
+	/* create atom of the installed mpkg without version, with this
+	 * SLOT (without SUBSLOT) */
+	snprintf(buf, sizeof(buf), "%s/%s:%s",
+			mpkg->atom->CATEGORY,
+			mpkg->atom->PN,
+			mpkg->atom->SLOT != NULL ? "0" : mpkg->atom->SLOT);
+	slotatom = atom_explode(buf);
 
-	c = qprint_tree_node(level, atom, pkg);
+	previnst = best_version(slotatom, BV_INSTALLED);
+	if (previnst != NULL)
+		replacing = atom_compare(mpkg->atom, slotatom);
 
-	if (0)
-		if (((c == 'R') || (c == 'D')) && update_only)
-			return;
+	(void)qprint_tree_node(level, mpkg, previnst, replacing);
 
-	if (pkg->RDEPEND[0] != '\0' && follow_rdepends) {
-		const char *rdepend;
+	if (mpkg->meta->Q_RDEPEND != NULL &&
+			mpkg->meta->Q_RDEPEND[0] != '\0' &&
+			follow_rdepends)
+	{
+		const char *rdepend = mpkg->meta->Q_RDEPEND;
 
-		IF_DEBUG(fprintf(stderr, "\n+Parent: %s/%s\n", pkg->CATEGORY, pkg->PF));
-		IF_DEBUG(fprintf(stderr, "+Depstring: %s\n", pkg->RDEPEND));
+		IF_DEBUG(fprintf(stderr, "\n+Parent: %s\n+Depstring: %s\n",
+					atom_to_string(mpkg->atom), rdepend));
 
 		/* <hack> */
-		if (strncmp(pkg->RDEPEND, "|| ", 3) == 0) {
+		if (strncmp(rdepend, "|| ", 3) == 0) {
 			if (verbose)
-				qfprintf(stderr, "fix this rdepend hack %s\n", pkg->RDEPEND);
+				qfprintf(stderr, "fix this rdepend hack %s\n", rdepend);
 			rdepend = "";
-		} else
-			rdepend = pkg->RDEPEND;
+		}
 		/* </hack> */
 
 		makeargv(rdepend, &ARGC, &ARGV);
 		/* Walk the rdepends here. Merging what need be. */
 		for (i = 1; i < ARGC; i++) {
-			depend_atom *subatom, *ratom;
-			char *name = ARGV[i];
+			depend_atom *subatom;
+			char        *name = ARGV[i];
 			switch (*name) {
 				case '|':
 				case '!':
@@ -1046,41 +1058,19 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 					break;
 				default:
 					if ((subatom = atom_explode(name)) != NULL) {
-						struct pkg_t *subpkg;
-
-						subpkg = grab_binpkg_info(subatom); /* free me later */
-						if (subpkg == NULL) {
-							warn("Cannot find a binpkg for %s from rdepend(%s)",
-									name, pkg->RDEPEND);
+						bpkg = best_version(subatom, BV_INSTALLED | BV_BINPKG);
+						if (bpkg == NULL) {
+							warn("cannot resolve %s from rdepend(%s)",
+									name, rdepend);
 							atom_implode(subatom);
 							continue;
 						}
 
-						assert(subpkg != NULL);
-						IF_DEBUG(fprintf(stderr, "+Subpkg: %s/%s\n",
-									subpkg->CATEGORY, subpkg->PF));
+						if (bpkg->pkg->cat_ctx->ctx->cachetype != CACHE_VDB)
+							pkg_fetch(level + 1, subatom, bpkg);
 
-						/* look at installed versions now.
-						 * If NULL or < merge this pkg */
-						snprintf(buf, sizeof(buf), "%s/%s",
-								subpkg->CATEGORY, subpkg->PF);
-
-						ratom = atom_explode(buf);
-
-						p = best_version(subpkg->CATEGORY,
-								subpkg->PF, subpkg->SLOT);
-
-						/* we dont want to remerge equal versions here */
-						IF_DEBUG(fprintf(stderr, "+Installed: %s\n", p));
-						if (strlen(p) < 1)
-							if (!((strcmp(pkg->PF, subpkg->PF) == 0) &&
-										(strcmp(pkg->CATEGORY,
-												subpkg->CATEGORY) == 0)))
-								pkg_fetch(level+1, ratom, subpkg);
-
+						tree_match_close(bpkg);
 						atom_implode(subatom);
-						atom_implode(ratom);
-						free(subpkg);
 					} else {
 						qfprintf(stderr, "Cant explode atom %s\n", name);
 					}
@@ -1103,22 +1093,22 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	}
 	if (vdb == NULL)
 		errf("need access to root, check permissions to access %s", portroot);
-	cat_ctx = tree_open_cat(vdb, pkg->CATEGORY);
+	cat_ctx = tree_open_cat(vdb, mpkg->atom->CATEGORY);
 	if (!cat_ctx) {
 		if (errno != ENOENT) {
 			tree_close(vdb);
 			return;
 		}
-		mkdirat(vdb->tree_fd, pkg->CATEGORY, 0755);
-		cat_ctx = tree_open_cat(vdb, pkg->CATEGORY);
+		mkdirat(vdb->tree_fd, mpkg->atom->CATEGORY, 0755);
+		cat_ctx = tree_open_cat(vdb, mpkg->atom->CATEGORY);
 		if (!cat_ctx) {
 			tree_close(vdb);
 			return;
 		}
 	}
 
-	/* Set up our temp dir to unpack this stuff */
-	xasprintf(&p, "%s/qmerge/%s/%s", port_tmpdir, pkg->CATEGORY, pkg->PF);
+	/* Set up our temp dir to unpack this stuff   FIXME p -> builddir */
+	xasprintf(&p, "%s/qmerge/%s", port_tmpdir, atom_to_string(mpkg->atom));
 	mkdir_p(p, 0755);
 	xchdir(p);
 	xasprintf(&D, "%s/image", p);
@@ -1131,7 +1121,6 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	mkdir("temp", 0755);
 	mkdir_p(portroot, 0755);
 
-	xasprintf(&tbz2, "%s/%s/%s.tbz2", pkgdir, pkg->CATEGORY, pkg->PF);
 	tbz2size = 0;
 
 	mkdir("vdb", 0755);
@@ -1139,10 +1128,10 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		int vdbfd = open("vdb", O_RDONLY);
 		if (vdbfd == -1)
 			err("failed to open vdb extraction directory");
-		tbz2size = xpak_extract(tbz2, &vdbfd, pkg_extract_xpak_cb);
+		tbz2size = xpak_extract(mpkg->path, &vdbfd, pkg_extract_xpak_cb);
 	}
 	if (tbz2size <= 0)
-		err("%s appears not to be a valid tbz2 file", tbz2);
+		err("%s appears not to be a valid tbz2 file", mpkg->path);
 
 	/* figure out if the data is compressed differently from what the
 	 * name suggests, bug #660508, usage of BINPKG_COMPRESS,
@@ -1162,7 +1151,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		FILE *mfd;
 
 		compr = "brotli -dc"; /* default: brotli; has no magic header */
-		mfd = fopen(tbz2, "r");
+		mfd = fopen(mpkg->path, "r");
 		if (mfd != NULL) {
 			size_t mlen = fread(magic, 1, sizeof(magic), mfd);
 			fclose(mfd);
@@ -1261,18 +1250,18 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 		if ((tarpipe = popen(buf, "w")) == NULL)
 			errp("failed to start %s", buf);
 
-		if ((tbz2f = fopen(tbz2, "r")) == NULL)
-			errp("failed to open %s for reading", tbz2);
+		if ((tbz2f = fopen(mpkg->path, "r")) == NULL)
+			errp("failed to open %s for reading", mpkg->path);
 
 		for (piped = wr = 0; piped < tbz2size; piped += wr) {
 			n = MIN(tbz2size - piped, (ssize_t)sizeof iobuf);
 			rd = fread(iobuf, 1, n, tbz2f);
 			if (0 == rd) {
 				if ((err = ferror(tbz2f)) != 0)
-					err("reading %s failed: %s", tbz2, strerror(err));
+					err("reading %s failed: %s", mpkg->path, strerror(err));
 
 				if (feof(tbz2f))
-					err("unexpected EOF in %s: corrupted binpkg", tbz2);
+					err("unexpected EOF in %s: corrupted binpkg", mpkg->path);
 			}
 
 			for (wr = n = 0; wr < rd; wr += n) {
@@ -1296,13 +1285,12 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 			errp("finishing unpack binpkg unsuccessful");
 	}
 
-	free(tbz2);
 	fflush(stdout);
 
-	eat_file("vdb/DEFINED_PHASES", &phases, &phases_len);
-	pkg_run_func("vdb", phases, "pkg_pretend", D, T);
-	pkg_run_func("vdb", phases, "pkg_setup", D, T);
-	pkg_run_func("vdb", phases, "pkg_preinst", D, T);
+	eat_file("vdb/DEFINED_PHASES", &pm_phases, &pm_phases_len);
+	pkg_run_func("vdb", pm_phases, "pkg_pretend", D, T);
+	pkg_run_func("vdb", pm_phases, "pkg_setup", D, T);
+	pkg_run_func("vdb", pm_phases, "pkg_preinst", D, T);
 
 	if (!eat_file("vdb/EPREFIX", &eprefix, &eprefix_len))
 		eprefix_len = 0;
@@ -1379,7 +1367,7 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	/* run postinst */
 	if (!pretend)
-		pkg_run_func("vdb", phases, "pkg_postinst", D, T);
+		pkg_run_func("vdb", pm_phases, "pkg_postinst", D, T);
 
 	/* XXX: hmm, maybe we'll want to strip more ? */
 	unlink("vdb/environment");
@@ -1387,42 +1375,23 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	/* Unmerge any stray pieces from the older version which we didn't
 	 * replace */
 	/* TODO: Should see about merging with unmerge_packages() */
-	while (1) {
-		int ret;
-		tree_pkg_ctx *pkg_ctx;
-		depend_atom *old_atom;
-
-		pkg_ctx = tree_next_pkg(cat_ctx);
-		if (!pkg_ctx)
+	switch (replacing) {
+		case NEWER:
+		case OLDER:
+		case EQUAL:
+			/* We need to really set this unmerge pending after we
+			 * look at contents of the new pkg */
+			pkg_unmerge(previnst->pkg, objs,
+					cp_argc, cp_argv, cpm_argc, cpm_argv);
 			break;
-		old_atom = tree_get_atom(pkg_ctx, 1);  /* retrieve SLOT */
-		if (!old_atom)
-			goto next_pkg;
-		old_atom->SUBSLOT = NULL;  /* just match SLOT */
-		old_atom->REPO = NULL;     /* REPO never matters, TODO atom_compare */
-		ret = atom_compare(atom, old_atom);
-		switch (ret) {
-			case NEWER:
-			case OLDER:
-			case EQUAL:
-				/* We need to really set this unmerge pending after we
-				 * look at contents of the new pkg */
-				break;
-			default:
-				warn("no idea how we reached here.");
-			case ERROR:
-			case NOT_EQUAL:
-				goto next_pkg;
-		}
-
-		printf("%s+++%s %s/%s %s %s/%s\n",
-				GREEN, NORM, atom->CATEGORY, pkg->PF,
-				booga[ret], cat_ctx->name, pkg_ctx->name);
-
-		pkg_unmerge(pkg_ctx, objs, cp_argc, cp_argv, cpm_argc, cpm_argv);
- next_pkg:
-		tree_close_pkg(pkg_ctx);
+		default:
+			warn("no idea how we reached here.");
+		case ERROR:
+		case NOT_EQUAL:
+			break;
 	}
+
+	tree_match_close(previnst);
 
 	freeargv(cp_argc, cp_argv);
 	freeargv(cpm_argc, cpm_argv);
@@ -1442,9 +1411,9 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 	if (!pretend) {
 		/* move the local vdb copy to the final place */
 		snprintf(buf, sizeof(buf), "%s%s/%s/",
-				portroot, portvdb, pkg->CATEGORY);
+				portroot, portvdb, mpkg->atom->CATEGORY);
 		mkdir_p(buf, 0755);
-		strcat(buf, pkg->PF);
+		strcat(buf, mpkg->atom->PF);
 		rm_rf(buf);  /* get rid of existing dir, empty dir is fine */
 		if (rename("vdb", buf) != 0)
 			warn("failed to move 'vdb' to '%s': %s", buf, strerror(errno));
@@ -1452,12 +1421,12 @@ pkg_merge(int level, const depend_atom *atom, const struct pkg_t *pkg)
 
 	/* clean up our local temp dir */
 	xchdir("..");
-	rm_rf(pkg->PF);
+	rm_rf(mpkg->atom->PF);
 	/* don't care about return */
 	rmdir("../qmerge");
 
-	printf("%s>>>%s %s%s%s/%s%s%s\n",
-			YELLOW, NORM, WHITE, pkg->CATEGORY, NORM, CYAN, pkg->PF, NORM);
+	printf("%s>>>%s %s\n",
+			YELLOW, NORM, atom_format("%[CAT]%[PF]", mpkg->atom));
 
 	tree_close_cat(cat_ctx);
 	tree_close(vdb);
@@ -1481,7 +1450,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 	buf = phases = NULL;
 	T = "${PWD}/temp";
 
-	printf("%s<<<%s %s\n", YELLOW, NORM,
+	printf("%s***%s unmerging %s\n", YELLOW, NORM,
 			atom_format("%[CATEGORY]%[PF]", tree_get_atom(pkg_ctx, false)));
 
 	if (pretend == 100)
@@ -1513,11 +1482,11 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 		strstr(features, "config-protect-if-modified") != NULL;
 
 	for (; (buf = strtok_r(buf, "\n", &savep)) != NULL; buf = NULL) {
-		bool del;
+		bool            del;
 		contents_entry *e;
-		char zing[20];
-		int protected = 0;
-		struct stat st;
+		char            zing[20];
+		int             protected = 0;
+		struct stat     st;
 
 		e = contents_parse_line(buf);
 		if (!e)
@@ -1657,55 +1626,58 @@ unlink_empty(const char *buf)
 
 static int
 pkg_verify_checksums(
-		char *fname,
-		const struct pkg_t *pkg,
-		int strict,
-		int display)
+		const tree_match_ctx *pkg,
+		int                   strict,
+		int                   display)
 {
-	int ret = 0;
-	char md5[32+1];
-	char sha1[40+1];
+	int    ret = 0;
+	char   md5[32+1];
+	char   sha1[40+1];
 	size_t flen;
+	int    mlen;
 
-	if (hash_multiple_file(fname, md5, sha1, NULL, NULL, NULL, NULL,
+	if (hash_multiple_file(pkg->path, md5, sha1, NULL, NULL, NULL, NULL,
 			&flen, HASH_MD5 | HASH_SHA1) == -1)
-		errf("failed to compute hashes for %s/%s: %s\n",
-				pkg->CATEGORY, pkg->PF, strerror(errno));
+		errf("failed to compute hashes for %s: %s\n",
+				atom_to_string(pkg->atom), strerror(errno));
 
-	if (flen != pkg->SIZE) {
-		warn("filesize %zu doesn't match requested size %zu for %s/%s\n",
-				flen, pkg->SIZE, pkg->CATEGORY, pkg->PF);
+	mlen = atoi(pkg->meta->Q_SIZE);
+	if (flen != (size_t)mlen) {
+		warn("filesize %zu doesn't match requested size %d for %s\n",
+				flen, mlen, atom_to_string(pkg->atom));
 		ret++;
 	}
 
-	if (pkg->MD5[0]) {
-		if (strcmp(md5, pkg->MD5) == 0) {
+	if (pkg->meta->Q_MD5 != NULL) {
+		if (strcmp(md5, pkg->meta->Q_MD5) == 0) {
 			if (display)
-				printf("MD5:  [%sOK%s] %s %s/%s\n",
-						GREEN, NORM, md5, pkg->CATEGORY, pkg->PF);
+				printf("MD5:  [%sOK%s] %s %s\n",
+						GREEN, NORM, md5, atom_to_string(pkg->atom));
 		} else {
 			if (display)
-				warn("MD5:  [%sER%s] (%s) != (%s) %s/%s",
-						RED, NORM, md5, pkg->MD5, pkg->CATEGORY, pkg->PF);
+				warn("MD5:  [%sER%s] (%s) != (%s) %s",
+						RED, NORM, md5, pkg->meta->Q_MD5,
+						atom_to_string(pkg->atom));
 			ret++;
 		}
 	}
 
-	if (pkg->SHA1[0]) {
-		if (strcmp(sha1, pkg->SHA1) == 0) {
+	if (pkg->meta->Q_SHA1 != NULL) {
+		if (strcmp(sha1, pkg->meta->Q_SHA1) == 0) {
 			if (display)
-				qprintf("SHA1: [%sOK%s] %s %s/%s\n",
-						GREEN, NORM, sha1, pkg->CATEGORY, pkg->PF);
+				qprintf("SHA1: [%sOK%s] %s %s\n",
+						GREEN, NORM, sha1, atom_to_string(pkg->atom));
 		} else {
 			if (display)
-				warn("SHA1: [%sER%s] (%s) != (%s) %s/%s",
-						RED, NORM, sha1, pkg->SHA1, pkg->CATEGORY, pkg->PF);
+				warn("SHA1: [%sER%s] (%s) != (%s) %s",
+						RED, NORM, sha1, pkg->meta->Q_SHA1,
+						atom_to_string(pkg->atom));
 			ret++;
 		}
 	}
 
-	if (!pkg->SHA1[0] && !pkg->MD5[0])
-		return 1;
+	if (pkg->meta->Q_MD5 == NULL && pkg->meta->Q_SHA1 == NULL)
+		return -1;
 
 	if (strict && ret)
 		errf("strict is set in features");
@@ -1714,140 +1686,69 @@ pkg_verify_checksums(
 }
 
 static void
-pkg_fetch(int level, const depend_atom *atom, const struct pkg_t *pkg)
+pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 {
-	char buf[_Q_PATH_MAX], str[_Q_PATH_MAX];
+	int  verifyret;
+	char buf[_Q_PATH_MAX];
 
 	/* qmerge -pv patch */
 	if (pretend) {
 		if (!install)
 			install++;
-		/* qprint_tree_node(level, atom, pkg); */
-		pkg_merge(level, atom, pkg);
+		/* qprint_tree_node(level, qatom, mpkg); */
+		pkg_merge(level, qatom, mpkg);
 		return;
 	}
 
-	/* check to see if file exists and it's checksum matches */
-	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2", pkgdir, pkg->CATEGORY, pkg->PF);
-	unlink_empty(buf);
+	unlink_empty(mpkg->path);
 
-	snprintf(str, sizeof(str), "%s/%s", pkgdir, pkg->CATEGORY);
-	if (mkdir(str, 0755) == -1 && errno != EEXIST) {
-		warn("Failed to create %s", str);
+	if (mkdir(mpkg->pkg->cat_ctx->ctx->path, 0755) == -1 && errno != EEXIST) {
+		warn("Failed to create %s", mpkg->pkg->cat_ctx->ctx->path);
 		return;
 	}
 
-	if (force_download && (access(buf, R_OK) == 0) &&
-			(pkg->SHA1[0] || pkg->MD5[0]))
+	if (force_download && (access(mpkg->path, R_OK) == 0) &&
+			(mpkg->meta->Q_SHA1 != NULL || mpkg->meta->Q_MD5 != NULL))
 	{
-		if (pkg_verify_checksums(buf, pkg, 0, 0) != 0)
+		if (pkg_verify_checksums(mpkg, 0, 0) != 0)
 			if (getenv("QMERGE") == NULL)
-				unlink(buf);
-	}
-	if (access(buf, R_OK) == 0) {
-		if (!pkg->SHA1[0] && !pkg->MD5[0]) {
-			warn("No checksum data for %s (try `emaint binhost --fix`)", buf);
-			return;
-		} else {
-			if (pkg_verify_checksums(buf, pkg, qmerge_strict, !quiet)
-					== 0)
-			{
-				pkg_merge(0, atom, pkg);
-				return;
-			}
-		}
-	}
-	if (verbose)
-		printf("Fetching %s/%s.tbz2\n", atom->CATEGORY, pkg->PF);
-
-	/* fetch the package */
-	/* Check CATEGORY first */
-	if (!old_repo) {
-		snprintf(buf, sizeof(buf), "%s/%s.tbz2", atom->CATEGORY, pkg->PF);
-		fetch(str, buf);
-	}
-	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2",
-			pkgdir, atom->CATEGORY, pkg->PF);
-	if (access(buf, R_OK) != 0) {
-		snprintf(buf, sizeof(buf), "%s.tbz2", pkg->PF);
-		fetch(str, buf);
-		old_repo = 1;
+				unlink(mpkg->path);
 	}
 
-	/* verify the pkg exists now. unlink if zero bytes */
-	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2",
-			pkgdir, atom->CATEGORY, pkg->PF);
-	unlink_empty(buf);
+	if (access(mpkg->path, R_OK) != 0) {
+		if (verbose)
+			printf("Fetching %s\n", atom_to_string(mpkg->atom));
 
-	if (access(buf, R_OK) != 0) {
-		warn("Failed to fetch %s.tbz2 from %s", pkg->PF, binhost);
+		/* fetch the package */
+		snprintf(buf, sizeof(buf), "%s/%s.tbz2",
+				mpkg->atom->CATEGORY, mpkg->atom->PF);
+		fetch(mpkg->pkg->cat_ctx->ctx->path, buf);
+
+		/* verify the pkg exists now. unlink if zero bytes */
+		unlink_empty(mpkg->path);
+	}
+
+	if (access(mpkg->path, R_OK) != 0) {
+		warn("Failed to fetch %s.tbz2 from %s", mpkg->atom->PF, binhost);
 		fflush(stderr);
 		return;
 	}
 
-	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2",
-			pkgdir, atom->CATEGORY, pkg->PF);
-	if (pkg_verify_checksums(buf, pkg, qmerge_strict, !quiet) == 0) {
-		pkg_merge(0, atom, pkg);
+	/* check to see if checksum matches */
+	verifyret = pkg_verify_checksums(mpkg, qmerge_strict, !quiet);
+	if (verifyret == -1) {
+		warn("No checksum data for %s (try `emaint binhost --fix`)",
+				mpkg->path);
 		return;
-	}
-}
-
-static void
-print_Pkg(int full, const depend_atom *atom, const struct pkg_t *pkg)
-{
-	char *p = NULL;
-	char buf[512];
-
-	printf("%s%s%s%s\n", atom_format("%[CAT]%[PF]%[SLOT]", atom),
-		!quiet ? " [" : "",
-		!quiet ? make_human_readable_str(pkg->SIZE, 1, KILOBYTE) : "",
-		!quiet ? " KiB]" : "");
-
-	if (full == 0)
+	} else if (verifyret == 0) {
+		pkg_merge(0, qatom, mpkg);
 		return;
-
-	if (pkg->DESC[0])
-		printf(" %sDesc%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->DESC);
-	if (pkg->SHA1[0])
-		printf(" %sSha1%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->SHA1);
-	if (pkg->MD5[0])
-		printf(" %sMd5%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->MD5);
-	if (!pkg->MD5[0] && !pkg->SHA1[0])
-		printf(" %sSums%s:%s %s(MISSING!)%s\n",
-				DKGREEN, YELLOW, NORM, RED, NORM);
-	if (pkg->SLOT[0])
-		printf(" %sSlot%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->SLOT);
-	if (pkg->LICENSE[0])
-		printf(" %sLicense%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->LICENSE);
-	if (pkg->RDEPEND[0])
-		printf(" %sRdepend%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->RDEPEND);
-	if (pkg->USE[0])
-		printf(" %sUse%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->USE);
-	if (pkg->REPO[0])
-		if (strcmp(pkg->REPO, "gentoo") != 0)
-			printf(" %sRepo%s:%s %s\n", DKGREEN, YELLOW, NORM, pkg->REPO);
-
-	if ((p = best_version(pkg->CATEGORY, atom->PN, pkg->SLOT)) != NULL) {
-		if (*p) {
-			int ret;
-			const char *icolor = RED;
-			ret = atom_compare_str(buf, p);
-			switch (ret) {
-				case EQUAL: icolor = RED;    break;
-				case NEWER: icolor = YELLOW; break;
-				case OLDER: icolor = BLUE;   break;
-				default:    icolor = NORM;   break;
-			}
-			printf(" %sInstalled%s:%s %s%s%s\n",
-					DKGREEN, YELLOW, NORM, icolor, p, NORM);
-		}
 	}
 }
 
 /* HACK: pull this in, knowing that qlist will be in the final link, we
  * should however figure out how to do what match does here from e.g.
- * atom */
+ * atom   FIXME use tree_match_atom instead */
 extern bool qlist_match(
 		tree_pkg_ctx *pkg_ctx,
 		const char *name,
@@ -1891,71 +1792,6 @@ unmerge_packages(set *todo)
 		tree_close(vdb);
 	}
 	return ret;
-}
-
-static tree_ctx *_grab_binpkg_info_tree = NULL;
-static struct pkg_t *
-grab_binpkg_info(depend_atom *atom)
-{
-	tree_ctx *tree = _grab_binpkg_info_tree;
-	tree_match_ctx *tpkg;
-	struct pkg_t *pkg = NULL;
-	char path[BUFSIZ];
-	FILE *d;
-
-	/* reuse previously opened tree, so we really employ the cache
-	 * from libq/tree */
-	if (tree == NULL) {
-		snprintf(path, sizeof(path), "%s/portage/%s", port_tmpdir, Packages);
-		/* we don't use ROOT on package tree here, operating on ROOT
-		 * should be for package merges/unmerges, but be able to pull
-		 * binpkgs from current system */
-		if ((d = fopen(path, "r")) != NULL) {
-			fclose(d);
-			snprintf(path, sizeof(path), "%s/portage", port_tmpdir);
-			tree = tree_open_binpkg("/", path);
-		} else {
-			tree = tree_open_binpkg("/", pkgdir);
-		}
-		_grab_binpkg_info_tree = tree;
-
-		/* if opening the tree failed somehow, we can't return anything */
-		if (tree == NULL)
-			return NULL;
-	}
-
-	tpkg = tree_match_atom(tree, atom,
-			TREE_MATCH_FIRST | TREE_MATCH_VIRTUAL | TREE_MATCH_METADATA);
-	if (tpkg != NULL) {
-		depend_atom *tatom = tpkg->atom;
-		tree_pkg_meta *meta = tpkg->meta;
-		pkg = xzalloc(sizeof(struct pkg_t));
-
-		snprintf(pkg->PF, sizeof(pkg->PF), "%s", tatom->PF);
-		snprintf(pkg->CATEGORY, sizeof(pkg->CATEGORY), "%s", tatom->CATEGORY);
-		if (meta->Q_DESCRIPTION != NULL)
-			snprintf(pkg->DESC, sizeof(pkg->DESC), "%s", meta->Q_DESCRIPTION);
-		if (meta->Q_LICENSE != NULL)
-			snprintf(pkg->LICENSE, sizeof(pkg->LICENSE), "%s", meta->Q_LICENSE);
-		if (meta->Q_RDEPEND != NULL)
-			snprintf(pkg->RDEPEND, sizeof(pkg->RDEPEND), "%s", meta->Q_RDEPEND);
-		if (meta->Q_MD5 != NULL)
-			snprintf(pkg->MD5, sizeof(pkg->MD5), "%s", meta->Q_MD5);
-		if (meta->Q_SHA1 != NULL)
-			snprintf(pkg->SHA1, sizeof(pkg->SHA1), "%s", meta->Q_SHA1);
-		if (meta->Q_USE != NULL)
-			snprintf(pkg->USE, sizeof(pkg->USE), "%s", meta->Q_USE);
-		if (meta->Q_repository != NULL)
-			snprintf(pkg->REPO, sizeof(pkg->REPO), "%s", meta->Q_repository);
-		if (meta->Q_SLOT != NULL)
-			snprintf(pkg->REPO, sizeof(pkg->REPO), "%s", meta->Q_SLOT);
-		if (meta->Q_SIZE != NULL)
-			pkg->SIZE = atoi(meta->Q_SIZE);
-
-		tree_match_close(tpkg);
-	}
-
-	return pkg;
 }
 
 static set *
@@ -2046,8 +1882,7 @@ qmerge_run(set *todo)
 		return unmerge_packages(todo);
 	} else {
 		if (todo == NULL || search_pkgs) {
-			/* disputable, this should be qlist -kIv or something */
-			warn("please use qlist -kI");
+			warn("please use qlist -kIv");
 
 			return EXIT_SUCCESS;
 		} else {
@@ -2055,19 +1890,18 @@ qmerge_run(set *todo)
 			size_t todo_cnt = list_set(todo, &todo_strs);
 			size_t i;
 			depend_atom *atom;
-			struct pkg_t *pkg;
+			tree_match_ctx *bpkg;
 			int ret = EXIT_FAILURE;
 
 			for (i = 0; i < todo_cnt; i++) {
 				atom = atom_explode(todo_strs[i]);
-				pkg = grab_binpkg_info(atom);
-				if (pkg != NULL) {
-					if (search_pkgs)
-						print_Pkg(verbose, atom, pkg);
-					else
-						pkg_fetch(0, atom, pkg);
-					free(pkg);
+				bpkg = best_version(atom, BV_BINPKG);
+				if (bpkg != NULL) {
+					pkg_fetch(0, atom, bpkg);
+					tree_match_close(bpkg);
 					ret = EXIT_SUCCESS;
+				} else {
+					warn("nothing found for %s", atom_to_string(atom));
 				}
 				atom_implode(atom);
 			}
@@ -2088,22 +1922,26 @@ int qmerge_main(int argc, char **argv)
 
 	while ((i = GETOPT_LONG(QMERGE, qmerge, "")) != -1) {
 		switch (i) {
-			case 'f': force_download = 1; break;
-			case 'F': force_download = 2; break;
-			case 's': search_pkgs = 1; interactive = 0; break;
+			case 'f': force_download = 1;  break;
+			case 'F': force_download = 2;  break;
+			case 's': search_pkgs = 1;
+					  interactive = 0;     break;
 			/* case 'i': case 'g': */
-			case 'K': install = 1; break;
-			case 'U': uninstall = 1; break;
-			case 'p': pretend = 1; break;
-			case 'u':
-				update_only = 1;
-				/* fall through */
-			case 'y': interactive = 0; break;
+			case 'K': install = 1;         break;
+			case 'U': uninstall = 1;       break;
+			case 'p': pretend = 1;         break;
+			case 'u': update_only = 1;
+					  install = 1;         break;
+			case 'y': interactive = 0;     break;
 			case 'O': follow_rdepends = 0; break;
-			case 128: debug = true; break;
+			case 128: debug = true;        break;
 			COMMON_GETOPTS_CASES(qmerge)
 		}
 	}
+
+	/* default to install if no action given */
+	if (!install && !uninstall)
+		install = 1;
 
 	qmerge_strict = (strstr("strict", features) == 0) ? 1 : 0;
 
@@ -2140,14 +1978,14 @@ int qmerge_main(int argc, char **argv)
 		verbose = 0;
 		quiet = 1;
 		ret = qmerge_run(todo);
-		if (ret || save_pretend)
+		if (ret != EXIT_SUCCESS || save_pretend)
 			return ret;
 
 		if (uninstall) {
-			if (!prompt("OK to unmerge these packages"))
+			if (!qmerge_prompt("OK to unmerge these packages"))
 				return EXIT_FAILURE;
 		} else {
-			if (!prompt("OK to merge these packages"))
+			if (!qmerge_prompt("OK to merge these packages"))
 				return EXIT_FAILURE;
 		}
 

@@ -28,3 +28,16 @@ SHA1: 47f731ce30149f5ab15f0c47dc19b46e4b189d60
 SIZE: 7289
 REPO: local
 
+BUILD_TIME: 1367285976
+CPV: sys-devel/qmerge-test-2.0
+DEFINED_PHASES: install postinst postrm preinst prerm pretend setup
+DESC: my desc
+EAPI: 6
+KEYWORDS: ~amd64 ~x86
+LICENSE: GPL-2
+MD5: 100f6c414b1dc980fc73cf70178c2190
+MTIME: 1367290147
+SHA1: 5ba9c5db40a1b9be5e0e98b19b2cff5d2c197808
+SIZE: 7334
+REPO: local
+
