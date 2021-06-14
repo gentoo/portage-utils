@@ -546,7 +546,10 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 	tree_ctx *ctx = cat_ctx->ctx;
 	tree_pkg_ctx *ret = NULL;
 
-	if (ctx->cachetype == CACHE_EBUILD) {
+	if (ctx->do_sort && cat_ctx->pkg_ctxs != NULL) {
+		/* bypass to use the cache if it exists */
+		ret = tree_next_pkg_int(cat_ctx);
+	} else if (ctx->cachetype == CACHE_EBUILD) {
 		char *p;
 
 		/* serve *.ebuild files each as separate pkg_ctx with name set
@@ -1600,9 +1603,6 @@ tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 				}
 				pkg_ctx->atom->REPO = pkg_ctx->repo;
 			}
-
-			if (meta != NULL)
-				tree_close_meta(meta);
 		}
 
 		/* this is a bit atom territory, but since we pulled in SLOT we
@@ -1659,12 +1659,12 @@ tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms)
 static int
 tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 {
-	set *cache = priv;
-	tree_cat_ctx *cat_ctx;
-	tree_pkg_ctx *pkg;
-	tree_ctx *tctx = ctx->cat_ctx->ctx;
-	depend_atom *atom = tree_get_atom(ctx, true);
-	tree_pkg_meta *meta = tree_pkg_read(ctx);
+	tree_cat_ctx  *cat_ctx;
+	tree_pkg_ctx  *pkg;
+	set           *cache   = priv;
+	tree_ctx      *tctx    = ctx->cat_ctx->ctx;
+	depend_atom   *atom    = tree_get_atom(ctx, true);
+	tree_pkg_meta *meta    = tree_pkg_read(ctx);
 
 	(void)priv;
 
@@ -1686,10 +1686,31 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 	pkg->name = xstrdup(pkg->atom->PF);
 	pkg->repo = tctx->repo != NULL ? xstrdup(tctx->repo) : NULL;
 	if (meta != NULL) {
+		pkg->fd = -2;  /* don't try to read, we fill it in here */
 		pkg->meta = xmalloc(sizeof(*pkg->meta));
 		memcpy(pkg->meta, meta, sizeof(*pkg->meta));
-		pkg->meta->Q__data = NULL;  /* avoid free here (just to be sure) */
-		pkg->fd = -2;  /* don't try to read, we already got it */
+		if (ctx->cat_ctx->ctx->cachetype == CACHE_PACKAGES) {
+			pkg->meta->Q__data = NULL;  /* avoid free here (just to be sure) */
+		} else {  /* CACHE_BINPKG */
+			char **newdata;
+			int    elems;
+			size_t datasize = (size_t)meta->Q__eclasses_;
+
+			pkg->meta->Q__data = xmalloc(sizeof(char) * datasize);
+			memcpy(pkg->meta->Q__data, meta->Q__data, datasize);
+
+			/* re-position keys */
+			newdata = (char **)pkg->meta;
+			elems   = sizeof(tree_pkg_meta) / sizeof(char *);
+			while (elems-- > 1)  /* skip Q__data itself */
+				if (newdata[elems] != NULL)
+					newdata[elems] = pkg->meta->Q__data +
+						(newdata[elems] - meta->Q__data);
+
+			/* drop garbage used for Q__data admin in original case */
+			pkg->meta->Q__eclasses_ = NULL;
+			pkg->meta->Q__md5_      = NULL;
+		}
 	} else {
 		pkg->meta = NULL;
 	}
@@ -1728,12 +1749,9 @@ tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
 		else
 			cache = create_set();
 
-		if (ctx->cachetype == CACHE_PACKAGES)
-			tree_foreach_packages(ctx,
-					tree_match_atom_cache_populate_cb, cache);
-		else  /* BINPKG */
-			tree_foreach_pkg(ctx,
-					tree_match_atom_cache_populate_cb, cache, true, NULL);
+		tree_foreach_pkg(ctx,
+				tree_match_atom_cache_populate_cb, cache, true, NULL);
+
 		ctx->do_sort = true;  /* turn it back on */
 		ctx->cache.all_categories = true;
 
