@@ -1015,7 +1015,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	snprintf(buf, sizeof(buf), "%s/%s:%s",
 			mpkg->atom->CATEGORY,
 			mpkg->atom->PN,
-			mpkg->atom->SLOT != NULL ? "0" : mpkg->atom->SLOT);
+			mpkg->atom->SLOT == NULL ? "0" : mpkg->atom->SLOT);
 	slotatom = atom_explode(buf);
 
 	previnst = best_version(slotatom, BV_INSTALLED);
