@@ -1108,7 +1108,8 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	}
 
 	/* Set up our temp dir to unpack this stuff   FIXME p -> builddir */
-	xasprintf(&p, "%s/qmerge/%s/%s", port_tmpdir, mpkg->atom->CATEGORY, mpkg->atom->PF);
+	xasprintf(&p, "%s/qmerge/%s/%s", port_tmpdir,
+			mpkg->atom->CATEGORY, mpkg->atom->PF);
 	mkdir_p(p, 0755);
 	xchdir(p);
 	xasprintf(&D, "%s/image", p);
@@ -1457,14 +1458,9 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 	if (pretend == 100)
 		return 0;
 
-	/* First get a handle on the things to clean up */
-	buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
-	if (buf == NULL)
-		return 1;
-
 	portroot_fd = cat_ctx->ctx->portroot_fd;
 
-	/* Then execute the pkg_prerm step */
+	/* execute the pkg_prerm step */
 	if (!pretend) {
 		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
 		if (phases != NULL) {
@@ -1481,6 +1477,11 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 
 	unmerge_config_protected =
 		strstr(features, "config-protect-if-modified") != NULL;
+
+	/* get a handle on the things to clean up */
+	buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
+	if (buf == NULL)
+		return 1;
 
 	for (; (buf = strtok_r(buf, "\n", &savep)) != NULL; buf = NULL) {
 		bool            del;
@@ -1597,14 +1598,15 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 	}
 
 	if (!pretend) {
-		/* Then execute the pkg_postrm step */
+		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
+		/* execute the pkg_postrm step */
 		pkg_run_func_at(pkg_ctx->fd, ".", phases, "pkg_postrm", T, T);
 
-		/* Finally delete the vdb entry */
+		/* finally delete the vdb entry */
 		rm_rf_at(pkg_ctx->fd, ".");
 		unlinkat(cat_ctx->fd, pkg_ctx->name, AT_REMOVEDIR);
 
-		/* And prune the category if it's empty */
+		/* and prune the category if it's empty */
 		unlinkat(cat_ctx->ctx->tree_fd, cat_ctx->name, AT_REMOVEDIR);
 	}
 
