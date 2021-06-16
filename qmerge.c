@@ -1514,7 +1514,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 					char *hash = hash_file_at(portroot_fd,
 							e->name + 1, HASH_MD5);
 					protected = 0;
-					if (hash)
+					if (hash != NULL)  /* if file was not removed */
 						protected = strcmp(e->digest, (const char *)hash);
 				}
 				break;
