@@ -804,7 +804,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			hash = hash_file_at(subfd_src, name, HASH_MD5);
 			if (!pretend)
 				fprintf(contents, "obj %s %s %zu""\n",
-						cpath, hash, (size_t)st.st_mtime);
+					cpath, hash ? hash : "xxx", (size_t)st.st_mtime);
 
 			/* Check CONFIG_PROTECT */
 			if (config_protected(cpath + eprefix_len,
