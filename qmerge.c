@@ -1288,9 +1288,11 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	fflush(stdout);
 
 	eat_file("vdb/DEFINED_PHASES", &pm_phases, &pm_phases_len);
-	pkg_run_func("vdb", pm_phases, "pkg_pretend", D, T);
-	pkg_run_func("vdb", pm_phases, "pkg_setup", D, T);
-	pkg_run_func("vdb", pm_phases, "pkg_preinst", D, T);
+	if (!pretend) {
+		pkg_run_func("vdb", pm_phases, "pkg_pretend", D, T);
+		pkg_run_func("vdb", pm_phases, "pkg_setup", D, T);
+		pkg_run_func("vdb", pm_phases, "pkg_preinst", D, T);
+	}
 
 	if (!eat_file("vdb/EPREFIX", &eprefix, &eprefix_len))
 		eprefix_len = 0;
