@@ -1374,7 +1374,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 	/* Unmerge any stray pieces from the older version which we didn't
 	 * replace */
-	/* TODO: Should see about merging with unmerge_packages() */
 	switch (replacing) {
 		case NEWER:
 		case OLDER:
