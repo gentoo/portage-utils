@@ -1108,7 +1108,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	}
 
 	/* Set up our temp dir to unpack this stuff   FIXME p -> builddir */
-	xasprintf(&p, "%s/qmerge/%s", port_tmpdir, atom_to_string(mpkg->atom));
+	xasprintf(&p, "%s/qmerge/%s/%s", port_tmpdir, mpkg->atom->CATEGORY, mpkg->atom->PF);
 	mkdir_p(p, 0755);
 	xchdir(p);
 	xasprintf(&D, "%s/image", p);
