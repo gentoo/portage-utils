@@ -686,6 +686,10 @@ pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char 
 		"export MERGE_TYPE=binary\n"
 		"export ROOT='%4$s'\n"
 		"export EROOT=\"${ROOT%%/}${EPREFIX%%/}/\"\n"
+		/* BROOT, SYSROOT, ESYSROOT: PMS table 8.3 Prefix values for DEPEND */
+		"export BROOT=\n"
+		"export SYSROOT=\"${ROOT}\"\n"
+		"export ESYSROOT=\"${EROOT}\"\n"
 		"export D=\"%5$s\"\n"
 		"export ED=\"${D%%/}${EPREFIX%%/}/\"\n"
 		"export T=\"%6$s\"\n"
