@@ -627,15 +627,61 @@ qprint_tree_node(
 	return c;
 }
 
+/* PMS 9.2 Call order */
+enum pkg_phases {
+	PKG_PRETEND  = 1,
+	PKG_SETUP    = 2,
+	/* skipping src_* */
+	PKG_PREINST  = 3,
+	PKG_POSTINST = 4,
+	PKG_PRERM    = 5,
+	PKG_POSTRM   = 6
+};
+#define MAX_EAPI  8
+static struct {
+	enum pkg_phases phase;
+	const char     *phasestr;
+	unsigned char   eapi[1 + MAX_EAPI];
+} phase_table[] = {
+	{ 0,            NULL,           {0,0,0,0,0,0,0,0,0} },   /* align */
+	/* phase                   EAPI: 0 1 2 3 4 5 6 7 8 */
+	{ PKG_PRETEND,  "pkg_pretend",  {0,0,0,0,1,1,1,1,1} },   /* table 9.3 */
+	{ PKG_SETUP,    "pkg_setup",    {1,1,1,1,1,1,1,1,1} },
+	{ PKG_PREINST,  "pkg_preinst",  {1,1,1,1,1,1,1,1,1} },
+	{ PKG_POSTINST, "pkg_postinst", {1,1,1,1,1,1,1,1,1} },
+	{ PKG_PRERM,    "pkg_prerm",    {1,1,1,1,1,1,1,1,1} },
+	{ PKG_POSTRM,   "pkg_postrm",   {1,1,1,1,1,1,1,1,1} }
+};
+
 static void
-pkg_run_func_at(int dirfd, const char *vdb_path, const char *phases, const char *func, const char *D, const char *T)
+pkg_run_func_at(
+		int             dirfd,
+		const char     *vdb_path,
+		const char     *phases,
+		enum pkg_phases phaseidx,
+		const char     *D,
+		const char     *T,
+		const char     *EAPI)
 {
+	const char *func;
 	const char *phase;
-	char *script;
+	char       *script;
+	int         eapi;
+
+	/* EAPI officially is a string, but since the official ones are only
+	 * numbers, we'll just go with the numbers */
+	eapi = (int)strtol(EAPI, NULL, 10);
+	if (eapi > MAX_EAPI)
+		eapi = MAX_EAPI;  /* let's hope latest known EAPI is closest */
+
+	/* see if this function should be run for the EAPI */
+	if (!phase_table[phaseidx].eapi[eapi])
+		return;
 
 	/* This assumes no func is a substring of another func.
 	 * Today, that assumption is valid for all funcs ...
 	 * The phases are the func with the "pkg_" chopped off. */
+	func = phase_table[phaseidx].phasestr;
 	phase = func + 4;
 	if (strstr(phases, phase) == NULL) {
 		qprintf("--- %s\n", func);
@@ -978,8 +1024,6 @@ pkg_extract_xpak_cb(
 }
 
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
-static char  *pm_phases;
-static size_t pm_phases_len;
 static void
 pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 {
@@ -991,8 +1035,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	depend_atom    *slotatom;
 	FILE           *fp;
 	FILE           *contents;
-	char           *eprefix = NULL;
-	size_t          eprefix_len = 0;
 	char            buf[1024];
 	char           *p;
 	char           *D;
@@ -1009,7 +1051,13 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	char          **cp_argv;
 	char          **cpm_argv;
 	int             tbz2size;
-	int             replacing = 0;
+	int             replacing     = 0;
+	char           *eprefix       = NULL;
+	size_t          eprefix_len   = 0;
+	char           *pm_phases     = NULL;
+	size_t          pm_phases_len = 0;
+	char           *eapi          = NULL;
+	size_t          eapi_len      = 0;
 
 	if (!install || !mpkg || !qatom)
 		return;
@@ -1292,15 +1340,15 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 	fflush(stdout);
 
+	eat_file("vdb/EPREFIX", &eprefix, &eprefix_len);
+	eat_file("vdb/EAPI", &eapi, &eapi_len);
 	eat_file("vdb/DEFINED_PHASES", &pm_phases, &pm_phases_len);
-	if (!pretend) {
-		pkg_run_func("vdb", pm_phases, "pkg_pretend", D, T);
-		pkg_run_func("vdb", pm_phases, "pkg_setup", D, T);
-		pkg_run_func("vdb", pm_phases, "pkg_preinst", D, T);
-	}
 
-	if (!eat_file("vdb/EPREFIX", &eprefix, &eprefix_len))
-		eprefix_len = 0;
+	if (!pretend) {
+		pkg_run_func("vdb", pm_phases, PKG_PRETEND, D, T, eapi);
+		pkg_run_func("vdb", pm_phases, PKG_SETUP,   D, T, eapi);
+		pkg_run_func("vdb", pm_phases, PKG_PREINST, D, T, eapi);
+	}
 
 	{
 		int imagefd = open("image", O_RDONLY);
@@ -1312,7 +1360,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		if (fstat(imagefd, &st) == -1) {
 			close(imagefd);
 			err("Cannot stat image dirfd");
-		} else if (eprefix_len > 0) {
+		} else if (eprefix != NULL && eprefix[0] == '/') {
 			int imagepfx = openat(imagefd, eprefix + 1, O_RDONLY);
 			if (imagepfx != -1) {
 				close(imagefd);
@@ -1374,7 +1422,12 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 	/* run postinst */
 	if (!pretend)
-		pkg_run_func("vdb", pm_phases, "pkg_postinst", D, T);
+		pkg_run_func("vdb", pm_phases, PKG_POSTINST, D, T, eapi);
+
+	if (eapi != NULL)
+		free(eapi);
+	if (pm_phases != NULL)
+		free(pm_phases);
 
 	/* XXX: hmm, maybe we'll want to strip more ? */
 	unlink("vdb/environment");
@@ -1466,10 +1519,11 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 
 	/* execute the pkg_prerm step */
 	if (!pretend) {
+		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
 		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
 		if (phases != NULL) {
 			mkdirat(pkg_ctx->fd, "temp", 0755);
-			pkg_run_func_at(pkg_ctx->fd, ".", phases, "pkg_prerm", T, T);
+			pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_PRERM, T, T, buf);
 		}
 	}
 
@@ -1602,9 +1656,10 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 	}
 
 	if (!pretend) {
+		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
 		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
 		/* execute the pkg_postrm step */
-		pkg_run_func_at(pkg_ctx->fd, ".", phases, "pkg_postrm", T, T);
+		pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_POSTRM, T, T, buf);
 
 		/* finally delete the vdb entry */
 		rm_rf_at(pkg_ctx->fd, ".");
