@@ -723,10 +723,11 @@ pkg_run_func_at(
 		"keepdir() { dodir \"$@\" && touch \"$@\"/.keep_${CATEGORY}_${PN}-${SLOT%%/*}; }\n"
 		/* TODO: This should be fatal upon error */
 		"emake() { ${MAKE:-make} ${MAKEOPTS} \"$@\"; }\n"
-		/* Unpack the env if need be */
-		"[ -e '%1$s/environment' ] || { bzip2 -dc '%1$s/environment.bz2' > '%1$s/environment' || exit 1; }\n"
+		/* Unpack the env */
+		"{ bzip2 -dc '%1$s/environment.bz2' > \"%6$s/environment\" "
+		  "|| exit 1; }\n"
 		/* Load the main env */
-		". '%1$s/environment'\n"
+		". \"%6$s/environment\"\n"
 		/* Reload env vars that matter to us */
 		"export FILESDIR=/.does/not/exist/anywhere\n"
 		"export MERGE_TYPE=binary\n"
@@ -741,7 +742,7 @@ pkg_run_func_at(
 		"export T=\"%6$s\"\n"
 		/* we do not support preserve-libs yet, so force
 		 * preserve_old_lib instead */
-		"export FEATURES=\"${FEATURES/preserve-libs/disabled}\"\n"
+		"export FEATURES=\"${FEATURES/preserve-libs/}\"\n"
 		/* Finally run the func */
 		"%7$s%2$s\n"
 		/* Ignore func return values (not exit values) */
@@ -1340,7 +1341,10 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 	fflush(stdout);
 
-	eat_file("vdb/EPREFIX", &eprefix, &eprefix_len);
+	/* we won't realloc, so we can loose the alloc size */
+	eprefix_len = eat_file("vdb/EPREFIX", &eprefix, &eprefix_len) ?
+		strlen(eprefix) : 0;
+	/* don't care/use the string lengths on these */
 	eat_file("vdb/EAPI", &eapi, &eapi_len);
 	eat_file("vdb/DEFINED_PHASES", &pm_phases, &pm_phases_len);
 
@@ -1393,9 +1397,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		close(imagefd);
 	}
 
-	if (eprefix != NULL)
-		free(eprefix);
-
 	makeargv(config_protect, &cp_argc, &cp_argv);
 	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
@@ -1420,18 +1421,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		fclose(contents);
 	}
 
-	/* run postinst */
-	if (!pretend)
-		pkg_run_func("vdb", pm_phases, PKG_POSTINST, D, T, eapi);
-
-	if (eapi != NULL)
-		free(eapi);
-	if (pm_phases != NULL)
-		free(pm_phases);
-
-	/* XXX: hmm, maybe we'll want to strip more ? */
-	unlink("vdb/environment");
-
 	/* Unmerge any stray pieces from the older version which we didn't
 	 * replace */
 	switch (replacing) {
@@ -1449,6 +1438,17 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		case NOT_EQUAL:
 			break;
 	}
+
+	/* run postinst */
+	if (!pretend)
+		pkg_run_func("vdb", pm_phases, PKG_POSTINST, D, T, eapi);
+
+	if (eprefix != NULL)
+		free(eprefix);
+	if (eapi != NULL)
+		free(eapi);
+	if (pm_phases != NULL)
+		free(pm_phases);
 
 	tree_match_close(previnst);
 
@@ -1521,6 +1521,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 	if (!pretend) {
 		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
 		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
+		buf = tree_pkg_meta_get(pkg_ctx, EAPI);  /* when phases caused ralloc */
 		if (phases != NULL) {
 			mkdirat(pkg_ctx->fd, "temp", 0755);
 			pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_PRERM, T, T, buf);
