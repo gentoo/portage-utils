@@ -400,23 +400,26 @@ quse_search_profiles_desc(
 	return ret;
 }
 
-static void
+static bool
 quse_describe_flag(const char *root, const char *overlay,
 		struct quse_state *state)
 {
 	char buf[_Q_PATH_MAX];
 	int portdirfd;
+	bool ret = false;
 
 	snprintf(buf, sizeof(buf), "%s/%s", root, overlay);
 	portdirfd = open(buf, O_RDONLY|O_CLOEXEC|O_PATH);
 	if (portdirfd == -1)
-		return;
+		return false;
 
-	quse_search_use_desc(portdirfd, state);
-	quse_search_use_local_desc(portdirfd, state);
-	quse_search_profiles_desc(portdirfd, state);
+	ret |= quse_search_use_desc(portdirfd, state);
+	ret |= quse_search_use_local_desc(portdirfd, state);
+	ret |= quse_search_profiles_desc(portdirfd, state);
 
 	close(portdirfd);
+
+	return ret;
 }
 
 static int
@@ -437,6 +440,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int maxlen;
 	int cnt;
 	int portdirfd = -1;  /* pacify compiler */
+	int ret = 0;
 
 	if (state->match || state->do_describe) {
 		atom = tree_get_atom(pkg_ctx, false);
@@ -538,6 +542,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	}
 
 	if (match) {
+		ret++;
 		atom = tree_get_atom(pkg_ctx, state->need_full_atom);
 		if (quiet) {
 			printf("%s\n", atom_format(state->fmt, atom));
@@ -648,12 +653,13 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (state->do_describe && !state->do_licence)
 		close(portdirfd);
 
-	return EXIT_SUCCESS;
+	return ret;
 }
 
 int quse_main(int argc, char **argv)
 {
 	int i;
+	int ret;
 	size_t n;
 	const char *overlay;
 	char *match = NULL;
@@ -719,6 +725,7 @@ int quse_main(int argc, char **argv)
 				state.fmt = "%[CATEGORY]%[PN]";
 	}
 
+	ret = EXIT_FAILURE;
 	if (state.do_describe && state.match == NULL) {
 		array_for_each(overlays, n, overlay) {
 			tree_ctx *t = NULL;
@@ -726,7 +733,8 @@ int quse_main(int argc, char **argv)
 				t = tree_open(portroot, overlay);  /* used for repo */
 			if (t != NULL)
 				state.repo = t->repo;
-			quse_describe_flag(portroot, overlay, &state);
+			if (quse_describe_flag(portroot, overlay, &state))
+				ret = EXIT_SUCCESS;
 			if (t != NULL)
 				tree_close(t);
 		}
@@ -735,7 +743,9 @@ int quse_main(int argc, char **argv)
 		if (t != NULL) {
 			state.overlay = NULL;
 			state.repo = NULL;
-			tree_foreach_pkg_sorted(t, quse_results_cb, &state, state.match);
+			if (tree_foreach_pkg_sorted(t, quse_results_cb,
+						&state, state.match) > 0)
+				ret = EXIT_SUCCESS;
 			tree_close(t);
 		}
 	} else {
@@ -744,8 +754,9 @@ int quse_main(int argc, char **argv)
 			state.overlay = overlay;
 			if (t != NULL) {
 				state.repo = state.need_full_atom ? t->repo : NULL;
-				tree_foreach_pkg_sorted(t, quse_results_cb,
-						&state, state.match);
+				if (tree_foreach_pkg_sorted(t, quse_results_cb,
+							&state, state.match) > 0)
+					ret = EXIT_SUCCESS;
 				tree_close(t);
 			}
 		}
@@ -760,5 +771,5 @@ int quse_main(int argc, char **argv)
 	if (state.match != NULL)
 		atom_implode(state.match);
 
-	return EXIT_SUCCESS;
+	return ret;
 }
