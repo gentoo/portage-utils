@@ -154,9 +154,9 @@ void tree_close_pkg(tree_pkg_ctx *pkg_ctx);
 int tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 		bool sort, const depend_atom *query);
 #define tree_foreach_pkg_fast(ctx, cb, priv, query) \
-	tree_foreach_pkg(ctx, cb, priv, false, query);
+	tree_foreach_pkg(ctx, cb, priv, false, query)
 #define tree_foreach_pkg_sorted(ctx, cb, priv, query) \
-	tree_foreach_pkg(ctx, cb, priv, true, query);
+	tree_foreach_pkg(ctx, cb, priv, true, query)
 set *tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms);
 depend_atom *tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete);
 tree_match_ctx *tree_match_atom(tree_ctx *t, const depend_atom *q, int flags);
