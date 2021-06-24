@@ -98,7 +98,7 @@ typedef struct llist_char_t llist_char;
 
 static void pkg_fetch(int, const depend_atom *, const tree_match_ctx *);
 static void pkg_merge(int, const depend_atom *, const tree_match_ctx *);
-static int pkg_unmerge(tree_pkg_ctx *, set *, int, char **, int, char **);
+static int pkg_unmerge(tree_pkg_ctx *, depend_atom *, set *, int, char **, int, char **);
 
 static bool
 qmerge_prompt(const char *p)
@@ -652,6 +652,19 @@ static struct {
 	{ PKG_PRERM,    "pkg_prerm",    {1,1,1,1,1,1,1,1,1} },
 	{ PKG_POSTRM,   "pkg_postrm",   {1,1,1,1,1,1,1,1,1} }
 };
+static struct {
+	enum pkg_phases phase;
+	const char     *varname;
+} phase_replacingvers[] = {
+	{ 0,            NULL                  },   /* align */
+	/* phase        varname                  PMS 11.1.2 */
+	{ PKG_PRETEND,  "REPLACING_VERSIONS"  },
+	{ PKG_SETUP,    "REPLACING_VERSIONS"  },
+	{ PKG_PREINST,  "REPLACING_VERSIONS"  },
+	{ PKG_POSTINST, "REPLACING_VERSIONS"  },
+	{ PKG_PRERM,    "REPLACED_BY_VERSION" },
+	{ PKG_POSTRM,   "REPLACED_BY_VERSION" }
+};
 
 static void
 pkg_run_func_at(
@@ -661,7 +674,8 @@ pkg_run_func_at(
 		enum pkg_phases phaseidx,
 		const char     *D,
 		const char     *T,
-		const char     *EAPI)
+		const char     *EAPI,
+		const char     *replacing)
 {
 	const char *func;
 	const char *phase;
@@ -743,8 +757,11 @@ pkg_run_func_at(
 		/* we do not support preserve-libs yet, so force
 		 * preserve_old_lib instead */
 		"export FEATURES=\"${FEATURES/preserve-libs/}\"\n"
+		/* replacing versions: we ignore EAPI availability, for it will
+		 * never hurt */
+		"export %7$s=\"%8$s\"\n"
 		/* Finally run the func */
-		"%7$s%2$s\n"
+		"%9$s%2$s\n"
 		/* Ignore func return values (not exit values) */
 		":",
 		/*1*/ vdb_path,
@@ -753,7 +770,9 @@ pkg_run_func_at(
 		/*4*/ portroot,
 		/*5*/ D,
 		/*6*/ T,
-		/*7*/ debug ? "set -x;" : "");
+		/*7*/ phase_replacingvers[phaseidx].varname,
+		/*8*/ replacing,
+		/*9*/ debug ? "set -x;" : "");
 	xsystembash(script, dirfd);
 	free(script);
 }
@@ -1052,7 +1071,8 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	char          **cp_argv;
 	char          **cpm_argv;
 	int             tbz2size;
-	int             replacing     = 0;
+	const char     *replver       = "";
+	int             replacing     = NOT_EQUAL;
 	char           *eprefix       = NULL;
 	size_t          eprefix_len   = 0;
 	char           *pm_phases     = NULL;
@@ -1072,8 +1092,10 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	slotatom = atom_explode(buf);
 
 	previnst = best_version(slotatom, BV_INSTALLED);
-	if (previnst != NULL)
-		replacing = atom_compare(mpkg->atom, slotatom);
+	if (previnst != NULL) {
+		replacing = atom_compare(mpkg->atom, previnst->atom);
+		replver = previnst->atom->PVR;
+	}
 
 	(void)qprint_tree_node(level, mpkg, previnst, replacing);
 
@@ -1349,9 +1371,9 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	eat_file("vdb/DEFINED_PHASES", &pm_phases, &pm_phases_len);
 
 	if (!pretend) {
-		pkg_run_func("vdb", pm_phases, PKG_PRETEND, D, T, eapi);
-		pkg_run_func("vdb", pm_phases, PKG_SETUP,   D, T, eapi);
-		pkg_run_func("vdb", pm_phases, PKG_PREINST, D, T, eapi);
+		pkg_run_func("vdb", pm_phases, PKG_PRETEND, D, T, eapi, replver);
+		pkg_run_func("vdb", pm_phases, PKG_SETUP,   D, T, eapi, replver);
+		pkg_run_func("vdb", pm_phases, PKG_PREINST, D, T, eapi, replver);
 	}
 
 	{
@@ -1429,7 +1451,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		case EQUAL:
 			/* We need to really set this unmerge pending after we
 			 * look at contents of the new pkg */
-			pkg_unmerge(previnst->pkg, objs,
+			pkg_unmerge(previnst->pkg, mpkg->atom, objs,
 					cp_argc, cp_argv, cpm_argc, cpm_argv);
 			break;
 		default:
@@ -1441,7 +1463,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 	/* run postinst */
 	if (!pretend)
-		pkg_run_func("vdb", pm_phases, PKG_POSTINST, D, T, eapi);
+		pkg_run_func("vdb", pm_phases, PKG_POSTINST, D, T, eapi, replver);
 
 	if (eprefix != NULL)
 		free(eprefix);
@@ -1492,7 +1514,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 }
 
 static int
-pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
+pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
 	tree_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
@@ -1524,7 +1546,8 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 		buf = tree_pkg_meta_get(pkg_ctx, EAPI);  /* when phases caused ralloc */
 		if (phases != NULL) {
 			mkdirat(pkg_ctx->fd, "temp", 0755);
-			pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_PRERM, T, T, buf);
+			pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_PRERM,
+					T, T, buf, rpkg == NULL ? "" : rpkg->PVR);
 		}
 	}
 
@@ -1660,7 +1683,8 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, set *keep,
 		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
 		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
 		/* execute the pkg_postrm step */
-		pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_POSTRM, T, T, buf);
+		pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_POSTRM,
+				T, T, buf, rpkg == NULL ? "" : rpkg->PVR);
 
 		/* finally delete the vdb entry */
 		rm_rf_at(pkg_ctx->fd, ".");
@@ -1837,7 +1861,8 @@ qmerge_unmerge_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	(void)list_set(priv, &todo);
 	for (p = todo; *p != NULL; p++) {
 		if (qlist_match(pkg_ctx, *p, NULL, true, false))
-			pkg_unmerge(pkg_ctx, NULL, cp_argc, cp_argv, cpm_argc, cpm_argv);
+			pkg_unmerge(pkg_ctx, NULL, NULL,
+					cp_argc, cp_argv, cpm_argc, cpm_argv);
 	}
 
 	free(todo);
