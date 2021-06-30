@@ -239,7 +239,8 @@ best_version(const depend_atom *atom, int mode)
 			_qmerge_vdb_tree = vdb;
 		}
 		tmv = tree_match_atom(vdb, atom,
-				TREE_MATCH_LATEST | TREE_MATCH_FIRST);
+				TREE_MATCH_LATEST  | TREE_MATCH_FIRST |
+				TREE_MATCH_VIRTUAL | TREE_MATCH_ACCT);
 	}
 
 	if (mode & BV_BINPKG) {
@@ -255,7 +256,8 @@ best_version(const depend_atom *atom, int mode)
 			_qmerge_binpkg_tree = binpkg;
 		}
 		tmp = tree_match_atom(binpkg, atom,
-				TREE_MATCH_LATEST | TREE_MATCH_FIRST | TREE_MATCH_METADATA);
+				TREE_MATCH_LATEST  | TREE_MATCH_FIRST | TREE_MATCH_METADATA |
+				TREE_MATCH_VIRTUAL | TREE_MATCH_ACCT);
 	}
 
 	if (tmv == NULL && tmp == NULL)
