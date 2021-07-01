@@ -1485,7 +1485,8 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	freeargv(cpm_argc, cpm_argv);
 
 	/* Clean up the package state */
-	free_set(objs);
+	if (objs != NULL)
+		free_set(objs);
 	free(D);
 	free(T);
 
