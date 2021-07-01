@@ -1095,8 +1095,13 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 	previnst = best_version(slotatom, BV_INSTALLED);
 	if (previnst != NULL) {
+		char *orepo = previnst->atom->REPO;
+		previnst->atom->REPO = NULL;
+		/* drop REPO from query, we don't care about where the
+		 * replacement comes from here */
 		replacing = atom_compare(mpkg->atom, previnst->atom);
 		replver = previnst->atom->PVR;
+		previnst->atom->REPO = orepo;
 	}
 
 	(void)qprint_tree_node(level, mpkg, previnst, replacing);
