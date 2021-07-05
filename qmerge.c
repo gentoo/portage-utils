@@ -1095,13 +1095,23 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 	previnst = best_version(slotatom, BV_INSTALLED);
 	if (previnst != NULL) {
-		char *orepo = previnst->atom->REPO;
-		previnst->atom->REPO = NULL;
-		/* drop REPO from query, we don't care about where the
-		 * replacement comes from here */
-		replacing = atom_compare(mpkg->atom, previnst->atom);
-		replver = previnst->atom->PVR;
-		previnst->atom->REPO = orepo;
+		char *orepo;
+		char *osubslot;
+
+		/* drop REPO and SUBSLOT from query, we don't care about where
+		 * the replacement comes from here, SUBSLOT only affects rebuild
+		 * triggering */
+		orepo                   = previnst->atom->REPO;
+		osubslot                = previnst->atom->SUBSLOT;
+		previnst->atom->REPO    = NULL;
+		previnst->atom->SUBSLOT = NULL;
+
+		replacing               = atom_compare(mpkg->atom, previnst->atom);
+		replver                 = previnst->atom->PVR;
+
+		/* restore atom for later printing/handling */
+		previnst->atom->REPO    = orepo;
+		previnst->atom->SUBSLOT = osubslot;
 	}
 
 	(void)qprint_tree_node(level, mpkg, previnst, replacing);
