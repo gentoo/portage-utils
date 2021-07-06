@@ -28,6 +28,8 @@
 - make tree\_get\_metadata also retrieve maintainer type, such that
   qlist can query for maintainer email or type, ideally to do
   qlist -Iv $(portageq --repo gentoo --orphaned) in one step (bug 711466#c3)
+- atom\_compare should have a flags argument which specifies how to
+  match, e.g. ignore REPO, SUBSLOT, etc. for use in e.g. qmerge
 
 # tests
 - add test for qsearch to avoid repetitions like
@@ -38,20 +40,16 @@
 - needs safe deleting (merge in place rather than unmerge;merge)
 - multiple binary repos (talk to zmedico)
 - handle compressed Packages file (talk to zmedico)
-- handle binary Packages file (talk to zmedico)
 - gpg sign the packages file (before compression)
 - binary vdb (sqlite) ... talk to zmedico
 - remote vdb
 - parallel fetch tbz2s
-- check order of pkg\_{pre,post}{inst,rm} during install, unmerge, and upgrade
 - env is not saved/restored between pkg\_{pre,post}inst (see portage and REPO\_LAYOUT\_CONF\_WARN)
 - support installing via path to tbz2 package
 - support TTL field in binpkgs file
-- merge duplicate atoms on the CLI (`qmerge -Uq nano nano nano`)
 - unmerging should clean out @world set
 - fixup lame misnaming of force\_download (--fetch/--force) actually
   not-forcing things
-- use xpak.h instead of shelling out to qxpak binary
 
 # qdepends
 - -v should lookup whether packages are installed for || cases/colouring
