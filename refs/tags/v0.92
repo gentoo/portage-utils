@@ -1,0 +1,17 @@
+certificate version 0.1
+pusher 0x80C6A09A8D33302C1D2C06A93DC126BC457C8490 1625553843 +0200
+pushee git+ssh://git.gentoo.org/proj/portage-utils.git
+nonce 1625553843-438a6635150bf02229dacffc9456e63290672d19
+
+0000000000000000000000000000000000000000 a7fdc5749013b873ec1df8113d3f28e8e624551d refs/tags/v0.92
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAABCgAdFiEELUvHd/Gtp7LaU1vuzpXahU5EQpMFAmDj+7MACgkQzpXahU5E
+QpPxKgf/bQUfxVEhiPHOdNHs0xEBpVJdcAjwaWenKm0lGExzcu2ZaoRdu+ng77l0
+L3VfnMctvgibiAorvZtMklwDpzsGILfci8pQNc2IFaUt1g08O3JPygxASVA8uumv
+obbxv0mCbNSTu/FVwCizQHhdp1zkfAZ8JB0jsNDP6qL5p+Potc6qV8+wmXybnhYX
+gJGplC7uomGtlZlEnl7gxU2Y0PgdB3Ncc0bzwPNoKaw+o8LzSmTuMy30GmrkXVt+
+7+BSTHe6vgPjdU+ZL4WB1ebixvXxYwaWHM+fmQUMrBOzDFylRjzNni7RKZgZ1klO
+ND/hjuLTtgpnKNEotAyfHm2zCBSvVA==
+=jPCE
+-----END PGP SIGNATURE-----
