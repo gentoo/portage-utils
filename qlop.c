@@ -593,7 +593,7 @@ static int do_emerge_log(
 			continue;
 
 		/* are we interested in this line? */
-		if (flags->show_emerge && verbose && (strpfx(p, "  *** emerge ") == 0))
+		if (flags->show_emerge && verbose && p[7] == 'm' /* emerge */)
 		{
 			char shortopts[8];  /* must hold as many opts converted below */
 			int numopts = 0;
@@ -753,15 +753,17 @@ static int do_emerge_log(
 				/* see if we need this atom */
 				atomw = NULL;
 				if (atomset == NULL) {
-					int orev = atom->PR_int;
-					if (flags->do_predict)
-						atom->PR_int = 0;  /* allow matching a revision */
+					/* match without revisions when we try to predict,
+					 * such that our set remains rich enough to cover
+					 * various predictions */
 					array_for_each(atoms, i, atomw) {
-						if (atom_compare(atom, atomw) == EQUAL)
+						if (atom_compare_flg(atom, atomw,
+									flags->do_predict
+									? ATOM_COMP_NOREV
+									: ATOM_COMP_DEFAULT) == EQUAL)
 							break;
 						atomw = NULL;
 					}
-					atom->PR_int = orev;
 				} else {
 					snprintf(afmt, sizeof(afmt), "%s/%s",
 							atom->CATEGORY, atom->PN);
@@ -1229,11 +1231,8 @@ static int do_emerge_log(
 
 			array_for_each(avgs, j, pkg) {
 				if (pkgstate == P_INIT) {
-					int orev = pkg->atom->PR_int;
 					atom_equality eq;
-					pkg->atom->PR_int = 0;
-					eq = atom_compare(pkg->atom, atom);
-					pkg->atom->PR_int = orev;
+					eq = atom_compare_flg(pkg->atom, atom, ATOM_COMP_NOREV);
 					switch (eq) {
 						case EQUAL:
 							/* version-less atoms equal any versioned

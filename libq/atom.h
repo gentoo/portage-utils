@@ -96,11 +96,19 @@ typedef enum {
 	OLDER
 } atom_equality;
 
+/* bitflags to control compare behaviour */
+#define ATOM_COMP_DEFAULT    (0<<0)
+#define ATOM_COMP_NOREV      (1<<0)
+#define ATOM_COMP_NOSLOT     (1<<1)
+#define ATOM_COMP_NOSUBSLOT  (1<<2)
+#define ATOM_COMP_NOREPO     (1<<3)
+
 depend_atom *atom_explode_cat(const char *atom, const char *cat);
 #define atom_explode(A) atom_explode_cat(A, NULL)
 depend_atom *atom_clone(depend_atom *atom);
 void atom_implode(depend_atom *atom);
-atom_equality atom_compare(const depend_atom *a1, const depend_atom *a2);
+atom_equality atom_compare_flg(const depend_atom *a1, const depend_atom *a2, int flags);
+#define atom_compare(A,B) atom_compare_flg(A, B, ATOM_COMP_DEFAULT)
 atom_equality atom_compare_str(const char * const s1, const char * const s2);
 char *atom_to_string_r(char *buf, size_t buflen, depend_atom *a);
 char *atom_format_r(char *buf, size_t buflen,

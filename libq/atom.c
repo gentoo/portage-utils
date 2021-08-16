@@ -514,7 +514,7 @@ _atom_compare_match(int ret, atom_operator op)
  * foo-1 <NOT_EQUAL> bar-1
  */
 atom_equality
-atom_compare(const depend_atom *data, const depend_atom *query)
+atom_compare_flg(const depend_atom *data, const depend_atom *query, int flags)
 {
 	atom_operator pfx_op;
 	atom_operator sfx_op;
@@ -551,27 +551,32 @@ atom_compare(const depend_atom *data, const depend_atom *query)
 	 */
 	bl_op = query->blocker;
 	if (bl_op == ATOM_BL_ANTISLOT) {
-		/* ^perl -> match anything with a SLOT */
-		if (query->SLOT == NULL && data->SLOT == NULL)
-			return NOT_EQUAL;
-		if (query->SLOT != NULL) {
-			if (query->SUBSLOT == NULL) {
-				/* ^perl:0 -> match different SLOT */
-				if (data->SLOT == NULL ||
-						strcmp(query->SLOT, data->SLOT) == 0)
-					return NOT_EQUAL;
-			} else {
-				/* ^perl:0/5.28 -> match SLOT, but different SUBSLOT */
-				if (data->SLOT == NULL ||
-						strcmp(query->SLOT, data->SLOT) != 0)
-					return NOT_EQUAL;
-				if (data->SUBSLOT == NULL ||
-						strcmp(query->SUBSLOT, data->SUBSLOT) == 0)
-					return NOT_EQUAL;
+		/* just disable/ignore antislot op when SLOT is supposed to be
+		 * ignored */
+		if (!(flags & ATOM_COMP_NOSLOT)) {
+			/* ^perl -> match anything with a SLOT */
+			if (query->SLOT == NULL && data->SLOT == NULL)
+				return NOT_EQUAL;
+			if (query->SLOT != NULL) {
+				if (query->SUBSLOT == NULL || flags & ATOM_COMP_NOSUBSLOT) {
+					/* ^perl:0 -> match different SLOT */
+					if (data->SLOT == NULL ||
+							strcmp(query->SLOT, data->SLOT) == 0)
+						return NOT_EQUAL;
+				} else {
+					/* ^perl:0/5.28 -> match SLOT, but different SUBSLOT */
+					if (data->SLOT == NULL ||
+							strcmp(query->SLOT, data->SLOT) != 0)
+						return NOT_EQUAL;
+					if (!(flags & ATOM_COMP_NOSUBSLOT))
+						if (data->SUBSLOT == NULL ||
+								strcmp(query->SUBSLOT, data->SUBSLOT) == 0)
+							return NOT_EQUAL;
+				}
 			}
 		}
 		bl_op = ATOM_BL_NONE;  /* ease work below */
-	} else if (query->SLOT != NULL) {
+	} else if (query->SLOT != NULL && !(flags & ATOM_COMP_NOSLOT)) {
 		/* check SLOT only when query side has it */
 		if (data->SLOT == NULL) {
 			if (bl_op == ATOM_BL_NONE)
@@ -581,7 +586,7 @@ atom_compare(const depend_atom *data, const depend_atom *query)
 				/* slot has differs */
 				if (bl_op == ATOM_BL_NONE)
 					return NOT_EQUAL;
-			} else {
+			} else if (!(flags & ATOM_COMP_NOSUBSLOT)) {
 				if (query->SUBSLOT != NULL) {
 					if (data->SUBSLOT == NULL) {
 						if (bl_op == ATOM_BL_NONE)
@@ -623,7 +628,7 @@ atom_compare(const depend_atom *data, const depend_atom *query)
 	}
 
 	/* check REPO, if query has it, ignore blocker stuff for this one */
-	if (query->REPO != NULL) {
+	if (query->REPO != NULL && !(flags & ATOM_COMP_NOREPO)) {
 		if (data->REPO == NULL)
 			return NOT_EQUAL;
 		if (strcmp(query->REPO, data->REPO) != 0)
@@ -753,8 +758,9 @@ atom_compare(const depend_atom *data, const depend_atom *query)
 		return EQUAL;
 
 	/* Make sure the -r# is the same. */
-	if ((sfx_op == ATOM_OP_STAR && !query->PR_int) ||
+	if ((sfx_op == ATOM_OP_STAR && query->PR_int == 0) ||
 	    pfx_op == ATOM_OP_PV_EQUAL ||
+		flags & ATOM_COMP_NOREV ||
 	    data->PR_int == query->PR_int)
 		return _atom_compare_match(EQUAL, pfx_op);
 	else if (data->PR_int < query->PR_int)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -140,11 +140,9 @@ quse_search_use_local_desc(int portdirfd, struct quse_state *state)
 			if ((atom = atom_explode(buf)) == NULL)
 				continue;
 
-			atom->REPO = (char *)state->repo;
-			if (state->match != NULL)
-				atom->SLOT = state->match->SLOT;  /* fake match */
 			if (state->match == NULL ||
-					atom_compare(atom, state->match) == EQUAL)
+					atom_compare_flg(atom, state->match,
+						ATOM_COMP_NOSLOT | ATOM_COMP_NOREPO) == EQUAL)
 			{
 				if (state->do_list) {
 					state->retv[i] = xstrdup(q);
