@@ -1428,6 +1428,22 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	makeargv(config_protect, &cp_argc, &cp_argv);
 	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
+	/* call pkg_prerm right before we merge the replacment version such
+	 * that any logic it defines, can use stuff installed by the package */
+	switch (replacing) {
+		case NEWER:
+		case OLDER:
+		case EQUAL:
+			if (!pretend)
+				pkg_run_func("vdb", pm_phases, PKG_PRERM, D, T, eapi, replver);
+			break;
+		default:
+			warn("no idea how we reached here.");
+		case ERROR:
+		case NOT_EQUAL:
+			break;
+	}
+
 	objs = NULL;
 	if ((contents = fopen("vdb/CONTENTS", "w")) == NULL) {
 		errf("could not open vdb/CONTENTS for writing");
@@ -1546,8 +1562,10 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 
 	portroot_fd = cat_ctx->ctx->portroot_fd;
 
-	/* execute the pkg_prerm step */
-	if (!pretend) {
+	/* execute the pkg_prerm step if we're just unmerging, not when
+	 * replacing, pkg_merge will have called prerm right before merging
+	 * the replacement package */
+	if (!pretend && rpkg == NULL) {
 		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
 		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
 		buf = tree_pkg_meta_get(pkg_ctx, EAPI);  /* when phases caused ralloc */
