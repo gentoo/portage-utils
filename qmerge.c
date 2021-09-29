@@ -2066,7 +2066,7 @@ int qmerge_main(int argc, char **argv)
 			install = 0;
 			warn("Using these options are likely to break your "
 					"system at this point. export QMERGE=1; "
-					"if you think you know what your doing.");
+					"if you think you know what you're doing.");
 		}
 	}
 
