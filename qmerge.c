@@ -740,7 +740,8 @@ pkg_run_func_at(
 		/* TODO: This should be fatal upon error */
 		"emake() { ${MAKE:-make} ${MAKEOPTS} \"$@\"; }\n"
 		/* Unpack the env */
-		"{ bzip2 -dc '%1$s/environment.bz2' > \"%6$s/environment\" "
+		"{ mkdir -p \"%6$s\"; "
+		  "bzip2 -dc '%1$s/environment.bz2' > \"%6$s/environment\" "
 		  "|| exit 1; }\n"
 		/* Load the main env */
 		". \"%6$s/environment\"\n"
