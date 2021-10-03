@@ -373,12 +373,15 @@ atom_clone(depend_atom *atom)
 	size_t plen = 0;
 	size_t nlen = 0;
 	size_t slen = 0;
+	size_t sslen = 0;
 	size_t rlen = 0;
 
 	if (atom->REPO != NULL)
 		rlen = strlen(atom->REPO) + 1;
 	if (atom->SLOT != NULL)
 		slen = strlen(atom->SLOT) + 1;
+	if (atom->SUBSLOT != NULL)
+		sslen = strlen(atom->SUBSLOT) + 1;
 	if (atom->CATEGORY != NULL)
 		clen = strlen(atom->CATEGORY) + 1;
 	if (atom->PF != NULL)
@@ -388,7 +391,7 @@ atom_clone(depend_atom *atom)
 	if (atom->PN != NULL)
 		nlen = strlen(atom->PN) + 1;
 
-	alen = sizeof(*ret) + clen + flen + plen + nlen + rlen + slen;
+	alen = sizeof(*ret) + clen + flen + plen + nlen + rlen + slen + sslen;
 	ret = xmalloc(alen);
 	memset(ret, '\0', sizeof(*ret));
 
@@ -423,8 +426,11 @@ atom_clone(depend_atom *atom)
 		memcpy(ret->SLOT, atom->SLOT, slen);
 		p += slen;
 	}
-	if (atom->SUBSLOT > atom->SLOT && atom->SUBSLOT < (atom->SLOT + slen))
-		ret->SUBSLOT = ret->SLOT + (atom->SUBSLOT - atom->SLOT);
+	if (atom->SUBSLOT != NULL) {
+		ret->SUBSLOT = p;
+		memcpy(ret->SUBSLOT, atom->SUBSLOT, sslen);
+		p += sslen;
+	}
 	if (atom->REPO != NULL) {
 		ret->REPO = p;
 		memcpy(ret->REPO, atom->REPO, rlen);
