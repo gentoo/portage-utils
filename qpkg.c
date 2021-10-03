@@ -76,6 +76,8 @@ qpkg_clean(char *dirp)
 		return 1;
 
 	bin_pkgs = tree_get_atoms(pkgs, true, bin_pkgs);
+	if (bin_pkgs == NULL)
+		return 1;
 	array_set(bin_pkgs, bins);
 
 	if (eclean) {
