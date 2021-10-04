@@ -218,6 +218,10 @@ atom_explode_cat(const char *atom, const char *cat)
 		/* set to NULL if there's nothing */
 		if (ret->SLOT[0] == '\0')
 			ret->SLOT = NULL;
+
+		/* PMS 7.2: SUBSLOT defaults to SLOT when unset */
+		if (ret->SUBSLOT == NULL)
+			ret->SUBSLOT = ret->SLOT;
 	}
 
 	/* see if we have any suffix operators */
@@ -380,7 +384,7 @@ atom_clone(depend_atom *atom)
 		rlen = strlen(atom->REPO) + 1;
 	if (atom->SLOT != NULL)
 		slen = strlen(atom->SLOT) + 1;
-	if (atom->SUBSLOT != NULL)
+	if (atom->SUBSLOT != NULL && atom->SUBSLOT != atom->SLOT)
 		sslen = strlen(atom->SUBSLOT) + 1;
 	if (atom->CATEGORY != NULL)
 		clen = strlen(atom->CATEGORY) + 1;
@@ -427,9 +431,13 @@ atom_clone(depend_atom *atom)
 		p += slen;
 	}
 	if (atom->SUBSLOT != NULL) {
-		ret->SUBSLOT = p;
-		memcpy(ret->SUBSLOT, atom->SUBSLOT, sslen);
-		p += sslen;
+		if (atom->SUBSLOT == atom->SLOT) {  /* PMS 7.2 */
+			ret->SUBSLOT = ret->SLOT;
+		} else {
+			ret->SUBSLOT = p;
+			memcpy(ret->SUBSLOT, atom->SUBSLOT, sslen);
+			p += sslen;
+		}
 	}
 	if (atom->REPO != NULL) {
 		ret->REPO = p;
@@ -820,7 +828,8 @@ atom_to_string_r(char *buf, size_t buflen, depend_atom *a)
 	if (a->SLOT != NULL || a->slotdep != ATOM_SD_NONE)
 		off += snprintf(buf + off, buflen - off, ":%s%s%s%s",
 				a->SLOT ? a->SLOT : "",
-				a->SUBSLOT ? "/" : "", a->SUBSLOT ? a->SUBSLOT : "",
+				a->SUBSLOT && a->SUBSLOT != a->SLOT ?  "/" : "",
+				a->SUBSLOT && a->SUBSLOT != a->SLOT ? a->SUBSLOT : "",
 				atom_slotdep_str[a->slotdep]);
 	for (ud = a->usedeps; ud != NULL; ud = ud->next)
 		off += snprintf(buf + off, buflen - off, "%s%s%s%s%s",
@@ -933,7 +942,8 @@ atom_format_r(
 								HN(atom->SLOT),
 								NORM);
 				} else if (!strncmp("SUBSLOT", fmt, len)) {
-					if (showit || atom->SUBSLOT)
+					if (showit ||
+							(atom->SUBSLOT && atom->SUBSLOT != atom->SLOT))
 						append_buf(buf, buflen, "%s%s%s%s%s",
 								YELLOW,
 								connected ? "/" : "",
