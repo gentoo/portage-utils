@@ -1613,8 +1613,13 @@ tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 			char *ptr;
 			if ((ptr = strchr(pkg_ctx->atom->SLOT, '/')) != NULL) {
 				*ptr++ = '\0';
-				pkg_ctx->atom->SUBSLOT = ptr;
+			} else {
+				/* PMS 7.2: When the sub-slot part is omitted from the
+				 * SLOT definition, the package is considered to have an
+				 * implicit sub-slot which is equal to the regular slot. */
+				ptr = pkg_ctx->atom->SLOT;
 			}
+			pkg_ctx->atom->SUBSLOT = ptr;
 		}
 	}
 
