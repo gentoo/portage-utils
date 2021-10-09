@@ -572,7 +572,9 @@ atom_compare_flg(const depend_atom *data, const depend_atom *query, int flags)
 			if (query->SLOT == NULL && data->SLOT == NULL)
 				return NOT_EQUAL;
 			if (query->SLOT != NULL) {
-				if (query->SUBSLOT == NULL || flags & ATOM_COMP_NOSUBSLOT) {
+				if (query->SUBSLOT == query->SLOT ||
+						flags & ATOM_COMP_NOSUBSLOT)
+				{
 					/* ^perl:0 -> match different SLOT */
 					if (data->SLOT == NULL ||
 							strcmp(query->SLOT, data->SLOT) == 0)
@@ -583,7 +585,7 @@ atom_compare_flg(const depend_atom *data, const depend_atom *query, int flags)
 							strcmp(query->SLOT, data->SLOT) != 0)
 						return NOT_EQUAL;
 					if (!(flags & ATOM_COMP_NOSUBSLOT))
-						if (data->SUBSLOT == NULL ||
+						if (data->SUBSLOT == query->SLOT ||
 								strcmp(query->SUBSLOT, data->SUBSLOT) == 0)
 							return NOT_EQUAL;
 				}
@@ -601,8 +603,8 @@ atom_compare_flg(const depend_atom *data, const depend_atom *query, int flags)
 				if (bl_op == ATOM_BL_NONE)
 					return NOT_EQUAL;
 			} else if (!(flags & ATOM_COMP_NOSUBSLOT)) {
-				if (query->SUBSLOT != NULL) {
-					if (data->SUBSLOT == NULL) {
+				if (query->SUBSLOT != query->SLOT) {
+					if (data->SUBSLOT == data->SLOT) {
 						if (bl_op == ATOM_BL_NONE)
 							return NOT_EQUAL;
 					} else {
