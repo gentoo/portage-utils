@@ -42,6 +42,7 @@ char *binhost;
 char *pkgdir;
 char *port_tmpdir;
 char *features;
+char *ev_use;
 char *install_mask;
 DECLARE_ARRAY(overlays);
 DECLARE_ARRAY(overlay_names);
@@ -625,6 +626,7 @@ env_vars vars_to_read[] = {
 	_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
 	_Q_EVB(BOOL, NOCOLOR,             nocolor,             0)
 	_Q_EVS(ISTR, FEATURES,            features,            "")
+	_Q_EVS(ISTR, USE,                 ev_use,              "")
 	_Q_EVS(STR,  EPREFIX,             eprefix,             CONFIG_EPREFIX)
 	_Q_EVS(STR,  EMERGE_LOG_DIR,      portlogdir,          CONFIG_EPREFIX "var/log")
 	_Q_EVS(STR,  PORTDIR,             main_overlay,        CONFIG_EPREFIX "var/db/repos/gentoo")

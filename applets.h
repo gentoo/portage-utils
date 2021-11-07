@@ -171,6 +171,7 @@ extern char *binhost;
 extern char *pkgdir;
 extern char *port_tmpdir;
 extern char *features;
+extern char *ev_use;
 extern char *install_mask;
 extern DEFINE_ARRAY(overlays);
 extern DEFINE_ARRAY(overlay_names);
