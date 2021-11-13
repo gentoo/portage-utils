@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -146,7 +146,7 @@ extern FILE *warnout;
 #define errp(fmt, args...) _err(warnp, fmt , ## args)
 #define errfp(fmt, args...) _err(warnfp, fmt, ## args)
 
-typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR } var_types;
+typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR, _Q_ISET } var_types;
 typedef struct {
 	const char *name;
 	const size_t name_len;
@@ -154,6 +154,7 @@ typedef struct {
 	union {
 		char **s;
 		bool *b;
+		set **t;
 	} value;
 	size_t value_len;
 	const char *default_value;

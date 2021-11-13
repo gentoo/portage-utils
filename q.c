@@ -242,10 +242,23 @@ int q_main(int argc, char **argv)
 						printf("%s%s%s",
 								YELLOW, *var->value.b ? "1" : "0", NORM);
 						break;
-				case _Q_STR:
-				case _Q_ISTR:
+					case _Q_STR:
+					case _Q_ISTR:
 						printf("%s\"%s\"%s", RED, *var->value.s, NORM);
 						break;
+					case _Q_ISET: {
+						DECLARE_ARRAY(vals);
+						size_t n;
+						char  *val;
+
+						printf("%s\"", RED);
+						array_set(*var->value.t, vals);
+						array_for_each(vals, n, val) {
+							printf("%s%s", n == 0 ? "" : " ", val);
+						}
+						xarrayfree_int(vals);
+						printf("\"%s", NORM);
+					}	break;
 				}
 				if (verbose)
 					printf(" [%s]\n", var->src);
@@ -264,12 +277,24 @@ int q_main(int argc, char **argv)
 				switch (var->type) {
 					case _Q_BOOL:
 						printf("%s%s%s",
-								YELLOW, *var->value.b ? "1" : "0", NORM);
+							   YELLOW, *var->value.b ? "1" : "0", NORM);
 						break;
-				case _Q_STR:
-				case _Q_ISTR:
+					case _Q_STR:
+					case _Q_ISTR:
 						printf("%s%s%s", RED, *var->value.s, NORM);
 						break;
+					case _Q_ISET: {
+						DECLARE_ARRAY(vals);
+						size_t n;
+						char  *val;
+
+						array_set(*var->value.t, vals);
+						array_for_each(vals, n, val) {
+							printf("%s%s", n == 0 ? RED : " ", val);
+						}
+						xarrayfree_int(vals);
+						printf("%s", NORM);
+					}	break;
 				}
 				if (verbose)
 					printf(" [%s]\n", var->src);

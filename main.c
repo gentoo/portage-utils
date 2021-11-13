@@ -42,7 +42,7 @@ char *binhost;
 char *pkgdir;
 char *port_tmpdir;
 char *features;
-char *ev_use;
+set  *ev_use;
 char *install_mask;
 DECLARE_ARRAY(overlays);
 DECLARE_ARRAY(overlay_names);
@@ -249,8 +249,9 @@ static void
 strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 {
 	size_t len;
-	char *p, *nv;
-	char brace;
+	char  *p;
+	char  *nv;
+	char   brace;
 
 	len = strlen(s);
 	*value = xrealloc(*value, *value_len + len + 2);
@@ -258,9 +259,6 @@ strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 	if (*value_len)
 		*nv++ = ' ';
 	memcpy(nv, s, len + 1);
-
-	while ((p = strstr(nv, "-*")) != NULL)
-		memset(*value, ' ', p - *value + 2);
 
 	/* This function is mainly used by the startup code for parsing
 		make.conf and stacking variables remove.
@@ -295,9 +293,62 @@ strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 		}
 	}
 
+	while ((p = strstr(nv, "-*")) != NULL)
+		memset(*value, ' ', p - *value + 2);
+
 	remove_extra_space(*value);
 	*value_len = strlen(*value);
 	/* we should sort here */
+}
+
+static void
+setincr_var(const char *s, set **vals)
+{
+	int    i;
+	int    argc;
+	char **argv;
+	bool   ignore;
+
+	/* This tries to mimick parsing of portage envvars and the stacking
+	 * thereof.  In particular USE and FEATURES, where also negation can
+	 * happen (- prefix).  Variables are supported in form of ${v} or
+	 * $v, but there's no actual replacement happening, we just ignore
+	 * any of such forms.
+	 *  works:
+	 *		FEATURES="${FEATURES} foo"
+	 *		FEATURES="$FEATURES foo"
+	 *		FEATURES="baz bar -* foo"
+	 *
+	 *	wont work:
+	 *		FEATURES="${OTHERVAR} foo"
+	 *		FEATURES="-* ${FEATURES}"
+	 */
+
+	if (s == NULL || *s == '\0')
+		return;
+
+	/* break up input */
+	makeargv(s, &argc, &argv);
+
+	for (i = 1 /* skip executable name */; i < argc; i++) {
+		if (argv[i][0] == '-' && *vals != NULL) {
+			/* handle negation, when the respective value isn't set, we
+			 * simply ignore/drop it */
+			if (argv[i][1] == '*') {
+				clear_set(*vals);
+			} else {
+				del_set(&argv[i][1], *vals, &ignore);
+			}
+		} else if (argv[i][0] == '$') {
+			/* detect ${var} or $var, simply ignore it completely, for
+			 * all of these should be stacked, so re-including whatever
+			 * there is shouldn't make much sense */
+		} else {
+			*vals = add_set_unique(argv[i], *vals, &ignore);
+		}
+	}
+
+	freeargv(argc, argv);
 }
 
 static env_vars *
@@ -329,6 +380,7 @@ set_portage_env_var(env_vars *var, const char *value, const char *src)
 		var->src = xstrdup(src);
 		break;
 	case _Q_ISTR:
+	case _Q_ISET:
 		if (strcmp(var->src, STR_DEFAULT) != 0) {
 			size_t l = strlen(var->src) + 2 + strlen(src) + 1;
 			char *p = xmalloc(sizeof(char) * l);
@@ -342,7 +394,10 @@ set_portage_env_var(env_vars *var, const char *value, const char *src)
 			free(var->src);
 			var->src = xstrdup(src);
 		}
-		strincr_var(var->name, value, var->value.s, &var->value_len);
+		if (var->type == _Q_ISTR)
+			strincr_var(var->name, value, var->value.s, &var->value_len);
+		else
+			setincr_var(value, var->value.t);
 		break;
 	}
 }
@@ -612,10 +667,12 @@ env_vars vars_to_read[] = {
 	.default_value = d, \
 	.src = NULL, \
 },
-#define _Q_EVS(t, V, v, d) \
-	_Q_EV(t, V, .value.s = &v, .value_len = sizeof(d) - 1, d)
-#define _Q_EVB(t, V, v, d) \
-	_Q_EV(t, V, .value.b = &v, .value_len = 0, d)
+#define _Q_EVS(t, V, v, D) \
+	_Q_EV(t, V, .value.s = &v, .value_len = sizeof(D) - 1, D)
+#define _Q_EVB(t, V, v, D) \
+	_Q_EV(t, V, .value.b = &v, .value_len = 0, D)
+#define _Q_EVT(T, V, v, D) \
+	_Q_EV(T, V, .value.t = &v, .value_len = 0, D)
 
 	_Q_EVS(STR,  ROOT,                portroot,            "/")
 	_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      "")
@@ -626,7 +683,7 @@ env_vars vars_to_read[] = {
 	_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
 	_Q_EVB(BOOL, NOCOLOR,             nocolor,             0)
 	_Q_EVS(ISTR, FEATURES,            features,            "")
-	_Q_EVS(ISTR, USE,                 ev_use,              "")
+	_Q_EVT(ISET, USE,                 ev_use,              NULL)
 	_Q_EVS(STR,  EPREFIX,             eprefix,             CONFIG_EPREFIX)
 	_Q_EVS(STR,  EMERGE_LOG_DIR,      portlogdir,          CONFIG_EPREFIX "var/log")
 	_Q_EVS(STR,  PORTDIR,             main_overlay,        CONFIG_EPREFIX "var/db/repos/gentoo")
@@ -819,8 +876,12 @@ initialize_portage_env(void)
 	/* initialize all the properties with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
 		var = &vars_to_read[i];
-		if (var->type != _Q_BOOL)
-			*var->value.s = xstrdup(var->default_value);
+		switch (var->type) {
+			case _Q_BOOL:  *var->value.b = var->default_value;           break;
+			case _Q_STR:
+			case _Q_ISTR:  *var->value.s = xstrdup(var->default_value);  break;
+			case _Q_ISET:  *var->value.t = (set *)var->default_value;    break;
+		}
 		var->src = xstrdup(STR_DEFAULT);
 	}
 
@@ -895,7 +956,7 @@ initialize_portage_env(void)
 		char *svar;
 
 		var = &vars_to_read[i];
-		if (var->type == _Q_BOOL)
+		if (var->type != _Q_STR)
 			continue;
 
 		while ((svar = strchr(*var->value.s, '$'))) {
@@ -1023,11 +1084,27 @@ initialize_portage_env(void)
 	if (getenv("DEBUG")) {
 		for (i = 0; vars_to_read[i].name; ++i) {
 			var = &vars_to_read[i];
-			fprintf(stderr, "%s = ", var->name);
 			switch (var->type) {
-			case _Q_BOOL: fprintf(stderr, "%i\n", *var->value.b); break;
-			case _Q_STR:
-			case _Q_ISTR: fprintf(stderr, "%s\n", *var->value.s); break;
+				case _Q_BOOL:
+					fprintf(stderr, "%s = %d\n", var->name, *var->value.b);
+					break;
+				case _Q_STR:
+				case _Q_ISTR:
+					fprintf(stderr, "%s = %s\n", var->name, *var->value.s);
+					break;
+				case _Q_ISET: {
+					DECLARE_ARRAY(vals);
+					size_t n;
+					char  *val;
+
+					fprintf(stderr, "%s = ", var->name);
+					array_set(*var->value.t, vals);
+					array_for_each(vals, n, val) {
+						fprintf(stderr, "%s ", val);
+					}
+					fprintf(stderr, "\n");
+					xarrayfree_int(vals);
+				}	break;
 			}
 		}
 	}
