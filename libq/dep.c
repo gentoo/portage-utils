@@ -319,7 +319,8 @@ dep_prune_use(dep_node *root, set *use)
 		dep_prune_use(root->neighbor, use);
 	if (root->type == DEP_USE) {
 		bool invert = (root->info[0] == '!' ? 1 : 0);
-		bool notfound = contains_set(root->info + (invert ? 1 : 0), use);
+		bool notfound =
+			contains_set(root->info + (invert ? 1 : 0), use) == NULL;
 
 		if (notfound ^ invert) {
 			root->type = DEP_NULL;
