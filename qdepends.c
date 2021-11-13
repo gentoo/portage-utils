@@ -196,6 +196,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				tree_close_cat(vcat);
 			}
 		} else {
+			dep_prune_use(dep_tree, ev_use);
 			dep_flatten_tree(dep_tree, state->deps);
 		}
 
