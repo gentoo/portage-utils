@@ -41,7 +41,7 @@ char *pkg_install_mask;
 char *binhost;
 char *pkgdir;
 char *port_tmpdir;
-char *features;
+set  *features;
 set  *ev_use;
 char *install_mask;
 DECLARE_ARRAY(overlays);
@@ -252,13 +252,27 @@ strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 	char  *p;
 	char  *nv;
 	char   brace;
+	bool   haddashstar;
 
-	len = strlen(s);
-	*value = xrealloc(*value, *value_len + len + 2);
-	nv = &(*value)[*value_len];
-	if (*value_len)
-		*nv++ = ' ';
-	memcpy(nv, s, len + 1);
+	/* find/skip any -* instances */
+	nv = (char *)s;
+	while ((p = strstr(nv, "-*")) != NULL)
+		nv = p + 2;
+
+	haddashstar = nv != (char *)s;
+
+	len = strlen(nv);
+	if (haddashstar && len < *value_len) {
+		p = *value;
+		*p = '\0';  /* in case len == 0 */
+	} else {
+		*value = xrealloc(*value,
+						  (haddashstar ? (*value_len + 1) : 0) + len + 1);
+		p = &(*value)[*value_len];
+		if (*value_len > 0)
+			*p++ = ' ';
+	}
+	memcpy(p, nv, len + 1);
 
 	/* This function is mainly used by the startup code for parsing
 		make.conf and stacking variables remove.
@@ -275,7 +289,6 @@ strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 	*/
 
 	len = strlen(name);
-	p = nv;
 	while ((p = strchr(p, '$')) != NULL) {
 		nv = p;
 		p++;  /* skip $ */
@@ -292,9 +305,6 @@ strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 			}
 		}
 	}
-
-	while ((p = strstr(nv, "-*")) != NULL)
-		memset(*value, ' ', p - *value + 2);
 
 	remove_extra_space(*value);
 	*value_len = strlen(*value);
@@ -331,13 +341,15 @@ setincr_var(const char *s, set **vals)
 	makeargv(s, &argc, &argv);
 
 	for (i = 1 /* skip executable name */; i < argc; i++) {
-		if (argv[i][0] == '-' && *vals != NULL) {
-			/* handle negation, when the respective value isn't set, we
-			 * simply ignore/drop it */
-			if (argv[i][1] == '*') {
-				clear_set(*vals);
-			} else {
-				del_set(&argv[i][1], *vals, &ignore);
+		if (argv[i][0] == '-') {
+			if (*vals != NULL) {
+				/* handle negation, when the respective value isn't set, we
+				 * simply ignore/drop it */
+				if (argv[i][1] == '*') {
+					clear_set(*vals);
+				} else {
+					del_set(&argv[i][1], *vals, &ignore);
+				}
 			}
 		} else if (argv[i][0] == '$') {
 			/* detect ${var} or $var, simply ignore it completely, for
@@ -368,7 +380,11 @@ set_portage_env_var(env_vars *var, const char *value, const char *src)
 {
 	switch (var->type) {
 	case _Q_BOOL:
-		*var->value.b = 1;
+		*var->value.b = 0;
+		if (strcasecmp(value, "true") == 0 ||
+				strcasecmp(value, "yes") == 0 ||
+				strcmp(value, "1") == 0)
+			*var->value.b = 1;
 		free(var->src);
 		var->src = xstrdup(src);
 		break;
@@ -682,7 +698,7 @@ env_vars vars_to_read[] = {
 	_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      "/etc")
 	_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
 	_Q_EVB(BOOL, NOCOLOR,             nocolor,             0)
-	_Q_EVS(ISTR, FEATURES,            features,            "")
+	_Q_EVT(ISET, FEATURES,            features,            NULL)
 	_Q_EVT(ISET, USE,                 ev_use,              NULL)
 	_Q_EVS(STR,  EPREFIX,             eprefix,             CONFIG_EPREFIX)
 	_Q_EVS(STR,  EMERGE_LOG_DIR,      portlogdir,          CONFIG_EPREFIX "var/log")

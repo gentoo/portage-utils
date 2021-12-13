@@ -170,7 +170,7 @@ extern char *pkg_install_mask;
 extern char *binhost;
 extern char *pkgdir;
 extern char *port_tmpdir;
-extern char *features;
+extern set  *features;
 extern set  *ev_use;
 extern char *install_mask;
 extern DEFINE_ARRAY(overlays);
