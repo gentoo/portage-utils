@@ -271,6 +271,11 @@ array_set(set *q, array_t *ret)
 	array_t blank = array_init_decl;
 
 	*ret = blank;
+
+	/* allow using empty set */
+	if (q == NULL)
+		return 0;
+
 	for (i = 0; i < _SET_HASH_SIZE; i++) {
 		for (w = q->buckets[i]; w != NULL; w = w->next)
 			xarraypush_ptr(ret, w->name);
