@@ -1403,13 +1403,13 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 		/* rely on INSTALL_MASK code to remove optional dirs */
 		maskp = snprintf(imask, masklen, "%s ", install_mask);
-		if (strstr(features, "noinfo") != NULL)
+		if (contains_set("noinfo", features))
 			maskp += snprintf(imask + maskp, masklen - maskp,
 					"/usr/share/info ");
-		if (strstr(features, "noman" ) != NULL)
+		if (contains_set("noman", features))
 			maskp += snprintf(imask + maskp, masklen - maskp,
 					"/usr/share/man ");
-		if (strstr(features, "nodoc" ) != NULL)
+		if (contains_set("nodoc", features))
 			maskp += snprintf(imask + maskp, masklen - maskp,
 					"/usr/share/doc ");
 
@@ -1584,7 +1584,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		eprefix_len = strlen(eprefix);
 
 	unmerge_config_protected =
-		strstr(features, "config-protect-if-modified") != NULL;
+		contains_set("config-protect-if-modified", features);
 
 	/* get a handle on the things to clean up */
 	buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
@@ -2059,7 +2059,7 @@ int qmerge_main(int argc, char **argv)
 	if (!install && !uninstall)
 		install = 1;
 
-	qmerge_strict = (strstr("strict", features) == 0) ? 1 : 0;
+	qmerge_strict = contains_set("strict", features) ? 1 : 0;
 
 	/* Short circut this. */
 	if (install && !pretend) {
