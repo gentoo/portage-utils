@@ -12,18 +12,21 @@ tenv() {
 	[[ ${res} == "${exp}" ]]
 	if ! tend $? "(${profile}) ${var} = ${exp}" ; then
 		echo "we got: {${res}}"
+		echo "we want: {${exp}}"
 		echo "full env: $(q -ev "${var}")"
 	fi
 }
 
-# clear out env vars that would affect our tests
-unset $(q -e | cut -d= -f1)
+# clear out env vars that would affect our tests, keep NOCOLOR
+unset $(q -e | cut -d= -f1 | grep -v NOCOLOR)
 
 # test vars that should default to known values.
 # cannot test too many more as portage's default
 # make.globals will kick in.  also can't test
 # some vars (e.g. PORTAGE_BINHOST) that we default
 # on some platforms.
+echo "NOCOLOR=${NOCOLOR}"
+tenv inv NOCOLOR 1
 tenv inv ROOT /
 tenv inv ARCH
 

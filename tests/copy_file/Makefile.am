@@ -10,7 +10,8 @@ m_CPPFLAGS = -I$(top_srcdir) \
 m_LDADD = $(top_builddir)/libq/libq.la \
 		  $(top_builddir)/autotools/gnulib/libgnu.a \
 		  $(LIB_CLOCK_GETTIME) \
-		  $(LIB_EACCESS)
+		  $(LIB_EACCESS) \
+		  $(SENDFILE_LIBS)
 
 dotest: m
 	$(s)/dotest

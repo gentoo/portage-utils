@@ -1,15 +1,15 @@
-AC_PREREQ([2.65])
-AC_INIT([portage-utils], [git])
+AC_PREREQ([2.71])
+AC_INIT([portage-utils],[git])
 AM_INIT_AUTOMAKE([1.11 dist-xz no-dist-gzip silent-rules -Wall])
 AM_SILENT_RULES([yes]) # AM_INIT_AUTOMAKE([silent-rules]) is broken atm
 AM_MAINTAINER_MODE([enable])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([autotools/m4])
 
-AC_PROG_CC_C99
-AM_PROG_CC_C_O
-AC_OPENMP
+AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
+AC_OPENMP
+AM_PROG_CC_C_O
 
 gl_EARLY
 gl_INIT
@@ -26,7 +26,7 @@ headers='#ifdef HAVE_STDDEF_H
 #endif
 '
 AC_CHECK_HEADERS([stddef.h unistd.h])
-AC_COMPILE_CHECK_SIZEOF([size_t], [${headers}])
+AX_COMPILE_CHECK_SIZEOF([size_t],[${headers}])
 
 AC_CHECK_FUNCS_ONCE(m4_flatten([
 	   fmemopen
