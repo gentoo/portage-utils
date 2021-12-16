@@ -12,14 +12,14 @@ mktmpdir
 test() {
 	local num=$1 exp=$2 ret=0
 	shift 2
-	eval "$@" > manifest 2>&1 || ret=$?
+	eval "$*" > manifest 2>&1 || ret=$?
 	sed -i -e '/^checked [0-9]/s/ in [0-9.]\+s$//' manifest
 	if ! diff -u ${as}/manifest${num}.good manifest; then
 		tfail "output does not match"
 		[[ -e gpgme.log ]] && cat gpgme.log
 	fi
 	if [[ ${exp} -ne ${ret} ]] ; then
-		tfail "exit code (${ret}) does not match expected (${exp}) for test ${num}"
+		tfail "exit code (${ret}) does not match expected (${exp}) for test ${num} (args: $*)"
 	fi
 	tend $? "$*"
 }
@@ -74,6 +74,8 @@ set +e
 if gpg_import "${as}"/key.gpg qmanifest ; then
 set -e
 
+tend 0 "gpg import key"
+
 # make it a fully valid tree
 rm testtree/my-cat/mypackage/unrecorded-file
 # drop ROOT, we'll work here in T
@@ -82,7 +84,7 @@ SIGNAS=0x3D695C8C0F87966B62DC5AFCDCFABA8E07F52261
 KEYPASS=qmanifest
 export GPGME_DEBUG=9:${PWD}/gpgme.log
 rm -f gpgme.log
-test 06 0 "echo ${KEYPASS} | qmanifest -g -s ${SIGNAS} -p testtree"
+test 06 0 "qmanifest -g -s ${SIGNAS} -p testtree <<< ${KEYPASS}"
 
 # validate the just generated tree
 rm -f gpgme.log

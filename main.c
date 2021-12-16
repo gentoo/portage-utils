@@ -265,9 +265,10 @@ strincr_var(const char *name, const char *s, char **value, size_t *value_len)
 	if (haddashstar && len < *value_len) {
 		p = *value;
 		*p = '\0';  /* in case len == 0 */
+	} else if (haddashstar) {
+		p = *value = xrealloc(*value, len + 1);
 	} else {
-		*value = xrealloc(*value,
-						  (haddashstar ? (*value_len + 1) : 0) + len + 1);
+		*value = xrealloc(*value, *value_len + 1 + len + 1);
 		p = &(*value)[*value_len];
 		if (*value_len > 0)
 			*p++ = ' ';
