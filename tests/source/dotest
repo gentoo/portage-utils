@@ -76,73 +76,11 @@ testit src.typos
 
 
 #
-# don't allow obsolete functions
+# don't allow obsolete functions or headers (portability)
 #
+funcs='\<(bcmp|bcopy|bzero|getwd|index|mktemp|rindex|utime)\>[[:space:]]*\('
+hdrs='\<(malloc|memory|sys/(errno|fcntl|signal|stropts|termios|unistd))\.h\>'
 find ${ats} "${src_files[@]}" -print0 | xargs -0 \
-	grep -n -E -e '\<(bcmp|bcopy|bzero|getwd|index|mktemp|rindex|utime)\>[[:space:]]*\(' \
-	| sed -e "s:^\.\./\.\./::g" > src.obsolete.funcs
-testit src.obsolete.funcs
-
-
-
-#
-# make sure people use our constants
-#
-find ${ats} "${src_files[@]}" -print0 | xargs -0 \
-	grep -n -E -e '\<PATH_MAX\>' | grep -v _Q_PATH_MAX \
-	| sed -e "s:^\.\./\.\./::g" > src.bad.constants
-testit src.bad.constants
-
-
-
-#
-# don't allow obsolete headers
-#
-find ${ats} "${src_files[@]}" -print0 | xargs -0 \
-	grep -n -E -e '\<(malloc|memory|sys/(errno|fcntl|signal|stropts|termios|unistd))\.h\>' \
-	| sed -e "s:^\.\./\.\./::g" > src.obsolete.headers
-testit src.obsolete.headers
-
-
-
-#
-# make sure people use the x* helper funcs
-#
-find ${ats} "${src_files[@]}" -print0 | xargs -0 \
-	grep -n -E -e '\<(malloc|strdup)[[:space:]]*\(' \
-	| grep -v libq/x \
-	| sed -e "s:^\.\./\.\./::g" > src.use.xfuncs
-testit src.use.xfuncs
-
-
-#
-# check for style
-#
-find ${ats} "${src_files[@]}" -print0 | xargs -0 \
-	grep -n -E \
-		-e '\<(for|if|switch|while)\(' \
-		-e '\<(for|if|switch|while) \( ' \
-		-e ' ;' \
-		-e '[[:space:]]$' \
-		-e '\){' \
-		-e '(^|[^:])//' \
-	| sed -e "s:^\.\./\.\./::g" > src.style
-testit src.style
-
-
-#
-# Auto clean up the space issues
-#
-for x in $(find ${ats} "${src_files[@]}" -print); do
-	# skip paths we don't have write access to
-	touch "$x~" 2>/dev/null || continue
-	${s}/space "$x" > "$x~"
-	if ! diff -u "$x" "$x~" ; then
-		echo "New file: $x~"
-	else
-		rm -f "$x~"
-	fi
-done > src.space
-testit src.space
-
-end
+	grep -n -E -e "(${funcs}|${hdrs})" \
+	| sed -e "s:^\.\./\.\./::g" > src.obsolete.funcs.hdrs
+testit src.obsolete.funcs.hdrs
