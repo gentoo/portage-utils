@@ -64,8 +64,9 @@ static const char * const qlist_opts_help[] = {
 static int
 cmpstringp(const void *p1, const void *p2)
 {
-	/* case insensitive comparator */
-	return strcasecmp(*((char * const *)p1), *((char * const *)p2));
+	/* PMS 3.1.4: USE-flag names may contain any of the characters
+	 * [A-Za-z0-9+_@-]. */
+	return strcmp(*((char * const *)p1), *((char * const *)p2));
 }
 
 /*

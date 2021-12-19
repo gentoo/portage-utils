@@ -70,6 +70,9 @@ test 15 1 "qlist -ICv lajsdflkjasdflkjasdfljasdf"
 # match test w/out sub-SLOT
 test 16 0 "qlist -ICSS virtual/sub-2:1"
 
+# check USE retrieval
+test 17 0 "qlist -IUv mtools"
+
 cleantmpdir
 
 end
