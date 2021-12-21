@@ -14,7 +14,16 @@ if ! qlist -qI sys-devel/autoconf-archive > /dev/null ; then
 	exit 1
 fi
 
-v rm -rf autotools
+# keep this list updated with non-generated M4 files
+keepm4=( ac_check_sendfile.m4 )
+for keepf in "${keepm4[@]}" ; do
+	v mv "${m4dir}/${keepf}" "autotools/"
+done
+v rm -rf autotools/{gnulib,m4}
+v mkdir "${m4dir}"
+for keepf in "${keepm4[@]}" ; do
+	v mv "autotools/${keepf}" "${m4dir}/"
+done
 
 # reload the gnulib code
 PATH=/usr/local/src/gnu/gnulib:${PATH}
