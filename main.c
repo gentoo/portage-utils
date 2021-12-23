@@ -30,6 +30,7 @@ char *module_name = NULL;
 int verbose = 0;
 int quiet = 0;
 int twidth;
+bool nocolor;
 char pretend = 0;
 char *portarch;
 char *portroot;
@@ -672,7 +673,6 @@ read_portage_profile(const char *profile, env_vars vars[], set *masks)
 	read_portage_file(profile_file, PMASK_FILE, masks);
 }
 
-static bool nocolor = 0;
 env_vars vars_to_read[] = {
 #define _Q_EV(t, V, set, lset, d) \
 { \
@@ -1091,7 +1091,7 @@ initialize_portage_env(void)
 	}
 
 	/* Make sure ROOT always ends in a slash */
-	var = &vars_to_read[0];
+	var = &vars_to_read[0];  /* ROOT */
 	if (var->value_len == 0 || (*var->value.s)[var->value_len - 1] != '/') {
 		portroot = xrealloc(portroot, var->value_len + 2);
 		portroot[var->value_len] = '/';
@@ -1134,7 +1134,7 @@ initialize_portage_env(void)
 		setenv("NOCOLOR", "true", 1);
 	} else {
 		color_remap();
-		unsetenv("NOCOLOR");
+		setenv("NOCOLOR", "false", 1);
 	}
 }
 
@@ -1151,7 +1151,11 @@ int main(int argc, char **argv)
 	bindtextdomain(argv0, CONFIG_EPREFIX "usr/share/locale");
 	textdomain(argv0);
 
+	/* note: setting nocolor here is pointless, since
+	 * initialize_portage_env is going to re-init nocolor, so make
+	 * sure we modify the default instead. */
 	twidth = 0;
+	nocolor = 0;
 	if (fstat(fileno(stdout), &st) != -1) {
 		if (!isatty(fileno(stdout))) {
 			nocolor = 1;
@@ -1162,7 +1166,10 @@ int main(int argc, char **argv)
 			if (ioctl(0, TIOCGWINSZ, &winsz) == 0 && winsz.ws_col > 0)
 				twidth = (int)winsz.ws_col;
 		}
+	} else {
+		nocolor = 1;
 	}
+	vars_to_read[7].default_value = (char *)nocolor;  /* NOCOLOR */
 
 	initialize_portage_env();
 	optind = 0;

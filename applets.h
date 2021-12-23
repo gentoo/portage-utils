@@ -153,8 +153,16 @@ static const struct applet_t {
 	case 'q': setup_quiet(); break; \
 	case 'V': version_barf(); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
-	case 'C': color_clear(); setenv("NOCOLOR", "true", 1); break; \
-	case 0x2: color_remap(); unsetenv("NOCOLOR"); break; \
+	case 'C': if (!nocolor) { \
+				  nocolor = 1; \
+				  color_clear(); \
+				  setenv("NOCOLOR", "true", 1); \
+			  } break; \
+	case 0x2: if (nocolor) { \
+				  nocolor = 0; \
+				  color_remap(); \
+				  setenv("NOCOLOR", "false", 1); \
+			  } break; \
 	default:  applet ## _usage(EXIT_FAILURE); break;
 
 extern char *portarch;
@@ -178,8 +186,8 @@ extern DEFINE_ARRAY(overlay_names);
 extern DEFINE_ARRAY(overlay_src);
 extern char *main_overlay;
 extern int twidth;
+extern bool nocolor;
 
-void no_colors(void);
 void setup_quiet(void);
 void version_barf(void);
 void usage(int status, const char *flags, struct option const opts[],
