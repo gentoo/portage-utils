@@ -6,28 +6,28 @@ export ROOT=${as}/root
 export Q_VDB=/
 
 tests=(
-	"qfile -Cq /bin/bash /bin/XXXXX"
+	"qfile -q /bin/bash /bin/XXXXX"
 	"app-shells/bash"
 
-	"qfile -Co /bin/bash /bin/XXXXX"
+	"qfile -o /bin/bash /bin/XXXXX"
 	"/bin/XXXXX"
 
-	"qfile -Co -x bash /bin/bash"
+	"qfile -o -x bash /bin/bash"
 	"/bin/bash"
 
-	"qfile -Co -x app-shells/bash /bin/bash"
+	"qfile -o -x app-shells/bash /bin/bash"
 	"/bin/bash"
 
-	"qfile -Co -x bash:0 /bin/bash"
+	"qfile -o -x bash:0 /bin/bash"
 	"/bin/bash"
 
-	"qfile -Co -x app-shells/bash:0 /bin/bash"
+	"qfile -o -x app-shells/bash:0 /bin/bash"
 	"/bin/bash"
 
-	"(cd ${ROOT}/bin; qfile -RCq bash)"
+	"(cd ${ROOT}/bin; qfile -Rq bash)"
 	"app-shells/bash"
 
-	"(cd ${ROOT}/; qfile -Co whatever)"
+	"(cd ${ROOT}/; qfile -o whatever)"
 	"whatever"
 )
 

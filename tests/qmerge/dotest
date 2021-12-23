@@ -21,7 +21,7 @@ mkdir -p "${ROOT}/var/db/pkg"
 set +e
 
 # sanity check on environment
-q -Cev
+q -ev
 qlist -kIv
 
 # Do a merge into an empty tree.

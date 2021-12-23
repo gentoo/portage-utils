@@ -4,7 +4,7 @@
 
 rm -f q
 
-applets=$(q -Ch | \
+applets=$(q -h | \
 	sed -n '/^Currently defined applets:/,/^Options/p' | \
 	grep ' : ' | \
 	awk '{print $1}'
