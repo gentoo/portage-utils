@@ -437,6 +437,7 @@ static int do_emerge_log(
 	size_t i;
 	size_t parallel_emerge = 0;
 	bool all_atoms = false;
+	bool emerge_line;
 	char afmt[BUFSIZ];
 	struct pkg_match *pkg;
 	struct pkg_match *pkgw;
@@ -544,14 +545,21 @@ static int do_emerge_log(
 
 		tstart = atol(buf);
 
+		emerge_line = false;
+		if (((flags->do_running ||
+			  (flags->show_emerge && verbose)) &&
+			 strpfx(p, "  *** emerge ") == 0) ||
+			(flags->do_running &&
+			 (strpfx(p, "  *** exiting ") == 0 ||
+			  strpfx(p, "  *** terminating.") == 0)))
+		{
+			emerge_line = true;
+		}
+
 		/* keeping track of parallel merges needs to be done before
 		 * applying dates, for a subset of the log might show emerge
 		 * finished without knowledge of another instance */
-		if (flags->do_running &&
-				(strpfx(p, "  *** emerge ") == 0 ||
-				 strpfx(p, "  *** exiting ") == 0 ||
-				 strpfx(p, "  *** terminating.") == 0))
-		{
+		if (emerge_line && flags->do_running) {
 			if (p[7] == 'm') {
 				parallel_emerge++;
 			} else if (parallel_emerge > 0) {
@@ -593,8 +601,7 @@ static int do_emerge_log(
 			continue;
 
 		/* are we interested in this line? */
-		if (flags->show_emerge && verbose && p[7] == 'm' /* emerge */)
-		{
+		if (emerge_line && flags->show_emerge && verbose) {
 			char shortopts[8];  /* must hold as many opts converted below */
 			int numopts = 0;
 
@@ -651,14 +658,11 @@ static int do_emerge_log(
 
 				if (strpfx(q, "--") == 0) {
 					printf(" %s%s%s", GREEN, q, NORM);
-				} else if (strcmp(q, "@world") == 0 ||
-						strcmp(q, "@system") == 0)
+				} else if (q[0] == '@' ||
+						   strcmp(q, "world") == 0 ||
+						   strcmp(q, "system") == 0)
 				{
 					printf(" %s%s%s", YELLOW, q, NORM);
-				} else if (strcmp(q, "world") == 0 ||
-						strcmp(q, "system") == 0)
-				{
-					printf(" %s@%s%s", YELLOW, q, NORM);
 				} else {
 					/* this should be an atom */
 					atom = atom_explode(q);
