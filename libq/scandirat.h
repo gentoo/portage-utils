@@ -1,6 +1,10 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
+ *
+ * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
+ * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2021-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #ifndef _SCANDIRAT_H
@@ -19,6 +23,7 @@ int scandirat(
 #endif
 
 void scandir_free(struct dirent **de, int cnt);
-int filter_hidden(const struct dirent *dentry);
+int filter_hidden(const struct dirent *de);
+int filter_self_parent(const struct dirent *de);
 
 #endif
