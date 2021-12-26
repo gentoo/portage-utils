@@ -85,7 +85,7 @@ move_file(int rootfd_src, const char *name_src,
 			return -1;
 		}
 
-		/* Preserve the file times */
+		/* preserve the file times */
 		times[0] = get_stat_atime(&st);
 		times[1] = get_stat_mtime(&st);
 		futimens(fd_dst, times);
@@ -93,12 +93,15 @@ move_file(int rootfd_src, const char *name_src,
 		close(fd_src);
 		close(fd_dst);
 
-		/* finally move the new tmp dst file to the right place, which
+		/* move the new tmp dst file to the right place, which
 		 * should be on the same FS/device now */
 		if (renameat(rootfd_dst, tmpname_dst, rootfd_dst, name_dst)) {
 			warnp("could not rename %s to %s", tmpname_dst, name_dst);
 			return -1;
 		}
+
+		/* finally remove the source file */
+		return unlinkat(rootfd_src, name_src, 0);
 	}
 
 	return 0;
