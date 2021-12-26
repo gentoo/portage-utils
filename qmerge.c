@@ -22,6 +22,7 @@
 
 #include "atom.h"
 #include "copy_file.h"
+#include "move_file.h"
 #include "contents.h"
 #include "eat_file.h"
 #include "hash.h"
@@ -320,16 +321,6 @@ crossmount_rm(const char *fname, const struct stat * const st,
 	rm_rf_at(fd, fname);
 }
 
-static int
-q_merge_filter_self_parent(const struct dirent *de)
-{
-	if (de->d_name[0] == '.' && (de->d_name[1] == '\0' ||
-			 (de->d_name[1] == '.' && de->d_name[2] == '\0')))
-		return 0;
-
-	return 1;
-}
-
 enum inc_exc { INCLUDE = 1, EXCLUDE = 2 };
 
 static void
@@ -353,7 +344,7 @@ install_mask_check_dir(
 #endif
 	char *npth = qpth + strlen(qpth);
 
-	cnt = scandirat(fd, ".", &files, q_merge_filter_self_parent, alphasort);
+	cnt = scandirat(fd, ".", &files, filter_self_parent, alphasort);
 	for (j = 0; j < cnt; j++) {
 		mode = child_mode = parent_mode;
 		for (i = 0; i < maskc; i++) {
@@ -820,7 +811,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 	while ((de = readdir(dir)) != NULL) {
 		const char *name = de->d_name;
 
-		if (!strcmp(name, ".") || !strcmp(name, ".."))
+		if (filter_self_parent(de) == 0)
 			continue;
 
 		/* Build up the full path for this entry */
@@ -866,10 +857,8 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 				unlinkat(subfd_dst, name, AT_REMOVEDIR);
 		} else if (S_ISREG(st.st_mode)) {
 			/* Migrate a file */
-			struct timespec times[2];
-			int fd_srcf, fd_dstf;
 			char *hash;
-			const char *tmpname, *dname;
+			const char *dname;
 			char buf[_Q_PATH_MAX * 2];
 			struct stat ignore;
 
@@ -905,66 +894,8 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			if (pretend)
 				continue;
 
-			/* First try fast path -- src/dst are same device */
-			if (renameat(subfd_src, dname, subfd_dst, name) == 0)
-				continue;
-
-			/* Fall back to slow path -- manual read/write */
-			fd_srcf = openat(subfd_src, name, O_RDONLY|O_CLOEXEC);
-			if (fd_srcf < 0) {
-				warnp("could not read %s", cpath);
-				continue;
-			}
-
-			/* Do not write the file in place ...
-			 * will fail with files that are in use.
-			 * XXX: Should we make this random ?
-			 */
-			tmpname = ".qmerge.update";
-			fd_dstf = openat(subfd_dst, tmpname,
-					O_WRONLY|O_CLOEXEC|O_CREAT|O_TRUNC, st.st_mode);
-			if (fd_dstf < 0) {
-				warnp("could not write %s", cpath);
-				close(fd_srcf);
-				continue;
-			}
-
-			/* Make sure owner/mode is sane before we write out data */
-			if (fchown(fd_dstf, st.st_uid, st.st_gid)) {
-				warnp("could not set ownership (%zu/%zu) for %s",
-						(size_t)st.st_uid, (size_t)st.st_gid, cpath);
-				continue;
-			}
-			if (fchmod(fd_dstf, st.st_mode)) {
-				warnp("could not set permission (%u) for %s",
-						(int)st.st_mode, cpath);
-				continue;
-			}
-
-			/* Do the actual data copy */
-			if (copy_file_fd(fd_srcf, fd_dstf)) {
-				warnp("could not write %s", cpath);
-				if (ftruncate(fd_dstf, 0)) {
-					/* don't care */;
-				}
-				close(fd_srcf);
-				close(fd_dstf);
-				continue;
-			}
-
-			/* Preserve the file times */
-			times[0] = get_stat_mtime(&st);
-			times[1] = get_stat_mtime(&st);
-			futimens(fd_dstf, times);
-
-			close(fd_srcf);
-			close(fd_dstf);
-
-			/* Move the new tmp dst file to the right place */
-			if (renameat(subfd_dst, tmpname, subfd_dst, dname)) {
-				warnp("could not rename %s to %s", tmpname, cpath);
-				continue;
-			}
+			if (move_file(subfd_src, name, subfd_dst, dname, &st) != 0)
+				warnp("failed to move file from %s", cpath);
 		} else if (S_ISLNK(st.st_mode)) {
 			/* Migrate a symlink */
 			size_t len = st.st_size;
@@ -1000,7 +931,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			}
 
 			struct timespec times[2];
-			times[0] = get_stat_mtime(&st);
+			times[0] = get_stat_atime(&st);
 			times[1] = get_stat_mtime(&st);
 			utimensat(subfd_dst, name, times, AT_SYMLINK_NOFOLLOW);
 		} else {
@@ -1520,8 +1451,36 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		mkdir_p(buf, 0755);
 		strcat(buf, mpkg->atom->PF);
 		rm_rf(buf);  /* get rid of existing dir, empty dir is fine */
-		if (rename("vdb", buf) != 0)
-			warn("failed to move 'vdb' to '%s': %s", buf, strerror(errno));
+		if (rename("vdb", buf) != 0) {
+			struct stat     vst;
+			int             src_fd;
+			int             dst_fd;
+			int             cnt;
+			int             vi;
+			struct dirent **files;
+
+			/* e.g. in case of cross-device rename, try copy+delete */
+			if ((src_fd = open("vdb", O_RDONLY|O_CLOEXEC|O_PATH)) < 0 ||
+				fstat(src_fd, &vst) != 0 ||
+				mkdir_p(buf, vst.st_mode) != 0 ||
+				(dst_fd = open(buf, O_RDONLY|O_CLOEXEC|O_PATH)) < 0 ||
+				(cnt = scandirat(src_fd, ".",
+								 &files, filter_self_parent, NULL)) < 0)
+			{
+				warn("cannot stat 'vdb' or create '%s', huh?", buf);
+			} else {
+				/* for now we assume the VDB is a flat directory, e.g.
+				 * there are no subdirs */
+				for (vi = 0; vi < cnt; vi++) {
+					if (move_file(src_fd, files[vi]->d_name,
+							  	  dst_fd, files[vi]->d_name,
+							  	  NULL) != 0)
+						warn("failed to move 'vdb/%s' to '%s': %s",
+							 files[vi]->d_name, buf, strerror(errno));
+				}
+				scandir_free(files, cnt);
+			}
+		}
 	}
 
 	/* clean up our local temp dir */
