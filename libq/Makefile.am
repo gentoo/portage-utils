@@ -11,6 +11,7 @@ QFILES = \
 	hash.c hash.h \
 	human_readable.c human_readable.h \
 	i18n.h \
+	move_file.c move_file.h \
 	prelink.c prelink.h \
 	profile.c profile.h \
 	rmspace.c rmspace.h \
