@@ -1928,10 +1928,14 @@ qmerge_add_set_system(void *data, char *buf)
 static set *
 qmerge_add_set(char *buf, set *q)
 {
-	if (strcmp(buf, "world") == 0)
+	/* accept @world next to just "world" */
+	if (*buf == '@')
+		buf++;
+
+	if (strcmp(buf, "world") == 0) {
 		return qmerge_add_set_file(CONFIG_EPREFIX, "/var/lib/portage",
-				"world", q);
-	else if (strcmp(buf, "all") == 0) {
+								   "world", q);
+	} else if (strcmp(buf, "all") == 0) {
 		tree_ctx *ctx = tree_open_vdb(portroot, portvdb);
 		set *ret = NULL;
 		if (ctx != NULL) {
@@ -1939,12 +1943,13 @@ qmerge_add_set(char *buf, set *q)
 			tree_close(ctx);
 		}
 		return ret;
-	} else if (strcmp(buf, "system") == 0)
+	} else if (strcmp(buf, "system") == 0) {
 		return q_profile_walk("packages", qmerge_add_set_system, q);
-	else if (buf[0] == '@')
+	} else if (buf[0] == '@') {
 		/* TODO: use configroot */
-		return qmerge_add_set_file(CONFIG_EPREFIX, "/etc/portage", buf+1, q);
-	else {
+		return qmerge_add_set_file(CONFIG_EPREFIX,
+								   "/etc/portage/sets", buf+1, q);
+	} else {
 		rmspace(buf);
 		return add_set(buf, q);
 	}
