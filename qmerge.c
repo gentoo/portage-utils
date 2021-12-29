@@ -1528,7 +1528,6 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	if (!pretend && rpkg == NULL) {
 		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
 		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
-		buf = tree_pkg_meta_get(pkg_ctx, EAPI);  /* when phases caused ralloc */
 		if (phases != NULL) {
 			mkdirat(pkg_ctx->fd, "temp", 0755);
 			pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_PRERM,
