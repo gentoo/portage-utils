@@ -651,6 +651,21 @@ tree_pkg_vdb_eat(
 	return ret;
 }
 
+#define tree_meta_alloc_storage(M,SIZ) { \
+	struct tree_pkg_meta_ll *blk; \
+	size_t                   newlen; \
+\
+	/* calculate new block size, ensuring it covers whatever we \
+	 * need to write this iteration */ \
+	newlen     = ((((SIZ) + 1) / BUFSIZ) + 1) * BUFSIZ; \
+	blk        = xmalloc(sizeof(*blk) + newlen); \
+	memset(blk, 0, sizeof(*blk)); \
+	blk->next  = M->storage; \
+	blk->ptr   = (char *)blk + sizeof(*blk); \
+	blk->len   = newlen; \
+	M->storage = blk; \
+}
+
 static tree_pkg_meta *
 tree_read_file_pms(tree_pkg_ctx *pkg_ctx)
 {
@@ -668,8 +683,9 @@ tree_read_file_pms(tree_pkg_ctx *pkg_ctx)
 		goto err;
 
 	len = sizeof(*ret) + s.st_size + 1;
-	ret = xzalloc(len);
-	ptr = (char*)ret + sizeof(*ret);
+	ret = xmalloc(len);
+	memset(ret, 0, sizeof(*ret));
+	ptr = (char *)ret + sizeof(*ret);
 	if ((off_t)fread(ptr, 1, s.st_size, f) != s.st_size)
 		goto err;
 	ptr[s.st_size] = '\0';
@@ -954,15 +970,15 @@ static void
 tree_read_file_binpkg_xpak_cb(
 	void *ctx,
 	char *pathname,
-	int pathname_len,
-	int data_offset,
-	int data_len,
+	int   pathname_len,
+	int   data_offset,
+	int   data_len,
 	char *data)
 {
 	tree_pkg_meta *m = (tree_pkg_meta *)ctx;
-	char **key;
-	size_t pos;
-	size_t len;
+	char         **key;
+	size_t         pos;
+	size_t         len;
 
 #define match_path(K) \
 	else if (pathname_len == (sizeof(#K) - 1) && strcmp(pathname, #K) == 0) \
@@ -994,37 +1010,28 @@ tree_read_file_binpkg_xpak_cb(
 		return;
 #undef match_path
 
-	/* hijack unused members */
-	pos = (size_t)m->Q__eclasses_;
-	len = (size_t)m->Q__md5_;
+	/* get current storage block */
+	if (m->storage != NULL) {
+		pos = m->storage->pos;
+		len = m->storage->len;
+	} else {
+		pos = 0;
+		len = 0;
+	}
 
 	/* trim whitespace (mostly trailing newline) */
 	while (isspace((int)data[data_offset + data_len - 1]))
 		data_len--;
 
 	if (len - pos < (size_t)(data_len + 1)) {
-		char *old_data = m->Q__data;
-		len += (((data_len + 1 - (len - pos)) / BUFSIZ) + 1) * BUFSIZ;
-		m->Q__data = xrealloc(m->Q__data, len);
-
-		/* re-position existing keys */
-		if (old_data != NULL && m->Q__data != old_data) {
-			char **newdata = (char **)m;
-			int elems = sizeof(tree_pkg_meta) / sizeof(char *);
-			while (elems-- > 1)  /* skip Q__data itself */
-				if (newdata[elems] != NULL)
-					newdata[elems] = m->Q__data + (newdata[elems] - old_data);
-		}
-
-		/* set after repositioning! */
-		m->Q__md5_ = (char *)len;
-		m->Q__eclasses_ = (char *)pos;
+		tree_meta_alloc_storage(m, data_len + 1);
+		len = m->storage->len;
+		pos = m->storage->pos;
 	}
 
-	*key = m->Q__data + pos;
+	*key = m->storage->ptr + pos;
 	snprintf(*key, len - pos, "%.*s", data_len, data + data_offset);
-	pos += data_len + 1;
-	m->Q__eclasses_ = (char *)pos;
+	m->storage->pos += data_len + 1;
 }
 
 static tree_pkg_meta *
@@ -1042,33 +1049,23 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 	if (newfd != -1) {
 		size_t fsize;
 		size_t needlen = 40 + 1 + 19 + 1;
-		size_t pos = (size_t)m->Q__eclasses_;
-		size_t len = (size_t)m->Q__md5_;
+		size_t pos = 0;
+		size_t len = 0;
 
-		if (len - pos < needlen) {
-			char *old_data = m->Q__data;
-			len += (((needlen - (len - pos)) / BUFSIZ) + 1) * BUFSIZ;
-			m->Q__data = xrealloc(m->Q__data, len);
-
-			/* re-position existing keys */
-			if (old_data != NULL && m->Q__data != old_data) {
-				char **newdata = (char **)m;
-				int elems = sizeof(tree_pkg_meta) / sizeof(char *);
-				while (elems-- > 1)  /* skip Q__data itself */
-					if (newdata[elems] != NULL)
-						newdata[elems] =
-							m->Q__data + (newdata[elems] - old_data);
-			}
-
-			/* set after repositioning! */
-			m->Q__md5_ = (char *)len;
-			m->Q__eclasses_ = (char *)pos;
+		if (m->storage != NULL) {
+			pos = m->storage->pos;
+			len = m->storage->len;
 		}
 
-		m->Q_SHA1 = m->Q__data + pos;
+		if (len - pos < needlen) {
+			tree_meta_alloc_storage(m, needlen);
+			len = m->storage->len;
+			pos = m->storage->pos;
+		}
+
+		m->Q_SHA1 = m->storage->ptr + pos;
 		m->Q_SIZE = m->Q_SHA1 + 40 + 1;
-		pos += needlen;
-		m->Q__eclasses_ = (char *)pos;
+		m->storage->pos += needlen;
 
 		lseek(newfd, 0, SEEK_SET);  /* reposition at the whole file */
 		if (hash_multiple_file_fd(newfd, NULL, m->Q_SHA1, NULL, NULL,
@@ -1123,13 +1120,48 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 	return ret;
 }
 
+static tree_pkg_meta *
+tree_clone_meta(tree_pkg_meta *m)
+{
+	tree_pkg_meta *ret;
+	size_t         pos = 0;
+	size_t         len = 0;
+	char         **ptr;
+	char          *p;
+
+	/* compute necessary space upfront */
+	len = sizeof(*ret);
+	for (ptr = &m->Q__data; ptr <= &m->Q__last; ptr++)
+		if (*ptr != NULL)
+			len += strlen(*ptr);
+
+	/* malloc and copy */
+	ret = xzalloc(len);
+	p = (char *)ret + sizeof(*ret);
+	for (ptr = &m->Q__data; ptr <= &m->Q__last; ptr++, pos++) {
+		if (*ptr == NULL)
+			continue;
+		*(&ret->Q__data + pos) = p;
+		len = strlen(*ptr) + 1;
+		memcpy(p, *ptr, len);
+		p += len;
+	}
+
+	return ret;
+}
+
 static void
 tree_close_meta(tree_pkg_meta *cache)
 {
+	struct tree_pkg_meta_ll *blk;
+
 	if (cache == NULL)
 		errf("Cache is empty !");
-	if (cache->Q__data != NULL)
-		free(cache->Q__data);
+	while (cache->storage != NULL) {
+		blk = cache->storage->next;
+		free(cache->storage);
+		cache->storage = blk;
+	}
 	free(cache);
 }
 
@@ -1165,37 +1197,26 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 				return NULL;
 			}
 
-			/* hijack unused members */
-			pos = (size_t)m->Q__eclasses_;
-			len = (size_t)m->Q__md5_;
-
-			/* TODO: this is an exact copy from tree_read_file_binpkg_xpak_cb */
-			if (len - pos < (size_t)(s.st_size + 1)) {
-				p = m->Q__data;
-				len += (((s.st_size + 1 - (len - pos)) / BUFSIZ) + 1) * BUFSIZ;
-				m->Q__data = xrealloc(m->Q__data, len);
-
-				/* re-position existing keys */
-				if (p != NULL && m->Q__data != p) {
-					char **newdata = (char **)m;
-					int elems = sizeof(tree_pkg_meta) / sizeof(char *);
-					while (elems-- > 1)  /* skip Q__data itself */
-						if (newdata[elems] != NULL)
-							newdata[elems] = m->Q__data + (newdata[elems] - p);
-				}
-
-				/* set after repositioning! */
-				m->Q__md5_ = (char *)len;
-				m->Q__eclasses_ = (char *)pos;
+			if (m->storage != NULL) {
+				pos = m->storage->pos;
+				len = m->storage->len;
+			} else {
+				pos = 0;
+				len = 0;
 			}
 
-			p = *key = m->Q__data + pos;
+			if (len - pos < (size_t)(s.st_size + 1)) {
+				tree_meta_alloc_storage(m, s.st_size + 1);
+				pos = m->storage->pos;
+				len = m->storage->len;
+			}
+
+			p = *key = m->storage->ptr + pos;
 			if (read(fd, p, s.st_size) == (ssize_t)s.st_size) {
 				p[s.st_size] = '\0';
 				while (s.st_size > 0 && isspace((int)p[s.st_size - 1]))
 					p[--s.st_size] = '\0';
-				pos += s.st_size + 1;
-				m->Q__eclasses_ = (char *)pos;
+				m->storage->pos += s.st_size + 1;
 			}
 			close(fd);
 		}
@@ -1692,29 +1713,14 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 	pkg->repo = tctx->repo != NULL ? xstrdup(tctx->repo) : NULL;
 	if (meta != NULL) {
 		pkg->fd = -2;  /* don't try to read, we fill it in here */
-		pkg->meta = xmalloc(sizeof(*pkg->meta));
-		memcpy(pkg->meta, meta, sizeof(*pkg->meta));
-		if (ctx->cat_ctx->ctx->cachetype == CACHE_PACKAGES) {
-			pkg->meta->Q__data = NULL;  /* avoid free here (just to be sure) */
-		} else {  /* CACHE_BINPKG */
-			char **newdata;
-			int    elems;
-			size_t datasize = (size_t)meta->Q__eclasses_;
-
-			pkg->meta->Q__data = xmalloc(sizeof(char) * datasize);
-			memcpy(pkg->meta->Q__data, meta->Q__data, datasize);
-
-			/* re-position keys */
-			newdata = (char **)pkg->meta;
-			elems   = sizeof(tree_pkg_meta) / sizeof(char *);
-			while (elems-- > 1)  /* skip Q__data itself */
-				if (newdata[elems] != NULL)
-					newdata[elems] = pkg->meta->Q__data +
-						(newdata[elems] - meta->Q__data);
-
-			/* drop garbage used for Q__data admin in original case */
-			pkg->meta->Q__eclasses_ = NULL;
-			pkg->meta->Q__md5_      = NULL;
+		if (tctx->cachetype == CACHE_PACKAGES) {
+			/* need to copy, source is based on temp space in foreach */
+			pkg->meta = tree_clone_meta(meta);
+		} else {
+			/* BINPKG case, this one is read/allocated separately from
+			 * xpak archive, so can just take it over */
+			pkg->meta = meta;
+			ctx->meta = NULL;  /* avoid double free */
 		}
 	} else {
 		pkg->meta = NULL;

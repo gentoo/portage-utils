@@ -80,7 +80,7 @@ struct tree_pkg_ctx {
 
 /* Ebuild data */
 struct tree_pkg_meta {
-	char *Q__data;
+#define Q__data Q_DEPEND  /* ptr to first member of the struct */
 	char *Q_DEPEND;        /* line 1 */
 	char *Q_RDEPEND;
 	char *Q_SLOT;
@@ -111,6 +111,15 @@ struct tree_pkg_meta {
 	/* These are MD5-Cache only */
 	char *Q__eclasses_;
 	char *Q__md5_;
+#define Q__last Q__md5_  /* ptr to last data member in struct */
+
+	/* for memory allocations backing the pointers above */
+	struct tree_pkg_meta_ll {
+		char                    *ptr;
+		size_t                   len;
+		size_t                   pos;
+		struct tree_pkg_meta_ll *next;
+	}    *storage;
 };
 
 /* Metadata.xml */
