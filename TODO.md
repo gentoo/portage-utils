@@ -4,11 +4,6 @@
 	- -e foo
 	- -r (-R ?) regexp foo.\*
 - make default -e for apps like quse/qdepends/qlist?
-- env vars only get expanded once, so this fails:<br>
-  `ACCEPT_LICENSE="foo"`<br>
-  `ACCEPT_LICENSE="${ACCEPT_LICENSE} bar"`<br>
-  we end up getting just:<br>
-  `ACCEPT_LICENSE=" bar"`
 - tree\_get\_atoms should return atoms iso string set, needs a rewrite
   to use foreach\_pkg and get\_atom -- set is ready for storing objects
   now
@@ -28,8 +23,6 @@
 - make tree\_get\_metadata also retrieve maintainer type, such that
   qlist can query for maintainer email or type, ideally to do
   qlist -Iv $(portageq --repo gentoo --orphaned) in one step (bug 711466#c3)
-- atom\_compare should have a flags argument which specifies how to
-  match, e.g. ignore REPO, SUBSLOT, etc. for use in e.g. qmerge
 
 # tests
 - add test for qsearch to avoid repetitions like
