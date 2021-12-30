@@ -485,10 +485,10 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 			continue;
 		}
 
-		/* Handle "source" keyword */
 		if (type == ENV_FILE) {
 			size_t curline = line;
 
+			/* Handle "source" keyword */
 			if (strncmp(buf, "source ", 7) == 0) {
 				const char *sfile = buf + 7;
 
