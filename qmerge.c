@@ -1093,6 +1093,9 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		freeargv(ARGC, ARGV);
 	}
 
+	if (pretend == 100)
+		return;
+
 	/* Get a handle on the main vdb repo */
 	vdb = tree_open_vdb(portroot, portvdb);
 	if (vdb == NULL) {
@@ -1517,9 +1520,6 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	printf("%s***%s unmerging %s\n", YELLOW, NORM,
 			atom_format("%[CATEGORY]%[PF]", tree_get_atom(pkg_ctx, false)));
 
-	if (pretend == 100)
-		return 0;
-
 	portroot_fd = cat_ctx->ctx->portroot_fd;
 
 	/* execute the pkg_prerm step if we're just unmerging, not when
@@ -1768,7 +1768,6 @@ pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	if (pretend) {
 		if (!install)
 			install++;
-		/* qprint_tree_node(level, qatom, mpkg); */
 		pkg_merge(level, qatom, mpkg);
 		return;
 	}
@@ -2053,7 +2052,7 @@ int qmerge_main(int argc, char **argv)
 		int save_verbose = verbose;
 		int save_quiet = quiet;
 
-		pretend = 100;
+		pretend = save_pretend ? 10 : 100;
 		verbose = 0;
 		quiet = 1;
 		ret = qmerge_run(todo);
