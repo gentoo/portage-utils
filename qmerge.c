@@ -1133,6 +1133,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		if (vdbfd == -1)
 			err("failed to open vdb extraction directory");
 		tbz2size = xpak_extract(mpkg->path, &vdbfd, pkg_extract_xpak_cb);
+		close(vdbfd);
 	}
 	if (tbz2size <= 0)
 		err("%s appears not to be a valid tbz2 file", mpkg->path);
@@ -2062,5 +2063,11 @@ int qmerge_main(int argc, char **argv)
 	ret = qmerge_run(todo);
 	if (todo != NULL)
 		free_set(todo);
+
+	if (_qmerge_binpkg_tree != NULL)
+		tree_close(_qmerge_binpkg_tree);
+	if (_qmerge_vdb_tree != NULL)
+		tree_close(_qmerge_vdb_tree);
+
 	return ret;
 }
