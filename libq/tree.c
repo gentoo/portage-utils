@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -194,6 +194,8 @@ tree_close(tree_ctx *ctx)
 
 		xarrayfree_int(t);
 	}
+	if (ctx->cache.store != NULL)
+		free(ctx->cache.store);
 
 	closedir(ctx->dir);
 	/* closedir() above does this for us: */
