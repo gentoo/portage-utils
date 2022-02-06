@@ -66,20 +66,19 @@ jobs:
       - name: make
         run: make CFLAGS="-O3 -Wall -Wshadow -pipe" V=1 check
 
-# until we are able to set token on Github :(
-#  coverity:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v2
-#      - name: configure
-#        run: >
-#          ./configure
-#          --disable-maintainer-mode --disable-openmp
-#          --enable-qmanifest --enable-qtegrity
-#      - uses: vapier/coverity-scan-action@v1
-#        with:
-#          email: ${{ secrets.COVERITY_SCAN_EMAIL }}
-#          token: ${{ secrets.COVERITY_SCAN_TOKEN }}
+  coverity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: configure
+        run: >
+          ./configure
+          --disable-maintainer-mode --disable-openmp
+          --enable-qmanifest --enable-qtegrity
+      - uses: vapier/coverity-scan-action@v1
+        with:
+          email: ${{ secrets.COVERITY_SCAN_EMAIL }}
+          token: ${{ secrets.COVERITY_SCAN_TOKEN }}
 
   valgrind:
     runs-on: ubuntu-latest
