@@ -45,7 +45,7 @@ jobs:
           --disable-maintainer-mode --disable-openmp
           ${{ matrix.features }}
       - name: make variant ${{ matrix.features }}
-        run: make CFLAGS="-O3 -Wall -Werror -Wshadow -pipe" V=1 check
+        run: make CFLAGS="-O3 -Wall -Wshadow -pipe" V=1 check
 
   make-check-macos-x64:
     strategy:
@@ -64,7 +64,7 @@ jobs:
       - name: configure
         run: ./configure --disable-maintainer-mode --disable-openmp
       - name: make
-        run: make CFLAGS="-O3 -Wall -Werror -Wshadow -pipe" V=1 check
+        run: make CFLAGS="-O3 -Wall -Wshadow -pipe" V=1 check
 
 # until we are able to set token on Github :(
 #  coverity:
