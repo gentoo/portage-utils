@@ -1778,6 +1778,7 @@ tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
 						sizeof(*cat_ctx->pkg_ctxs), tree_pkg_compar);
 			}
 		}
+		xarrayfree_int(cats);
 	}
 
 	/* activate cache for future lookups, tree_match_atom relies on
