@@ -37,13 +37,13 @@ jobs:
       - name: install deps
         run: >
           sudo apt-get install -y
-            libgpgme-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
+          libgpgme-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
       - uses: actions/checkout@v2
       - name: configure variant ${{ matrix.features }}
         run: >
           ./configure
-            --disable-maintainer-mode --disable-openmp
-            ${{ matrix.features }}
+          --disable-maintainer-mode --disable-openmp
+          ${{ matrix.features }}
       - name: make variant ${{ matrix.features }}
         run: make CFLAGS="-O3 -Wall -Werror -Wshadow -pipe" V=1 check
 
@@ -74,8 +74,8 @@ jobs:
 #      - name: configure
 #        run: >
 #          ./configure
-#            --disable-maintainer-mode --disable-openmp
-#            --enable-qmanifest --enable-qtegrity
+#          --disable-maintainer-mode --disable-openmp
+#          --enable-qmanifest --enable-qtegrity
 #      - uses: vapier/coverity-scan-action@v1
 #        with:
 #          email: ${{ secrets.COVERITY_SCAN_EMAIL }}
@@ -87,13 +87,13 @@ jobs:
       - name: install deps
         run: >
           sudo apt-get install -y
-            libgpgme-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
-            valgrind
+          libgpgme-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
+          valgrind
       - uses: actions/checkout@v2
       - name: configure
         run: >
           ./configure
-            --disable-maintainer-mode --disable-openmp
-            --enable-qmanifest --enable-qtegrity
+          --disable-maintainer-mode --disable-openmp
+          --enable-qmanifest --enable-qtegrity
       - name: make
         run: make CFLAGS="-g -pipe" Q_RUN_WITH_VALGRIND=1 V=1 check
