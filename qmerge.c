@@ -133,7 +133,7 @@ fetch(const char *destdir, const char *src)
 	} else
 #endif
 	{
-		char *path;
+		char *path = NULL;
 
 		/* wget -c -q -P <dir> <uri> */
 		const char *argv[] = {
@@ -1021,6 +1021,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 				ATOM_COMP_NOSUBSLOT | ATOM_COMP_NOREPO);
 		replver   = previnst->atom->PVR;
 	}
+	atom_implode(slotatom);
 
 	(void)qprint_tree_node(level, mpkg, previnst, replacing);
 
