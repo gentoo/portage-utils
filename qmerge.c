@@ -1081,8 +1081,10 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		freeargv(ARGC, ARGV);
 	}
 
-	if (pretend == 100)
+	if (pretend == 100) {
+		tree_match_close(previnst);
 		return;
+	}
 
 	/* Get a handle on the main vdb repo */
 	vdb = tree_open_vdb(portroot, portvdb);
