@@ -1,8 +1,9 @@
 /*
- * Copyright 2010-2019 Gentoo Foundation
+ * Copyright 2010-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2010-2016 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2022-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #include "main.h"
@@ -24,7 +25,7 @@ void xsystem(const char *command)
 
 void xsystembash(const char *command, int cwd)
 {
-	pid_t p = vfork();
+	pid_t p = fork();
 	int status;
 
 	switch (p) {
