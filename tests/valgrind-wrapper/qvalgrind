@@ -16,7 +16,7 @@ if [[ ${ret} == 234 ]] ; then
 	mv q-valgrind.log q-valgrind.$$.log
 	echo "valgrind log can be found at ${PWD}/q-valgrind.$$.log" > /dev/stderr
 	# dump complaints in Travis' log, as we cannot retrieve them lateron
-	[[ -n ${TRAVIS_OS_NAME} ]] && cat q-valgrind.$$.log > /dev/stderr
+	[[ -n ${RUNNER_OS} ]] && cat q-valgrind.$$.log > /dev/stderr
 else
 	rm q-valgrind.log
 fi
