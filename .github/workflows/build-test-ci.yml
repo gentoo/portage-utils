@@ -37,7 +37,7 @@ jobs:
       - name: install deps
         run: >
           sudo apt-get install -y
-            libgpgme11-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
+            libgpgme-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
       - uses: actions/checkout@v2
       - name: configure variant ${{ matrix.features }}
         run: >
@@ -87,7 +87,7 @@ jobs:
       - name: install deps
         run: >
           sudo apt-get install -y
-            libgpgme11-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
+            libgpgme-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
             valgrind
       - uses: actions/checkout@v2
       - name: configure
