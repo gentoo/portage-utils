@@ -1,0 +1,99 @@
+# GitHub actions workflow.
+# https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions
+
+name: Build+Test CI
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - v*
+  pull_request:
+    types:
+      - opened
+    branches:
+      - master
+
+jobs:
+  make-check-ubuntu-x64:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        cc:
+          - gcc
+          - clang
+        features:
+          - --enable-qmanifest --enable-qtegrity
+          - --disable-qmanifest --enable-qtegrity
+          - --enable-qmanifest --disable-qtegrity
+          - --disable-qmanifest --disable-qtegrity
+          - ""
+    runs-on: ${{ matrix.os }}
+    env:
+      CC: ${{ matrix.cc }}
+    steps:
+      - name: install deps
+        run: >
+          sudo apt-get install -y
+            libgpgme11-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
+      - uses: actions/checkout@v2
+      - name: configure variant ${{ matrix.features }}
+        run: >
+          ./configure
+            --disable-maintainer-mode --disable-openmp
+            ${{ matrix.features }}
+      - name: make variant ${{ matrix.features }}
+        run: make CFLAGS="-O3 -Wall -Werror -Wshadow -pipe" V=1 check
+
+  make-check-macos-x64:
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+        cc:
+          - clang
+    runs-on: ${{ matrix.os }}
+    env:
+      CC: ${{ matrix.cc }}
+    steps:
+      - name: install deps
+        run: brew install gpgme gnupg gnu-sed coreutils bash openssl
+      - uses: actions/checkout@v2
+      - name: configure
+        run: ./configure --disable-maintainer-mode --disable-openmp
+      - name: make
+        run: make CFLAGS="-O3 -Wall -Werror -Wshadow -pipe" V=1 check
+
+# until we are able to set token on Github :(
+#  coverity:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v2
+#      - name: configure
+#        run: >
+#          ./configure
+#            --disable-maintainer-mode --disable-openmp
+#            --enable-qmanifest --enable-qtegrity
+#      - uses: vapier/coverity-scan-action@v1
+#        with:
+#          email: ${{ secrets.COVERITY_SCAN_EMAIL }}
+#          token: ${{ secrets.COVERITY_SCAN_TOKEN }}
+
+  valgrind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: install deps
+        run: >
+          sudo apt-get install -y
+            libgpgme11-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
+            valgrind
+      - uses: actions/checkout@v2
+      - name: configure
+        run: >
+          ./configure
+            --disable-maintainer-mode --disable-openmp
+            --enable-qmanifest --enable-qtegrity
+      - name: make
+        run: make CFLAGS="-g -pipe" Q_RUN_WITH_VALGRIND=1 V=1 check
