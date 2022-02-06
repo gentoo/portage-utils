@@ -1135,7 +1135,7 @@ tree_clone_meta(tree_pkg_meta *m)
 	len = sizeof(*ret);
 	for (ptr = &m->Q__data; ptr <= &m->Q__last; ptr++)
 		if (*ptr != NULL)
-			len += strlen(*ptr);
+			len += strlen(*ptr) + 1;
 
 	/* malloc and copy */
 	ret = xzalloc(len);
