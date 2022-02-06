@@ -57,6 +57,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CC: ${{ matrix.cc }}
+      PATH: "$(brew --prefix)/opt/coreutils/libexec/gnubin:$PATH"
     steps:
       - name: install deps
         run: brew install gpgme gnupg gnu-sed coreutils bash openssl
