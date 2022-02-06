@@ -57,10 +57,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CC: ${{ matrix.cc }}
-      PATH: "$(brew --prefix)/opt/coreutils/libexec/gnubin:$PATH"
     steps:
       - name: install deps
-        run: brew install gpgme gnupg gnu-sed coreutils bash openssl
+        run: brew install gpgme gnupg gnu-sed coreutils bash openssl b2sum
+      - name: add homebrew utils to PATH
+        run: |
+          echo "$(brew --prefix)/opt/coreutils/libexec/gnubin" >> $GITHUB_PATH
+          echo "$(brew --prefix)/opt/gnu-sed/libexec/gnubin" >> $GITHUB_PATH
+          echo "$(brew --prefix)/opt/openssl@3/bin" >> $GITHUB_PATH
+      - name: add homebrew utils to ENV
+        run: |
+          echo 'LDFLAGS="-L'"$(brew --prefix)/opt/openssl@3/lib ${LDFLAGS}"'"' >> $GITHUB_ENV
+          echo 'CPPFLAGS="-I'"$(brew --prefix)/opt/openssl@3/include ${CPPFLAGS}"'"' >> $GITHUB_ENV
+          echo 'PKG_CONFIG_PATH="'"$(brew --prefix)/opt/openssl@3/lib/pkgconfig:${PKG_CONFIG_PATH}"'"' >> $GITHUB_ENV
+          echo 'LDFLAGS="-L'"$(brew --prefix)/opt/b2sum/lib ${LDFLAGS}"'"' >> $GITHUB_ENV
+          echo 'CPPFLAGS="-I'"$(brew --prefix)/opt/b2sum/include ${CPPFLAGS}"'"' >> $GITHUB_ENV
       - uses: actions/checkout@v2
       - name: configure
         run: ./configure --disable-maintainer-mode --disable-openmp
