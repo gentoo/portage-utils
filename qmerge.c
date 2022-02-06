@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Authors
+ * Copyright 2005-2022 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -129,45 +129,32 @@ fetch(const char *destdir, const char *src)
 		char buf[BUFSIZ];
 		snprintf(buf, sizeof(buf), "(export DISTDIR='%s' URI='%s/%s'; %s)",
 			destdir, binhost, src, getenv("FETCHCOMMAND"));
-		xsystem(buf);
+		xsystem(buf, AT_FDCWD);
 	} else
 #endif
 	{
-		pid_t p;
-		int status;
 		char *path;
 
-		xasprintf(&path, "%s/%s", binhost, src);
-
 		/* wget -c -q -P <dir> <uri> */
-		char prog[] = "wget";
-		char *const argv[] = {
-			prog,
-			(char *)"-c",
-			(char *)"-P",
-			(char *)destdir,
+		const char *argv[] = {
+			"echo",
+			"wget",
+			"-c",
+			"-P",
+			destdir,
 			path,
 			quiet ? (char *)"-q" : NULL,
 			NULL,
 		};
-		if (!(force_download || install) && pretend)
-			strcpy(prog, "echo");
 
-		p = vfork();
-		switch (p) {
-		case 0:
-			_exit(execvp(prog, argv));
-		case -1:
-			errp("vfork failed");
-		}
+		xasprintf(&path, "%s/%s", binhost, src);
+
+		if (!pretend && (force_download || install))
+			xsystemv(&argv[1], AT_FDCWD);  /* skip echo */
+		else
+			xsystemv(argv, AT_FDCWD);
 
 		free(path);
-
-		waitpid(p, &status, 0);
-#if 0
-		if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
-			return;
-#endif
 	}
 
 	fflush(stdout);
@@ -767,7 +754,7 @@ pkg_run_func_at(
 		/*7*/ phase_replacingvers[phaseidx].varname,
 		/*8*/ replacing,
 		/*9*/ debug ? "set -x;" : "");
-	xsystembash(script, dirfd);
+	xsystem(script, dirfd);
 	free(script);
 }
 #define pkg_run_func(...) pkg_run_func_at(AT_FDCWD, __VA_ARGS__)
