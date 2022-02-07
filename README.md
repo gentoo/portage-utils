@@ -6,7 +6,7 @@
 | GIT      | https://anongit.gentoo.org/git/proj/portage-utils.git     |
 | VIEWVCS  | https://gitweb.gentoo.org/proj/portage-utils.git/         |
 | GITHUB   | https://github.com/gentoo/portage-utils                   |
-| STATUS   | [![Build Status](https://travis-ci.org/gentoo/portage-utils.svg?branch=master)](https://travis-ci.org/gentoo/portage-utils) [![Coverity Status](https://scan.coverity.com/projects/9213/badge.svg)](https://scan.coverity.com/projects/gentoo-portage-utils) |
+| STATUS   | [![Build Status](https://github.com/gentoo/portage-utils/actions/workflows/build-test-ci.yml/badge.svg)](https://github.com/gentoo/portage-utils/actions/workflows/build-test-ci.yml) [![Coverity Status](https://scan.coverity.com/projects/9213/badge.svg)](https://scan.coverity.com/projects/gentoo-portage-utils) |
 
 portage-utils is a small set of utilities for working with Portage, Gentoo
 ebuilds, Gentoo ebuild overlays, installed packages (vdb), and similar sources
