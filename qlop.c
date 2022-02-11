@@ -797,7 +797,9 @@ static int do_emerge_log(
 							|| flags->do_running)
 					{
 						/* find in list of averages */
-						if (flags->do_predict || verbose) {
+						if (flags->do_predict ||
+							(verbose && !flags->do_running))
+						{
 							snprintf(afmt, sizeof(afmt), "%s/%s",
 									pkgw->atom->CATEGORY, pkgw->atom->PF);
 						} else {
@@ -940,7 +942,9 @@ static int do_emerge_log(
 							|| flags->do_running)
 					{
 						/* find in list of averages */
-						if (flags->do_predict || verbose) {
+						if (flags->do_predict ||
+							(verbose && !flags->do_running))
+						{
 							snprintf(afmt, sizeof(afmt), "%s/%s",
 									pkgw->atom->CATEGORY, pkgw->atom->PF);
 						} else {
