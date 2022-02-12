@@ -1693,8 +1693,9 @@ unlink_empty(const char *buf)
 	if (fd != -1 && stat(buf, &st) != -1) {
 		if (st.st_size == 0)
 			ret = unlink(buf);
-		close(fd);
 	}
+	if (fd != -1)
+		close(fd);
 	return ret;
 }
 
