@@ -1,9 +1,10 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
+ * Copyright 2020-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
 #include "main.h"
@@ -198,6 +199,17 @@ tbz2_decompose(int dir_fd, const char *tbz2, const char *tarbz2, const char *xpa
 	xpak_size = READ_BE_INT32(tbz2_tail);
 	/* calculate tarbz2's size */
 	tarbz2_size = st.st_size - xpak_size - TBZ2_END_LEN;
+
+	/* attempt to check xpak_size and tarbz2_size for Coverity's taint
+	 * check CID 248878 */
+	if (xpak_size <= 0 || xpak_size >= st.st_size) {
+		warn("%s: invalid xpak size: %ld", tbz2, xpak_size);
+		goto close_in_and_ret;
+	}
+	if (tarbz2_size <= 0) {
+		warn("%s: invalid tar size: %ld", tbz2, tarbz2_size);
+		goto close_in_and_ret;
+	}
 
 	/* reset to the start of the tbz2 */
 	rewind(in);
