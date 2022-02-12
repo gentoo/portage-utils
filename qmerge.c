@@ -1518,6 +1518,8 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	 * the replacement package */
 	if (!pretend && rpkg == NULL) {
 		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
+		if (buf == NULL)
+			buf = "0";  /* default */
 		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
 		if (phases != NULL) {
 			mkdirat(pkg_ctx->fd, "temp", 0755);
@@ -1657,9 +1659,13 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	if (!pretend) {
 		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
 		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
-		/* execute the pkg_postrm step */
-		pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_POSTRM,
-				T, T, buf, rpkg == NULL ? "" : rpkg->PVR);
+		if (buf == NULL)
+			buf = "0";  /* default */
+		if (phases != NULL) {
+			/* execute the pkg_postrm step */
+			pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_POSTRM,
+					T, T, buf, rpkg == NULL ? "" : rpkg->PVR);
+		}
 
 		/* finally delete the vdb entry */
 		rm_rf_at(pkg_ctx->fd, ".");
