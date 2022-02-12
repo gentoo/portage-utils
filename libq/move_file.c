@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Authors
+ * Copyright 2005-2022 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -86,8 +86,8 @@ move_file(int rootfd_src, const char *name_src,
 		}
 
 		/* preserve the file times */
-		times[0] = get_stat_atime(&st);
-		times[1] = get_stat_mtime(&st);
+		times[0] = get_stat_atime(stat_src);
+		times[1] = get_stat_mtime(stat_src);
 		futimens(fd_dst, times);
 
 		close(fd_src);
