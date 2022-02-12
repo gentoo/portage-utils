@@ -676,7 +676,6 @@ tree_read_file_pms(tree_pkg_ctx *pkg_ctx)
 	FILE *f;
 	tree_pkg_meta *ret = NULL;
 	size_t len;
-	char buf[_Q_PATH_MAX];
 
 	if ((f = fdopen(pkg_ctx->fd, "r")) == NULL)
 		goto err;
@@ -695,7 +694,8 @@ tree_read_file_pms(tree_pkg_ctx *pkg_ctx)
 	ret->Q_DEPEND = ptr;
 #define next_line(curr, next) \
 	if ((ptr = strchr(ret->Q_##curr, '\n')) == NULL) { \
-		warn("Invalid cache file for '%s'", buf); \
+		warn("Invalid cache file for '%s/%s'", \
+			 pkg_ctx->cat_ctx->name, pkg_ctx->name); \
 		goto err; \
 	} \
 	ret->Q_##next = ptr+1; \
@@ -718,8 +718,8 @@ tree_read_file_pms(tree_pkg_ctx *pkg_ctx)
 #undef next_line
 	ptr = strchr(ptr+1, '\n');
 	if (ptr == NULL) {
-		warn("Invalid cache file for '%s' - could not find end of cache data",
-				buf);
+		warn("Invalid cache file for '%s/%s' - could not find end of cache data",
+			 pkg_ctx->cat_ctx->name, pkg_ctx->name);
 		goto err;
 	}
 	*ptr = '\0';
