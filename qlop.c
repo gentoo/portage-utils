@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -1259,7 +1259,7 @@ static int do_emerge_log(
 								continue;
 							}
 						case NEWER:
-							if (atom->pfx_op != ATOM_OP_NEWER ||
+							if (atom->pfx_op != ATOM_OP_NEWER &&
 									atom->pfx_op != ATOM_OP_NEWER_EQUAL)
 								continue;
 							/* fall through */
