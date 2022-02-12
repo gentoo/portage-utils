@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Authors
+ * Copyright 2005-2022 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -256,15 +256,17 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 						snprintf(buf, sizeof(buf), "%s%s%s",
 								RED, atom_to_string(atom), NORM);
 						if (quiet < 2)
-							add_set_unique(buf, state->udeps, NULL);
+							state->udeps = add_set_unique(buf,
+														  state->udeps, NULL);
 					} else if (!quiet) {
-						add_set_unique(atom_to_string(atom),
-								state->udeps, NULL);
+						state->udeps = add_set_unique(atom_to_string(atom),
+													  state->udeps, NULL);
 					}
 				}
 			} else {
 				array_for_each(state->deps, m, atom)
-					add_set_unique(atom_to_string(atom), state->udeps, NULL);
+					state->udeps = add_set_unique(atom_to_string(atom),
+												  state->udeps, NULL);
 			}
 		}
 
