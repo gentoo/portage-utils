@@ -1089,8 +1089,10 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	/* Get a handle on the main vdb repo */
 	vdb = tree_open_vdb(portroot, portvdb);
 	if (vdb == NULL) {
-		if (pretend)
+		if (pretend) {
+			tree_match_close(previnst);
 			return;
+		}
 		/* try to create a vdb if none exists yet */
 		xasprintf(&p, "%s/%s", portroot, portvdb);
 		mkdir_p(p, 0755);
@@ -1103,12 +1105,14 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	if (!cat_ctx) {
 		if (errno != ENOENT) {
 			tree_close(vdb);
+			tree_match_close(previnst);
 			return;
 		}
 		mkdirat(vdb->tree_fd, mpkg->atom->CATEGORY, 0755);
 		cat_ctx = tree_open_cat(vdb, mpkg->atom->CATEGORY);
 		if (!cat_ctx) {
 			tree_close(vdb);
+			tree_match_close(previnst);
 			return;
 		}
 	}
