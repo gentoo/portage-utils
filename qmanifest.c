@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019 Gentoo Foundation
+ * Copyright 2018-2021 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
@@ -438,8 +438,10 @@ generate_dir(const char *dir, enum type_manifest mtype)
 			return NULL;
 		}
 
-		if (list_dir(&dentries, &dentrieslen, dir) != 0)
+		if (list_dir(&dentries, &dentrieslen, dir) != 0) {
+			gzclose(mf);
 			return NULL;
+		}
 
 		for (i = 0; i < dentrieslen; i++) {
 			/* ignore existing Manifests */
