@@ -1523,12 +1523,12 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	if (!pretend && rpkg == NULL) {
 		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
 		if (buf == NULL)
-			buf = "0";  /* default */
+			buf = (char *)"0";  /* default */
 		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
 		if (phases != NULL) {
 			mkdirat(pkg_ctx->fd, "temp", 0755);
 			pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_PRERM,
-					T, T, buf, rpkg == NULL ? "" : rpkg->PVR);
+							T, T, buf, "");
 		}
 	}
 
@@ -1664,7 +1664,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
 		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
 		if (buf == NULL)
-			buf = "0";  /* default */
+			buf = (char *)"0";  /* default */
 		if (phases != NULL) {
 			/* execute the pkg_postrm step */
 			pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_POSTRM,
