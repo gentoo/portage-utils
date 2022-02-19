@@ -1,9 +1,9 @@
 /* Rename a file relative to open directories.
-   Copyright (C) 2009-2019 Free Software Foundation, Inc.
+   Copyright (C) 2009-2022 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -61,6 +61,29 @@ rename_noreplace (char const *src, char const *dst)
 
 #undef renameat
 
+#if HAVE_RENAMEAT
+
+/* Act like renameat (FD1, SRC, FD2, DST), except fail with EEXIST if
+   FLAGS is nonzero and it is easy to fail atomically if DST already exists.
+   This lets renameatu be atomic when it can be implemented in terms
+   of renameatx_np.  */
+static int
+renameat2ish (int fd1, char const *src, int fd2, char const *dst,
+              unsigned int flags)
+{
+# ifdef RENAME_EXCL
+  if (flags)
+    {
+      int r = renameatx_np (fd1, src, fd2, dst, RENAME_EXCL);
+      if (r == 0 || errno != ENOTSUP)
+        return r;
+    }
+# endif
+
+  return renameat (fd1, src, fd2, dst);
+}
+#endif
+
 /* Rename FILE1, in the directory open on descriptor FD1, to FILE2, in
    the directory open on descriptor FD2.  If possible, do it without
    changing the working directory.  Otherwise, resort to using
@@ -86,14 +109,6 @@ renameatu (int fd1, char const *src, int fd2, char const *dst,
 #elif defined SYS_renameat2
   ret_val = syscall (SYS_renameat2, fd1, src, fd2, dst, flags);
   err = errno;
-#elif defined RENAME_EXCL
-  if (! (flags & ~(RENAME_EXCHANGE | RENAME_NOREPLACE)))
-    {
-      ret_val = renameatx_np (fd1, src, fd2, dst,
-                             ((flags & RENAME_EXCHANGE ? RENAME_SWAP : 0)
-                              | (flags & RENAME_NOREPLACE ? RENAME_EXCL : 0)));
-      err = errno;
-    }
 #endif
 
   if (! (ret_val < 0 && (err == EINVAL || err == ENOSYS || err == ENOTSUP)))
@@ -112,33 +127,38 @@ renameatu (int fd1, char const *src, int fd2, char const *dst,
   struct stat dst_st;
   bool dst_found_nonexistent = false;
 
-  if (flags != 0)
+  switch (flags)
     {
-      /* RENAME_NOREPLACE is the only flag currently supported.  */
-      if (flags & ~RENAME_NOREPLACE)
-        return errno_fail (ENOTSUP);
-      else
-        {
-          /* This has a race between the call to lstatat and the calls to
-             renameat below.  */
-          if (lstatat (fd2, dst, &dst_st) == 0 || errno == EOVERFLOW)
-            return errno_fail (EEXIST);
-          if (errno != ENOENT)
-            return -1;
-          dst_found_nonexistent = true;
-        }
+    case 0:
+      break;
+
+    case RENAME_NOREPLACE:
+      /* This has a race between the call to lstatat and the calls to
+         renameat below.  This lstatat is needed even if RENAME_EXCL
+         is defined, because RENAME_EXCL is buggy on macOS 11.2:
+         renameatx_np (fd, "X", fd, "X", RENAME_EXCL) incorrectly
+         succeeds when X exists.  */
+      if (lstatat (fd2, dst, &dst_st) == 0 || errno == EOVERFLOW)
+        return errno_fail (EEXIST);
+      if (errno != ENOENT)
+        return -1;
+      dst_found_nonexistent = true;
+      break;
+
+    default:
+      return errno_fail (ENOTSUP);
     }
 
   /* Let strace see any ENOENT failure.  */
   src_len = strlen (src);
   dst_len = strlen (dst);
   if (!src_len || !dst_len)
-    return renameat (fd1, src, fd2, dst);
+    return renameat2ish (fd1, src, fd2, dst, flags);
 
   src_slash = src[src_len - 1] == '/';
   dst_slash = dst[dst_len - 1] == '/';
   if (!src_slash && !dst_slash)
-    return renameat (fd1, src, fd2, dst);
+    return renameat2ish (fd1, src, fd2, dst, flags);
 
   /* Presence of a trailing slash requires directory semantics.  If
      the source does not exist, or if the destination cannot be turned
@@ -211,7 +231,7 @@ renameatu (int fd1, char const *src, int fd2, char const *dst,
      on Solaris, since all other systems either lack renameat or honor
      trailing slash correctly.  */
 
-  ret_val = renameat (fd1, src_temp, fd2, dst_temp);
+  ret_val = renameat2ish (fd1, src_temp, fd2, dst_temp, flags);
   rename_errno = errno;
   goto out;
  out:

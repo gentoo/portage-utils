@@ -1,5 +1,5 @@
-# strcasestr.m4 serial 24
-dnl Copyright (C) 2005, 2007-2019 Free Software Foundation, Inc.
+# strcasestr.m4 serial 28
+dnl Copyright (C) 2005, 2007-2022 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -7,7 +7,7 @@ dnl with or without modifications, as long as this notice is preserved.
 dnl Check that strcasestr is present and works.
 AC_DEFUN([gl_FUNC_STRCASESTR_SIMPLE],
 [
-  AC_REQUIRE([gl_HEADER_STRING_H_DEFAULTS])
+  AC_REQUIRE([gl_STRING_H_DEFAULTS])
 
   dnl Persuade glibc <string.h> to declare strcasestr().
   AC_REQUIRE([AC_USE_SYSTEM_EXTENSIONS])
@@ -17,7 +17,7 @@ AC_DEFUN([gl_FUNC_STRCASESTR_SIMPLE],
   if test $ac_cv_func_strcasestr = no; then
     HAVE_STRCASESTR=0
   else
-    if test $HAVE_MEMCHR = 0 || test $REPLACE_MEMCHR = 1; then
+    if test $REPLACE_MEMCHR = 1; then
       REPLACE_STRCASESTR=1
     else
       dnl Detect https://sourceware.org/bugzilla/show_bug.cgi?id=12092
@@ -26,7 +26,7 @@ AC_DEFUN([gl_FUNC_STRCASESTR_SIMPLE],
         [gl_cv_func_strcasestr_works_always],
         [AC_RUN_IFELSE(
            [AC_LANG_PROGRAM([[
-#include <string.h> /* for strcasestr */
+#include <string.h> /* for __GNU_LIBRARY__, strcasestr */
 #ifdef __GNU_LIBRARY__
  #include <features.h>
  #if __GLIBC__ == 2 && __GLIBC_MINOR__ == 28
@@ -48,6 +48,7 @@ AC_DEFUN([gl_FUNC_STRCASESTR_SIMPLE],
             dnl linear.
             AC_EGREP_CPP([Lucky user],
               [
+#include <string.h> /* for __GNU_LIBRARY__ */
 #ifdef __GNU_LIBRARY__
  #include <features.h>
  #if ((__GLIBC__ == 2 && __GLIBC_MINOR__ > 12) || (__GLIBC__ > 2)) \
@@ -64,7 +65,7 @@ AC_DEFUN([gl_FUNC_STRCASESTR_SIMPLE],
 #endif
               ],
               [gl_cv_func_strcasestr_works_always="guessing yes"],
-              [gl_cv_func_strcasestr_works_always="guessing no"])
+              [gl_cv_func_strcasestr_works_always="$gl_cross_guess_normal"])
            ])
         ])
       case "$gl_cv_func_strcasestr_works_always" in
@@ -136,7 +137,7 @@ static void quit (int sig) { _exit (sig + 128); }
 #endif
            ],
            [gl_cv_func_strcasestr_linear="guessing yes"],
-           [gl_cv_func_strcasestr_linear="guessing no"])
+           [gl_cv_func_strcasestr_linear="$gl_cross_guess_normal"])
         ])
       ])
     case "$gl_cv_func_strcasestr_linear" in

@@ -1,18 +1,18 @@
 /* Concatenate two arbitrary file names.
 
-   Copyright (C) 1996-2007, 2009-2019 Free Software Foundation, Inc.
+   Copyright (C) 1996-2007, 2009-2022 Free Software Foundation, Inc.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; either version 2.1 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Lesser General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Written by Jim Meyering.  */
@@ -25,7 +25,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "dirname.h"
+#include "basename-lgpl.h"
+#include "filename.h"
 
 #if ! HAVE_MEMPCPY && ! defined mempcpy
 # define mempcpy(D, S, N) ((void *) ((char *) memcpy (D, S, N) + (N)))
@@ -41,7 +42,7 @@
    *BASE_IN_RESULT to point to the copy of BASE at the end of the
    returned concatenation.
 
-   Return NULL if malloc fails.  */
+   If malloc fails, return NULL with errno set.  */
 
 char *
 mfile_name_concat (char const *dir, char const *base, char **base_in_result)
@@ -68,20 +69,22 @@ mfile_name_concat (char const *dir, char const *base, char **base_in_result)
     }
 
   char *p_concat = malloc (dirlen + (sep != '\0')  + baselen + 1);
-  char *p;
-
   if (p_concat == NULL)
     return NULL;
 
-  p = mempcpy (p_concat, dir, dirlen);
-  *p = sep;
-  p += sep != '\0';
+  {
+    char *p;
 
-  if (base_in_result)
-    *base_in_result = p;
+    p = mempcpy (p_concat, dir, dirlen);
+    *p = sep;
+    p += sep != '\0';
 
-  p = mempcpy (p, base, baselen);
-  *p = '\0';
+    if (base_in_result)
+      *base_in_result = p;
+
+    p = mempcpy (p, base, baselen);
+    *p = '\0';
+  }
 
   return p_concat;
 }
