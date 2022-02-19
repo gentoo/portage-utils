@@ -1,3 +1,9 @@
+# Copyright 2011-2022 Gentoo Authors
+# Distributed under the terms of the GNU General Public License v2
+#
+# Copyright 2011-2014 Mike Frysinger  - <vapier@gentoo.org>
+# Copyright 2011-     Fabian Groffen  - <grobian@gentoo.org>
+
 AC_PREREQ([2.71])
 AC_INIT([portage-utils],[git])
 AM_INIT_AUTOMAKE([1.11 dist-xz no-dist-gzip silent-rules -Wall])
