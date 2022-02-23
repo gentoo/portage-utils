@@ -126,18 +126,18 @@ parse_date(const char *sdate, time_t *t)
 		 */
 		size_t len = strspn(sdate, "0123456789-:T@");
 		if (sdate[len] == '\0') {
-			const char *fmt;
 			if (sdate[0] == '@') {
-				fmt = "@%s";
+				time_t d = (time_t)strtoll(&sdate[1], (char **)&s, 10);
+				localtime_r(&d, &tm);
 			} else if (strchr(sdate, '-') == NULL) {
-				fmt = "%s";
+				time_t d = (time_t)strtoll(sdate, (char **)&s, 10);
+				localtime_r(&d, &tm);
 			} else if ((s = strchr(sdate, 'T')) == NULL) {
-				fmt = "%Y-%m-%d";
+				s = strptime(sdate, "%Y-%m-%d", &tm);
 			} else {
-				fmt = "%Y-%m-%dT%H:%M:%S";
+				s = strptime(sdate, "%Y-%m-%dT%H:%M:%S", &tm);
 			}
 
-			s = strptime(sdate, fmt, &tm);
 			if (s == NULL || s[0] != '\0')
 				return false;
 		} else {
