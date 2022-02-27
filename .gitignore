@@ -30,8 +30,6 @@ libtool
 stamp-h1
 INSTALL
 Makefile
-/autotools/gnulib/*.h
-/autotools/gnulib/sys
 /tests/init.sh
 /tests/qmanifest/root/.gnupg/random_seed
 
