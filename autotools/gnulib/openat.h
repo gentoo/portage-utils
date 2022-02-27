@@ -1,9 +1,9 @@
 /* provide a replacement openat function
-   Copyright (C) 2004-2006, 2008-2022 Free Software Foundation, Inc.
+   Copyright (C) 2004-2006, 2008-2019 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
+   the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -52,19 +52,19 @@ _Noreturn void openat_save_fail (int);
    slightly more readable than it would be with
    fchownat (..., 0) or fchownat (..., AT_SYMLINK_NOFOLLOW).  */
 
-#if GNULIB_CHOWNAT
+#if GNULIB_FCHOWNAT
 
-# ifndef CHOWNAT_INLINE
-#  define CHOWNAT_INLINE _GL_INLINE
+# ifndef FCHOWNAT_INLINE
+#  define FCHOWNAT_INLINE _GL_INLINE
 # endif
 
-CHOWNAT_INLINE int
+FCHOWNAT_INLINE int
 chownat (int fd, char const *file, uid_t owner, gid_t group)
 {
   return fchownat (fd, file, owner, group, 0);
 }
 
-CHOWNAT_INLINE int
+FCHOWNAT_INLINE int
 lchownat (int fd, char const *file, uid_t owner, gid_t group)
 {
   return fchownat (fd, file, owner, group, AT_SYMLINK_NOFOLLOW);
@@ -72,19 +72,19 @@ lchownat (int fd, char const *file, uid_t owner, gid_t group)
 
 #endif
 
-#if GNULIB_CHMODAT
+#if GNULIB_FCHMODAT
 
-# ifndef CHMODAT_INLINE
-#  define CHMODAT_INLINE _GL_INLINE
+# ifndef FCHMODAT_INLINE
+#  define FCHMODAT_INLINE _GL_INLINE
 # endif
 
-CHMODAT_INLINE int
+FCHMODAT_INLINE int
 chmodat (int fd, char const *file, mode_t mode)
 {
   return fchmodat (fd, file, mode, 0);
 }
 
-CHMODAT_INLINE int
+FCHMODAT_INLINE int
 lchmodat (int fd, char const *file, mode_t mode)
 {
   return fchmodat (fd, file, mode, AT_SYMLINK_NOFOLLOW);

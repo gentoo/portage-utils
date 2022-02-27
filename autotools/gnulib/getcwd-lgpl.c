@@ -1,17 +1,17 @@
-/* Copyright (C) 2011-2022 Free Software Foundation, Inc.
+/* Copyright (C) 2011-2019 Free Software Foundation, Inc.
    This file is part of gnulib.
 
-   This file is free software: you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as
-   published by the Free Software Foundation; either version 2.1 of the
-   License, or (at your option) any later version.
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
 
-   This file is distributed in the hope that it will be useful,
+   This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
+   GNU General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public License
+   You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include <config.h>
@@ -38,10 +38,6 @@ typedef int dummy;
    necessary.  */
 
 # undef getcwd
-# if defined _WIN32 && !defined __CYGWIN__
-#  define getcwd _getcwd
-# endif
-
 char *
 rpl_getcwd (char *buf, size_t size)
 {
@@ -69,7 +65,11 @@ rpl_getcwd (char *buf, size_t size)
         }
       result = getcwd (buf, size);
       if (!result)
-        free (buf);
+        {
+          int saved_errno = errno;
+          free (buf);
+          errno = saved_errno;
+        }
       return result;
     }
 
@@ -108,18 +108,17 @@ rpl_getcwd (char *buf, size_t size)
   while (!result && errno == ERANGE);
 
   if (!result)
-    free (buf);
+    {
+      int saved_errno = errno;
+      free (buf);
+      errno = saved_errno;
+    }
   else
     {
-      /* Here result == buf.  */
-      /* Shrink result before returning it.  */
-      size_t actual_size = strlen (result) + 1;
-      if (actual_size < size)
-        {
-          char *shrinked_result = realloc (result, actual_size);
-          if (shrinked_result != NULL)
-            result = shrinked_result;
-        }
+      /* Trim to fit, if possible.  */
+      result = realloc (buf, strlen (buf) + 1);
+      if (!result)
+        result = buf;
     }
   return result;
 }

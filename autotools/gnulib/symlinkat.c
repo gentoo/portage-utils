@@ -1,9 +1,9 @@
 /* Create a symlink relative to an open directory.
-   Copyright (C) 2009-2022 Free Software Foundation, Inc.
+   Copyright (C) 2009-2019 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
+   the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -18,16 +18,12 @@
 
 #include <config.h>
 
-/* Specification.  */
 #include <unistd.h>
-
 #include <errno.h>
-#include <stdlib.h>
 
 #if HAVE_SYMLINKAT
 # undef symlinkat
 
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <string.h>
 
@@ -39,8 +35,7 @@ rpl_symlinkat (char const *contents, int fd, char const *name)
   if (len && name[len - 1] == '/')
     {
       struct stat st;
-      if (fstatat (fd, name, &st, AT_SYMLINK_NOFOLLOW) == 0
-          || errno == EOVERFLOW)
+      if (fstatat (fd, name, &st, 0) == 0)
         errno = EEXIST;
       return -1;
     }
@@ -52,8 +47,8 @@ rpl_symlinkat (char const *contents, int fd, char const *name)
    wrapper than to go through at-func.c to call rpl_symlink.  */
 
 int
-symlinkat (_GL_UNUSED char const *path1, _GL_UNUSED int fd,
-           _GL_UNUSED char const *path2)
+symlinkat (char const *path1 _GL_UNUSED, int fd _GL_UNUSED,
+           char const *path2 _GL_UNUSED)
 {
   errno = ENOSYS;
   return -1;

@@ -1,7 +1,7 @@
-# serial 9
+# serial 7
 # See if we need to provide futimens replacement.
 
-dnl Copyright (C) 2009-2022 Free Software Foundation, Inc.
+dnl Copyright (C) 2009-2019 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -11,7 +11,6 @@ dnl with or without modifications, as long as this notice is preserved.
 AC_DEFUN([gl_FUNC_FUTIMENS],
 [
   AC_REQUIRE([gl_SYS_STAT_H_DEFAULTS])
-  AC_REQUIRE([AC_CANONICAL_HOST]) dnl for cross-compiles
   AC_REQUIRE([gl_USE_SYSTEM_EXTENSIONS])
   AC_CHECK_FUNCS_ONCE([futimens])
   if test $ac_cv_func_futimens = no; then
@@ -24,8 +23,7 @@ AC_DEFUN([gl_FUNC_FUTIMENS],
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
-]GL_MDA_DEFINES],
-     [[struct timespec ts[2];
+]], [[struct timespec ts[2];
       int fd = creat ("conftest.file", 0600);
       struct stat st;
       if (fd < 0) return 1;
@@ -46,21 +44,10 @@ AC_DEFUN([gl_FUNC_FUTIMENS],
       ]])],
          [gl_cv_func_futimens_works=yes],
          [gl_cv_func_futimens_works=no],
-         [case "$host_os" in
-                           # Guess no on glibc systems.
-            *-gnu* | gnu*) gl_cv_func_futimens_works="guessing no" ;;
-                           # Guess no on musl systems.
-            *-musl*)       gl_cv_func_futimens_works="guessing no" ;;
-                           # Guess yes otherwise.
-            *)             gl_cv_func_futimens_works="guessing yes" ;;
-          esac
-         ])
+         [gl_cv_func_futimens_works="guessing yes"])
       rm -f conftest.file])
-    case "$gl_cv_func_futimens_works" in
-      *yes) ;;
-      *)
-        REPLACE_FUTIMENS=1
-        ;;
-    esac
+    if test "$gl_cv_func_futimens_works" = no; then
+      REPLACE_FUTIMENS=1
+    fi
   fi
 ])

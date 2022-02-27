@@ -28,7 +28,6 @@ done
 # reload the gnulib code
 PATH=/usr/local/src/gnu/gnulib:${PATH}
 mods="
-	basename-lgpl
 	dirent
 	faccessat
 	fdopendir

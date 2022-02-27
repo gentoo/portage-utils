@@ -1,18 +1,18 @@
 /* Formatted output to strings.
-   Copyright (C) 1999-2000, 2002-2003, 2006-2022 Free Software Foundation, Inc.
+   Copyright (C) 1999-2000, 2002-2003, 2006-2019 Free Software Foundation, Inc.
 
-   This file is free software: you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as
-   published by the Free Software Foundation; either version 2.1 of the
-   License, or (at your option) any later version.
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3, or (at your option)
+   any later version.
 
-   This file is distributed in the hope that it will be useful,
+   This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
+   GNU General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public License
-   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, see <https://www.gnu.org/licenses/>.  */
 
 /* This file can be parametrized with the following macros:
      CHAR_T             The element type of the format string.
@@ -48,7 +48,16 @@
 #include <stddef.h>
 
 /* Get intmax_t.  */
-#include <stdint.h>
+#if defined IN_LIBINTL || defined IN_LIBASPRINTF
+# if HAVE_STDINT_H_WITH_UINTMAX
+#  include <stdint.h>
+# endif
+# if HAVE_INTTYPES_H_WITH_UINTMAX
+#  include <inttypes.h>
+# endif
+#else
+# include <stdint.h>
+#endif
 
 /* malloc(), realloc(), free().  */
 #include <stdlib.h>
@@ -438,12 +447,14 @@ PRINTF_PARSE (const CHAR_T *format, DIRECTIVES *d, arguments *a)
               switch (c)
                 {
                 case 'd': case 'i':
-                  /* If 'long long' is larger than 'long':  */
+#if HAVE_LONG_LONG_INT
+                  /* If 'long long' exists and is larger than 'long':  */
                   if (flags >= 16 || (flags & 4))
                     type = TYPE_LONGLONGINT;
                   else
-                  /* If 'long long' is the same as 'long', we parse "lld" into
-                     TYPE_LONGINT.  */
+#endif
+                  /* If 'long long' exists and is the same as 'long', we parse
+                     "lld" into TYPE_LONGINT.  */
                   if (flags >= 8)
                     type = TYPE_LONGINT;
                   else if (flags & 2)
@@ -454,12 +465,14 @@ PRINTF_PARSE (const CHAR_T *format, DIRECTIVES *d, arguments *a)
                     type = TYPE_INT;
                   break;
                 case 'o': case 'u': case 'x': case 'X':
-                  /* If 'unsigned long long' is larger than 'unsigned long':  */
+#if HAVE_LONG_LONG_INT
+                  /* If 'long long' exists and is larger than 'long':  */
                   if (flags >= 16 || (flags & 4))
                     type = TYPE_ULONGLONGINT;
                   else
-                  /* If 'unsigned long long' is the same as 'unsigned long', we
-                     parse "llu" into TYPE_ULONGINT.  */
+#endif
+                  /* If 'unsigned long long' exists and is the same as
+                     'unsigned long', we parse "llu" into TYPE_ULONGINT.  */
                   if (flags >= 8)
                     type = TYPE_ULONGINT;
                   else if (flags & 2)
@@ -512,12 +525,14 @@ PRINTF_PARSE (const CHAR_T *format, DIRECTIVES *d, arguments *a)
                   type = TYPE_POINTER;
                   break;
                 case 'n':
-                  /* If 'long long' is larger than 'long':  */
+#if HAVE_LONG_LONG_INT
+                  /* If 'long long' exists and is larger than 'long':  */
                   if (flags >= 16 || (flags & 4))
                     type = TYPE_COUNT_LONGLONGINT_POINTER;
                   else
-                  /* If 'long long' is the same as 'long', we parse "lln" into
-                     TYPE_COUNT_LONGINT_POINTER.  */
+#endif
+                  /* If 'long long' exists and is the same as 'long', we parse
+                     "lln" into TYPE_COUNT_LONGINT_POINTER.  */
                   if (flags >= 8)
                     type = TYPE_COUNT_LONGINT_POINTER;
                   else if (flags & 2)

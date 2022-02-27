@@ -1,17 +1,17 @@
 /* Work around platform bugs in stat.
-   Copyright (C) 2009-2022 Free Software Foundation, Inc.
+   Copyright (C) 2009-2019 Free Software Foundation, Inc.
 
-   This file is free software: you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as
-   published by the Free Software Foundation; either version 2.1 of the
-   License, or (at your option) any later version.
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
 
-   This file is distributed in the hope that it will be useful,
+   This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
+   GNU General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public License
+   You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Written by Eric Blake and Bruno Haible.  */
@@ -65,13 +65,6 @@ orig_stat (const char *filename, struct stat *buf)
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
 # include "stat-w32.h"
-/* Don't assume that UNICODE is not defined.  */
-# undef WIN32_FIND_DATA
-# define WIN32_FIND_DATA WIN32_FIND_DATAA
-# undef CreateFile
-# define CreateFile CreateFileA
-# undef FindFirstFile
-# define FindFirstFile FindFirstFileA
 #endif
 
 #ifdef WINDOWS_NATIVE
@@ -120,7 +113,7 @@ rpl_stat (char const *name, struct stat *buf)
      around length limitations
      <https://docs.microsoft.com/en-us/windows/desktop/FileIO/naming-a-file> ?  */
 
-  /* POSIX <https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_13>
+  /* POSIX <http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_13>
      specifies: "More than two leading <slash> characters shall be treated as
      a single <slash> character."  */
   if (ISSLASH (name[0]) && ISSLASH (name[1]) && ISSLASH (name[2]))
@@ -382,7 +375,7 @@ rpl_stat (char const *name, struct stat *buf)
 
       case ERROR_ACCESS_DENIED:  /* rname is such as 'C:\System Volume Information\foo'.  */
       case ERROR_SHARING_VIOLATION: /* rname is such as 'C:\pagefile.sys' (second approach only).  */
-                                    /* XXX map to EACCES or EPERM? */
+                                    /* XXX map to EACCESS or EPERM? */
         errno = EACCES;
         break;
 
@@ -405,7 +398,7 @@ rpl_stat (char const *name, struct stat *buf)
         errno = ENAMETOOLONG;
         break;
 
-      case ERROR_DELETE_PENDING: /* XXX map to EACCES or EPERM? */
+      case ERROR_DELETE_PENDING: /* XXX map to EACCESS or EPERM? */
         errno = EPERM;
         break;
 

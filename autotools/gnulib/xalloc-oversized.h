@@ -1,18 +1,18 @@
 /* xalloc-oversized.h -- memory allocation size checking
 
-   Copyright (C) 1990-2000, 2003-2004, 2006-2022 Free Software Foundation, Inc.
+   Copyright (C) 1990-2000, 2003-2004, 2006-2019 Free Software Foundation, Inc.
 
-   This file is free software: you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as
-   published by the Free Software Foundation; either version 2.1 of the
-   License, or (at your option) any later version.
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
 
-   This file is distributed in the hope that it will be useful,
+   This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
+   GNU General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public License
+   You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifndef XALLOC_OVERSIZED_H_
@@ -21,39 +21,34 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* True if N * S does not fit into both ptrdiff_t and size_t.
-   N and S should be nonnegative and free of side effects.
+/* True if N * S would overflow in a size_t calculation,
+   or would generate a value larger than PTRDIFF_MAX.
    This expands to a constant expression if N and S are both constants.
-   By gnulib convention, SIZE_MAX represents overflow in size_t
+   By gnulib convention, SIZE_MAX represents overflow in size
    calculations, so the conservative size_t-based dividend to use here
    is SIZE_MAX - 1.  */
 #define __xalloc_oversized(n, s) \
-  ((s) != 0 \
-   && ((size_t) (PTRDIFF_MAX < SIZE_MAX ? PTRDIFF_MAX : SIZE_MAX - 1) / (s) \
-       < (n)))
+  ((size_t) (PTRDIFF_MAX < SIZE_MAX ? PTRDIFF_MAX : SIZE_MAX - 1) / (s) < (n))
 
-/* Return 1 if and only if an array of N objects, each of size S,
-   cannot exist reliably because its total size in bytes would exceed
-   MIN (PTRDIFF_MAX, SIZE_MAX - 1).
+#if PTRDIFF_MAX < SIZE_MAX
+typedef ptrdiff_t __xalloc_count_type;
+#else
+typedef size_t __xalloc_count_type;
+#endif
 
-   N and S should be nonnegative and free of side effects.
+/* Return 1 if an array of N objects, each of size S, cannot exist
+   reliably due to size or ptrdiff_t arithmetic overflow.  S must be
+   positive and N must be nonnegative.  This is a macro, not a
+   function, so that it works correctly even when SIZE_MAX < N.  */
 
-   Warning: (xalloc_oversized (N, S) ? NULL : malloc (N * S)) can
-   misbehave if N and S are both narrower than ptrdiff_t and size_t,
-   and can be rewritten as (xalloc_oversized (N, S) ?  NULL
-   : malloc (N * (size_t) S)).
-
-   This is a macro, not a function, so that it works even if an
-   argument exceeds MAX (PTRDIFF_MAX, SIZE_MAX).  */
-#if 7 <= __GNUC__ && !defined __clang__ && PTRDIFF_MAX < SIZE_MAX
+#if 7 <= __GNUC__
 # define xalloc_oversized(n, s) \
-   __builtin_mul_overflow_p (n, s, (ptrdiff_t) 1)
-#elif (5 <= __GNUC__ && !defined __ICC && !__STRICT_ANSI__ \
-       && PTRDIFF_MAX < SIZE_MAX)
+   __builtin_mul_overflow_p (n, s, (__xalloc_count_type) 1)
+#elif 5 <= __GNUC__ && !defined __ICC && !__STRICT_ANSI__
 # define xalloc_oversized(n, s) \
    (__builtin_constant_p (n) && __builtin_constant_p (s) \
     ? __xalloc_oversized (n, s) \
-    : ({ ptrdiff_t __xalloc_count; \
+    : ({ __xalloc_count_type __xalloc_count; \
          __builtin_mul_overflow (n, s, &__xalloc_count); }))
 
 /* Other compilers use integer division; this may be slower but is
