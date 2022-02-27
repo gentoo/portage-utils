@@ -38,6 +38,7 @@
 #  --no-libtool \
 #  --macro-prefix=gl \
 #  --no-vc-files \
+#  basename-lgpl \
 #  dirent \
 #  faccessat \
 #  fdopendir \
@@ -63,6 +64,7 @@
 # Specification in the form of a few gnulib-tool.m4 macro invocations:
 gl_LOCAL_DIR([])
 gl_MODULES([
+  basename-lgpl
   dirent
   faccessat
   fdopendir

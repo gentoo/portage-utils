@@ -33,6 +33,7 @@
 #  --no-libtool \
 #  --macro-prefix=gl \
 #  --no-vc-files \
+#  basename-lgpl \
 #  dirent \
 #  faccessat \
 #  fdopendir \
