@@ -1,9 +1,9 @@
 /* Check the access rights of a file relative to an open directory.
-   Copyright (C) 2009-2019 Free Software Foundation, Inc.
+   Copyright (C) 2009-2022 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -22,9 +22,12 @@
 #define _GL_INCLUDING_UNISTD_H
 #include <config.h>
 
+/* Specification.  */
 #include <unistd.h>
+
 #include <errno.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #undef _GL_INCLUDING_UNISTD_H

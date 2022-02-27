@@ -1,17 +1,17 @@
 /* fchdir replacement.
-   Copyright (C) 2006-2019 Free Software Foundation, Inc.
+   Copyright (C) 2006-2022 Free Software Foundation, Inc.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation, either version 3 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Lesser General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include <config.h>
@@ -29,7 +29,7 @@
 #include <sys/stat.h>
 
 #include "assure.h"
-#include "dosname.h"
+#include "filename.h"
 #include "filenamecat.h"
 
 #ifndef REPLACE_OPEN_DIRECTORY
@@ -84,13 +84,13 @@ ensure_dirs_slot (size_t fd)
   return true;
 }
 
-/* Return an absolute name of DIR in malloc'd storage.  */
+/* Return an absolute name of DIR in malloc'd storage.
+   Upon failure, return NULL with errno set.  */
 static char *
 get_name (char const *dir)
 {
   char *cwd;
   char *result;
-  int saved_errno;
 
   if (IS_ABSOLUTE_FILE_NAME (dir))
     return strdup (dir);
@@ -101,9 +101,7 @@ get_name (char const *dir)
     return cwd;
 
   result = mfile_name_concat (cwd, dir, NULL);
-  saved_errno = errno;
   free (cwd);
-  errno = saved_errno;
   return result;
 }
 
@@ -125,8 +123,8 @@ _gl_unregister_fd (int fd)
 /* Mark FD as visiting FILENAME.  FD must be non-negative, and refer
    to an open file descriptor.  If REPLACE_OPEN_DIRECTORY is non-zero,
    this should only be called if FD is visiting a directory.  Close FD
-   and return -1 if there is insufficient memory to track the
-   directory name; otherwise return FD.  */
+   and return -1 with errno set if there is insufficient memory to track
+   the directory name; otherwise return FD.  */
 int
 _gl_register_fd (int fd, const char *filename)
 {
