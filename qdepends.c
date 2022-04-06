@@ -22,7 +22,7 @@
 #include "xasprintf.h"
 #include "xregex.h"
 
-#define QDEPENDS_FLAGS "drpbQitF:S" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpbQitUF:S" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
 	{"depend",    no_argument, NULL, 'd'},
 	{"rdepend",   no_argument, NULL, 'r'},
@@ -31,6 +31,7 @@ static struct option const qdepends_long_opts[] = {
 	{"query",     no_argument, NULL, 'Q'},
 	{"installed", no_argument, NULL, 'i'},
 	{"tree",      no_argument, NULL, 't'},
+	{"use",       no_argument, NULL, 'U'},
 	{"format",     a_argument, NULL, 'F'},
 	{"pretty",    no_argument, NULL, 'S'},
 	COMMON_LONG_OPTS
@@ -43,6 +44,7 @@ static const char * const qdepends_opts_help[] = {
 	"Query reverse deps",
 	"Search installed packages using VDB",
 	"Search available ebuilds in the tree",
+	"Apply profile USE-flags to conditional deps",
 	"Print matched atom using given format string",
 	"Pretty format specified depend strings",
 	COMMON_OPTS_HELP
@@ -51,7 +53,7 @@ static const char * const qdepends_opts_help[] = {
 
 /* structures / types / etc ... */
 struct qdepends_opt_state {
-	unsigned char qmode;
+	unsigned int qmode;
 	array_t *atoms;
 	array_t *deps;
 	set *udeps;
@@ -68,6 +70,7 @@ struct qdepends_opt_state {
 #define QMODE_INSTALLED  (1<<5)
 #define QMODE_TREE       (1<<6)
 #define QMODE_REVERSE    (1<<7)
+#define QMODE_FILTERUSE  (1<<8)
 
 const char *depend_files[] = {  /* keep *DEPEND aligned with above defines */
 	/* 0 */ "DEPEND",
@@ -171,7 +174,10 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			continue;
 		}
 
-		if (state->qmode & QMODE_TREE && verbose) {
+		if (state->qmode & QMODE_TREE &&
+			!(state->qmode & QMODE_REVERSE) &&
+			verbose)
+		{
 			/* pull in flags in use if possible */
 			tree_cat_ctx *vcat =
 				tree_open_cat(state->vdb, pkg_ctx->cat_ctx->name);
@@ -196,15 +202,16 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				tree_close_cat(vcat);
 			}
 		} else {
-			dep_prune_use(dep_tree, ev_use);
+			if (state->qmode & QMODE_FILTERUSE)
+				dep_prune_use(dep_tree, ev_use);
 			dep_flatten_tree(dep_tree, state->deps);
 		}
 
 		if (verbose) {
 			if (state->qmode & QMODE_REVERSE) {
-				array_for_each(state->atoms, m, atom) {
-					array_for_each(state->deps, n, fatom) {
-						if (atom_compare(fatom, atom) == EQUAL) {
+				array_for_each(state->deps, m, atom) {
+					array_for_each(state->atoms, n, fatom) {
+						if (atom_compare(atom, fatom) == EQUAL) {
 							fatom = NULL;
 							break;
 						}
@@ -319,6 +326,7 @@ int qdepends_main(int argc, char **argv)
 		case 'Q': state.qmode |= QMODE_REVERSE;   break;
 		case 'i': state.qmode |= QMODE_INSTALLED; break;
 		case 't': state.qmode |= QMODE_TREE;      break;
+		case 'U': state.qmode |= QMODE_FILTERUSE; break;
 		case 'S': do_pretty = true;               break;
 		case 'F': state.format = optarg;          break;
 		}
@@ -336,7 +344,7 @@ int qdepends_main(int argc, char **argv)
 	if (!(state.qmode & QMODE_INSTALLED) && !(state.qmode & QMODE_TREE))
 		state.qmode |= QMODE_INSTALLED;
 
-	/* don't allow both installed and froim tree */
+	/* don't allow both installed and from tree */
 	if (state.qmode & QMODE_INSTALLED && state.qmode & QMODE_TREE) {
 		warn("-i and -t cannot be used together, dropping -i");
 		state.qmode &= ~QMODE_INSTALLED;
