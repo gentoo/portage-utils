@@ -238,6 +238,13 @@ dep_print_tree(
 	size_t s;
 	int indent = 4;  /* Gentoo 4-wide indent standard */
 	depend_atom *d = NULL;
+	bool singlechild = false;
+	bool nonewline = false;
+
+	if (verbose < 0) {
+		nonewline = true;
+		verbose = -verbose - 1;
+	}
 
 	assert(root);
 	if (root->type == DEP_NULL)
@@ -248,7 +255,8 @@ dep_print_tree(
 
 	if (verbose > 0)
 		fprintf(fp, "Node [%s]: ", _dep_names[root->type]);
-	/*printf("Node %p [%s] %p %p %p: ", root, _dep_names[root->type], root->parent, root->neighbor, root->children);*/
+	/*printf("Node %p [%s] %p %p %p: ", root, _dep_names[root->type],
+	 *       root->parent, root->neighbor, root->children);*/
 	if (root->type == DEP_OR)
 		fprintf(fp, "|| (");
 	if (root->info) {
@@ -286,14 +294,30 @@ dep_print_tree(
 		if (root->type == DEP_USE)
 			fprintf(fp, "? (");
 	}
-	fprintf(fp, "\n");
+
+	if (root->children &&
+		root->children->children == NULL &&
+		root->children->neighbor == NULL)
+	{
+		singlechild = true;
+	}
+
+	if (singlechild)
+		fprintf(fp, " ");
+	else if (!nonewline)
+		fprintf(fp, "\n");
 
 	if (root->children)
-		dep_print_tree(fp, root->children, space+1, hlatoms, hlcolor, verbose);
+		dep_print_tree(fp, root->children,
+					   singlechild ? 0 : space + 1,
+					   hlatoms, hlcolor, singlechild ? -verbose - 1 : verbose);
 
 	if (root->type == DEP_OR || root->type == DEP_USE) {
-		for (s = space; s; --s)
-			fprintf(fp, "%*s", indent, "");
+		if (singlechild)
+			fprintf(fp, " ");
+		else
+			for (s = space; s; --s)
+				fprintf(fp, "%*s", indent, "");
 		fprintf(fp, ")\n");
 	}
  this_node_sucks:
