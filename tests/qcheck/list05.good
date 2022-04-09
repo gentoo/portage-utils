@@ -6,6 +6,6 @@ Checking a-b/pkg ...
  AFK: /missing-dir
  AFK: /missing-dir/missing-file
  AFK: /missing-dir/missing-sym
-  * 4 out of 11 files are good (2 files were ignored)
+  * 3 out of 10 files are good (3 files were ignored)
 Checking virtual/pkg ...
   * 0 out of 0 files are good
