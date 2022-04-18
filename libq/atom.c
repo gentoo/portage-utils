@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -694,41 +694,170 @@ atom_compare_flg(const depend_atom *data, const depend_atom *query, int flags)
 
 	/* check version */
 	if (data->PV && query->PV) {
-		char *s1, *s2;
-		uint64_t n1, n2;
-		/* first we compare the version [1.0]z_alpha1 */
-		s1 = data->PV;
-		s2 = query->PV;
-		while (s1 || s2) {
-			if (s1 && s2) {
-				/* deal with leading zeros */
-				while (*s1 == '0' && *s2 == '0') {
-					++s1;
-					++s2;
+		char              *s1;
+		char              *ends1;
+		char              *s2;
+		char              *ends2;
+		long long          n1;
+		long long          n2;
+		const atom_suffix *as1;
+		const atom_suffix *as2;
+
+		/* PMS 3.3 Version Comparison
+		 *
+		 * Algorithm 3.1: Version comparison top-level logic
+		 * 1:  let A and B be the versions to be compared
+		 * 2:  compare numeric components using Algorithm 3.2
+		 * 3:  compare letter components using Algorithm 3.4
+		 * 4:  compare suffixes using Algorithm 3.5
+		 * 5:  compare revision components using Algorithm 3.7
+		 * 6:  return  A = B
+		 */
+
+		/* step 2: numeric components
+		 *
+		 * Algorithm 3.2: Version comparison logic for numeric
+		 * components
+		 *  1:  define the notations Ank and Bnk to mean the kth numeric
+		 *      component of A and B respectively, using 0-based indexing
+		 *  2:  if An0 > Bn0 using integer comparison then
+		 *  3:    return  A > B
+		 *  4:  else if An0 < Bn0 using integer comparison then
+		 *  5:    return  A < B
+		 *  6:  end if
+		 *  7:  let Ann be the number of numeric components of A
+		 *  8:  let Bnn be the number of numeric components of B
+		 *  9:  for all i such that i ≥ 1 and i < Ann and i < Bnn, in
+		 *      ascending order do
+		 * 10:    compare Ani and Bni using Algorithm 3.3
+		 * 11:  end for
+		 * 12:  if Ann > Bnn then
+		 * 13:    return  A > B
+		 * 14:  else if Ann < Bnn then
+		 * 15:    return  A < B
+		 * 16:  end if
+		 *
+		 * Algorithm 3.3: Version comparison logic for each numeric
+		 * component after the first
+		 *  1:  if either Ani or Bni has a leading 0 then
+		 *  2:    let An′i be Ani with any trailing 0s removed
+		 *  3:    let Bn′i be Bni with any trailing 0s removed
+		 *  4:    if An′i > Bn′i using ASCII stringwise comparison then
+		 *  5:      return  A > B
+		 *  6:    else if An′i < Bn′i using ASCII stringwise comparison then
+		 *  7:      return  A < B
+		 *  8:    end if
+		 *  9:  else
+		 * 10:    if Ani > Bni using integer comparison then
+		 * 11:      return  A > B
+		 * 12:    else if Ani < Bni using integer comparison then
+		 * 13:      return  A < B
+		 * 14:    end if
+		 * 15:  end if
+		 */
+		s1    = data->PV;   /* A */
+		s2    = query->PV;  /* B */
+		ends1 = NULL;
+		ends2 = NULL;
+		n1    = 0;
+		n2    = 0;
+		while (s1 != NULL || s2 != NULL) {
+			if (s1 != NULL && s2 != NULL) {
+				if (ends1 == NULL) {
+					/* 3.2#L2-6: first component integer comparison */
+					n1 = strtoll(s1, &ends1, 10);
+					if (ends1 == s1)
+						n1 = -1;
+					n2 = strtoll(s2, &ends2, 10);
+					if (ends2 == s2)
+						n2 = -1;
+				} else {
+					/* 3.2#L9-11: run algorithm 3.3 for remaining
+					 * components */
+
+					/* 3.3#L1-9: if a leading zero is present do strcmp */
+					if (*s1 == '0' || *s2 == '0') {  /* 3.3#L1 */
+						/* find end of component */
+						for (ends1 = s1;
+							 *ends1 != '\0' &&
+							 *ends1 != '.' &&
+							 *ends1 != '_';
+							 ends1++)
+							;
+						for (ends2 = s2;
+							 *ends2 != '\0' &&
+							 *ends2 != '.' &&
+							 *ends2 != '_';
+							 ends2++)
+							;
+						/* 3.3L2-3: remove *trailing* zeros */
+						for (ends1--; ends1 > s1 && *ends1 == '0'; ends1--)
+							;
+						for (ends2--; ends2 > s2 && *ends2 == '0'; ends2--)
+							;
+						/* 3.3L4 ASCII stringwise comparison */
+						n1 = ends1 - s1;
+						n2 = ends2 - s2;
+						n1 = strncmp(s1, s2, n1 > n2 ? n1 : n2);
+						n2 = 0;
+					} else {  /* 3.3#L9 */
+						n1 = strtoll(s1, &ends1, 10);
+						if (ends1 == s1)
+							n1 = -1;
+						n2 = strtoll(s2, &ends2, 10);
+						if (ends2 == s2)
+							n2 = -1;
+					}
 				}
-				if (*s1 == '0' && isdigit(*s2))
-					return _atom_compare_match(OLDER, pfx_op);
-				else if (*s2 == '0' && isdigit(*s1))
-					return _atom_compare_match(NEWER, pfx_op);
-			} else if (sfx_op == ATOM_OP_STAR && !s2 && !ver_bits)
+			} else if (sfx_op == ATOM_OP_STAR && s2 == NULL && !ver_bits) {
 				return _atom_compare_match(EQUAL, pfx_op);
-			n1 = (s1 ? atoll(s1) : 0);
-			n2 = (s2 ? atoll(s2) : 0);
+			} else {  /* 3.2#L12-16 */
+				if (s1 == NULL) {
+					n1    = -1;
+					n2    =  0;
+					ends1 =  NULL;
+				}
+				else if (s2 == NULL) {
+					n1    =  0;
+					n2    = -1;
+					ends2 =  NULL;
+				}
+			}
+
 			if (n1 < n2)
 				return _atom_compare_match(OLDER, pfx_op);
 			else if (n1 > n2)
 				return _atom_compare_match(NEWER, pfx_op);
-			if (s1) {
-				s1 = strchr(s1, '.');
-				if (s1) ++s1;
+
+			s1 = *ends1 == '\0' ? NULL : ends1;
+			if (s1 != NULL) {
+				if (*s1 != '.')
+					s1 = strchr(s1, '.');
+				if (s1 != NULL)
+					s1++;
 			}
-			if (s2) {
-				s2 = strchr(s2, '.');
-				if (s2) ++s2;
+			s2 = *ends2 == '\0' ? NULL : ends2;
+			if (s2 != NULL) {
+				if (*s2 != '.')
+					s2 = strchr(s2, '.');
+				if (s2 != NULL)
+					s2++;
 			}
 		}
 
-		/* compare trailing letter 1.0[z]_alpha1 */
+		/* step 3: compare trailing letter 1.0[z]_alpha1
+		 *
+		 * Algorithm 3.4: Version comparison logic for letter components
+		 * 1:  let Al be the letter component of A if any, otherwise the
+		 *     empty string
+		 * 2:  let Bl be the letter component of B if any, otherwise the
+		 *     empty string
+		 * 3:  if Al > Bl using ASCII stringwise comparison then
+		 * 4:    return  A > B
+		 * 5:  else if Al < Bl using ASCII stringwise comparison then
+		 * 6:    return  A < B
+		 * 7:  end if
+		 */
 		if (sfx_op == ATOM_OP_STAR) {
 			ver_bits >>= 1;
 			if (!query->letter && !ver_bits)
@@ -738,12 +867,52 @@ atom_compare_flg(const depend_atom *data, const depend_atom *query, int flags)
 			return _atom_compare_match(OLDER, pfx_op);
 		if (data->letter > query->letter)
 			return _atom_compare_match(NEWER, pfx_op);
-		/* find differing suffixes 1.0z[_alpha1] */
-		const atom_suffix *as1 = &data->suffixes[0];
-		const atom_suffix *as2 = &query->suffixes[0];
+
+		/* Algorithm 3.5: Version comparison logic for suffixes
+		 *  1:  define the notations Ask and Bsk to mean the kth suffix
+		 *      of A and B respectively, using 0-based indexing
+		 *  2:  let Asn be the number of suffixes of A
+		 *  3:  let Bsn be the number of suffixes of B
+		 *  4:  for all i such that i ≥ 0 and i < Asn and i < Bsn, in
+		 *      ascending order do
+		 *  5:    compare Asi and Bsi using algorithm 3.6
+		 *  6:  end for
+		 *  7:  if Asn > Bsn then
+		 *  8:    if AsBsn is of type _p then
+		 *  9:      return  A > B
+		 * 10:    else
+		 * 11:      return  A < B
+		 * 12:    end if
+		 * 13:  else if Asn < Bsn then
+		 * 14:    if BsAsn is of type _p then
+		 * 15:      return  A < B
+		 * 16:    else
+		 * 17:      return  A > B
+		 * 18:    end if
+		 * 19:  end if
+		 *
+		 * Algorithm 3.6: Version comparison logic for each suffix
+		 *  1:  if Asi and Bsi are of the same type (_alpha vs _beta etc) then
+		 *  2:    let As′i be the integer part of Asi if any, otherwise 0
+		 *  3:    let Bs′i be the integer part of Bsi if any, otherwise 0
+		 *  4:    if As′i > Bs′i, using integer comparison then
+		 *  5:      return  A > B
+		 *  6:    else if As′i < Bs′i, using integer comparison then
+		 *  7:      return  A < B
+		 *  8:    end if
+		 *  9:  else if the type of Asi is greater than the type of Bsi
+		 *      using the ordering _alpha < _beta < _pre < _rc < _p then
+		 * 10:    return  A > B
+		 * 11:  else
+		 * 12:    return  A < B
+		 * 13:  end if
+		 */
+
+		/* step 4: find differing suffixes 1.0z[_alpha1] */
+		as1 = &data->suffixes[0];
+		as2 = &query->suffixes[0];
 		while (as1->suffix == as2->suffix) {
-			if (as1->suffix == VER_NORM ||
-			    as2->suffix == VER_NORM)
+			if (as1->suffix == VER_NORM || as2->suffix == VER_NORM)
 				break;
 
 			if (as1->sint != as2->sint)
@@ -752,17 +921,18 @@ atom_compare_flg(const depend_atom *data, const depend_atom *query, int flags)
 			as1++;
 			as2++;
 		}
+
 		/* compare suffixes 1.0z[_alpha]1 */
 		if (sfx_op == ATOM_OP_STAR) {
 			ver_bits >>= 1;
 			if (as2->suffix == VER_NORM && !ver_bits)
 				return _atom_compare_match(EQUAL, pfx_op);
 		}
-		if (as1->suffix < as2->suffix)
+		if (as1->suffix < as2->suffix)  /* 3.6#L9 */
 			return _atom_compare_match(OLDER, pfx_op);
 		else if (as1->suffix > as2->suffix)
 			return _atom_compare_match(NEWER, pfx_op);
-		/* compare suffix number 1.0z_alpha[1] */
+		/* compare suffix number 1.0z_alpha[1] 3.6#L4 */
 		if (sfx_op == ATOM_OP_STAR && !as2->sint && !ver_bits)
 			return _atom_compare_match(EQUAL, pfx_op);
 		else if (as1->sint < as2->sint)
@@ -773,7 +943,18 @@ atom_compare_flg(const depend_atom *data, const depend_atom *query, int flags)
 	} else if (data->PV || query->PV)
 		return EQUAL;
 
-	/* Make sure the -r# is the same. */
+	/* Algorithm 3.7: Version comparison logic for revision components
+	 * 1:  let Ar be the integer part of the revision component of A if
+	 *     any, otherwise 0
+	 * 2:  let Br be the integer part of the revision component of B if
+	 *     any, otherwise 0
+	 * 3:  if Ar > Br using integer comparison then
+	 * 4:    return  A > B
+	 * 5:  else if Ar < Br using integer comparison then
+	 * 6:    return  A < B
+	 * 7:  end if
+	 */
+	/* Make sure the -r# is the same. 3.7 */
 	if ((sfx_op == ATOM_OP_STAR && query->PR_int == 0) ||
 	    pfx_op == ATOM_OP_PV_EQUAL ||
 		flags & ATOM_COMP_NOREV ||

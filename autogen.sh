@@ -43,6 +43,7 @@ mods="
 	stat-time
 	strcasestr-simple
 	strncat
+	strtoll
 	symlinkat
 	sys_stat
 	unlinkat
