@@ -1483,6 +1483,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		if (strcmp(p, "REPO") == 0) { /* from global section in older files */
 			ctx->repo = c;
 		} else if (strcmp(p, "CPV") == 0) {
+			meta.Q_CPV = c;
 			if (atom != NULL)
 				atom_implode(atom);
 			atom = atom_explode(c);
@@ -1510,6 +1511,15 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		match_key(PDEPEND);
 		match_key2(REPO, repository);
 		match_key(SIZE);
+		match_key(BDEPEND);
+		//
+		match_key(PATH);
+		match_key(BUILD_ID);
+		match_key(BUILD_TIME);
+		match_key(REQUIRES);
+		match_key(RESTRICT);
+		match_key2(PROVIDES, PROVIDE);
+		//
 #undef match_key
 #undef match_key2
 		}
@@ -1812,11 +1822,22 @@ tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
 			n = xzalloc(sizeof(tree_match_ctx)); \
 			n->atom = atom; \
 			n->pkg = pkg_ctx; \
-			snprintf(n->path, sizeof(n->path), "%s/%s/%s%s", \
+			if (C->ctx->cachetype == CACHE_PACKAGES) { \
+				/* .xpak packages store their PATH a in cachefile var */ \
+				if (pkg_ctx->meta->Q_PATH != NULL) { \
+					snprintf(n->path, sizeof(n->path), "%s/%s", \
+						(char *)C->ctx->path, pkg_ctx->meta->Q_PATH); \
+				/* must be a regular .tbz2 otherwise */ \
+				} else { \
+					snprintf(n->path, sizeof(n->path), "%s/%s/%s%s", \
+						(char *)C->ctx->path, C->name, pkg_ctx->name, ".tbz2"); \
+				} \
+			} else { \
+				snprintf(n->path, sizeof(n->path), "%s/%s/%s%s", \
 					(char *)C->ctx->path, C->name, pkg_ctx->name, \
 					C->ctx->cachetype == CACHE_EBUILD ? ".ebuild" : \
-					C->ctx->cachetype == CACHE_BINPKGS ? ".tbz2" : \
-					C->ctx->cachetype == CACHE_PACKAGES ? ".tbz2" : ""); \
+					C->ctx->cachetype == CACHE_BINPKGS ? ".tbz2" : ""); \
+			} \
 			if (flags & TREE_MATCH_METADATA) \
 				n->meta = tree_pkg_read(pkg_ctx); \
 			if (C->ctx->cachetype == CACHE_BINPKGS || \

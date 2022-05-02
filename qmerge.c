@@ -87,6 +87,7 @@ char force_download = 0;
 char follow_rdepends = 1;
 char qmerge_strict = 0;
 char update_only = 0;
+char binpkg_multi_instance = 0;
 bool debug = false;
 const char Packages[] = "Packages";
 
@@ -2024,6 +2025,12 @@ int qmerge_main(int argc, char **argv)
 		install = 1;
 
 	qmerge_strict = contains_set("strict", features) ? 1 : 0;
+
+	binpkg_multi_instance = contains_set("binpkg-multi-instance", features) ? 1 : 0;
+	if (binpkg_multi_instance) {
+		warn("FEATURES=binpkg-multi-instance is set, but the qmerge");
+		warn(" .xpak multi-directory structure support is in beta!!");
+	}
 
 	/* Short circut this. */
 	if (install && !pretend) {

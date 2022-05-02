@@ -99,6 +99,13 @@ struct tree_pkg_meta {
 	char *Q_PROPERTIES;
 	char *Q_BDEPEND;
 	/* binpkgs/vdb */
+	//
+	char *Q_CPV;
+	char *Q_PATH;
+	char *Q_BUILD_ID;
+	char *Q_BUILD_TIME;
+	char *Q_REQUIRES;
+	//
 	char *Q_DEFINED_PHASES;
 	char *Q_REQUIRED_USE;
 	char *Q_CONTENTS;
