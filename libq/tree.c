@@ -1483,7 +1483,6 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		if (strcmp(p, "REPO") == 0) { /* from global section in older files */
 			ctx->repo = c;
 		} else if (strcmp(p, "CPV") == 0) {
-			meta.Q_CPV = c;
 			if (atom != NULL)
 				atom_implode(atom);
 			atom = atom_explode(c);
@@ -1511,15 +1510,9 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		match_key(PDEPEND);
 		match_key2(REPO, repository);
 		match_key(SIZE);
-		match_key(BDEPEND);
-		//
 		match_key(PATH);
 		match_key(BUILD_ID);
 		match_key(BUILD_TIME);
-		match_key(REQUIRES);
-		match_key(RESTRICT);
-		match_key2(PROVIDES, PROVIDE);
-		//
 #undef match_key
 #undef match_key2
 		}

@@ -2026,8 +2026,9 @@ int qmerge_main(int argc, char **argv)
 
 	qmerge_strict = contains_set("strict", features) ? 1 : 0;
 
+	/* TODO: remove warning when satisfied with binpkg-multi-instance handling */
 	binpkg_multi_instance = contains_set("binpkg-multi-instance", features) ? 1 : 0;
-	if (binpkg_multi_instance) {
+	if (verbose > 1 && binpkg_multi_instance) {
 		warn("FEATURES=binpkg-multi-instance is set, but the qmerge");
 		warn(" .xpak multi-directory structure support is in beta!!");
 	}
