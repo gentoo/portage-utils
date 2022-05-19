@@ -954,16 +954,24 @@ atom_compare_flg(const depend_atom *data, const depend_atom *query, int flags)
 	 * 6:    return  A < B
 	 * 7:  end if
 	 */
-	/* Make sure the -r# is the same. 3.7 */
+	/* first handle wildcarding cases */
 	if ((sfx_op == ATOM_OP_STAR && query->PR_int == 0) ||
 	    pfx_op == ATOM_OP_PV_EQUAL ||
-		flags & ATOM_COMP_NOREV ||
-	    data->PR_int == query->PR_int)
+		flags & ATOM_COMP_NOREV)
 		return _atom_compare_match(EQUAL, pfx_op);
-	else if (data->PR_int < query->PR_int)
+	/* Make sure the -r# is the same. 3.7 */
+	if (data->PR_int < query->PR_int)
 		return _atom_compare_match(OLDER, pfx_op);
-	else
+	else if (data->PR_int > query->PR_int)
 		return _atom_compare_match(NEWER, pfx_op);
+
+	/* binpkg-multi-instance support */
+	if (data->BUILDID < query->BUILDID)
+		return _atom_compare_match(OLDER, pfx_op);
+	if (data->BUILDID > query->BUILDID)
+		return _atom_compare_match(NEWER, pfx_op);
+
+	return _atom_compare_match(EQUAL, pfx_op);
 }
 
 atom_equality
