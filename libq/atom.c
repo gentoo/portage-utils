@@ -1045,6 +1045,7 @@ atom_to_string_r(char *buf, size_t buflen, depend_atom *a)
  *    - any prefix of these (e.g. CAT, CA, C) will match as well
  *  pfx - the version qualifier if set (e.g. > < = !)
  *  sfx - the version qualifier if set (e.g. *)
+ *  BUILDID - the binpkg-multi-instance id
  */
 char *
 atom_format_r(
@@ -1173,6 +1174,20 @@ atom_format_r(
 							if (connected)
 								append_buf(buf, buflen, "%s", "]");
 						}
+					}
+				} else if (strncmp("BUILDID", fmt, len) == 0) {
+					if (showit || atom->BUILDID > 0) {
+						/* this is really shitty, '-' is not feasible,
+						 * but used by Portage
+						 * https://archives.gentoo.org/gentoo-portage-dev/message/054f5f1f334b60bdb1b7f80ff4755bd4
+						 * using this we cannot parse what we would
+						 * produce, but look more like the original
+						 * since it's not clear this is necessary at
+						 * all, I decided to avoid any confusion and use
+						 * '~' so we can see this is not a version bit */
+						append_buf(buf, buflen, "%s%s%u%s",
+								   RED, connected ? "~" : "",
+								   atom->BUILDID, NORM);
 					}
 				} else
 					append_buf(buf, buflen, "<BAD:%.*s>", (int)len, fmt);
