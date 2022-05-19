@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -68,23 +68,24 @@ typedef struct _atom_usedep {
 } atom_usedep;
 
 typedef struct {
-	atom_blocker blocker;
+	atom_blocker  blocker;
 	atom_operator pfx_op;
 	atom_operator sfx_op;
-	char *CATEGORY;
-	char *PN;
-	char *PV;
-	char *PF;
-	unsigned int PR_int;
-	char letter;
-	atom_suffix *suffixes;
-	char *PVR;
-	char *P;
-	atom_usedep *usedeps;
-	char *SLOT;
-	char *SUBSLOT;
-	atom_slotdep slotdep;
-	char *REPO;
+	char         *CATEGORY;
+	char         *PN;
+	char         *PV;
+	char         *PF;
+	unsigned int  PR_int;
+	char          letter;
+	atom_suffix  *suffixes;
+	char         *PVR;
+	char         *P;
+	atom_usedep  *usedeps;
+	char         *SLOT;
+	char         *SUBSLOT;
+	atom_slotdep  slotdep;
+	char         *REPO;
+	unsigned int  BUILDID;
 } depend_atom;
 
 extern const char * const booga[];
