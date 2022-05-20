@@ -1015,6 +1015,8 @@ atom_to_string_r(char *buf, size_t buflen, depend_atom *a)
 		off += snprintf(buf + off, buflen - off, "-%s", a->PV);
 	if (a->PR_int > 0)
 		off += snprintf(buf + off, buflen - off, "-r%d", a->PR_int);
+	if (a->BUILDID > 0)
+		off += snprintf(buf + off, buflen - off, "~%u", a->BUILDID);
 	off += snprintf(buf + off, buflen - off, "%s", atom_op_str[a->sfx_op]);
 	if (a->SLOT != NULL || a->slotdep != ATOM_SD_NONE)
 		off += snprintf(buf + off, buflen - off, ":%s%s%s%s",
