@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005 Martin Schlemmer     - <azarah@gentoo.org>
@@ -501,11 +501,15 @@ int qlist_main(int argc, char **argv)
 		}
 		snprintf(qfmt, sizeof(qfmt), "%sCATEGORY%s"
 				"%s%s%s"   /* PN/PF */
+				"%s%s%s"   /* BUILDID */
 				"%s%s%s"   /* SLOT */
 				"%s%s%s"   /* SUBSLOT */
 				"%s%s%s",  /* REPO */
 				l, r,
 				l, verbose ? "PF" : "PN", r,
+				verbose && state.do_binpkgs ? l : "",
+					verbose && state.do_binpkgs ? "BUILDID" : "",
+					verbose && state.do_binpkgs ? r : "",
 				show_slots >= 1 ? l : "",
 					show_slots >= 1 ? "SLOT" : "",
 					show_slots >= 1 ? r : "",
