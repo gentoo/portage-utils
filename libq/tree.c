@@ -1440,6 +1440,8 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 					}
 					cat->pkg_ctxs = (tree_pkg_ctx **)atom;  /* for name */
 				}
+				if (meta.Q_BUILDID != NULL)
+					atom->BUILDID = atoi(meta.Q_BUILDID);
 				pkgnamelen = snprintf(pkgname, sizeof(pkgname),
 						"%s.tbz2", atom->PF);
 				pkgname[pkgnamelen - (sizeof(".tbz2") - 1)] = '\0';
@@ -1510,6 +1512,9 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		match_key(PDEPEND);
 		match_key2(REPO, repository);
 		match_key(SIZE);
+		match_key(BDEPEND);
+		match_key(PATH);
+		match_key2(BUILD_ID, BUILDID);
 #undef match_key
 #undef match_key2
 		}
@@ -1812,11 +1817,19 @@ tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
 			n = xzalloc(sizeof(tree_match_ctx)); \
 			n->atom = atom; \
 			n->pkg = pkg_ctx; \
-			snprintf(n->path, sizeof(n->path), "%s/%s/%s%s", \
-					(char *)C->ctx->path, C->name, pkg_ctx->name, \
-					C->ctx->cachetype == CACHE_EBUILD ? ".ebuild" : \
-					C->ctx->cachetype == CACHE_BINPKGS ? ".tbz2" : \
-					C->ctx->cachetype == CACHE_PACKAGES ? ".tbz2" : ""); \
+			if (C->ctx->cachetype == CACHE_PACKAGES && \
+				pkg_ctx->meta->Q_PATH != NULL) \
+			{ \
+				/* binpkg-multi-instance has a PATH ready for us */ \
+				snprintf(n->path, sizeof(n->path), "%s/%s", \
+						 (char *)C->ctx->path, pkg_ctx->meta->Q_PATH); \
+			} else { \
+				snprintf(n->path, sizeof(n->path), "%s/%s/%s%s", \
+						 (char *)C->ctx->path, C->name, pkg_ctx->name, \
+						 C->ctx->cachetype == CACHE_EBUILD   ? ".ebuild" : \
+						 C->ctx->cachetype == CACHE_BINPKGS  ? ".tbz2" : \
+						 C->ctx->cachetype == CACHE_PACKAGES ? ".tbz2" : ""); \
+			} \
 			if (flags & TREE_MATCH_METADATA) \
 				n->meta = tree_pkg_read(pkg_ctx); \
 			if (C->ctx->cachetype == CACHE_BINPKGS || \

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -104,6 +104,8 @@ struct tree_pkg_meta {
 	char *Q_CONTENTS;
 	char *Q_USE;
 	char *Q_EPREFIX;
+	char *Q_PATH;     /* binpkg-multi-instance */
+	char *Q_BUILDID;  /* binpkg-multi-instance */
 	char *Q_repository;
 	char *Q_MD5;
 	char *Q_SHA1;
