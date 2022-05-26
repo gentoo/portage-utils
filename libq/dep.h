@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -9,6 +9,7 @@
 #include "atom.h"
 #include "colors.h"
 #include "set.h"
+#include "tree.h"
 #include "xarray.h"
 
 typedef enum {
@@ -28,10 +29,10 @@ static const char * const _dep_names[] = {
 };
 
 struct _dep_node {
-	dep_type type;
-	char *info;
-	char info_on_heap;
-	depend_atom *atom;
+	dep_type          type;
+	char             *info;
+	char              atom_resolved:1;
+	depend_atom      *atom;
 	struct _dep_node *parent;
 	struct _dep_node *neighbor;
 	struct _dep_node *children;
@@ -47,6 +48,7 @@ typedef struct _dep_node dep_node;
 
 dep_node *dep_grow_tree(const char *depend);
 void dep_print_tree(FILE *fp, const dep_node *root, size_t space, array_t *m, const char *c, int verbose);
+void dep_resolve_tree(dep_node *root, tree_ctx *t);
 void dep_burn_tree(dep_node *root);
 void dep_prune_use(dep_node *root, set *use);
 void dep_flatten_tree(const dep_node *root, array_t *out);

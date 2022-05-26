@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -20,6 +20,7 @@
 #include "atom.h"
 #include "dep.h"
 #include "set.h"
+#include "tree.h"
 #include "xarray.h"
 #include "xasprintf.h"
 
@@ -62,8 +63,6 @@ static void
 _dep_burn_node(dep_node *node)
 {
 	assert(node);
-	if (node->info_on_heap)
-		free(node->info);
 	if (node->atom)
 		atom_implode(node->atom);
 	free(node);
@@ -237,7 +236,6 @@ dep_print_tree(
 {
 	size_t s;
 	int indent = 4;  /* Gentoo 4-wide indent standard */
-	depend_atom *d = NULL;
 	bool singlechild = false;
 	bool nonewline = false;
 
@@ -260,33 +258,31 @@ dep_print_tree(
 	if (root->type == DEP_OR)
 		fprintf(fp, "|| (");
 	if (root->info) {
-		if (hlatoms != NULL && array_cnt(hlatoms) > 0 &&
-				root->type == DEP_NORM)
-		{
-			size_t i;
-			depend_atom *m;
-			char *oslot;
+		if (root->type == DEP_NORM) {
+			bool dohl = false;
 
-			d = root->atom;
-			d->pfx_op = d->sfx_op = ATOM_OP_NONE;
+			if (hlatoms != NULL && array_cnt(hlatoms) > 0)
+			{
+				size_t       i;
+				depend_atom *m;
 
-			array_for_each(hlatoms, i, m) {
-				oslot = d->SLOT;
-				if (m->SLOT == NULL)
-					d->SLOT = NULL;
-
-				if (atom_compare(m, d) == EQUAL) {
-					m = NULL;
-					break;
+				array_for_each(hlatoms, i, m) {
+					/* make m query, such that any specifics (SLOT,
+					 * pfx/sfx) from the depstring are ignored while
+					 * highlighting */
+					if (atom_compare(root->atom, m) == EQUAL) {
+						dohl = true;
+						break;
+					}
 				}
-				d->SLOT = oslot;
 			}
 
-			if (m == NULL) { /* match found */
-				fprintf(fp, "%s%s%s", hlcolor, root->info, NORM);
-			} else {
-				fprintf(fp, "%s", root->info);
-			}
+			fprintf(fp, "%s%s%s",
+					dohl ? hlcolor : "",
+					atom_to_string(root->atom),
+					dohl ? NORM : "");
+			if (root->atom_resolved && verbose > 0)
+				fprintf(fp, "  # %s", root->info);
 		} else {
 			fprintf(fp, "%s", root->info);
 		}
@@ -353,6 +349,31 @@ dep_prune_use(dep_node *root, set *use)
 	}
 	if (root->children)
 		dep_prune_use(root->children, use);
+}
+
+void
+dep_resolve_tree(dep_node *root, tree_ctx *t)
+{
+	if (root->type != DEP_NULL) {
+		if (root->type == DEP_NORM && root->atom) {
+			depend_atom    *d = root->atom;
+			tree_match_ctx *r = tree_match_atom(t, d,
+											 	TREE_MATCH_DEFAULT |
+											 	TREE_MATCH_LATEST);
+			if (r != NULL) {
+				atom_implode(d);
+				root->atom = atom_clone(r->atom);
+				root->atom_resolved = 1;
+				tree_match_close(r);
+			}
+		}
+
+		if (root->children)
+			dep_resolve_tree(root->children, t);
+	}
+
+	if (root->neighbor)
+		dep_resolve_tree(root->neighbor, t);
 }
 
 void
