@@ -915,8 +915,7 @@ divide (mpn_t a, mpn_t b, mpn_t *q)
       q_ptr[q_len++] = 1;
     }
   keep_q:
-  if (tmp_roomptr != NULL)
-    free (tmp_roomptr);
+  free (tmp_roomptr);
   q->limbs = q_ptr;
   q->nlimbs = q_len;
   return roomptr;
@@ -1873,11 +1872,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
     free (a.arg);
 
   if (PRINTF_FETCHARGS (args, &a) < 0)
-    {
-      CLEANUP ();
-      errno = EINVAL;
-      return NULL;
-    }
+    goto fail_1_with_EINVAL;
 
   {
     size_t buf_neededlength;
@@ -1913,19 +1908,12 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
         buf_malloced = buf;
       }
 
-    if (resultbuf != NULL)
-      {
-        result = resultbuf;
-        allocated = *lengthp;
-      }
-    else
-      {
-        result = NULL;
-        allocated = 0;
-      }
+    result = resultbuf;
+    allocated = (resultbuf != NULL ? *lengthp : 0);
     length = 0;
     /* Invariants:
-       result is either == resultbuf or == NULL or malloc-allocated.
+       result is either == resultbuf or malloc-allocated.
+       If result == NULL, resultbuf is == NULL as well.
        If length > 0, then result != NULL.  */
 
     /* Ensures that allocated >= needed.  Aborts through a jump to
@@ -1942,7 +1930,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
         memory_size = xtimes (allocated, sizeof (DCHAR_T));                  \
         if (size_overflow_p (memory_size))                                   \
           oom_statement                                                      \
-        if (result == resultbuf || result == NULL)                           \
+        if (result == resultbuf)                                             \
           memory = (DCHAR_T *) malloc (memory_size);                         \
         else                                                                 \
           memory = (DCHAR_T *) realloc (result, memory_size);                \
@@ -2112,15 +2100,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                               if (count == 0)
                                 break;
                               if (count < 0)
-                                {
-                                  if (!(result == resultbuf || result == NULL))
-                                    free (result);
-                                  if (buf_malloced != NULL)
-                                    free (buf_malloced);
-                                  CLEANUP ();
-                                  errno = EILSEQ;
-                                  return NULL;
-                                }
+                                goto fail_with_EILSEQ;
                               arg_end += count;
                               characters++;
                             }
@@ -2137,15 +2117,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                               if (count == 0)
                                 break;
                               if (count < 0)
-                                {
-                                  if (!(result == resultbuf || result == NULL))
-                                    free (result);
-                                  if (buf_malloced != NULL)
-                                    free (buf_malloced);
-                                  CLEANUP ();
-                                  errno = EILSEQ;
-                                  return NULL;
-                                }
+                                goto fail_with_EILSEQ;
                               arg_end += count;
                               characters++;
                             }
@@ -2191,14 +2163,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                                        converted, &converted_len);
 #  endif
                         if (converted == NULL)
-                          {
-                            if (!(result == resultbuf || result == NULL))
-                              free (result);
-                            if (buf_malloced != NULL)
-                              free (buf_malloced);
-                            CLEANUP ();
-                            return NULL;
-                          }
+                          goto fail_with_errno;
                         if (converted != result + length)
                           {
                             ENSURE_ALLOCATION_ELSE (xsum (length, converted_len),
@@ -2237,15 +2202,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                               if (count == 0)
                                 break;
                               if (count < 0)
-                                {
-                                  if (!(result == resultbuf || result == NULL))
-                                    free (result);
-                                  if (buf_malloced != NULL)
-                                    free (buf_malloced);
-                                  CLEANUP ();
-                                  errno = EILSEQ;
-                                  return NULL;
-                                }
+                                goto fail_with_EILSEQ;
                               arg_end += count;
                               characters++;
                             }
@@ -2262,15 +2219,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                               if (count == 0)
                                 break;
                               if (count < 0)
-                                {
-                                  if (!(result == resultbuf || result == NULL))
-                                    free (result);
-                                  if (buf_malloced != NULL)
-                                    free (buf_malloced);
-                                  CLEANUP ();
-                                  errno = EILSEQ;
-                                  return NULL;
-                                }
+                                goto fail_with_EILSEQ;
                               arg_end += count;
                               characters++;
                             }
@@ -2316,14 +2265,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                                         converted, &converted_len);
 #  endif
                         if (converted == NULL)
-                          {
-                            if (!(result == resultbuf || result == NULL))
-                              free (result);
-                            if (buf_malloced != NULL)
-                              free (buf_malloced);
-                            CLEANUP ();
-                            return NULL;
-                          }
+                          goto fail_with_errno;
                         if (converted != result + length)
                           {
                             ENSURE_ALLOCATION_ELSE (xsum (length, converted_len),
@@ -2362,15 +2304,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                               if (count == 0)
                                 break;
                               if (count < 0)
-                                {
-                                  if (!(result == resultbuf || result == NULL))
-                                    free (result);
-                                  if (buf_malloced != NULL)
-                                    free (buf_malloced);
-                                  CLEANUP ();
-                                  errno = EILSEQ;
-                                  return NULL;
-                                }
+                                goto fail_with_EILSEQ;
                               arg_end += count;
                               characters++;
                             }
@@ -2387,15 +2321,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                               if (count == 0)
                                 break;
                               if (count < 0)
-                                {
-                                  if (!(result == resultbuf || result == NULL))
-                                    free (result);
-                                  if (buf_malloced != NULL)
-                                    free (buf_malloced);
-                                  CLEANUP ();
-                                  errno = EILSEQ;
-                                  return NULL;
-                                }
+                                goto fail_with_EILSEQ;
                               arg_end += count;
                               characters++;
                             }
@@ -2441,14 +2367,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                                         converted, &converted_len);
 #  endif
                         if (converted == NULL)
-                          {
-                            if (!(result == resultbuf || result == NULL))
-                              free (result);
-                            if (buf_malloced != NULL)
-                              free (buf_malloced);
-                            CLEANUP ();
-                            return NULL;
-                          }
+                          goto fail_with_errno;
                         if (converted != result + length)
                           {
                             ENSURE_ALLOCATION_ELSE (xsum (length, converted_len),
@@ -2590,16 +2509,8 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                             /* Found the terminating NUL.  */
                             break;
                           if (count < 0)
-                            {
-                              /* Invalid or incomplete multibyte character.  */
-                              if (!(result == resultbuf || result == NULL))
-                                free (result);
-                              if (buf_malloced != NULL)
-                                free (buf_malloced);
-                              CLEANUP ();
-                              errno = EILSEQ;
-                              return NULL;
-                            }
+                            /* Invalid or incomplete multibyte character.  */
+                            goto fail_with_EILSEQ;
                           arg_end += count;
                           characters++;
                         }
@@ -2626,16 +2537,8 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                             /* Found the terminating NUL.  */
                             break;
                           if (count < 0)
-                            {
-                              /* Invalid or incomplete multibyte character.  */
-                              if (!(result == resultbuf || result == NULL))
-                                free (result);
-                              if (buf_malloced != NULL)
-                                free (buf_malloced);
-                              CLEANUP ();
-                              errno = EILSEQ;
-                              return NULL;
-                            }
+                            /* Invalid or incomplete multibyte character.  */
+                            goto fail_with_EILSEQ;
                           arg_end += count;
                           characters++;
                         }
@@ -2752,16 +2655,8 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                             break;
                           count = local_wcrtomb (cbuf, *arg_end, &state);
                           if (count < 0)
-                            {
-                              /* Cannot convert.  */
-                              if (!(result == resultbuf || result == NULL))
-                                free (result);
-                              if (buf_malloced != NULL)
-                                free (buf_malloced);
-                              CLEANUP ();
-                              errno = EILSEQ;
-                              return NULL;
-                            }
+                            /* Cannot convert.  */
+                            goto fail_with_EILSEQ;
                           if (precision < (unsigned int) count)
                             break;
                           arg_end++;
@@ -2793,16 +2688,8 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                             break;
                           count = local_wcrtomb (cbuf, *arg_end, &state);
                           if (count < 0)
-                            {
-                              /* Cannot convert.  */
-                              if (!(result == resultbuf || result == NULL))
-                                free (result);
-                              if (buf_malloced != NULL)
-                                free (buf_malloced);
-                              CLEANUP ();
-                              errno = EILSEQ;
-                              return NULL;
-                            }
+                            /* Cannot convert.  */
+                            goto fail_with_EILSEQ;
                           arg_end++;
                           characters += count;
                         }
@@ -2859,12 +2746,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                   if (tmpdst == NULL)
                     {
                       free (tmpsrc);
-                      if (!(result == resultbuf || result == NULL))
-                        free (result);
-                      if (buf_malloced != NULL)
-                        free (buf_malloced);
-                      CLEANUP ();
-                      return NULL;
+                      goto fail_with_errno;
                     }
                   free (tmpsrc);
 #  endif
@@ -2938,16 +2820,8 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                             abort ();
                           count = local_wcrtomb (cbuf, *arg, &state);
                           if (count <= 0)
-                            {
-                              /* Cannot convert.  */
-                              if (!(result == resultbuf || result == NULL))
-                                free (result);
-                              if (buf_malloced != NULL)
-                                free (buf_malloced);
-                              CLEANUP ();
-                              errno = EILSEQ;
-                              return NULL;
-                            }
+                            /* Cannot convert.  */
+                            goto fail_with_EILSEQ;
                           ENSURE_ALLOCATION (xsum (length, count));
                           memcpy (result + length, cbuf, count);
                           length += count;
@@ -3083,14 +2957,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                                               NULL,
                                               NULL, &tmpdst_len);
                   if (tmpdst == NULL)
-                    {
-                      if (!(result == resultbuf || result == NULL))
-                        free (result);
-                      if (buf_malloced != NULL)
-                        free (buf_malloced);
-                      CLEANUP ();
-                      return NULL;
-                    }
+                    goto fail_with_errno;
 # endif
 
                   if (has_width)
@@ -5463,13 +5330,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                               errno = EINVAL;
                           }
 
-                        if (!(result == resultbuf || result == NULL))
-                          free (result);
-                        if (buf_malloced != NULL)
-                          free (buf_malloced);
-                        CLEANUP ();
-
-                        return NULL;
+                        goto fail_with_errno;
                       }
 
 #if USE_SNPRINTF
@@ -5603,14 +5464,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                                                     NULL,
                                                     NULL, &tmpdst_len);
                         if (tmpdst == NULL)
-                          {
-                            if (!(result == resultbuf || result == NULL))
-                              free (result);
-                            if (buf_malloced != NULL)
-                              free (buf_malloced);
-                            CLEANUP ();
-                            return NULL;
-                          }
+                          goto fail_with_errno;
                         ENSURE_ALLOCATION_ELSE (xsum (length, tmpdst_len),
                                                 { free (tmpdst); goto out_of_memory; });
                         DCHAR_CPY (result + length, tmpdst, tmpdst_len);
@@ -5835,25 +5689,40 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
 
 #if USE_SNPRINTF
   overflow:
-    if (!(result == resultbuf || result == NULL))
-      free (result);
-    if (buf_malloced != NULL)
-      free (buf_malloced);
-    CLEANUP ();
     errno = EOVERFLOW;
-    return NULL;
+    goto fail_with_errno;
 #endif
 
   out_of_memory:
-    if (!(result == resultbuf || result == NULL))
+    errno = ENOMEM;
+    goto fail_with_errno;
+
+#if ENABLE_UNISTDIO || ((!USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF || (NEED_PRINTF_DIRECTIVE_LS && !defined IN_LIBINTL) || ENABLE_WCHAR_FALLBACK) && HAVE_WCHAR_T)
+  fail_with_EILSEQ:
+    errno = EILSEQ;
+    goto fail_with_errno;
+#endif
+
+  fail_with_errno:
+    if (result != resultbuf)
       free (result);
     if (buf_malloced != NULL)
       free (buf_malloced);
-  out_of_memory_1:
     CLEANUP ();
-    errno = ENOMEM;
     return NULL;
   }
+
+ out_of_memory_1:
+  errno = ENOMEM;
+  goto fail_1_with_errno;
+
+ fail_1_with_EINVAL:
+  errno = EINVAL;
+  goto fail_1_with_errno;
+
+ fail_1_with_errno:
+  CLEANUP ();
+  return NULL;
 }
 
 #undef MAX_ROOM_NEEDED

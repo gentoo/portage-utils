@@ -1,4 +1,4 @@
-# gnulib-common.m4 serial 72
+# gnulib-common.m4 serial 73
 dnl Copyright (C) 2007-2022 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
@@ -69,7 +69,9 @@ AC_DEFUN([gl_COMMON_BODY], [
 [/* Attributes.  */
 #if (defined __has_attribute \
      && (!defined __clang_minor__ \
-         || 3 < __clang_major__ + (5 <= __clang_minor__)))
+         || (defined __apple_build_version__ \
+             ? 6000000 <= __apple_build_version__ \
+             : 3 < __clang_major__ + (5 <= __clang_minor__))))
 # define _GL_HAS_ATTRIBUTE(attr) __has_attribute (__##attr##__)
 #else
 # define _GL_HAS_ATTRIBUTE(attr) _GL_ATTR_##attr
@@ -104,6 +106,10 @@ AC_DEFUN([gl_COMMON_BODY], [
 #endif
 
 #ifdef __has_c_attribute
+# if ((defined __STDC_VERSION__ ? __STDC_VERSION__ : 0) <= 201710 \
+      && _GL_GNUC_PREREQ (4, 6))
+#  pragma GCC diagnostic ignored "-Wpedantic"
+# endif
 # define _GL_HAS_C_ATTRIBUTE(attr) __has_c_attribute (__##attr##__)
 #else
 # define _GL_HAS_C_ATTRIBUTE(attr) 0

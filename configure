@@ -870,6 +870,8 @@ GL_COND_OBJ_SYMLINKAT_FALSE
 GL_COND_OBJ_SYMLINKAT_TRUE
 GL_COND_OBJ_SYMLINK_FALSE
 GL_COND_OBJ_SYMLINK_TRUE
+GL_COND_OBJ_STRTOLL_FALSE
+GL_COND_OBJ_STRTOLL_TRUE
 GL_COND_OBJ_STRNCAT_FALSE
 GL_COND_OBJ_STRNCAT_TRUE
 GL_GNULIB_FFS
@@ -7767,7 +7769,6 @@ printf "%s\n" "#define __MINGW_USE_VC2005_COMPAT 1" >>confdefs.h
 
 
 
-
   # Code from module absolute-header:
   # Code from module alloca-opt:
   # Code from module assure:
@@ -7891,7 +7892,6 @@ printf "%s\n" "#define __MINGW_USE_VC2005_COMPAT 1" >>confdefs.h
   # Code from module ssize_t:
   # Code from module stat:
   # Code from module stat-time:
-  # Code from module statat:
   # Code from module std-gnu11:
   # Code from module stdalign:
   # Code from module stdbool:
@@ -7907,6 +7907,7 @@ printf "%s\n" "#define __MINGW_USE_VC2005_COMPAT 1" >>confdefs.h
   # Code from module string:
   # Code from module strings:
   # Code from module strncat:
+  # Code from module strtoll:
   # Code from module symlink:
   # Code from module symlinkat:
   # Code from module sys_stat:
@@ -29119,10 +29120,6 @@ fi
 
 
 
-
-printf "%s\n" "#define GNULIB_STATAT 1" >>confdefs.h
-
-
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for working stdalign.h" >&5
 printf %s "checking for working stdalign.h... " >&6; }
 if test ${gl_cv_header_working_stdalign_h+y}
@@ -30251,6 +30248,116 @@ fi
 
 
 printf "%s\n" "#define GNULIB_TEST_STRNCAT 1" >>confdefs.h
+
+
+
+
+
+
+  ac_fn_c_check_func "$LINENO" "strtoll" "ac_cv_func_strtoll"
+if test "x$ac_cv_func_strtoll" = xyes
+then :
+  printf "%s\n" "#define HAVE_STRTOLL 1" >>confdefs.h
+
+fi
+
+  if test $ac_cv_func_strtoll = yes; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether strtoll works" >&5
+printf %s "checking whether strtoll works... " >&6; }
+if test ${gl_cv_func_strtoll_works+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  if test "$cross_compiling" = yes
+then :
+  case "$host_os" in
+                    # Guess no on native Windows.
+            mingw*) gl_cv_func_strtoll_works="guessing no" ;;
+            *)      gl_cv_func_strtoll_works="$gl_cross_guess_normal" ;;
+          esac
+
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdlib.h>
+int
+main (void)
+{
+int result = 0;
+              char *term;
+              /* This test fails on Minix and native Windows.  */
+              {
+                const char input[] = "0x";
+                (void) strtoll (input, &term, 16);
+                if (term != input + 1)
+                  result |= 1;
+              }
+              return result;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_run "$LINENO"
+then :
+  gl_cv_func_strtoll_works=yes
+else $as_nop
+  gl_cv_func_strtoll_works=no
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $gl_cv_func_strtoll_works" >&5
+printf "%s\n" "$gl_cv_func_strtoll_works" >&6; }
+    case "$gl_cv_func_strtoll_works" in
+      *yes) ;;
+      *)    REPLACE_STRTOLL=1 ;;
+    esac
+  else
+    HAVE_STRTOLL=0
+  fi
+
+
+     if test $HAVE_STRTOLL = 0 || test $REPLACE_STRTOLL = 1; then
+  GL_COND_OBJ_STRTOLL_TRUE=
+  GL_COND_OBJ_STRTOLL_FALSE='#'
+else
+  GL_COND_OBJ_STRTOLL_TRUE='#'
+  GL_COND_OBJ_STRTOLL_FALSE=
+fi
+:
+    if test -z "${GL_COND_OBJ_STRTOLL_TRUE}" && test -z "${GL_COND_OBJ_STRTOLL_FALSE}"; then
+    GL_COND_OBJ_STRTOLL_TRUE='#'
+    GL_COND_OBJ_STRTOLL_FALSE='#'
+  fi
+
+  if test -z "$GL_COND_OBJ_STRTOLL_TRUE"; then :
+
+
+  :
+
+
+fi
+
+
+
+
+
+
+
+
+
+          GL_GNULIB_STRTOLL=1
+
+
+
+
+
+printf "%s\n" "#define GNULIB_TEST_STRTOLL 1" >>confdefs.h
 
 
 

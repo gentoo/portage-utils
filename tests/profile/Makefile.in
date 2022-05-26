@@ -212,6 +212,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/string_h.m4 \
 	$(top_srcdir)/autotools/m4/strings_h.m4 \
 	$(top_srcdir)/autotools/m4/strncat.m4 \
+	$(top_srcdir)/autotools/m4/strtoll.m4 \
 	$(top_srcdir)/autotools/m4/symlink.m4 \
 	$(top_srcdir)/autotools/m4/symlinkat.m4 \
 	$(top_srcdir)/autotools/m4/sys_socket_h.m4 \

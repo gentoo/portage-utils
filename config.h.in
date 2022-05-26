@@ -144,10 +144,6 @@
 #undef GNULIB_SCANF
 
 /* Define to a C preprocessor expression that evaluates to 1 or 0, depending
-   whether the gnulib module statat shall be considered present. */
-#undef GNULIB_STATAT
-
-/* Define to a C preprocessor expression that evaluates to 1 or 0, depending
    whether the gnulib module strerror shall be considered present. */
 #undef GNULIB_STRERROR
 
@@ -367,6 +363,9 @@
 
 /* Define to 1 when the gnulib module strncat should be tested. */
 #undef GNULIB_TEST_STRNCAT
+
+/* Define to 1 when the gnulib module strtoll should be tested. */
+#undef GNULIB_TEST_STRTOLL
 
 /* Define to 1 when the gnulib module symlink should be tested. */
 #undef GNULIB_TEST_SYMLINK
@@ -852,6 +851,9 @@
 
 /* Define to 1 if you have the `strnlen' function. */
 #undef HAVE_STRNLEN
+
+/* Define to 1 if you have the `strtoll' function. */
+#undef HAVE_STRTOLL
 
 /* Define to 1 if `st_atimensec' is a member of `struct stat'. */
 #undef HAVE_STRUCT_STAT_ST_ATIMENSEC
@@ -1517,7 +1519,9 @@
 /* Attributes.  */
 #if (defined __has_attribute \
      && (!defined __clang_minor__ \
-         || 3 < __clang_major__ + (5 <= __clang_minor__)))
+         || (defined __apple_build_version__ \
+             ? 6000000 <= __apple_build_version__ \
+             : 3 < __clang_major__ + (5 <= __clang_minor__))))
 # define _GL_HAS_ATTRIBUTE(attr) __has_attribute (__##attr##__)
 #else
 # define _GL_HAS_ATTRIBUTE(attr) _GL_ATTR_##attr
@@ -1552,6 +1556,10 @@
 #endif
 
 #ifdef __has_c_attribute
+# if ((defined __STDC_VERSION__ ? __STDC_VERSION__ : 0) <= 201710 \
+      && _GL_GNUC_PREREQ (4, 6))
+#  pragma GCC diagnostic ignored "-Wpedantic"
+# endif
 # define _GL_HAS_C_ATTRIBUTE(attr) __has_c_attribute (__##attr##__)
 #else
 # define _GL_HAS_C_ATTRIBUTE(attr) 0

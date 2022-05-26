@@ -53,6 +53,7 @@
 #  stat-time \
 #  strcasestr-simple \
 #  strncat \
+#  strtoll \
 #  symlinkat \
 #  sys_stat \
 #  unlinkat \
@@ -78,6 +79,7 @@ gl_MODULES([
   stat-time
   strcasestr-simple
   strncat
+  strtoll
   symlinkat
   sys_stat
   unlinkat

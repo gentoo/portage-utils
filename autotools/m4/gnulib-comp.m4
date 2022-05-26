@@ -42,7 +42,6 @@ AC_DEFUN([gl_EARLY],
   AC_REQUIRE([gl_USE_SYSTEM_EXTENSIONS])
   AC_REQUIRE([gl_PROG_AR_RANLIB])
 
-  AC_REQUIRE([AM_PROG_CC_C_O])
   # Code from module absolute-header:
   # Code from module alloca-opt:
   # Code from module assure:
@@ -166,7 +165,6 @@ AC_DEFUN([gl_EARLY],
   # Code from module ssize_t:
   # Code from module stat:
   # Code from module stat-time:
-  # Code from module statat:
   # Code from module std-gnu11:
   # Code from module stdalign:
   # Code from module stdbool:
@@ -182,6 +180,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module string:
   # Code from module strings:
   # Code from module strncat:
+  # Code from module strtoll:
   # Code from module symlink:
   # Code from module symlinkat:
   # Code from module sys_stat:
@@ -606,7 +605,6 @@ AC_DEFUN([gl_INIT],
   gl_SYS_STAT_MODULE_INDICATOR([stat])
   gl_STAT_TIME
   gl_STAT_BIRTHTIME
-  gl_MODULE_INDICATOR([statat]) dnl for lib/openat.h
   gl_STDALIGN_H
   gl_CONDITIONAL_HEADER([stdalign.h])
   AC_PROG_MKDIR_P
@@ -697,6 +695,13 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_STRNCAT
   ])
   gl_STRING_MODULE_INDICATOR([strncat])
+  gl_FUNC_STRTOLL
+  gl_CONDITIONAL([GL_COND_OBJ_STRTOLL],
+                 [test $HAVE_STRTOLL = 0 || test $REPLACE_STRTOLL = 1])
+  AM_COND_IF([GL_COND_OBJ_STRTOLL], [
+    gl_PREREQ_STRTOLL
+  ])
+  gl_STDLIB_MODULE_INDICATOR([strtoll])
   gl_FUNC_SYMLINK
   gl_CONDITIONAL([GL_COND_OBJ_SYMLINK],
                  [test $HAVE_SYMLINK = 0 || test $REPLACE_SYMLINK = 1])
@@ -1091,7 +1096,6 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/stat-w32.c
   lib/stat-w32.h
   lib/stat.c
-  lib/statat.c
   lib/stdalign.in.h
   lib/stdbool.in.h
   lib/stddef.in.h
@@ -1112,6 +1116,8 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/stripslash.c
   lib/strncasecmp.c
   lib/strncat.c
+  lib/strtol.c
+  lib/strtoll.c
   lib/symlink.c
   lib/symlinkat.c
   lib/sys_stat.in.h
@@ -1261,6 +1267,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/string_h.m4
   m4/strings_h.m4
   m4/strncat.m4
+  m4/strtoll.m4
   m4/symlink.m4
   m4/symlinkat.m4
   m4/sys_socket_h.m4

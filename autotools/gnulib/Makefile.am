@@ -48,6 +48,7 @@
 #  stat-time \
 #  strcasestr-simple \
 #  strncat \
+#  strtoll \
 #  symlinkat \
 #  sys_stat \
 #  unlinkat \
@@ -55,7 +56,7 @@
 #  vasprintf-posix \
 #  xalloc
 
-AUTOMAKE_OPTIONS = 1.11 gnits subdir-objects
+AUTOMAKE_OPTIONS = 1.14 gnits subdir-objects
 
 SUBDIRS =
 noinst_HEADERS =
@@ -1510,12 +1511,6 @@ EXTRA_DIST += stat-time.h
 
 ## end   gnulib module stat-time
 
-## begin gnulib module statat
-
-libgnu_a_SOURCES += statat.c
-
-## end   gnulib module statat
-
 ## begin gnulib module stdalign
 
 BUILT_SOURCES += $(STDALIGN_H)
@@ -2120,6 +2115,18 @@ libgnu_a_SOURCES += strncat.c
 endif
 
 ## end   gnulib module strncat
+
+## begin gnulib module strtoll
+
+if GL_COND_OBJ_STRTOLL
+libgnu_a_SOURCES += strtoll.c
+endif
+
+EXTRA_DIST += strtol.c
+
+EXTRA_libgnu_a_SOURCES += strtol.c
+
+## end   gnulib module strtoll
 
 ## begin gnulib module symlink
 
