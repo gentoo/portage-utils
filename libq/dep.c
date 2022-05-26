@@ -355,7 +355,7 @@ void
 dep_resolve_tree(dep_node *root, tree_ctx *t)
 {
 	if (root->type != DEP_NULL) {
-		if (root->type == DEP_NORM && root->atom) {
+		if (root->type == DEP_NORM && root->atom && !root->atom_resolved) {
 			depend_atom    *d = root->atom;
 			tree_match_ctx *r = tree_match_atom(t, d,
 											 	TREE_MATCH_DEFAULT |
