@@ -22,7 +22,7 @@
 #include "xasprintf.h"
 #include "xregex.h"
 
-#define QDEPENDS_FLAGS "drpbQitUF:S" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpbQitUF:SR" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
 	{"depend",    no_argument, NULL, 'd'},
 	{"rdepend",   no_argument, NULL, 'r'},
@@ -34,6 +34,7 @@ static struct option const qdepends_long_opts[] = {
 	{"use",       no_argument, NULL, 'U'},
 	{"format",     a_argument, NULL, 'F'},
 	{"pretty",    no_argument, NULL, 'S'},
+	{"resolve",   no_argument, NULL, 'R'},
 	COMMON_LONG_OPTS
 };
 static const char * const qdepends_opts_help[] = {
@@ -47,20 +48,23 @@ static const char * const qdepends_opts_help[] = {
 	"Apply profile USE-flags to conditional deps",
 	"Print matched atom using given format string",
 	"Pretty format specified depend strings",
+	"Resolve found dependencies to package versions",
 	COMMON_OPTS_HELP
 };
 #define qdepends_usage(ret) usage(ret, QDEPENDS_FLAGS, qdepends_long_opts, qdepends_opts_help, NULL, lookup_applet_idx("qdepends"))
 
 /* structures / types / etc ... */
 struct qdepends_opt_state {
-	unsigned int qmode;
-	array_t *atoms;
-	array_t *deps;
-	set *udeps;
-	char *depend;
-	size_t depend_len;
-	const char *format;
-	tree_ctx *vdb;
+	unsigned int  qmode;
+	array_t      *atoms;
+	array_t      *deps;
+	set          *udeps;
+	char         *depend;
+	size_t        depend_len;
+	const char   *format;
+	char          resolve:1;
+	tree_ctx     *vdb;
+	tree_ctx     *rtree;
 };
 
 #define QMODE_DEPEND     (1<<0)
@@ -173,6 +177,10 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			warn("failed to parse depstring from %s\n", atom_to_string(datom));
 			continue;
 		}
+
+		/* try and resolve expressions to real package atoms */
+		if (state->resolve)
+			dep_resolve_tree(dep_tree, state->rtree);
 
 		if (state->qmode & QMODE_TREE &&
 			!(state->qmode & QMODE_REVERSE) &&
@@ -301,12 +309,14 @@ int qdepends_main(int argc, char **argv)
 	DECLARE_ARRAY(atoms);
 	DECLARE_ARRAY(deps);
 	struct qdepends_opt_state state = {
-		.atoms = atoms,
-		.deps = deps,
-		.udeps = create_set(),
-		.qmode = 0,
-		.format = "%[CATEGORY]%[PF]",
-		.vdb = NULL,
+		.atoms   = atoms,
+		.deps    = deps,
+		.udeps   = create_set(),
+		.qmode   = 0,
+		.format  = "%[CATEGORY]%[PF]",
+		.resolve = false,
+		.vdb     = NULL,
+		.rtree   = NULL,
 	};
 	size_t i;
 	int ret;
@@ -328,6 +338,7 @@ int qdepends_main(int argc, char **argv)
 		case 't': state.qmode |= QMODE_TREE;      break;
 		case 'U': state.qmode |= QMODE_FILTERUSE; break;
 		case 'S': do_pretty = true;               break;
+		case 'R': state.resolve = true;           break;
 		case 'F': state.format = optarg;          break;
 		}
 	}
@@ -391,6 +402,8 @@ int qdepends_main(int argc, char **argv)
 		array_for_each(overlays, n, overlay) {
 			t = tree_open(portroot, overlay);
 			if (t != NULL) {
+				if (state.resolve)
+					state.rtree = tree_open(portroot, overlay);
 				if (!(state.qmode & QMODE_REVERSE) && array_cnt(atoms) > 0) {
 					array_for_each(atoms, i, atom) {
 						ret |= tree_foreach_pkg_sorted(t,
@@ -401,9 +414,13 @@ int qdepends_main(int argc, char **argv)
 							qdepends_results_cb, &state, NULL);
 				}
 				tree_close(t);
+				if (state.rtree)
+					tree_close(state.rtree);
 			}
 		}
-	} else {
+	} else {  /* INSTALLED */
+		if (state.resolve)
+			state.rtree = tree_open_vdb(portroot, portvdb);
 		if (!(state.qmode & QMODE_REVERSE) && array_cnt(atoms) > 0) {
 			array_for_each(atoms, i, atom) {
 				ret |= tree_foreach_pkg_fast(state.vdb,
@@ -413,6 +430,8 @@ int qdepends_main(int argc, char **argv)
 			ret |= tree_foreach_pkg_fast(state.vdb,
 					qdepends_results_cb, &state, NULL);
 		}
+		if (state.rtree)
+			tree_close(state.rtree);
 	}
 
 	if (state.vdb != NULL)
