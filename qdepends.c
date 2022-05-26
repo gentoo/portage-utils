@@ -199,11 +199,13 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 							             tree_pkg_meta_get(vpkg, BDEPEND);
 					if (depstr != NULL) {
 						dep_node *dep_vdb = dep_grow_tree(depstr);
-						if (dep_vdb != NULL)
+						if (dep_vdb != NULL) {
 							dep_flatten_tree(dep_vdb, state->deps);
-						else
+							dep_burn_tree(dep_vdb);
+						} else {
 							warn("failed to parse VDB depstring from %s\n",
-									atom_to_string(datom));
+								 atom_to_string(datom));
+						}
 					}
 					tree_close_pkg(vpkg);
 				}
