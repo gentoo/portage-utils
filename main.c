@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -747,7 +747,8 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 	repo = NULL;
 	for (p = strtok_r(buf, "\n", &s); p != NULL; p = strtok_r(NULL, "\n", &s))
 	{
-		/* trim trailing whitespace, remove comments, locate = */
+		/* trim trailing whitespace, remove comments, locate =, walking
+		 * backwards to the front of the string */
 		do_trim = true;
 		e = NULL;
 		for (r = q = s - 2; q >= p; q--) {
@@ -785,7 +786,7 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 		for (r = e - 1; r >= p && isspace((int)*r); r--)
 			*r = '\0';
 		/* and after the = */
-		for (e++; e < q && isspace((int)*e); e++)
+		for (*e++ = '\0'; e < q && isspace((int)*e); e++)
 			;
 
 		if (is_default && strcmp(p, "main-repo") == 0) {
