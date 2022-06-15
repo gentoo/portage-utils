@@ -784,22 +784,38 @@ atom_compare_flg(const depend_atom *data, const depend_atom *query, int flags)
 							 *ends1 != '_';
 							 ends1++)
 							;
+						if (ends1 != s1)
+							ends1--;
 						for (ends2 = s2;
 							 *ends2 != '\0' &&
 							 *ends2 != '.' &&
 							 *ends2 != '_';
 							 ends2++)
 							;
-						/* 3.3L2-3: remove *trailing* zeros */
-						for (ends1--; ends1 > s1 && *ends1 == '0'; ends1--)
-							;
-						for (ends2--; ends2 > s2 && *ends2 == '0'; ends2--)
-							;
-						/* 3.3L4 ASCII stringwise comparison */
-						n1 = ends1 - s1;
-						n2 = ends2 - s2;
-						n1 = strncmp(s1, s2, n1 > n2 ? n1 : n2);
-						n2 = 0;
+						if (ends2 != s2)
+							ends2--;
+						/* bug 852197: leading 0 means something else
+						 *              must follow */
+						if (ends1 - s1 > 1 || ends2 - s2 > 1) {
+							/* 3.3L2-3: remove *trailing* zeros */
+							for (; ends1 > s1 && *ends1 == '0'; ends1--)
+								;
+							for (; ends2 > s2 && *ends2 == '0'; ends2--)
+								;
+							/* 3.3L4 ASCII stringwise comparison */
+							n1 = ends1 - s1;
+							n2 = ends2 - s2;
+							n1 = strncmp(s1, s2, n1 > n2 ? n1 : n2);
+							n2 = 0;
+						} else {
+							/* repeat of 3.3#L9 (else case below) */
+							n1 = strtoll(s1, &ends1, 10);
+							if (ends1 == s1)
+								n1 = -1;
+							n2 = strtoll(s2, &ends2, 10);
+							if (ends2 == s2)
+								n2 = -1;
+						}
 					} else {  /* 3.3#L9 */
 						n1 = strtoll(s1, &ends1, 10);
 						if (ends1 == s1)
