@@ -73,14 +73,17 @@ q_CPPFLAGS = \
 	-I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib \
 	$(OPENMP_CFLAGS) \
+	$(LIBSSL_CFLAGS) \
+	$(LIBBL2_CFLAGS) \
+	$(LIBZ_CFLAGS) \
 	$(NULL)
 q_LDADD = \
 	$(top_builddir)/libq/libq.la \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
 	$(OPENMP_CFLAGS) \
-	$(LIBSSL) \
-	$(LIBBL2) \
-	$(LIBZ) \
+	$(LIBSSL_LIBS) \
+	$(LIBBL2_LIBS) \
+	$(LIBZ_LIBS) \
 	$(GPGME_LIBS) \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS) \
