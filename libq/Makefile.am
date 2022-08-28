@@ -34,9 +34,9 @@ QFILES += hash_md5_sha1.c hash_md5_sha1.h
 endif
 endif
 
-noinst_LTLIBRARIES = libq.la
-libq_la_SOURCES = $(QFILES)
-libq_la_CPPFLAGS = \
+noinst_LIBRARIES = libq.a
+libq_a_SOURCES = $(QFILES)
+libq_a_CPPFLAGS = \
 	$(OPENMP_CFLAGS) \
 	-I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib

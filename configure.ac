@@ -21,8 +21,7 @@ gl_EARLY
 gl_INIT
 
 AM_PROG_AR
-LT_INIT
-AC_SUBST([LIBTOOL_DEPS])
+AC_PROG_LN_S
 
 headers='#ifdef HAVE_STDDEF_H
 #include <stddef.h>

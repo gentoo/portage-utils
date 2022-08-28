@@ -7,7 +7,7 @@ e_CPPFLAGS = -I$(top_srcdir) \
 			 -I$(top_srcdir)/libq \
 			 -I$(top_builddir)/autotools/gnulib \
 			 -I$(top_srcdir)/autotools/gnulib
-e_LDADD = $(top_builddir)/libq/libq.la \
+e_LDADD = $(top_builddir)/libq/libq.a \
 		  $(top_builddir)/autotools/gnulib/libgnu.a \
 		  $(LIB_CLOCK_GETTIME) \
 		  $(LIB_EACCESS)
