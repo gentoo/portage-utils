@@ -54,12 +54,6 @@
 /* Define to 1 if // is a file system root distinct from /. */
 #undef DOUBLE_SLASH_IS_DISTINCT_ROOT
 
-/* Define if qmanifest should be compiled */
-#undef ENABLE_QMANIFEST
-
-/* Define if qtegrity should be compiled */
-#undef ENABLE_QTEGRITY
-
 /* Define this to 1 if F_DUPFD behavior does not match POSIX */
 #undef FCNTL_DUPFD_BUGGY
 
@@ -415,9 +409,6 @@
 /* Define if you have blake2b */
 #undef HAVE_BLAKE2B
 
-/* Define to 1 if you have the <blake2.h> header file. */
-#undef HAVE_BLAKE2_H
-
 /* Define to 1 if you have the <bp-sym.h> header file. */
 #undef HAVE_BP_SYM_H
 
@@ -559,9 +550,6 @@
 
 /* Define to 1 if you have the `dirfd' function. */
 #undef HAVE_DIRFD
-
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#undef HAVE_DLFCN_H
 
 /* Define to 1 if you have the `eaccess' function. */
 #undef HAVE_EACCESS
@@ -739,12 +727,6 @@
 
 /* Define to 1 if you have the `opendir' function. */
 #undef HAVE_OPENDIR
-
-/* Define to 1 if you have the <openssl/err.h> header file. */
-#undef HAVE_OPENSSL_ERR_H
-
-/* Define to 1 if you have the <openssl/ssl.h> header file. */
-#undef HAVE_OPENSSL_SSL_H
 
 /* Define to 1 if you have the `pipe' function. */
 #undef HAVE_PIPE
@@ -973,9 +955,6 @@
 /* Define if utimes works properly. */
 #undef HAVE_WORKING_UTIMES
 
-/* Define to 1 if you have the <zlib.h> header file. */
-#undef HAVE_ZLIB_H
-
 /* Define to 1 if the system has the type `_Bool'. */
 #undef HAVE__BOOL
 
@@ -1120,9 +1099,6 @@
 /* Define to 1 if 'lstat' dereferences a symlink specified with a trailing
    slash. */
 #undef LSTAT_FOLLOWS_SLASHED_SYMLINK
-
-/* Define to the sub-directory where libtool stores uninstalled libraries. */
-#undef LT_OBJDIR
 
 /* If malloc(0) is != NULL, define this to 1. Otherwise define this to 0. */
 #undef MALLOC_0_IS_NONNULL
