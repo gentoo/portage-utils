@@ -52,104 +52,71 @@ AC_DEFINE_UNQUOTED([CONFIG_EPREFIX], ["$with_eprefix"],
 AC_SUBST([CONFIG_EPREFIX], ["$with_eprefix"])
 
 AC_ARG_ENABLE([qmanifest], [AS_HELP_STRING([--enable-qmanifest],
-			  [support qmanifest applet])],
-			  [], [enable_qmanifest=auto])
+			  [support qmanifest applet])])
 AC_ARG_ENABLE([qtegrity], [AS_HELP_STRING([--enable-qtegrity],
-			  [support qtegrity applet])],
-			  [], [enable_qtegrity=auto])
-LIBSSL=
-LIBBL2=
-LIBZ=
-HASGPGME=
+			  [support qtegrity applet])])
 
-AS_IF([test "x${enable_qmanifest}x${enable_qtegrity}" != xnoxno],
-	  [AC_CHECK_HEADERS([openssl/err.h \
-	                     openssl/ssl.h], [], [LIBSSL=_missing_header])
-	   AC_CHECK_LIB([ssl${LIBSSL}], [SSL_connect],
-					[LIBSSL="-lssl"
-					 AC_DEFINE([HAVE_SSL], [1], [Define if you have ssl])
-					 AC_CHECK_LIB([crypto],
-								  [ERR_reason_error_string],
-								  [LIBSSL="${LIBSSL} -lcrypto"],
-								  [])
-					 AC_SUBST([LIBSSL], ["${LIBSSL}"])
-					],
-					[if test "x$enable_qmanifest" != xauto; then
-					 AC_MSG_FAILURE(
-					   [--enable-qmanifest was given, but test for ssl failed])
-					 fi
-					 if test "x$enable_qtegrity" != xauto; then
-					 AC_MSG_FAILURE(
-					   [--enable-qtegrity was given, but test for ssl failed])
-					 fi
-					 LIBSSL=
-					])
-	   AC_MSG_CHECKING([whether to enable qtegrity])
-	   case "x${LIBSSL}" in
-		   "x-lssl"*)
-				AC_MSG_RESULT([yes])
-				;;
-		   *)
-			   enable_qtegrity=no
-			   AC_MSG_RESULT([no: missing dependencies])
-			   ;;
-	   esac
-	   if test "x$enable_qtegrity" != xno ; then
-		   AC_DEFINE([ENABLE_QTEGRITY], [1],
-					 [Define if qtegrity should be compiled])
-	   fi
-	],
-	[
-	   AC_MSG_CHECKING([whether to enable qtegrity])
-	   AC_MSG_RESULT([no: disabled by configure argument])
-	])
-AS_IF([test "x$enable_qmanifest" != xno],
-	  [AC_CHECK_HEADERS([blake2.h], [], [LIBBL2=_missing_header])
-	   AC_CHECK_LIB([b2${LIBBL2}], [blake2b_update],
-					[LIBBL2="-lb2"
-					 AC_DEFINE([HAVE_BLAKE2B], [1],
-							   [Define if you have blake2b])
-					 AC_SUBST([LIBBL2], ["${LIBBL2}"])
-					],
-					[if test "x$enable_qmanifest" != xauto; then
-					 AC_MSG_FAILURE(
-					   [--enable-qmanifest was given, but test for blake2b failed])
-					 fi
-					 LIBBL2=
-					])
-	   AC_CHECK_HEADERS([zlib.h], [], [LIBZ=_missing_header])
-	   AC_CHECK_LIB([z${LIBZ}], [gzopen],
-					[LIBZ="-lz"
-					 AC_DEFINE([HAVE_LIBZ], [1],
-							   [Define if you have zlib])
-					 AC_SUBST([LIBZ], ["${LIBZ}"])
-					],
-					[if test "x$enable_qmanifest" != xauto; then
-					 AC_MSG_FAILURE(
-					   [--enable-qmanifest was given, but test for libz failed])
-					 fi
-					 LIBZ=
-					])
-	   AM_PATH_GPGME([], [HASGPGME=yes])
-	   AC_MSG_CHECKING([whether to enable qmanifest])
-	   case "x${LIBSSL}${LIBBL2}${LIBZ}-${HASGPGME}" in
-		   "x-lssl"*"-lb2-lz-yes")
-				AC_MSG_RESULT([yes])
-				;;
-		   *)
-			   enable_qmanifest=no
-			   AC_MSG_RESULT([no: missing dependencies])
-			   ;;
-	   esac
-	   if test "x$enable_qmanifest" != xno ; then
-		   AC_DEFINE([ENABLE_QMANIFEST], [1],
-					 [Define if qmanifest should be compiled])
-	   fi
-	],
-	[
-	   AC_MSG_CHECKING([whether to enable qmanifest])
-	   AC_MSG_RESULT([no: disabled by configure argument])
-	])
+AS_IF([test "x${enable_qmanifest}${enable_qtegrity}" != "xnono"], [
+  PKG_CHECK_MODULES([LIBSSL], [libcrypto], [
+    AC_DEFINE([HAVE_SSL], [1], [Define if you have ssl])
+    LIBSSL="yes"
+  ], [
+    AS_IF([test "x${enable_qmanifest}" = "xyes"], [
+      AC_MSG_FAILURE([--enable-qmanifest was given, but libcrypto.pc could not be found])
+    ])
+    AS_IF([test "x${enable_qtegrity}" = "xyes"], [
+      AC_MSG_FAILURE([--enable-qtegrity was given, but libcrypto.pc could not be found])
+    ])
+    LIBSSL="no: missing dependencies"
+  ])
+  AC_MSG_CHECKING([whether to enable qtegrity])
+  AC_MSG_RESULT([${LIBSSL}])
+], [
+  AC_MSG_CHECKING([whether to enable qtegrity])
+  AC_MSG_RESULT([no: disabled by configure argument])
+])
+
+AS_IF([test "x${enable_qmanifest}" != "xno"], [
+  PKG_CHECK_MODULES([LIBBL2], [libb2], [
+    AC_DEFINE([HAVE_BLAKE2B], [1], [Define if you have blake2b])
+    LIBBL2="yes"
+  ], [
+    AS_IF([test "x${enable_qmanifest}" = "xyes"], [
+      AC_MSG_FAILURE([--enable-qmanifest was given, but libb2.pc could not be found])
+    ])
+    LIBBL2="no: missing dependencies"
+  ])
+
+  PKG_CHECK_MODULES([LIBZ], [zlib], [
+    AC_DEFINE([HAVE_LIBZ], [1], [Define if you have zlib])
+    LIBZ="yes"
+  ], [
+    AS_IF([test "x${enable_qmanifest}" = "xyes"], [
+      AC_MSG_FAILURE([--enable-qmanifest was given, but zlib.pc could not be found])
+    ])
+    LIBZ="no: missing dependencies"
+  ])
+
+  PKG_CHECK_MODULES([GPGME], [gpgme], [
+    GPGME="yes"
+  ], [
+    AS_IF([test "x${enable_qmanifest}" = "xyes"], [
+      AC_MSG_FAILURE([--enable-qmanifest was given, but gpgme.pc could not be found])
+    ])
+    GPGME="no: missing dependencies"
+  ])
+
+  AC_MSG_CHECKING([whether to enable qmanifest])
+  AS_IF([test "x${LIBBL2}${LIBZ}${GPGME}" = "xyesyesyes"], [
+    AC_MSG_RESULT([yes])
+  ], [
+    AC_MSG_RESULT([no: missing dependencies])
+  ])
+], [
+  AC_MSG_CHECKING([whether to enable qmanifest])
+  AC_MSG_RESULT([no: disabled by configure argument])
+])
+
 AM_CONDITIONAL([QMANIFEST_ENABLED], [test "x$enable_qmanifest" != xno])
 AM_CONDITIONAL([QTEGRITY_ENABLED], [test "x$enable_qtegrity" != xno])
 
