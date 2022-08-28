@@ -6,7 +6,7 @@
 
 AC_PREREQ([2.71])
 AC_INIT([portage-utils],[git])
-AM_INIT_AUTOMAKE([1.11 dist-xz no-dist-gzip silent-rules -Wall])
+AM_INIT_AUTOMAKE([1.11 dist-xz foreign no-dist-gzip silent-rules -Wall])
 AM_SILENT_RULES([yes]) # AM_INIT_AUTOMAKE([silent-rules]) is broken atm
 AM_MAINTAINER_MODE([enable])
 AC_CONFIG_HEADERS([config.h])
