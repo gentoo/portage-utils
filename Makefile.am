@@ -78,7 +78,7 @@ q_CPPFLAGS = \
 	$(LIBZ_CFLAGS) \
 	$(NULL)
 q_LDADD = \
-	$(top_builddir)/libq/libq.la \
+	$(top_builddir)/libq/libq.a \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
 	$(OPENMP_CFLAGS) \
 	$(LIBSSL_LIBS) \
