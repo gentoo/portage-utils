@@ -54,6 +54,12 @@
 /* Define to 1 if // is a file system root distinct from /. */
 #undef DOUBLE_SLASH_IS_DISTINCT_ROOT
 
+/* Define if qmanifest should be compiled */
+#undef ENABLE_QMANIFEST
+
+/* Define if qtegrity should be compiled */
+#undef ENABLE_QTEGRITY
+
 /* Define this to 1 if F_DUPFD behavior does not match POSIX */
 #undef FCNTL_DUPFD_BUGGY
 
