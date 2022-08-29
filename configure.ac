@@ -118,6 +118,14 @@ AS_IF([test "x${enable_qmanifest}" != "xno"], [
 
 AM_CONDITIONAL([QMANIFEST_ENABLED], [test "x$enable_qmanifest" != xno])
 AM_CONDITIONAL([QTEGRITY_ENABLED], [test "x$enable_qtegrity" != xno])
+if test "x$enable_qmanifest" != xno ; then
+	AC_DEFINE([ENABLE_QMANIFEST], [1],
+			  [Define if qmanifest should be compiled])
+fi
+if test "x$enable_qtegrity" != xno ; then
+	AC_DEFINE([ENABLE_QTEGRITY], [1],
+			  [Define if qtegrity should be compiled])
+fi
 
 AX_CFLAGS_WARN_ALL
 AC_DEFUN([PT_CHECK_CFLAG],[AX_CHECK_COMPILER_FLAGS([$1],[CFLAGS="$CFLAGS $1"])])
