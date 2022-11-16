@@ -724,6 +724,7 @@ pkg_run_func_at(
 		/* Load the main env */
 		". \"%6$s/environment\"\n"
 		/* Reload env vars that matter to us */
+		"export EBUILD_PHASE_FUNC='%2$s'\n"
 		"export FILESDIR=/.does/not/exist/anywhere\n"
 		"export MERGE_TYPE=binary\n"
 		"export ROOT='%4$s'\n"
