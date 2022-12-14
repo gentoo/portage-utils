@@ -646,6 +646,8 @@ read_portage_profile(const char *profile, env_vars vars[], set *masks)
 					repo_name = NULL;
 				}
 				if (repo_name == NULL) {
+					/* bring back the colon to see the ignored parent line */
+					*(--p) = ':';
 					warn("ignoring parent with unknown repo in profile %s: %s",
 							profile, s);
 					continue;
