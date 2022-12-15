@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2022 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2006      Thomas A. Cort - <tcort@gentoo.org>
@@ -784,6 +784,12 @@ qkeyword_traverse(tree_pkg_cb func, void *priv)
 	 * to overlays if set), but oh well. */
 	array_for_each(overlays, n, overlay)
 		qkeyword_load_arches(overlay);
+
+	if (archlist_count == 0 || archlist == NULL) {
+		warnf("no arches could be found in your active overlays (see q -o), "
+			  "do you have profiles/arch.list files present?\n");
+		return EXIT_FAILURE;
+	}
 
 	/* allocate memory (once) for the list used by various funcs */
 	if (archlist_count > data->keywordsbuflen) {
