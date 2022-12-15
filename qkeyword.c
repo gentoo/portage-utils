@@ -28,11 +28,12 @@
 /* Required portage-utils stuff                                     */
 /********************************************************************/
 
-#define QKEYWORD_FLAGS "p:c:m:idtsanSTF:" COMMON_FLAGS
+#define QKEYWORD_FLAGS "p:c:m:AidtsanSTF:" COMMON_FLAGS
 static struct option const qkeyword_long_opts[] = {
 	{"matchpkg",     a_argument, NULL, 'p'},
 	{"matchcat",     a_argument, NULL, 'c'},
 	{"matchmaint",   a_argument, NULL, 'm'},
+	{"showarch",    no_argument, NULL, 'A'},
 	{"imlate",      no_argument, NULL, 'i'},
 	{"dropped",     no_argument, NULL, 'd'},
 	{"needsstable", no_argument, NULL, 't'},
@@ -48,6 +49,7 @@ static const char * const qkeyword_opts_help[] = {
 	"match pkgname",
 	"match catname",
 	"match maintainer email from metadata.xml (slow)",
+	"show selected arch from profile configuration",
 	"list packages that can be marked stable for <arch>",
 	"list packages that have dropped keywords for <arch>",
 	"list packages that have ~arch versions, but no stable versions for <arch>",
@@ -818,19 +820,22 @@ qkeyword_traverse(tree_pkg_cb func, void *priv)
 
 int qkeyword_main(int argc, char **argv)
 {
-	int i;
-	char action = '\0';
+	int   i;
+	char  action   = '\0';
+	char *pkg      = NULL;
+	char *cat      = NULL;
+	char *maint    = NULL;
+	bool  showarch = false;
 	qkeyword_data data;
-	char *pkg = NULL;
-	char *cat = NULL;
-	char *maint = NULL;
 
 	data.fmt = NULL;
 	while ((i = GETOPT_LONG(QKEYWORD, qkeyword, "")) != -1) {
 		switch (i) {
-			case 'p': pkg = optarg; break;
-			case 'c': cat = optarg; break;
-			case 'm': maint = optarg; break;
+			case 'p':  pkg      = optarg;  break;
+			case 'c':  cat      = optarg;  break;
+			case 'm':  maint    = optarg;  break;
+			case 'A':  showarch = true;    break;
+			case 'F':  data.fmt = optarg;  break;
 			case 'i':
 			case 'd':
 			case 't':
@@ -844,9 +849,6 @@ int qkeyword_main(int argc, char **argv)
 					qkeyword_usage(EXIT_FAILURE);
 				action = i;
 				break;
-			case 'F':
-				data.fmt = optarg;
-				break;
 
 			COMMON_GETOPTS_CASES(qkeyword)
 		}
@@ -859,6 +861,11 @@ int qkeyword_main(int argc, char **argv)
 	if (((data.arch == NULL || *data.arch == '\0') && action != 's') ||
 			optind + 1 < argc)
 		qkeyword_usage(EXIT_FAILURE);
+
+	if (showarch) {
+		printf("%s\n", data.arch);
+		return EXIT_SUCCESS;
+	}
 
 	if (cat != NULL) {
 		data.qatom = atom_explode_cat(pkg == NULL ? "" : pkg, cat);
