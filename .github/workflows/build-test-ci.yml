@@ -8,6 +8,7 @@ on: [pull_request, push]
 jobs:
   make-check-ubuntu-x64:
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
