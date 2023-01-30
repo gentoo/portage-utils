@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2022 Gentoo Foundation
+ * Copyright 2005-2023 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -824,6 +824,7 @@ tree_read_file_md5(tree_pkg_ctx *pkg_ctx)
 		assign_var(DEFINED_PHASES);
 		assign_var(REQUIRED_USE);
 		assign_var(BDEPEND);
+		assign_var(IDEPEND);
 		assign_var(EPREFIX);
 		assign_var(_eclasses_);
 		assign_var(_md5_);
@@ -901,6 +902,7 @@ tree_read_file_ebuild(tree_pkg_ctx *pkg_ctx)
 			match_key(EAPI);
 			match_key(REQUIRED_USE);
 			match_key(BDEPEND);
+			match_key(IDEPEND);
 #undef match_key
 		}
 
@@ -1004,6 +1006,7 @@ tree_read_file_binpkg_xpak_cb(
 	match_path(DEFINED_PHASES);
 	match_path(REQUIRED_USE);
 	match_path(BDEPEND);
+	match_path(IDEPEND);
 	match_path(CONTENTS);
 	match_path(USE);
 	match_path(EPREFIX);
@@ -1513,6 +1516,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		match_key2(REPO, repository);
 		match_key(SIZE);
 		match_key(BDEPEND);
+		match_key(IDEPEND);
 		match_key(PATH);
 		match_key2(BUILD_ID, BUILDID);
 #undef match_key

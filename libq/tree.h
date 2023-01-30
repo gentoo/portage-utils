@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2022 Gentoo Foundation
+ * Copyright 2005-2023 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -96,8 +96,9 @@ struct tree_pkg_meta {
 	char *Q_PDEPEND;
 	char *Q_PROVIDE;       /* line 14 */
 	char *Q_EAPI;
-	char *Q_PROPERTIES;
+	char *Q_PROPERTIES;    /* last line from metadata */
 	char *Q_BDEPEND;
+	char *Q_IDEPEND;
 	/* binpkgs/vdb */
 	char *Q_DEFINED_PHASES;
 	char *Q_REQUIRED_USE;
