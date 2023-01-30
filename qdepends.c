@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2022 Gentoo Authors
+ * Copyright 2005-2023 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -22,12 +22,13 @@
 #include "xasprintf.h"
 #include "xregex.h"
 
-#define QDEPENDS_FLAGS "drpbQitUF:SR" COMMON_FLAGS
+#define QDEPENDS_FLAGS "drpbIQitUF:SR" COMMON_FLAGS
 static struct option const qdepends_long_opts[] = {
 	{"depend",    no_argument, NULL, 'd'},
 	{"rdepend",   no_argument, NULL, 'r'},
 	{"pdepend",   no_argument, NULL, 'p'},
 	{"bdepend",   no_argument, NULL, 'b'},
+	{"idepend",   no_argument, NULL, 'I'},
 	{"query",     no_argument, NULL, 'Q'},
 	{"installed", no_argument, NULL, 'i'},
 	{"tree",      no_argument, NULL, 't'},
@@ -42,6 +43,7 @@ static const char * const qdepends_opts_help[] = {
 	"Show RDEPEND info",
 	"Show PDEPEND info",
 	"Show BDEPEND info",
+	"Show IDEPEND info",
 	"Query reverse deps",
 	"Search installed packages using VDB",
 	"Search available ebuilds in the tree",
@@ -71,17 +73,22 @@ struct qdepends_opt_state {
 #define QMODE_RDEPEND    (1<<1)
 #define QMODE_PDEPEND    (1<<2)
 #define QMODE_BDEPEND    (1<<3)
+#define QMODE_IDEPEND    (1<<4)
 #define QMODE_INSTALLED  (1<<5)
 #define QMODE_TREE       (1<<6)
 #define QMODE_REVERSE    (1<<7)
 #define QMODE_FILTERUSE  (1<<8)
+
+#define QMODE_DEP_FIRST  QMODE_DEPEND
+#define QMODE_DEP_LAST   QMODE_IDEPEND
 
 const char *depend_files[] = {  /* keep *DEPEND aligned with above defines */
 	/* 0 */ "DEPEND",
 	/* 1 */ "RDEPEND",
 	/* 2 */ "PDEPEND",
 	/* 3 */ "BDEPEND",
-	/* 4 */ NULL
+	/* 4 */ "IDEPEND",
+	/* 5 */ NULL
 };
 
 static bool
@@ -161,15 +168,19 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	xarrayfree_int(state->deps);
 	clear_set(state->udeps);
 
+#define get_depstr(X) \
+	i == QMODE_DEPEND  ? tree_pkg_meta_get(pkg_ctx, DEPEND)  : \
+	i == QMODE_RDEPEND ? tree_pkg_meta_get(pkg_ctx, RDEPEND) : \
+	i == QMODE_PDEPEND ? tree_pkg_meta_get(pkg_ctx, PDEPEND) : \
+	i == QMODE_BDEPEND ? tree_pkg_meta_get(pkg_ctx, BDEPEND) : \
+		                 tree_pkg_meta_get(pkg_ctx, IDEPEND) ;
+
 	dfile = depend_files;
-	for (i = QMODE_DEPEND; i <= QMODE_BDEPEND; i <<= 1, dfile++) {
+	for (i = QMODE_DEP_FIRST; i <= QMODE_DEP_LAST; i <<= 1, dfile++) {
 		if (!(state->qmode & i))
 			continue;
 
-		depstr = i == 1<<0 ? tree_pkg_meta_get(pkg_ctx, DEPEND) :
-				 i == 1<<1 ? tree_pkg_meta_get(pkg_ctx, RDEPEND) :
-				 i == 1<<2 ? tree_pkg_meta_get(pkg_ctx, PDEPEND) :
-				             tree_pkg_meta_get(pkg_ctx, BDEPEND);
+		depstr = get_depstr(i);
 		if (depstr == NULL)
 			continue;
 		dep_tree = dep_grow_tree(depstr);
@@ -193,10 +204,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				tree_pkg_ctx *vpkg =
 					tree_open_pkg(vcat, pkg_ctx->name);
 				if (vpkg != NULL) {
-					depstr = i == 1<<0 ? tree_pkg_meta_get(vpkg, DEPEND) :
-							 i == 1<<1 ? tree_pkg_meta_get(vpkg, RDEPEND) :
-							 i == 1<<2 ? tree_pkg_meta_get(vpkg, PDEPEND) :
-							             tree_pkg_meta_get(vpkg, BDEPEND);
+					depstr = get_depstr(i);
 					if (depstr != NULL) {
 						dep_node *dep_vdb = dep_grow_tree(depstr);
 						if (dep_vdb != NULL) {
@@ -293,6 +301,8 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (verbose && ret == 1)
 		printf("\n");
 
+#undef get_depstr
+
 	if (!verbose) {
 		if ((state->qmode & QMODE_REVERSE) == 0 || ret == 1) {
 			for (n = list_set(state->udeps, &d); n > 0; n--)
@@ -335,6 +345,7 @@ int qdepends_main(int argc, char **argv)
 		case 'r': state.qmode |= QMODE_RDEPEND;   break;
 		case 'p': state.qmode |= QMODE_PDEPEND;   break;
 		case 'b': state.qmode |= QMODE_BDEPEND;   break;
+		case 'I': state.qmode |= QMODE_IDEPEND;   break;
 		case 'Q': state.qmode |= QMODE_REVERSE;   break;
 		case 'i': state.qmode |= QMODE_INSTALLED; break;
 		case 't': state.qmode |= QMODE_TREE;      break;
@@ -350,7 +361,8 @@ int qdepends_main(int argc, char **argv)
 		state.qmode |= QMODE_DEPEND  |
 					   QMODE_RDEPEND |
 					   QMODE_PDEPEND |
-					   QMODE_BDEPEND;
+					   QMODE_BDEPEND |
+					   QMODE_IDEPEND ;
 	}
 
 	/* default to installed packages */

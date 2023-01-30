@@ -4,7 +4,8 @@ applet has two different modes, forward and reverse dependency querying.
 Default operation is forward mode, answering the queries "what does
 package X depend on", while reverse mode answers "what packages depend
 on X".  Both modes can be further specified into build (DEPEND), run
-(RDEPEND), post (PDEPEND) and EAPI7's BDEPEND dependencies.
+(RDEPEND), post (PDEPEND), EAPI7's build (BDEPEND) and EAPI8's
+install-time (IDEPEND) dependencies.
 .P
 By default, \fIqdepends\fR returns the unique set of atoms that match
 all dependency variables.  To split this out per variable, use \fB-v\fR
