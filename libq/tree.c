@@ -1709,7 +1709,8 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 	cat_ctx = get_set(atom->CATEGORY, cache);
 	if (cat_ctx == NULL) {
 		cat_ctx = tree_open_cat(tctx, ".");
-		cache = add_set_value(atom->CATEGORY, cat_ctx, NULL, cache);
+		if (cache != NULL)  /* for static code analysers */
+			add_set_value(atom->CATEGORY, cat_ctx, NULL, cache);
 		/* get a pointer from the set */
 		cat_ctx->name = contains_set(atom->CATEGORY, cache);
 	}
