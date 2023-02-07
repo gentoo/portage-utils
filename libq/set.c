@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2023 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -112,17 +112,22 @@ add_set_unique(const char *name, set *q, bool *unique)
 
 /* add ptr to set with name as key, return existing value when key
  * already exists or NULL otherwise */
-void *
-add_set_value(const char *name, void *ptr, set *q)
+set *
+add_set_value(const char *name, void *ptr, void **prevptr, set *q)
 {
 	unsigned int hash;
 	int pos;
 	set_elem *ll;
 	set_elem *w;
 
+	if (q == NULL)
+		q = create_set();
+
 	hash = fnv1a32(name);
 	pos = hash % _SET_HASH_SIZE;
 
+	if (prevptr != NULL)
+		*prevptr = NULL;
 	if (q->buckets[pos] == NULL) {
 		q->buckets[pos] = ll = xmalloc(sizeof(*ll));
 		ll->next = NULL;
@@ -132,8 +137,11 @@ add_set_value(const char *name, void *ptr, set *q)
 	} else {
 		ll = NULL;
 		for (w = q->buckets[pos]; w != NULL; ll = w, w = w->next) {
-			if (w->hash == hash && strcmp(w->name, name) == 0)
-				return w->val;
+			if (w->hash == hash && strcmp(w->name, name) == 0) {
+				if (prevptr != NULL)
+					*prevptr = w->val;
+				return q;
+			}
 		}
 		if (w == NULL) {
 			ll = ll->next = xmalloc(sizeof(*ll));
@@ -145,7 +153,7 @@ add_set_value(const char *name, void *ptr, set *q)
 	}
 
 	q->len++;
-	return NULL;
+	return q;
 }
 
 /* returns whether name is in set, and if so, the set-internal key
@@ -157,6 +165,9 @@ contains_set(const char *name, set *q)
 	int pos;
 	set_elem *w;
 	const char *found;
+
+	if (q == NULL)
+		return NULL;
 
 	hash = fnv1a32(name);
 	pos = hash % _SET_HASH_SIZE;
@@ -182,6 +193,9 @@ get_set(const char *name, set *q)
 	unsigned int hash;
 	int pos;
 	set_elem *w;
+
+	if (q == NULL)
+		return NULL;
 
 	hash = fnv1a32(name);
 	pos = hash % _SET_HASH_SIZE;
@@ -210,6 +224,12 @@ del_set(const char *s, set *q, bool *removed)
 	set_elem *w;
 	void *ret;
 	bool rmd;
+
+	if (q == NULL) {
+		if (removed != NULL)
+			*removed = false;
+		return NULL;
+	}
 
 	hash = fnv1a32(s);
 	pos = hash % _SET_HASH_SIZE;
@@ -252,8 +272,8 @@ list_set(set *q, char ***l)
 	set_elem *w;
 	char **ret;
 
-	ret = *l = xmalloc(sizeof(char *) * (q->len + 1));
-	for (i = 0; i < _SET_HASH_SIZE; i++) {
+	ret = *l = xmalloc(sizeof(char *) * (cnt_set(q) + 1));
+	for (i = 0; q != NULL && i < _SET_HASH_SIZE; i++) {
 		for (w = q->buckets[i]; w != NULL; w = w->next) {
 			*ret = w->name;
 			ret++;
@@ -292,6 +312,11 @@ values_set(set *q, array_t *ret)
 	array_t blank = array_init_decl;
 
 	*ret = blank;
+
+	/* allow using empty set */
+	if (q == NULL)
+		return 0;
+
 	for (i = 0; i < _SET_HASH_SIZE; i++) {
 		for (w = q->buckets[i]; w != NULL; w = w->next)
 			xarraypush_ptr(ret, w->val);
@@ -314,6 +339,9 @@ clear_set(set *q)
 	set_elem *w;
 	set_elem *e;
 
+	if (q == NULL)
+		return;
+
 	for (i = 0; i < _SET_HASH_SIZE; i++) {
 		for (w = q->buckets[i]; w != NULL; w = e) {
 			e = w->next;
@@ -329,6 +357,9 @@ clear_set(set *q)
 void
 free_set(set *q)
 {
+	if (q == NULL)
+		return;
+
 	clear_set(q);
 	free(q);
 }

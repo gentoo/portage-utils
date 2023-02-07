@@ -297,7 +297,8 @@ tree_open_cat(tree_ctx *ctx, const char *name)
 	cat_ctx->pkg_cnt = 0;
 
 	if (ctx->cache.categories != NULL) {
-		add_set_value(name, cat_ctx, ctx->cache.categories);
+		ctx->cache.categories =
+			add_set_value(name, cat_ctx, NULL, ctx->cache.categories);
 		/* ensure name doesn't expire after this instantiation is closed */
 		cat_ctx->name = contains_set(name, ctx->cache.categories);
 	}
@@ -1708,7 +1709,7 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 	cat_ctx = get_set(atom->CATEGORY, cache);
 	if (cat_ctx == NULL) {
 		cat_ctx = tree_open_cat(tctx, ".");
-		add_set_value(atom->CATEGORY, cat_ctx, cache);
+		cache = add_set_value(atom->CATEGORY, cat_ctx, NULL, cache);
 		/* get a pointer from the set */
 		cat_ctx->name = contains_set(atom->CATEGORY, cache);
 	}

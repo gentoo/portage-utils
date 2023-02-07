@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2022 Gentoo Foundation
+ * Copyright 2005-2023 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -581,10 +581,12 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 				if ((p = del_set(buf + 1, masks, NULL)) != NULL)
 					free(p);
 			} else {
+				void *e;
 				snprintf(npath, sizeof(npath), "%s:%zu:%zu-%zu",
 						file, line, cbeg, cend);
 				p = xstrdup(npath);
-				if (add_set_value(buf, p, masks) != NULL)
+				masks = add_set_value(buf, p, &e, masks);
+				if (e != NULL)
 					free(p);
 			}
 		}

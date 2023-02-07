@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2022 Gentoo Foundation
+ * Copyright 2005-2023 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2006      Thomas A. Cort - <tcort@gentoo.org>
@@ -913,8 +913,8 @@ int qkeyword_main(int argc, char **argv)
 				continue;
 			bucket = xzalloc(sizeof(array_t));
 			xarraypush_ptr(bucket, atom);
-			ebuck = add_set_value(atom_format("%[CAT]%[PN]", atom),
-					bucket, pmasks);
+			pmasks = add_set_value(atom_format("%[CAT]%[PN]", atom),
+								   bucket, (void **)&ebuck, pmasks);
 			if (ebuck != NULL) {
 				xarraypush_ptr(ebuck, atom);
 				xarrayfree_int(bucket);

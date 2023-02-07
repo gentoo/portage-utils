@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2023 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -30,7 +30,7 @@ struct set_t {
 set *create_set(void);
 set *add_set(const char *name, set *q);
 set *add_set_unique(const char *name, set *q, bool *unique);
-void *add_set_value(const char *name, void *ptr, set *q);
+set *add_set_value(const char *name, void *ptr, void **prevptr, set *q);
 const char *contains_set(const char *name, set *q);
 void *get_set(const char *name, set *q);
 void *del_set(const char *s, set *q, bool *removed);

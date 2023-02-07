@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2022 Gentoo Foundation
+ * Copyright 2005-2023 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -523,7 +523,7 @@ static int do_emerge_log(
 					last_merge = tstart_emerge;
 				}
 
-				atomw = add_set_value(afmt, atom, atomset);
+				atomset = add_set_value(afmt, atom, (void **)&atomw, atomset);
 				if (atomw != NULL)
 					atom_implode(atom);
 			}
@@ -807,7 +807,9 @@ static int do_emerge_log(
 									pkgw->atom->CATEGORY, pkgw->atom->PN);
 						}
 
-						pkg = add_set_value(afmt, pkgw, merge_averages);
+						merge_averages =
+							add_set_value(afmt, pkgw,
+										  (void **)&pkg, merge_averages);
 						if (pkg != NULL) {
 							pkg->cnt++;
 							pkg->time += elapsed;
@@ -952,7 +954,9 @@ static int do_emerge_log(
 									pkgw->atom->CATEGORY, pkgw->atom->PN);
 						}
 
-						pkg = add_set_value(afmt, pkgw, unmerge_averages);
+						unmerge_averages =
+							add_set_value(afmt, pkgw,
+										  (void **)&pkg, unmerge_averages);
 						if (pkg != NULL) {
 							pkg->cnt++;
 							pkg->time += elapsed;
