@@ -584,12 +584,12 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 				void *e;
 				snprintf(npath, sizeof(npath), "%s:%zu:%zu-%zu",
 						file, line, cbeg, cend);
-				p = xstrdup(npath);
 				/* if not necessary, but do it for static code analysers
 				 * which take into accound that add_set_value might
 				 * allocate a new set when masks would be NULL -- a case
 				 * which would never happen */
 				if (masks != NULL) {
+					p = xstrdup(npath);
 					add_set_value(buf, p, &e, masks);
 					if (e != NULL)
 						free(p);
