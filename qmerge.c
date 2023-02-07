@@ -47,6 +47,100 @@
   --noscript                       don't execute pkg_{pre,post}{inst,rm} (if any)
 */
 
+/* How things should work, ideally.  This is not how it currently is
+ * implemented at all.
+ *
+ * invocation: qmerge ... pkg/a pkg/b pkg/c
+ * initial mergeset: pkg/a pkg/b pkg/c
+ * resolving:
+ * - for pkg, get dependencies
+ *   * apply masks
+ *   * extract depend, rdepend, bdepend, etc.
+ *   * filter flags in use (libq/dep)
+ *   * add found pkgs to mergeset if not present in resolvedset
+ * - while mergeset contains pkgs
+ *   * resolve pkg (see above)
+ *   * move from mergeset to resolvedset
+ * here (if all is well) mergeset is empty, and resolvedset contains the
+ * pkgs to be installed.  If for instance pkg/c depends on pkg/b it
+ * won't occur double, for it is a set.
+ *
+ * Technically, because we deal with binpkgs, we don't have
+ * dependencies, but there can be pre/post scripts that actually use
+ * depended on pkgs, and if we would invoke ebuild(5) to compile instead
+ * of unpack, we would respect the order too, so the resolvedset here
+ * needs to be ordered into a list.
+ * While functionally one can re-evaluate the dependencies here,
+ * implementation wise, it probably is easier to build the final merge
+ * order list while resolving.  This can also add the additional
+ * metadata of whether a pkg was requested (cmdline) or pulled in a dep,
+ * and for which package.  That information can be leveraged to draw a
+ * tree (visuals) but also to determine possible parallel installation
+ * paths.
+ *
+ * For example, original invocation could lead to a resolved merge list
+ * of:
+ *   M pkg/a
+ *   m  pkg/d
+ *   R pkg/c
+ *   M  pkg/b
+ *
+ * After this, the pkgs need to be fetched and the pre phases need to be
+ * run.  In interactive mode, a question probably needs to be inserted
+ * after the printing of the resolved merge list.  Then if all checks
+ * out, the unpack and merge to live fs + vdb updates can be performed.
+ * Ideally the unpack (or compile via ebuild(5)) phase is separated from
+ * the final merge to live fs.  The latter always has to be serial, but
+ * the former can run in parallel based on dependencies seen.  For
+ * our example, pkg/d and pkg/b can be unpacked in parallel, merged in
+ * which order finished first, then pkg/a and pkg/c can commence.  So
+ * the start set is pkg/d and pkg/b, and each unlocks pkg/a and pkg/c
+ * respectively, which are not constrained, other than the final merge
+ * logic.
+ *
+ * Errors
+ * There are multiple kinds of errors in multiple stages.  Whether they
+ * are fatal depends on a number of factors.
+ * - resolution error
+ *   Failing to resolve an atom basically makes the tree that that pkg
+ *   is part of unmergable; that is, it needs to be discarded from the
+ *   workset.  In interactive mode after resolving we could ask if the
+ *   user wants to continue (if there's anything else we *can* do),
+ *   non-interactive we could decide to just go ahead with whatever we
+ *   was possible, unless we add a flag that stops at resolution errors.
+ * - USE-dep resolution error
+ *   The state of USE-flags must be respected, and can cause problems,
+ *   in particular cyclic dependencies.  Solution to those is to disable
+ *   USE-flags temporary and re-merge without.  For now, these errors
+ *   are not resolved, but should be detected and treated as resolution
+ *   errors above.
+ * - fetch error
+ *   Either because fetching the binpkg or the source files fails.  This
+ *   discards the atom and its tree.  It may be possible in this case to
+ *   try and re-resolve using an older version of the pkg.  But since
+ *   this kind of error is pretty much in the foundation of the work, it
+ *   seems more logical to exclude the tree the package belongs too,
+ *   because at this point parallel execution happens, it makes no sense
+ *   any more to ask the user to abort.
+ * - unpack or merge error
+ *   Under these errors are the failures in the various pkg checks (run
+ *   phases) and for source-based installs obviously compilation
+ *   failures.  These discard an entire tree, and like fetch errors,
+ *   we don't have a clear opportunity anymore to ask whether or not to
+ *   continue.
+ * - live fs + vdb error
+ *   This should be rare, but most probably filesystem related errors,
+ *   such as running out of diskspace or lacking certain permissions.
+ *   Corrupting the VDB hopefully doesn't happen, but it is possible to
+ *   encounter problems there as well.  Like fetch and unpack errors, we
+ *   should try to continue with whatever we can, but will not roll-back
+ *   already merged packages.  So a failure here, should result in
+ *   dropping all children from the failed pkg.
+ *
+ * After merging qlop -Ev should show whatever was merged successfully,
+ * so qmerge should show what failed to merge (in what stage).
+ */
+
 /* #define BUSYBOX "/bin/busybox" */
 #define BUSYBOX ""
 
