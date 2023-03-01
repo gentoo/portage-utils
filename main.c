@@ -1052,6 +1052,12 @@ initialize_portage_env(void)
 			set_portage_env_var(var, s, var->name);
 	}
 
+	/* special snowflake, NO_COLOR is apparently some standard now,
+	 * accept it (as override of NOCOLOR) */
+	s = getenv("NO_COLOR");
+	if (s != NULL)
+		set_portage_env_var(&vars_to_read[7], s, "NO_COLOR");
+
 	/* expand any nested variables e.g. PORTDIR=${EPREFIX}/usr/portage */
 	for (i = 0; vars_to_read[i].name; ++i) {
 		char *svar;
