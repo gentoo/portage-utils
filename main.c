@@ -705,10 +705,13 @@ read_portage_profile(const char *profile, env_vars vars[], set *masks)
 					/* empty repo name means a repo where the profile is */
 					const char* current_overlay = overlay_from_path (profile);
 					if (current_overlay == NULL) {
-						/* bring back the colon to see the ignored parent line */
+						/* bring back the colon to see the ignored
+						 * parent line */
 						*(--p) = ':';
-						warn("could not figure out current repo of profile %s, ignoring parent %s",
-							       profile, s);
+						if (!quiet)
+							warn("could not figure out current repo "
+								 "of profile %s, ignoring parent %s",
+							     profile, s);
 						continue;
 					}
 					snprintf(profile_file, sizeof(profile_file),
@@ -726,10 +729,12 @@ read_portage_profile(const char *profile, env_vars vars[], set *masks)
 						repo_name = NULL;
 					}
 					if (repo_name == NULL) {
-						/* bring back the colon to see the ignored parent line */
+						/* bring back the colon to see the ignored
+						 * parent line */
 						*(--p) = ':';
-						warn("ignoring parent with unknown repo in profile %s: %s",
-								profile, s);
+						if (!quiet)
+							warn("ignoring parent with unknown repo "
+								 "in profile %s: %s", profile, s);
 						continue;
 					}
                                 }
