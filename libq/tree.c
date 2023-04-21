@@ -1109,8 +1109,17 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 
 	if (ctx->cachetype == CACHE_METADATA_MD5) {
 		ret = tree_read_file_md5(pkg_ctx);
+		/* md5-cache, is sort of documented in egencache man-page
+		 * key-points are that an md5 is provided for the ebuild itself,
+		 * and if it includes eclasses, the md5s for each eclass.  These
+		 * are available as _md5_ and _eclasses_ keys.  The latter uses
+		 * tab-separation of form <eclass-name>\t<md5>\t... */
 	} else if (ctx->cachetype == CACHE_METADATA_PMS) {
 		ret = tree_read_file_pms(pkg_ctx);
+		/* PMS implies to do an mtime and existence check (the cache may
+		 * contain extra stuff) but since this form of metadata in fact
+		 * is extinct, because these checks are insufficient and
+		 * impossible on e.g. a git-based tree. */
 	} else if (ctx->cachetype == CACHE_EBUILD) {
 		ret = tree_read_file_ebuild(pkg_ctx);
 	} else if (ctx->cachetype == CACHE_BINPKGS) {
