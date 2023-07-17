@@ -979,6 +979,14 @@ initialize_portage_env(void)
 	const char *configroot = getenv("PORTAGE_CONFIGROOT");
 	char *primary_overlay = NULL;
 
+	/* ensure color strings are initialised, code below here may use
+	 * e.g. warn which uses them */
+	color_clear();
+
+	/* set quiet early in the game, bug #735134 */
+	if (getenv("PORTAGE_QUIET") != NULL)
+		setup_quiet();
+
 	/* initialize all the properties with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
 		var = &vars_to_read[i];
@@ -1220,9 +1228,6 @@ initialize_portage_env(void)
 			}
 		}
 	}
-
-	if (getenv("PORTAGE_QUIET") != NULL)
-		setup_quiet();
 
 	if (nocolor) {
 		color_clear();
