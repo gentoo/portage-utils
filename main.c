@@ -979,14 +979,6 @@ initialize_portage_env(void)
 	const char *configroot = getenv("PORTAGE_CONFIGROOT");
 	char *primary_overlay = NULL;
 
-	/* ensure color strings are initialised, code below here may use
-	 * e.g. warn which uses them */
-	color_clear();
-
-	/* set quiet early in the game, bug #735134 */
-	if (getenv("PORTAGE_QUIET") != NULL)
-		setup_quiet();
-
 	/* initialize all the properties with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
 		var = &vars_to_read[i];
@@ -1242,6 +1234,7 @@ int main(int argc, char **argv)
 {
 	struct stat st;
 	struct winsize winsz;
+	int i;
 
 	warnout = stderr;
 	IF_DEBUG(init_coredumps());
@@ -1271,7 +1264,29 @@ int main(int argc, char **argv)
 	}
 	vars_to_read[7].default_value = (char *)nocolor;  /* NOCOLOR */
 
+	/* We can use getopt here, but only in POSIX mode (which stops at
+	 * the first non-option argument) because otherwise argv is
+	 * modified, this basically sulks, because ideally we parse and
+	 * handle the common options here.  Because we are parsing profiles
+	 * and stuff at this point we need -q for bug #735134, so do lame
+	 * matching for that */
+	for (i = 1; i < argc; i++) {
+		if (argv[i] != NULL && argv[i][0] == '-' &&
+			(argv[i][1] == 'q' || strcmp(&argv[i][1], "-quiet") == 0))
+		{
+			setup_quiet();
+		}
+	}
+	/* same for env-based fallback */
+	if (getenv("PORTAGE_QUIET") != NULL)
+		setup_quiet();
+
+	/* ensure color strings are initialised, early code here may use
+	 * e.g. warn which uses them */
+	color_clear();
+
 	initialize_portage_env();
 	optind = 0;
+	quiet  = 0;
 	return q_main(argc, argv);
 }
