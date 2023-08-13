@@ -354,3 +354,34 @@ hash_file_at_cb(int pfd, const char *fname, int hash, hash_cb_t cb)
 
 	return _hash_file_buf;
 }
+
+
+/*
+*Generate and alloc in heap a hash with MD5.
+*Param: str :string to hash the string must be \0 terminating
+*       len : len of the string str, if <=0 the function will compute the len itself
+*/
+char *
+hash_from_string(char *str,size_t len)
+{
+  unsigned int hash_size = 32;
+  unsigned char hex_buf[hash_size+1];
+  char *hash_final;
+  MD5_CTX ctx;
+
+  if(len <= 0){
+    len=strlen(str);
+  }
+
+  hash_final=xmalloc(hash_size+1*sizeof(*hash_final));
+  hash_final[hash_size]='\0';
+  hex_buf[hash_size]='\0';
+  MD5_Init(&ctx);
+  MD5_Update(&ctx,str,len);
+  MD5_Final(hex_buf,&ctx); 
+  hash_hex(hash_final,hex_buf,(hash_size>>1));
+
+  return hash_final;
+}
+
+
