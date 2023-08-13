@@ -261,7 +261,8 @@ am__libq_a_SOURCES_DIST = atom.c atom.h basename.c basename.h \
 	rmspace.h safe_io.c safe_io.h scandirat.c scandirat.h set.c \
 	set.h tree.c tree.h xarray.c xarray.h xasprintf.h xchdir.c \
 	xchdir.h xmkdir.c xmkdir.h xpak.c xpak.h xregex.c xregex.h \
-	xsystem.c xsystem.h hash_md5_sha1.c hash_md5_sha1.h
+	xsystem.c xsystem.h cur_sys_pkg.c cur_sys_pkg.h \
+	hash_md5_sha1.c hash_md5_sha1.h
 @QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_FALSE@am__objects_1 = libq_a-hash_md5_sha1.$(OBJEXT)
 am__objects_2 = libq_a-atom.$(OBJEXT) libq_a-basename.$(OBJEXT) \
 	libq_a-colors.$(OBJEXT) libq_a-contents.$(OBJEXT) \
@@ -274,7 +275,8 @@ am__objects_2 = libq_a-atom.$(OBJEXT) libq_a-basename.$(OBJEXT) \
 	libq_a-tree.$(OBJEXT) libq_a-xarray.$(OBJEXT) \
 	libq_a-xchdir.$(OBJEXT) libq_a-xmkdir.$(OBJEXT) \
 	libq_a-xpak.$(OBJEXT) libq_a-xregex.$(OBJEXT) \
-	libq_a-xsystem.$(OBJEXT) $(am__objects_1)
+	libq_a-xsystem.$(OBJEXT) libq_a-cur_sys_pkg.$(OBJEXT) \
+	$(am__objects_1)
 am_libq_a_OBJECTS = $(am__objects_2)
 libq_a_OBJECTS = $(am_libq_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -295,8 +297,9 @@ am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/libq_a-atom.Po \
 	./$(DEPDIR)/libq_a-basename.Po ./$(DEPDIR)/libq_a-colors.Po \
 	./$(DEPDIR)/libq_a-contents.Po ./$(DEPDIR)/libq_a-copy_file.Po \
-	./$(DEPDIR)/libq_a-dep.Po ./$(DEPDIR)/libq_a-eat_file.Po \
-	./$(DEPDIR)/libq_a-hash.Po ./$(DEPDIR)/libq_a-hash_md5_sha1.Po \
+	./$(DEPDIR)/libq_a-cur_sys_pkg.Po ./$(DEPDIR)/libq_a-dep.Po \
+	./$(DEPDIR)/libq_a-eat_file.Po ./$(DEPDIR)/libq_a-hash.Po \
+	./$(DEPDIR)/libq_a-hash_md5_sha1.Po \
 	./$(DEPDIR)/libq_a-human_readable.Po \
 	./$(DEPDIR)/libq_a-move_file.Po ./$(DEPDIR)/libq_a-prelink.Po \
 	./$(DEPDIR)/libq_a-profile.Po ./$(DEPDIR)/libq_a-rmspace.Po \
@@ -1610,7 +1613,7 @@ QFILES = atom.c atom.h basename.c basename.h busybox.h colors.c \
 	safe_io.h scandirat.c scandirat.h set.c set.h tree.c tree.h \
 	xarray.c xarray.h xasprintf.h xchdir.c xchdir.h xmkdir.c \
 	xmkdir.h xpak.c xpak.h xregex.c xregex.h xsystem.c xsystem.h \
-	$(NULL) $(am__append_1)
+	cur_sys_pkg.c cur_sys_pkg.h $(NULL) $(am__append_1)
 noinst_LIBRARIES = libq.a
 libq_a_SOURCES = $(QFILES)
 libq_a_CPPFLAGS = \
@@ -1671,6 +1674,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-colors.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-contents.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-copy_file.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-cur_sys_pkg.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-dep.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-eat_file.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-hash.Po@am__quote@ # am--include-marker
@@ -2033,6 +2037,20 @@ libq_a-xsystem.obj: xsystem.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_a-xsystem.obj `if test -f 'xsystem.c'; then $(CYGPATH_W) 'xsystem.c'; else $(CYGPATH_W) '$(srcdir)/xsystem.c'; fi`
 
+libq_a-cur_sys_pkg.o: cur_sys_pkg.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_a-cur_sys_pkg.o -MD -MP -MF $(DEPDIR)/libq_a-cur_sys_pkg.Tpo -c -o libq_a-cur_sys_pkg.o `test -f 'cur_sys_pkg.c' || echo '$(srcdir)/'`cur_sys_pkg.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_a-cur_sys_pkg.Tpo $(DEPDIR)/libq_a-cur_sys_pkg.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cur_sys_pkg.c' object='libq_a-cur_sys_pkg.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_a-cur_sys_pkg.o `test -f 'cur_sys_pkg.c' || echo '$(srcdir)/'`cur_sys_pkg.c
+
+libq_a-cur_sys_pkg.obj: cur_sys_pkg.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_a-cur_sys_pkg.obj -MD -MP -MF $(DEPDIR)/libq_a-cur_sys_pkg.Tpo -c -o libq_a-cur_sys_pkg.obj `if test -f 'cur_sys_pkg.c'; then $(CYGPATH_W) 'cur_sys_pkg.c'; else $(CYGPATH_W) '$(srcdir)/cur_sys_pkg.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_a-cur_sys_pkg.Tpo $(DEPDIR)/libq_a-cur_sys_pkg.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cur_sys_pkg.c' object='libq_a-cur_sys_pkg.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_a-cur_sys_pkg.obj `if test -f 'cur_sys_pkg.c'; then $(CYGPATH_W) 'cur_sys_pkg.c'; else $(CYGPATH_W) '$(srcdir)/cur_sys_pkg.c'; fi`
+
 libq_a-hash_md5_sha1.o: hash_md5_sha1.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_a-hash_md5_sha1.o -MD -MP -MF $(DEPDIR)/libq_a-hash_md5_sha1.Tpo -c -o libq_a-hash_md5_sha1.o `test -f 'hash_md5_sha1.c' || echo '$(srcdir)/'`hash_md5_sha1.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_a-hash_md5_sha1.Tpo $(DEPDIR)/libq_a-hash_md5_sha1.Po
@@ -2175,6 +2193,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/libq_a-colors.Po
 	-rm -f ./$(DEPDIR)/libq_a-contents.Po
 	-rm -f ./$(DEPDIR)/libq_a-copy_file.Po
+	-rm -f ./$(DEPDIR)/libq_a-cur_sys_pkg.Po
 	-rm -f ./$(DEPDIR)/libq_a-dep.Po
 	-rm -f ./$(DEPDIR)/libq_a-eat_file.Po
 	-rm -f ./$(DEPDIR)/libq_a-hash.Po
@@ -2244,6 +2263,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/libq_a-colors.Po
 	-rm -f ./$(DEPDIR)/libq_a-contents.Po
 	-rm -f ./$(DEPDIR)/libq_a-copy_file.Po
+	-rm -f ./$(DEPDIR)/libq_a-cur_sys_pkg.Po
 	-rm -f ./$(DEPDIR)/libq_a-dep.Po
 	-rm -f ./$(DEPDIR)/libq_a-eat_file.Po
 	-rm -f ./$(DEPDIR)/libq_a-hash.Po
