@@ -75,6 +75,7 @@ contents_parse_line_general(char *line,int line_len)
   *p='\0';
 
   //hash
+	/* obj /bin/bash 62ed51c8b23866777552643ec57614b0 */
   if(e.type == CONTENTS_OBJ){
     for (;*p!=' ';--p) {} 
     if(p == e.name){
@@ -82,6 +83,14 @@ contents_parse_line_general(char *line,int line_len)
     }
     e.digest=p+1;
     *p='\0';
+  }
+
+	/* sym /bin/sh -> bash */
+  if(e.type == CONTENTS_SYM){
+			if ((e.sym_target = strstr(e.name, " -> ")) == NULL)
+				return NULL;
+			*e.sym_target = '\0';
+			e.sym_target += 4;
   }
   return &e;
 }
