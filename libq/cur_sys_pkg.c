@@ -62,7 +62,7 @@ static void add_node(cur_pkg_tree_node **root,char *data,char *key)
     return;
   }
 
-  int is_greater=strncmp((*root)->key,key,HASH_SIZE);
+  int is_greater=strncmp(key,(*root)->key,HASH_SIZE);
   
   if(!is_greater){
     printf("you are reading the same file twice, check CONTENTS file\n");
@@ -77,7 +77,9 @@ static void add_node(cur_pkg_tree_node **root,char *data,char *key)
 static char *hash_from_file(char *file_path_complete)
 {
   char *out = NULL;
-  out=hash_file(file_path_complete,HASH_MD5);
+  int fd = open(file_path_complete,O_RDONLY);
+  out=hash_file_at(fd,file_path_complete,HASH_MD5);
+  close(fd);
   return strdup(out);
 }
 
@@ -105,7 +107,7 @@ static void read_file_add_data(cur_pkg_tree_node **root)
       line_cont=contents_parse_line_general(line_buffer,byte_read);
       assert(line_cont!=NULL);
       key=hash_from_string(line_cont->name,(size_t) ((line_cont->digest-1)- line_cont->name));
-      add_node(root,strdup(line_cont->digest),key);
+      add_node(root,strdup(line_cont->digest),strdup(key));
       key=NULL;
     }
   }
@@ -114,25 +116,20 @@ static void read_file_add_data(cur_pkg_tree_node **root)
   free(line_buffer);
 }
 
-static int find_in_tree(cur_pkg_tree_node *root,char * key,char *hash)
+static int find_in_tree(cur_pkg_tree_node **root,char * key,char *hash)
 {
   if(!strcmp(hash,"-1")) return 1;
 
-  if(root != NULL)
+  if((*root) != NULL)
   { 
-  int is_greater=strncmp(root->key,key,HASH_SIZE);
-  
-    switch (is_greater) {
-      case 0:
-        return !strcmp(hash,root->hash_buffer); 
-        break;
-      case 1:
-        return find_in_tree(root->greater,key,hash);
-        break;
-      case -1:
-        return find_in_tree(root->minor,key,hash);
-        break;
-      default:
+    int is_greater=strncmp(key,(*root)->key,HASH_SIZE);
+    
+    if(is_greater == 0){
+      return !strcmp(hash,(*root)->hash_buffer); 
+    }else if(is_greater < 0){
+      return find_in_tree(&(*root)->minor,key,hash);
+    }else {
+      return find_in_tree(&(*root)->greater,key,hash);
     }
   }
   return 0;
@@ -173,7 +170,7 @@ int is_default(cur_pkg_tree_node *root,char *file_path_complete)
 
   hash = hash_from_file(file_path_complete);
   key= hash_from_string(file_path_complete,strlen(file_path_complete));
-  res = find_in_tree(root,key,hash);
+  res = find_in_tree(&root,key,hash);
 
   free(hash);
   free(key);
