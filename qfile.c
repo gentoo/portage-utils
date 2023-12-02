@@ -567,8 +567,31 @@ int qfile_main(int argc, char **argv)
 	state.real_root = p;
 	state.real_root_len = strlen(p);
 
+	/* Act according to what the arguments are. */
+	char *files[argc];
+	for (i = 0; i < argc; i++) {
+		char *file = malloc(sizeof(char) * PATH_MAX);
+		struct stat *buf = malloc(sizeof(struct stat));
+		int stat_out = lstat(argv[i], buf);
+		if (stat_out) {}; // Suppress the compilation warning
+		/* If an argument is a link, then get the file behind the link.*/
+		if (S_ISLNK(buf->st_mode)) {
+			char *out_path = realpath(argv[i], file);
+			if (out_path == NULL) errp("Could not read the path for %s", argv[i]);
+		/* Else, use the argument as is. */
+		} else {
+			strcpy(file, argv[i]);
+		}
+		files[i] = file;
+	}
+
 	/* Prepare the qfile(...) arguments structure */
-	nb_of_queries = prepare_qfile_args(argc, (const char **) argv, &state);
+	nb_of_queries = prepare_qfile_args(argc, (const char **) files, &state);
+
+	/* Free the pointers we used */
+	for (i = 0; i < argc; i++) {
+		free(files[i]);
+	}
 
 	/* Now do the actual `qfile` checking by looking at CONTENTS of all pkgs */
 	if (nb_of_queries > 0) {
