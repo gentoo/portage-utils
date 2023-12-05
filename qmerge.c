@@ -794,8 +794,8 @@ pkg_run_func_at(
 		"has() { hasq \"$@\"; }\n"
 		"hasq() { local h=$1; shift; case \" $* \" in *\" $h \"*) return 0;; *) return 1;; esac; }\n"
 		"hasv() { hasq \"$@\" && echo \"$1\"; }\n"
-		"elog() { printf ' * %%b\\n' \"$*\"; }\n"
-		"einfon() { printf ' * %%b' \"$*\"; }\n"
+		"elog() { printf ' * %%b\\n' \"$*\" >&2 ; }\n"
+		"einfon() { printf ' * %%b' \"$*\" >&2 ; }\n"
 		"einfo() { elog \"$@\"; }\n"
 		"ewarn() { elog \"$@\"; }\n"
 		"eqawarn() { elog \"QA: \"\"$@\"; }\n"
@@ -805,8 +805,8 @@ pkg_run_func_at(
 		"fperms() { local f a=$1; shift; for f in \"$@\"; do chmod $a \"${ED}/${f}\"; done; }\n"
 		/* TODO: This should suppress `die` */
 		"nonfatal() { \"$@\"; }\n"
-		"ebegin() { printf ' * %%b ...' \"$*\"; }\n"
-		"eend() { local r=${1:-$?}; [ $# -gt 0 ] && shift; [ $r -eq 0 ] && echo ' [ ok ]' || echo \" $* \"'[ !! ]'; return $r; }\n"
+		"ebegin() { printf ' * %%b ...' \"$*\" >&2 ; }\n"
+		"eend() { local r=${1:-$?}; [ $# -gt 0 ] && shift; [ $r -eq 0 ] && echo ' [ ok ]' || echo \" $* \"'[ !! ]'; return $r; } >&2 \n"
 		"dodir() { mkdir -p \"$@\"; }\n"
 		"keepdir() { dodir \"$@\" && touch \"$@\"/.keep_${CATEGORY}_${PN}-${SLOT%%/*}; }\n"
 		/* TODO: This should be fatal upon error */
