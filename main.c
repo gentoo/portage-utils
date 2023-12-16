@@ -839,7 +839,7 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 		 * backwards to the front of the string */
 		do_trim = true;
 		e = NULL;
-		for (r = q = s - 2; q >= p; q--) {
+		for (r = q = s - 2; q >= p && s != 0; q--) {
 			if (do_trim && isspace((int)*q)) {
 				*q = '\0';
 				r = q - 1;
