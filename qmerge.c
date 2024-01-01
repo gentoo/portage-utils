@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2022 Gentoo Authors
+ * Copyright 2005-2024 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -1806,7 +1806,7 @@ pkg_verify_checksums(
 	size_t flen;
 	int    mlen;
 
-	if (hash_multiple_file(pkg->path, md5, sha1, NULL, NULL, NULL, NULL,
+	if (hash_multiple_file(pkg->path, md5, sha1, NULL, NULL, NULL,
 			&flen, HASH_MD5 | HASH_SHA1) == -1)
 		errf("failed to compute hashes for %s: %s\n",
 				atom_to_string(pkg->atom), strerror(errno));

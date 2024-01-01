@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 Gentoo Foundation
+ * Copyright 2018-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
@@ -30,7 +30,6 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <openssl/sha.h>
-#include <openssl/whrlpool.h>
 #include <blake2.h>
 #include <zlib.h>
 #include <gpgme.h>
@@ -188,7 +187,6 @@ write_hashes(
 	size_t flen = 0;
 	char sha256[(SHA256_DIGEST_LENGTH * 2) + 1];
 	char sha512[(SHA512_DIGEST_LENGTH * 2) + 1];
-	char whrlpl[(WHIRLPOOL_DIGEST_LENGTH * 2) + 1];
 	char blak2b[(BLAKE2B_OUTBYTES * 2) + 1];
 	char data[8192];
 	char fname[8192];
@@ -202,7 +200,7 @@ write_hashes(
 
 	update_times(tv, &s);
 
-	hash_compute_file(fname, sha256, sha512, whrlpl, blak2b, &flen, hashes);
+	hash_compute_file(fname, sha256, sha512, blak2b, &flen, hashes);
 
 	len = snprintf(data, sizeof(data), "%s %s %zd", type, name, flen);
 	if (hashes & HASH_BLAKE2B)
@@ -214,9 +212,6 @@ write_hashes(
 	if (hashes & HASH_SHA512)
 		len += snprintf(data + len, sizeof(data) - len,
 				" SHA512 %s", sha512);
-	if (hashes & HASH_WHIRLPOOL)
-		len += snprintf(data + len, sizeof(data) - len,
-				" WHIRLPOOL %s", whrlpl);
 	len += snprintf(data + len, sizeof(data) - len, "\n");
 
 	if (m != NULL)
@@ -1034,7 +1029,6 @@ verify_file(const char *dir, char *mfline, const char *mfest, verify_msg **msgs)
 	size_t flen = 0;
 	char sha256[(SHA256_DIGEST_LENGTH * 2) + 1];
 	char sha512[(SHA512_DIGEST_LENGTH * 2) + 1];
-	char whrlpl[(WHIRLPOOL_DIGEST_LENGTH * 2) + 1];
 	char blak2b[(BLAKE2B_OUTBYTES * 2) + 1];
 	char ret = 0;
 
@@ -1065,9 +1059,9 @@ verify_file(const char *dir, char *mfline, const char *mfest, verify_msg **msgs)
 		return 1;
 	}
 
-	sha256[0] = sha512[0] = whrlpl[0] = blak2b[0] = '\0';
+	sha256[0] = sha512[0] = blak2b[0] = '\0';
 	snprintf(buf, sizeof(buf), "%s/%s", dir, path);
-	hash_compute_file(buf, sha256, sha512, whrlpl, blak2b, &flen, hashes);
+	hash_compute_file(buf, sha256, sha512, blak2b, &flen, hashes);
 
 	if (flen == 0) {
 		msgs_add(msgs, mfest, path, "cannot open file!");
@@ -1139,15 +1133,12 @@ verify_file(const char *dir, char *mfline, const char *mfest, verify_msg **msgs)
 					msgs_add(msgs, mfest, path,
 							"hash WHIRLPOOL is not "
 							"enabled for this repository");
-			} else if (strcmp(hash, whrlpl) != 0) {
-				msgs_add(msgs, mfest, path,
-						"WHIRLPOOL hash mismatch\n"
-						"computed: '%s'\n"
-						"Manifest: '%s'",
-						whrlpl, hash);
-				ret = 1;
+			} else {
+				if (strict)
+					msgs_add(msgs, mfest, path,
+							"hash WHIRLPOOL is not "
+							"supported by qmanifest");
 			}
-			whrlpl[0] = '\0';
 		} else if (strcmp(hashtype, "BLAKE2B") == 0) {
 			if (!(hashes & HASH_BLAKE2B)) {
 				if (strict)
@@ -1175,10 +1166,6 @@ verify_file(const char *dir, char *mfline, const char *mfest, verify_msg **msgs)
 	}
 	if (sha512[0] != '\0') {
 		msgs_add(msgs, mfest, path, "missing hash: SHA512");
-		ret = 1;
-	}
-	if (whrlpl[0] != '\0') {
-		msgs_add(msgs, mfest, path, "missing hash: WHIRLPOOL");
 		ret = 1;
 	}
 	if (blak2b[0] != '\0') {

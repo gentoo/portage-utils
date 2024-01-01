@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 Gentoo Foundation
+ * Copyright 2018-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
@@ -15,7 +15,6 @@
 #ifdef HAVE_SSL
 # include <openssl/md5.h>
 # include <openssl/sha.h>
-# include <openssl/whrlpool.h>
 #else
 # include "hash_md5_sha1.h"
 #endif
@@ -120,7 +119,6 @@ hash_multiple_file_fd(
 		char *sha1,
 		char *sha256,
 		char *sha512,
-		char *whrlpl,
 		char *blak2b,
 		size_t *flen,
 		int hashes)
@@ -133,13 +131,11 @@ hash_multiple_file_fd(
 	SHA_CTX s1;
 	SHA256_CTX s256;
 	SHA512_CTX s512;
-	WHIRLPOOL_CTX whrl;
 #else
 	struct md5_ctx_t m5;
 	struct sha1_ctx_t s1;
 	(void)sha256;
 	(void)sha512;
-	(void)whrlpl;
 #endif
 #ifdef HAVE_BLAKE2B
 	blake2b_state bl2b;
@@ -156,7 +152,6 @@ hash_multiple_file_fd(
 	SHA1_Init(&s1);
 	SHA256_Init(&s256);
 	SHA512_Init(&s512);
-	WHIRLPOOL_Init(&whrl);
 #else
 	md5_begin(&m5);
 	sha1_begin(&s1);
@@ -189,11 +184,6 @@ hash_multiple_file_fd(
 			{
 				if (hashes & HASH_SHA512)
 					SHA512_Update(&s512, data, len);
-			}
-#pragma omp section
-			{
-				if (hashes & HASH_WHIRLPOOL)
-					WHIRLPOOL_Update(&whrl, data, len);
 			}
 #else
 #pragma omp section
@@ -253,14 +243,6 @@ hash_multiple_file_fd(
 				hash_hex(sha512, sha512buf, SHA512_DIGEST_LENGTH);
 			}
 		}
-#pragma omp section
-		{
-			if (hashes & HASH_WHIRLPOOL) {
-				unsigned char whrlplbuf[WHIRLPOOL_DIGEST_LENGTH];
-				WHIRLPOOL_Final(whrlplbuf, &whrl);
-				hash_hex(whrlpl, whrlplbuf, WHIRLPOOL_DIGEST_LENGTH);
-			}
-		}
 #else
 #pragma omp section
 		{
@@ -303,7 +285,6 @@ hash_multiple_file_at_cb(
 		char *sha1,
 		char *sha256,
 		char *sha512,
-		char *whrlpl,
 		char *blak2b,
 		size_t *flen,
 		int hashes)
@@ -321,7 +302,7 @@ hash_multiple_file_at_cb(
 	}
 
 	ret = hash_multiple_file_fd(fd, md5, sha1, sha256, sha512,
-			whrlpl, blak2b, flen, hashes);
+			blak2b, flen, hashes);
 
 	if (ret != 0)
 		close(fd);
@@ -340,11 +321,10 @@ hash_file_at_cb(int pfd, const char *fname, int hash, hash_cb_t cb)
 		case HASH_SHA1:
 		case HASH_SHA256:
 		case HASH_SHA512:
-		case HASH_WHIRLPOOL:
 		case HASH_BLAKE2B:
 			if (hash_multiple_file_at_cb(pfd, fname, cb,
 					_hash_file_buf, _hash_file_buf, _hash_file_buf,
-					_hash_file_buf, _hash_file_buf, _hash_file_buf,
+					_hash_file_buf, _hash_file_buf,
 					&dummy, hash) != 0)
 				return NULL;
 			break;
