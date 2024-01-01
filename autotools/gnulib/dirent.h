@@ -1,6 +1,6 @@
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
 /* A GNU-like <dirent.h>.
-   Copyright (C) 2006-2022 Free Software Foundation, Inc.
+   Copyright (C) 2006-2024 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -30,6 +30,12 @@
 #ifndef _GL_DIRENT_H
 #define _GL_DIRENT_H
 
+/* This file uses _GL_ATTRIBUTE_DEALLOC, _GL_ATTRIBUTE_MALLOC,
+   _GL_ATTRIBUTE_PURE, GNULIB_POSIXCHECK, HAVE_RAW_DECL_*.  */
+#if !_GL_CONFIG_H_INCLUDED
+ #error "Please include config.h first."
+#endif
+
 /* Get ino_t.  Needed on some systems, including glibc 2.8.  */
 #include <sys/types.h>
 
@@ -51,8 +57,21 @@ struct dirent
 #  define DT_LNK    10          /* symbolic link */
 #  define DT_SOCK   12          /* socket */
 #  define DT_WHT    14          /* whiteout */
-typedef struct gl_directory DIR;
 #  define GNULIB_defined_struct_dirent 1
+# endif
+#endif
+
+#if !1
+# if !GNULIB_defined_DIR
+/* struct gl_directory is a type with a field 'int fd_to_close'.
+   It is needed for implementing fdopendir().  */
+struct gl_directory;
+#  if 1
+#   define DIR struct gl_directory
+#  else
+typedef struct gl_directory DIR;
+#  endif
+#  define GNULIB_defined_DIR 1
 # endif
 #endif
 
@@ -90,7 +109,7 @@ typedef struct gl_directory DIR;
 
 /* The definitions of _GL_FUNCDECL_RPL etc. are copied here.  */
 /* C++ compatible function declaration macros.
-   Copyright (C) 2010-2022 Free Software Foundation, Inc.
+   Copyright (C) 2010-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify it
    under the terms of the GNU Lesser General Public License as published
@@ -190,6 +209,12 @@ typedef struct gl_directory DIR;
    Example:
      _GL_FUNCDECL_RPL (open, int, (const char *filename, int flags, ...)
                                   _GL_ARG_NONNULL ((1)));
+
+   Note: Attributes, such as _GL_ATTRIBUTE_DEPRECATED, are supported in front
+   of a _GL_FUNCDECL_RPL invocation only in C mode, not in C++ mode.  (That's
+   because
+     [[...]] extern "C" <declaration>;
+   is invalid syntax in C++.)
  */
 #define _GL_FUNCDECL_RPL(func,rettype,parameters_and_attributes) \
   _GL_FUNCDECL_RPL_1 (rpl_##func, rettype, parameters_and_attributes)
@@ -423,7 +448,7 @@ typedef struct gl_directory DIR;
 
 /* The definition of _GL_ARG_NONNULL is copied here.  */
 /* A C macro for declaring that specific arguments must not be NULL.
-   Copyright (C) 2009-2022 Free Software Foundation, Inc.
+   Copyright (C) 2009-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify it
    under the terms of the GNU Lesser General Public License as published
@@ -451,7 +476,7 @@ typedef struct gl_directory DIR;
 
 /* The definition of _GL_WARN_ON_USE is copied here.  */
 /* A C macro for emitting warnings if a function is used.
-   Copyright (C) 2010-2022 Free Software Foundation, Inc.
+   Copyright (C) 2010-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify it
    under the terms of the GNU Lesser General Public License as published
@@ -650,7 +675,7 @@ _GL_CXXALIAS_SYS (opendir, DIR *, (const char *dir_name));
 # endif
 _GL_CXXALIASWARN (opendir);
 #else
-# if 1 && __GNUC__ >= 11 && !defined opendir
+# if 1 && !GNULIB_defined_DIR && __GNUC__ >= 11 && !defined opendir
 /* For -Wmismatched-dealloc: Associate opendir with closedir or
    rpl_closedir.  */
 _GL_FUNCDECL_SYS (opendir, DIR *,
@@ -668,10 +693,19 @@ _GL_WARN_ON_USE (opendir, "opendir is not portable - "
 #endif
 
 #if 0
-# if !1
+# if 0
+#  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+#   undef readdir
+#   define readdir rpl_readdir
+#  endif
+_GL_FUNCDECL_RPL (readdir, struct dirent *, (DIR *dirp) _GL_ARG_NONNULL ((1)));
+_GL_CXXALIAS_RPL (readdir, struct dirent *, (DIR *dirp));
+# else
+#  if !1
 _GL_FUNCDECL_SYS (readdir, struct dirent *, (DIR *dirp) _GL_ARG_NONNULL ((1)));
-# endif
+#  endif
 _GL_CXXALIAS_SYS (readdir, struct dirent *, (DIR *dirp));
+# endif
 _GL_CXXALIASWARN (readdir);
 #elif defined GNULIB_POSIXCHECK
 # undef readdir
@@ -682,10 +716,19 @@ _GL_WARN_ON_USE (readdir, "readdir is not portable - "
 #endif
 
 #if 0
-# if !1
+# if 0
+#  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+#   undef rewinddir
+#   define rewinddir rpl_rewinddir
+#  endif
+_GL_FUNCDECL_RPL (rewinddir, void, (DIR *dirp) _GL_ARG_NONNULL ((1)));
+_GL_CXXALIAS_RPL (rewinddir, void, (DIR *dirp));
+# else
+#  if !1
 _GL_FUNCDECL_SYS (rewinddir, void, (DIR *dirp) _GL_ARG_NONNULL ((1)));
-# endif
+#  endif
 _GL_CXXALIAS_SYS (rewinddir, void, (DIR *dirp));
+# endif
 _GL_CXXALIASWARN (rewinddir);
 #elif defined GNULIB_POSIXCHECK
 # undef rewinddir
@@ -707,12 +750,6 @@ _GL_WARN_ON_USE (rewinddir, "rewinddir is not portable - "
 _GL_FUNCDECL_RPL (dirfd, int, (DIR *) _GL_ARG_NONNULL ((1)));
 _GL_CXXALIAS_RPL (dirfd, int, (DIR *));
 
-#  ifdef __KLIBC__
-/* Gnulib internal hooks needed to maintain the dirfd metadata.  */
-_GL_EXTERN_C int _gl_register_dirp_fd (int fd, DIR *dirp)
-     _GL_ARG_NONNULL ((2));
-_GL_EXTERN_C void _gl_unregister_dirp_fd (int fd);
-#  endif
 # else
 #  if defined __cplusplus && defined GNULIB_NAMESPACE && defined dirfd
     /* dirfd is defined as a macro and not as a function.

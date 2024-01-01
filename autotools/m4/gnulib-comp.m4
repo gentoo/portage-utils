@@ -1,5 +1,5 @@
 # DO NOT EDIT! GENERATED AUTOMATICALLY!
-# Copyright (C) 2002-2022 Free Software Foundation, Inc.
+# Copyright (C) 2002-2024 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,7 +43,9 @@ AC_DEFUN([gl_EARLY],
   AC_REQUIRE([gl_PROG_AR_RANLIB])
 
   # Code from module absolute-header:
+  # Code from module access:
   # Code from module alloca-opt:
+  # Code from module assert-h:
   # Code from module assure:
   # Code from module at-internal:
   # Code from module attribute:
@@ -68,6 +70,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module eloop-threshold:
   # Code from module errno:
   # Code from module error:
+  # Code from module error-h:
   # Code from module euidaccess:
   # Code from module exitfail:
   # Code from module extensions:
@@ -102,6 +105,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module gettext-h:
   # Code from module gettime:
   # Code from module gettimeofday:
+  # Code from module glibc-internal/scratch_buffer:
   # Code from module group-member:
   # Code from module ialloc:
   # Code from module idx:
@@ -114,7 +118,6 @@ AC_DEFUN([gl_EARLY],
   # Code from module isnanl-nolibm:
   # Code from module largefile:
   AC_REQUIRE([AC_SYS_LARGEFILE])
-  AC_REQUIRE([gl_YEAR2038_EARLY])
   # Code from module libc-config:
   # Code from module limits-h:
   # Code from module lstat:
@@ -122,6 +125,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module malloc-posix:
   # Code from module malloca:
   # Code from module math:
+  # Code from module mbszero:
   # Code from module memchr:
   # Code from module mempcpy:
   # Code from module memrchr:
@@ -155,7 +159,6 @@ AC_DEFUN([gl_EARLY],
   # Code from module root-uid:
   # Code from module same-inode:
   # Code from module save-cwd:
-  # Code from module scratch_buffer:
   # Code from module signbit:
   # Code from module size_max:
   # Code from module snippet/_Noreturn:
@@ -166,11 +169,12 @@ AC_DEFUN([gl_EARLY],
   # Code from module stat:
   # Code from module stat-time:
   # Code from module std-gnu11:
-  # Code from module stdalign:
   # Code from module stdbool:
+  # Code from module stdckdint:
   # Code from module stddef:
   # Code from module stdint:
   # Code from module stdio:
+  gl_STDIO_H_EARLY
   # Code from module stdlib:
   # Code from module strcase:
   # Code from module strcasestr-simple:
@@ -186,7 +190,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module sys_stat:
   # Code from module sys_time:
   # Code from module sys_types:
-  # Code from module time:
+  # Code from module time-h:
   # Code from module timespec:
   # Code from module unistd:
   # Code from module unistd-safer:
@@ -227,8 +231,14 @@ AC_DEFUN([gl_INIT],
   gl_COMMON
   gl_source_base='autotools/gnulib'
   gl_source_base_prefix=
+  gl_FUNC_ACCESS
+  gl_CONDITIONAL([GL_COND_OBJ_ACCESS], [test $REPLACE_ACCESS = 1])
+  gl_UNISTD_MODULE_INDICATOR([access])
   gl_FUNC_ALLOCA
   gl_CONDITIONAL_HEADER([alloca.h])
+  AC_PROG_MKDIR_P
+  gl_ASSERT_H
+  gl_CONDITIONAL_HEADER([assert.h])
   AC_PROG_MKDIR_P
   AC_REQUIRE([AC_CANONICAL_HOST])
   gl___BUILTIN_EXPECT
@@ -269,7 +279,7 @@ AC_DEFUN([gl_INIT],
   AC_PROG_MKDIR_P
   gl_FUNC_DIRFD
   gl_CONDITIONAL([GL_COND_OBJ_DIRFD],
-                 [test $ac_cv_func_dirfd = no && test $gl_cv_func_dirfd_macro = no || test $REPLACE_DIRFD = 1])
+                 [test $HAVE_DIRFD = 0 || test $REPLACE_DIRFD = 1])
   AM_COND_IF([GL_COND_OBJ_DIRFD], [
     gl_PREREQ_DIRFD
   ])
@@ -290,14 +300,17 @@ AC_DEFUN([gl_INIT],
   gl_HEADER_ERRNO_H
   gl_CONDITIONAL_HEADER([errno.h])
   AC_PROG_MKDIR_P
+  AC_REQUIRE([gl_ERROR_H])
   gl_ERROR
-  gl_CONDITIONAL([GL_COND_OBJ_ERROR], [test "$ac_cv_lib_error_at_line" = no])
+  gl_CONDITIONAL([GL_COND_OBJ_ERROR], [test $COMPILE_ERROR_C = 1])
   AM_COND_IF([GL_COND_OBJ_ERROR], [
     gl_PREREQ_ERROR
   ])
   m4_ifdef([AM_XGETTEXT_OPTION],
     [AM_][XGETTEXT_OPTION([--flag=error:3:c-format])
      AM_][XGETTEXT_OPTION([--flag=error_at_line:5:c-format])])
+  gl_ERROR_H
+  AC_PROG_MKDIR_P
   gl_FUNC_EUIDACCESS
   gl_CONDITIONAL([GL_COND_OBJ_EUIDACCESS], [test $HAVE_EUIDACCESS = 0])
   AM_COND_IF([GL_COND_OBJ_EUIDACCESS], [
@@ -314,7 +327,8 @@ AC_DEFUN([gl_INIT],
   gl_MODULE_INDICATOR([faccessat])
   gl_UNISTD_MODULE_INDICATOR([faccessat])
   gl_FUNC_FCHDIR
-  gl_CONDITIONAL([GL_COND_OBJ_FCHDIR], [test $HAVE_FCHDIR = 0])
+  gl_CONDITIONAL([GL_COND_OBJ_FCHDIR],
+                 [test $HAVE_FCHDIR = 0 || test $REPLACE_FCHDIR = 1])
   AM_COND_IF([GL_COND_OBJ_FCHDIR], [
     gl_PREREQ_FCHDIR
   ])
@@ -358,7 +372,7 @@ AC_DEFUN([gl_INIT],
   gl_CONDITIONAL([GL_COND_OBJ_FSTAT], [test $REPLACE_FSTAT = 1])
   AM_COND_IF([GL_COND_OBJ_FSTAT], [
     case "$host_os" in
-      mingw*)
+      mingw* | windows*)
         AC_LIBOBJ([stat-w32])
         ;;
     esac
@@ -412,6 +426,12 @@ AC_DEFUN([gl_INIT],
   ])
   gl_UNISTD_MODULE_INDICATOR([getopt-posix])
   gl_FUNC_GETPROGNAME
+  gl_CONDITIONAL([GL_COND_OBJ_GETPROGNAME],
+                 [test $HAVE_GETPROGNAME = 0 || test $REPLACE_GETPROGNAME = 1])
+  AM_COND_IF([GL_COND_OBJ_GETPROGNAME], [
+    gl_PREREQ_GETPROGNAME
+  ])
+  gl_STDLIB_MODULE_INDICATOR([getprogname])
   AC_SUBST([LIBINTL])
   AC_SUBST([LTLIBINTL])
   gl_GETTIME
@@ -422,6 +442,7 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_GETTIMEOFDAY
   ])
   gl_SYS_TIME_MODULE_INDICATOR([gettimeofday])
+  AC_PROG_MKDIR_P
   gl_FUNC_GROUP_MEMBER
   gl_CONDITIONAL([GL_COND_OBJ_GROUP_MEMBER], [test $HAVE_GROUP_MEMBER = 0])
   AM_COND_IF([GL_COND_OBJ_GROUP_MEMBER], [
@@ -472,6 +493,10 @@ AC_DEFUN([gl_INIT],
   gl_MATH_H
   gl_MATH_H_REQUIRE_DEFAULTS
   AC_PROG_MKDIR_P
+  AC_REQUIRE([AC_TYPE_MBSTATE_T])
+  gl_MBSTATE_T_BROKEN
+  gl_MUSL_LIBC
+  gl_WCHAR_MODULE_INDICATOR([mbszero])
   gl_FUNC_MEMCHR
   gl_CONDITIONAL([GL_COND_OBJ_MEMCHR], [test $REPLACE_MEMCHR = 1])
   AM_COND_IF([GL_COND_OBJ_MEMCHR], [
@@ -479,7 +504,8 @@ AC_DEFUN([gl_INIT],
   ])
   gl_STRING_MODULE_INDICATOR([memchr])
   gl_FUNC_MEMPCPY
-  gl_CONDITIONAL([GL_COND_OBJ_MEMPCPY], [test $HAVE_MEMPCPY = 0])
+  gl_CONDITIONAL([GL_COND_OBJ_MEMPCPY],
+                 [test $HAVE_MEMPCPY = 0 || test $REPLACE_MEMPCPY = 1])
   AM_COND_IF([GL_COND_OBJ_MEMPCPY], [
     gl_PREREQ_MEMPCPY
   ])
@@ -586,7 +612,6 @@ AC_DEFUN([gl_INIT],
   gl_CONDITIONAL([GL_COND_OBJ_RMDIR], [test $REPLACE_RMDIR = 1])
   gl_UNISTD_MODULE_INDICATOR([rmdir])
   gl_SAVE_CWD
-  AC_PROG_MKDIR_P
   gl_SIGNBIT
   gl_CONDITIONAL([GL_COND_OBJ_SIGNBIT3], [test $REPLACE_SIGNBIT = 1])
   gl_MATH_MODULE_INDICATOR([signbit])
@@ -596,7 +621,7 @@ AC_DEFUN([gl_INIT],
   gl_CONDITIONAL([GL_COND_OBJ_STAT], [test $REPLACE_STAT = 1])
   AM_COND_IF([GL_COND_OBJ_STAT], [
     case "$host_os" in
-      mingw*)
+      mingw* | windows*)
         AC_LIBOBJ([stat-w32])
         ;;
     esac
@@ -605,11 +630,14 @@ AC_DEFUN([gl_INIT],
   gl_SYS_STAT_MODULE_INDICATOR([stat])
   gl_STAT_TIME
   gl_STAT_BIRTHTIME
-  gl_STDALIGN_H
-  gl_CONDITIONAL_HEADER([stdalign.h])
-  AC_PROG_MKDIR_P
-  gl_STDBOOL_H
-  gl_CONDITIONAL_HEADER([stdbool.h])
+  gl_C_BOOL
+  AC_CHECK_HEADERS_ONCE([stdckdint.h])
+  if test $ac_cv_header_stdckdint_h = yes; then
+    GL_GENERATE_STDCKDINT_H=false
+  else
+    GL_GENERATE_STDCKDINT_H=true
+  fi
+  gl_CONDITIONAL_HEADER([stdckdint.h])
   AC_PROG_MKDIR_P
   gl_STDDEF_H
   gl_STDDEF_H_REQUIRE_DEFAULTS
@@ -938,10 +966,12 @@ AC_DEFUN([gltests_LIBSOURCES], [
 # gnulib-tool and may be removed by future gnulib-tool invocations.
 AC_DEFUN([gl_FILE_LIST], [
   lib/_Noreturn.h
+  lib/access.c
   lib/alloca.in.h
   lib/arg-nonnull.h
   lib/asnprintf.c
   lib/asprintf.c
+  lib/assert.in.h
   lib/assure.h
   lib/at-func.c
   lib/at-func2.c
@@ -970,7 +1000,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/eloop-threshold.h
   lib/errno.in.h
   lib/error.c
-  lib/error.h
+  lib/error.in.h
   lib/euidaccess.c
   lib/exitfail.c
   lib/exitfail.h
@@ -1019,6 +1049,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/ialloc.c
   lib/ialloc.h
   lib/idx.h
+  lib/intprops-internal.h
   lib/intprops.h
   lib/inttypes.in.h
   lib/isnan.c
@@ -1034,7 +1065,6 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/lstat.c
   lib/malloc.c
   lib/malloc/scratch_buffer.h
-  lib/malloc/scratch_buffer_dupfree.c
   lib/malloc/scratch_buffer_grow.c
   lib/malloc/scratch_buffer_grow_preserve.c
   lib/malloc/scratch_buffer_set_array_size.c
@@ -1042,6 +1072,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/malloca.h
   lib/math.c
   lib/math.in.h
+  lib/mbszero.c
   lib/memchr.c
   lib/memchr.valgrind
   lib/mempcpy.c
@@ -1083,6 +1114,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/renameatu.h
   lib/rmdir.c
   lib/root-uid.h
+  lib/same-inode.c
   lib/same-inode.h
   lib/save-cwd.c
   lib/save-cwd.h
@@ -1096,8 +1128,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/stat-w32.c
   lib/stat-w32.h
   lib/stat.c
-  lib/stdalign.in.h
-  lib/stdbool.in.h
+  lib/stdckdint.in.h
   lib/stddef.in.h
   lib/stdint.in.h
   lib/stdio-read.c
@@ -1152,14 +1183,18 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/00gnulib.m4
   m4/__inline.m4
   m4/absolute-header.m4
+  m4/access.m4
   m4/alloca.m4
+  m4/assert_h.m4
   m4/builtin-expect.m4
+  m4/c-bool.m4
   m4/calloc.m4
   m4/canonicalize.m4
   m4/chdir-long.m4
   m4/clock_time.m4
   m4/close.m4
   m4/closedir.m4
+  m4/codeset.m4
   m4/dirent_h.m4
   m4/dirfd.m4
   m4/double-slash-root.m4
@@ -1168,6 +1203,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/eealloc.m4
   m4/errno_h.m4
   m4/error.m4
+  m4/error_h.m4
   m4/euidaccess.m4
   m4/exponentd.m4
   m4/exponentf.m4
@@ -1210,10 +1246,15 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/largefile.m4
   m4/ldexpl.m4
   m4/limits-h.m4
+  m4/locale-fr.m4
+  m4/locale-ja.m4
+  m4/locale-zh.m4
   m4/lstat.m4
   m4/malloc.m4
   m4/malloca.m4
   m4/math_h.m4
+  m4/mbrtowc.m4
+  m4/mbstate_t.m4
   m4/memchr.m4
   m4/mempcpy.m4
   m4/memrchr.m4
@@ -1225,6 +1266,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/msvc-inval.m4
   m4/msvc-nothrow.m4
   m4/multiarch.m4
+  m4/musl.m4
   m4/nocrash.m4
   m4/off_t.m4
   m4/open-cloexec.m4
@@ -1253,8 +1295,6 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/stat-time.m4
   m4/stat.m4
   m4/std-gnu11.m4
-  m4/stdalign.m4
-  m4/stdbool.m4
   m4/stddef_h.m4
   m4/stdint.m4
   m4/stdint_h.m4
@@ -1295,6 +1335,5 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/wint_t.m4
   m4/xalloc.m4
   m4/xsize.m4
-  m4/year2038.m4
   m4/zzgnulib.m4
 ])
