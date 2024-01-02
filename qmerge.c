@@ -1411,10 +1411,12 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		int imagefd = open("image", O_RDONLY);
 		size_t masklen = strlen(install_mask) + 1 +
 				15 + 1 + 14 + 1 + 14 + 1 + 1;  /* worst case scenario */
-		char *imask = xmalloc(masklen);
+		char *imask;
 		size_t maskp;
 
-		if (fstat(imagefd, &st) == -1) {
+		if (imagefd == -1) {
+			err("Failed to open image dir");
+		} else if (fstat(imagefd, &st) == -1) {
 			close(imagefd);
 			err("Cannot stat image dirfd");
 		} else if (eprefix != NULL && eprefix[0] == '/') {
@@ -1425,6 +1427,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 			}
 		}
 
+		imask = xmalloc(masklen);
 		/* rely on INSTALL_MASK code to remove optional dirs */
 		maskp = snprintf(imask, masklen, "%s ", install_mask);
 		if (contains_set("noinfo", features))
