@@ -12,15 +12,14 @@
 
 #include "main.h"
 
-#ifdef HAVE_SSL
-# include <openssl/md5.h>
-# include <openssl/sha.h>
-#else
-# include "hash_md5_sha1.h"
-#endif
 #ifdef HAVE_BLAKE2B
 # include <blake2.h>
 #endif
+
+#include "md5.h"
+#include "sha1.h"
+#include "sha256.h"
+#include "sha512.h"
 
 #include "hash.h"
 
@@ -28,8 +27,7 @@ void
 hash_hex(char *out, const unsigned char *buf, const int length)
 {
 	switch (length) {
-		/* MD5_DIGEST_LENGTH */
-		case 16:
+		case 16: /* MD5_DIGEST_SIZE */
 			snprintf(out, 32 + 1,
 					"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
 					"%02x%02x%02x%02x%02x%02x",
@@ -39,8 +37,7 @@ hash_hex(char *out, const unsigned char *buf, const int length)
 					buf[15]
 					);
 			break;
-		/* SHA1_DIGEST_LENGTH */
-		case 20:
+		case 20: /* SHA1_DIGEST_SIZE */
 			snprintf(out, 40 + 1,
 					"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
 					"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
@@ -50,8 +47,7 @@ hash_hex(char *out, const unsigned char *buf, const int length)
 					buf[15], buf[16], buf[17], buf[18], buf[19]
 					);
 			break;
-		/* SHA256_DIGEST_LENGTH */
-		case 32:
+		case 32: /* SHA256_DIGEST_SIZE */
 			snprintf(out, 64 + 1,
 					"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
 					"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
@@ -66,8 +62,7 @@ hash_hex(char *out, const unsigned char *buf, const int length)
 					buf[30], buf[31]
 					);
 			break;
-		/* SHA512_DIGEST_LENGTH, WHIRLPOOL_DIGEST_LENGTH, BLAKE2B_OUTBYTES */
-		case 64:
+		case 64: /* SHA512_DIGEST_SIZE, BLAKE2B_OUTBYTES */
 			snprintf(out, 128 + 1,
 					"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
 					"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
@@ -123,22 +118,15 @@ hash_multiple_file_fd(
 		size_t *flen,
 		int hashes)
 {
-	FILE *f;
-	char data[8192];
-	size_t len;
-#ifdef HAVE_SSL
-	MD5_CTX m5;
-	SHA_CTX s1;
-	SHA256_CTX s256;
-	SHA512_CTX s512;
-#else
-	struct md5_ctx_t m5;
-	struct sha1_ctx_t s1;
-	(void)sha256;
-	(void)sha512;
-#endif
+	FILE             *f;
+	char              data[8192];
+	size_t            len;
+	struct md5_ctx    m5;
+	struct sha1_ctx   s1;
+	struct sha256_ctx s256;
+	struct sha512_ctx s512;
 #ifdef HAVE_BLAKE2B
-	blake2b_state bl2b;
+	blake2b_state     bl2b;
 #else
 	(void)blak2b;
 #endif
@@ -147,15 +135,10 @@ hash_multiple_file_fd(
 	if ((f = fdopen(fd, "r")) == NULL)
 		return -1;
 
-#ifdef HAVE_SSL
-	MD5_Init(&m5);
-	SHA1_Init(&s1);
-	SHA256_Init(&s256);
-	SHA512_Init(&s512);
-#else
-	md5_begin(&m5);
-	sha1_begin(&s1);
-#endif
+	md5_init_ctx(&m5);
+	sha1_init_ctx(&s1);
+	sha256_init_ctx(&s256);
+	sha512_init_ctx(&s512);
 #ifdef HAVE_BLAKE2B
 	blake2b_init(&bl2b, BLAKE2B_OUTBYTES);
 #endif
@@ -164,39 +147,26 @@ hash_multiple_file_fd(
 		*flen += len;
 #pragma omp parallel sections
 		{
-#ifdef HAVE_SSL
 #pragma omp section
 			{
 				if (hashes & HASH_MD5)
-					MD5_Update(&m5, data, len);
+					md5_process_bytes(data, len, &m5);
 			}
 #pragma omp section
 			{
 				if (hashes & HASH_SHA1)
-					SHA1_Update(&s1, data, len);
+					sha1_process_bytes(data, len, &s1);
 			}
 #pragma omp section
 			{
 				if (hashes & HASH_SHA256)
-					SHA256_Update(&s256, data, len);
+					sha256_process_bytes(data, len, &s256);
 			}
 #pragma omp section
 			{
 				if (hashes & HASH_SHA512)
-					SHA512_Update(&s512, data, len);
+					sha512_process_bytes(data, len, &s512);
 			}
-#else
-#pragma omp section
-			{
-				if (hashes & HASH_MD5)
-					md5_hash(data, len, &m5);
-			}
-#pragma omp section
-			{
-				if (hashes & HASH_SHA1)
-					sha1_hash(data, len, &s1);
-			}
-#endif
 #ifdef HAVE_BLAKE2B
 #pragma omp section
 			{
@@ -210,57 +180,38 @@ hash_multiple_file_fd(
 
 #pragma omp parallel sections
 	{
-#ifdef HAVE_SSL
 #pragma omp section
 		{
 			if (hashes & HASH_MD5) {
-				unsigned char md5buf[MD5_DIGEST_LENGTH];
-				MD5_Final(md5buf, &m5);
-				hash_hex(md5, md5buf, MD5_DIGEST_LENGTH);
+				unsigned char md5buf[MD5_DIGEST_SIZE];
+				md5_finish_ctx(&m5, md5buf);
+				hash_hex(md5, md5buf, MD5_DIGEST_SIZE);
 			}
 		}
 #pragma omp section
 		{
 			if (hashes & HASH_SHA1) {
-				unsigned char sha1buf[SHA_DIGEST_LENGTH];
-				SHA1_Final(sha1buf, &s1);
-				hash_hex(sha1, sha1buf, SHA_DIGEST_LENGTH);
+				unsigned char sha1buf[SHA1_DIGEST_SIZE];
+				sha1_finish_ctx(&s1, sha1buf);
+				hash_hex(sha1, sha1buf, SHA1_DIGEST_SIZE);
 			}
 		}
 #pragma omp section
 		{
 			if (hashes & HASH_SHA256) {
-				unsigned char sha256buf[SHA256_DIGEST_LENGTH];
-				SHA256_Final(sha256buf, &s256);
-				hash_hex(sha256, sha256buf, SHA256_DIGEST_LENGTH);
+				unsigned char sha256buf[SHA256_DIGEST_SIZE];
+				sha256_finish_ctx(&s256, sha256buf);
+				hash_hex(sha256, sha256buf, SHA256_DIGEST_SIZE);
 			}
 		}
 #pragma omp section
 		{
 			if (hashes & HASH_SHA512) {
-				unsigned char sha512buf[SHA512_DIGEST_LENGTH];
-				SHA512_Final(sha512buf, &s512);
-				hash_hex(sha512, sha512buf, SHA512_DIGEST_LENGTH);
+				unsigned char sha512buf[SHA512_DIGEST_SIZE];
+				sha512_finish_ctx(&s512, sha512buf);
+				hash_hex(sha512, sha512buf, SHA512_DIGEST_SIZE);
 			}
 		}
-#else
-#pragma omp section
-		{
-			if (hashes & HASH_MD5) {
-				unsigned char md5buf[16];
-				md5_end(md5buf, &m5);
-				hash_hex(md5, md5buf, 16);
-			}
-		}
-#pragma omp section
-		{
-			if (hashes & HASH_SHA1) {
-				unsigned char sha1buf[20];
-				sha1_end(sha1buf, &s1);
-				hash_hex(sha1, sha1buf, 20);
-			}
-		}
-#endif
 #ifdef HAVE_BLAKE2B
 #pragma omp section
 		{

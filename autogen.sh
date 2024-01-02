@@ -28,6 +28,10 @@ done
 # reload the gnulib code
 PATH=/usr/local/src/gnu/gnulib:${PATH}
 mods="
+	crypto/md5-buffer
+	crypto/sha1-buffer
+	crypto/sha256-buffer
+	crypto/sha512-buffer
 	dirent
 	faccessat
 	fdopendir
