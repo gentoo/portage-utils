@@ -88,7 +88,6 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_FALSE@am__append_1 = hash_md5_sha1.c hash_md5_sha1.h
 subdir = libq
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
@@ -99,6 +98,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/alloca.m4 \
 	$(top_srcdir)/autotools/m4/assert_h.m4 \
 	$(top_srcdir)/autotools/m4/builtin-expect.m4 \
+	$(top_srcdir)/autotools/m4/byteswap.m4 \
 	$(top_srcdir)/autotools/m4/c-bool.m4 \
 	$(top_srcdir)/autotools/m4/calloc.m4 \
 	$(top_srcdir)/autotools/m4/canonicalize.m4 \
@@ -146,6 +146,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/getprogname.m4 \
 	$(top_srcdir)/autotools/m4/gettime.m4 \
 	$(top_srcdir)/autotools/m4/gettimeofday.m4 \
+	$(top_srcdir)/autotools/m4/gl-openssl.m4 \
 	$(top_srcdir)/autotools/m4/gnulib-common.m4 \
 	$(top_srcdir)/autotools/m4/gnulib-comp.m4 \
 	$(top_srcdir)/autotools/m4/group-member.m4 \
@@ -168,6 +169,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/math_h.m4 \
 	$(top_srcdir)/autotools/m4/mbrtowc.m4 \
 	$(top_srcdir)/autotools/m4/mbstate_t.m4 \
+	$(top_srcdir)/autotools/m4/md5.m4 \
 	$(top_srcdir)/autotools/m4/memchr.m4 \
 	$(top_srcdir)/autotools/m4/mempcpy.m4 \
 	$(top_srcdir)/autotools/m4/memrchr.m4 \
@@ -201,11 +203,15 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/renameat.m4 \
 	$(top_srcdir)/autotools/m4/rmdir.m4 \
 	$(top_srcdir)/autotools/m4/save-cwd.m4 \
+	$(top_srcdir)/autotools/m4/sha1.m4 \
+	$(top_srcdir)/autotools/m4/sha256.m4 \
+	$(top_srcdir)/autotools/m4/sha512.m4 \
 	$(top_srcdir)/autotools/m4/signbit.m4 \
 	$(top_srcdir)/autotools/m4/size_max.m4 \
 	$(top_srcdir)/autotools/m4/ssize_t.m4 \
 	$(top_srcdir)/autotools/m4/stat-time.m4 \
 	$(top_srcdir)/autotools/m4/stat.m4 \
+	$(top_srcdir)/autotools/m4/stdalign.m4 \
 	$(top_srcdir)/autotools/m4/stddef_h.m4 \
 	$(top_srcdir)/autotools/m4/stdint.m4 \
 	$(top_srcdir)/autotools/m4/stdint_h.m4 \
@@ -261,17 +267,7 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libq_a_AR = $(AR) $(ARFLAGS)
 libq_a_LIBADD =
-am__libq_a_SOURCES_DIST = atom.c atom.h basename.c basename.h \
-	busybox.h colors.c colors.h contents.c contents.h copy_file.c \
-	copy_file.h dep.c dep.h eat_file.c eat_file.h hash.c hash.h \
-	human_readable.c human_readable.h i18n.h move_file.c \
-	move_file.h prelink.c prelink.h profile.c profile.h rmspace.c \
-	rmspace.h safe_io.c safe_io.h scandirat.c scandirat.h set.c \
-	set.h tree.c tree.h xarray.c xarray.h xasprintf.h xchdir.c \
-	xchdir.h xmkdir.c xmkdir.h xpak.c xpak.h xregex.c xregex.h \
-	xsystem.c xsystem.h hash_md5_sha1.c hash_md5_sha1.h
-@QMANIFEST_ENABLED_FALSE@@QTEGRITY_ENABLED_FALSE@am__objects_1 = libq_a-hash_md5_sha1.$(OBJEXT)
-am__objects_2 = libq_a-atom.$(OBJEXT) libq_a-basename.$(OBJEXT) \
+am__objects_1 = libq_a-atom.$(OBJEXT) libq_a-basename.$(OBJEXT) \
 	libq_a-colors.$(OBJEXT) libq_a-contents.$(OBJEXT) \
 	libq_a-copy_file.$(OBJEXT) libq_a-dep.$(OBJEXT) \
 	libq_a-eat_file.$(OBJEXT) libq_a-hash.$(OBJEXT) \
@@ -282,8 +278,8 @@ am__objects_2 = libq_a-atom.$(OBJEXT) libq_a-basename.$(OBJEXT) \
 	libq_a-tree.$(OBJEXT) libq_a-xarray.$(OBJEXT) \
 	libq_a-xchdir.$(OBJEXT) libq_a-xmkdir.$(OBJEXT) \
 	libq_a-xpak.$(OBJEXT) libq_a-xregex.$(OBJEXT) \
-	libq_a-xsystem.$(OBJEXT) $(am__objects_1)
-am_libq_a_OBJECTS = $(am__objects_2)
+	libq_a-xsystem.$(OBJEXT)
+am_libq_a_OBJECTS = $(am__objects_1)
 libq_a_OBJECTS = $(am_libq_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -304,7 +300,7 @@ am__depfiles_remade = ./$(DEPDIR)/libq_a-atom.Po \
 	./$(DEPDIR)/libq_a-basename.Po ./$(DEPDIR)/libq_a-colors.Po \
 	./$(DEPDIR)/libq_a-contents.Po ./$(DEPDIR)/libq_a-copy_file.Po \
 	./$(DEPDIR)/libq_a-dep.Po ./$(DEPDIR)/libq_a-eat_file.Po \
-	./$(DEPDIR)/libq_a-hash.Po ./$(DEPDIR)/libq_a-hash_md5_sha1.Po \
+	./$(DEPDIR)/libq_a-hash.Po \
 	./$(DEPDIR)/libq_a-human_readable.Po \
 	./$(DEPDIR)/libq_a-move_file.Po ./$(DEPDIR)/libq_a-prelink.Po \
 	./$(DEPDIR)/libq_a-profile.Po ./$(DEPDIR)/libq_a-rmspace.Po \
@@ -331,7 +327,7 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libq_a_SOURCES)
-DIST_SOURCES = $(am__libq_a_SOURCES_DIST)
+DIST_SOURCES = $(libq_a_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -374,6 +370,7 @@ BITSIZEOF_SIG_ATOMIC_T = @BITSIZEOF_SIG_ATOMIC_T@
 BITSIZEOF_SIZE_T = @BITSIZEOF_SIZE_T@
 BITSIZEOF_WCHAR_T = @BITSIZEOF_WCHAR_T@
 BITSIZEOF_WINT_T = @BITSIZEOF_WINT_T@
+BYTESWAP_H = @BYTESWAP_H@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -1227,11 +1224,10 @@ LIBGNU_LTLIBDEPS = @LIBGNU_LTLIBDEPS@
 LIBINTL = @LIBINTL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
-LIBSSL_CFLAGS = @LIBSSL_CFLAGS@
-LIBSSL_LIBS = @LIBSSL_LIBS@
 LIBZ_CFLAGS = @LIBZ_CFLAGS@
 LIBZ_LIBS = @LIBZ_LIBS@
 LIB_CLOCK_GETTIME = @LIB_CLOCK_GETTIME@
+LIB_CRYPTO = @LIB_CRYPTO@
 LIB_EACCESS = @LIB_EACCESS@
 LIMITS_H = @LIMITS_H@
 LN_S = @LN_S@
@@ -1683,15 +1679,35 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-QFILES = atom.c atom.h basename.c basename.h busybox.h colors.c \
-	colors.h contents.c contents.h copy_file.c copy_file.h dep.c \
-	dep.h eat_file.c eat_file.h hash.c hash.h human_readable.c \
-	human_readable.h i18n.h move_file.c move_file.h prelink.c \
-	prelink.h profile.c profile.h rmspace.c rmspace.h safe_io.c \
-	safe_io.h scandirat.c scandirat.h set.c set.h tree.c tree.h \
-	xarray.c xarray.h xasprintf.h xchdir.c xchdir.h xmkdir.c \
-	xmkdir.h xpak.c xpak.h xregex.c xregex.h xsystem.c xsystem.h \
-	$(NULL) $(am__append_1)
+QFILES = \
+	atom.c atom.h \
+	basename.c basename.h \
+	busybox.h \
+	colors.c colors.h \
+	contents.c contents.h \
+	copy_file.c copy_file.h \
+	dep.c dep.h \
+	eat_file.c eat_file.h \
+	hash.c hash.h \
+	human_readable.c human_readable.h \
+	i18n.h \
+	move_file.c move_file.h \
+	prelink.c prelink.h \
+	profile.c profile.h \
+	rmspace.c rmspace.h \
+	safe_io.c safe_io.h \
+	scandirat.c scandirat.h \
+	set.c set.h \
+	tree.c tree.h \
+	xarray.c xarray.h \
+	xasprintf.h \
+	xchdir.c xchdir.h \
+	xmkdir.c xmkdir.h \
+	xpak.c xpak.h \
+	xregex.c xregex.h \
+	xsystem.c xsystem.h \
+	$(NULL)
+
 noinst_LIBRARIES = libq.a
 libq_a_SOURCES = $(QFILES)
 libq_a_CPPFLAGS = \
@@ -1755,7 +1771,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-dep.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-eat_file.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-hash.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-hash_md5_sha1.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-human_readable.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-move_file.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-prelink.Po@am__quote@ # am--include-marker
@@ -2114,20 +2129,6 @@ libq_a-xsystem.obj: xsystem.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_a-xsystem.obj `if test -f 'xsystem.c'; then $(CYGPATH_W) 'xsystem.c'; else $(CYGPATH_W) '$(srcdir)/xsystem.c'; fi`
 
-libq_a-hash_md5_sha1.o: hash_md5_sha1.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_a-hash_md5_sha1.o -MD -MP -MF $(DEPDIR)/libq_a-hash_md5_sha1.Tpo -c -o libq_a-hash_md5_sha1.o `test -f 'hash_md5_sha1.c' || echo '$(srcdir)/'`hash_md5_sha1.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_a-hash_md5_sha1.Tpo $(DEPDIR)/libq_a-hash_md5_sha1.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='hash_md5_sha1.c' object='libq_a-hash_md5_sha1.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_a-hash_md5_sha1.o `test -f 'hash_md5_sha1.c' || echo '$(srcdir)/'`hash_md5_sha1.c
-
-libq_a-hash_md5_sha1.obj: hash_md5_sha1.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_a-hash_md5_sha1.obj -MD -MP -MF $(DEPDIR)/libq_a-hash_md5_sha1.Tpo -c -o libq_a-hash_md5_sha1.obj `if test -f 'hash_md5_sha1.c'; then $(CYGPATH_W) 'hash_md5_sha1.c'; else $(CYGPATH_W) '$(srcdir)/hash_md5_sha1.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_a-hash_md5_sha1.Tpo $(DEPDIR)/libq_a-hash_md5_sha1.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='hash_md5_sha1.c' object='libq_a-hash_md5_sha1.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_a-hash_md5_sha1.obj `if test -f 'hash_md5_sha1.c'; then $(CYGPATH_W) 'hash_md5_sha1.c'; else $(CYGPATH_W) '$(srcdir)/hash_md5_sha1.c'; fi`
-
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
 tags: tags-am
@@ -2259,7 +2260,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/libq_a-dep.Po
 	-rm -f ./$(DEPDIR)/libq_a-eat_file.Po
 	-rm -f ./$(DEPDIR)/libq_a-hash.Po
-	-rm -f ./$(DEPDIR)/libq_a-hash_md5_sha1.Po
 	-rm -f ./$(DEPDIR)/libq_a-human_readable.Po
 	-rm -f ./$(DEPDIR)/libq_a-move_file.Po
 	-rm -f ./$(DEPDIR)/libq_a-prelink.Po
@@ -2328,7 +2328,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/libq_a-dep.Po
 	-rm -f ./$(DEPDIR)/libq_a-eat_file.Po
 	-rm -f ./$(DEPDIR)/libq_a-hash.Po
-	-rm -f ./$(DEPDIR)/libq_a-hash_md5_sha1.Po
 	-rm -f ./$(DEPDIR)/libq_a-human_readable.Po
 	-rm -f ./$(DEPDIR)/libq_a-move_file.Po
 	-rm -f ./$(DEPDIR)/libq_a-prelink.Po

@@ -38,6 +38,10 @@
 #  --no-libtool \
 #  --macro-prefix=gl \
 #  --no-vc-files \
+#  crypto/md5-buffer \
+#  crypto/sha1-buffer \
+#  crypto/sha256-buffer \
+#  crypto/sha512-buffer \
 #  dirent \
 #  faccessat \
 #  fdopendir \
@@ -64,6 +68,10 @@
 # Specification in the form of a few gnulib-tool.m4 macro invocations:
 gl_LOCAL_DIR([])
 gl_MODULES([
+  crypto/md5-buffer
+  crypto/sha1-buffer
+  crypto/sha256-buffer
+  crypto/sha512-buffer
   dirent
   faccessat
   fdopendir

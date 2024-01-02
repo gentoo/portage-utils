@@ -646,6 +646,8 @@ ac_includes_default="\
 
 ac_header_c_list=
 ac_func_c_list=
+with_openssl_default='no'
+LIB_CRYPTO=
 gl_getopt_required=POSIX
 enable_year2038=no
 ac_subst_vars='gltests_LIBOBJDEPS
@@ -658,8 +660,6 @@ am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
-QTEGRITY_ENABLED_FALSE
-QTEGRITY_ENABLED_TRUE
 QMANIFEST_ENABLED_FALSE
 QMANIFEST_ENABLED_TRUE
 GPGME_LIBS
@@ -668,8 +668,6 @@ LIBZ_LIBS
 LIBZ_CFLAGS
 LIBBL2_LIBS
 LIBBL2_CFLAGS
-LIBSSL_LIBS
-LIBSSL_CFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
@@ -1653,6 +1651,7 @@ GL_COND_OBJ_DIRFD_TRUE
 HAVE_DIRENT_H
 NEXT_AS_FIRST_DIRECTIVE_DIRENT_H
 NEXT_DIRENT_H
+LIB_CRYPTO
 GL_GNULIB_ALPHASORT
 GL_GNULIB_SCANDIR
 GL_GNULIB_FDOPENDIR
@@ -1827,6 +1826,9 @@ HAVE_CANONICALIZE_FILE_NAME
 HAVE_ATOLL
 HAVE_ALIGNED_ALLOC
 HAVE__EXIT
+GL_GENERATE_BYTESWAP_H_FALSE
+GL_GENERATE_BYTESWAP_H_TRUE
+BYTESWAP_H
 GL_GENERATE_ASSERT_H_FALSE
 GL_GENERATE_ASSERT_H_TRUE
 ASSERT_H
@@ -2144,9 +2146,9 @@ enable_dependency_tracking
 enable_openmp
 enable_largefile
 enable_cross_guesses
+with_openssl
 with_eprefix
 enable_qmanifest
-enable_qtegrity
 enable_year2038
 '
       ac_precious_vars='build_alias
@@ -2161,8 +2163,6 @@ CPP
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
-LIBSSL_CFLAGS
-LIBSSL_LIBS
 LIBBL2_CFLAGS
 LIBBL2_LIBS
 LIBZ_CFLAGS
@@ -2810,12 +2810,22 @@ Optional Features:
   --enable-cross-guesses={conservative|risky}
                           specify policy for cross-compilation guesses
   --enable-qmanifest      support qmanifest applet
-  --enable-qtegrity       support qtegrity applet
   --enable-year2038       support timestamps after 2038
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-openssl[=ARG]    use libcrypto hash routines for the hash functions
+                          MD5, SHA-1, SHA-224, SHA-256, SHA-384, SHA-512.
+                          Valid ARGs are:
+                            'yes',
+                            'no',
+                            'auto' => use if any version available,
+                            'auto-gpl-compat' => use if GPL compatible version
+                                                 available,
+                            'optional' => use if available
+                                          and warn if not available;
+                          Default is 'no'.
   --with-eprefix          path for Gentoo/Prefix project
 
 Some influential environment variables:
@@ -2832,9 +2842,6 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
-  LIBSSL_CFLAGS
-              C compiler flags for LIBSSL, overriding pkg-config
-  LIBSSL_LIBS linker flags for LIBSSL, overriding pkg-config
   LIBBL2_CFLAGS
               C compiler flags for LIBBL2, overriding pkg-config
   LIBBL2_LIBS linker flags for LIBBL2, overriding pkg-config
@@ -7663,6 +7670,7 @@ fi
 
   # Code from module absolute-header:
   # Code from module access:
+  # Code from module alignasof:
   # Code from module alloca-opt:
   # Code from module assert-h:
   # Code from module assure:
@@ -7670,6 +7678,7 @@ fi
   # Code from module attribute:
   # Code from module basename-lgpl:
   # Code from module builtin-expect:
+  # Code from module byteswap:
   # Code from module c99:
   # Code from module calloc-gnu:
   # Code from module calloc-posix:
@@ -7680,6 +7689,10 @@ fi
   # Code from module cloexec:
   # Code from module close:
   # Code from module closedir:
+  # Code from module crypto/md5-buffer:
+  # Code from module crypto/sha1-buffer:
+  # Code from module crypto/sha256-buffer:
+  # Code from module crypto/sha512-buffer:
   # Code from module dirent:
   # Code from module dirfd:
   # Code from module dirname-lgpl:
@@ -7815,6 +7828,7 @@ fi
   # Code from module sys_types:
   # Code from module time-h:
   # Code from module timespec:
+  # Code from module u64:
   # Code from module unistd:
   # Code from module unistd-safer:
   # Code from module unlink:
@@ -9658,6 +9672,293 @@ fi
 
   GL_GNULIB_ALPHASORT=0
 
+
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for C/C++ restrict keyword" >&5
+printf %s "checking for C/C++ restrict keyword... " >&6; }
+if test ${ac_cv_c_restrict+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_cv_c_restrict=no
+   # Put '__restrict__' first, to avoid problems with glibc and non-GCC; see:
+   # https://lists.gnu.org/archive/html/bug-autoconf/2016-02/msg00006.html
+   # Put 'restrict' last, because C++ lacks it.
+   for ac_kw in __restrict__ __restrict _Restrict restrict; do
+     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+typedef int *int_ptr;
+	   int foo (int_ptr $ac_kw ip) { return ip[0]; }
+	   int bar (int [$ac_kw]); /* Catch GCC bug 14050.  */
+	   int bar (int ip[$ac_kw]) { return ip[0]; }
+
+int
+main (void)
+{
+int s[1];
+	   int *$ac_kw t = s;
+	   t[0] = 0;
+	   return foo (t) + bar (t);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  ac_cv_c_restrict=$ac_kw
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+     test "$ac_cv_c_restrict" != no && break
+   done
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_restrict" >&5
+printf "%s\n" "$ac_cv_c_restrict" >&6; }
+
+ case $ac_cv_c_restrict in
+   restrict) ;;
+   no) printf "%s\n" "#define restrict /**/" >>confdefs.h
+ ;;
+   *)  printf "%s\n" "#define restrict $ac_cv_c_restrict" >>confdefs.h
+ ;;
+ esac
+
+
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether byte ordering is bigendian" >&5
+printf %s "checking whether byte ordering is bigendian... " >&6; }
+if test ${ac_cv_c_bigendian+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_cv_c_bigendian=unknown
+    # See if we're dealing with a universal compiler.
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#ifndef __APPLE_CC__
+	       not a universal capable compiler
+	     #endif
+	     typedef int dummy;
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+	# Check for potential -arch flags.  It is not universal unless
+	# there are at least two -arch flags with different values.
+	ac_arch=
+	ac_prev=
+	for ac_word in $CC $CFLAGS $CPPFLAGS $LDFLAGS; do
+	 if test -n "$ac_prev"; then
+	   case $ac_word in
+	     i?86 | x86_64 | ppc | ppc64)
+	       if test -z "$ac_arch" || test "$ac_arch" = "$ac_word"; then
+		 ac_arch=$ac_word
+	       else
+		 ac_cv_c_bigendian=universal
+		 break
+	       fi
+	       ;;
+	   esac
+	   ac_prev=
+	 elif test "x$ac_word" = "x-arch"; then
+	   ac_prev=arch
+	 fi
+       done
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+    if test $ac_cv_c_bigendian = unknown; then
+      # See if sys/param.h defines the BYTE_ORDER macro.
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <sys/types.h>
+	     #include <sys/param.h>
+
+int
+main (void)
+{
+#if ! (defined BYTE_ORDER && defined BIG_ENDIAN \
+		     && defined LITTLE_ENDIAN && BYTE_ORDER && BIG_ENDIAN \
+		     && LITTLE_ENDIAN)
+	      bogus endian macros
+	     #endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  # It does; now see whether it defined to BIG_ENDIAN or not.
+	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <sys/types.h>
+		#include <sys/param.h>
+
+int
+main (void)
+{
+#if BYTE_ORDER != BIG_ENDIAN
+		 not big endian
+		#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  ac_cv_c_bigendian=yes
+else $as_nop
+  ac_cv_c_bigendian=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+    fi
+    if test $ac_cv_c_bigendian = unknown; then
+      # See if <limits.h> defines _LITTLE_ENDIAN or _BIG_ENDIAN (e.g., Solaris).
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <limits.h>
+
+int
+main (void)
+{
+#if ! (defined _LITTLE_ENDIAN || defined _BIG_ENDIAN)
+	      bogus endian macros
+	     #endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  # It does; now see whether it defined to _BIG_ENDIAN or not.
+	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <limits.h>
+
+int
+main (void)
+{
+#ifndef _BIG_ENDIAN
+		 not big endian
+		#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  ac_cv_c_bigendian=yes
+else $as_nop
+  ac_cv_c_bigendian=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+    fi
+    if test $ac_cv_c_bigendian = unknown; then
+      # Compile a test program.
+      if test "$cross_compiling" = yes
+then :
+  # Try to guess by grepping values from an object file.
+	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+unsigned short int ascii_mm[] =
+		  { 0x4249, 0x4765, 0x6E44, 0x6961, 0x6E53, 0x7953, 0 };
+		unsigned short int ascii_ii[] =
+		  { 0x694C, 0x5454, 0x656C, 0x6E45, 0x6944, 0x6E61, 0 };
+		int use_ascii (int i) {
+		  return ascii_mm[i] + ascii_ii[i];
+		}
+		unsigned short int ebcdic_ii[] =
+		  { 0x89D3, 0xE3E3, 0x8593, 0x95C5, 0x89C4, 0x9581, 0 };
+		unsigned short int ebcdic_mm[] =
+		  { 0xC2C9, 0xC785, 0x95C4, 0x8981, 0x95E2, 0xA8E2, 0 };
+		int use_ebcdic (int i) {
+		  return ebcdic_mm[i] + ebcdic_ii[i];
+		}
+		int
+		main (int argc, char **argv)
+		{
+		  /* Intimidate the compiler so that it does not
+		     optimize the arrays away.  */
+		  char *p = argv[0];
+		  ascii_mm[1] = *p++; ebcdic_mm[1] = *p++;
+		  ascii_ii[1] = *p++; ebcdic_ii[1] = *p++;
+		  return use_ascii (argc) == use_ebcdic (*p);
+		}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  if grep BIGenDianSyS conftest$ac_exeext >/dev/null; then
+	      ac_cv_c_bigendian=yes
+	    fi
+	    if grep LiTTleEnDian conftest$ac_exeext >/dev/null ; then
+	      if test "$ac_cv_c_bigendian" = unknown; then
+		ac_cv_c_bigendian=no
+	      else
+		# finding both strings is unlikely to happen, but who knows?
+		ac_cv_c_bigendian=unknown
+	      fi
+	    fi
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$ac_includes_default
+int
+main (void)
+{
+
+	     /* Are we little or big endian?  From Harbison&Steele.  */
+	     union
+	     {
+	       long int l;
+	       char c[sizeof (long int)];
+	     } u;
+	     u.l = 1;
+	     return u.c[sizeof (long int) - 1] == 1;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_run "$LINENO"
+then :
+  ac_cv_c_bigendian=no
+else $as_nop
+  ac_cv_c_bigendian=yes
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+    fi
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_bigendian" >&5
+printf "%s\n" "$ac_cv_c_bigendian" >&6; }
+ case $ac_cv_c_bigendian in #(
+   yes)
+     printf "%s\n" "#define WORDS_BIGENDIAN 1" >>confdefs.h
+;; #(
+   no)
+      ;; #(
+   universal)
+
+printf "%s\n" "#define AC_APPLE_UNIVERSAL_BUILD 1" >>confdefs.h
+
+     ;; #(
+   *)
+     as_fn_error $? "unknown endianness
+ presetting ac_cv_c_bigendian=no (or yes) will help" "$LINENO" 5 ;;
+ esac
 
 
 
@@ -11887,56 +12188,6 @@ printf "%s\n" "$gl_cv_member_st_size_64" >&6; }
       WINDOWS_64_BIT_ST_SIZE=0
       ;;
   esac
-
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for C/C++ restrict keyword" >&5
-printf %s "checking for C/C++ restrict keyword... " >&6; }
-if test ${ac_cv_c_restrict+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_cv_c_restrict=no
-   # Put '__restrict__' first, to avoid problems with glibc and non-GCC; see:
-   # https://lists.gnu.org/archive/html/bug-autoconf/2016-02/msg00006.html
-   # Put 'restrict' last, because C++ lacks it.
-   for ac_kw in __restrict__ __restrict _Restrict restrict; do
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-typedef int *int_ptr;
-	   int foo (int_ptr $ac_kw ip) { return ip[0]; }
-	   int bar (int [$ac_kw]); /* Catch GCC bug 14050.  */
-	   int bar (int ip[$ac_kw]) { return ip[0]; }
-
-int
-main (void)
-{
-int s[1];
-	   int *$ac_kw t = s;
-	   t[0] = 0;
-	   return foo (t) + bar (t);
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-  ac_cv_c_restrict=$ac_kw
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-     test "$ac_cv_c_restrict" != no && break
-   done
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_restrict" >&5
-printf "%s\n" "$ac_cv_c_restrict" >&6; }
-
- case $ac_cv_c_restrict in
-   restrict) ;;
-   no) printf "%s\n" "#define restrict /**/" >>confdefs.h
- ;;
-   *)  printf "%s\n" "#define restrict $ac_cv_c_restrict" >>confdefs.h
- ;;
- esac
 
 
 
@@ -15452,243 +15703,6 @@ printf "%s\n" "#define FLT_EXPBIT0_BIT $bit" >>confdefs.h
 
       ;;
   esac
-
-
-   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether byte ordering is bigendian" >&5
-printf %s "checking whether byte ordering is bigendian... " >&6; }
-if test ${ac_cv_c_bigendian+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_cv_c_bigendian=unknown
-    # See if we're dealing with a universal compiler.
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#ifndef __APPLE_CC__
-	       not a universal capable compiler
-	     #endif
-	     typedef int dummy;
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-	# Check for potential -arch flags.  It is not universal unless
-	# there are at least two -arch flags with different values.
-	ac_arch=
-	ac_prev=
-	for ac_word in $CC $CFLAGS $CPPFLAGS $LDFLAGS; do
-	 if test -n "$ac_prev"; then
-	   case $ac_word in
-	     i?86 | x86_64 | ppc | ppc64)
-	       if test -z "$ac_arch" || test "$ac_arch" = "$ac_word"; then
-		 ac_arch=$ac_word
-	       else
-		 ac_cv_c_bigendian=universal
-		 break
-	       fi
-	       ;;
-	   esac
-	   ac_prev=
-	 elif test "x$ac_word" = "x-arch"; then
-	   ac_prev=arch
-	 fi
-       done
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-    if test $ac_cv_c_bigendian = unknown; then
-      # See if sys/param.h defines the BYTE_ORDER macro.
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <sys/types.h>
-	     #include <sys/param.h>
-
-int
-main (void)
-{
-#if ! (defined BYTE_ORDER && defined BIG_ENDIAN \
-		     && defined LITTLE_ENDIAN && BYTE_ORDER && BIG_ENDIAN \
-		     && LITTLE_ENDIAN)
-	      bogus endian macros
-	     #endif
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-  # It does; now see whether it defined to BIG_ENDIAN or not.
-	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <sys/types.h>
-		#include <sys/param.h>
-
-int
-main (void)
-{
-#if BYTE_ORDER != BIG_ENDIAN
-		 not big endian
-		#endif
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-  ac_cv_c_bigendian=yes
-else $as_nop
-  ac_cv_c_bigendian=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-    fi
-    if test $ac_cv_c_bigendian = unknown; then
-      # See if <limits.h> defines _LITTLE_ENDIAN or _BIG_ENDIAN (e.g., Solaris).
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <limits.h>
-
-int
-main (void)
-{
-#if ! (defined _LITTLE_ENDIAN || defined _BIG_ENDIAN)
-	      bogus endian macros
-	     #endif
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-  # It does; now see whether it defined to _BIG_ENDIAN or not.
-	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <limits.h>
-
-int
-main (void)
-{
-#ifndef _BIG_ENDIAN
-		 not big endian
-		#endif
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-  ac_cv_c_bigendian=yes
-else $as_nop
-  ac_cv_c_bigendian=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-    fi
-    if test $ac_cv_c_bigendian = unknown; then
-      # Compile a test program.
-      if test "$cross_compiling" = yes
-then :
-  # Try to guess by grepping values from an object file.
-	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-unsigned short int ascii_mm[] =
-		  { 0x4249, 0x4765, 0x6E44, 0x6961, 0x6E53, 0x7953, 0 };
-		unsigned short int ascii_ii[] =
-		  { 0x694C, 0x5454, 0x656C, 0x6E45, 0x6944, 0x6E61, 0 };
-		int use_ascii (int i) {
-		  return ascii_mm[i] + ascii_ii[i];
-		}
-		unsigned short int ebcdic_ii[] =
-		  { 0x89D3, 0xE3E3, 0x8593, 0x95C5, 0x89C4, 0x9581, 0 };
-		unsigned short int ebcdic_mm[] =
-		  { 0xC2C9, 0xC785, 0x95C4, 0x8981, 0x95E2, 0xA8E2, 0 };
-		int use_ebcdic (int i) {
-		  return ebcdic_mm[i] + ebcdic_ii[i];
-		}
-		int
-		main (int argc, char **argv)
-		{
-		  /* Intimidate the compiler so that it does not
-		     optimize the arrays away.  */
-		  char *p = argv[0];
-		  ascii_mm[1] = *p++; ebcdic_mm[1] = *p++;
-		  ascii_ii[1] = *p++; ebcdic_ii[1] = *p++;
-		  return use_ascii (argc) == use_ebcdic (*p);
-		}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  if grep BIGenDianSyS conftest$ac_exeext >/dev/null; then
-	      ac_cv_c_bigendian=yes
-	    fi
-	    if grep LiTTleEnDian conftest$ac_exeext >/dev/null ; then
-	      if test "$ac_cv_c_bigendian" = unknown; then
-		ac_cv_c_bigendian=no
-	      else
-		# finding both strings is unlikely to happen, but who knows?
-		ac_cv_c_bigendian=unknown
-	      fi
-	    fi
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-else $as_nop
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-$ac_includes_default
-int
-main (void)
-{
-
-	     /* Are we little or big endian?  From Harbison&Steele.  */
-	     union
-	     {
-	       long int l;
-	       char c[sizeof (long int)];
-	     } u;
-	     u.l = 1;
-	     return u.c[sizeof (long int) - 1] == 1;
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_run "$LINENO"
-then :
-  ac_cv_c_bigendian=no
-else $as_nop
-  ac_cv_c_bigendian=yes
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-    fi
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_bigendian" >&5
-printf "%s\n" "$ac_cv_c_bigendian" >&6; }
- case $ac_cv_c_bigendian in #(
-   yes)
-     printf "%s\n" "#define WORDS_BIGENDIAN 1" >>confdefs.h
-;; #(
-   no)
-      ;; #(
-   universal)
-
-printf "%s\n" "#define AC_APPLE_UNIVERSAL_BUILD 1" >>confdefs.h
-
-     ;; #(
-   *)
-     as_fn_error $? "unknown endianness
- presetting ac_cv_c_bigendian=no (or yes) will help" "$LINENO" 5 ;;
- esac
-
 
 
 
@@ -22302,6 +22316,91 @@ printf "%s\n" "#define GNULIB_TEST_ACCESS 1" >>confdefs.h
 
 
 
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for alignas and alignof" >&5
+printf %s "checking for alignas and alignof... " >&6; }
+if test ${gl_cv_header_working_stdalign_h+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  gl_save_CFLAGS=$CFLAGS
+     for gl_working in "yes, keywords" "yes, <stdalign.h> macros"; do
+      case $gl_working in #(
+  *stdalign.h*) :
+    CFLAGS="$gl_save_CFLAGS -DINCLUDE_STDALIGN_H" ;; #(
+  *) :
+     ;;
+esac
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+            #ifdef INCLUDE_STDALIGN_H
+             #include <stdalign.h>
+            #endif
+            #include <stddef.h>
+
+            /* Test that alignof yields a result consistent with offsetof.
+               This catches GCC bug 52023
+               <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=52023>.  */
+            #ifdef __cplusplus
+               template <class t> struct alignof_helper { char a; t b; };
+            # define ao(type) offsetof (alignof_helper<type>, b)
+            #else
+            # define ao(type) offsetof (struct { char a; type b; }, b)
+            #endif
+            char test_double[ao (double) % _Alignof (double) == 0 ? 1 : -1];
+            char test_long[ao (long int) % _Alignof (long int) == 0 ? 1 : -1];
+            char test_alignof[alignof (double) == _Alignof (double) ? 1 : -1];
+
+            /* Test alignas only on platforms where gnulib can help.  */
+            #if \
+                ((defined __cplusplus && 201103 <= __cplusplus) \
+                 || (__TINYC__ && defined __attribute__) \
+                 || (defined __APPLE__ && defined __MACH__ \
+                     ? 4 < __GNUC__ + (1 <= __GNUC_MINOR__) \
+                     : __GNUC__) \
+                 || (__ia64 && (61200 <= __HP_cc || 61200 <= __HP_aCC)) \
+                 || __ICC || 0x590 <= __SUNPRO_C || 0x0600 <= __xlC__ \
+                 || 1300 <= _MSC_VER)
+              struct alignas_test { char c; char alignas (8) alignas_8; };
+              char test_alignas[offsetof (struct alignas_test, alignas_8) == 8
+                                ? 1 : -1];
+            #endif
+
+int
+main (void)
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  gl_cv_header_working_stdalign_h=$gl_working
+else $as_nop
+  gl_cv_header_working_stdalign_h=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+      CFLAGS=$gl_save_CFLAGS
+      test "$gl_cv_header_working_stdalign_h" != no && break
+     done
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $gl_cv_header_working_stdalign_h" >&5
+printf "%s\n" "$gl_cv_header_working_stdalign_h" >&6; }
+
+  case $gl_cv_header_working_stdalign_h in #(
+  yes*keyword*) :
+
+printf "%s\n" "#define HAVE_C_ALIGNASOF 1" >>confdefs.h
+ ;; #(
+  *) :
+     ;;
+esac
+
+
+
+
 
   if test $ac_cv_func_alloca_works = no; then
     :
@@ -22615,6 +22714,57 @@ printf "%s\n" "$gl_cv___builtin_expect" >&6; }
     printf "%s\n" "#define HAVE___BUILTIN_EXPECT 2" >>confdefs.h
 
   fi
+
+
+
+           for ac_header in byteswap.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "byteswap.h" "ac_cv_header_byteswap_h" "$ac_includes_default"
+if test "x$ac_cv_header_byteswap_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_BYTESWAP_H 1" >>confdefs.h
+
+    GL_GENERATE_BYTESWAP_H=false
+
+else $as_nop
+
+    GL_GENERATE_BYTESWAP_H=true
+
+fi
+
+done
+
+
+
+
+
+  case "$GL_GENERATE_BYTESWAP_H" in
+    false) BYTESWAP_H='' ;;
+    true)
+                  if test -z "$BYTESWAP_H"; then
+        BYTESWAP_H="${gl_source_base_prefix}byteswap.h"
+      fi
+      ;;
+    *) echo "*** GL_GENERATE_BYTESWAP_H is not set correctly" 1>&2; exit 1 ;;
+  esac
+
+
+     if $GL_GENERATE_BYTESWAP_H; then
+  GL_GENERATE_BYTESWAP_H_TRUE=
+  GL_GENERATE_BYTESWAP_H_FALSE='#'
+else
+  GL_GENERATE_BYTESWAP_H_TRUE='#'
+  GL_GENERATE_BYTESWAP_H_FALSE=
+fi
+:
+    if test -z "${GL_GENERATE_BYTESWAP_H_TRUE}" && test -z "${GL_GENERATE_BYTESWAP_H_FALSE}"; then
+    GL_GENERATE_BYTESWAP_H_TRUE='#'
+    GL_GENERATE_BYTESWAP_H_FALSE='#'
+  fi
+
+
+
+
 
 
 
@@ -23147,6 +23297,534 @@ fi
 
 printf "%s\n" "#define GNULIB_TEST_CLOSEDIR 1" >>confdefs.h
 
+
+
+
+
+
+
+
+
+
+
+
+
+# Check whether --with-openssl was given.
+if test ${with_openssl+y}
+then :
+  withval=$with_openssl;
+else $as_nop
+  with_openssl=$with_openssl_default
+fi
+
+
+
+  if test "x$with_openssl" != xno; then
+    if test "x$with_openssl" = xauto-gpl-compat; then
+                        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether openssl is GPL compatible" >&5
+printf %s "checking whether openssl is GPL compatible... " >&6; }
+if test ${gl_cv_openssl_gpl_compat+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+                #include <openssl/opensslv.h>
+                #if OPENSSL_VERSION_MAJOR < 3
+                  #error "openssl >= version 3 not found"
+                #endif
+
+int
+main (void)
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  gl_cv_openssl_gpl_compat=yes
+else $as_nop
+  gl_cv_openssl_gpl_compat=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $gl_cv_openssl_gpl_compat" >&5
+printf "%s\n" "$gl_cv_openssl_gpl_compat" >&6; }
+    fi
+    if test "x$with_openssl" != xauto-gpl-compat ||
+       test "x$gl_cv_openssl_gpl_compat" = xyes; then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for MD5 in -lcrypto" >&5
+printf %s "checking for MD5 in -lcrypto... " >&6; }
+if test ${ac_cv_lib_crypto_MD5+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lcrypto  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.
+   The 'extern "C"' is for builds by C++ compilers;
+   although this is not generally supported in C code supporting it here
+   has little cost and some practical benefit (sr 110532).  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char MD5 (void);
+int
+main (void)
+{
+return MD5 ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_crypto_MD5=yes
+else $as_nop
+  ac_cv_lib_crypto_MD5=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_MD5" >&5
+printf "%s\n" "$ac_cv_lib_crypto_MD5" >&6; }
+if test "x$ac_cv_lib_crypto_MD5" = xyes
+then :
+         for ac_header in openssl/md5.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "openssl/md5.h" "ac_cv_header_openssl_md5_h" "$ac_includes_default"
+if test "x$ac_cv_header_openssl_md5_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_OPENSSL_MD5_H 1" >>confdefs.h
+ LIB_CRYPTO=-lcrypto
+
+printf "%s\n" "#define HAVE_OPENSSL_MD5 1" >>confdefs.h
+
+fi
+
+done
+fi
+
+    fi
+    if test "x$LIB_CRYPTO" = x; then
+      message='openssl development library not found for MD5.
+  If you want to install it, first find the pre-built package name:
+    - On Debian and Debian-based systems: libssl-dev,
+    - On Red Hat distributions: openssl-devel.
+    - Other: https://repology.org/project/openssl/versions'
+      if test "x$with_openssl" = xyes; then
+        as_fn_error $? "$message" "$LINENO" 5
+      elif test "x$with_openssl" = xoptional; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: $message" >&5
+printf "%s\n" "$as_me: WARNING: $message" >&2;}
+      fi
+    fi
+  fi
+
+
+
+
+
+
+
+
+
+
+
+
+# Check whether --with-openssl was given.
+if test ${with_openssl+y}
+then :
+  withval=$with_openssl;
+else $as_nop
+  with_openssl=$with_openssl_default
+fi
+
+
+
+  if test "x$with_openssl" != xno; then
+    if test "x$with_openssl" = xauto-gpl-compat; then
+                        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether openssl is GPL compatible" >&5
+printf %s "checking whether openssl is GPL compatible... " >&6; }
+if test ${gl_cv_openssl_gpl_compat+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+                #include <openssl/opensslv.h>
+                #if OPENSSL_VERSION_MAJOR < 3
+                  #error "openssl >= version 3 not found"
+                #endif
+
+int
+main (void)
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  gl_cv_openssl_gpl_compat=yes
+else $as_nop
+  gl_cv_openssl_gpl_compat=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $gl_cv_openssl_gpl_compat" >&5
+printf "%s\n" "$gl_cv_openssl_gpl_compat" >&6; }
+    fi
+    if test "x$with_openssl" != xauto-gpl-compat ||
+       test "x$gl_cv_openssl_gpl_compat" = xyes; then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SHA1 in -lcrypto" >&5
+printf %s "checking for SHA1 in -lcrypto... " >&6; }
+if test ${ac_cv_lib_crypto_SHA1+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lcrypto  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.
+   The 'extern "C"' is for builds by C++ compilers;
+   although this is not generally supported in C code supporting it here
+   has little cost and some practical benefit (sr 110532).  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char SHA1 (void);
+int
+main (void)
+{
+return SHA1 ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_crypto_SHA1=yes
+else $as_nop
+  ac_cv_lib_crypto_SHA1=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_SHA1" >&5
+printf "%s\n" "$ac_cv_lib_crypto_SHA1" >&6; }
+if test "x$ac_cv_lib_crypto_SHA1" = xyes
+then :
+         for ac_header in openssl/sha.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "openssl/sha.h" "ac_cv_header_openssl_sha_h" "$ac_includes_default"
+if test "x$ac_cv_header_openssl_sha_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_OPENSSL_SHA_H 1" >>confdefs.h
+ LIB_CRYPTO=-lcrypto
+
+printf "%s\n" "#define HAVE_OPENSSL_SHA1 1" >>confdefs.h
+
+fi
+
+done
+fi
+
+    fi
+    if test "x$LIB_CRYPTO" = x; then
+      message='openssl development library not found for SHA1.
+  If you want to install it, first find the pre-built package name:
+    - On Debian and Debian-based systems: libssl-dev,
+    - On Red Hat distributions: openssl-devel.
+    - Other: https://repology.org/project/openssl/versions'
+      if test "x$with_openssl" = xyes; then
+        as_fn_error $? "$message" "$LINENO" 5
+      elif test "x$with_openssl" = xoptional; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: $message" >&5
+printf "%s\n" "$as_me: WARNING: $message" >&2;}
+      fi
+    fi
+  fi
+
+
+
+
+
+
+
+
+
+
+
+
+# Check whether --with-openssl was given.
+if test ${with_openssl+y}
+then :
+  withval=$with_openssl;
+else $as_nop
+  with_openssl=$with_openssl_default
+fi
+
+
+
+  if test "x$with_openssl" != xno; then
+    if test "x$with_openssl" = xauto-gpl-compat; then
+                        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether openssl is GPL compatible" >&5
+printf %s "checking whether openssl is GPL compatible... " >&6; }
+if test ${gl_cv_openssl_gpl_compat+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+                #include <openssl/opensslv.h>
+                #if OPENSSL_VERSION_MAJOR < 3
+                  #error "openssl >= version 3 not found"
+                #endif
+
+int
+main (void)
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  gl_cv_openssl_gpl_compat=yes
+else $as_nop
+  gl_cv_openssl_gpl_compat=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $gl_cv_openssl_gpl_compat" >&5
+printf "%s\n" "$gl_cv_openssl_gpl_compat" >&6; }
+    fi
+    if test "x$with_openssl" != xauto-gpl-compat ||
+       test "x$gl_cv_openssl_gpl_compat" = xyes; then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SHA256 in -lcrypto" >&5
+printf %s "checking for SHA256 in -lcrypto... " >&6; }
+if test ${ac_cv_lib_crypto_SHA256+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lcrypto  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.
+   The 'extern "C"' is for builds by C++ compilers;
+   although this is not generally supported in C code supporting it here
+   has little cost and some practical benefit (sr 110532).  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char SHA256 (void);
+int
+main (void)
+{
+return SHA256 ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_crypto_SHA256=yes
+else $as_nop
+  ac_cv_lib_crypto_SHA256=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_SHA256" >&5
+printf "%s\n" "$ac_cv_lib_crypto_SHA256" >&6; }
+if test "x$ac_cv_lib_crypto_SHA256" = xyes
+then :
+         for ac_header in openssl/sha.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "openssl/sha.h" "ac_cv_header_openssl_sha_h" "$ac_includes_default"
+if test "x$ac_cv_header_openssl_sha_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_OPENSSL_SHA_H 1" >>confdefs.h
+ LIB_CRYPTO=-lcrypto
+
+printf "%s\n" "#define HAVE_OPENSSL_SHA256 1" >>confdefs.h
+
+fi
+
+done
+fi
+
+    fi
+    if test "x$LIB_CRYPTO" = x; then
+      message='openssl development library not found for SHA256.
+  If you want to install it, first find the pre-built package name:
+    - On Debian and Debian-based systems: libssl-dev,
+    - On Red Hat distributions: openssl-devel.
+    - Other: https://repology.org/project/openssl/versions'
+      if test "x$with_openssl" = xyes; then
+        as_fn_error $? "$message" "$LINENO" 5
+      elif test "x$with_openssl" = xoptional; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: $message" >&5
+printf "%s\n" "$as_me: WARNING: $message" >&2;}
+      fi
+    fi
+  fi
+
+
+
+
+
+
+
+
+
+
+
+
+# Check whether --with-openssl was given.
+if test ${with_openssl+y}
+then :
+  withval=$with_openssl;
+else $as_nop
+  with_openssl=$with_openssl_default
+fi
+
+
+
+  if test "x$with_openssl" != xno; then
+    if test "x$with_openssl" = xauto-gpl-compat; then
+                        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether openssl is GPL compatible" >&5
+printf %s "checking whether openssl is GPL compatible... " >&6; }
+if test ${gl_cv_openssl_gpl_compat+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+                #include <openssl/opensslv.h>
+                #if OPENSSL_VERSION_MAJOR < 3
+                  #error "openssl >= version 3 not found"
+                #endif
+
+int
+main (void)
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  gl_cv_openssl_gpl_compat=yes
+else $as_nop
+  gl_cv_openssl_gpl_compat=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $gl_cv_openssl_gpl_compat" >&5
+printf "%s\n" "$gl_cv_openssl_gpl_compat" >&6; }
+    fi
+    if test "x$with_openssl" != xauto-gpl-compat ||
+       test "x$gl_cv_openssl_gpl_compat" = xyes; then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SHA512 in -lcrypto" >&5
+printf %s "checking for SHA512 in -lcrypto... " >&6; }
+if test ${ac_cv_lib_crypto_SHA512+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lcrypto  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.
+   The 'extern "C"' is for builds by C++ compilers;
+   although this is not generally supported in C code supporting it here
+   has little cost and some practical benefit (sr 110532).  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char SHA512 (void);
+int
+main (void)
+{
+return SHA512 ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_crypto_SHA512=yes
+else $as_nop
+  ac_cv_lib_crypto_SHA512=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_SHA512" >&5
+printf "%s\n" "$ac_cv_lib_crypto_SHA512" >&6; }
+if test "x$ac_cv_lib_crypto_SHA512" = xyes
+then :
+         for ac_header in openssl/sha.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "openssl/sha.h" "ac_cv_header_openssl_sha_h" "$ac_includes_default"
+if test "x$ac_cv_header_openssl_sha_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_OPENSSL_SHA_H 1" >>confdefs.h
+ LIB_CRYPTO=-lcrypto
+
+printf "%s\n" "#define HAVE_OPENSSL_SHA512 1" >>confdefs.h
+
+fi
+
+done
+fi
+
+    fi
+    if test "x$LIB_CRYPTO" = x; then
+      message='openssl development library not found for SHA512.
+  If you want to install it, first find the pre-built package name:
+    - On Debian and Debian-based systems: libssl-dev,
+    - On Red Hat distributions: openssl-devel.
+    - Other: https://repology.org/project/openssl/versions'
+      if test "x$with_openssl" = xyes; then
+        as_fn_error $? "$message" "$LINENO" 5
+      elif test "x$with_openssl" = xoptional; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: $message" >&5
+printf "%s\n" "$as_me: WARNING: $message" >&2;}
+      fi
+    fi
+  fi
 
 
 
@@ -35592,12 +36270,6 @@ then :
   enableval=$enable_qmanifest;
 fi
 
-# Check whether --enable-qtegrity was given.
-if test ${enable_qtegrity+y}
-then :
-  enableval=$enable_qtegrity;
-fi
-
 
 
 
@@ -35729,139 +36401,6 @@ printf "%s\n" "no" >&6; }
 		PKG_CONFIG=""
 	fi
 fi
-if test "x${enable_qmanifest}${enable_qtegrity}" != "xnono"
-then :
-
-
-pkg_failed=no
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libcrypto" >&5
-printf %s "checking for libcrypto... " >&6; }
-
-if test -n "$LIBSSL_CFLAGS"; then
-    pkg_cv_LIBSSL_CFLAGS="$LIBSSL_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libcrypto\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libcrypto") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBSSL_CFLAGS=`$PKG_CONFIG --cflags "libcrypto" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$LIBSSL_LIBS"; then
-    pkg_cv_LIBSSL_LIBS="$LIBSSL_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libcrypto\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libcrypto") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBSSL_LIBS=`$PKG_CONFIG --libs "libcrypto" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-                LIBSSL_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libcrypto" 2>&1`
-        else
-                LIBSSL_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libcrypto" 2>&1`
-        fi
-        # Put the nasty error message in config.log where it belongs
-        echo "$LIBSSL_PKG_ERRORS" >&5
-
-
-    if test "x${enable_qmanifest}" = "xyes"
-then :
-
-      { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "--enable-qmanifest was given, but libcrypto.pc could not be found
-See \`config.log' for more details" "$LINENO" 5; }
-
-fi
-    if test "x${enable_qtegrity}" = "xyes"
-then :
-
-      { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "--enable-qtegrity was given, but libcrypto.pc could not be found
-See \`config.log' for more details" "$LINENO" 5; }
-
-fi
-    LIBSSL="no: missing dependencies"
-
-elif test $pkg_failed = untried; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-    if test "x${enable_qmanifest}" = "xyes"
-then :
-
-      { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "--enable-qmanifest was given, but libcrypto.pc could not be found
-See \`config.log' for more details" "$LINENO" 5; }
-
-fi
-    if test "x${enable_qtegrity}" = "xyes"
-then :
-
-      { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "--enable-qtegrity was given, but libcrypto.pc could not be found
-See \`config.log' for more details" "$LINENO" 5; }
-
-fi
-    LIBSSL="no: missing dependencies"
-
-else
-        LIBSSL_CFLAGS=$pkg_cv_LIBSSL_CFLAGS
-        LIBSSL_LIBS=$pkg_cv_LIBSSL_LIBS
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-
-
-printf "%s\n" "#define HAVE_SSL 1" >>confdefs.h
-
-    LIBSSL="yes"
-
-fi
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to enable qtegrity" >&5
-printf %s "checking whether to enable qtegrity... " >&6; }
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: ${LIBSSL}" >&5
-printf "%s\n" "${LIBSSL}" >&6; }
-
-else $as_nop
-
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to enable qtegrity" >&5
-printf %s "checking whether to enable qtegrity... " >&6; }
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no: disabled by configure argument" >&5
-printf "%s\n" "no: disabled by configure argument" >&6; }
-
-fi
-
 if test "x${enable_qmanifest}" != "xno"
 then :
 
@@ -36191,22 +36730,9 @@ else
   QMANIFEST_ENABLED_FALSE=
 fi
 
- if test "x$enable_qtegrity" != xno; then
-  QTEGRITY_ENABLED_TRUE=
-  QTEGRITY_ENABLED_FALSE='#'
-else
-  QTEGRITY_ENABLED_TRUE='#'
-  QTEGRITY_ENABLED_FALSE=
-fi
-
 if test "x$enable_qmanifest" != xno ; then
 
 printf "%s\n" "#define ENABLE_QMANIFEST 1" >>confdefs.h
-
-fi
-if test "x$enable_qtegrity" != xno ; then
-
-printf "%s\n" "#define ENABLE_QTEGRITY 1" >>confdefs.h
 
 fi
 
@@ -37291,10 +37817,6 @@ fi
 
 if test -z "${QMANIFEST_ENABLED_TRUE}" && test -z "${QMANIFEST_ENABLED_FALSE}"; then
   as_fn_error $? "conditional \"QMANIFEST_ENABLED\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${QTEGRITY_ENABLED_TRUE}" && test -z "${QTEGRITY_ENABLED_FALSE}"; then
-  as_fn_error $? "conditional \"QTEGRITY_ENABLED\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

@@ -98,6 +98,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/alloca.m4 \
 	$(top_srcdir)/autotools/m4/assert_h.m4 \
 	$(top_srcdir)/autotools/m4/builtin-expect.m4 \
+	$(top_srcdir)/autotools/m4/byteswap.m4 \
 	$(top_srcdir)/autotools/m4/c-bool.m4 \
 	$(top_srcdir)/autotools/m4/calloc.m4 \
 	$(top_srcdir)/autotools/m4/canonicalize.m4 \
@@ -145,6 +146,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/getprogname.m4 \
 	$(top_srcdir)/autotools/m4/gettime.m4 \
 	$(top_srcdir)/autotools/m4/gettimeofday.m4 \
+	$(top_srcdir)/autotools/m4/gl-openssl.m4 \
 	$(top_srcdir)/autotools/m4/gnulib-common.m4 \
 	$(top_srcdir)/autotools/m4/gnulib-comp.m4 \
 	$(top_srcdir)/autotools/m4/group-member.m4 \
@@ -167,6 +169,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/math_h.m4 \
 	$(top_srcdir)/autotools/m4/mbrtowc.m4 \
 	$(top_srcdir)/autotools/m4/mbstate_t.m4 \
+	$(top_srcdir)/autotools/m4/md5.m4 \
 	$(top_srcdir)/autotools/m4/memchr.m4 \
 	$(top_srcdir)/autotools/m4/mempcpy.m4 \
 	$(top_srcdir)/autotools/m4/memrchr.m4 \
@@ -200,11 +203,15 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/renameat.m4 \
 	$(top_srcdir)/autotools/m4/rmdir.m4 \
 	$(top_srcdir)/autotools/m4/save-cwd.m4 \
+	$(top_srcdir)/autotools/m4/sha1.m4 \
+	$(top_srcdir)/autotools/m4/sha256.m4 \
+	$(top_srcdir)/autotools/m4/sha512.m4 \
 	$(top_srcdir)/autotools/m4/signbit.m4 \
 	$(top_srcdir)/autotools/m4/size_max.m4 \
 	$(top_srcdir)/autotools/m4/ssize_t.m4 \
 	$(top_srcdir)/autotools/m4/stat-time.m4 \
 	$(top_srcdir)/autotools/m4/stat.m4 \
+	$(top_srcdir)/autotools/m4/stdalign.m4 \
 	$(top_srcdir)/autotools/m4/stddef_h.m4 \
 	$(top_srcdir)/autotools/m4/stdint.m4 \
 	$(top_srcdir)/autotools/m4/stdint_h.m4 \
@@ -353,6 +360,7 @@ BITSIZEOF_SIG_ATOMIC_T = @BITSIZEOF_SIG_ATOMIC_T@
 BITSIZEOF_SIZE_T = @BITSIZEOF_SIZE_T@
 BITSIZEOF_WCHAR_T = @BITSIZEOF_WCHAR_T@
 BITSIZEOF_WINT_T = @BITSIZEOF_WINT_T@
+BYTESWAP_H = @BYTESWAP_H@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -1206,11 +1214,10 @@ LIBGNU_LTLIBDEPS = @LIBGNU_LTLIBDEPS@
 LIBINTL = @LIBINTL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
-LIBSSL_CFLAGS = @LIBSSL_CFLAGS@
-LIBSSL_LIBS = @LIBSSL_LIBS@
 LIBZ_CFLAGS = @LIBZ_CFLAGS@
 LIBZ_LIBS = @LIBZ_LIBS@
 LIB_CLOCK_GETTIME = @LIB_CLOCK_GETTIME@
+LIB_CRYPTO = @LIB_CRYPTO@
 LIB_EACCESS = @LIB_EACCESS@
 LIMITS_H = @LIMITS_H@
 LN_S = @LN_S@

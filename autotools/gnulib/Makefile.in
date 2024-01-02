@@ -47,6 +47,10 @@
 #  --no-libtool \
 #  --macro-prefix=gl \
 #  --no-vc-files \
+#  crypto/md5-buffer \
+#  crypto/sha1-buffer \
+#  crypto/sha256-buffer \
+#  crypto/sha512-buffer \
 #  dirent \
 #  faccessat \
 #  fdopendir \
@@ -221,6 +225,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/alloca.m4 \
 	$(top_srcdir)/autotools/m4/assert_h.m4 \
 	$(top_srcdir)/autotools/m4/builtin-expect.m4 \
+	$(top_srcdir)/autotools/m4/byteswap.m4 \
 	$(top_srcdir)/autotools/m4/c-bool.m4 \
 	$(top_srcdir)/autotools/m4/calloc.m4 \
 	$(top_srcdir)/autotools/m4/canonicalize.m4 \
@@ -268,6 +273,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/getprogname.m4 \
 	$(top_srcdir)/autotools/m4/gettime.m4 \
 	$(top_srcdir)/autotools/m4/gettimeofday.m4 \
+	$(top_srcdir)/autotools/m4/gl-openssl.m4 \
 	$(top_srcdir)/autotools/m4/gnulib-common.m4 \
 	$(top_srcdir)/autotools/m4/gnulib-comp.m4 \
 	$(top_srcdir)/autotools/m4/group-member.m4 \
@@ -290,6 +296,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/math_h.m4 \
 	$(top_srcdir)/autotools/m4/mbrtowc.m4 \
 	$(top_srcdir)/autotools/m4/mbstate_t.m4 \
+	$(top_srcdir)/autotools/m4/md5.m4 \
 	$(top_srcdir)/autotools/m4/memchr.m4 \
 	$(top_srcdir)/autotools/m4/mempcpy.m4 \
 	$(top_srcdir)/autotools/m4/memrchr.m4 \
@@ -323,11 +330,15 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/renameat.m4 \
 	$(top_srcdir)/autotools/m4/rmdir.m4 \
 	$(top_srcdir)/autotools/m4/save-cwd.m4 \
+	$(top_srcdir)/autotools/m4/sha1.m4 \
+	$(top_srcdir)/autotools/m4/sha256.m4 \
+	$(top_srcdir)/autotools/m4/sha512.m4 \
 	$(top_srcdir)/autotools/m4/signbit.m4 \
 	$(top_srcdir)/autotools/m4/size_max.m4 \
 	$(top_srcdir)/autotools/m4/ssize_t.m4 \
 	$(top_srcdir)/autotools/m4/stat-time.m4 \
 	$(top_srcdir)/autotools/m4/stat.m4 \
+	$(top_srcdir)/autotools/m4/stdalign.m4 \
 	$(top_srcdir)/autotools/m4/stddef_h.m4 \
 	$(top_srcdir)/autotools/m4/stdint.m4 \
 	$(top_srcdir)/autotools/m4/stdint_h.m4 \
@@ -387,9 +398,10 @@ libgnu_a_AR = $(AR) $(ARFLAGS)
 am__DEPENDENCIES_1 =
 am__libgnu_a_SOURCES_DIST = access.c openat-priv.h openat-proc.c \
 	basename-lgpl.c canonicalize-lgpl.c chdir-long.c cloexec.c \
-	close.c closedir.c dirfd.c dirname-lgpl.c stripslash.c dup.c \
-	dup2.c error.c euidaccess.c exitfail.c faccessat.c fchdir.c \
-	fcntl.c fd-hook.c fd-safer-flag.c dup-safer-flag.c fdopendir.c \
+	close.c closedir.c md5.c sha1.c sha256.c sha512.c dirfd.c \
+	dirname-lgpl.c stripslash.c dup.c dup2.c error.c euidaccess.c \
+	exitfail.c faccessat.c fchdir.c fcntl.c fd-hook.c \
+	fd-safer-flag.c dup-safer-flag.c fdopendir.c \
 	filenamecat-lgpl.c float.c itold.c free.c fstat.c fstatat.c \
 	futimens.c getcwd-lgpl.c getdelim.c getdtablesize.c \
 	getgroups.c getline.c getopt.c getopt1.c getprogname.c \
@@ -406,7 +418,7 @@ am__libgnu_a_SOURCES_DIST = access.c openat-priv.h openat-proc.c \
 	signbitd.c signbitl.c size_max.h stat.c stat-time.c \
 	stdio-read.c stdio-write.c strcasecmp.c strncasecmp.c strdup.c \
 	strerror.c strerror-override.c strncat.c strtoll.c symlink.c \
-	symlinkat.c timespec.c unistd.c dup-safer.c fd-safer.c \
+	symlinkat.c timespec.c u64.c unistd.c dup-safer.c fd-safer.c \
 	pipe-safer.c unlink.c unlinkat.c utime.c utimens.c utimensat.c \
 	xmalloc.c xalloc-die.c xsize.h xsize.c
 @GL_COND_OBJ_ACCESS_TRUE@am__objects_1 = libgnu_a-access.$(OBJEXT)
@@ -505,7 +517,9 @@ am__dirstamp = $(am__leading_dot)dirstamp
 am_libgnu_a_OBJECTS = $(am__objects_1) libgnu_a-openat-proc.$(OBJEXT) \
 	libgnu_a-basename-lgpl.$(OBJEXT) $(am__objects_2) \
 	$(am__objects_3) libgnu_a-cloexec.$(OBJEXT) $(am__objects_4) \
-	$(am__objects_5) $(am__objects_6) \
+	$(am__objects_5) libgnu_a-md5.$(OBJEXT) \
+	libgnu_a-sha1.$(OBJEXT) libgnu_a-sha256.$(OBJEXT) \
+	libgnu_a-sha512.$(OBJEXT) $(am__objects_6) \
 	libgnu_a-dirname-lgpl.$(OBJEXT) libgnu_a-stripslash.$(OBJEXT) \
 	$(am__objects_7) $(am__objects_8) $(am__objects_9) \
 	$(am__objects_10) libgnu_a-exitfail.$(OBJEXT) \
@@ -540,12 +554,12 @@ am_libgnu_a_OBJECTS = $(am__objects_1) libgnu_a-openat-proc.$(OBJEXT) \
 	$(am__objects_55) $(am__objects_56) $(am__objects_57) \
 	$(am__objects_58) $(am__objects_59) $(am__objects_60) \
 	$(am__objects_61) libgnu_a-timespec.$(OBJEXT) \
-	libgnu_a-unistd.$(OBJEXT) libgnu_a-dup-safer.$(OBJEXT) \
-	libgnu_a-fd-safer.$(OBJEXT) libgnu_a-pipe-safer.$(OBJEXT) \
-	$(am__objects_62) $(am__objects_63) $(am__objects_64) \
-	libgnu_a-utimens.$(OBJEXT) $(am__objects_65) \
-	libgnu_a-xmalloc.$(OBJEXT) libgnu_a-xalloc-die.$(OBJEXT) \
-	libgnu_a-xsize.$(OBJEXT)
+	libgnu_a-u64.$(OBJEXT) libgnu_a-unistd.$(OBJEXT) \
+	libgnu_a-dup-safer.$(OBJEXT) libgnu_a-fd-safer.$(OBJEXT) \
+	libgnu_a-pipe-safer.$(OBJEXT) $(am__objects_62) \
+	$(am__objects_63) $(am__objects_64) libgnu_a-utimens.$(OBJEXT) \
+	$(am__objects_65) libgnu_a-xmalloc.$(OBJEXT) \
+	libgnu_a-xalloc-die.$(OBJEXT) libgnu_a-xsize.$(OBJEXT)
 libgnu_a_OBJECTS = $(am_libgnu_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -605,8 +619,8 @@ am__depfiles_remade = ./$(DEPDIR)/libgnu_a-access.Po \
 	./$(DEPDIR)/libgnu_a-isnanl.Po ./$(DEPDIR)/libgnu_a-itold.Po \
 	./$(DEPDIR)/libgnu_a-lstat.Po ./$(DEPDIR)/libgnu_a-malloc.Po \
 	./$(DEPDIR)/libgnu_a-malloca.Po ./$(DEPDIR)/libgnu_a-math.Po \
-	./$(DEPDIR)/libgnu_a-mbszero.Po ./$(DEPDIR)/libgnu_a-memchr.Po \
-	./$(DEPDIR)/libgnu_a-mempcpy.Po \
+	./$(DEPDIR)/libgnu_a-mbszero.Po ./$(DEPDIR)/libgnu_a-md5.Po \
+	./$(DEPDIR)/libgnu_a-memchr.Po ./$(DEPDIR)/libgnu_a-mempcpy.Po \
 	./$(DEPDIR)/libgnu_a-memrchr.Po ./$(DEPDIR)/libgnu_a-mkdir.Po \
 	./$(DEPDIR)/libgnu_a-mkdirat.Po \
 	./$(DEPDIR)/libgnu_a-msvc-inval.Po \
@@ -631,7 +645,8 @@ am__depfiles_remade = ./$(DEPDIR)/libgnu_a-access.Po \
 	./$(DEPDIR)/libgnu_a-renameatu.Po \
 	./$(DEPDIR)/libgnu_a-rmdir.Po \
 	./$(DEPDIR)/libgnu_a-same-inode.Po \
-	./$(DEPDIR)/libgnu_a-save-cwd.Po \
+	./$(DEPDIR)/libgnu_a-save-cwd.Po ./$(DEPDIR)/libgnu_a-sha1.Po \
+	./$(DEPDIR)/libgnu_a-sha256.Po ./$(DEPDIR)/libgnu_a-sha512.Po \
 	./$(DEPDIR)/libgnu_a-signbitd.Po \
 	./$(DEPDIR)/libgnu_a-signbitf.Po \
 	./$(DEPDIR)/libgnu_a-signbitl.Po \
@@ -650,7 +665,7 @@ am__depfiles_remade = ./$(DEPDIR)/libgnu_a-access.Po \
 	./$(DEPDIR)/libgnu_a-strtoll.Po \
 	./$(DEPDIR)/libgnu_a-symlink.Po \
 	./$(DEPDIR)/libgnu_a-symlinkat.Po \
-	./$(DEPDIR)/libgnu_a-timespec.Po \
+	./$(DEPDIR)/libgnu_a-timespec.Po ./$(DEPDIR)/libgnu_a-u64.Po \
 	./$(DEPDIR)/libgnu_a-unistd.Po ./$(DEPDIR)/libgnu_a-unlink.Po \
 	./$(DEPDIR)/libgnu_a-unlinkat.Po ./$(DEPDIR)/libgnu_a-utime.Po \
 	./$(DEPDIR)/libgnu_a-utimens.Po \
@@ -766,6 +781,7 @@ BITSIZEOF_SIG_ATOMIC_T = @BITSIZEOF_SIG_ATOMIC_T@
 BITSIZEOF_SIZE_T = @BITSIZEOF_SIZE_T@
 BITSIZEOF_WCHAR_T = @BITSIZEOF_WCHAR_T@
 BITSIZEOF_WINT_T = @BITSIZEOF_WINT_T@
+BYTESWAP_H = @BYTESWAP_H@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -1619,11 +1635,10 @@ LIBGNU_LTLIBDEPS = @LIBGNU_LTLIBDEPS@
 LIBINTL = @LIBINTL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
-LIBSSL_CFLAGS = @LIBSSL_CFLAGS@
-LIBSSL_LIBS = @LIBSSL_LIBS@
 LIBZ_CFLAGS = @LIBZ_CFLAGS@
 LIBZ_LIBS = @LIBZ_LIBS@
 LIB_CLOCK_GETTIME = @LIB_CLOCK_GETTIME@
+LIB_CRYPTO = @LIB_CRYPTO@
 LIB_EACCESS = @LIB_EACCESS@
 LIMITS_H = @LIMITS_H@
 LN_S = @LN_S@
@@ -2081,45 +2096,47 @@ noinst_HEADERS =
 noinst_LIBRARIES = libgnu.a
 noinst_LTLIBRARIES = 
 EXTRA_DIST = alloca.in.h assert.in.h verify.h assure.h attribute.h \
-	basename-lgpl.h calloc.c calloc.c chdir-long.h cloexec.h \
-	dirent-private.h dirent.in.h dirent-private.h dirname.h \
-	eloop-threshold.h errno.in.h error.in.h exitfail.h at-func.c \
-	fcntl.in.h fd-hook.h dirent-private.h filename.h filenamecat.h \
-	float.in.h fpucw.h frexp.c frexp.c frexpl.c stat-w32.c \
-	stat-w32.h at-func.c getopt-cdefs.in.h getopt-core.h \
-	getopt-ext.h getopt-pfx-core.h getopt-pfx-ext.h getopt.in.h \
-	getopt_int.h getprogname.h malloc/scratch_buffer.h \
-	scratch_buffer.h ialloc.h intprops-internal.h intprops.h \
-	inttypes.in.h float+.h isnan.c isnand-nolibm.h isnand.c \
-	float+.h isnan.c isnanf-nolibm.h isnanf.c float+.h isnan.c \
-	isnanl-nolibm.h isnanl.c cdefs.h libc-config.h limits.in.h \
-	malloc.c malloc.c malloca.h math.in.h memchr.valgrind \
-	at-func.c msvc-inval.h msvc-nothrow.h openat.h \
-	dirent-private.h pathmax.h printf-frexp.h printf-frexp.c \
-	printf-frexpl.h rawmemchr.valgrind at-func.c realloc.c \
-	realloc.c at-func2.c at-func2.c renameatu.h root-uid.h \
-	save-cwd.h float+.h _Noreturn.h arg-nonnull.h c++defs.h \
-	warn-on-use.h stat-w32.c stat-w32.h stat-time.h \
-	intprops-internal.h stdckdint.in.h stddef.in.h stdint.in.h \
-	stdio.in.h stdlib.in.h str-two-way.h strcasestr.c \
-	strerror-override.h string.in.h strings.in.h strtol.c \
-	at-func.c sys_stat.in.h sys_time.in.h sys_types.in.h time.in.h \
-	timespec.h unistd.in.h unistd--.h unistd-safer.h at-func.c \
-	utime.in.h utimens.h at-func.c asnprintf.c float+.h \
-	printf-args.c printf-args.h printf-parse.c printf-parse.h \
-	vasnprintf.c vasnprintf.h asprintf.c vasprintf.c verify.h \
-	wchar.in.h xalloc.h xalloc.h xalloc-oversized.h
-BUILT_SOURCES = $(ALLOCA_H) $(ASSERT_H) dirent.h $(ERRNO_H) error.h \
-	fcntl.h $(FLOAT_H) $(GETOPT_H) $(GETOPT_CDEFS_H) \
-	malloc/scratch_buffer.gl.h inttypes.h $(LIMITS_H) math.h \
-	$(STDCKDINT_H) $(STDDEF_H) $(STDINT_H) stdio.h stdlib.h \
-	string.h strings.h sys/stat.h sys/time.h sys/types.h time.h \
-	unistd.h utime.h wchar.h
+	basename-lgpl.h byteswap.in.h calloc.c calloc.c chdir-long.h \
+	cloexec.h dirent-private.h gl_openssl.h md5.h gl_openssl.h \
+	sha1.h gl_openssl.h sha256.h gl_openssl.h sha512.h dirent.in.h \
+	dirent-private.h dirname.h eloop-threshold.h errno.in.h \
+	error.in.h exitfail.h at-func.c fcntl.in.h fd-hook.h \
+	dirent-private.h filename.h filenamecat.h float.in.h fpucw.h \
+	frexp.c frexp.c frexpl.c stat-w32.c stat-w32.h at-func.c \
+	getopt-cdefs.in.h getopt-core.h getopt-ext.h getopt-pfx-core.h \
+	getopt-pfx-ext.h getopt.in.h getopt_int.h getprogname.h \
+	malloc/scratch_buffer.h scratch_buffer.h ialloc.h \
+	intprops-internal.h intprops.h inttypes.in.h float+.h isnan.c \
+	isnand-nolibm.h isnand.c float+.h isnan.c isnanf-nolibm.h \
+	isnanf.c float+.h isnan.c isnanl-nolibm.h isnanl.c cdefs.h \
+	libc-config.h limits.in.h malloc.c malloc.c malloca.h \
+	math.in.h memchr.valgrind at-func.c msvc-inval.h \
+	msvc-nothrow.h openat.h dirent-private.h pathmax.h \
+	printf-frexp.h printf-frexp.c printf-frexpl.h \
+	rawmemchr.valgrind at-func.c realloc.c realloc.c at-func2.c \
+	at-func2.c renameatu.h root-uid.h save-cwd.h float+.h \
+	_Noreturn.h arg-nonnull.h c++defs.h warn-on-use.h stat-w32.c \
+	stat-w32.h stat-time.h intprops-internal.h stdckdint.in.h \
+	stddef.in.h stdint.in.h stdio.in.h stdlib.in.h str-two-way.h \
+	strcasestr.c strerror-override.h string.in.h strings.in.h \
+	strtol.c at-func.c sys_stat.in.h sys_time.in.h sys_types.in.h \
+	time.in.h timespec.h u64.h unistd.in.h unistd--.h \
+	unistd-safer.h at-func.c utime.in.h utimens.h at-func.c \
+	asnprintf.c float+.h printf-args.c printf-args.h \
+	printf-parse.c printf-parse.h vasnprintf.c vasnprintf.h \
+	asprintf.c vasprintf.c verify.h wchar.in.h xalloc.h xalloc.h \
+	xalloc-oversized.h
+BUILT_SOURCES = $(ALLOCA_H) $(ASSERT_H) $(BYTESWAP_H) dirent.h \
+	$(ERRNO_H) error.h fcntl.h $(FLOAT_H) $(GETOPT_H) \
+	$(GETOPT_CDEFS_H) malloc/scratch_buffer.gl.h inttypes.h \
+	$(LIMITS_H) math.h $(STDCKDINT_H) $(STDDEF_H) $(STDINT_H) \
+	stdio.h stdlib.h string.h strings.h sys/stat.h sys/time.h \
+	sys/types.h time.h unistd.h utime.h wchar.h
 SUFFIXES = 
 MOSTLYCLEANFILES = core *.stackdump alloca.h alloca.h-t assert.h \
-	assert.h-t dirent.h dirent.h-t errno.h errno.h-t error.h \
-	error.h-t fcntl.h fcntl.h-t float.h float.h-t getopt.h \
-	getopt.h-t getopt-cdefs.h getopt-cdefs.h-t \
+	assert.h-t byteswap.h byteswap.h-t dirent.h dirent.h-t errno.h \
+	errno.h-t error.h error.h-t fcntl.h fcntl.h-t float.h \
+	float.h-t getopt.h getopt.h-t getopt-cdefs.h getopt-cdefs.h-t \
 	malloc/scratch_buffer.gl.h malloc/scratch_buffer.gl.h-t \
 	inttypes.h inttypes.h-t limits.h limits.h-t math.h math.h-t1 \
 	math.h-t2 math.h-t3 math.h-t4 math.h-t5 math.h-t6 stdckdint.h \
@@ -2139,16 +2156,17 @@ AM_CPPFLAGS =
 AM_CFLAGS = 
 libgnu_a_SOURCES = $(am__append_1) openat-priv.h openat-proc.c \
 	basename-lgpl.c $(am__append_2) $(am__append_3) cloexec.c \
-	$(am__append_4) $(am__append_5) $(am__append_6) dirname-lgpl.c \
-	stripslash.c $(am__append_7) $(am__append_8) $(am__append_9) \
-	$(am__append_10) exitfail.c $(am__append_11) $(am__append_12) \
-	$(am__append_13) fd-hook.c fd-safer-flag.c dup-safer-flag.c \
-	$(am__append_14) filenamecat-lgpl.c $(am__append_15) \
-	$(am__append_16) $(am__append_17) $(am__append_18) \
-	$(am__append_19) $(am__append_20) $(am__append_21) \
-	$(am__append_22) $(am__append_23) $(am__append_24) \
-	$(am__append_25) $(am__append_26) $(am__append_27) gettext.h \
-	gettime.c $(am__append_28) malloc/scratch_buffer_grow.c \
+	$(am__append_4) $(am__append_5) md5.c sha1.c sha256.c sha512.c \
+	$(am__append_6) dirname-lgpl.c stripslash.c $(am__append_7) \
+	$(am__append_8) $(am__append_9) $(am__append_10) exitfail.c \
+	$(am__append_11) $(am__append_12) $(am__append_13) fd-hook.c \
+	fd-safer-flag.c dup-safer-flag.c $(am__append_14) \
+	filenamecat-lgpl.c $(am__append_15) $(am__append_16) \
+	$(am__append_17) $(am__append_18) $(am__append_19) \
+	$(am__append_20) $(am__append_21) $(am__append_22) \
+	$(am__append_23) $(am__append_24) $(am__append_25) \
+	$(am__append_26) $(am__append_27) gettext.h gettime.c \
+	$(am__append_28) malloc/scratch_buffer_grow.c \
 	malloc/scratch_buffer_grow_preserve.c \
 	malloc/scratch_buffer_set_array_size.c $(am__append_29) \
 	ialloc.c idx.h $(am__append_30) malloca.c math.c mbszero.c \
@@ -2164,9 +2182,9 @@ libgnu_a_SOURCES = $(am__append_1) openat-priv.h openat-proc.c \
 	$(am__append_53) $(am__append_54) $(am__append_55) \
 	$(am__append_56) $(am__append_57) $(am__append_58) \
 	$(am__append_59) $(am__append_60) $(am__append_61) timespec.c \
-	unistd.c dup-safer.c fd-safer.c pipe-safer.c $(am__append_62) \
-	$(am__append_63) $(am__append_64) utimens.c $(am__append_65) \
-	xmalloc.c xalloc-die.c xsize.h xsize.c
+	u64.c unistd.c dup-safer.c fd-safer.c pipe-safer.c \
+	$(am__append_62) $(am__append_63) $(am__append_64) utimens.c \
+	$(am__append_65) xmalloc.c xalloc-die.c xsize.h xsize.c
 libgnu_a_CFLAGS = $(AM_CFLAGS) $(GL_CFLAG_GNULIB_WARNINGS)
 libgnu_a_LIBADD = $(gl_LIBOBJS)
 libgnu_a_DEPENDENCIES = $(gl_LIBOBJS)
@@ -2348,6 +2366,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-malloca.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-math.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-mbszero.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-md5.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-memchr.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-mempcpy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-memrchr.Po@am__quote@ # am--include-marker
@@ -2377,6 +2396,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-rmdir.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-same-inode.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-save-cwd.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-sha1.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-sha256.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-sha512.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-signbitd.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-signbitf.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-signbitl.Po@am__quote@ # am--include-marker
@@ -2398,6 +2420,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-symlink.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-symlinkat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-timespec.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-u64.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-unistd.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-unlink.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-unlinkat.Po@am__quote@ # am--include-marker
@@ -2546,6 +2569,62 @@ libgnu_a-closedir.obj: closedir.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='closedir.c' object='libgnu_a-closedir.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-closedir.obj `if test -f 'closedir.c'; then $(CYGPATH_W) 'closedir.c'; else $(CYGPATH_W) '$(srcdir)/closedir.c'; fi`
+
+libgnu_a-md5.o: md5.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-md5.o -MD -MP -MF $(DEPDIR)/libgnu_a-md5.Tpo -c -o libgnu_a-md5.o `test -f 'md5.c' || echo '$(srcdir)/'`md5.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-md5.Tpo $(DEPDIR)/libgnu_a-md5.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='md5.c' object='libgnu_a-md5.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-md5.o `test -f 'md5.c' || echo '$(srcdir)/'`md5.c
+
+libgnu_a-md5.obj: md5.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-md5.obj -MD -MP -MF $(DEPDIR)/libgnu_a-md5.Tpo -c -o libgnu_a-md5.obj `if test -f 'md5.c'; then $(CYGPATH_W) 'md5.c'; else $(CYGPATH_W) '$(srcdir)/md5.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-md5.Tpo $(DEPDIR)/libgnu_a-md5.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='md5.c' object='libgnu_a-md5.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-md5.obj `if test -f 'md5.c'; then $(CYGPATH_W) 'md5.c'; else $(CYGPATH_W) '$(srcdir)/md5.c'; fi`
+
+libgnu_a-sha1.o: sha1.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-sha1.o -MD -MP -MF $(DEPDIR)/libgnu_a-sha1.Tpo -c -o libgnu_a-sha1.o `test -f 'sha1.c' || echo '$(srcdir)/'`sha1.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-sha1.Tpo $(DEPDIR)/libgnu_a-sha1.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sha1.c' object='libgnu_a-sha1.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-sha1.o `test -f 'sha1.c' || echo '$(srcdir)/'`sha1.c
+
+libgnu_a-sha1.obj: sha1.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-sha1.obj -MD -MP -MF $(DEPDIR)/libgnu_a-sha1.Tpo -c -o libgnu_a-sha1.obj `if test -f 'sha1.c'; then $(CYGPATH_W) 'sha1.c'; else $(CYGPATH_W) '$(srcdir)/sha1.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-sha1.Tpo $(DEPDIR)/libgnu_a-sha1.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sha1.c' object='libgnu_a-sha1.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-sha1.obj `if test -f 'sha1.c'; then $(CYGPATH_W) 'sha1.c'; else $(CYGPATH_W) '$(srcdir)/sha1.c'; fi`
+
+libgnu_a-sha256.o: sha256.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-sha256.o -MD -MP -MF $(DEPDIR)/libgnu_a-sha256.Tpo -c -o libgnu_a-sha256.o `test -f 'sha256.c' || echo '$(srcdir)/'`sha256.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-sha256.Tpo $(DEPDIR)/libgnu_a-sha256.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sha256.c' object='libgnu_a-sha256.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-sha256.o `test -f 'sha256.c' || echo '$(srcdir)/'`sha256.c
+
+libgnu_a-sha256.obj: sha256.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-sha256.obj -MD -MP -MF $(DEPDIR)/libgnu_a-sha256.Tpo -c -o libgnu_a-sha256.obj `if test -f 'sha256.c'; then $(CYGPATH_W) 'sha256.c'; else $(CYGPATH_W) '$(srcdir)/sha256.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-sha256.Tpo $(DEPDIR)/libgnu_a-sha256.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sha256.c' object='libgnu_a-sha256.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-sha256.obj `if test -f 'sha256.c'; then $(CYGPATH_W) 'sha256.c'; else $(CYGPATH_W) '$(srcdir)/sha256.c'; fi`
+
+libgnu_a-sha512.o: sha512.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-sha512.o -MD -MP -MF $(DEPDIR)/libgnu_a-sha512.Tpo -c -o libgnu_a-sha512.o `test -f 'sha512.c' || echo '$(srcdir)/'`sha512.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-sha512.Tpo $(DEPDIR)/libgnu_a-sha512.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sha512.c' object='libgnu_a-sha512.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-sha512.o `test -f 'sha512.c' || echo '$(srcdir)/'`sha512.c
+
+libgnu_a-sha512.obj: sha512.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-sha512.obj -MD -MP -MF $(DEPDIR)/libgnu_a-sha512.Tpo -c -o libgnu_a-sha512.obj `if test -f 'sha512.c'; then $(CYGPATH_W) 'sha512.c'; else $(CYGPATH_W) '$(srcdir)/sha512.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-sha512.Tpo $(DEPDIR)/libgnu_a-sha512.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sha512.c' object='libgnu_a-sha512.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-sha512.obj `if test -f 'sha512.c'; then $(CYGPATH_W) 'sha512.c'; else $(CYGPATH_W) '$(srcdir)/sha512.c'; fi`
 
 libgnu_a-dirfd.o: dirfd.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-dirfd.o -MD -MP -MF $(DEPDIR)/libgnu_a-dirfd.Tpo -c -o libgnu_a-dirfd.o `test -f 'dirfd.c' || echo '$(srcdir)/'`dirfd.c
@@ -3695,6 +3774,20 @@ libgnu_a-timespec.obj: timespec.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-timespec.obj `if test -f 'timespec.c'; then $(CYGPATH_W) 'timespec.c'; else $(CYGPATH_W) '$(srcdir)/timespec.c'; fi`
 
+libgnu_a-u64.o: u64.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-u64.o -MD -MP -MF $(DEPDIR)/libgnu_a-u64.Tpo -c -o libgnu_a-u64.o `test -f 'u64.c' || echo '$(srcdir)/'`u64.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-u64.Tpo $(DEPDIR)/libgnu_a-u64.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='u64.c' object='libgnu_a-u64.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-u64.o `test -f 'u64.c' || echo '$(srcdir)/'`u64.c
+
+libgnu_a-u64.obj: u64.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-u64.obj -MD -MP -MF $(DEPDIR)/libgnu_a-u64.Tpo -c -o libgnu_a-u64.obj `if test -f 'u64.c'; then $(CYGPATH_W) 'u64.c'; else $(CYGPATH_W) '$(srcdir)/u64.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-u64.Tpo $(DEPDIR)/libgnu_a-u64.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='u64.c' object='libgnu_a-u64.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-u64.obj `if test -f 'u64.c'; then $(CYGPATH_W) 'u64.c'; else $(CYGPATH_W) '$(srcdir)/u64.c'; fi`
+
 libgnu_a-unistd.o: unistd.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-unistd.o -MD -MP -MF $(DEPDIR)/libgnu_a-unistd.Tpo -c -o libgnu_a-unistd.o `test -f 'unistd.c' || echo '$(srcdir)/'`unistd.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-unistd.Tpo $(DEPDIR)/libgnu_a-unistd.Po
@@ -4408,6 +4501,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/libgnu_a-malloca.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-math.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-mbszero.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-md5.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-memchr.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-mempcpy.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-memrchr.Po
@@ -4437,6 +4531,9 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/libgnu_a-rmdir.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-same-inode.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-save-cwd.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-sha1.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-sha256.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-sha512.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-signbitd.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-signbitf.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-signbitl.Po
@@ -4458,6 +4555,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/libgnu_a-symlink.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-symlinkat.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-timespec.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-u64.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-unistd.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-unlink.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-unlinkat.Po
@@ -4575,6 +4673,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/libgnu_a-malloca.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-math.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-mbszero.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-md5.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-memchr.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-mempcpy.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-memrchr.Po
@@ -4604,6 +4703,9 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/libgnu_a-rmdir.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-same-inode.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-save-cwd.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-sha1.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-sha256.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-sha512.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-signbitd.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-signbitf.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-signbitl.Po
@@ -4625,6 +4727,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/libgnu_a-symlink.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-symlinkat.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-timespec.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-u64.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-unistd.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-unlink.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-unlinkat.Po
@@ -4707,6 +4810,14 @@ uninstall-am:
 @GL_GENERATE_ASSERT_H_TRUE@	$(AM_V_at)mv $@-t $@
 @GL_GENERATE_ASSERT_H_FALSE@assert.h: $(top_builddir)/config.status
 @GL_GENERATE_ASSERT_H_FALSE@	rm -f $@
+
+# We need the following in order to create <byteswap.h> when the system
+# doesn't have one.
+@GL_GENERATE_BYTESWAP_H_TRUE@byteswap.h: byteswap.in.h $(top_builddir)/config.status
+@GL_GENERATE_BYTESWAP_H_TRUE@	$(gl_V_at)$(SED_HEADER_TO_AT_t) $(srcdir)/byteswap.in.h
+@GL_GENERATE_BYTESWAP_H_TRUE@	$(AM_V_at)mv $@-t $@
+@GL_GENERATE_BYTESWAP_H_FALSE@byteswap.h: $(top_builddir)/config.status
+@GL_GENERATE_BYTESWAP_H_FALSE@	rm -f $@
 
 # We need the following in order to create <dirent.h> when the system
 # doesn't have one that works with the given compiler.

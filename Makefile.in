@@ -95,9 +95,6 @@ bin_PROGRAMS = q$(EXEEXT)
 
 @QMANIFEST_ENABLED_TRUE@am__append_3 = man/qmanifest.1
 @QMANIFEST_ENABLED_TRUE@am__append_4 = qmanifest
-@QTEGRITY_ENABLED_TRUE@am__append_5 = qtegrity.c
-@QTEGRITY_ENABLED_TRUE@am__append_6 = man/qtegrity.1
-@QTEGRITY_ENABLED_TRUE@am__append_7 = qtegrity
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
@@ -108,6 +105,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/alloca.m4 \
 	$(top_srcdir)/autotools/m4/assert_h.m4 \
 	$(top_srcdir)/autotools/m4/builtin-expect.m4 \
+	$(top_srcdir)/autotools/m4/byteswap.m4 \
 	$(top_srcdir)/autotools/m4/c-bool.m4 \
 	$(top_srcdir)/autotools/m4/calloc.m4 \
 	$(top_srcdir)/autotools/m4/canonicalize.m4 \
@@ -155,6 +153,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/getprogname.m4 \
 	$(top_srcdir)/autotools/m4/gettime.m4 \
 	$(top_srcdir)/autotools/m4/gettimeofday.m4 \
+	$(top_srcdir)/autotools/m4/gl-openssl.m4 \
 	$(top_srcdir)/autotools/m4/gnulib-common.m4 \
 	$(top_srcdir)/autotools/m4/gnulib-comp.m4 \
 	$(top_srcdir)/autotools/m4/group-member.m4 \
@@ -177,6 +176,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/math_h.m4 \
 	$(top_srcdir)/autotools/m4/mbrtowc.m4 \
 	$(top_srcdir)/autotools/m4/mbstate_t.m4 \
+	$(top_srcdir)/autotools/m4/md5.m4 \
 	$(top_srcdir)/autotools/m4/memchr.m4 \
 	$(top_srcdir)/autotools/m4/mempcpy.m4 \
 	$(top_srcdir)/autotools/m4/memrchr.m4 \
@@ -210,11 +210,15 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/renameat.m4 \
 	$(top_srcdir)/autotools/m4/rmdir.m4 \
 	$(top_srcdir)/autotools/m4/save-cwd.m4 \
+	$(top_srcdir)/autotools/m4/sha1.m4 \
+	$(top_srcdir)/autotools/m4/sha256.m4 \
+	$(top_srcdir)/autotools/m4/sha512.m4 \
 	$(top_srcdir)/autotools/m4/signbit.m4 \
 	$(top_srcdir)/autotools/m4/size_max.m4 \
 	$(top_srcdir)/autotools/m4/ssize_t.m4 \
 	$(top_srcdir)/autotools/m4/stat-time.m4 \
 	$(top_srcdir)/autotools/m4/stat.m4 \
+	$(top_srcdir)/autotools/m4/stdalign.m4 \
 	$(top_srcdir)/autotools/m4/stddef_h.m4 \
 	$(top_srcdir)/autotools/m4/stdint.m4 \
 	$(top_srcdir)/autotools/m4/stdint_h.m4 \
@@ -270,16 +274,15 @@ am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__q_SOURCES_DIST = main.c q.c qatom.c qcheck.c qdepends.c qfile.c \
 	qgrep.c qkeyword.c qlist.c qlop.c qmerge.c qpkg.c qsearch.c \
-	qsize.c qtbz2.c quse.c qwhich.c qxpak.c qmanifest.c qtegrity.c
+	qsize.c qtbz2.c qtegrity.c quse.c qwhich.c qxpak.c qmanifest.c
 @QMANIFEST_ENABLED_TRUE@am__objects_1 = q-qmanifest.$(OBJEXT)
-@QTEGRITY_ENABLED_TRUE@am__objects_2 = q-qtegrity.$(OBJEXT)
 am_q_OBJECTS = q-main.$(OBJEXT) q-q.$(OBJEXT) q-qatom.$(OBJEXT) \
 	q-qcheck.$(OBJEXT) q-qdepends.$(OBJEXT) q-qfile.$(OBJEXT) \
 	q-qgrep.$(OBJEXT) q-qkeyword.$(OBJEXT) q-qlist.$(OBJEXT) \
 	q-qlop.$(OBJEXT) q-qmerge.$(OBJEXT) q-qpkg.$(OBJEXT) \
 	q-qsearch.$(OBJEXT) q-qsize.$(OBJEXT) q-qtbz2.$(OBJEXT) \
-	q-quse.$(OBJEXT) q-qwhich.$(OBJEXT) q-qxpak.$(OBJEXT) \
-	$(am__objects_1) $(am__objects_2)
+	q-qtegrity.$(OBJEXT) q-quse.$(OBJEXT) q-qwhich.$(OBJEXT) \
+	q-qxpak.$(OBJEXT) $(am__objects_1)
 q_OBJECTS = $(am_q_OBJECTS)
 am__DEPENDENCIES_1 =
 q_DEPENDENCIES = $(top_builddir)/libq/libq.a \
@@ -467,6 +470,7 @@ BITSIZEOF_SIG_ATOMIC_T = @BITSIZEOF_SIG_ATOMIC_T@
 BITSIZEOF_SIZE_T = @BITSIZEOF_SIZE_T@
 BITSIZEOF_WCHAR_T = @BITSIZEOF_WCHAR_T@
 BITSIZEOF_WINT_T = @BITSIZEOF_WINT_T@
+BYTESWAP_H = @BYTESWAP_H@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -1320,11 +1324,10 @@ LIBGNU_LTLIBDEPS = @LIBGNU_LTLIBDEPS@
 LIBINTL = @LIBINTL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
-LIBSSL_CFLAGS = @LIBSSL_CFLAGS@
-LIBSSL_LIBS = @LIBSSL_LIBS@
 LIBZ_CFLAGS = @LIBZ_CFLAGS@
 LIBZ_LIBS = @LIBZ_LIBS@
 LIB_CLOCK_GETTIME = @LIB_CLOCK_GETTIME@
+LIB_CRYPTO = @LIB_CRYPTO@
 LIB_EACCESS = @LIB_EACCESS@
 LIMITS_H = @LIMITS_H@
 LN_S = @LN_S@
@@ -1785,29 +1788,28 @@ SUBDIRS = \
 	$(NULL)
 
 APPLETS = q qatom qcheck qdepends qfile qgrep qkeyword qlist qlop \
-	qmerge qpkg qsearch qsize qtbz2 quse qwhich qxpak $(NULL) \
-	$(am__append_4) $(am__append_7)
+	qmerge qpkg qsearch qsize qtbz2 qtegrity quse qwhich qxpak \
+	$(NULL) $(am__append_4)
 dist_man_MANS = man/q.1 man/qatom.1 man/qcheck.1 man/qdepends.1 \
 	man/qfile.1 man/qgrep.1 man/qkeyword.1 man/qlist.1 man/qlop.1 \
 	man/qmerge.1 man/qpkg.1 man/qsearch.1 man/qsize.1 man/qtbz2.1 \
-	man/quse.1 man/qwhich.1 man/qxpak.1 $(NULL) $(am__append_3) \
-	$(am__append_6)
+	man/qtegrity.1 man/quse.1 man/qwhich.1 man/qxpak.1 $(NULL) \
+	$(am__append_3)
 q_SOURCES = main.c q.c qatom.c qcheck.c qdepends.c qfile.c qgrep.c \
 	qkeyword.c qlist.c qlop.c qmerge.c qpkg.c qsearch.c qsize.c \
-	qtbz2.c quse.c qwhich.c qxpak.c $(NULL) $(am__append_1) \
-	$(am__append_5)
+	qtbz2.c qtegrity.c quse.c qwhich.c qxpak.c $(NULL) \
+	$(am__append_1)
 q_CPPFLAGS = -I$(top_srcdir)/libq -I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib $(OPENMP_CFLAGS) \
-	$(LIBSSL_CFLAGS) $(LIBBL2_CFLAGS) $(LIBZ_CFLAGS) $(NULL) \
-	$(am__append_2)
+	$(LIBBL2_CFLAGS) $(LIBZ_CFLAGS) $(NULL) $(am__append_2)
 q_LDADD = \
 	$(top_builddir)/libq/libq.a \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
 	$(OPENMP_CFLAGS) \
-	$(LIBSSL_LIBS) \
 	$(LIBBL2_LIBS) \
 	$(LIBZ_LIBS) \
 	$(GPGME_LIBS) \
+	$(LIB_CRYPTO) \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS) \
 	$(SENDFILE_LIBS) \
@@ -2176,6 +2178,20 @@ q-qtbz2.obj: qtbz2.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtbz2.obj `if test -f 'qtbz2.c'; then $(CYGPATH_W) 'qtbz2.c'; else $(CYGPATH_W) '$(srcdir)/qtbz2.c'; fi`
 
+q-qtegrity.o: qtegrity.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtegrity.o -MD -MP -MF $(DEPDIR)/q-qtegrity.Tpo -c -o q-qtegrity.o `test -f 'qtegrity.c' || echo '$(srcdir)/'`qtegrity.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtegrity.Tpo $(DEPDIR)/q-qtegrity.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtegrity.c' object='q-qtegrity.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtegrity.o `test -f 'qtegrity.c' || echo '$(srcdir)/'`qtegrity.c
+
+q-qtegrity.obj: qtegrity.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtegrity.obj -MD -MP -MF $(DEPDIR)/q-qtegrity.Tpo -c -o q-qtegrity.obj `if test -f 'qtegrity.c'; then $(CYGPATH_W) 'qtegrity.c'; else $(CYGPATH_W) '$(srcdir)/qtegrity.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtegrity.Tpo $(DEPDIR)/q-qtegrity.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtegrity.c' object='q-qtegrity.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtegrity.obj `if test -f 'qtegrity.c'; then $(CYGPATH_W) 'qtegrity.c'; else $(CYGPATH_W) '$(srcdir)/qtegrity.c'; fi`
+
 q-quse.o: quse.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-quse.o -MD -MP -MF $(DEPDIR)/q-quse.Tpo -c -o q-quse.o `test -f 'quse.c' || echo '$(srcdir)/'`quse.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-quse.Tpo $(DEPDIR)/q-quse.Po
@@ -2231,20 +2247,6 @@ q-qmanifest.obj: qmanifest.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qmanifest.c' object='q-qmanifest.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qmanifest.obj `if test -f 'qmanifest.c'; then $(CYGPATH_W) 'qmanifest.c'; else $(CYGPATH_W) '$(srcdir)/qmanifest.c'; fi`
-
-q-qtegrity.o: qtegrity.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtegrity.o -MD -MP -MF $(DEPDIR)/q-qtegrity.Tpo -c -o q-qtegrity.o `test -f 'qtegrity.c' || echo '$(srcdir)/'`qtegrity.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtegrity.Tpo $(DEPDIR)/q-qtegrity.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtegrity.c' object='q-qtegrity.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtegrity.o `test -f 'qtegrity.c' || echo '$(srcdir)/'`qtegrity.c
-
-q-qtegrity.obj: qtegrity.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT q-qtegrity.obj -MD -MP -MF $(DEPDIR)/q-qtegrity.Tpo -c -o q-qtegrity.obj `if test -f 'qtegrity.c'; then $(CYGPATH_W) 'qtegrity.c'; else $(CYGPATH_W) '$(srcdir)/qtegrity.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/q-qtegrity.Tpo $(DEPDIR)/q-qtegrity.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qtegrity.c' object='q-qtegrity.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(q_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o q-qtegrity.obj `if test -f 'qtegrity.c'; then $(CYGPATH_W) 'qtegrity.c'; else $(CYGPATH_W) '$(srcdir)/qtegrity.c'; fi`
 install-man1: $(dist_man_MANS)
 	@$(NORMAL_INSTALL)
 	@list1=''; \

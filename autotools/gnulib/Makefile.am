@@ -33,6 +33,10 @@
 #  --no-libtool \
 #  --macro-prefix=gl \
 #  --no-vc-files \
+#  crypto/md5-buffer \
+#  crypto/sha1-buffer \
+#  crypto/sha256-buffer \
+#  crypto/sha512-buffer \
 #  dirent \
 #  faccessat \
 #  fdopendir \
@@ -181,6 +185,26 @@ EXTRA_DIST += basename-lgpl.h
 
 ## end   gnulib module basename-lgpl
 
+## begin gnulib module byteswap
+
+BUILT_SOURCES += $(BYTESWAP_H)
+
+# We need the following in order to create <byteswap.h> when the system
+# doesn't have one.
+if GL_GENERATE_BYTESWAP_H
+byteswap.h: byteswap.in.h $(top_builddir)/config.status
+	$(gl_V_at)$(SED_HEADER_TO_AT_t) $(srcdir)/byteswap.in.h
+	$(AM_V_at)mv $@-t $@
+else
+byteswap.h: $(top_builddir)/config.status
+	rm -f $@
+endif
+MOSTLYCLEANFILES += byteswap.h byteswap.h-t
+
+EXTRA_DIST += byteswap.in.h
+
+## end   gnulib module byteswap
+
 ## begin gnulib module calloc-gnu
 
 
@@ -242,6 +266,38 @@ endif
 EXTRA_DIST += dirent-private.h
 
 ## end   gnulib module closedir
+
+## begin gnulib module crypto/md5-buffer
+
+libgnu_a_SOURCES += md5.c
+
+EXTRA_DIST += gl_openssl.h md5.h
+
+## end   gnulib module crypto/md5-buffer
+
+## begin gnulib module crypto/sha1-buffer
+
+libgnu_a_SOURCES += sha1.c
+
+EXTRA_DIST += gl_openssl.h sha1.h
+
+## end   gnulib module crypto/sha1-buffer
+
+## begin gnulib module crypto/sha256-buffer
+
+libgnu_a_SOURCES += sha256.c
+
+EXTRA_DIST += gl_openssl.h sha256.h
+
+## end   gnulib module crypto/sha256-buffer
+
+## begin gnulib module crypto/sha512-buffer
+
+libgnu_a_SOURCES += sha512.c
+
+EXTRA_DIST += gl_openssl.h sha512.h
+
+## end   gnulib module crypto/sha512-buffer
 
 ## begin gnulib module dirent
 
@@ -2453,6 +2509,14 @@ libgnu_a_SOURCES += timespec.c
 EXTRA_DIST += timespec.h
 
 ## end   gnulib module timespec
+
+## begin gnulib module u64
+
+libgnu_a_SOURCES += u64.c
+
+EXTRA_DIST += u64.h
+
+## end   gnulib module u64
 
 ## begin gnulib module unistd
 

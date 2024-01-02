@@ -44,6 +44,7 @@ AC_DEFUN([gl_EARLY],
 
   # Code from module absolute-header:
   # Code from module access:
+  # Code from module alignasof:
   # Code from module alloca-opt:
   # Code from module assert-h:
   # Code from module assure:
@@ -51,6 +52,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module attribute:
   # Code from module basename-lgpl:
   # Code from module builtin-expect:
+  # Code from module byteswap:
   # Code from module c99:
   # Code from module calloc-gnu:
   # Code from module calloc-posix:
@@ -61,6 +63,10 @@ AC_DEFUN([gl_EARLY],
   # Code from module cloexec:
   # Code from module close:
   # Code from module closedir:
+  # Code from module crypto/md5-buffer:
+  # Code from module crypto/sha1-buffer:
+  # Code from module crypto/sha256-buffer:
+  # Code from module crypto/sha512-buffer:
   # Code from module dirent:
   # Code from module dirfd:
   # Code from module dirname-lgpl:
@@ -192,6 +198,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module sys_types:
   # Code from module time-h:
   # Code from module timespec:
+  # Code from module u64:
   # Code from module unistd:
   # Code from module unistd-safer:
   # Code from module unlink:
@@ -234,6 +241,7 @@ AC_DEFUN([gl_INIT],
   gl_FUNC_ACCESS
   gl_CONDITIONAL([GL_COND_OBJ_ACCESS], [test $REPLACE_ACCESS = 1])
   gl_UNISTD_MODULE_INDICATOR([access])
+  gl_ALIGNASOF
   gl_FUNC_ALLOCA
   gl_CONDITIONAL_HEADER([alloca.h])
   AC_PROG_MKDIR_P
@@ -242,6 +250,9 @@ AC_DEFUN([gl_INIT],
   AC_PROG_MKDIR_P
   AC_REQUIRE([AC_CANONICAL_HOST])
   gl___BUILTIN_EXPECT
+  gl_BYTESWAP
+  gl_CONDITIONAL_HEADER([byteswap.h])
+  AC_PROG_MKDIR_P
   gl_FUNC_CALLOC_GNU
   if test $REPLACE_CALLOC_FOR_CALLOC_GNU = 1; then
     AC_LIBOBJ([calloc])
@@ -274,6 +285,14 @@ AC_DEFUN([gl_INIT],
   gl_CONDITIONAL([GL_COND_OBJ_CLOSEDIR],
                  [test $HAVE_CLOSEDIR = 0 || test $REPLACE_CLOSEDIR = 1])
   gl_DIRENT_MODULE_INDICATOR([closedir])
+  AC_REQUIRE([AC_C_RESTRICT])
+  gl_MD5
+  AC_REQUIRE([AC_C_RESTRICT])
+  gl_SHA1
+  AC_REQUIRE([AC_C_RESTRICT])
+  gl_SHA256
+  AC_REQUIRE([AC_C_RESTRICT])
+  gl_SHA512
   gl_DIRENT_H
   gl_DIRENT_H_REQUIRE_DEFAULTS
   AC_PROG_MKDIR_P
@@ -978,6 +997,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/attribute.h
   lib/basename-lgpl.c
   lib/basename-lgpl.h
+  lib/byteswap.in.h
   lib/c++defs.h
   lib/calloc.c
   lib/canonicalize-lgpl.c
@@ -1045,6 +1065,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/gettext.h
   lib/gettime.c
   lib/gettimeofday.c
+  lib/gl_openssl.h
   lib/group-member.c
   lib/ialloc.c
   lib/ialloc.h
@@ -1073,6 +1094,8 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/math.c
   lib/math.in.h
   lib/mbszero.c
+  lib/md5.c
+  lib/md5.h
   lib/memchr.c
   lib/memchr.valgrind
   lib/mempcpy.c
@@ -1119,6 +1142,12 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/save-cwd.c
   lib/save-cwd.h
   lib/scratch_buffer.h
+  lib/sha1.c
+  lib/sha1.h
+  lib/sha256.c
+  lib/sha256.h
+  lib/sha512.c
+  lib/sha512.h
   lib/signbitd.c
   lib/signbitf.c
   lib/signbitl.c
@@ -1157,6 +1186,8 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/time.in.h
   lib/timespec.c
   lib/timespec.h
+  lib/u64.c
+  lib/u64.h
   lib/unistd--.h
   lib/unistd-safer.h
   lib/unistd.c
@@ -1187,6 +1218,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/alloca.m4
   m4/assert_h.m4
   m4/builtin-expect.m4
+  m4/byteswap.m4
   m4/c-bool.m4
   m4/calloc.m4
   m4/canonicalize.m4
@@ -1234,6 +1266,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/getprogname.m4
   m4/gettime.m4
   m4/gettimeofday.m4
+  m4/gl-openssl.m4
   m4/gnulib-common.m4
   m4/group-member.m4
   m4/include_next.m4
@@ -1255,6 +1288,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/math_h.m4
   m4/mbrtowc.m4
   m4/mbstate_t.m4
+  m4/md5.m4
   m4/memchr.m4
   m4/mempcpy.m4
   m4/memrchr.m4
@@ -1289,12 +1323,16 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/renameat.m4
   m4/rmdir.m4
   m4/save-cwd.m4
+  m4/sha1.m4
+  m4/sha256.m4
+  m4/sha512.m4
   m4/signbit.m4
   m4/size_max.m4
   m4/ssize_t.m4
   m4/stat-time.m4
   m4/stat.m4
   m4/std-gnu11.m4
+  m4/stdalign.m4
   m4/stddef_h.m4
   m4/stdint.m4
   m4/stdint_h.m4
