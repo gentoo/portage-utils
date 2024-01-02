@@ -1224,7 +1224,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	/* Doesn't actually remove $PWD, just everything under it */
 	rm_rf(".");
 
-	mkdir("temp", 0755);
+	mkdir_p("temp", 0755);
 	mkdir_p(portroot, 0755);
 
 	tbz2size = 0;
