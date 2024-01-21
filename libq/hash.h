@@ -18,7 +18,7 @@ enum hash_impls {
 	HASH_SHA1      = 1<<1,
 	HASH_SHA256    = 1<<2,
 	HASH_SHA512    = 1<<3,
-	HASH_WHIRLPOOL = 1<<4,
+	HASH_WHIRLPOOL = 1<<4,  /* removed */
 	HASH_BLAKE2B   = 1<<5
 };
 
@@ -32,15 +32,15 @@ typedef int (*hash_cb_t) (int, const char *);
 void hash_hex(char *out, const unsigned char *buf, const int length);
 int hash_multiple_file_fd(
 		int fd, char *md5, char *sha1, char *sha256, char *sha512,
-		char *whrlpl, char *blak2b, size_t *flen, int hashes);
+		char *blak2b, size_t *flen, int hashes);
 int hash_multiple_file_at_cb(
 		int pfd, const char *fname, hash_cb_t cb, char *md5,
-		char *sha1, char *sha256, char *sha512, char *whrlpl,
+		char *sha1, char *sha256, char *sha512,
 		char *blak2b, size_t *flen, int hashes);
-#define hash_multiple_file(f, m, s1, s2, s5, w, b, l, h) \
-	hash_multiple_file_at_cb(AT_FDCWD, f, NULL, m, s1, s2, s5, w, b, l, h)
-#define hash_compute_file(f, s2, s5, w, b, l, h) \
-	hash_multiple_file_at_cb(AT_FDCWD, f, NULL, NULL, NULL, s2, s5, w, b, l, h)
+#define hash_multiple_file(f, m, s1, s2, s5, b, l, h) \
+	hash_multiple_file_at_cb(AT_FDCWD, f, NULL, m, s1, s2, s5, b, l, h)
+#define hash_compute_file(f, s2, s5, b, l, h) \
+	hash_multiple_file_at_cb(AT_FDCWD, f, NULL, NULL, NULL, s2, s5, b, l, h)
 char *hash_file_at_cb(int pfd, const char *filename, int hash_algo, hash_cb_t cb);
 #define hash_file(f, h) hash_file_at_cb(AT_FDCWD, f, h, NULL)
 #define hash_file_at(fd, f, h) hash_file_at_cb(fd, f, h, NULL)

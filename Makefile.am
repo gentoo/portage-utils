@@ -22,6 +22,7 @@ APPLETS = \
 	qsearch \
 	qsize \
 	qtbz2 \
+	qtegrity \
 	quse \
 	qwhich \
 	qxpak \
@@ -42,6 +43,7 @@ dist_man_MANS = \
 	man/qsearch.1 \
 	man/qsize.1 \
 	man/qtbz2.1 \
+	man/qtegrity.1 \
 	man/quse.1 \
 	man/qwhich.1 \
 	man/qxpak.1 \
@@ -64,6 +66,7 @@ q_SOURCES = \
 	qsearch.c \
 	qsize.c \
 	qtbz2.c \
+	qtegrity.c \
 	quse.c \
 	qwhich.c \
 	qxpak.c \
@@ -73,7 +76,6 @@ q_CPPFLAGS = \
 	-I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib \
 	$(OPENMP_CFLAGS) \
-	$(LIBSSL_CFLAGS) \
 	$(LIBBL2_CFLAGS) \
 	$(LIBZ_CFLAGS) \
 	$(NULL)
@@ -81,10 +83,10 @@ q_LDADD = \
 	$(top_builddir)/libq/libq.a \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
 	$(OPENMP_CFLAGS) \
-	$(LIBSSL_LIBS) \
 	$(LIBBL2_LIBS) \
 	$(LIBZ_LIBS) \
 	$(GPGME_LIBS) \
+	$(LIB_CRYPTO) \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS) \
 	$(SENDFILE_LIBS) \
@@ -96,11 +98,6 @@ q_CPPFLAGS += \
 	$(GPGME_CFLAGS)
 dist_man_MANS += man/qmanifest.1
 APPLETS += qmanifest
-endif
-if QTEGRITY_ENABLED
-q_SOURCES += qtegrity.c
-dist_man_MANS += man/qtegrity.1
-APPLETS += qtegrity
 endif
 
 

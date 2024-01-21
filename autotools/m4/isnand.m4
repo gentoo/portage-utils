@@ -1,5 +1,5 @@
-# isnand.m4 serial 12
-dnl Copyright (C) 2007-2022 Free Software Foundation, Inc.
+# isnand.m4 serial 13
+dnl Copyright (C) 2007-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -18,8 +18,7 @@ AC_DEFUN([gl_FUNC_ISNAND],
     fi
   fi
   dnl The variable gl_func_isnand set here is used by isnan.m4.
-  if test $gl_cv_func_isnand_no_libm = yes \
-     || test $gl_cv_func_isnand_in_libm = yes; then
+  if test $gl_cv_func_isnand_no_libm = yes || test -n "$ISNAND_LIBM"; then
     gl_func_isnand=yes
   else
     gl_func_isnand=no

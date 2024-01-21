@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2022 Gentoo Foundation
+ * Copyright 2005-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005 Martin Schlemmer     - <azarah@gentoo.org>
@@ -102,11 +102,9 @@ cmpstringp(const void *p1, const void *p2)
  * -radius -redis -sasl -selinux spf -sqlite -srs ssl -syslog tcpd tpda
  * -X
  */
-static char _umapstr_buf[BUFSIZ];
-static const char *
-umapstr(char display, tree_pkg_ctx *pkg_ctx)
+static void
+umapstr(tree_pkg_ctx *pkg_ctx)
 {
-	char *bufp = _umapstr_buf;
 	char *use = NULL;
 	char *iuse = NULL;
 	int use_argc = 0;
@@ -117,16 +115,12 @@ umapstr(char display, tree_pkg_ctx *pkg_ctx)
 	int u;
 	int d;
 
-	*bufp = '\0';
-	if (!display)
-		return bufp;
-
 	use = tree_pkg_meta_get(pkg_ctx, USE);
 	if (use == NULL || *use == '\0')
-		return bufp;
+		return;
 	iuse = tree_pkg_meta_get(pkg_ctx, IUSE);
 	if (iuse == NULL || *iuse == '\0')
-		return bufp;
+		return;
 
 	/* strip out possible leading +/- flags in IUSE */
 	u = (int)strlen(iuse);
@@ -137,10 +131,6 @@ umapstr(char display, tree_pkg_ctx *pkg_ctx)
 
 	makeargv(use, &use_argc, &use_argv);
 	makeargv(iuse, &iuse_argc, &iuse_argv);
-
-#define add_to_buf(fmt, Cb, use, Ce) \
-	bufp += snprintf(bufp, sizeof(_umapstr_buf) - (bufp - _umapstr_buf), \
-			" %s" fmt "%s", Cb, use, Ce);
 
 	/* merge join, ensure inputs are sorted (Portage does this, but just
 	 * to be sure) */
@@ -161,17 +151,15 @@ umapstr(char display, tree_pkg_ctx *pkg_ctx)
 		}
 
 		if (d == 0) {
-			add_to_buf("%s", RED, iuse_argv[i], NORM);
+			printf(" %s%s%s", RED, iuse_argv[i], NORM);
 			u++;
 		} else if (verbose) {
-			add_to_buf("-%s", DKBLUE, iuse_argv[i], NORM);
+			printf(" %s-%s%s", DKBLUE, iuse_argv[i], NORM);
 		}
 	}
 
 	freeargv(iuse_argc, iuse_argv);
 	freeargv(use_argc, use_argv);
-
-	return _umapstr_buf;
 }
 
 /* forward declaration necessary for misuse from qmerge.c, see HACK there */
@@ -379,9 +367,10 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	atom = tree_get_atom(pkg_ctx, state->need_full_atom);
 	if (state->just_pkgname) {
-		printf("%s%s\n",
-				atom_format(state->fmt, atom),
-				umapstr(state->show_umap, pkg_ctx));
+		printf("%s", atom_format(state->fmt, atom));
+		if (state->show_umap)
+			umapstr(pkg_ctx);
+		printf("\n");
 
 		return 1;
 	}

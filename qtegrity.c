@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -77,7 +77,7 @@ check_sha(char *ret_digest, char *path, char *algo)
 		return;
 	}
 
-	hash_compute_file(path, ret_digest, ret_digest, NULL, NULL, &flen, hashes);
+	hash_compute_file(path, ret_digest, ret_digest, NULL, &flen, hashes);
 	(void)flen;  /* we don't use the file size */
 
 	return;

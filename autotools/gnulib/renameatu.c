@@ -1,5 +1,5 @@
 /* Rename a file relative to open directories.
-   Copyright (C) 2009-2022 Free Software Foundation, Inc.
+   Copyright (C) 2009-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -38,7 +38,6 @@ errno_fail (int e)
 
 #if HAVE_RENAMEAT
 
-# include <stdbool.h>
 # include <stdlib.h>
 # include <string.h>
 
@@ -214,15 +213,16 @@ renameatu (int fd1, char const *src, int fd2, char const *dst,
           goto out;
         }
       strip_trailing_slashes (dst_temp);
-      if (fstatat (fd2, dst_temp, &dst_st, AT_SYMLINK_NOFOLLOW))
+      char readlink_buf[1];
+      if (readlinkat (fd2, dst_temp, readlink_buf, sizeof readlink_buf) < 0)
         {
-          if (errno != ENOENT)
+          if (errno != ENOENT && errno != EINVAL)
             {
               rename_errno = errno;
               goto out;
             }
         }
-      else if (S_ISLNK (dst_st.st_mode))
+      else
         goto out;
     }
 # endif /* RENAME_TRAILING_SLASH_SOURCE_BUG */

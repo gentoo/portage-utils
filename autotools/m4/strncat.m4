@@ -1,5 +1,5 @@
-# strncat.m4 serial 6
-dnl Copyright (C) 2002-2004, 2009-2022 Free Software Foundation, Inc.
+# strncat.m4 serial 8
+dnl Copyright (C) 2002-2004, 2009-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -15,7 +15,7 @@ AC_DEFUN_ONCE([gl_FUNC_STRNCAT],
   AC_CHECK_HEADERS_ONCE([sys/mman.h])
   AC_CHECK_FUNCS_ONCE([mprotect])
 
-  dnl Detect bug in Solaris 8..10 on SPARC and Solaris 11.0 on x86:
+  dnl Detect bug in Solaris 8..11.4 on SPARC and Solaris 11.0 on x86:
   dnl strncat should not dereference more than n bytes, but always dereferences
   dnl n+1 bytes if the first n bytes don't contain a NUL byte.
   dnl Assume that strncat works on platforms that lack mprotect.
@@ -84,12 +84,12 @@ AC_DEFUN_ONCE([gl_FUNC_STRNCAT],
 ]])], [gl_cv_func_strncat_works=yes], [gl_cv_func_strncat_works=no],
        [
         case "$host_os" in
-                    # Guess no on Solaris.
-          solaris*) gl_cv_func_strncat_works="guessing no" ;;
-                    # Guess yes on native Windows.
-          mingw*)   gl_cv_func_strncat_works="guessing yes" ;;
-                    # Guess yes otherwise.
-          *)        gl_cv_func_strncat_works="guessing yes" ;;
+                             # Guess no on Solaris.
+          solaris*)          gl_cv_func_strncat_works="guessing no" ;;
+                             # Guess yes on native Windows.
+          mingw* | windows*) gl_cv_func_strncat_works="guessing yes" ;;
+                             # Guess yes otherwise.
+          *)                 gl_cv_func_strncat_works="guessing yes" ;;
         esac
        ])
     ])

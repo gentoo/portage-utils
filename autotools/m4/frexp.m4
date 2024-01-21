@@ -1,5 +1,5 @@
-# frexp.m4 serial 16
-dnl Copyright (C) 2007-2022 Free Software Foundation, Inc.
+# frexp.m4 serial 19
+dnl Copyright (C) 2007-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -156,7 +156,8 @@ int main()
   {
     int exp;
     double y = frexp (x, &exp);
-    if (memcmp (&y, &x, sizeof x))
+    double x1 = x;
+    if (memcmp (&y, &x1, sizeof x1))
       result |= 4;
   }
   return result;
@@ -165,7 +166,11 @@ int main()
         [gl_cv_func_frexp_works=no],
         [case "$host_os" in
            netbsd* | irix*) gl_cv_func_frexp_works="guessing no" ;;
-           mingw*) # Guess yes with MSVC, no with mingw.
+           # Guess yes with MSVC, no with mingw.
+           windows*-msvc*)
+             gl_cv_func_frexp_works="guessing yes"
+             ;;
+           mingw* | windows*)
              AC_EGREP_CPP([Good], [
 #ifdef _MSC_VER
  Good

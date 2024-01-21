@@ -1,5 +1,5 @@
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-/* Copyright (C) 2006-2022 Free Software Foundation, Inc.
+/* Copyright (C) 2006-2024 Free Software Foundation, Inc.
    Written by Paul Eggert, Bruno Haible, Derek Price.
    This file is part of gnulib.
 
@@ -47,6 +47,11 @@
 #if ! defined INTTYPES_H && ! defined _GL_JUST_INCLUDE_SYSTEM_INTTYPES_H
 #define INTTYPES_H
 
+/* This file uses GNULIB_POSIXCHECK, HAVE_RAW_DECL_*.  */
+#if !_GL_CONFIG_H_INCLUDED
+ #error "Please include config.h first."
+#endif
+
 /* Include <stdint.h> or the gnulib replacement.
    But avoid namespace pollution on glibc systems.  */
 #ifndef __GLIBC__
@@ -65,7 +70,7 @@
 
 /* The definitions of _GL_FUNCDECL_RPL etc. are copied here.  */
 /* C++ compatible function declaration macros.
-   Copyright (C) 2010-2022 Free Software Foundation, Inc.
+   Copyright (C) 2010-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify it
    under the terms of the GNU Lesser General Public License as published
@@ -165,6 +170,12 @@
    Example:
      _GL_FUNCDECL_RPL (open, int, (const char *filename, int flags, ...)
                                   _GL_ARG_NONNULL ((1)));
+
+   Note: Attributes, such as _GL_ATTRIBUTE_DEPRECATED, are supported in front
+   of a _GL_FUNCDECL_RPL invocation only in C mode, not in C++ mode.  (That's
+   because
+     [[...]] extern "C" <declaration>;
+   is invalid syntax in C++.)
  */
 #define _GL_FUNCDECL_RPL(func,rettype,parameters_and_attributes) \
   _GL_FUNCDECL_RPL_1 (rpl_##func, rettype, parameters_and_attributes)
@@ -398,7 +409,7 @@
 
 /* The definition of _GL_ARG_NONNULL is copied here.  */
 /* A C macro for declaring that specific arguments must not be NULL.
-   Copyright (C) 2009-2022 Free Software Foundation, Inc.
+   Copyright (C) 2009-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify it
    under the terms of the GNU Lesser General Public License as published
@@ -426,7 +437,7 @@
 
 /* The definition of _GL_WARN_ON_USE is copied here.  */
 /* A C macro for emitting warnings if a function is used.
-   Copyright (C) 2010-2022 Free Software Foundation, Inc.
+   Copyright (C) 2010-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify it
    under the terms of the GNU Lesser General Public License as published
@@ -1410,8 +1421,21 @@ extern "C" {
 #endif
 
 #if 0
-# if !1
-extern intmax_t imaxabs (intmax_t);
+# if 0
+#  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+#   undef imaxabs
+#   define imaxabs rpl_imaxabs
+#  endif
+_GL_FUNCDECL_RPL (imaxabs, intmax_t, (intmax_t x));
+_GL_CXXALIAS_RPL (imaxabs, intmax_t, (intmax_t x));
+# else
+#  if !1
+_GL_FUNCDECL_SYS (imaxabs, intmax_t, (intmax_t x));
+#  endif
+_GL_CXXALIAS_SYS (imaxabs, intmax_t, (intmax_t x));
+# endif
+# if __GLIBC__ >= 2
+_GL_CXXALIASWARN (imaxabs);
 # endif
 #elif defined GNULIB_POSIXCHECK
 # undef imaxabs
@@ -1428,8 +1452,21 @@ typedef struct { intmax_t quot; intmax_t rem; } imaxdiv_t;
 #   define GNULIB_defined_imaxdiv_t 1
 #  endif
 # endif
-# if !1
-extern imaxdiv_t imaxdiv (intmax_t, intmax_t);
+# if 0
+#  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+#   undef imaxdiv
+#   define imaxdiv rpl_imaxdiv
+#  endif
+_GL_FUNCDECL_RPL (imaxdiv, imaxdiv_t, (intmax_t numer, intmax_t denom));
+_GL_CXXALIAS_RPL (imaxdiv, imaxdiv_t, (intmax_t numer, intmax_t denom));
+# else
+#  if !1
+_GL_FUNCDECL_SYS (imaxdiv, imaxdiv_t, (intmax_t numer, intmax_t denom));
+#  endif
+_GL_CXXALIAS_SYS (imaxdiv, imaxdiv_t, (intmax_t numer, intmax_t denom));
+# endif
+# if __GLIBC__ >= 2
+_GL_CXXALIASWARN (imaxdiv);
 # endif
 #elif defined GNULIB_POSIXCHECK
 # undef imaxdiv

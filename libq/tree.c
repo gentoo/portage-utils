@@ -1075,7 +1075,7 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 
 		lseek(newfd, 0, SEEK_SET);  /* reposition at the whole file */
 		if (hash_multiple_file_fd(newfd, NULL, m->Q_SHA1, NULL, NULL,
-				NULL, NULL, &fsize, HASH_SHA1) == 0)
+				NULL, &fsize, HASH_SHA1) == 0)
 			snprintf(m->Q_SIZE, 19 + 1, "%zu", fsize);
 	}
 

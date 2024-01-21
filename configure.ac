@@ -52,28 +52,6 @@ AC_SUBST([CONFIG_EPREFIX], ["$with_eprefix"])
 
 AC_ARG_ENABLE([qmanifest], [AS_HELP_STRING([--enable-qmanifest],
 			  [support qmanifest applet])])
-AC_ARG_ENABLE([qtegrity], [AS_HELP_STRING([--enable-qtegrity],
-			  [support qtegrity applet])])
-
-AS_IF([test "x${enable_qmanifest}${enable_qtegrity}" != "xnono"], [
-  PKG_CHECK_MODULES([LIBSSL], [libcrypto], [
-    AC_DEFINE([HAVE_SSL], [1], [Define if you have ssl])
-    LIBSSL="yes"
-  ], [
-    AS_IF([test "x${enable_qmanifest}" = "xyes"], [
-      AC_MSG_FAILURE([--enable-qmanifest was given, but libcrypto.pc could not be found])
-    ])
-    AS_IF([test "x${enable_qtegrity}" = "xyes"], [
-      AC_MSG_FAILURE([--enable-qtegrity was given, but libcrypto.pc could not be found])
-    ])
-    LIBSSL="no: missing dependencies"
-  ])
-  AC_MSG_CHECKING([whether to enable qtegrity])
-  AC_MSG_RESULT([${LIBSSL}])
-], [
-  AC_MSG_CHECKING([whether to enable qtegrity])
-  AC_MSG_RESULT([no: disabled by configure argument])
-])
 
 AS_IF([test "x${enable_qmanifest}" != "xno"], [
   PKG_CHECK_MODULES([LIBBL2], [libb2], [
@@ -117,14 +95,9 @@ AS_IF([test "x${enable_qmanifest}" != "xno"], [
 ])
 
 AM_CONDITIONAL([QMANIFEST_ENABLED], [test "x$enable_qmanifest" != xno])
-AM_CONDITIONAL([QTEGRITY_ENABLED], [test "x$enable_qtegrity" != xno])
 if test "x$enable_qmanifest" != xno ; then
 	AC_DEFINE([ENABLE_QMANIFEST], [1],
 			  [Define if qmanifest should be compiled])
-fi
-if test "x$enable_qtegrity" != xno ; then
-	AC_DEFINE([ENABLE_QTEGRITY], [1],
-			  [Define if qtegrity should be compiled])
 fi
 
 AX_CFLAGS_WARN_ALL
