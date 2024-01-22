@@ -289,7 +289,7 @@ hash_file_at_cb(int pfd, const char *fname, int hash, hash_cb_t cb)
 
 /*
 *Generate hash with different algorithm based on the input, if the algorithm is not supported
-*do nothing
+*do nothing and return NULL
 *Param: str :string to hash the string must be \0 terminating
 *       len : len of the string str, len >= 0
 *       algo_hash : algorithm used to compute the hash
@@ -298,7 +298,7 @@ char *
 hash_from_string(const char *str,const size_t len, const enum hash_impls algo_hash)
 {
     static int size_hash_buffer = sizeof(_hash_file_buf)/sizeof(_hash_file_buf[0]);
-    char *out_hex_src_buffer=NULL;
+    unsigned char *out_hex_src_buffer=NULL;
     int OUT_DIGEST_SIZE = -1;
     
     memset(_hash_file_buf, 0x0, sizeof(_hash_file_buf));
@@ -311,7 +311,7 @@ hash_from_string(const char *str,const size_t len, const enum hash_impls algo_ha
             struct md5_ctx md5;
             unsigned char md5buf[MD5_DIGEST_SIZE];
 
-            md5_init_ctx(md5);
+            md5_init_ctx(&md5);
 			md5_process_bytes(_hash_file_buf, len, &md5);
 			md5_finish_ctx(&md5, md5buf);
 
@@ -345,8 +345,8 @@ hash_from_string(const char *str,const size_t len, const enum hash_impls algo_ha
             unsigned char sha512buf[SHA512_DIGEST_SIZE];
 
             sha512_init_ctx(&sha512);
-			sha256_process_bytes(_hash_file_buf, len, &s256);
-            sha512_finish_ctx(&s512, sha512buf);
+			sha512_process_bytes(_hash_file_buf, len, &sha512);
+            sha512_finish_ctx(&sha512, sha512buf);
 
             out_hex_src_buffer = sha512buf;
             OUT_DIGEST_SIZE = SHA512_DIGEST_SIZE;
@@ -354,13 +354,13 @@ hash_from_string(const char *str,const size_t len, const enum hash_impls algo_ha
 #ifdef HAVE_BLAKE2B
         case HASH_BLAKE2B:
 	        blake2b_state blak2b;
-            unsigned char blak2bbuf[BLAKE2B_OUTBYTES];
+            unsigned char blak2buf[BLAKE2B_OUTBYTES];
 
             blake2b_init(&blak2b, BLAKE2B_OUTBYTES);
 			blake2b_update(&blak2b, (unsigned char *)_hash_file_buf, len);
-            blake2b_final(&bl2b, blak2bbuf, BLAKE2B_OUTBYTES);
+            blake2b_final(&blak2b, blak2buf, BLAKE2B_OUTBYTES);
 
-            out_hex_src_buffer = blak2b;
+            out_hex_src_buffer = blak2buf;
             OUT_DIGEST_SIZE = BLAKE2B_OUTBYTES;
             break;
 #endif
