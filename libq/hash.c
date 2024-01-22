@@ -288,31 +288,87 @@ hash_file_at_cb(int pfd, const char *fname, int hash, hash_cb_t cb)
 
 
 /*
-*Generate and alloc in heap a hash with MD5.
+*Generate hash with different algorithm based on the input, if the algorithm is not supported
+*do nothing
 *Param: str :string to hash the string must be \0 terminating
-*       len : len of the string str, if <=0 the function will compute the len itself
+*       len : len of the string str, len >= 0
+*       algo_hash : algorithm used to compute the hash
 */
 char *
-hash_from_string(char *str,size_t len)
+hash_from_string(const char *str,const size_t len, const enum hash_impls algo_hash)
 {
-  unsigned int hash_size = 32;
-  unsigned char hex_buf[hash_size+1];
-  char *hash_final;
-  MD5_CTX ctx;
+    static int size_hash_buffer = sizeof(_hash_file_buf)/sizeof(_hash_file_buf[0]);
+    char *out_hex_src_buffer=NULL;
+    int OUT_DIGEST_SIZE = -1;
+    
+    memset(_hash_file_buf, 0x0, sizeof(_hash_file_buf));
+    if(len){
+        strncpy(_hash_file_buf, str, size_hash_buffer-1);
+    }
 
-  if(len <= 0){
-    len=strlen(str);
-  }
+    switch (algo_hash) {
+        case HASH_MD5:
+            struct md5_ctx md5;
+            unsigned char md5buf[MD5_DIGEST_SIZE];
 
-  hash_final=xmalloc(hash_size+1*sizeof(*hash_final));
-  hash_final[hash_size]='\0';
-  hex_buf[hash_size]='\0';
-  MD5_Init(&ctx);
-  MD5_Update(&ctx,str,len);
-  MD5_Final(hex_buf,&ctx); 
-  hash_hex(hash_final,hex_buf,(hash_size>>1));
+            md5_init_ctx(md5);
+			md5_process_bytes(_hash_file_buf, len, &md5);
+			md5_finish_ctx(&md5, md5buf);
 
-  return hash_final;
+            out_hex_src_buffer = md5buf;
+            OUT_DIGEST_SIZE = MD5_DIGEST_SIZE;
+            break;
+        case HASH_SHA1:
+            struct sha1_ctx sha1;
+            unsigned char sha1buf[SHA1_DIGEST_SIZE];
+
+            sha1_init_ctx(&sha1);
+			sha1_process_bytes(_hash_file_buf, len, &sha1);
+            sha1_finish_ctx(&sha1, sha1buf);
+
+            out_hex_src_buffer = sha1buf;
+            OUT_DIGEST_SIZE = SHA1_DIGEST_SIZE;
+            break;
+        case HASH_SHA256:
+            struct sha256_ctx sha256; 
+            unsigned char sha256buf[SHA256_DIGEST_SIZE];
+
+            sha256_init_ctx(&sha256);
+			sha256_process_bytes(_hash_file_buf, len, &sha256);
+            sha256_finish_ctx(&sha256, sha256buf);
+
+            out_hex_src_buffer = sha256buf;
+            OUT_DIGEST_SIZE = SHA256_DIGEST_SIZE;
+            break;
+        case HASH_SHA512:
+            struct sha512_ctx sha512;
+            unsigned char sha512buf[SHA512_DIGEST_SIZE];
+
+            sha512_init_ctx(&sha512);
+			sha256_process_bytes(_hash_file_buf, len, &s256);
+            sha512_finish_ctx(&s512, sha512buf);
+
+            out_hex_src_buffer = sha512buf;
+            OUT_DIGEST_SIZE = SHA512_DIGEST_SIZE;
+            break;
+#ifdef HAVE_BLAKE2B
+        case HASH_BLAKE2B:
+	        blake2b_state blak2b;
+            unsigned char blak2bbuf[BLAKE2B_OUTBYTES];
+
+            blake2b_init(&blak2b, BLAKE2B_OUTBYTES);
+			blake2b_update(&blak2b, (unsigned char *)_hash_file_buf, len);
+            blake2b_final(&bl2b, blak2bbuf, BLAKE2B_OUTBYTES);
+
+            out_hex_src_buffer = blak2b;
+            OUT_DIGEST_SIZE = BLAKE2B_OUTBYTES;
+            break;
+#endif
+        default:
+            return NULL;
+    }
+
+    hash_hex(_hash_file_buf, out_hex_src_buffer, OUT_DIGEST_SIZE);
+
+    return _hash_file_buf;
 }
-
-

@@ -169,7 +169,7 @@ int is_default(cur_pkg_tree_node *root,char *file_path_complete)
   char *hash =NULL;
 
   hash = hash_from_file(file_path_complete);
-  key= hash_from_string(file_path_complete,strlen(file_path_complete));
+  key= hash_from_string(file_path_complete,strlen(file_path_complete),HASH_MD5);
   res = find_in_tree(&root,key,hash);
 
   free(hash);
