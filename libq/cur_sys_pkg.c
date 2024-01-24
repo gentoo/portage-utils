@@ -1,7 +1,7 @@
 #include "config.h"
 
-#include <openssl/evp.h>
 #include <assert.h>
+#include <openssl/evp.h>
 #include <sys/stat.h> 
 #include <sys/types.h>
 #include <dirent.h>
@@ -11,15 +11,13 @@
 #include <stdio.h>
 #include <xalloc.h>
 
-#include "xchdir.h"
 #include "contents.h"
-#include "atom.h"
+#include "md5.h"
 #include "hash.h"
 #include "cur_sys_pkg.h"
 
 
-#define HASH_SIZE 32
-#define SIZE_STR_VAR_DB_PKG 12
+#define HASH_SIZE (MD5_DIGEST_SIZE << 1)
 
 //private
 
@@ -33,22 +31,6 @@ typedef struct cur_pkg_tree_node {
 
 
 //functions
-static unsigned int correct_pkg_name(char *pkg_name,depend_atom *atom)
-{
-  if(strstr(pkg_name,atom->CATEGORY)){
-    return 1;
-  }
-
-  depend_atom *pkg_atom = atom_explode(pkg_name);
-  if(!strcmp(pkg_atom->PN,atom->PN)){
-    free(pkg_atom);
-    return 1;
-  }
-
-  free(pkg_atom);
-  return 0;
-}
-
 static void add_node(cur_pkg_tree_node **root,char *data,char *key)
 {
   if(*root==NULL)
@@ -82,42 +64,6 @@ static char *hash_from_file(char *file_path_complete)
   return strdup(out);
 }
 
-static int is_dir(char *string)
-{
-  struct stat path;
-  stat(string, &path);
-  return !S_ISREG(path.st_mode);
-}
-
-static void read_cont_buf_add_data(cur_pkg_tree_node **root)
-{
-  FILE *CONTENTS=fopen("./CONTENTS","r");
-  int byte_read = 0;
-  char *line_buffer=NULL;
-  size_t line_buffer_size=0;
-  contents_entry *line_cont=NULL;
-  char *key=NULL;
-
-  //read file CONTENTS
-  while( (byte_read=getline(&line_buffer,&line_buffer_size,CONTENTS)) != -1 )
-  {
-    if(line_buffer[0]=='o' && line_buffer[1]=='b' && line_buffer[2]=='j')
-    {
-      line_cont=contents_parse_line_general(line_buffer,byte_read);
-      assert(line_cont!=NULL);
-      key=hash_from_string(
-              line_cont->name,
-              (size_t) ((line_cont->digest-1)- line_cont->name),
-              HASH_MD5);
-      add_node(root,strdup(line_cont->digest),strdup(key));
-      key=NULL;
-    }
-  }
-
-  fclose(CONTENTS);
-  free(line_buffer);
-}
-
 static int find_in_tree(cur_pkg_tree_node **root,char * key,char *hash)
 {
   if(!strcmp(hash,"-1")) return 1;
@@ -138,48 +84,26 @@ static int find_in_tree(cur_pkg_tree_node **root,char * key,char *hash)
 }
 
 //public
-int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root,struct tree_pkg_ctx *pkg_ctx)
+int create_cur_pkg_tree(cur_pkg_tree_node **root,struct tree_pkg_ctx *pkg_ctx)
 { 
   char *buf, *savep, *key;   
+  contents_entry *e;
+
   buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
 
   for (; (buf = strtok_r(buf, "\n", &savep)) != NULL; buf = NULL) {
-		contents_entry *e;
 
 		e = contents_parse_line(buf);
-		if (!e || e->type != CONTENTS_OBJ)
+		if (!e || e->type != CONTENTS_OBJ){
 			continue;
+        }
         
-      key=hash_from_string(
-              e->name,
-              (size_t) ((e->digest-1)- e->name),
-              HASH_MD5);
+      key=hash_from_string(e->name, (size_t) ((e->digest-1)- e->name), HASH_MD5);
+
       add_node(root,strdup(e->digest),strdup(key));
       key=NULL;
   }
-
-
-  // char *name_file;
-  // DIR *dir = NULL;
-  // struct dirent * dirent_struct = NULL;
-  // int find_it =0;
-  //
-  // xchdir(path);
-  // dir=opendir(".");
-  //
-  // while(!find_it && (dirent_struct=readdir(dir)) != NULL)
-  // {
-  //   name_file=dirent_struct->d_name;
-  //   if(name_file[0]!='.' && is_dir(name_file) && correct_pkg_name(name_file,atom)){ 
-  //       create_cur_pkg_tree(name_file,root,atom);
-  //   }else if(!strcmp(name_file,"CONTENTS")){
-  //     read_cont_buf_add_data(root);
-  //     find_it=1;
-  //   }
-  // }
-  //
-  // closedir(dir);
-  // xchdir("..");
+  assert(*root);
   return 0;
 }
 

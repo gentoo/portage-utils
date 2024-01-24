@@ -1480,22 +1480,19 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		errf("could not open vdb/CONTENTS for writing");
 	} else {
 		char *cpath;
-    char *pwd;
 		int ret;
-    cur_pkg_tree_node *cur_pkg_tree=NULL;
+        cur_pkg_tree_node *cur_pkg_tree=NULL;
 
-    pwd = get_current_dir_name();
-    create_cur_pkg_tree(portvdb,&cur_pkg_tree,previnst->pkg);
-    xchdir(pwd);
+        create_cur_pkg_tree(&cur_pkg_tree,previnst->pkg);
 
 		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
 				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, cur_pkg_tree);
-
 		free(cpath);
-    free(pwd);
-    destroy_cur_pkg_tree(&cur_pkg_tree);
+
+        destroy_cur_pkg_tree(&cur_pkg_tree);
+
 		if (ret != 0)
 			errp("failed to merge to %s", portroot);
 
