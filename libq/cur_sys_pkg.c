@@ -1,3 +1,8 @@
+/*
+ * Distributed under the terms of the GNU General Public License v2
+ * Copyright (c) 2024 Alberto Damo. All Rights Reserved.
+ */
+
 #include "config.h"
 
 #include <assert.h>
