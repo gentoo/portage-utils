@@ -89,7 +89,7 @@ static int is_dir(char *string)
   return !S_ISREG(path.st_mode);
 }
 
-static void read_file_add_data(cur_pkg_tree_node **root)
+static void read_cont_buf_add_data(cur_pkg_tree_node **root)
 {
   FILE *CONTENTS=fopen("./CONTENTS","r");
   int byte_read = 0;
@@ -138,29 +138,48 @@ static int find_in_tree(cur_pkg_tree_node **root,char * key,char *hash)
 }
 
 //public
-int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root, depend_atom *atom)
+int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root,struct tree_pkg_ctx *pkg_ctx)
 { 
-  char *name_file;
-  DIR *dir = NULL;
-  struct dirent * dirent_struct = NULL;
-  int find_it =0;
+  char *buf, *savep, *key;   
+  buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
 
-  xchdir(path);
-  dir=opendir(".");
+  for (; (buf = strtok_r(buf, "\n", &savep)) != NULL; buf = NULL) {
+		contents_entry *e;
 
-  while(!find_it && (dirent_struct=readdir(dir)) != NULL)
-  {
-    name_file=dirent_struct->d_name;
-    if(name_file[0]!='.' && is_dir(name_file) && correct_pkg_name(name_file,atom)){ 
-        create_cur_pkg_tree(name_file,root,atom);
-    }else if(!strcmp(name_file,"CONTENTS")){
-      read_file_add_data(root);
-      find_it=1;
-    }
+		e = contents_parse_line(buf);
+		if (!e || e->type != CONTENTS_OBJ)
+			continue;
+        
+      key=hash_from_string(
+              e->name,
+              (size_t) ((e->digest-1)- e->name),
+              HASH_MD5);
+      add_node(root,strdup(e->digest),strdup(key));
+      key=NULL;
   }
 
-  closedir(dir);
-  xchdir("..");
+
+  // char *name_file;
+  // DIR *dir = NULL;
+  // struct dirent * dirent_struct = NULL;
+  // int find_it =0;
+  //
+  // xchdir(path);
+  // dir=opendir(".");
+  //
+  // while(!find_it && (dirent_struct=readdir(dir)) != NULL)
+  // {
+  //   name_file=dirent_struct->d_name;
+  //   if(name_file[0]!='.' && is_dir(name_file) && correct_pkg_name(name_file,atom)){ 
+  //       create_cur_pkg_tree(name_file,root,atom);
+  //   }else if(!strcmp(name_file,"CONTENTS")){
+  //     read_cont_buf_add_data(root);
+  //     find_it=1;
+  //   }
+  // }
+  //
+  // closedir(dir);
+  // xchdir("..");
   return 0;
 }
 
@@ -175,7 +194,6 @@ int is_default(cur_pkg_tree_node *root,char *file_path_complete)
   res = find_in_tree(&root,key,hash);
 
   free(hash);
-  free(key);
   key=NULL;
   hash=NULL;
 
