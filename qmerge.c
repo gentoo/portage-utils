@@ -1607,6 +1607,8 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	char *eprefix;
 	size_t eprefix_len;
 	const char *T;
+    char *original;
+    char *root_buf;
 	char *buf;
 	char *savep;
 	int portroot_fd;
@@ -1646,7 +1648,8 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		contains_set("config-protect-if-modified", features);
 
 	/* get a handle on the things to clean up */
-	buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
+	original = tree_pkg_meta_get(pkg_ctx, CONTENTS);
+    root_buf = buf = strdup(original);
 	if (buf == NULL)
 		return 1;
 
@@ -1748,6 +1751,8 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 			}
 		}
 	}
+
+    free(root_buf);
 
 	/* Then remove all dirs in reverse order */
 	while (dirs != NULL) {
