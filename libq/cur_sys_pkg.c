@@ -90,26 +90,37 @@ static int find_in_tree(cur_pkg_tree_node **root,char * key,char *hash)
 //public
 int create_cur_pkg_tree(cur_pkg_tree_node **root,struct tree_pkg_ctx *pkg_ctx)
 { 
-  char *original, *root_buf, *buf, *savep, *key;   
+  char *root_buf, *buf, *savep, *key;   
   contents_entry *e;
 
-  original = tree_pkg_meta_get(pkg_ctx, CONTENTS);
+  root_buf = buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
   
-  root_buf = buf = strdup(original);
-
   for (; (buf = strtok_r(buf, "\n", &savep)) != NULL; buf = NULL) {
 
-		e = contents_parse_line(buf);
-		if (!e || e->type != CONTENTS_OBJ){
-			continue;
-        }
+	  e = contents_parse_line(buf);
+      if(buf != root_buf){
+          *(buf-1) = '\n';
+      }
+
+      if(e && e->type == CONTENTS_SYM){
+          *(e->sym_target-4) =' ';
+          *(e->mtime_str -1) =' ';
+      }
+
+	  if (!e || e->type != CONTENTS_OBJ){
+	  	continue;
+      }
+
         
       key=hash_from_string(e->name, (size_t) ((e->digest-1)- e->name), HASH_MD5);
-
+      
       add_node(root,strdup(e->digest),strdup(key));
+      *(e->digest-1)=' ';
+      *(e->mtime_str-1)=' ';
+
+
       key=NULL;
   }
-  free(root_buf);
   return 0;
 }
 
