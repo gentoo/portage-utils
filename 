@@ -1,0 +1,99 @@
+_s_t_r_i_n_g(3)                                                                                  Library Functions Manual                                                                                  _s_t_r_i_n_g(3)
+
+NNAAMMEE
+       stpcpy, strcasecmp, strcat, strchr, strcmp, strcoll, strcpy, strcspn, strdup, strfry, strlen, strncat, strncmp, strncpy, strncasecmp, strpbrk, strrchr, strsep, strspn, strstr, strtok, strxfrm, index,
+       rindex - string operations
+
+LLIIBBRRAARRYY
+       Standard C library (_l_i_b_c, _-_l_c)
+
+SSYYNNOOPPSSIISS
+       ##iinncclluuddee <<ssttrriinnggss..hh>>
+
+       iinntt ssttrrccaasseeccmmpp((ccoonnsstt cchhaarr **_s_1,, ccoonnsstt cchhaarr **_s_2));;
+              Compare the strings _s_1 and _s_2 ignoring case.
+
+       iinntt ssttrrnnccaasseeccmmpp((ccoonnsstt cchhaarr _s_1[[.._n]],, ccoonnsstt cchhaarr _s_2[[.._n]],, ssiizzee__tt _n));;
+              Compare the first _n bytes of the strings _s_1 and _s_2 ignoring case.
+
+       cchhaarr **iinnddeexx((ccoonnsstt cchhaarr **_s,, iinntt _c));;
+              Identical to ssttrrcchhrr(3).
+
+       cchhaarr **rriinnddeexx((ccoonnsstt cchhaarr **_s,, iinntt _c));;
+              Identical to ssttrrrrcchhrr(3).
+
+       ##iinncclluuddee <<ssttrriinngg..hh>>
+
+       cchhaarr **ssttppccppyy((cchhaarr **rreessttrriicctt _d_e_s_t,, ccoonnsstt cchhaarr **rreessttrriicctt _s_r_c));;
+              Copy a string from _s_r_c to _d_e_s_t, returning a pointer to the end of the resulting string at _d_e_s_t.
+
+       cchhaarr **ssttrrccaatt((cchhaarr **rreessttrriicctt _d_e_s_t,, ccoonnsstt cchhaarr **rreessttrriicctt _s_r_c));;
+              Append the string _s_r_c to the string _d_e_s_t, returning a pointer _d_e_s_t.
+
+       cchhaarr **ssttrrcchhrr((ccoonnsstt cchhaarr **_s,, iinntt _c));;
+              Return a pointer to the first occurrence of the character _c in the string _s.
+
+       iinntt ssttrrccmmpp((ccoonnsstt cchhaarr **_s_1,, ccoonnsstt cchhaarr **_s_2));;
+              Compare the strings _s_1 with _s_2.
+
+       iinntt ssttrrccoollll((ccoonnsstt cchhaarr **_s_1,, ccoonnsstt cchhaarr **_s_2));;
+              Compare the strings _s_1 with _s_2 using the current locale.
+
+       cchhaarr **ssttrrccppyy((cchhaarr **rreessttrriicctt _d_e_s_t,, ccoonnsstt cchhaarr **rreessttrriicctt _s_r_c));;
+              Copy the string _s_r_c to _d_e_s_t, returning a pointer to the start of _d_e_s_t.
+
+       ssiizzee__tt ssttrrccssppnn((ccoonnsstt cchhaarr **_s,, ccoonnsstt cchhaarr **_r_e_j_e_c_t));;
+              Calculate the length of the initial segment of the string _s which does not contain any of bytes in the string _r_e_j_e_c_t,
+
+       cchhaarr **ssttrrdduupp((ccoonnsstt cchhaarr **_s));;
+              Return a duplicate of the string _s in memory allocated using mmaalllloocc(3).
+
+       cchhaarr **ssttrrffrryy((cchhaarr **_s_t_r_i_n_g));;
+              Randomly swap the characters in _s_t_r_i_n_g.
+
+       ssiizzee__tt ssttrrlleenn((ccoonnsstt cchhaarr **_s));;
+              Return the length of the string _s.
+
+       cchhaarr **ssttrrnnccaatt((cchhaarr _d_e_s_t[[rreessttrriicctt ssttrrlleenn((.._d_e_s_t)) ++ .._n ++ 11]],,
+                     ccoonnsstt cchhaarr _s_r_c[[rreessttrriicctt .._n]],,
+                     ssiizzee__tt _n));;
+              Append at most _n bytes from the unterminated string _s_r_c to the string _d_e_s_t, returning a pointer to _d_e_s_t.
+
+       iinntt ssttrrnnccmmpp((ccoonnsstt cchhaarr _s_1[[.._n]],, ccoonnsstt cchhaarr _s_2[[.._n]],, ssiizzee__tt _n));;
+              Compare at most _n bytes of the strings _s_1 and _s_2.
+
+       cchhaarr **ssttrrppbbrrkk((ccoonnsstt cchhaarr **_s,, ccoonnsstt cchhaarr **_a_c_c_e_p_t));;
+              Return a pointer to the first occurrence in the string _s of one of the bytes in the string _a_c_c_e_p_t.
+
+       cchhaarr **ssttrrrrcchhrr((ccoonnsstt cchhaarr **_s,, iinntt _c));;
+              Return a pointer to the last occurrence of the character _c in the string _s.
+
+       cchhaarr **ssttrrsseepp((cchhaarr ****rreessttrriicctt _s_t_r_i_n_g_p,, ccoonnsstt cchhaarr **rreessttrriicctt _d_e_l_i_m));;
+              Extract the initial token in _s_t_r_i_n_g_p that is delimited by one of the bytes in _d_e_l_i_m.
+
+       ssiizzee__tt ssttrrssppnn((ccoonnsstt cchhaarr **_s,, ccoonnsstt cchhaarr **_a_c_c_e_p_t));;
+              Calculate the length of the starting segment in the string _s that consists entirely of bytes in _a_c_c_e_p_t.
+
+       cchhaarr **ssttrrssttrr((ccoonnsstt cchhaarr **_h_a_y_s_t_a_c_k,, ccoonnsstt cchhaarr **_n_e_e_d_l_e));;
+              Find the first occurrence of the substring _n_e_e_d_l_e in the string _h_a_y_s_t_a_c_k, returning a pointer to the found substring.
+
+       cchhaarr **ssttrrttookk((cchhaarr **rreessttrriicctt _s,, ccoonnsstt cchhaarr **rreessttrriicctt _d_e_l_i_m));;
+              Extract tokens from the string _s that are delimited by one of the bytes in _d_e_l_i_m.
+
+       ssiizzee__tt ssttrrxxffrrmm((cchhaarr _d_e_s_t[[rreessttrriicctt .._n]],, ccoonnsstt cchhaarr _s_r_c[[rreessttrriicctt .._n]],,
+                      ssiizzee__tt _n));;
+              Transforms _s_r_c to the current locale and copies the first _n bytes to _d_e_s_t.
+
+   OObbssoolleettee ffuunnccttiioonnss
+       cchhaarr **ssttrrnnccppyy((cchhaarr _d_e_s_t[[rreessttrriicctt .._n]],, ccoonnsstt cchhaarr _s_r_c[[rreessttrriicctt .._n]],,
+                     ssiizzee__tt _n));;
+              Copy at most _n bytes from string _s_r_c to _d_e_s_t, returning a pointer to the start of _d_e_s_t.
+
+DDEESSCCRRIIPPTTIIOONN
+       The string functions perform operations on null-terminated strings.  See the individual man pages for descriptions of each function.
+
+SSEEEE AALLSSOO
+       bbssttrriinngg(3),  ssttppccppyy(3),  ssttrrccaasseeccmmpp(3),  ssttrrccaatt(3), ssttrrcchhrr(3), ssttrrccmmpp(3), ssttrrccoollll(3), ssttrrccppyy(3), ssttrrccssppnn(3), ssttrrdduupp(3), ssttrrffrryy(3), ssttrrlleenn(3), ssttrrnnccaasseeccmmpp(3), ssttrrnnccaatt(3), ssttrrnnccmmpp(3), ssttrrnnccppyy(3), ssttrrpp‐‐
+       bbrrkk(3), ssttrrrrcchhrr(3), ssttrrsseepp(3), ssttrrssppnn(3), ssttrrssttrr(3), ssttrrttookk(3), ssttrrxxffrrmm(3)
+
+Linux man-pages 6.05.01                                                                           2023-01-22                                                                                         _s_t_r_i_n_g(3)

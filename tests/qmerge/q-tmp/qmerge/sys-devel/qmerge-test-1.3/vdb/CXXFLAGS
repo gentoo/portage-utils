@@ -1,0 +1,1 @@
+-O2 -march=amdfam10 -pipe -g

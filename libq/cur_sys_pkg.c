@@ -1,6 +1,10 @@
+/*
+ * Distributed under the terms of the GNU General Public License v2
+ * Copyright (c) 2024 Alberto Damo. All Rights Reserved.
+ */
+
 #include "config.h"
 
-#include <assert.h>
 #include <openssl/evp.h>
 #include <sys/stat.h> 
 #include <sys/types.h>
@@ -105,9 +109,7 @@ int create_cur_pkg_tree(cur_pkg_tree_node **root,struct tree_pkg_ctx *pkg_ctx)
       add_node(root,strdup(e->digest),strdup(key));
       key=NULL;
   }
-
   free(root_buf);
-  assert(*root);
   return 0;
 }
 
