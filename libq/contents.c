@@ -21,28 +21,23 @@
  * Parse a line of CONTENTS file and provide access to the individual fields
  */
 contents_entry *
-contents_parse_line_general(char *line,int line_len)
+contents_parse_line(char *line)
 {
 	static contents_entry e;
 	char *p;
-
-  if(line_len <= 0)
-  {
-    line_len = strlen(line);
-  }
 
 	if (line == NULL || *line == '\0' || *line == '\n')
 		return NULL;
 
 	/* chop trailing newline */
-	p = &line[line_len - 1];
+	p = &line[strlen(line) - 1];
 	if (*p == '\n')
 		*p = '\0';
 
 	memset(&e, 0x00, sizeof(e));
-  e._data=line;
+	e._data = line;
 
-  if (!strncmp(e._data, "obj ", 4))
+	if (!strncmp(e._data, "obj ", 4))
 		e.type = CONTENTS_OBJ;
 	else if (!strncmp(e._data, "dir ", 4))
 		e.type = CONTENTS_DIR;
@@ -53,44 +48,60 @@ contents_parse_line_general(char *line,int line_len)
 
 	e.name = e._data + 4;
 
-  if(e.type == CONTENTS_DIR){
-    return NULL;
-  }
+	switch (e.type) {
+		/* dir /bin */
+		case CONTENTS_DIR:
+			break;
 
-	/* obj /bin/bash 62ed51c8b23866777552643ec57614b0 1120707577 */
-	/* sym /bin/sh -> bash 1120707577 */
+		/* obj /bin/bash 62ed51c8b23866777552643ec57614b0 1120707577 */
+		case CONTENTS_OBJ:
+			if ((e.mtime_str = strrchr(e.name, ' ')) == NULL)
+				return NULL;
+			*e.mtime_str++ = '\0';
+			if ((e.digest = strrchr(e.name, ' ')) == NULL)
+				return NULL;
+			*e.digest++ = '\0';
+			break;
 
-  //timestamp
-  for (;*p!=' ';--p) {}
-
-  if(p == e.name){
-    return NULL;
-  }
-  e.mtime_str=p+1;
-	e.mtime = strtol(e.mtime_str, NULL, 10);
-	if (e.mtime == LONG_MAX) {
-    e.mtime = 0;
-    e.mtime_str = NULL;
-  }
-  *p='\0';
-
-  //hash
-	/* obj /bin/bash 62ed51c8b23866777552643ec57614b0 */
-  if(e.type == CONTENTS_OBJ){
-    for (;*p!=' ';--p) {} 
-    if(p == e.name){
-        return NULL;
-    }
-    e.digest=p+1;
-    *p='\0';
-  }
-
-	/* sym /bin/sh -> bash */
-  if(e.type == CONTENTS_SYM){
+		/* sym /bin/sh -> bash 1120707577 */
+		case CONTENTS_SYM:
+			if ((e.mtime_str = strrchr(e.name, ' ')) == NULL)
+				return NULL;
+			*e.mtime_str++ = '\0';
 			if ((e.sym_target = strstr(e.name, " -> ")) == NULL)
 				return NULL;
 			*e.sym_target = '\0';
 			e.sym_target += 4;
-  }
-  return &e;
+			break;
+	}
+
+	if (e.mtime_str) {
+		e.mtime = strtol(e.mtime_str, NULL, 10);
+		if (e.mtime == LONG_MAX) {
+			e.mtime = 0;
+			e.mtime_str = NULL;
+		}
+	}
+
+	return &e;
+}
+
+void restore_buffer_after_parsing(contents_entry *e)
+{
+    if(!e){
+        return;
+    }
+    switch (e->type) {
+        case CONTENTS_SYM:
+            *(e->sym_target-4) =' ';
+            *(e->mtime_str -1) =' ';
+            break;
+        case CONTENTS_OBJ:
+            *(e->digest-1)=' ';
+            *(e->mtime_str-1)=' ';
+             break;
+        case CONTENTS_DIR:
+            break;
+    }
+
 }

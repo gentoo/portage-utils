@@ -1607,7 +1607,6 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	char *eprefix;
 	size_t eprefix_len;
 	const char *T;
-    char *original;
     char *root_buf;
 	char *buf;
 	char *savep;
@@ -1648,8 +1647,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		contains_set("config-protect-if-modified", features);
 
 	/* get a handle on the things to clean up */
-	original = tree_pkg_meta_get(pkg_ctx, CONTENTS);
-    root_buf = buf = strdup(original);
+	root_buf = buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
 	if (buf == NULL)
 		return 1;
 
@@ -1661,6 +1659,11 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		struct stat     st;
 
 		e = contents_parse_line(buf);
+
+        if(buf != root_buf){
+            *(buf-1) = '\n';
+        }
+
 		if (!e)
 			continue;
 
@@ -1678,6 +1681,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 				list->data = xstrdup(e->name);
 				list->next = dirs;
 				dirs = list;
+                restore_buffer_after_parsing(e);
 				continue;
 			}
 
@@ -1698,20 +1702,24 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 					if (errno != ENOENT) {
 						warnp("stat failed for %s -> '%s'",
 								e->name, e->sym_target);
+                        restore_buffer_after_parsing(e);
 						continue;
 					} else
 						break;
 				}
 
 				/* Hrm, if it isn't a symlink anymore, then leave it be */
-				if (!S_ISLNK(st.st_mode))
+				if (!S_ISLNK(st.st_mode)){
+                    restore_buffer_after_parsing(e);
 					continue;
+                }
 
 				break;
 
 			default:
 				warn("%s???%s %s%s%s (%d)", RED, NORM,
 						WHITE, e->name, NORM, e->type);
+                restore_buffer_after_parsing(e);
 				continue;
 		}
 
@@ -1721,6 +1729,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 
 		if (protected) {
 			qprintf("%s %s\n", zing, e->name);
+            restore_buffer_after_parsing(e);
 			continue;
 		}
 
@@ -1750,9 +1759,9 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 					rmdir_r_at(portroot_fd, e->name + 1);
 			}
 		}
+        restore_buffer_after_parsing(e);
 	}
 
-    free(root_buf);
 
 	/* Then remove all dirs in reverse order */
 	while (dirs != NULL) {

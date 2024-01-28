@@ -24,7 +24,8 @@ typedef struct {
 	long mtime;
 } contents_entry;
 
-#define contents_parse_line(l) contents_parse_line_general(l,-1);
-contents_entry *contents_parse_line_general(char *line,int line_len);
+// #define contents_parse_line(l) contents_parse_line_general(l,-1);
+contents_entry *contents_parse_line(char *line);
+void restore_buffer_after_parsing(contents_entry *e);
 
 #endif
