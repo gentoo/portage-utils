@@ -1252,7 +1252,15 @@ atom_compar_cb(const void *l, const void *r)
 		default:
 		{
 			int ret;
-			ret = strcmp(al->CATEGORY, ar->CATEGORY);
+			if (!al->CATEGORY && !ar->CATEGORY) {
+				ret = 0;
+			} else if (!al->CATEGORY) {
+				ret = -1;
+			} else if (!ar->CATEGORY) {
+				ret = 1;
+			} else {
+				ret = strcmp(al->CATEGORY, ar->CATEGORY);
+			}
 			if (ret == 0)
 				ret = strcasecmp(al->PN, ar->PN);
 			return ret;
