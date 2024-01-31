@@ -44,5 +44,6 @@ int hash_multiple_file_at_cb(
 char *hash_file_at_cb(int pfd, const char *filename, int hash_algo, hash_cb_t cb);
 #define hash_file(f, h) hash_file_at_cb(AT_FDCWD, f, h, NULL)
 #define hash_file_at(fd, f, h) hash_file_at_cb(fd, f, h, NULL)
+char *hash_string(const char *buf, ssize_t buflen, int hash);
 
 #endif

@@ -98,29 +98,54 @@ hash_hex(char *out, const unsigned char *buf, const int length)
 	}
 }
 
-/**
- * Computes the hashes for file fname and writes the hex-representation
- * for those hashes into the address space pointed to by the return
- * pointers for these hashes.  The caller should ensure enough space is
- * available.  Only those hashes which are in the global hashes variable
- * are computed, the address space pointed to for non-used hashes are
- * left untouched, e.g. they can be NULL.  The number of bytes read from
- * the file pointed to by fname is returned in the flen argument.
- */
-int
-hash_multiple_file_fd(
-		int fd,
-		char *md5,
-		char *sha1,
-		char *sha256,
-		char *sha512,
-		char *blak2b,
-		size_t *flen,
-		int hashes)
+/* len func(dest,destlen,cbctx) */
+typedef size_t (*read_cb)(char *,size_t,void *);
+
+static size_t read_stdio(char *dest, size_t destlen, void *ctx)
 {
-	FILE             *f;
-	char              data[8192];
+	FILE *io = ctx;
+
+	return fread(dest, 1, destlen, io);
+}
+
+struct bufctx {
+	const char *buf;
+	size_t      buflen;
+};
+
+static size_t read_buffer(char *dest, size_t destlen, void *ctx)
+{
+	struct bufctx *membuf = ctx;
+	size_t         readlen;
+
+	readlen = destlen;
+	if (readlen > membuf->buflen)
+		readlen = membuf->buflen;
+
+	memcpy(dest, membuf->buf, readlen);
+
+	/* update buffer to the remainder */
+	membuf->buf    += readlen;
+	membuf->buflen -= readlen;
+
+	return readlen;
+}
+
+static int
+hash_multiple_internal(
+		read_cb rcb,
+		void   *ctx,
+		char   *md5,
+		char   *sha1,
+		char   *sha256,
+		char   *sha512,
+		char   *blak2b,
+		size_t *flen,
+		int     hashes)
+{
 	size_t            len;
+	char              data[8192];
+
 	struct md5_ctx    m5;
 	struct sha1_ctx   s1;
 	struct sha256_ctx s256;
@@ -132,8 +157,6 @@ hash_multiple_file_fd(
 #endif
 
 	*flen = 0;
-	if ((f = fdopen(fd, "r")) == NULL)
-		return -1;
 
 	md5_init_ctx(&m5);
 	sha1_init_ctx(&s1);
@@ -143,7 +166,7 @@ hash_multiple_file_fd(
 	blake2b_init(&bl2b, BLAKE2B_OUTBYTES);
 #endif
 
-	while ((len = fread(data, 1, sizeof(data), f)) > 0) {
+	while ((len = rcb(data, sizeof(data), ctx)) > 0) {
 		*flen += len;
 #pragma omp parallel sections
 		{
@@ -176,7 +199,6 @@ hash_multiple_file_fd(
 #endif
 		}
 	}
-	fclose(f);
 
 #pragma omp parallel sections
 	{
@@ -225,6 +247,41 @@ hash_multiple_file_fd(
 	}
 
 	return 0;
+}
+
+/**
+ * Computes the hashes for file fname and writes the hex-representation
+ * for those hashes into the address space pointed to by the return
+ * pointers for these hashes.  The caller should ensure enough space is
+ * available.  Only those hashes which are in the global hashes variable
+ * are computed, the address space pointed to for non-used hashes are
+ * left untouched, e.g. they can be NULL.  The number of bytes read from
+ * the file pointed to by fname is returned in the flen argument.
+ */
+int
+hash_multiple_file_fd(
+		int fd,
+		char *md5,
+		char *sha1,
+		char *sha256,
+		char *sha512,
+		char *blak2b,
+		size_t *flen,
+		int hashes)
+{
+	FILE *f;
+	int   ret;
+
+	if ((f = fdopen(fd, "r")) == NULL)
+		return -1;
+
+	ret = hash_multiple_internal(read_stdio, f,
+								 md5, sha1, sha256, sha512, blak2b,
+								 flen, hashes);
+
+	fclose(f);
+
+	return ret;
 }
 
 int
@@ -277,6 +334,38 @@ hash_file_at_cb(int pfd, const char *fname, int hash, hash_cb_t cb)
 					_hash_file_buf, _hash_file_buf, _hash_file_buf,
 					_hash_file_buf, _hash_file_buf,
 					&dummy, hash) != 0)
+				return NULL;
+			break;
+		default:
+			return NULL;
+	}
+
+	return _hash_file_buf;
+}
+
+char *
+hash_string(const char *buf, ssize_t buflen, int hash)
+{
+	struct bufctx membuf;
+	size_t        dummy;
+
+	if (buflen < 0)
+		buflen = (ssize_t)strlen(buf);
+
+	membuf.buf    =  buf;
+	membuf.buflen = (size_t)buflen;
+
+	switch (hash) {
+		case HASH_MD5:
+		case HASH_SHA1:
+		case HASH_SHA256:
+		case HASH_SHA512:
+		case HASH_BLAKE2B:
+			if (hash_multiple_internal(read_buffer, &membuf,
+									   _hash_file_buf, _hash_file_buf,
+									   _hash_file_buf, _hash_file_buf,
+									   _hash_file_buf,
+									   &dummy, hash) != 0)
 				return NULL;
 			break;
 		default:
