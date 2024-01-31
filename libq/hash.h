@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 Gentoo Foundation
+ * Copyright 2018-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
