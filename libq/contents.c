@@ -34,6 +34,9 @@ contents_parse_line_len(char *line, size_t len)
 		len--;
 	}
 
+	if (len <= 4)  /* minimal: "dir /" */
+		return NULL;
+
 	memset(&e, 0x00, sizeof(e));
 	e._data = line;
 
@@ -47,6 +50,7 @@ contents_parse_line_len(char *line, size_t len)
 		return NULL;
 
 	e.name = e._data + 4;
+	len   -= 4;
 
 	switch (e.type) {
 		/* dir /bin */
