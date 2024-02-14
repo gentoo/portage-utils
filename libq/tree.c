@@ -1233,6 +1233,12 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 					p[--s.st_size] = '\0';
 				m->storage->pos += s.st_size + 1;
 			}
+			else
+			{
+				/* hmmm, couldn't read the whole file?!? */
+				p[0] = '\0';
+				m->storage->pos++;
+			}
 			close(fd);
 		}
 	} else {

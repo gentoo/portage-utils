@@ -98,29 +98,54 @@ hash_hex(char *out, const unsigned char *buf, const int length)
 	}
 }
 
-/**
- * Computes the hashes for file fname and writes the hex-representation
- * for those hashes into the address space pointed to by the return
- * pointers for these hashes.  The caller should ensure enough space is
- * available.  Only those hashes which are in the global hashes variable
- * are computed, the address space pointed to for non-used hashes are
- * left untouched, e.g. they can be NULL.  The number of bytes read from
- * the file pointed to by fname is returned in the flen argument.
- */
-int
-hash_multiple_file_fd(
-		int fd,
-		char *md5,
-		char *sha1,
-		char *sha256,
-		char *sha512,
-		char *blak2b,
-		size_t *flen,
-		int hashes)
+/* len func(dest,destlen,cbctx) */
+typedef size_t (*read_cb)(char *,size_t,void *);
+
+static size_t read_stdio(char *dest, size_t destlen, void *ctx)
 {
-	FILE             *f;
-	char              data[8192];
+	FILE *io = ctx;
+
+	return fread(dest, 1, destlen, io);
+}
+
+struct bufctx {
+	const char *buf;
+	size_t      buflen;
+};
+
+static size_t read_buffer(char *dest, size_t destlen, void *ctx)
+{
+	struct bufctx *membuf = ctx;
+	size_t         readlen;
+
+	readlen = destlen;
+	if (readlen > membuf->buflen)
+		readlen = membuf->buflen;
+
+	memcpy(dest, membuf->buf, readlen);
+
+	/* update buffer to the remainder */
+	membuf->buf    += readlen;
+	membuf->buflen -= readlen;
+
+	return readlen;
+}
+
+static int
+hash_multiple_internal(
+		read_cb rcb,
+		void   *ctx,
+		char   *md5,
+		char   *sha1,
+		char   *sha256,
+		char   *sha512,
+		char   *blak2b,
+		size_t *flen,
+		int     hashes)
+{
 	size_t            len;
+	char              data[8192];
+
 	struct md5_ctx    m5;
 	struct sha1_ctx   s1;
 	struct sha256_ctx s256;
@@ -132,8 +157,6 @@ hash_multiple_file_fd(
 #endif
 
 	*flen = 0;
-	if ((f = fdopen(fd, "r")) == NULL)
-		return -1;
 
 	md5_init_ctx(&m5);
 	sha1_init_ctx(&s1);
@@ -143,7 +166,7 @@ hash_multiple_file_fd(
 	blake2b_init(&bl2b, BLAKE2B_OUTBYTES);
 #endif
 
-	while ((len = fread(data, 1, sizeof(data), f)) > 0) {
+	while ((len = rcb(data, sizeof(data), ctx)) > 0) {
 		*flen += len;
 #pragma omp parallel sections
 		{
@@ -176,7 +199,6 @@ hash_multiple_file_fd(
 #endif
 		}
 	}
-	fclose(f);
 
 #pragma omp parallel sections
 	{
@@ -225,6 +247,41 @@ hash_multiple_file_fd(
 	}
 
 	return 0;
+}
+
+/**
+ * Computes the hashes for file fname and writes the hex-representation
+ * for those hashes into the address space pointed to by the return
+ * pointers for these hashes.  The caller should ensure enough space is
+ * available.  Only those hashes which are in the global hashes variable
+ * are computed, the address space pointed to for non-used hashes are
+ * left untouched, e.g. they can be NULL.  The number of bytes read from
+ * the file pointed to by fname is returned in the flen argument.
+ */
+int
+hash_multiple_file_fd(
+		int fd,
+		char *md5,
+		char *sha1,
+		char *sha256,
+		char *sha512,
+		char *blak2b,
+		size_t *flen,
+		int hashes)
+{
+	FILE *f;
+	int   ret;
+
+	if ((f = fdopen(fd, "r")) == NULL)
+		return -1;
+
+	ret = hash_multiple_internal(read_stdio, f,
+								 md5, sha1, sha256, sha512, blak2b,
+								 flen, hashes);
+
+	fclose(f);
+
+	return ret;
 }
 
 int
@@ -287,88 +344,34 @@ hash_file_at_cb(int pfd, const char *fname, int hash, hash_cb_t cb)
 }
 
 
-/*
-*Generate hash with different algorithm based on the input, if the algorithm is not supported
-*do nothing and return NULL
-*Param: str :string to hash the string must be \0 terminating
-*       len : len of the string str, len >= 0
-*       algo_hash : algorithm used to compute the hash
-*/
 char *
-hash_from_string(const char *str,const size_t len, const enum hash_impls algo_hash)
+hash_string(const char *buf, ssize_t buflen, int hash)
 {
-    static int size_hash_buffer = sizeof(_hash_file_buf)/sizeof(_hash_file_buf[0]);
-    unsigned char *out_hex_src_buffer=NULL;
-    int OUT_DIGEST_SIZE = -1;
-    
-    memset(_hash_file_buf, 0x0, sizeof(_hash_file_buf));
-    if(len){
-        strncpy(_hash_file_buf, str, size_hash_buffer-1);
-    }
+	struct bufctx membuf;
+	size_t        dummy;
 
-    switch (algo_hash) {
-        case HASH_MD5:
-            struct md5_ctx md5;
-            unsigned char md5buf[MD5_DIGEST_SIZE];
+	if (buflen < 0)
+		buflen = (ssize_t)strlen(buf);
 
-            md5_init_ctx(&md5);
-			md5_process_bytes(_hash_file_buf, len, &md5);
-			md5_finish_ctx(&md5, md5buf);
+	membuf.buf    =  buf;
+	membuf.buflen = (size_t)buflen;
 
-            out_hex_src_buffer = md5buf;
-            OUT_DIGEST_SIZE = MD5_DIGEST_SIZE;
-            break;
-        case HASH_SHA1:
-            struct sha1_ctx sha1;
-            unsigned char sha1buf[SHA1_DIGEST_SIZE];
+	switch (hash) {
+		case HASH_MD5:
+		case HASH_SHA1:
+		case HASH_SHA256:
+		case HASH_SHA512:
+		case HASH_BLAKE2B:
+			if (hash_multiple_internal(read_buffer, &membuf,
+									   _hash_file_buf, _hash_file_buf,
+									   _hash_file_buf, _hash_file_buf,
+									   _hash_file_buf,
+									   &dummy, hash) != 0)
+				return NULL;
+			break;
+		default:
+			return NULL;
+	}
 
-            sha1_init_ctx(&sha1);
-			sha1_process_bytes(_hash_file_buf, len, &sha1);
-            sha1_finish_ctx(&sha1, sha1buf);
-
-            out_hex_src_buffer = sha1buf;
-            OUT_DIGEST_SIZE = SHA1_DIGEST_SIZE;
-            break;
-        case HASH_SHA256:
-            struct sha256_ctx sha256; 
-            unsigned char sha256buf[SHA256_DIGEST_SIZE];
-
-            sha256_init_ctx(&sha256);
-			sha256_process_bytes(_hash_file_buf, len, &sha256);
-            sha256_finish_ctx(&sha256, sha256buf);
-
-            out_hex_src_buffer = sha256buf;
-            OUT_DIGEST_SIZE = SHA256_DIGEST_SIZE;
-            break;
-        case HASH_SHA512:
-            struct sha512_ctx sha512;
-            unsigned char sha512buf[SHA512_DIGEST_SIZE];
-
-            sha512_init_ctx(&sha512);
-			sha512_process_bytes(_hash_file_buf, len, &sha512);
-            sha512_finish_ctx(&sha512, sha512buf);
-
-            out_hex_src_buffer = sha512buf;
-            OUT_DIGEST_SIZE = SHA512_DIGEST_SIZE;
-            break;
-#ifdef HAVE_BLAKE2B
-        case HASH_BLAKE2B:
-	        blake2b_state blak2b;
-            unsigned char blak2buf[BLAKE2B_OUTBYTES];
-
-            blake2b_init(&blak2b, BLAKE2B_OUTBYTES);
-			blake2b_update(&blak2b, (unsigned char *)_hash_file_buf, len);
-            blake2b_final(&blak2b, blak2buf, BLAKE2B_OUTBYTES);
-
-            out_hex_src_buffer = blak2buf;
-            OUT_DIGEST_SIZE = BLAKE2B_OUTBYTES;
-            break;
-#endif
-        default:
-            return NULL;
-    }
-
-    hash_hex(_hash_file_buf, out_hex_src_buffer, OUT_DIGEST_SIZE);
-
-    return _hash_file_buf;
+	return _hash_file_buf;
 }

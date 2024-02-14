@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -21,18 +21,23 @@
  * Parse a line of CONTENTS file and provide access to the individual fields
  */
 contents_entry *
-contents_parse_line(char *line)
+contents_parse_line_len(char *line, size_t len)
 {
 	static contents_entry e;
 	char *p;
 
-	if (line == NULL || *line == '\0' || *line == '\n')
+	if (len == 0 || line == NULL || *line == '\0' || *line == '\n')
 		return NULL;
 
 	/* chop trailing newline */
-	p = &line[strlen(line) - 1];
-	if (*p == '\n')
+	p = &line[len - 1];
+	if (*p == '\n') {
 		*p = '\0';
+		len--;
+	}
+
+	if (len <= 4)  /* minimal: "dir /" */
+		return NULL;
 
 	memset(&e, 0x00, sizeof(e));
 	e._data = line;
@@ -47,6 +52,7 @@ contents_parse_line(char *line)
 		return NULL;
 
 	e.name = e._data + 4;
+	len   -= 4;
 
 	switch (e.type) {
 		/* dir /bin */
@@ -55,23 +61,38 @@ contents_parse_line(char *line)
 
 		/* obj /bin/bash 62ed51c8b23866777552643ec57614b0 1120707577 */
 		case CONTENTS_OBJ:
-			if ((e.mtime_str = strrchr(e.name, ' ')) == NULL)
-				return NULL;
-			*e.mtime_str++ = '\0';
-			if ((e.digest = strrchr(e.name, ' ')) == NULL)
-				return NULL;
-			*e.digest++ = '\0';
+			for (p = &e.name[len - 1]; p >= e.name; p--) {
+				if (*p == ' ') {
+					if (e.mtime_str == NULL)
+						e.mtime_str = p + 1;
+					else if (e.digest == NULL)
+						e.digest = p + 1;
+					*p = '\0';
+
+					if (e.digest != NULL)
+						break;
+				}
+			}
 			break;
 
 		/* sym /bin/sh -> bash 1120707577 */
 		case CONTENTS_SYM:
-			if ((e.mtime_str = strrchr(e.name, ' ')) == NULL)
-				return NULL;
-			*e.mtime_str++ = '\0';
-			if ((e.sym_target = strstr(e.name, " -> ")) == NULL)
-				return NULL;
-			*e.sym_target = '\0';
-			e.sym_target += 4;
+			for (p = &e.name[len - 1]; p >= e.name; p--) {
+				if (*p == ' ') {
+					if (e.mtime_str == NULL) {
+						e.mtime_str = p + 1;
+					} else if (e.sym_target == NULL) {
+						if (strncmp(p, " -> ", sizeof(" -> ") - 1) == 0)
+							e.sym_target = p + sizeof(" -> ") - 1;
+						else
+							continue;
+					}
+					*p = '\0';
+
+					if (e.sym_target != NULL)
+						break;
+				}
+			}
 			break;
 	}
 
