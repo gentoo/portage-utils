@@ -10,6 +10,9 @@
 #ifndef _CONTENTS_H
 #define _CONTENTS_H 1
 
+#include "config.h"
+#include <stddef.h>
+
 typedef enum {
 	CONTENTS_DIR, CONTENTS_OBJ, CONTENTS_SYM
 } contents_type;
@@ -27,5 +30,6 @@ typedef struct {
 
 contents_entry *contents_parse_line_len(char *line, size_t len);
 #define contents_parse_line(L) contents_parse_line_len(L, strlen(L))
+void restore_buffer_after_parsing(contents_entry *e);
 
 #endif
