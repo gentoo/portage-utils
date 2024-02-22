@@ -343,6 +343,7 @@ hash_file_at_cb(int pfd, const char *fname, int hash, hash_cb_t cb)
 	return _hash_file_buf;
 }
 
+
 char *
 hash_string(const char *buf, ssize_t buflen, int hash)
 {

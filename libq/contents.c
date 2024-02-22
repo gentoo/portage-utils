@@ -15,6 +15,8 @@
 
 #include "contents.h"
 
+
+
 /*
  * Parse a line of CONTENTS file and provide access to the individual fields
  */
@@ -103,4 +105,24 @@ contents_parse_line_len(char *line, size_t len)
 	}
 
 	return &e;
+}
+
+void restore_buffer_after_parsing(contents_entry *e)
+{
+    if(!e){
+        return;
+    }
+    switch (e->type) {
+        case CONTENTS_SYM:
+            *(e->sym_target-4) =' ';
+            *(e->mtime_str -1) =' ';
+            break;
+        case CONTENTS_OBJ:
+            *(e->digest-1)=' ';
+            *(e->mtime_str-1)=' ';
+             break;
+        case CONTENTS_DIR:
+            break;
+    }
+
 }

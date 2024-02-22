@@ -6,6 +6,8 @@
 #ifndef _TREE_H
 #define _TREE_H 1
 
+#include "main.h"
+
 #include <dirent.h>
 #include <stdbool.h>
 #include <stddef.h>

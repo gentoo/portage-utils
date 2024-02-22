@@ -1,0 +1,257 @@
+declare -x A=""
+declare -x ABI="amd64"
+declare -x ABI_X86="64"
+declare -x ALSA_CARDS=""
+declare -x ALSA_PCM_PLUGINS="adpcm alaw asym copy dmix dshare dsnoop empty extplug file hooks iec958 ioplug ladspa lfloat linear meter mmap_emul mulaw multi null plug rate route share shm softvol"
+declare -x APACHE2_MODULES="authn_core authz_core socache_shmcb unixd actions alias auth_basic authn_alias authn_anon authn_dbm authn_default authn_file authz_dbm authz_default authz_groupfile authz_host authz_owner authz_user autoindex cache cgi cgid dav dav_fs dav_lock deflate dir disk_cache env expires ext_filter file_cache filter headers include info log_config logio mem_cache mime mime_magic negotiation rewrite setenvif speling status unique_id userdir usertrack vhost_alias"
+declare -x ARCH="amd64"
+declare -x BOOTSTRAP_USE="cxx unicode python_targets_python3_2 python_targets_python2_7 multilib"
+declare -x CALLIGRA_FEATURES="kexi words flow plan sheets stage tables krita karbon braindump"
+declare -x CAMERAS="canon"
+declare -x CATEGORY="sys-devel"
+declare -x CBUILD="x86_64-pc-linux-gnu"
+declare -x CFLAGS="-O2 -march=amdfam10 -pipe -g -Wimplicit-function-declaration"
+declare -x CFLAGS_amd64="-m64"
+declare -x CFLAGS_x32="-mx32"
+declare -x CFLAGS_x86="-m32"
+declare -x CG_COMPILER_EXE="/opt/bin/cgc"
+declare -x CG_INC_PATH="/opt/nvidia-cg-toolkit/include"
+declare -x CG_LIB_PATH="/opt/nvidia-cg-toolkit/lib64:/opt/nvidia-cg-toolkit/lib32"
+declare -x CHOST="x86_64-pc-linux-gnu"
+declare -x CHOST_amd64="x86_64-pc-linux-gnu"
+declare -x CHOST_x32="x86_64-pc-linux-gnux32"
+declare -x CHOST_x86="i686-pc-linux-gnu"
+declare -x COLLECTD_PLUGINS="df interface irq load memory rrdtool swap syslog"
+declare -x CPPFLAGS="-DCPPFLAGS_TEST"
+declare -x CXXFLAGS="-O2 -march=amdfam10 -pipe -g"
+declare -x DCCC_PATH="/usr/lib64/distcc/bin"
+declare -x DEFAULT_ABI="amd64"
+declare -x DEFINED_PHASES=" install postinst postrm preinst prerm pretend setup"
+declare DEPEND=""
+declare DESCRIPTION="my desc"
+declare -x DESTTREE="/usr"
+declare -x DIROPTIONS="-m0755"
+declare -x EAPI="4"
+declare -x EBEEP_IGNORE="1"
+declare -x EBUILD_DEFAULT_OPTS="--skip-manifest"
+declare -x ELIBC="glibc"
+declare -x EPAUSE_IGNORE="1"
+declare -x EXEOPTIONS="-m0755"
+declare -x FCFLAGS="-O2 -pipe"
+declare -x FEATURES="assume-digests binpkg-logs buildpkg buildsyspkg ccache collision-protect compressdebug config-protect-if-modified digest distlocks ebuild-locks fixlafiles merge-sync news parallel-fetch preserve-libs protect-owned sandbox sfperms sign splitdebug strict test-fail-continue unknown-features-warn unmerge-logs unmerge-orphans userfetch userpriv usersandbox xattr"
+declare -x FETCHCOMMAND_SSH="bash -c \"x=\\\${2#ssh://} ; host=\\\${x%%/*} ; port=\\\${host##*:} ; host=\\\${host%:*} ; [[ \\\${host} = \\\${port} ]] && port=22 ; exec rsync --rsh=\\\"ssh -p\\\${port}\\\" -avP \\\"\\\${host}:/\\\${x#*/}\\\" \\\"\\\$1\\\"\" rsync \"\${DISTDIR}/\${FILE}\" \"\${URI}\""
+declare -x FFLAGS="-O2 -pipe"
+declare -x GCC_BOUNDS_OPTS="-no-message"
+declare -x GCC_SPECS=""
+declare -x GPSD_PROTOCOLS="ashtech aivdm earthmate evermore fv18 garmin garmintxt gpsclock itrax mtk3301 nmea ntrip navcom oceanserver oldstyle oncore rtcm104v2 rtcm104v3 sirf superstar2 timing tsip tripmate tnt ubx"
+declare -x GRUB_PLATFORMS=""
+declare -x GSETTINGS_BACKEND="dconf"
+declare -x GUILE_LOAD_PATH="/usr/share/guile/1.8"
+declare HDEPEND=""
+declare -x HG="/usr/bin/hg"
+declare HOMEPAGE="http://gentoo.org"
+declare INHERITED
+declare -x INPUT_DEVICES="mouse keyboard joystick void"
+declare -x INSDESTTREE="/etc"
+declare -x INSOPTIONS="-m0644"
+declare IUSE=""
+declare -x IUSE_IMPLICIT="prefix"
+declare -x I_AM_CRAZY_TO_USE_MASKED_VERSIONS="1"
+declare -x I_KNOW_WHAT_I_AM_DOING="yes"
+declare -x I_PROMISE_TO_SUPPLY_PATCHES_WITH_BUGS="1"
+declare -x KERNEL="linux"
+declare -x KEYWORDS="~amd64 ~x86"
+declare -x LADSPA_PATH="/usr/lib64/ladspa"
+declare -x LANG="en_US.UTF8"
+declare -x LCD_DEVICES=""
+declare -x LDFLAGS="-Wl,-O1 -Wl,--hash-style=gnu"
+declare -x LDFLAGS_amd64="-m elf_x86_64"
+declare -x LDFLAGS_x32="-m elf32_x86_64"
+declare -x LDFLAGS_x86="-m elf_i386"
+declare -x LIBDIR_amd64="lib64"
+declare -x LIBDIR_amd64_fbsd="lib64"
+declare -x LIBDIR_n32="lib32"
+declare -x LIBDIR_n64="lib64"
+declare -x LIBDIR_o32="lib"
+declare -x LIBDIR_ppc="lib32"
+declare -x LIBDIR_ppc64="lib64"
+declare -x LIBDIR_s390="lib32"
+declare -x LIBDIR_s390x="lib64"
+declare -x LIBDIR_sparc32="lib32"
+declare -x LIBDIR_sparc64="lib64"
+declare -x LIBDIR_x32="libx32"
+declare -x LIBDIR_x86="lib"
+declare -x LIBDIR_x86_fbsd="lib32"
+declare -x LIBOPTIONS="-m0644"
+declare -x LIBREOFFICE_EXTENSIONS="presenter-console presenter-minimizer"
+declare -x LICENSE="GPL-2"
+declare -x LINGUAS="en en_US en_GB de"
+declare -x MAIL="/var/mail/root"
+declare -x MAKEOPTS="-j5"
+declare -x MULTILIB_ABIS="amd64 x86"
+declare -x MULTILIB_STRICT_DENY="64-bit.*shared object"
+declare -x MULTILIB_STRICT_DIRS="/lib32 /lib /usr/lib32 /usr/lib /usr/kde/*/lib32 /usr/kde/*/lib /usr/qt/*/lib32 /usr/qt/*/lib /usr/X11R6/lib32 /usr/X11R6/lib"
+declare -x MULTILIB_STRICT_EXEMPT="(perl5|gcc|gcc-lib|binutils|eclipse-3|debug|portage|udev)"
+declare -x NETBEANS="apisupport cnd groovy gsf harness ide identity j2ee java mobility nb php profiler soa visualweb webcommon websvccommon xml"
+declare -x OFFICE_IMPLEMENTATION="libreoffice"
+declare -x OPENCL_PROFILE="nvidia"
+declare -x OPENGL_PROFILE="nvidia"
+declare -x P="qmerge-test-1.3"
+declare PDEPEND=""
+declare -x PF="qmerge-test-1.3"
+declare -x PHP_TARGETS=""
+declare -x PKG_CONFIG_PATH="/usr/lib64/pkgconfig"
+declare -x PN="qmerge-test"
+declare -x PORTAGE_FEATURES="assume-digests binpkg-logs buildpkg buildsyspkg ccache collision-protect compressdebug config-protect-if-modified digest distlocks ebuild-locks fixlafiles merge-sync news parallel-fetch preserve-libs protect-owned sandbox sfperms sign splitdebug strict test-fail-continue unknown-features-warn unmerge-logs unmerge-orphans userfetch userpriv usersandbox xattr"
+declare -x PORTAGE_NICENESS="5"
+declare -x PR="r0"
+declare -x PRELINK_PATH_MASK="/lib/modules:/usr/lib64/locale:/usr/lib64/wine:/usr/lib64/valgrind:*.la:*.png:*.py:*.pl:*.pm:*.sh:*.xml:*.xslt:*.a:*.js:/usr/lib64/libfreebl3.so:/usr/lib64/libnssdbm3.so:/usr/lib64/libsoftokn3.so"
+declare -x PROFILE_ONLY_VARIABLES="ARCH ELIBC IUSE_IMPLICIT KERNEL USERLAND USE_EXPAND_IMPLICIT USE_EXPAND_UNPREFIXED USE_EXPAND_VALUES_ARCH USE_EXPAND_VALUES_ELIBC USE_EXPAND_VALUES_KERNEL USE_EXPAND_VALUES_USERLAND"
+declare -x PROPERTIES=""
+declare -x PROVIDE=""
+declare -x PV="1.3"
+declare -x PVR="1.3"
+declare -x PYTHONDONTWRITEBYTECODE="1"
+declare -x PYTHON_SINGLE_TARGET=""
+declare -x PYTHON_TARGETS=""
+declare -x QEMU_SOFTMMU_TARGETS="alpha arm i386 mips mips64 mips64el mipsel ppc ppc64 s390x sh4 sh4eb sparc sparc64 x86_64"
+declare -x QEMU_USER_TARGETS="alpha arm armeb i386 mips mipsel ppc ppc64 ppc64abi32 s390x sh4 sh4eb sparc sparc32plus sparc64"
+declare -x QT_GRAPHICSSYSTEM="raster"
+declare -x QT_PLUGIN_PATH="/usr/lib64/kde4/plugins"
+declare RDEPEND=""
+declare REPOSITORY
+declare REQUIRED_USE=""
+declare -x RESTRICT=""
+declare -x RESUMECOMMAND_SSH="bash -c \"x=\\\${2#ssh://} ; host=\\\${x%%/*} ; port=\\\${host##*:} ; host=\\\${host%:*} ; [[ \\\${host} = \\\${port} ]] && port=22 ; exec rsync --rsh=\\\"ssh -p\\\${port}\\\" -avP \\\"\\\${host}:/\\\${x#*/}\\\" \\\"\\\$1\\\"\" rsync \"\${DISTDIR}/\${FILE}\" \"\${URI}\""
+declare -x RUBYOPT="-rauto_gem"
+declare -x RUBY_TARGETS=""
+declare -x SGML_CATALOG_FILES="/etc/sgml/sgml-docbook-4.4.cat:/etc/sgml/sgml-docbook-4.2.cat:/etc/sgml/sgml-lite.cat:/etc/sgml/sgml-docbook-4.0.cat:/etc/sgml/xml-docbook-4.4.cat:/etc/sgml/sgml-docbook-4.1.cat:/etc/sgml/sgml-docbook-3.1.cat:/etc/sgml/xml-docbook-4.2.cat:/etc/sgml/xml-docbook-4.5.cat:/etc/sgml/xml-docbook-4.1.2.cat:/etc/sgml/sgml-docbook-3.0.cat:/etc/sgml/sgml-docbook-4.5.cat"
+declare -x SLOT="0"
+declare SRC_URI=""
+declare -x SUDO_COMMAND="/usr/bin/emerge -B qmerge-test --nodeps"
+declare -x SUDO_GID="100"
+declare -x SUDO_UID="8282"
+declare -x SUDO_USER="vapier"
+declare -x SYMLINK_LIB="no"
+declare -x USE="abi_x86_64 amd64 elibc_glibc kernel_linux multilib userland_GNU"
+declare -x USERLAND="GNU"
+declare -x USERNAME="root"
+declare -x USE_EXPAND_IMPLICIT="ARCH ELIBC KERNEL USERLAND"
+declare -x USE_EXPAND_UNPREFIXED="ARCH"
+declare -x USE_EXPAND_VALUES_ARCH="alpha amd64 amd64-fbsd amd64-linux arm arm-linux hppa hppa-hpux ia64 ia64-hpux ia64-linux m68k m68k-mint mips ppc ppc64 ppc64-linux ppc-aix ppc-macos ppc-openbsd s390 sh sparc sparc64-freebsd sparc64-solaris sparc-fbsd sparc-solaris x64-freebsd x64-macos x64-openbsd x64-solaris x86 x86-cygwin x86-fbsd x86-freebsd x86-interix x86-linux x86-macos x86-netbsd x86-openbsd x86-solaris x86-winnt"
+declare -x USE_EXPAND_VALUES_ELIBC="AIX Cygwin Darwin FreeBSD glibc HPUX Interix mintlib NetBSD OpenBSD SunOS uclibc Winnt"
+declare -x USE_EXPAND_VALUES_KERNEL="AIX Cygwin Darwin FreeBSD freemint HPUX Interix linux NetBSD OpenBSD SunOS Winnt"
+declare -x USE_EXPAND_VALUES_USERLAND="BSD GNU"
+declare -x VIDEO_CARDS=""
+declare -x XDG_CONFIG_DIRS="/etc/xdg"
+declare -x XDG_DATA_DIRS="/usr/local/share:/usr/share"
+declare -x XTABLES_ADDONS="quota2 psd pknock lscan length2 ipv4options ipset ipp2p iface geoip fuzzy condition tee tarpit sysrq steal rawnat logmark ipmark dhcpmac delude chaos account"
+declare -x autoconf_LIVE_REPO="/usr/local/src/gnu/autoconf/.git"
+declare -x automake_LIVE_REPO="/usr/local/src/gnu/automake/.git"
+declare -x binutils_LIVE_REPO="/usr/local/src/gnu/binutils/.git"
+declare -x crossdev_LIVE_REPO="/usr/local/src/gentoo/crossdev/.git"
+declare -x dtc_LIVE_REPO="/usr/local/src/dtc/.git"
+declare -- f
+declare -x ffmpeg_LIVE_REPO="/usr/local/src/ffmpeg/.git"
+declare -x gcc_LIVE_REPO="/usr/local/src/gnu/gcc/git/.git"
+declare -x git_LIVE_REPO="/usr/local/src/gnu/gdb/.git"
+declare -x glibc_LIVE_REPO="/usr/local/src/gnu/glibc/.git"
+declare -x gpsd_LIVE_REPO="/usr/local/src/gpsd/.git"
+declare -x iputils_LIVE_REPO="/usr/local/src/iputils/.git"
+declare -x libnfs_LIVE_REPO="/usr/local/src/libnfs/.git"
+declare -x mesa_LIVE_REPO="/usr/local/src/xorg/mesa/.git"
+declare -x mplayer_LIVE_REPO="/usr/local/src/ffmpeg/.git"
+declare -x net_tools_LIVE_REPO="/usr/local/src/net-tools/.git"
+declare -x openrc_LIVE_REPO="/usr/local/src/gentoo/openrc/.git"
+declare -- phase_func
+declare -x portage_LIVE_REPO="/usr/local/src/gentoo/portage/.git"
+declare -x strace_LIVE_REPO="/usr/local/src/strace/.git"
+declare -x systemd_LIVE_REPO="/usr/local/src/systemd/.git"
+declare -x udev_LIVE_REPO="/usr/local/src/systemd/.git"
+declare -x urjtag_LIVE_REPO="/usr/local/src/urjtag/git/.git"
+declare -x util_linux_LIVE_REPO="/usr/local/src/util-linux/.git"
+declare -x xbmc_LIVE_REPO="/usr/local/src/xbmc/git/.git"
+declare -x yaffs2_utils_LIVE_REPO="/usr/local/src/yaffs2/.git"
+p () 
+{ 
+    einfo "FUNC = $1";
+    einfo "EBUILD_PHASE = ${EBUILD_PHASE}";
+    [ "$1" = "pkg_${EBUILD_PHASE}" ] || echo "FAIL: EBUILD_PHASE is wrong";
+    einfo "ROOT = ${ROOT}";
+    einfo "EROOT = ${EROOT}";
+    einfo "ED = ${ED}";
+    einfo "D = ${D}";
+    einfo "T = ${T}";
+    [ -d "${T}" ] || echo "FAIL: T does not exist";
+    einfo "PN = ${PN}"
+}
+pkg_nofetch () 
+{ 
+    __eapi0_pkg_nofetch "$@"
+}
+pkg_postinst () 
+{ 
+    p pkg_postinst
+}
+pkg_postrm () 
+{ 
+    p pkg_postrm
+}
+pkg_preinst () 
+{ 
+    p pkg_preinst;
+    [ -d "${D}" ] || echo "FAIL: D does not exist";
+    [ -x "${D}/usr/bin/${PN}" ] || echo "FAIL: ${PN} not in /usr/bin"
+}
+pkg_prerm () 
+{ 
+    p pkg_prerm
+}
+pkg_pretend () 
+{ 
+    p pkg_pretend
+}
+pkg_setup () 
+{ 
+    p pkg_setup;
+    echo;
+    [ "${MERGE_TYPE}" = "binary" ] || echo "FAIL: MERGE_TYPE is wrong";
+    echo;
+    elog "elog test";
+    ewarn "ewarn test";
+    eqawarn "eqawarn test";
+    eerror "eerror test";
+    ebegin "ebegin/eend pass test";
+    eend 0 || echo "FAIL: eend did not return 0";
+    ebegin "ebegin/eend fail test";
+    eend 1 "ignore the !! part" && echo "FAIL: eend did not return 1"
+}
+src_compile () 
+{ 
+    __eapi2_src_compile "$@"
+}
+src_configure () 
+{ 
+    __eapi2_src_configure "$@"
+}
+src_install () 
+{ 
+    printf '#!/bin/sh\necho hi\n' > test.sh;
+    newbin test.sh ${PN};
+    cat > some.conf  <<-EOF
+# file conf
+foo
+EOF
+
+    insinto /etc;
+    doins some.conf;
+    newins some.conf another.conf
+}
+src_test () 
+{ 
+    __eapi0_src_test "$@"
+}
+src_unpack () 
+{ 
+    __eapi0_src_unpack "$@"
+}

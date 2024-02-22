@@ -1,0 +1,1 @@
+assume-digests binpkg-logs buildpkg buildsyspkg ccache collision-protect compressdebug config-protect-if-modified digest distlocks ebuild-locks fixlafiles merge-sync news parallel-fetch preserve-libs protect-owned sandbox sfperms sign splitdebug strict test-fail-continue unknown-features-warn unmerge-logs unmerge-orphans userfetch userpriv usersandbox xattr

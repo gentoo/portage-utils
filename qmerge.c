@@ -37,6 +37,7 @@
 #include "xmkdir.h"
 #include "xpak.h"
 #include "xsystem.h"
+#include "cur_sys_pkg.h"
 
 #ifndef GLOB_BRACE
 # define GLOB_BRACE     (1 << 10)	/* Expand "{a,b}" to "a" "b".  */
@@ -858,7 +859,8 @@ pkg_run_func_at(
 static int
 merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
               FILE *contents, size_t eprefix_len, set **objs, char **cpathp,
-              int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
+              int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv,
+              cur_pkg_tree_node *cur_pkg_tree)
 {
 	int i, ret, subfd_src, subfd_dst;
 	DIR *dir;
@@ -930,7 +932,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			/* Copy all of these contents */
 			merge_tree_at(subfd_src, name,
 					subfd_dst, name, contents, eprefix_len,
-					objs, cpathp, cp_argc, cp_argv, cpm_argc, cpm_argv);
+					objs, cpathp, cp_argc, cp_argv, cpm_argc, cpm_argv, cur_pkg_tree);
 			cpath = *cpathp;
 			mnlen = 0;
 
@@ -953,7 +955,8 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			/* Check CONFIG_PROTECT */
 			if (config_protected(cpath + eprefix_len,
 						cp_argc, cp_argv, cpm_argc, cpm_argv) &&
-					fstatat(subfd_dst, name, &ignore, AT_SYMLINK_NOFOLLOW) == 0)
+					fstatat(subfd_dst, name, &ignore, AT_SYMLINK_NOFOLLOW) == 0 &&
+          !is_default(cur_pkg_tree,cpath + eprefix_len))
 			{
 				/* ._cfg####_ */
 				char *num;
@@ -1478,14 +1481,17 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	} else {
 		char *cpath;
 		int ret;
+        cur_pkg_tree_node *cur_pkg_tree=NULL;
+
+        create_cur_pkg_tree(&cur_pkg_tree,mpkg->pkg);
 
 		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
-
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
-				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv);
-
+				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, cur_pkg_tree);
 		free(cpath);
+
+        destroy_cur_pkg_tree(&cur_pkg_tree);
 
 		if (ret != 0)
 			errp("failed to merge to %s", portroot);
@@ -1601,6 +1607,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	char *eprefix;
 	size_t eprefix_len;
 	const char *T;
+    char *root_buf;
 	char *buf;
 	char *savep;
 	int portroot_fd;
@@ -1640,7 +1647,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		contains_set("config-protect-if-modified", features);
 
 	/* get a handle on the things to clean up */
-	buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
+	root_buf = buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
 	if (buf == NULL)
 		return 1;
 
@@ -1652,6 +1659,11 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		struct stat     st;
 
 		e = contents_parse_line(buf);
+
+        if(buf != root_buf){
+            *(buf-1) = '\n';
+        }
+
 		if (!e)
 			continue;
 
@@ -1669,6 +1681,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 				list->data = xstrdup(e->name);
 				list->next = dirs;
 				dirs = list;
+                restore_buffer_after_parsing(e);
 				continue;
 			}
 
@@ -1689,20 +1702,24 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 					if (errno != ENOENT) {
 						warnp("stat failed for %s -> '%s'",
 								e->name, e->sym_target);
+                        restore_buffer_after_parsing(e);
 						continue;
 					} else
 						break;
 				}
 
 				/* Hrm, if it isn't a symlink anymore, then leave it be */
-				if (!S_ISLNK(st.st_mode))
+				if (!S_ISLNK(st.st_mode)){
+                    restore_buffer_after_parsing(e);
 					continue;
+                }
 
 				break;
 
 			default:
 				warn("%s???%s %s%s%s (%d)", RED, NORM,
 						WHITE, e->name, NORM, e->type);
+                restore_buffer_after_parsing(e);
 				continue;
 		}
 
@@ -1712,6 +1729,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 
 		if (protected) {
 			qprintf("%s %s\n", zing, e->name);
+            restore_buffer_after_parsing(e);
 			continue;
 		}
 
@@ -1741,7 +1759,9 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 					rmdir_r_at(portroot_fd, e->name + 1);
 			}
 		}
+        restore_buffer_after_parsing(e);
 	}
+
 
 	/* Then remove all dirs in reverse order */
 	while (dirs != NULL) {
@@ -1863,7 +1883,7 @@ pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 {
 	int  verifyret;
 	char buf[_Q_PATH_MAX];
-
+  
 	/* qmerge -pv patch */
 	if (pretend) {
 		if (!install)
