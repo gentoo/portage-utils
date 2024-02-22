@@ -1483,7 +1483,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		int ret;
         cur_pkg_tree_node *cur_pkg_tree=NULL;
 
-        create_cur_pkg_tree(&cur_pkg_tree,previnst->pkg);
+        create_cur_pkg_tree(&cur_pkg_tree,mpkg->pkg);
 
 		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
 		ret = merge_tree_at(AT_FDCWD, "image",
