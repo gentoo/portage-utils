@@ -309,7 +309,7 @@ pkg_sort_cb(const void *l, const void *r)
 	depend_atom *al = pl->atom;
 	depend_atom *ar = pr->atom;
 
-	return atom_compar_cb(al, ar);
+	return atom_compar_cb(&al, &ar);
 }
 
 /* The format of the sync log has changed over time.

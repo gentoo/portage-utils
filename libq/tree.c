@@ -463,7 +463,7 @@ tree_pkg_compar(const void *l, const void *r)
 	depend_atom *al = tree_get_atom(pl, false);
 	depend_atom *ar = tree_get_atom(pr, false);
 
-	return atom_compar_cb(al, ar);
+	return atom_compar_cb(&al, &ar);
 }
 
 static tree_pkg_ctx *
