@@ -1242,8 +1242,8 @@ atom_format(const char *format, const depend_atom *atom)
 inline int
 atom_compar_cb(const void *l, const void *r)
 {
-	const depend_atom *al = l;
-	const depend_atom *ar = r;
+	const depend_atom *al = *(const depend_atom**)l;
+	const depend_atom *ar = *(const depend_atom**)r;
 
 	switch (atom_compare(al, ar)) {
 		case EQUAL:  return  0;
