@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
 			boom(a, buf);
 			atom_implode(a);
 		}
+		free(buf);
 	}
 
 	return EXIT_SUCCESS;
