@@ -1324,6 +1324,7 @@ static int do_emerge_log(
 				}
 			}
 		}
+		xarrayfree_int(avgs);
 	}
 
 	{
