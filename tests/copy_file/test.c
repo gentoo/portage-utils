@@ -72,6 +72,7 @@ int main(int argc, char *argv[])
 	assert(buf != NULL);
 	memset(buf, 0xaf, len);
 	testone(buf, len);
+	free(buf);
 
 	return 0;
 }
