@@ -1421,13 +1421,15 @@ verify_manifest(
 #define append_list(STR) \
 	if (strncmp(STR, "TIMESTAMP ", 10) != 0 || strncmp(STR, "DIST ", 5) != 0) {\
 		char *endp = STR + strlen(STR) - 1;\
-		while (isspace(*endp))\
+		while (endp > STR && isspace(*endp))\
 			*endp-- = '\0';\
 		if (elemslen == elemssize) {\
 			elemssize += LISTSZ;\
 			elems = xrealloc(elems, elemssize * sizeof(elems[0]));\
 		}\
-		if (strncmp(STR, "IGNORE ", 7) == 0) {\
+		if (endp - STR < 4) {\
+			/* avoid doing comparisons, none will match */\
+		} else if (strncmp(STR, "IGNORE ", 7) == 0) {\
 			STR[5] = 'I';\
 			elems[elemslen] = xstrdup(STR + 5);\
 			elemslen++;\
