@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2019 Gentoo Foundation
+ * Copyright 2003-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2003-2007 Ned Ludd        - <solar@gentoo.org>
@@ -46,7 +46,8 @@ void *xarraypush(array_t *arr, const void *ele, size_t ele_len)
 
 void xarraysort(array_t *arr, int (*compar)(const void *, const void *))
 {
-	qsort(arr->eles, arr->num, sizeof(void *), compar);
+	if (arr->num > 1)
+		qsort(arr->eles, arr->num, sizeof(void *), compar);
 }
 
 void xarraydelete_ptr(array_t *arr, size_t elem)
