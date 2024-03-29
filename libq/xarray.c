@@ -46,7 +46,8 @@ void *xarraypush(array_t *arr, const void *ele, size_t ele_len)
 
 void xarraysort(array_t *arr, int (*compar)(const void *, const void *))
 {
-	qsort(arr->eles, arr->num, sizeof(void *), compar);
+	if (arr->num > 1)
+		qsort(arr->eles, arr->num, sizeof(void *), compar);
 }
 
 void xarraydelete_ptr(array_t *arr, size_t elem)
