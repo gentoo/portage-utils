@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 	for (i = 1; i < argc; ++i) {
 		s = rmspace(argv[i]);
 		len = strlen(s);
-		if (isspace(s[0]) || isspace(s[len - 1])) {
+		if (isspace(s[0]) || (len && isspace(s[len - 1]))) {
 			fprintf(stderr, "FAIL {%s}\n", s);
 			return 1;
 		}
