@@ -1481,6 +1481,10 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
 
+		/* TODO: use replacing to pass over pervinst->pkg for
+		 * VDB/CONTENTS and respect the config-protect-if-modified flag
+		 * like unmerge does */
+
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
 				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv);
