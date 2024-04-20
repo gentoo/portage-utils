@@ -9,8 +9,8 @@ if ! qlist -qI dev-libs/gnulib > /dev/null ; then
 	echo "please install dev-libs/gnulib"
 	exit 1
 fi
-if ! qlist -qI sys-devel/autoconf-archive > /dev/null ; then
-	echo "please install sys-devel/autoconf-archive"
+if ! qlist -qI dev-build/autoconf-archive > /dev/null ; then
+	echo "please install dev-build/autoconf-archive"
 	exit 1
 fi
 
