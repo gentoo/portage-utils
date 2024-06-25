@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Gentoo Foundation
+ * Copyright 2021-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2021-     Fabian Groffen  - <grobian@gentoo.org>
@@ -19,14 +19,15 @@
 #include "atom.h"
 #include "tree.h"
 
-#define QWHICH_FLAGS "IbtpdRflTAF:" COMMON_FLAGS
+#define QWHICH_FLAGS "Ibtpdr:RflTAF:" COMMON_FLAGS
 static struct option const qwhich_long_opts[] = {
 	{"vdb",       no_argument, NULL, 'I'},
 	{"binpkg",    no_argument, NULL, 'b'},
 	{"tree",      no_argument, NULL, 't'},
 	{"pretty",    no_argument, NULL, 'p'},
 	{"dir",       no_argument, NULL, 'd'},
-	{"repo",      no_argument, NULL, 'R'},
+	{"repo",       a_argument, NULL, 'r'},
+	{"printrepo", no_argument, NULL, 'R'},
 	{"first",     no_argument, NULL, 'f'},
 	{"latest",    no_argument, NULL, 'l'},
 	{"novirtual", no_argument, NULL, 'T'},
@@ -40,6 +41,7 @@ static const char * const qwhich_opts_help[] = {
 	"Look in main tree and overlays",
 	"Print (pretty) atom instead of path for use with -F",
 	"Print directory instead of path",
+	"Only look in given repo",
 	"Print repository name instead of path for tree/overlay matches",
 	"Stop searching after first match (implies -l)",
 	"Only return latest version for each match",
@@ -48,7 +50,7 @@ static const char * const qwhich_opts_help[] = {
 	"Print matched using given format string",
 	COMMON_OPTS_HELP
 };
-static const char qwhich_desc[] = "";
+static const char qwhich_desc[] = "Find paths to ebuilds.";
 #define qwhich_usage(ret) \
 	usage(ret, QWHICH_FLAGS, qwhich_long_opts, qwhich_opts_help, qwhich_desc, lookup_applet_idx("qwhich"))
 
@@ -80,7 +82,8 @@ int qwhich_main(int argc, char **argv)
 	size_t n;
 	int ret;
 	tree_ctx *t;
-	char *repo;
+	char *repo = NULL;
+	char *reponam;
 	int repolen;
 	const char *ext;
 
@@ -95,6 +98,7 @@ int qwhich_main(int argc, char **argv)
 			case 't': m.do_tree = true;      break;
 			case 'p': m.print_atom = true;   break;
 			case 'd': m.print_path = true;   break;
+			case 'r': repo = optarg;         break;
 			case 'R': m.print_repo = true;   break;
 			case 'f': m.match_first = true;  break;
 			case 'l': m.match_latest = true; break;
@@ -160,11 +164,18 @@ int qwhich_main(int argc, char **argv)
 
 	/* at least keep the IO constrained to a tree at a time */
 	array_for_each(trees, j, t) {
+		if (repo != NULL &&
+			(t->repo == NULL || strcmp(repo, t->repo) != 0))
+		{
+			tree_close(t);
+			continue;
+		}
+
 		if (m.print_repo && t->repo != NULL) {
-			repo = t->repo;
-			repolen = strlen(repo);
+			reponam = t->repo;
+			repolen = strlen(reponam);
 		} else {
-			repo = t->path;
+			reponam = t->path;
 			if (t->cachetype == CACHE_METADATA_MD5)
 				repolen = strlen(t->path) - (sizeof("/metadata/md5-cache") - 1);
 			else if (t->cachetype == CACHE_METADATA_PMS)
@@ -205,14 +216,14 @@ int qwhich_main(int argc, char **argv)
 					{
 						if (m.print_path)
 							printf("%s%.*s%s%s%s/%s%s%s\n",
-									GREEN, repolen, repo,
+									GREEN, repolen, reponam,
 									m.print_repo ? "::" : "/",
 									BOLD, tmcw->atom->CATEGORY,
 									DKBLUE, tmcw->atom->PN,
 									NORM);
 						else
 							printf("%s%.*s%s%s%s/%s%s/%s%s%s.%s%s\n",
-									DKGREEN, repolen, repo,
+									DKGREEN, repolen, reponam,
 									m.print_repo ? "::" : "/",
 									BOLD, tmcw->atom->CATEGORY,
 									DKBLUE, tmcw->atom->PN,
