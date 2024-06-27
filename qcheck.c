@@ -55,7 +55,7 @@ static const char * const qcheck_opts_help[] = {
 };
 #define qcheck_usage(ret) usage(ret, QCHECK_FLAGS, qcheck_long_opts, qcheck_opts_help, NULL, lookup_applet_idx("qcheck"))
 
-#define qcprintf(fmt, args...) do { if (!state->bad_only) printf(_(fmt), ## args); } while (0)
+#define qcprintf(fmt, args...) do { if (!state->bad_only) printf(fmt, ## args); } while (0)
 
 struct qcheck_opt_state {
 	array_t *atoms;

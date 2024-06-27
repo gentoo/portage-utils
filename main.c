@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2023 Gentoo Foundation
+ * Copyright 2005-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -106,13 +106,13 @@ usage(int status, const char *flags, struct option const opts[],
 				fprintf(fp, " %s%9s%s %s%-16s%s%s:%s %s\n",
 					YELLOW, applets[i].name, NORM,
 					DKBLUE, applets[i].opts, NORM,
-					RED, NORM, _(applets[i].desc));
+					RED, NORM, applets[i].desc);
 	} else if (blabber > 0) {
 		fprintf(fp, "%susage:%s %s%s%s [opts] %s%s%s %s:%s %s\n",
 			GREEN, NORM,
 			YELLOW, applets[blabber].name, NORM,
 			DKBLUE, applets[blabber].opts, NORM,
-			RED, NORM, _(applets[blabber].desc));
+			RED, NORM, applets[blabber].desc);
 		if (desc)
 			fprintf(fp, "\n%s\n", desc);
 	}
@@ -154,10 +154,10 @@ usage(int status, const char *flags, struct option const opts[],
 		/* then wrap the help text, if necessary */
 		prefixlen = 6 + 2 + optlen + 1 + 1 + 1;
 		if ((size_t)twidth < prefixlen + 10) {
-			fprintf(fp, "%s\n", _(help[i]));
+			fprintf(fp, "%s\n", help[i]);
 		} else {
 			const char *t;
-			hstr = _(help[i]);
+			hstr = help[i];
 			l = strlen(hstr);
 			while (twidth - prefixlen < l) {
 				/* search backwards for a space */
@@ -1239,10 +1239,6 @@ int main(int argc, char **argv)
 	warnout = stderr;
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
-
-	setlocale(LC_ALL, "");
-	bindtextdomain(argv0, CONFIG_EPREFIX "usr/share/locale");
-	textdomain(argv0);
 
 	/* note: setting nocolor here is pointless, since
 	 * initialize_portage_env is going to re-init nocolor, so make

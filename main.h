@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -23,7 +23,6 @@
 #include <string.h>
 
 #include "colors.h"
-#include "i18n.h"
 #include "set.h"
 
 extern const char *argv0;
@@ -87,8 +86,8 @@ extern const char *argv0;
 #define likely(x) __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
 
-#define qfprintf(stream, fmt, args...) do { if (!quiet) fprintf(stream, _( fmt ), ## args); } while (0)
-#define qprintf(fmt, args...) qfprintf(stdout, _( fmt ), ## args)
+#define qfprintf(stream, fmt, args...) do { if (!quiet) fprintf(stream, fmt, ## args); } while (0)
+#define qprintf(fmt, args...) qfprintf(stdout, fmt, ## args)
 
 #define _q_unused_ __attribute__((__unused__))
 
@@ -125,7 +124,7 @@ extern FILE *warnout;
 #define warn(fmt, args...)
 #else
 #define warn(fmt, args...) \
-	fprintf(warnout, _("%s%s%s: " fmt "\n"), RED, argv0, NORM , ## args)
+	fprintf(warnout, "%s%s%s: " fmt "\n", RED, argv0, NORM , ## args)
 #endif
 #define warnf(fmt, args...) warn("%s%s()%s: " fmt, YELLOW, __func__, NORM , ## args)
 #define warnl(fmt, args...) warn("%s%i()%s: " fmt, YELLOW, __LINE__, NORM , ## args)
