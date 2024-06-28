@@ -101,9 +101,9 @@ qpkg_clean(char *dirp)
 	if (known_pkgs != NULL) {
 		/* check which binpkgs exist in the known_pkgs (vdb or trees), such
 		 * that the remainder is what we would clean */
-		array_for_each(bins, n, binatomstr) {
+		array_for_each_rev(bins, n, binatomstr) {
 			if (contains_set(binatomstr, known_pkgs))
-				xarraydelete_ptr(bins, n--);
+				xarraydelete_ptr(bins, n);
 		}
 
 		free_set(known_pkgs);

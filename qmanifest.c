@@ -1357,8 +1357,8 @@ verify_dir(
 			}
 		}
 
-		while (dentrieslen-- > 0)
-			free(dentries[dentrieslen]);
+		for (curdentry = 0; curdentry < dentrieslen; curdentry++)
+			free(dentries[curdentry]);
 		free(dentries);
 
 #pragma omp parallel for shared(ret) private(entry, etpe, slash)
@@ -1497,8 +1497,8 @@ verify_manifest(
 	ret = verify_dir(dir, elems, elemslen, 0, buf + 2, msgs);
 	checked_manifests++;
 
-	while (elemslen-- > 0)
-		free(elems[elemslen]);
+	for (elemssize = 0; elemssize < elemslen; elemssize++)
+		free(elems[elemssize]);
 	free(elems);
 
 	return ret;

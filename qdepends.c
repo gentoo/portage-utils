@@ -416,6 +416,7 @@ int qdepends_main(int argc, char **argv)
 		array_for_each(overlays, n, overlay) {
 			t = tree_open(portroot, overlay);
 			if (t != NULL) {
+				state.rtree = NULL;
 				if (state.resolve)
 					state.rtree = tree_open(portroot, overlay);
 				if (!(state.qmode & QMODE_REVERSE) && array_cnt(atoms) > 0) {
