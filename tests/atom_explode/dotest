@@ -2,7 +2,7 @@
 
 . ../init.sh || exit 1
 
-files=$(xzcat ebuildlist.xz)
+files=$(xzcat "${as}"/ebuildlist.xz)
 
 printf "atom_explode():"
 time echo "${files}" | "$b"/e > "$b"/me || exit $?
@@ -13,7 +13,7 @@ if [[ -n ${QATOM_COMPARE_TO_PORTAGE} ]] ; then
 	time echo "${files}" | "$s"/atom-explode.py > "$b"/py
 	echo
 else
-	xzcat portageatoms.xz > "$b"/py
+	xzcat "${as}"/portageatoms.xz > "$b"/py
 fi
 
 diff -U 0 "$b"/me "$b"/py
