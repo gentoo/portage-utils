@@ -443,7 +443,8 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 	env_vars *vars = data;
 	set *masks = data;
 
-	if ((dentslen = scandir(file, &dents, NULL, alphasort)) > 0) {
+	snprintf(npath, sizeof(npath), "%s%s", portroot, file);
+	if ((dentslen = scandir(npath, &dents, NULL, alphasort)) > 0) {
 		int di;
 		struct dirent *d;
 
@@ -603,7 +604,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 	free(buf);
 
 	if (getenv("DEBUG"))
-		fprintf(stderr, "read profile %s\n", file);
+		fprintf(stderr, "read profile %s%s\n", portroot, file);
 }
 
 /* Helper to check if a string starts with a prefix. If so, returns
@@ -883,10 +884,16 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 			void *ele;
 			size_t n;
 			char *overlay;
+			char rootovrl[_Q_PATH_MAX];
 
 			/* try not to get confused by symlinks etc. */
-			if (realpath(e, rrepo) != NULL)
-				e = rrepo;
+			snprintf(rootovrl, sizeof(rootovrl), "%s%s", portroot, e);
+			n = strlen(portroot);
+			if (realpath(rootovrl, rrepo) != NULL &&
+				strncmp(rrepo, portroot, n) == 0)
+				e = rrepo + n;
+			else
+				e = rootovrl + n;
 
 			array_for_each(overlay_names, n, overlay) {
 				if (strcmp(overlay, repo) == 0)
@@ -922,7 +929,7 @@ read_repos_conf(const char *configroot, const char *repos_conf, char **primary)
 	int i, count;
 	struct dirent **confs;
 
-	xasprintf(&top_conf, "%s%s", configroot, repos_conf);
+	xasprintf(&top_conf, "%s%s%s", portroot, configroot, repos_conf);
 	if (getenv("DEBUG"))
 		fprintf(stderr, "repos.conf.d scanner %s\n", top_conf);
 	count = scandir(top_conf, &confs, NULL, alphasort);
@@ -1130,9 +1137,12 @@ initialize_portage_env(void)
 
 		if (strcmp(var->src, STR_DEFAULT) != 0 || array_cnt(overlays) == 0) {
 			char roverlay[_Q_PATH_MAX];
+			char rootovrl[_Q_PATH_MAX];
+			snprintf(rootovrl, sizeof(rootovrl), "%s%s",
+					 portroot, main_overlay);
 			/* get cannonical path, we do so for repos.conf too */
-			if (realpath(main_overlay, roverlay) == NULL)
-				snprintf(roverlay, sizeof(roverlay), "%s", main_overlay);
+			if (realpath(rootovrl, roverlay) == NULL)
+				snprintf(roverlay, sizeof(roverlay), "%s", rootovrl);
 			array_for_each(overlays, i, overlay) {
 				if (strcmp(overlay, roverlay) == 0)
 					break;
