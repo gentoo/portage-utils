@@ -72,7 +72,7 @@ init_coredumps(void)
 }
 #endif
 
-void
+static void
 setup_quiet(void)
 {
 	/* "e" for FD_CLOEXEC */
@@ -979,18 +979,6 @@ initialize_portage_env(void)
 	const char *configroot = getenv("PORTAGE_CONFIGROOT");
 	char *primary_overlay = NULL;
 
-	/* initialize all the properties with their default value */
-	for (i = 0; vars_to_read[i].name; ++i) {
-		var = &vars_to_read[i];
-		switch (var->type) {
-			case _Q_BOOL:  *var->value.b = var->default_value;           break;
-			case _Q_STR:
-			case _Q_ISTR:  *var->value.s = xstrdup(var->default_value);  break;
-			case _Q_ISET:  *var->value.t = (set *)var->default_value;    break;
-		}
-		var->src = xstrdup(STR_DEFAULT);
-	}
-
 	package_masks = create_set();
 
 	/* figure out where to find our config files */
@@ -1240,9 +1228,19 @@ int main(int argc, char **argv)
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
 
-	/* note: setting nocolor here is pointless, since
-	 * initialize_portage_env is going to re-init nocolor, so make
-	 * sure we modify the default instead. */
+	/* initialise all the properties with their default value */
+	for (i = 0; vars_to_read[i].name; ++i) {
+		env_vars *var = &vars_to_read[i];
+		switch (var->type) {
+			case _Q_BOOL:  *var->value.b = var->default_value;           break;
+			case _Q_STR:
+			case _Q_ISTR:  *var->value.s = xstrdup(var->default_value);  break;
+			case _Q_ISET:  *var->value.t = (set *)var->default_value;    break;
+		}
+		var->src = xstrdup(STR_DEFAULT);
+	}
+
+	/* disable colours when not writing to a terminal */
 	twidth = 0;
 	nocolor = 0;
 	if (fstat(fileno(stdout), &st) != -1) {
@@ -1258,21 +1256,47 @@ int main(int argc, char **argv)
 	} else {
 		nocolor = 1;
 	}
-	vars_to_read[7].default_value = (char *)nocolor;  /* NOCOLOR */
+	if (nocolor == 1)
+		set_portage_env_var(&vars_to_read[7], "true", "terminal"); /* NOCOLOR */
 
 	/* We can use getopt here, but only in POSIX mode (which stops at
 	 * the first non-option argument) because otherwise argv is
 	 * modified, this basically sulks, because ideally we parse and
 	 * handle the common options here.  Because we are parsing profiles
-	 * and stuff at this point we need -q for bug #735134, so do lame
-	 * matching for that */
+	 * and stuff at this point we need -q for bug #735134, and --root so
+	 * do lame matching for that */
 	for (i = 1; i < argc; i++) {
-		if (argv[i] != NULL && argv[i][0] == '-' &&
-			(argv[i][1] == 'q' || strcmp(&argv[i][1], "-quiet") == 0))
-		{
-			setup_quiet();
+		if (argv[i] != NULL && argv[i][0] == '-') {
+			if (argv[i][1] == '-') {
+				if (strcmp(&argv[i][2], "quiet") == 0) {
+					setup_quiet();
+				} else if (strcmp(&argv[i][2], "root") == 0 &&
+						 argv[i + 1] != NULL)
+				{
+					char  realroot[_Q_PATH_MAX];
+					char *root;
+					if (realpath(argv[i + 1], realroot) != NULL)
+						root = realroot;
+					else
+						root = argv[i + 1];
+					set_portage_env_var(&vars_to_read[0], root,
+										"command line");  /* ROOT */
+				}
+			} else {
+				char *p;
+
+				/* must handle combinations of options like -Rq :( */
+				for (p = &argv[i][1]; *p != '\0'; p++) {
+					switch (*p) {
+						case 'q':
+							setup_quiet();
+							break;
+					}
+				}
+			}
 		}
 	}
+
 	/* same for env-based fallback */
 	if (getenv("PORTAGE_QUIET") != NULL)
 		setup_quiet();
@@ -1283,6 +1307,5 @@ int main(int argc, char **argv)
 
 	initialize_portage_env();
 	optind = 0;
-	quiet  = 0;
 	return q_main(argc, argv);
 }

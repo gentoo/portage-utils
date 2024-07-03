@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2024 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -144,9 +144,9 @@ static const struct applet_t {
 	"Print version and exit", \
 	NULL
 #define COMMON_GETOPTS_CASES(applet) \
-	case 0x1: portroot = optarg; break; \
+	case 0x1: /* already handled early in main */ break; \
 	case 'v': ++verbose; break; \
-	case 'q': setup_quiet(); break; \
+	case 'q': /* already handled early in main */ break; \
 	case 'V': version_barf(); break; \
 	case 'h': applet ## _usage(EXIT_SUCCESS); break; \
 	case 'C': if (!nocolor) { \
@@ -184,7 +184,6 @@ extern char *main_overlay;
 extern int twidth;
 extern bool nocolor;
 
-void setup_quiet(void);
 void version_barf(void);
 void usage(int status, const char *flags, struct option const opts[],
       const char * const help[], const char *desc, int blabber);
