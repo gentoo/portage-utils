@@ -8,7 +8,7 @@ tree: |
 umap: |
     List USE-flags enabled when the package was installed.  This flag
     implies \fB\-I\fR.
-slot: |
+slots: |
     Display installed packages with slots (use twice for subslots).
     This flag implies \fB\-I\fR.
 repo: |
