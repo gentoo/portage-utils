@@ -555,7 +555,7 @@ int qgrep_main(int argc, char **argv)
 
 	if (argc > (optind + 1)) {
 		depend_atom **d = args.include_atoms =
-			xcalloc(sizeof(depend_atom *), (argc - optind - 1) + 1);
+			xcalloc((argc - optind - 1) + 1, sizeof(depend_atom *));
 		for (i = (optind + 1); i < argc; i++) {
 			*d = atom_explode(argv[i]);
 			if (*d == NULL) {
