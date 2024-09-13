@@ -884,14 +884,20 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 			void *ele;
 			size_t n;
 			char *overlay;
-			char rootovrl[_Q_PATH_MAX];
+			char rootovrl[_Q_PATH_MAX], portroot_real[_Q_PATH_MAX];
+			bool use_portroot_real, portroot_empty_or_root;
 
 			/* try not to get confused by symlinks etc. */
-			snprintf(rootovrl, sizeof(rootovrl), "%s%s", portroot, e);
-			n = strlen(portroot);
-			if (realpath(rootovrl, rrepo) != NULL &&
-				strncmp(rrepo, portroot, n) == 0)
-				e = rrepo + n;
+			use_portroot_real = realpath(portroot, portroot_real) != NULL;
+			n = use_portroot_real ? strlen(portroot_real) : strlen(portroot);
+			portroot_empty_or_root = n == 0 || strncmp(use_portroot_real ? portroot_real : portroot,
+					"/", 2) == 0;
+			snprintf(rootovrl, sizeof(rootovrl), "%s/%s", use_portroot_real ? portroot_real :
+					portroot, e);
+
+			if (realpath(rootovrl, rrepo) != NULL && (portroot_empty_or_root ||
+					(use_portroot_real && strncmp(rrepo, portroot_real, n) == 0)))
+				e = rrepo + (portroot_empty_or_root ? 0 : n);
 			else
 				e = rootovrl + n;
 
