@@ -280,7 +280,7 @@ static char *fmt_elapsedtime(struct qlop_mode *flags, time_t e)
 					GREEN, (size_t)ss, NORM);
 		} else if (mm > 0) {
 			snprintf(_elapsed_buf, sizeof(_elapsed_buf),
-					"%s%zd%s′%s%02zd%s″",
+					"%s%zd%sm%s%02zd%ss",
 					GREEN, (size_t)mm, NORM,
 					GREEN, (size_t)ss, NORM);
 		} else {
