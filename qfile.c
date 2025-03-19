@@ -231,13 +231,40 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 			path_ok = false;
 
-			if (dir_names[i] && (len = strlen(dir_names[i])) > 0 &&
-					len == dirname_len &&
-					memcmp(e->name, dir_names[i], len) == 0)
-			{
-				/* dir_name == dirname(CONTENTS) */
-				path_ok = true;
-			} else if (real_root[0]) {
+			if (real_root[0] == '\0') {
+				if (dir_names[i] && (len = strlen(dir_names[i])) > 0) {
+					if (len == dirname_len &&
+							memcmp(e->name, dir_names[i], len) == 0)
+					{
+						/* dir_name == dirname(CONTENTS) */
+						path_ok = true;
+					}
+					else {
+						/* dir_name == realpath(dirname(CONTENTS)) */
+						char rpath[_Q_PATH_MAX + 1];
+
+						/* Insert a null terminator at the end of dirname in
+						 * order to not copy the entire dirname string. */
+						char tmp = e->name[dirname_len]; /* Save the current character. */
+						e->name[dirname_len] = '\0';
+
+						if (realpath(e->name, rpath) == NULL) {
+							if (verbose) {
+								atom = tree_get_atom(pkg_ctx, false);
+								warnp("Could not read real path of \"%s\" (from %s)",
+										e->name,
+										atom_format("%[CATEGORY]%[PF]", atom));
+								warn("We'll never know whether \"%s\" was a result "
+										"for your query...", e->name);
+							}
+						} else if (strcmp(dir_names[i], rpath) == 0) {
+							path_ok = true;
+						}
+
+						e->name[dirname_len] = tmp; /* Restore the character. */
+					}
+				}
+			} else {
 				char rpath[_Q_PATH_MAX + 1];
 				char *_rpath;
 				char fullpath[_Q_PATH_MAX + 1];
@@ -245,7 +272,6 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 				snprintf(fullpath, sizeof(fullpath), "%s%s",
 						real_root, e->name);
-				_rpath = rpath + real_root_len;
 				if (realpath(fullpath, rpath) == NULL) {
 					if (verbose) {
 						atom = tree_get_atom(pkg_ctx, false);
@@ -259,10 +285,13 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					if (verbose)
 						warn("Real path of \"%s\" is not under ROOT: %s",
 								fullpath, rpath);
-				} else if (dir_names[i] &&
+				} else {
+					_rpath = dirname(rpath) + real_root_len;
+					if (dir_names[i] &&
 				           strcmp(_rpath, dir_names[i]) == 0) {
-					/* dir_name == realpath(dirname(CONTENTS)) */
-					path_ok = true;
+						/* dir_name == realpath(dirname(CONTENTS)) */
+						path_ok = true;
+					}
 				}
 			}
 
