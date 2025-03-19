@@ -54,7 +54,6 @@ typedef struct {
 	int length;
 	char **basenames;
 	char **dirnames;
-	char **realdirnames;
 	short *non_orphans;
 	int *results;
 } qfile_args_t;
@@ -170,7 +169,6 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	char *real_root = state->real_root;
 	char **base_names = args->basenames;
 	char **dir_names = args->dirnames;
-	char **real_dir_names = args->realdirnames;
 	short *non_orphans = args->non_orphans;
 	int *results = args->results;
 	int found = 0;
@@ -239,13 +237,6 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			{
 				/* dir_name == dirname(CONTENTS) */
 				path_ok = true;
-			} else if (real_dir_names[i] &&
-					(len = strlen(real_dir_names[i])) > 0 &&
-					len == dirname_len &&
-					memcmp(e->name, real_dir_names[i], len) == 0)
-			{
-				/* real_dir_name == dirname(CONTENTS) */
-				path_ok = true;
 			} else if (real_root[0]) {
 				char rpath[_Q_PATH_MAX + 1];
 				char *_rpath;
@@ -272,10 +263,6 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				           strcmp(_rpath, dir_names[i]) == 0) {
 					/* dir_name == realpath(dirname(CONTENTS)) */
 					path_ok = true;
-				} else if (real_dir_names[i] &&
-				           strcmp(_rpath, real_dir_names[i]) == 0) {
-					/* real_dir_name == realpath(dirname(CONTENTS)) */
-					path_ok = true;
 				}
 			}
 
@@ -290,7 +277,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					path_ok = true;
 			}
 
-			if (!path_ok && dir_names[i] == NULL && real_dir_names[i] == NULL) {
+			if (!path_ok && dir_names[i] == NULL) {
 				/* basename match */
 				if (e->type != CONTENTS_DIR)
 					path_ok = true;
@@ -334,13 +321,10 @@ static void destroy_qfile_args(qfile_args_t *qfile_args)
 			free(qfile_args->basenames[i]);
 		if (qfile_args->dirnames)
 			free(qfile_args->dirnames[i]);
-		if (qfile_args->realdirnames)
-			free(qfile_args->realdirnames[i]);
 	}
 
 	free(qfile_args->basenames);
 	free(qfile_args->dirnames);
-	free(qfile_args->realdirnames);
 	free(qfile_args->non_orphans);
 	free(qfile_args->results);
 
@@ -360,7 +344,6 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	char *real_root = state->real_root;
 	char **basenames = NULL;
 	char **dirnames = NULL;
-	char **realdirnames = NULL;
 	int *results = NULL;
 	char tmppath[_Q_PATH_MAX];
 	char abspath[_Q_PATH_MAX * 2];
@@ -372,7 +355,6 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	 */
 	basenames = xcalloc(argc, sizeof(char*));
 	dirnames = xcalloc(argc, sizeof(char*));
-	realdirnames = xcalloc(argc, sizeof(char*));
 	results = xcalloc(argc, sizeof(int));
 
 	for (i = 0; i < argc; ++i) {
@@ -420,22 +402,27 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 			snprintf(tmppath, sizeof(tmppath), "%s%s",
 					dirname(abspath),
 					abspath[real_root_len] == '\0' ? "/" : "");
-			dirnames[i] = xstrdup(tmppath + real_root_len);
+
+			/* A canonicalised path is provided on best effort basis. If
+			 * realpath(3) succeeds, then the path in `dirnames` is a
+			 * canonicalised dirname. If realpath(3) fails, then the path 
+			 * in `dirnames` is a non-canonicalised dirname. */
 			if (realpath(tmppath, abspath) == NULL) {
 				if (verbose) {
 					warnp("Could not read real path of \"%s\"", tmppath);
 					warn("Results for query item \"%s\" may be inaccurate.",
 							argv[i]);
 				}
+				dirnames[i] = xstrdup(tmppath + real_root_len);
 				continue;
 			}
-			if (!qfile_is_prefix(abspath, real_root, real_root_len)) {
+			else if (!qfile_is_prefix(abspath, real_root, real_root_len)) {
 				warn("Real path of \"%s\" is not under ROOT: %s",
 						tmppath, abspath);
 				goto skip_query_item;
 			}
-			if (strcmp(dirnames[i], abspath + real_root_len))
-				realdirnames[i] = xstrdup(abspath + real_root_len);
+			else
+				dirnames[i] = xstrdup(abspath + real_root_len);
 		} else {
 			/* No basename means we are looking for something like "/foo/bar/.."
 			 * Dirname is meaningless here, we can only get realpath of the full
@@ -453,7 +440,7 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 			snprintf(abspath, sizeof(abspath), "%s%s",
 					dirname(tmppath),
 					tmppath[real_root_len] == '\0' ? "/" : "");
-			realdirnames[i] = xstrdup(abspath + real_root_len);
+			dirnames[i] = xstrdup(abspath + real_root_len);
 		}
 		continue;
 
@@ -462,13 +449,11 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 		warn("Skipping query item \"%s\".", argv[i]);
 		free(basenames[i]);
 		free(dirnames[i]);
-		free(realdirnames[i]);
-		basenames[i] = dirnames[i] = realdirnames[i] = NULL;
+		basenames[i] = dirnames[i] = NULL;
 	}
 
 	args->basenames = basenames;
 	args->dirnames = dirnames;
-	args->realdirnames = realdirnames;
 	args->length = argc;
 	args->results = results;
 
