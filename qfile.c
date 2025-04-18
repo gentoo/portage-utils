@@ -166,11 +166,10 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qfile_opt_state *state          = priv;
 	const char             *catname        = pkg_ctx->cat_ctx->name;
-	char                   *real_root      = state->real_root;
 	qfile_args_t           *args           = &state->args;
 	qfile_str_len_t        *base_names     = args->basenames;
 	qfile_str_len_t        *dir_names      = args->dirnames;
-	qfile_str_len_t        *real_dir_names = args->dirnames;
+	qfile_str_len_t        *real_dir_names = args->realdirnames;
 	short                  *non_orphans    = args->non_orphans;
 	int                    *results        = args->results;
 	char *line;
@@ -239,23 +238,22 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 			path_ok = false;
 
-			if (dir_names[i].len > 0 &&
-				dir_names[i].len == dirname_len &&
+			if (dir_names[i].len == dirname_len &&
 				memcmp(e->name, dir_names[i].str, dir_names[i].len) == 0)
 			{
 				/* dir_name == dirname(CONTENTS) */
 				path_ok = true;
-			} else if (real_dir_names[i].len > 0 &&
-					   real_dir_names[i].len == dirname_len &&
+			} else if (real_dir_names[i].len == dirname_len &&
 					   memcmp(e->name, real_dir_names[i].str,
 					   		  real_dir_names[i].len) == 0)
 			{
 				/* real_dir_name == dirname(CONTENTS) */
 				path_ok = true;
-			} else if (real_root[0]) {
+			} else if (state->real_root_len > 0) {
 				char rpath[_Q_PATH_MAX + 1];
 				char *_rpath;
 				char fullpath[_Q_PATH_MAX + 1];
+				char  *real_root     = state->real_root;
 				size_t real_root_len = state->real_root_len;
 
 				snprintf(fullpath, sizeof(fullpath), "%s%s",
@@ -275,6 +273,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 						warn("Real path of \"%s\" is not under ROOT: %s",
 								fullpath, rpath);
 				} else if (dir_names[i].len > 0 &&
+						   real_dir_names[i].len == 0 &&
 				           strcmp(_rpath, dir_names[i].str) == 0) {
 					/* dir_name == realpath(dirname(CONTENTS)) */
 					path_ok = true;
@@ -444,7 +443,7 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 						tmppath, abspath);
 				goto skip_query_item;
 			}
-			if (strcmp(dirnames[i].str, abspath + real_root_len))
+			if (strcmp(dirnames[i].str, abspath + real_root_len) != 0)
 			{
 				realdirnames[i].str = xstrdup(abspath + real_root_len);
 				realdirnames[i].len = strlen(realdirnames[i].str);
@@ -567,12 +566,13 @@ int qfile_main(int argc, char **argv)
 		state.pwd = xstrdup(state.pwd);
 		if (state.pwd[lastc] == '/')
 			state.pwd[lastc] = '\0';
+		state.pwd_len = strlen(state.pwd);
 	}
 
 	/* Get realpath of $ROOT, with no trailing slash */
 	if (portroot[0] == '/')
 		p = realpath(portroot, NULL);
-	else if (state.pwd) {
+	else if (state.pwd_len > 0) {
 		snprintf(state.buf, state.buflen, "%s/%s", state.pwd, portroot);
 		p = realpath(state.buf, NULL);
 	} else
