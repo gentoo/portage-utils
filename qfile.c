@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -51,12 +51,17 @@ static const char * const qfile_opts_help[] = {
 			&& !strncmp(path, prefix, prefix_length)))
 
 typedef struct {
-	int length;
-	char **basenames;
-	char **dirnames;
-	char **realdirnames;
-	short *non_orphans;
-	int *results;
+	char   *str;
+	size_t  len;
+} qfile_str_len_t;
+
+typedef struct {
+	size_t           length;
+	qfile_str_len_t *basenames;
+	qfile_str_len_t *dirnames;
+	qfile_str_len_t *realdirnames;
+	short           *non_orphans;
+	int             *results;
 } qfile_args_t;
 
 struct qfile_opt_state {
@@ -65,6 +70,7 @@ struct qfile_opt_state {
 	qfile_args_t args;
 	char *root;
 	char *pwd;
+	size_t pwd_len;
 	char *real_root;
 	size_t real_root_len;
 	char *exclude_pkg;
@@ -83,7 +89,12 @@ struct qfile_opt_state {
  */
 static int qfile_check_plibreg(void *priv)
 {
-	struct qfile_opt_state *state = priv;
+	struct qfile_opt_state *state       = priv;
+	qfile_args_t           *args        = &state->args;
+	qfile_str_len_t        *base_names  = args->basenames;
+	qfile_str_len_t        *dir_names   = args->dirnames;
+	short                  *non_orphans = args->non_orphans;
+	int                    *results     = args->results;
 
 	char fn_plibreg[_Q_PATH_MAX];
 	int fd_plibreg;
@@ -94,13 +105,7 @@ static int qfile_check_plibreg(void *priv)
 	char *line = NULL;
 	size_t len = 0;
 	int found = 0;
-	int i;
-
-	qfile_args_t *args = &state->args;
-	char **base_names = args->basenames;
-	char **dir_names = args->dirnames;
-	short *non_orphans = args->non_orphans;
-	int *results = args->results;
+	size_t i;
 
 	/* Open plibreg */
 	snprintf(fn_plibreg, _Q_PATH_MAX, "%s%s",
@@ -119,17 +124,18 @@ static int qfile_check_plibreg(void *priv)
 	}
 
 	for (i = 0; i < args->length; i++) {
-		if (base_names[i] == NULL || base_names[i][0] == '\0')
+		if (base_names[i].len == 0)
 			continue;
 		if (non_orphans && non_orphans[i])
 			continue;
 		if (results[i] == 1)
 			continue;
 
-		if (dir_names[i] != NULL)
-			snprintf(file, sizeof(file), "%s/%s", dir_names[i], base_names[i]);
+		if (dir_names[i].len > 0)
+			snprintf(file, sizeof(file), "%s/%s",
+					 dir_names[i].str, base_names[i].str);
 		else
-			snprintf(file, sizeof(file), "%s", base_names[i]);
+			snprintf(file, sizeof(file), "%s", base_names[i].str);
 
 		while (getline(&line, &len, fp_plibreg) != -1)
 			if (strstr(line, file) != NULL) {
@@ -158,23 +164,22 @@ static int qfile_check_plibreg(void *priv)
  */
 static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
-	struct qfile_opt_state *state = priv;
-	const char *catname = pkg_ctx->cat_ctx->name;
-	qfile_args_t *args = &state->args;
+	struct qfile_opt_state *state          = priv;
+	const char             *catname        = pkg_ctx->cat_ctx->name;
+	char                   *real_root      = state->real_root;
+	qfile_args_t           *args           = &state->args;
+	qfile_str_len_t        *base_names     = args->basenames;
+	qfile_str_len_t        *dir_names      = args->dirnames;
+	qfile_str_len_t        *real_dir_names = args->dirnames;
+	short                  *non_orphans    = args->non_orphans;
+	int                    *results        = args->results;
 	char *line;
 	char *savep;
 	const char *base;
 	depend_atom *atom = NULL;
-	int i;
+	size_t i;
 	bool path_ok;
-	char *real_root = state->real_root;
-	char **base_names = args->basenames;
-	char **dir_names = args->dirnames;
-	char **real_dir_names = args->realdirnames;
-	short *non_orphans = args->non_orphans;
-	int *results = args->results;
 	int found = 0;
-	size_t len;
 
 	/* If exclude_pkg is not NULL, check it.  We are looking for files
 	 * collisions, and must exclude one package. */
@@ -222,27 +227,28 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			dirname_len = 1;
 
 		for (i = 0; i < args->length; i++) {
-			if (base_names[i] == NULL)
+			if (base_names[i].len == 0)
 				continue;
 			if (non_orphans != NULL && non_orphans[i])
 				continue;
 
 			/* Try to avoid numerous strcmp() calls. */
-			if (base[0] != base_names[i][0] || strcmp(base, base_names[i]) != 0)
+			if (base[0] != base_names[i].str[0] ||
+				strcmp(base, base_names[i].str) != 0)
 				continue;
 
 			path_ok = false;
 
-			if (dir_names[i] && (len = strlen(dir_names[i])) > 0 &&
-					len == dirname_len &&
-					memcmp(e->name, dir_names[i], len) == 0)
+			if (dir_names[i].len > 0 &&
+				dir_names[i].len == dirname_len &&
+				memcmp(e->name, dir_names[i].str, dir_names[i].len) == 0)
 			{
 				/* dir_name == dirname(CONTENTS) */
 				path_ok = true;
-			} else if (real_dir_names[i] &&
-					(len = strlen(real_dir_names[i])) > 0 &&
-					len == dirname_len &&
-					memcmp(e->name, real_dir_names[i], len) == 0)
+			} else if (real_dir_names[i].len > 0 &&
+					   real_dir_names[i].len == dirname_len &&
+					   memcmp(e->name, real_dir_names[i].str,
+					   		  real_dir_names[i].len) == 0)
 			{
 				/* real_dir_name == dirname(CONTENTS) */
 				path_ok = true;
@@ -268,12 +274,12 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					if (verbose)
 						warn("Real path of \"%s\" is not under ROOT: %s",
 								fullpath, rpath);
-				} else if (dir_names[i] &&
-				           strcmp(_rpath, dir_names[i]) == 0) {
+				} else if (dir_names[i].len > 0 &&
+				           strcmp(_rpath, dir_names[i].str) == 0) {
 					/* dir_name == realpath(dirname(CONTENTS)) */
 					path_ok = true;
-				} else if (real_dir_names[i] &&
-				           strcmp(_rpath, real_dir_names[i]) == 0) {
+				} else if (real_dir_names[i].len > 0 &&
+				           strcmp(_rpath, real_dir_names[i].str) == 0) {
 					/* real_dir_name == realpath(dirname(CONTENTS)) */
 					path_ok = true;
 				}
@@ -282,15 +288,17 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			if (!path_ok && state->basename)
 				path_ok = true;
 
-			if (!path_ok && state->pwd && dir_names[i] == NULL) {
+			if (!path_ok && state->pwd && dir_names[i].len == 0) {
 				/* try to match file in current directory */
-				if ((len = strlen(state->pwd)) > 0 &&
-						len == dirname_len &&
-						memcmp(e->name, state->pwd, len) == 0)
+				if (state->pwd_len > 0 &&
+					state->pwd_len == dirname_len &&
+					memcmp(e->name, state->pwd, state->pwd_len) == 0)
 					path_ok = true;
 			}
 
-			if (!path_ok && dir_names[i] == NULL && real_dir_names[i] == NULL) {
+			if (!path_ok && dir_names[i].len == 0 &&
+				real_dir_names[i].len == 0)
+			{
 				/* basename match */
 				if (e->type != CONTENTS_DIR)
 					path_ok = true;
@@ -327,15 +335,15 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 static void destroy_qfile_args(qfile_args_t *qfile_args)
 {
-	int i;
+	size_t i;
 
 	for (i = 0; i < qfile_args->length; ++i) {
-		if (qfile_args->basenames)
-			free(qfile_args->basenames[i]);
-		if (qfile_args->dirnames)
-			free(qfile_args->dirnames[i]);
-		if (qfile_args->realdirnames)
-			free(qfile_args->realdirnames[i]);
+		if (qfile_args->basenames[i].len > 0)
+			free(qfile_args->basenames[i].str);
+		if (qfile_args->dirnames[i].len > 0)
+			free(qfile_args->dirnames[i].str);
+		if (qfile_args->realdirnames[i].len > 0)
+			free(qfile_args->realdirnames[i].str);
 	}
 
 	free(qfile_args->basenames);
@@ -358,9 +366,9 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	size_t real_root_len = state->real_root_len;
 	size_t len;
 	char *real_root = state->real_root;
-	char **basenames = NULL;
-	char **dirnames = NULL;
-	char **realdirnames = NULL;
+	qfile_str_len_t *basenames = NULL;
+	qfile_str_len_t *dirnames = NULL;
+	qfile_str_len_t *realdirnames = NULL;
 	int *results = NULL;
 	char tmppath[_Q_PATH_MAX];
 	char abspath[_Q_PATH_MAX * 2];
@@ -370,9 +378,9 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 	 * are stored without their $ROOT prefix, but $ROOT is used when
 	 * checking realpaths.
 	 */
-	basenames = xcalloc(argc, sizeof(char*));
-	dirnames = xcalloc(argc, sizeof(char*));
-	realdirnames = xcalloc(argc, sizeof(char*));
+	basenames = xcalloc(argc, sizeof(basenames[0]));
+	dirnames = xcalloc(argc, sizeof(dirnames[0]));
+	realdirnames = xcalloc(argc, sizeof(realdirnames[0]));
 	results = xcalloc(argc, sizeof(int));
 
 	for (i = 0; i < argc; ++i) {
@@ -389,7 +397,8 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 		    (strncmp(tmppath, "..", len) != 0 &&
 		     strncmp(tmppath, "/", len) != 0))
 		{
-			basenames[i] = xstrdup(p);
+			basenames[i].str = xstrdup(p);
+			basenames[i].len = strlen(p);
 			/* If there is no "/" in the argument, then it's over.
 			 * (we are searching a simple file name) */
 			if (strchr(argv[i], '/') == NULL)
@@ -413,14 +422,15 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 			goto skip_query_item;
 		}
 
-		if (basenames[i] != NULL) {
+		if (basenames[i].len > 0) {
 			/* Get both the dirname and its realpath.  These paths will
 			 * have no trailing slash, except if it is the only char (ie.,
 			 * when searching for "/foobar"). */
 			snprintf(tmppath, sizeof(tmppath), "%s%s",
 					dirname(abspath),
 					abspath[real_root_len] == '\0' ? "/" : "");
-			dirnames[i] = xstrdup(tmppath + real_root_len);
+			dirnames[i].str = xstrdup(tmppath + real_root_len);
+			dirnames[i].len = strlen(dirnames[i].str);
 			if (realpath(tmppath, abspath) == NULL) {
 				if (verbose) {
 					warnp("Could not read real path of \"%s\"", tmppath);
@@ -434,8 +444,11 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 						tmppath, abspath);
 				goto skip_query_item;
 			}
-			if (strcmp(dirnames[i], abspath + real_root_len))
-				realdirnames[i] = xstrdup(abspath + real_root_len);
+			if (strcmp(dirnames[i].str, abspath + real_root_len))
+			{
+				realdirnames[i].str = xstrdup(abspath + real_root_len);
+				realdirnames[i].len = strlen(realdirnames[i].str);
+			}
 		} else {
 			/* No basename means we are looking for something like "/foo/bar/.."
 			 * Dirname is meaningless here, we can only get realpath of the full
@@ -449,21 +462,23 @@ prepare_qfile_args(const int argc, const char **argv, struct qfile_opt_state *st
 						abspath, tmppath);
 				goto skip_query_item;
 			}
-			basenames[i] = xstrdup(basename(tmppath));
+			basenames[i].str = xstrdup(basename(tmppath));
+			basenames[i].len = strlen(basenames[i].str);
 			snprintf(abspath, sizeof(abspath), "%s%s",
 					dirname(tmppath),
 					tmppath[real_root_len] == '\0' ? "/" : "");
-			realdirnames[i] = xstrdup(abspath + real_root_len);
+			realdirnames[i].str = xstrdup(abspath + real_root_len);
+			realdirnames[i].len = strlen(realdirnames[i].str);
 		}
 		continue;
 
  skip_query_item:
 		--nb_of_queries;
 		warn("Skipping query item \"%s\".", argv[i]);
-		free(basenames[i]);
-		free(dirnames[i]);
-		free(realdirnames[i]);
-		basenames[i] = dirnames[i] = realdirnames[i] = NULL;
+		free(basenames[i].str);
+		free(dirnames[i].str);
+		free(realdirnames[i].str);
+		basenames[i].len = dirnames[i].len = realdirnames[i].len = 0;
 	}
 
 	args->basenames = basenames;
@@ -489,7 +504,9 @@ int qfile_main(int argc, char **argv)
 		.skip_plibreg = false,
 		.format = NULL,
 	};
-	int i, nb_of_queries, found = 0;
+	int i;
+	int nb_of_queries;
+	int found = 0;
 	char *p;
 
 	while ((i = GETOPT_LONG(QFILE, qfile, "")) != -1) {
@@ -588,16 +605,17 @@ int qfile_main(int argc, char **argv)
 		found += qfile_check_plibreg(&state);
 
 	if (state.args.non_orphans) {
+		size_t j;
 		/* display orphan files */
-		for (i = 0; i < state.args.length; i++) {
-			if (state.args.non_orphans[i])
+		for (j = 0; j < state.args.length; j++) {
+			if (state.args.non_orphans[j])
 				continue;
-			if (state.args.basenames[i]) {
+			if (state.args.basenames[j].len > 0) {
 				/* inverse return code (as soon as an orphan is found,
 				 * return non-zero) */
 				found = 0;
 				if (!quiet)
-					puts(argv[i]);
+					puts(argv[j]);
 				else
 					break;
 			}
