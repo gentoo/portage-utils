@@ -21,9 +21,10 @@
 #include "rmspace.h"
 #include "tree.h"
 
-#define QFILE_FLAGS "F:doRx:SP" COMMON_FLAGS
+#define QFILE_FLAGS "F:LdoRx:SP" COMMON_FLAGS
 static struct option const qfile_long_opts[] = {
 	{"format",       a_argument, NULL, 'F'},
+	{"follow",      no_argument, NULL, 'L'},
 	{"slots",       no_argument, NULL, 'S'},
 	{"root-prefix", no_argument, NULL, 'R'},
 	{"dir",         no_argument, NULL, 'd'},
@@ -34,6 +35,7 @@ static struct option const qfile_long_opts[] = {
 };
 static const char * const qfile_opts_help[] = {
 	"Print matched atom using given format string",
+	"Follow symlinks in CONTENTS entries (slower)",
 	"Display installed packages with slots",
 	"Assume arguments are already prefixed by $ROOT",
 	"Also match directories for single component arguments",
@@ -77,6 +79,7 @@ struct qfile_opt_state {
 	char *exclude_slot;
 	depend_atom *exclude_atom;
 	bool basename;
+	bool followlinks;
 	bool orphans;
 	bool assume_root_prefix;
 	bool skip_plibreg;
@@ -172,6 +175,9 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	qfile_str_len_t        *real_dir_names = args->realdirnames;
 	short                  *non_orphans    = args->non_orphans;
 	int                    *results        = args->results;
+	const char             *_rpath;
+	char                    rpath[_Q_PATH_MAX + 1];
+	char                    fullpath[_Q_PATH_MAX + 1];
 	char *line;
 	char *savep;
 	const char *base;
@@ -238,27 +244,9 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 			path_ok = false;
 
-			if (dir_names[i].len == dirname_len &&
-				memcmp(e->name, dir_names[i].str, dir_names[i].len) == 0)
-			{
-				/* dir_name == dirname(CONTENTS) */
-				path_ok = true;
-			} else if (real_dir_names[i].len == dirname_len &&
-					   memcmp(e->name, real_dir_names[i].str,
-					   		  real_dir_names[i].len) == 0)
-			{
-				/* real_dir_name == dirname(CONTENTS) */
-				path_ok = true;
-			} else if (state->real_root_len > 0) {
-				char rpath[_Q_PATH_MAX + 1];
-				char *_rpath;
-				char fullpath[_Q_PATH_MAX + 1];
-				char  *real_root     = state->real_root;
-				size_t real_root_len = state->real_root_len;
-
+			if (state->followlinks) {
 				snprintf(fullpath, sizeof(fullpath), "%s%s",
-						real_root, e->name);
-				_rpath = rpath + real_root_len;
+						 state->real_root, e->name);
 				if (realpath(fullpath, rpath) == NULL) {
 					if (verbose) {
 						atom = tree_get_atom(pkg_ctx, false);
@@ -268,20 +256,37 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 						warn("We'll never know whether \"%s\" was a result "
 								"for your query...", e->name);
 					}
-				} else if (!qfile_is_prefix(rpath, real_root, real_root_len)) {
+					break;
+				}
+				if (state->real_root_len > 0 &&
+					!qfile_is_prefix(rpath,
+									 state->real_root, state->real_root_len))
+				{
 					if (verbose)
 						warn("Real path of \"%s\" is not under ROOT: %s",
 								fullpath, rpath);
-				} else if (dir_names[i].len > 0 &&
-						   real_dir_names[i].len == 0 &&
-				           strcmp(_rpath, dir_names[i].str) == 0) {
-					/* dir_name == realpath(dirname(CONTENTS)) */
-					path_ok = true;
-				} else if (real_dir_names[i].len > 0 &&
-				           strcmp(_rpath, real_dir_names[i].str) == 0) {
-					/* real_dir_name == realpath(dirname(CONTENTS)) */
-					path_ok = true;
+					break;
 				}
+				_rpath = rpath + state->real_root_len;
+				dirname_len = strlen(_rpath) - 1 - base_names[i].len;
+			} else {
+				_rpath = e->name;
+			}
+
+			if (real_dir_names[i].len == dirname_len &&
+				memcmp(_rpath, real_dir_names[i].str,
+					   real_dir_names[i].len) == 0)
+			{
+				/* real_dir_name == dirname(CONTENTS) */
+				path_ok = true;
+			}
+			else if ((!state->followlinks ||
+					  real_dir_names[i].len == 0) &&
+					 dir_names[i].len == dirname_len &&
+					 memcmp(_rpath, dir_names[i].str, dir_names[i].len) == 0)
+			{
+				/* dir_name == dirname(CONTENTS) */
+				path_ok = true;
 			}
 
 			if (!path_ok && state->basename)
@@ -513,6 +518,7 @@ int qfile_main(int argc, char **argv)
 			COMMON_GETOPTS_CASES(qfile)
 			case 'F': state.format = optarg;            /* fall through */
 			case 'S': state.need_full_atom = true;      break;
+			case 'L': state.followlinks = true;         break;
 			case 'd': state.basename = true;            break;
 			case 'o': state.orphans = true;             break;
 			case 'R': state.assume_root_prefix = true;  break;

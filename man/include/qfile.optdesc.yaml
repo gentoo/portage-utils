@@ -9,3 +9,9 @@ dir: |
     Only consider basename of argument and also match directories, this
     option makes qlist ignore any path component given in the arguments
     if present.
+follow: |
+    Follow symlinks in both input as well as VDB stored entries.  This
+    is useful in situations such as usr-merge where files are stored in
+    locations which contain a symlink traversal, e.g. /bin/bash.  By
+    default only the input arguments are resolved to make an exact match
+    with the VDB.  Turning this option on may affect performance.
