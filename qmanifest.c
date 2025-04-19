@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2024 Gentoo Foundation
+ * Copyright 2018-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
@@ -929,7 +929,9 @@ verify_gpg_sig(const char *path, verify_msg **msgs)
 
 	/* we only check/return the first signature */
 	if ((sig = vres->signatures) != NULL) {
-		ret = xmalloc(sizeof(gpg_sig));
+		bool cleanup = false;
+
+		ret = xcalloc(1, sizeof(gpg_sig));
 
 		if (sig->fpr != NULL) {
 			snprintf(buf, sizeof(buf),
@@ -984,23 +986,30 @@ verify_gpg_sig(const char *path, verify_msg **msgs)
 						"used to verify the signature has been revoked");
 				break;
 			case GPG_ERR_BAD_SIGNATURE:
-				free(ret);
-				ret = NULL;
+				cleanup = true;
 				printf("the signature is invalid\n");
 				break;
 			case GPG_ERR_NO_PUBKEY:
-				free(ret);
-				ret = NULL;
+				cleanup = true;
 				printf("the signature could not be verified due to a "
 						"missing key for:\n  %s\n", buf);
 				break;
 			default:
-				free(ret);
-				ret = NULL;
+				cleanup = true;
 				printf("there was some error which prevented the "
 						"signature verification:\n  %s: %s\n",
 						buf, gpgme_strerror(sig->status));
 				break;
+		}
+
+		if (cleanup) {
+			free(ret->algo);
+			free(ret->fingerprint);
+			free(ret->timestamp);
+			free(ret->signer);
+			free(ret->pkfingerprint);
+			free(ret);
+			ret = NULL;
 		}
 	}
 
