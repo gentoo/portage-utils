@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2024 Gentoo Authors
+ * Copyright 2005-2025 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -1749,17 +1749,17 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 
 	/* Then remove all dirs in reverse order */
 	while (dirs != NULL) {
-		llist_char *list = dirs;
-		char *dir = list->data;
+		llist_char *list;
 		int rm;
 
-		rm = pretend ? -1 : rmdir_r_at(portroot_fd, dir + 1);
+		rm = pretend ? -1 : rmdir_r_at(portroot_fd, dirs->data + 1);
 		qprintf("%s%s%s %s%s%s/\n", rm ? YELLOW : GREEN, rm ? "---" : "<<<",
-			NORM, DKBLUE, dir, NORM);
+			NORM, DKBLUE, dirs->data, NORM);
 
-		dirs = dirs->next;
-		free(list->data);
-		free(list);
+		list = dirs->next;
+		free(dirs->data);
+		free(dirs);
+		dirs = list;
 	}
 
 	if (!pretend) {
