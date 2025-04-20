@@ -461,7 +461,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 		goto done;
 	}
 
-	fp = fopen(file, "r");
+	fp = fopen(npath, "r");
 	if (fp == NULL)
 		goto done;
 
@@ -757,9 +757,9 @@ read_portage_profile(const char *profile, env_vars vars[], set *masks)
 
 	/* now consume *this* profile's make.defaults and package.mask */
 	strcpy(profile_file + profile_len, "make.defaults");
-	read_portage_file(profile_file, ENV_FILE, vars);
+	read_portage_file(profile_file + 1, ENV_FILE, vars);
 	strcpy(profile_file + profile_len, "package.mask");
-	read_portage_file(profile_file, PMASK_FILE, masks);
+	read_portage_file(profile_file + 1, PMASK_FILE, masks);
 }
 
 env_vars vars_to_read[] = {
@@ -887,13 +887,15 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 			char rootovrl[_Q_PATH_MAX];
 
 			/* try not to get confused by symlinks etc. */
+			if (*e == '/')
+				e++;  /* ROOT ends with / */
 			snprintf(rootovrl, sizeof(rootovrl), "%s%s", portroot, e);
 			n = strlen(portroot);
 			if (realpath(rootovrl, rrepo) != NULL &&
 				strncmp(rrepo, portroot, n) == 0)
-				e = rrepo + n;
+				e = rrepo + n - 1;
 			else
-				e = rootovrl + n;
+				e = rootovrl + n - 1;
 
 			array_for_each(overlay_names, n, overlay) {
 				if (strcmp(overlay, repo) == 0)
@@ -992,6 +994,10 @@ initialize_portage_env(void)
 	if (!configroot)
 		configroot = CONFIG_EPREFIX;
 
+	if (*configroot != '/')
+		err("PORTAGE_CONFIGROOT must be an absolute path");
+	configroot++;  /* strip leading /, ROOT always ends with one */
+
 	/* rstrip /-es */
 	i = strlen(configroot);
 	while (i > 0 && configroot[i - 1] == '/')
@@ -1018,20 +1024,20 @@ initialize_portage_env(void)
 			if (overlay == primary_overlay) {
 				snprintf(pathbuf, sizeof(pathbuf), "%s/profiles/package.mask",
 						(char *)array_get_elem(overlays, n));
-				read_portage_file(pathbuf, PMASK_FILE, package_masks);
+				read_portage_file(pathbuf + 1, PMASK_FILE, package_masks);
 				break;
 			}
 		}
 	}
 
 	/* walk all the stacked profiles */
-	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/make.profile",
-			(int)i, configroot);
+	snprintf(pathbuf, sizeof(pathbuf), "%s%.*s/etc/make.profile",
+			 portroot, (int)i, configroot);
 	read_portage_profile(
 			realpath(pathbuf, rpathbuf) == NULL ? pathbuf : rpathbuf,
 			vars_to_read, package_masks);
-	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/portage/make.profile",
-			(int)i, configroot);
+	snprintf(pathbuf, sizeof(pathbuf), "%s%.*s/etc/portage/make.profile",
+			 portroot, (int)i, configroot);
 	read_portage_profile(
 			realpath(pathbuf, rpathbuf) == NULL ? pathbuf : rpathbuf,
 			vars_to_read, package_masks);
@@ -1133,7 +1139,7 @@ initialize_portage_env(void)
 	 * administration in overlays */
 	{
 		char *overlay;
-		var = &vars_to_read[11];  /* PORTDIR */
+		var = &vars_to_read[12];  /* PORTDIR */
 
 		if (strcmp(var->src, STR_DEFAULT) != 0 || array_cnt(overlays) == 0) {
 			char roverlay[_Q_PATH_MAX];
@@ -1238,6 +1244,9 @@ int main(int argc, char **argv)
 	IF_DEBUG(init_coredumps());
 	argv0 = argv[0];
 
+	/* ensure any err/warn doesn't use unitialised vars */
+	color_clear();
+
 	/* initialise all the properties with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
 		env_vars *var = &vars_to_read[i];
@@ -1288,7 +1297,7 @@ int main(int argc, char **argv)
 					if (realpath(argv[i + 1], realroot) != NULL)
 						root = realroot;
 					else
-						root = argv[i + 1];
+						errp("--root argument could not be resolved");
 					set_portage_env_var(&vars_to_read[0], root,
 										"command line");  /* ROOT */
 				}
