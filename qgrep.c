@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005      Petteri Räty    - <betelgeuse@gentoo.org>
@@ -404,9 +404,9 @@ qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	/* need to construct path in portdir to ebuild, pass it to grep */
 	cctx = (tree_ctx *)(pkg_ctx->cat_ctx->ctx);
-	if (cctx->cachetype == CACHE_EBUILD) {
+	if (cctx->treetype == TREE_EBUILD) {
 		pfd = cctx->tree_fd;
-	} else if (cctx->cachetype == CACHE_VDB) {
+	} else if (cctx->treetype == TREE_VDB) {
 		pfd = openat(cctx->portroot_fd, data->portdir, O_RDONLY|O_CLOEXEC);
 	} else {
 		pfd = openat(cctx->tree_fd, "../..", O_RDONLY|O_CLOEXEC);

@@ -1162,7 +1162,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 							continue;
 						}
 
-						if (bpkg->pkg->cat_ctx->ctx->cachetype != CACHE_VDB)
+						if (bpkg->pkg->cat_ctx->ctx->treetype != TREE_VDB)
 							pkg_fetch(level + 1, subatom, bpkg);
 
 						tree_match_close(bpkg);

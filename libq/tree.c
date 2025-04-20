@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2023 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -96,7 +96,7 @@ tree_open(const char *sroot, const char *portdir)
 	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_md5);
 	ret = tree_open_int(sroot, buf, true);
 	if (ret != NULL) {
-		ret->cachetype = CACHE_METADATA_MD5;
+		ret->treetype = TREE_METADATA_MD5;
 		ret->repo = repo;
 		return ret;
 	}
@@ -104,14 +104,14 @@ tree_open(const char *sroot, const char *portdir)
 	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_pms);
 	ret = tree_open_int(sroot, buf, true);
 	if (ret != NULL) {
-		ret->cachetype = CACHE_METADATA_PMS;
+		ret->treetype = TREE_METADATA_PMS;
 		ret->repo = repo;
 		return ret;
 	}
 
 	ret = tree_open_int(sroot, portdir, true);
 	if (ret != NULL) {
-		ret->cachetype = CACHE_EBUILD;
+		ret->treetype = TREE_EBUILD;
 		ret->repo = repo;
 		return ret;
 	}
@@ -128,7 +128,7 @@ tree_open_vdb(const char *sroot, const char *svdb)
 {
 	tree_ctx *ret = tree_open_int(sroot, svdb, false);
 	if (ret != NULL)
-		ret->cachetype = CACHE_VDB;
+		ret->treetype = TREE_VDB;
 	return ret;
 }
 
@@ -146,7 +146,7 @@ tree_open_ebuild(const char *sroot, const char *portdir)
 			(void)rmspace(repo);
 			ret->repo = repo;
 		}
-		ret->cachetype = CACHE_EBUILD;
+		ret->treetype = TREE_EBUILD;
 	}
 	return ret;
 }
@@ -159,11 +159,11 @@ tree_open_binpkg(const char *sroot, const char *spkg)
 	int fd;
 
 	if (ret != NULL) {
-		ret->cachetype = CACHE_BINPKGS;
+		ret->treetype = TREE_BINPKGS;
 
 		fd = openat(ret->tree_fd, binpkg_packages, O_RDONLY | O_CLOEXEC);
 		if (eat_file_fd(fd, &ret->cache.store, &ret->cache.storesize)) {
-			ret->cachetype = CACHE_PACKAGES;
+			ret->treetype = TREE_PACKAGES;
 		} else if (ret->cache.store != NULL) {
 			free(ret->cache.store);
 			ret->cache.store = NULL;
@@ -552,7 +552,7 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 	if (ctx->do_sort && cat_ctx->pkg_ctxs != NULL) {
 		/* bypass to use the cache if it exists */
 		ret = tree_next_pkg_int(cat_ctx);
-	} else if (ctx->cachetype == CACHE_EBUILD) {
+	} else if (ctx->treetype == TREE_EBUILD) {
 		char *p;
 
 		/* serve *.ebuild files each as separate pkg_ctx with name set
@@ -572,7 +572,7 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 				pkgdir->tree_fd = cat_ctx->fd;
 				pkgdir->do_sort = ctx->do_sort;
 				pkgdir->repo = ctx->repo;
-				pkgdir->cachetype = ctx->cachetype;
+				pkgdir->treetype = ctx->treetype;
 
 				ctx->ebuilddir_cat_ctx =
 					tree_open_cat(pkgdir, ctx->ebuilddir_pkg_ctx->name);
@@ -601,7 +601,7 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 				}
 			}
 		} while (ret == NULL);
-	} else if (ctx->cachetype == CACHE_BINPKGS) {
+	} else if (ctx->treetype == TREE_BINPKGS) {
 		char *p = NULL;
 		ret = NULL;
 		do {
@@ -1092,7 +1092,7 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 		return pkg_ctx->meta;
 
 	if (pkg_ctx->fd == -1) {
-		if (ctx->cachetype == CACHE_EBUILD || ctx->cachetype == CACHE_BINPKGS) {
+		if (ctx->treetype == TREE_EBUILD || ctx->treetype == TREE_BINPKGS) {
 			char *p = (char *)pkg_ctx->name;
 			p += strlen(p);
 			*p = '.';
@@ -1107,24 +1107,24 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 			return NULL;
 	}
 
-	if (ctx->cachetype == CACHE_METADATA_MD5) {
+	if (ctx->treetype == TREE_METADATA_MD5) {
 		ret = tree_read_file_md5(pkg_ctx);
 		/* md5-cache, is sort of documented in egencache man-page
 		 * key-points are that an md5 is provided for the ebuild itself,
 		 * and if it includes eclasses, the md5s for each eclass.  These
 		 * are available as _md5_ and _eclasses_ keys.  The latter uses
 		 * tab-separation of form <eclass-name>\t<md5>\t... */
-	} else if (ctx->cachetype == CACHE_METADATA_PMS) {
+	} else if (ctx->treetype == TREE_METADATA_PMS) {
 		ret = tree_read_file_pms(pkg_ctx);
 		/* PMS implies to do an mtime and existence check (the cache may
 		 * contain extra stuff) but since this form of metadata in fact
 		 * is extinct, because these checks are insufficient and
 		 * impossible on e.g. a git-based tree. */
-	} else if (ctx->cachetype == CACHE_EBUILD) {
+	} else if (ctx->treetype == TREE_EBUILD) {
 		ret = tree_read_file_ebuild(pkg_ctx);
-	} else if (ctx->cachetype == CACHE_BINPKGS) {
+	} else if (ctx->treetype == TREE_BINPKGS) {
 		ret = tree_read_file_binpkg(pkg_ctx);
-	} else if (ctx->cachetype == CACHE_PACKAGES) {
+	} else if (ctx->treetype == TREE_PACKAGES) {
 		ret = (tree_pkg_meta *)pkg_ctx->cat_ctx->ctx->pkgs;
 	}
 
@@ -1190,7 +1190,7 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 	 * key, the tree_pkg_meta_get macro as called by the user takes care
 	 * of offset and keyn pointing to the same thing */
 
-	if (ctx->cachetype == CACHE_VDB) {
+	if (ctx->treetype == TREE_VDB) {
 		if (pkg_ctx->meta == NULL)
 			pkg_ctx->meta = xzalloc(sizeof(tree_pkg_meta));
 
@@ -1253,8 +1253,8 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 		 * contain everything available (for a semi-good reason though)
 		 * We cannot downgrade the tree execution to BINPKGS, because
 		 * we're running from tree_foreach_packages */
-		if (*key == NULL && ctx->cachetype == CACHE_PACKAGES) {
-			ctx->cachetype = CACHE_BINPKGS;
+		if (*key == NULL && ctx->treetype == TREE_PACKAGES) {
+			ctx->treetype = TREE_BINPKGS;
 			pkg_ctx->fd = -1;
 
 			/* trigger tree_pkg_read to do something */
@@ -1263,7 +1263,7 @@ tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
 			pkg_ctx->meta = NULL;
 
 			pkg_ctx->meta = tree_pkg_read(pkg_ctx);
-			ctx->cachetype = CACHE_PACKAGES;
+			ctx->treetype = TREE_PACKAGES;
 			if (pkg_ctx->meta == NULL) {
 				/* hrmffff. */
 				pkg_ctx->fd = -2;
@@ -1295,7 +1295,7 @@ tree_pkg_metadata(tree_pkg_ctx *pkg_ctx)
 	 * tag, but practically speaking we don't care at all, so we can
 	 * just extract everything between <email> and </email> */
 
-	if (ctx->cachetype == CACHE_EBUILD) {
+	if (ctx->treetype == TREE_EBUILD) {
 		fd = openat(pkg_ctx->cat_ctx->fd, "metadata", O_RDONLY | O_CLOEXEC);
 	} else {
 		char buf[_Q_PATH_MAX];
@@ -1574,7 +1574,7 @@ tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 	ctx->query_atom = query;
 
 	/* handle Packages (binpkgs index) file separately */
-	if (ctx->cachetype == CACHE_PACKAGES)
+	if (ctx->treetype == TREE_PACKAGES)
 		return tree_foreach_packages(ctx, callback, priv);
 
 	ret = 0;
@@ -1611,7 +1611,7 @@ tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 
 	if (complete) {
 		tree_ctx *ctx = pkg_ctx->cat_ctx->ctx;
-		if (ctx->cachetype == CACHE_VDB) {
+		if (ctx->treetype == TREE_VDB) {
 			if (pkg_ctx->atom->SLOT == NULL) {
 				/* FIXME: use tree_meta_get !!! */
 				if (pkg_ctx->slot == NULL)
@@ -1641,7 +1641,7 @@ tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
 			}
 			/* repo is set from the tree, when found */
 			if (pkg_ctx->atom->REPO == NULL) {
-				if (pkg_ctx->repo == NULL && ctx->cachetype == CACHE_BINPKGS) {
+				if (pkg_ctx->repo == NULL && ctx->treetype == TREE_BINPKGS) {
 					if (meta == NULL)
 						meta = tree_pkg_read(pkg_ctx);
 					if (meta != NULL && meta->Q_repository != NULL) {
@@ -1741,7 +1741,7 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 	pkg->repo = tctx->repo != NULL ? xstrdup(tctx->repo) : NULL;
 	if (meta != NULL) {
 		pkg->fd = -2;  /* don't try to read, we fill it in here */
-		if (tctx->cachetype == CACHE_PACKAGES) {
+		if (tctx->treetype == TREE_PACKAGES) {
 			/* need to copy, source is based on temp space in foreach */
 			pkg->meta = tree_clone_meta(meta);
 		} else {
@@ -1768,7 +1768,7 @@ tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
 	ctx->do_sort = true;     /* sort uses buffer, which cache relies on */
 	ctx->query_atom = NULL;  /* ensure the cache contains ALL pkgs */
 
-	if ((ctx->cachetype == CACHE_PACKAGES || ctx->cachetype == CACHE_BINPKGS)
+	if ((ctx->treetype == TREE_PACKAGES || ctx->treetype == TREE_BINPKGS)
 			&& ctx->cache.categories == NULL)
 	{
 		set *cache;
@@ -1838,7 +1838,7 @@ tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
 			n = xzalloc(sizeof(tree_match_ctx)); \
 			n->atom = atom; \
 			n->pkg = pkg_ctx; \
-			if (C->ctx->cachetype == CACHE_PACKAGES && \
+			if (C->ctx->treetype == TREE_PACKAGES && \
 				pkg_ctx->meta->Q_PATH != NULL) \
 			{ \
 				/* binpkg-multi-instance has a PATH ready for us */ \
@@ -1847,14 +1847,14 @@ tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
 			} else { \
 				snprintf(n->path, sizeof(n->path), "%s/%s/%s%s", \
 						 (char *)C->ctx->path, C->name, pkg_ctx->name, \
-						 C->ctx->cachetype == CACHE_EBUILD   ? ".ebuild" : \
-						 C->ctx->cachetype == CACHE_BINPKGS  ? ".tbz2" : \
-						 C->ctx->cachetype == CACHE_PACKAGES ? ".tbz2" : ""); \
+						 C->ctx->treetype == TREE_EBUILD   ? ".ebuild" : \
+						 C->ctx->treetype == TREE_BINPKGS  ? ".tbz2" : \
+						 C->ctx->treetype == TREE_PACKAGES ? ".tbz2" : ""); \
 			} \
 			if (flags & TREE_MATCH_METADATA) \
 				n->meta = tree_pkg_read(pkg_ctx); \
-			if (C->ctx->cachetype == CACHE_BINPKGS || \
-					C->ctx->cachetype == CACHE_PACKAGES) \
+			if (C->ctx->treetype == TREE_BINPKGS || \
+					C->ctx->treetype == TREE_PACKAGES) \
 				n->free_atom = n->free_meta = 0; \
 			n->next = ret; \
 			ret = n; \

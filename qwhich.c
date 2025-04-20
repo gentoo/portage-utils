@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 Gentoo Foundation
+ * Copyright 2021-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2021-     Fabian Groffen  - <grobian@gentoo.org>
@@ -176,21 +176,21 @@ int qwhich_main(int argc, char **argv)
 			repolen = strlen(reponam);
 		} else {
 			reponam = t->path;
-			if (t->cachetype == CACHE_METADATA_MD5)
+			if (t->treetype == TREE_METADATA_MD5)
 				repolen = strlen(t->path) - (sizeof("/metadata/md5-cache") - 1);
-			else if (t->cachetype == CACHE_METADATA_PMS)
+			else if (t->treetype == TREE_METADATA_PMS)
 				repolen = strlen(t->path) - (sizeof("/metadata/cache") - 1);
-			else if (t->cachetype == CACHE_EBUILD ||
-					t->cachetype == CACHE_BINPKGS ||
-					t->cachetype == CACHE_PACKAGES)
+			else if (t->treetype == TREE_EBUILD ||
+					t->treetype == TREE_BINPKGS ||
+					t->treetype == TREE_PACKAGES)
 				repolen = strlen(t->path);
 			else
 				repolen = 0;
 		}
 
-		switch (t->cachetype) {
-			case CACHE_BINPKGS:
-			case CACHE_PACKAGES:
+		switch (t->treetype) {
+			case TREE_BINPKGS:
+			case TREE_PACKAGES:
 				ext = "tbz2";
 				break;
 			default:
@@ -208,11 +208,11 @@ int qwhich_main(int argc, char **argv)
 				if (m.print_atom) {
 					printf("%s\n", atom_format(m.fmt, tmcw->atom));
 				} else {
-					if (t->cachetype == CACHE_METADATA_MD5 ||
-							t->cachetype == CACHE_METADATA_PMS ||
-							t->cachetype == CACHE_EBUILD ||
-							t->cachetype == CACHE_BINPKGS ||
-							t->cachetype == CACHE_PACKAGES)
+					if (t->treetype == TREE_METADATA_MD5 ||
+							t->treetype == TREE_METADATA_PMS ||
+							t->treetype == TREE_EBUILD ||
+							t->treetype == TREE_BINPKGS ||
+							t->treetype == TREE_PACKAGES)
 					{
 						if (m.print_path)
 							printf("%s%.*s%s%s%s/%s%s%s\n",
@@ -229,7 +229,7 @@ int qwhich_main(int argc, char **argv)
 									DKBLUE, tmcw->atom->PN,
 									BLUE, tmcw->atom->PF,
 									DKGREEN, ext, NORM);
-					} else if (t->cachetype == CACHE_VDB && !m.print_path) {
+					} else if (t->treetype == TREE_VDB && !m.print_path) {
 						printf("%s%s/%s%s%s.ebuild%s\n",
 								DKBLUE, tmcw->path,
 								BLUE, tmcw->atom->PF,

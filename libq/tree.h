@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2023 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -31,14 +31,14 @@ struct tree_ctx {
 	size_t cat_cur;
 	bool do_sort:1;
 	enum {
-		CACHE_UNSET = 0,
-		CACHE_METADATA_MD5,
-		CACHE_METADATA_PMS,
-		CACHE_EBUILD,
-		CACHE_VDB,
-		CACHE_PACKAGES,
-		CACHE_BINPKGS,
-	} cachetype:3;
+		TREE_UNSET = 0,
+		TREE_METADATA_MD5,
+		TREE_METADATA_PMS,
+		TREE_EBUILD,
+		TREE_VDB,
+		TREE_PACKAGES,
+		TREE_BINPKGS,
+	} treetype:3;
 	tree_pkg_ctx *ebuilddir_pkg_ctx;
 	tree_cat_ctx *ebuilddir_cat_ctx;
 	tree_ctx *ebuilddir_ctx;
