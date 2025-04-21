@@ -39,6 +39,7 @@ struct tree_ctx {
 		TREE_PACKAGES,
 		TREE_BINPKGS,
 	} treetype:3;
+	tree_ctx *subtree;
 	tree_pkg_ctx *ebuilddir_pkg_ctx;
 	tree_cat_ctx *ebuilddir_cat_ctx;
 	tree_ctx *ebuilddir_ctx;
