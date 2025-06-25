@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -11,12 +11,47 @@
 #include "colors.h"
 #include "rmspace.h"
 
+#define COLOR_MAP CONFIG_EPREFIX "etc/portage/color.map"
+
+#define CPAIR_VALUE_LEN 16
+typedef struct {
+	const char  *name;
+	const char  *origval;
+	const char **var;
+	char         tmpbuf[CPAIR_VALUE_LEN];
+} colourpair;
+
+typedef struct {
+	const char *name;
+	const char *value;
+} colourmap;
+
 /* color constants */
 #ifdef OPTIMIZE_FOR_SIZE
-# define _MAKE_COLOR(c,b) ""
+# define _MAKE_COLOUR1(c)   ""
+# define _MAKE_COLOUR2(c,b) ""
 #else
-# define _MAKE_COLOR(c,b) "\e[" c ";" b "m"
+# define _MAKE_COLOUR1(c)   "\e[" #c "m"
+# define _MAKE_COLOUR2(c,b) "\e[" #c ";" #b "m"
 #endif
+#define LQC_BLACK      _MAKE_COLOUR1(30)
+#define LQC_DARKGREY   _MAKE_COLOUR2(30,01)
+#define LQC_RED        _MAKE_COLOUR1(31)
+#define LQC_DARKRED    _MAKE_COLOUR2(31,01)
+#define LQC_GREEN      _MAKE_COLOUR1(32)
+#define LQC_DARKGREEN  _MAKE_COLOUR2(32,01)
+#define LQC_YELLOW     _MAKE_COLOUR1(33)
+#define LQC_BROWN      _MAKE_COLOUR2(33,01)
+#define LQC_BLUE       _MAKE_COLOUR1(34)
+#define LQC_DARKBLUE   _MAKE_COLOUR2(34,01)
+#define LQC_FUCHSIA    _MAKE_COLOUR1(35)
+#define LQC_PURPLE     _MAKE_COLOUR2(35,01)
+#define LQC_TURQUOISE  _MAKE_COLOUR1(36)
+#define LQC_TEAL       _MAKE_COLOUR2(36,01)
+#define LQC_WHITE      _MAKE_COLOUR1(37)
+#define LQC_LIGHTGREY  _MAKE_COLOUR2(37,01)
+
+/* symbols that are used by the code and hold the active colour escapes */
 const char *NORM;
 const char *BLUE;
 const char *BOLD;
@@ -30,35 +65,69 @@ const char *RED;
 const char *WHITE;
 const char *YELLOW;
 
-static const char *COLOR_MAP = CONFIG_EPREFIX "etc/portage/color.map";
-
-#define CPAIR_VALUE_LEN 16
-typedef struct {
-	const char *name;
-	char value[CPAIR_VALUE_LEN];
-	char origval[CPAIR_VALUE_LEN];
-} cpairtype;
-
-#define X2(X) X, X
-static cpairtype color_pairs[] = {
-	{"blue",      X2(_MAKE_COLOR("34", "01")) },
-	{"brown",     X2(_MAKE_COLOR("00", "33")) },
-	{"darkblue",  X2(_MAKE_COLOR("00", "34")) },
-	{"darkgreen", X2(_MAKE_COLOR("00", "32")) },
-	{"darkred",   X2(_MAKE_COLOR("00", "31")) },
-	{"faint",     X2(_MAKE_COLOR("00", "02")) },
-	{"fuchsia",   X2(_MAKE_COLOR("35", "01")) },
-	{"green",     X2(_MAKE_COLOR("32", "01")) },
-	{"lightgray", X2(_MAKE_COLOR("00", "37")) },
-	{"purple",    X2(_MAKE_COLOR("00", "35")) },
-	{"red",       X2(_MAKE_COLOR("31", "01")) },
-	{"teal",      X2(_MAKE_COLOR("00", "36")) },
-	{"turquoise", X2(_MAKE_COLOR("36", "01")) },
-	{"white",     X2(_MAKE_COLOR("01", "38")) },
-	{"yellow",    X2(_MAKE_COLOR("01", "33")) },
-	{"eol",       X2(_MAKE_COLOR("00", "00")) },
+/* all of the above need to be in the list below */
+static colourpair colour_pairs[] = {
+	{"norm",      _MAKE_COLOUR2(0,0),   &NORM,      ""},
+	{"blue",      LQC_TEAL,             &BLUE,      ""},
+	{"bold",      _MAKE_COLOUR2(0,1),   &BOLD,      ""},
+	{"bryellow",  LQC_BROWN,            &BRYELLOW,  ""},
+	{"cyan",      LQC_TURQUOISE,        &CYAN,      ""},
+	{"dkblue",    LQC_DARKBLUE,         &DKBLUE,    ""},
+	{"dkgreen",   LQC_GREEN,            &DKGREEN,   ""},
+	{"green",     LQC_DARKGREEN,        &GREEN,     ""},
+	{"magenta",   LQC_FUCHSIA,          &MAGENTA,   ""},
+	{"red",       LQC_DARKRED,          &RED,       ""},
+	{"white",     _MAKE_COLOUR2(1,38),  &WHITE,     ""},
+	{"yellow",    LQC_BROWN,            &YELLOW,    ""}
 };
-#undef X2
+
+static colourmap colour_map[] = {
+	/* Portage's list of names */
+	{"black",      LQC_BLACK    },
+	{"darkgrey",   LQC_DARKGREY },
+	{"darkgray",   LQC_DARKGREY },
+	{"red",        LQC_RED      },
+	{"darkred",    LQC_DARKRED  },
+	{"green",      LQC_GREEN    },
+	{"darkgreen",  LQC_DARKGREEN},
+	{"yellow",     LQC_YELLOW   },
+	{"brown",      LQC_BROWN    },
+	{"darkyellow", LQC_BROWN    },
+	{"blue",       LQC_BLUE     },
+	{"darkblue",   LQC_DARKBLUE },
+	{"fuchsia",    LQC_FUCHSIA  },
+	{"purple",     LQC_PURPLE   },
+	{"turquoise",  LQC_TURQUOISE},
+	{"darkteal",   LQC_TURQUOISE},
+	{"teal",       LQC_TEAL     },
+	/* portage-utils historical colour names */
+	{"bryellow",   LQC_BROWN    },
+	{"cyan",       LQC_TURQUOISE},
+	{"dkblue",     LQC_DARKBLUE },
+	{"dkgreen",    LQC_GREEN    },
+	{"magenta",    LQC_FUCHSIA  }
+};
+static colourmap rgb_map[] = {
+	/* RGB ANSI codes */
+	{"0x000000",   LQC_BLACK    },
+	{"0x555555",   LQC_DARKGREY },
+	{"0xAA0000",   LQC_RED      },
+	{"0xFF5555",   LQC_DARKRED  },
+	{"0x00AA00",   LQC_GREEN    },
+	{"0x55FF55",   LQC_DARKGREEN},
+	{"0xAA5500",   LQC_YELLOW   },
+	{"0xFFFF55",   LQC_BROWN    },
+	{"0x0000AA",   LQC_BLUE     },
+	{"0x5555FF",   LQC_DARKBLUE },
+	{"0xAA00AA",   LQC_FUCHSIA  },
+	{"0xFF55FF",   LQC_PURPLE   },
+	{"0x00AAAA",   LQC_TURQUOISE},
+	{"0x55FFFF",   LQC_TEAL     },
+	{"0xAAAAAA",   LQC_WHITE    },
+	{"0xFFFFFF",   LQC_LIGHTGREY},
+	/* some terminals have darkyellow instead of brown */
+	{"0xAAAA00",   LQC_BROWN    }
+};
 
 void
 color_remap(void)
@@ -71,23 +140,12 @@ color_remap(void)
 	char *p;
 	unsigned int lineno = 0;
 
-	/* set q's defaults, if there's no colormap, or the file is empty,
-	 * or it doesn't match things, we at least got some defaults */
-	NORM     = _MAKE_COLOR("00", "00");
-	BLUE     = _MAKE_COLOR("36", "01");
-	BOLD     = _MAKE_COLOR("00", "01");
-	BRYELLOW = _MAKE_COLOR("01", "33");
-	CYAN     = _MAKE_COLOR("00", "36");
-	DKBLUE   = _MAKE_COLOR("34", "01");
-	DKGREEN  = _MAKE_COLOR("00", "32");
-	GREEN    = _MAKE_COLOR("32", "01");
-	MAGENTA  = _MAKE_COLOR("00", "35");
-	RED      = _MAKE_COLOR("31", "01");
-	WHITE    = _MAKE_COLOR("01", "38");
-	YELLOW   = _MAKE_COLOR("33", "01");
-
 	if ((fp = fopen(COLOR_MAP, "r")) == NULL)
 		return;
+
+	/* (re)set to defaults */
+	for (i = 0; i < ARRAY_SIZE(colour_pairs); i++)
+		*(colour_pairs[i].var) = colour_pairs[i].origval;
 
 	buf = NULL;
 	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
@@ -96,78 +154,63 @@ color_remap(void)
 		if ((p = strchr(buf, '#')) != NULL)
 			*p = '\0';
 
-		rmspace_len(buf, (size_t)linelen);
-
 		p = strchr(buf, '=');
 		if (p == NULL)
 			continue;
 
-		*p++ = 0; /* split the pair */
-		for (i = 0; i < ARRAY_SIZE(color_pairs); ++i) {
-			if (strcmp(buf, color_pairs[i].name) == 0) {
+		*p++ = '\0'; /* split the pair */
+		rmspace(buf);
+		rmspace(p);
+
+		for (i = 0; i < ARRAY_SIZE(colour_pairs); i++) {
+			int found = 0;
+			if (strcmp(buf, colour_pairs[i].name) == 0) {
 				if (strncmp(p, "0x", 2) == 0) {
-					warn("[%s=%s] RGB values in color map are not "
-							"supported on line %d of %s",
-							buf, p, lineno, COLOR_MAP);
+					size_t n;
+					for (n = 0; n < ARRAY_SIZE(rgb_map); n++) {
+						if (strcasecmp(rgb_map[n].name, p) == 0) {
+							found = 1;
+							*(colour_pairs[i].var) = rgb_map[n].value;
+							break;
+						}
+					}
+					if (found == 0)
+						warn("[%s=%s] arbitrary RGB values in color map "
+							 "are not supported on line %d of %s",
+							 buf, p, lineno, COLOR_MAP);
 				} else {
 					/* color=color format support */
 					size_t n;
-					int found = 0;
-					for (n = 0; n < ARRAY_SIZE(color_pairs); n++) {
-						if (strcmp(color_pairs[n].name, p) == 0) {
-							snprintf(color_pairs[i].value,
-									sizeof(color_pairs[i].value),
-									"%s", color_pairs[n].origval);
+					for (n = 0; n < ARRAY_SIZE(colour_map); n++) {
+						if (strcasecmp(colour_map[n].name, p) == 0) {
 							found = 1;
+							*(colour_pairs[i].var) = colour_map[n].value;
 							break;
 						}
 					}
 
-					if (!found)
-						snprintf(color_pairs[i].value,
-								sizeof(color_pairs[i].value), "\e[%s", p);
+					if (found == 0) {
+						snprintf(colour_pairs[i].tmpbuf,
+								 sizeof(colour_pairs[i].tmpbuf),
+								 "\e[%s", p);
+						*(colour_pairs[i].var) = colour_pairs[i].tmpbuf;
+					}
 				}
+
+				break;
 			}
 		}
 	}
 
 	free(buf);
 	fclose(fp);
-
-	for (i = 0; i < ARRAY_SIZE(color_pairs); ++i) {
-		/* unmapped: MAGENTA YELLOW */
-		if (strcmp(color_pairs[i].name, "white") == 0)
-			WHITE = color_pairs[i].value;
-		else if (strcmp(color_pairs[i].name, "green") == 0)
-			GREEN = color_pairs[i].value;
-		else if (strcmp(color_pairs[i].name, "darkgreen") == 0)
-			DKGREEN = color_pairs[i].value;
-		else if (strcmp(color_pairs[i].name, "red") == 0)
-			RED = color_pairs[i].value;
-		else if (strcmp(color_pairs[i].name, "blue") == 0)
-			DKBLUE = color_pairs[i].value;
-		else if (strcmp(color_pairs[i].name, "turquoise") == 0)
-			BLUE = color_pairs[i].value;
-		else if (strcmp(color_pairs[i].name, "yellow") == 0)
-			BRYELLOW = color_pairs[i].value;
-		else if (strcmp(color_pairs[i].name, "teal") == 0)
-			CYAN = color_pairs[i].value;
-	}
 }
 
 void
 color_clear(void)
 {
-	NORM     = "";
-	BLUE     = "";
-	BOLD     = "";
-	BRYELLOW = "";
-	CYAN     = "";
-	DKBLUE   = "";
-	DKGREEN  = "";
-	GREEN    = "";
-	MAGENTA  = "";
-	RED      = "";
-	WHITE    = "";
-	YELLOW   = "";
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(colour_pairs); i++)
+		*(colour_pairs[i].var) = "";
 }
