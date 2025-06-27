@@ -65,20 +65,20 @@ const char *RED;
 const char *WHITE;
 const char *YELLOW;
 
-/* all of the above need to be in the list below */
+/* all of the above need to be referenced in the list below */
 static colourpair colour_pairs[] = {
-	{"norm",      _MAKE_COLOUR2(0,0),   &NORM,      ""},
-	{"blue",      LQC_TEAL,             &BLUE,      ""},
-	{"bold",      _MAKE_COLOUR2(0,1),   &BOLD,      ""},
-	{"bryellow",  LQC_BROWN,            &BRYELLOW,  ""},
-	{"cyan",      LQC_TURQUOISE,        &CYAN,      ""},
-	{"dkblue",    LQC_DARKBLUE,         &DKBLUE,    ""},
-	{"dkgreen",   LQC_GREEN,            &DKGREEN,   ""},
-	{"green",     LQC_DARKGREEN,        &GREEN,     ""},
-	{"magenta",   LQC_FUCHSIA,          &MAGENTA,   ""},
-	{"red",       LQC_DARKRED,          &RED,       ""},
-	{"white",     _MAKE_COLOUR2(1,38),  &WHITE,     ""},
-	{"yellow",    LQC_BROWN,            &YELLOW,    ""}
+	{"norm",       _MAKE_COLOUR2(0,0),   &NORM,      ""},
+	{"teal",       LQC_TEAL,             &BLUE,      ""},
+	{"bold",       _MAKE_COLOUR2(0,1),   &BOLD,      ""},
+	{"brown",      LQC_BROWN,            &BRYELLOW,  ""},
+	{"turquoise",  LQC_TURQUOISE,        &CYAN,      ""},
+	{"darkblue",   LQC_DARKBLUE,         &DKBLUE,    ""},
+	{"green",      LQC_GREEN,            &DKGREEN,   ""},
+	{"darkgreen",  LQC_DARKGREEN,        &GREEN,     ""},
+	{"fuchsia",    LQC_FUCHSIA,          &MAGENTA,   ""},
+	{"red",        LQC_DARKRED,          &RED,       ""},
+	{"white",      _MAKE_COLOUR2(1,38),  &WHITE,     ""},
+	{"yellow",     LQC_BROWN,            &YELLOW,    ""}
 };
 
 static colourmap colour_map[] = {
@@ -161,6 +161,17 @@ color_remap(void)
 		*p++ = '\0'; /* split the pair */
 		rmspace(buf);
 		rmspace(p);
+
+		/* strip off quotes from values */
+		linelen = (int)strlen(p);
+		if (linelen > 1 &&
+			p[0] == p[linelen - 1] &&
+			(p[0] == '\'' ||
+			 p[0] == '"'))
+		{
+			p[linelen - 1] = '\0';
+			p++;
+		}
 
 		for (i = 0; i < ARRAY_SIZE(colour_pairs); i++) {
 			int found = 0;
