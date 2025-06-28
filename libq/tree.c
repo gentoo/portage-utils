@@ -9,7 +9,11 @@
 
 #include "main.h"
 
+#include <stdbool.h>
+#include <stddef.h>
 #include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <ctype.h>
@@ -1194,7 +1198,9 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 	} else if (ctx->treetype == TREE_BINPKGS) {
 		ret = tree_read_file_binpkg(pkg_ctx);
 	} else if (ctx->treetype == TREE_PACKAGES) {
-		ret = (tree_pkg_meta *)pkg_ctx->cat_ctx->ctx->pkgs;
+		// The meta should have been in pkg_ctx->meta
+		warn("TREE_PACHAGES pkg_ctx->meta is NULL");
+		ret = NULL;
 	}
 
 	pkg_ctx->meta = ret;
@@ -1454,22 +1460,265 @@ tree_close_pkg(tree_pkg_ctx *pkg_ctx)
 	free(pkg_ctx);
 }
 
+// The next are methods & types used internally by tree_foreach_packages
+typedef struct {
+	tree_pkg_ctx *pkgs_queue;
+	size_t pkgs_queue_len;
+	size_t pkgs_queue_cap;
+
+	tree_cat_ctx *cat_ctx;
+	// Kept alongside cat_cache->name in order to be able to free
+	char *cat_ctx_name;
+
+	// Input values
+	tree_ctx *ctx;
+        tree_pkg_cb *callback;
+	void *callback_data;
+} _tree_foreach_packages_state;
+
+static int
+_tree_foreach_packages_compare(const void *l, const void *r)
+{
+	const tree_pkg_ctx *a = l, *b = r;
+	switch (atom_compare(a->atom, b->atom)) {
+	case NEWER:
+		return -1;
+	case OLDER:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+static void
+_tree_foreach_packages_destroy_package(tree_pkg_ctx *p)
+{
+	if (p->atom) atom_implode(p->atom);
+	if (p->meta) free(p->meta);
+	memset(p, 0, sizeof(*p));
+}
+
+static tree_cat_ctx *
+_tree_foreach_packages_get_cat_ctx(_tree_foreach_packages_state *state,
+                                   const char *cat)
+{
+	// If the cached category doesn't exist or is a mismatch recreate it
+        if (state->cat_ctx == NULL || strcmp(cat, state->cat_ctx->name) != 0) {
+		if (state->cat_ctx != NULL)
+			tree_close_cat(state->cat_ctx);
+                if (state->cat_ctx_name != NULL)
+			free(state->cat_ctx_name);
+
+		// We use this after `cat` has been free'd by atom_implode
+		state->cat_ctx_name = xstrdup(cat);
+		state->cat_ctx = tree_open_cat(state->ctx, state->cat_ctx_name);
+
+                if (state->cat_ctx == NULL) {
+			free(state->cat_ctx_name);
+			state->cat_ctx_name = NULL;
+			// probably dir doesn't exist or something,
+			// generate a dummy cat
+			state->cat_ctx = tree_open_cat(state->ctx, ".");
+		}
+	}
+
+	return state->cat_ctx;
+}
+
+static int
+_tree_foreach_packages_do_callback(_tree_foreach_packages_state *state,
+                                   tree_pkg_ctx *p)
+{
+	const char *cat = p->atom->CATEGORY;
+	p->cat_ctx = _tree_foreach_packages_get_cat_ctx(state, cat);
+	int result = state->callback(p, state->callback_data);
+
+	_tree_foreach_packages_destroy_package(p);
+
+	return result;
+}
+
+// Check if the top-most package in state.queue has the same CAT and PN as p
+// If there aren't package in the queue this function returns true
+static bool
+_tree_foreach_packages_can_enqueue(_tree_foreach_packages_state *state,
+				   tree_pkg_ctx *p) {
+	if (state->pkgs_queue_len == 0) return true;
+
+        depend_atom *a = p->atom;
+	depend_atom *b = state->pkgs_queue[state->pkgs_queue_len - 1].atom;
+
+        if (a->CATEGORY == NULL || b->CATEGORY == NULL || strcmp(a->CATEGORY, b->CATEGORY) != 0)
+		return false;
+        if (a->PN == NULL || b->PN == NULL || strcmp(a->PN, b->PN) != 0)
+		return false;
+	return true;
+}
+
+static int
+_tree_foreach_packages_dequeue(_tree_foreach_packages_state *state)
+{
+	size_t i;
+	const char *cat;
+	int ret = 0;
+
+	if (state->pkgs_queue_len == 0) return ret;
+
+	if (state->pkgs_queue_len > 1)
+		qsort(state->pkgs_queue, state->pkgs_queue_len, sizeof(state->pkgs_queue[0]),
+		      _tree_foreach_packages_compare);
+
+        for (i = 0; i < state->pkgs_queue_len; ++i)
+		ret |= _tree_foreach_packages_do_callback(state, &state->pkgs_queue[i]);
+
+	state->pkgs_queue_len = 0;
+	return ret;
+}
+
+// When this returns true then:
+//   1) result->meta is VALID and, after use, will need to be free'd
+//   2) result->atom is VALID and, after use, will need to be atom_implode'd
+// If this function returns false then:
+//   1) result contains garbage data
+static bool
+_tree_foreach_packages_get_package(char **data, size_t *size, tree_pkg_ctx *result)
+{
+	// Used for the default SLOT, has to be of type char*
+	static char ZERO[] = "0";
+
+	memset(result, 0, sizeof(*result));
+	result->meta = xzalloc(sizeof(*result->meta));
+
+        do {
+		char *q, *c;
+
+		/* find next line */
+		c = NULL;
+		for (q = *data; *size > 0 && *q != '\n'; q++, -- *size)
+			if (c == NULL && *q == ':')
+				c = q;
+
+		if (*size == 0) break;
+
+		bool end_of_block = *data == q;
+		const char *line_start = *data;
+		*data = q + 1; /* hop over \n */
+		-- *size;
+
+                if (end_of_block) {
+			// If we didn't find a CPV line then clear the data and keep going
+                        if (result->atom == NULL) {
+				tree_pkg_meta *meta = result->meta;
+				memset(meta, 0, sizeof(*meta));
+				memset(result, 0, sizeof(*result));
+				result->meta = meta;
+
+				continue;
+			}
+
+			// Fill the package's data and return success
+			if (result->meta->Q_BUILDID)
+				result->atom->BUILDID = atoi(result->meta->Q_BUILDID);
+			result->slot = result->meta->Q_SLOT ? result->meta->Q_SLOT : ZERO;
+			result->name = result->atom->PF;
+			result->repo = result->meta->Q_repository;
+			result->fd = -2; /* intentional, meta has already been read */
+
+			return true;
+		}
+
+		/* skip invalid lines */
+		if (c == NULL || q - c < 3 || c[1] != ' ')
+			continue;
+
+		const char *key = line_start;
+		char *value = c + 2; /* hop over ": " */
+		/* NULL-terminate key and value */
+		*q = '\0';
+		*c = '\0';
+
+		if (strcmp(key, "CPV") == 0) {
+			if (result->atom != NULL) atom_implode(result->atom);
+			result->atom = atom_explode(value);
+
+#               define match_key(X) match_key2(X,X)
+#               define match_key2(X,Y) \
+			} else if (strcmp(key, #X) == 0) {		\
+				result->meta->Q_##Y = value;
+
+			match_key(DEFINED_PHASES);
+			match_key(DEPEND);
+			match_key2(DESC, DESCRIPTION);
+			match_key(EAPI);
+			match_key(IUSE);
+			match_key(KEYWORDS);
+			match_key(LICENSE);
+			match_key(MD5);
+			match_key(SHA1);
+			match_key(RDEPEND);
+			match_key(SLOT);
+			match_key(USE);
+			match_key(PDEPEND);
+			match_key2(REPO, repository);
+			match_key(SIZE);
+			match_key(BDEPEND);
+			match_key(IDEPEND);
+			match_key(PATH);
+			match_key2(BUILD_ID, BUILDID);
+
+#               undef match_key2
+#               undef match_key
+
+		}
+	} while (*size > 0);
+
+	_tree_foreach_packages_destroy_package(result);
+	return false; // Reached EOF, no package has been read
+}
+
+static void
+_tree_foreach_packages_enqueue(_tree_foreach_packages_state *state, tree_pkg_ctx *p)
+{
+	// Create space for the next package
+	if (state->pkgs_queue_len == state->pkgs_queue_cap) {
+		state->pkgs_queue_cap += 64;
+		state->pkgs_queue = xreallocarray(state->pkgs_queue, state->pkgs_queue_cap, sizeof(state->pkgs_queue[0]));
+	}
+
+	state->pkgs_queue[state->pkgs_queue_len ++] = *p;
+}
+
 static int
 tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 {
-	char *p;
-	char *q;
-	char *c;
-	char pkgname[_Q_PATH_MAX];
-	size_t len;
 	int ret = 0;
 	const depend_atom *query = ctx->query_atom;
+	size_t i;
 
-	/* reused for every entry */
-	tree_cat_ctx *cat = NULL;
-	tree_pkg_ctx pkg;
-	tree_pkg_meta meta;
-	depend_atom *atom = NULL;
+	// The Packages file, read into memory
+        char *data;
+	size_t size;
+
+	// The Packages file is sorted ascending by version. To stay
+	// consistent with the rest of the outputs we sort it
+	// descending. The package appear in CAT/PN order so it's
+	// only needed to sort per-pkg
+	bool use_queue = ctx->do_sort;
+
+	_tree_foreach_packages_state state;
+
+	state.ctx = ctx;
+	state.callback = callback;
+	state.callback_data = priv;
+	state.cat_ctx = NULL;
+	state.cat_ctx_name = NULL;
+
+	if (use_queue) {
+		state.pkgs_queue_cap = 64;
+		state.pkgs_queue = xcalloc(state.pkgs_queue_cap, sizeof(state.pkgs_queue[0]));
+		state.pkgs_queue_len = 0;
+	}
+
 
 	/* re-read the contents, this is necessary to make it possible to
 	 * call this function multiple times */
@@ -1486,143 +1735,42 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		close(fd);
 	}
 
-	p = ctx->cache.store;
-	len = strlen(ctx->cache.store);  /* sucks, need eat_file change */
+	data = ctx->cache.store;
+	size = strlen(ctx->cache.store);  /* sucks, need eat_file change */
 
-	memset(&meta, 0, sizeof(meta));
+        while (true) {
+		tree_pkg_ctx p;
+		bool found = _tree_foreach_packages_get_package(&data, &size, &p);
+		if (!found) break;
 
-	do {
-		/* find next line */
-		c = NULL;
-		for (q = p; len > 0 && *q != '\n'; q++, len--)
-			if (c == NULL && *q == ':')
-				c = q;
-
-		if (len == 0)
-			break;
-
-		/* empty line, end of a block */
-		if (p == q) {
-			/* make callback with populated atom */
-			if (atom != NULL) {
-				size_t pkgnamelen;
-
-				memset(&pkg, 0, sizeof(pkg));
-
-				/* store meta ptr in ctx->pkgs, such that get_pkg_meta
-				 * can grab it from there (for free) */
-				ctx->pkgs = (char *)&meta;
-
-				if (cat == NULL || strcmp(cat->name, atom->CATEGORY) != 0)
-				{
-					if (cat != NULL) {
-						atom_implode((depend_atom *)cat->pkg_ctxs);
-						cat->pkg_ctxs = NULL;
-						tree_close_cat(cat);
-					}
-					cat = tree_open_cat(ctx, atom->CATEGORY);
-					if (cat == NULL) {
-						/* probably dir doesn't exist or something,
-						 * generate a dummy cat */
-						cat = tree_open_cat(ctx, ".");
-					}
-					cat->pkg_ctxs = (tree_pkg_ctx **)atom;  /* for name */
-				}
-				if (meta.Q_BUILDID != NULL)
-					atom->BUILDID = atoi(meta.Q_BUILDID);
-				pkgnamelen = snprintf(pkgname, sizeof(pkgname),
-						"%s.tbz2", atom->PF);
-				pkgname[pkgnamelen - (sizeof(".tbz2") - 1)] = '\0';
-				pkg.name = pkgname;
-				pkg.slot = meta.Q_SLOT == NULL ? (char *)"0" : meta.Q_SLOT;
-				pkg.repo = ctx->repo;
-				pkg.atom = atom;
-				pkg.cat_ctx = cat;
-				pkg.fd = -2;  /* intentional, meta has already been read */
-
-				/* do call callback with pkg_atom (populate cat and pkg) */
-				ret |= callback(&pkg, priv);
-
-				ctx->pkgs = NULL;
-				if (atom != (depend_atom *)cat->pkg_ctxs)
-					atom_implode(atom);
-			}
-
-			memset(&meta, 0, sizeof(meta));
-			atom = NULL;
-			if (len > 0) {  /* hop over \n */
-				p++;
-				len--;
-			}
+                if (query != NULL && atom_compare(query, p.atom) != EQUAL) {
+			_tree_foreach_packages_destroy_package(&p);
 			continue;
 		}
 
-		/* skip invalid lines */
-		if (c == NULL || q - c < 3 || c[1] != ' ')
-			continue;
-
-		/* NULL-terminate p and c, file should end with \n */
-		*q = '\0';
-		*c = '\0';
-		c += 2;         /* hop over ": " */
-		if (len > 0) {  /* hop over \n */
-			q++;
-			len--;
+                if (!use_queue) {
+			_tree_foreach_packages_do_callback(&state, &p);
+                        continue;
 		}
 
-		if (strcmp(p, "REPO") == 0) { /* from global section in older files */
-			ctx->repo = c;
-		} else if (strcmp(p, "CPV") == 0) {
-			if (atom != NULL)
-				atom_implode(atom);
-			atom = atom_explode(c);
-			/* pretend this entry is bogus if it doesn't match query */
-			if (query != NULL && atom_compare(atom, query) != EQUAL) {
-				atom_implode(atom);
-				atom = NULL;
-			}
-#define match_key(X) match_key2(X,X)
-#define match_key2(X,Y) \
-		} else if (strcmp(p, #X) == 0) { \
-			meta.Q_##Y = c
-		match_key(DEFINED_PHASES);
-		match_key(DEPEND);
-		match_key2(DESC, DESCRIPTION);
-		match_key(EAPI);
-		match_key(IUSE);
-		match_key(KEYWORDS);
-		match_key(LICENSE);
-		match_key(MD5);
-		match_key(SHA1);
-		match_key(RDEPEND);
-		match_key(SLOT);
-		match_key(USE);
-		match_key(PDEPEND);
-		match_key2(REPO, repository);
-		match_key(SIZE);
-		match_key(BDEPEND);
-		match_key(IDEPEND);
-		match_key(PATH);
-		match_key2(BUILD_ID, BUILDID);
-#undef match_key
-#undef match_key2
-		}
+		// Not the same CAT/PN? => clear the queue
+		if (!_tree_foreach_packages_can_enqueue(&state, &p))
+			ret |= _tree_foreach_packages_dequeue(&state);
 
-		p = q;
-	} while (len > 0);
-
-	if (cat != NULL) {
-		atom_implode((depend_atom *)cat->pkg_ctxs);
-		cat->pkg_ctxs = NULL;
-		tree_close_cat(cat);
+		_tree_foreach_packages_enqueue(&state, &p);
 	}
 
-	if (atom != NULL)
-		atom_implode(atom);
+	// Clear out all pending packages, if they exist
+	ret |= _tree_foreach_packages_dequeue(&state);
+
+        if (use_queue)
+		free(state.pkgs_queue);
+	if (state.cat_ctx)
+		tree_close_cat(state.cat_ctx);
+	if (state.cat_ctx_name)
+		free(state.cat_ctx_name);
 
 	/* ensure we don't free a garbage pointer */
-	ctx->repo = NULL;
-	ctx->do_sort = false;
 	ctx->cache.store[0] = '\0';
 
 	return ret;
