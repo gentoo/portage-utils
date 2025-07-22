@@ -9,3 +9,11 @@ describe: |
     \fB-p\fR, lists all USE-flags with their descriptions (and enabled
     state prefixed with an asterisk when used with \fB-I\fR) per
     package.
+format: |
+    Print matched atom using given format string.
+    The default is \fI%[CATEGORY]%[PN]\fR or \fI%[CATEGORY]%[PF]\fR in
+    verbose mode (\fB-v\fR|\fB--verbose\fR).
+    If \fB-R\fR|\fB--repo\fR is set, \fI%[REPO]\fR will be appended.
+    Note that this only sets the format of the atom field, not the
+    entire output line.
+    For more information see \fBqatom\fR(1).

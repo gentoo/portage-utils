@@ -1,0 +1,16 @@
+format: |
+    Print matched atom using given format string.
+
+    Setting this option has the effect of also setting
+    \fB-p\fR|\fB--pretty\fR.
+
+    Note that this only sets the format of the atom field, not the
+    entire output line.
+
+    For more information see \fBqatom\fR(1).
+pretty: |
+    Print (pretty) atom instead of path.
+
+    The default print format is \fI%[CATEGORY]%[PN]\fR or
+    \fI%[CATEGORY]%[PF]\fR in verbose mode (\fB-v\fR|\fB--verbose\fR).
+    The format can be changed with \fB-F\fR|\fB--format\fR.
