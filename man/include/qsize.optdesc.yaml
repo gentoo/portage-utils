@@ -3,3 +3,9 @@ ignore: |
     expression, before calculating size.
 verbose: Ignored for compatibility with other qapplets.
 quiet: Ignored for compatibility with other qapplets.
+format: |
+    Print matched atom using given format string.
+    The default is \fI%[CATEGORY]%[PN]\fR or \fI%[CATEGORY]%[PF]\fR in
+    verbose mode (\fB-v\fR|\fB--verbose\fR).
+    Note that this only sets the format of the atom field, not the entire output line.
+    For more information see \fBqatom\fR(1).

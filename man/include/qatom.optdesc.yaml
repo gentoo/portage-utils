@@ -15,6 +15,8 @@ format: |
     .RS
     .IP CATEGORY
     The category of the package.
+    If this field is specified as \fI%[CATEGORY]\fR and it precedes a subsequent
+    field start symbol, the field will be suffixed with a \fI/\fR.
     .IP P
     The package name and version without the ebuild revision.
     .IP PN

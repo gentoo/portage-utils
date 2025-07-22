@@ -1,0 +1,5 @@
+format: |
+    Print matched atom using given format string.
+    The default is \fI%[CATEGORY]%[PF]\fR.
+    Note that this only sets the format of the atom field, not the entire output line.
+    For more information see \fBqatom\fR(1).
