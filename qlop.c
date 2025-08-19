@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2023 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -1369,14 +1369,14 @@ static int do_emerge_log(
  * or root */
 static array_t *probe_proc(array_t *atoms)
 {
-	struct dirent **procs;
+	struct dirent **procs = NULL;
 	int procslen;
 	int pi;
-	struct dirent **links;
+	struct dirent **links = NULL;
 	int linkslen;
 	int li;
 	struct dirent *d;
-	char npath[_Q_PATH_MAX * 2];
+	char npath[(_Q_PATH_MAX * 2) + 16];
 	char rpath[_Q_PATH_MAX];
 	const char *subdir = NULL;
 	const char *pid;

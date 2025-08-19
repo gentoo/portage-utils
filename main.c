@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2024 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -428,7 +428,7 @@ static void
 read_portage_file(const char *file, enum portage_file_type type, void *data)
 {
 	FILE *fp;
-	struct dirent **dents;
+	struct dirent **dents = NULL;
 	int dentslen;
 	char *s;
 	char *p;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2011-2016 Mike Frysinger  - <vapier@gentoo.org>
@@ -57,6 +57,7 @@ int copy_file_fd(int fd_src, int fd_dst)
 		if (offset == (off_t)len)
 			return 0;
 #endif
+		(void)ret;  /* ignore ret, we fall back */
 
 		/* fall back to read/write, rewind the fd */
 		lseek(fd_src, 0, SEEK_SET);

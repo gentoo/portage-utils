@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -299,7 +299,7 @@ xpak_create(
 		int verbose)
 {
 	FILE *findex, *fdata, *fout;
-	struct dirent **dir;
+	struct dirent **dir = NULL;
 	int i, fidx, numfiles;
 	struct stat st;
 	char path[_Q_PATH_MAX];
@@ -342,7 +342,10 @@ xpak_create(
 		if (S_ISDIR(st.st_mode)) {
 			if ((numfiles =
 						scandir(argv[i], &dir, filter_hidden, alphasort)) < 0)
+			{
 				warn("Directory '%s' is empty; skipping", argv[i]);
+				continue;
+			}
 			for (fidx = 0; fidx < numfiles; ++fidx) {
 				int ret = snprintf(path, sizeof(path), "%s/%s",
 						argv[i], dir[fidx]->d_name);

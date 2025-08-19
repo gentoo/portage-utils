@@ -327,8 +327,14 @@ tree_next_cat(tree_ctx *ctx)
 							(int (*)(const void *, const void *))alphasort);
 				free(cats);
 			} else {
-				ctx->cat_cnt = scandirat(ctx->tree_fd,
-						".", &ctx->cat_de, tree_filter_cat, alphasort);
+				int sdret = scandirat(ctx->tree_fd, ".",
+									  &ctx->cat_de,
+									  tree_filter_cat, alphasort);
+				/* CID 548426 */
+				if (sdret < 0)
+					ctx->cat_cnt = 0;
+				else
+					ctx->cat_cnt = (size_t)sdret;
 			}
 			ctx->cat_cur = 0;
 		}
