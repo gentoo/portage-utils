@@ -405,12 +405,6 @@ tree_filter_pkg(const struct dirent *de)
 	int i;
 	bool founddash = false;
 
-#ifdef DT_UNKNOWN
-	/* pkg must be a file */
-	if (de->d_type != DT_REG)
-		return 0;
-#endif
-
 	/* PMS 3.1.2 */
 	for (i = 0; de->d_name[i] != '\0'; i++) {
 		switch (de->d_name[i]) {
