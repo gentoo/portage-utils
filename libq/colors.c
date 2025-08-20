@@ -140,12 +140,12 @@ color_remap(void)
 	char *p;
 	unsigned int lineno = 0;
 
-	if ((fp = fopen(COLOR_MAP, "r")) == NULL)
-		return;
-
 	/* (re)set to defaults */
 	for (i = 0; i < ARRAY_SIZE(colour_pairs); i++)
 		*(colour_pairs[i].var) = colour_pairs[i].origval;
+
+	if ((fp = fopen(COLOR_MAP, "r")) == NULL)
+		return;
 
 	buf = NULL;
 	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {

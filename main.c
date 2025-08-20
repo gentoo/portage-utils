@@ -787,7 +787,7 @@ env_vars vars_to_read[] = {
 	_Q_EVS(STR,  ARCH,                portarch,            "")
 	_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      "/etc")
 	_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
-	_Q_EVB(BOOL, NOCOLOR,             nocolor,             0)
+	_Q_EVB(BOOL, NOCOLOR,             nocolor,             false)
 	_Q_EVT(ISET, FEATURES,            features,            NULL)
 	_Q_EVT(ISET, USE,                 ev_use,              NULL)
 	_Q_EVS(STR,  EPREFIX,             eprefix,             CONFIG_EPREFIX)
@@ -1261,21 +1261,21 @@ int main(int argc, char **argv)
 
 	/* disable colours when not writing to a terminal */
 	twidth = 0;
-	nocolor = 0;
+	nocolor = false;
 	if (fstat(fileno(stdout), &st) != -1) {
 		if (!isatty(fileno(stdout))) {
-			nocolor = 1;
+			nocolor = true;
 		} else {
 			if ((getenv("TERM") == NULL) ||
 					(strcmp(getenv("TERM"), "dumb") == 0))
-				nocolor = 1;
+				nocolor = true;
 			if (ioctl(0, TIOCGWINSZ, &winsz) == 0 && winsz.ws_col > 0)
 				twidth = (int)winsz.ws_col;
 		}
 	} else {
-		nocolor = 1;
+		nocolor = true;
 	}
-	if (nocolor == 1)
+	if (nocolor)
 		set_portage_env_var(&vars_to_read[7], "true", "terminal"); /* NOCOLOR */
 
 	/* We can use getopt here, but only in POSIX mode (which stops at
@@ -1319,10 +1319,6 @@ int main(int argc, char **argv)
 	/* same for env-based fallback */
 	if (getenv("PORTAGE_QUIET") != NULL)
 		setup_quiet();
-
-	/* ensure color strings are initialised, early code here may use
-	 * e.g. warn which uses them */
-	color_clear();
 
 	initialize_portage_env();
 	optind = 0;
