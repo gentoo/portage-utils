@@ -292,6 +292,22 @@ qgpkg_make(tree_pkg_ctx *pkg)
 	}
 	fchmod(mfd, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
+	snprintf(buf, sizeof(buf), "%s/gpkg-1", tmpdir);
+	fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC);
+	if (mfd < 0) {
+		close(mfd);
+		rm_rf(tmpdir);
+		printf("%sFAIL%s\n", RED, NORM);
+		return -5;
+	}
+	fchmod(fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	/* contractually we don't have to put anything in here, but we drop
+	 * our signature so it can be traced back to us */
+	len = snprintf(ename, sizeof(ename), "portage-utils-%s", VERSION);
+	write(fd, ename, len);
+	close(fd);
+	write_hashes(buf, "DATA", mfd);
+
 	/* we first 1. create metadata (vdb), 2. image (actual data) and
 	 * then 3. the container gpkg image */
 
@@ -388,19 +404,23 @@ qgpkg_make(tree_pkg_ctx *pkg)
 	archive_write_set_format_ustar(a);  /* as required by GLEP-78 */
 	archive_write_open_filename(a, gpkg);
 	/* 3.1 the package format identifier file gpkg-1 */
-	entry = archive_entry_new();
-	snprintf(ename, sizeof(ename), "%s/gpkg-1", atom->PF);
-	archive_entry_set_pathname(entry, ename);
-	/* contractually we don't have to put anything in here, but we drop
-	 * our signature in here */
-	len = snprintf(buf, sizeof(buf), "portage-utils-%s", VERSION);
-	archive_entry_set_size(entry, len);
-	archive_entry_set_filetype(entry, AE_IFREG);
-	archive_entry_set_mtime(entry, time(NULL), 0);
-	archive_entry_set_perm(entry, 0644);
-	archive_write_header(a, entry);
-	archive_write_data(a, buf, len);
-	archive_entry_free(entry);
+	snprintf(buf, sizeof(buf), "%s/gpkg-1", tmpdir);
+	if ((fd = open(buf, O_RDONLY)) >= 0 &&
+		fstat(fd, &st) >= 0)
+	{
+		entry = archive_entry_new();
+		snprintf(ename, sizeof(ename), "%s/gpkg-1", atom->PF);
+		archive_entry_set_pathname(entry, ename);
+		archive_entry_set_size(entry, st.st_size);
+		archive_entry_set_mtime(entry, st.st_mtime, 0);
+		archive_entry_set_filetype(entry, AE_IFREG);
+		archive_entry_set_perm(entry, 0644);
+		archive_write_header(a, entry);
+		while ((len = read(fd, buf, sizeof(buf))) > 0)
+			archive_write_data(a, buf, len);
+		close(fd);
+		archive_entry_free(entry);
+	}
 	/* 3.2 the metadata archive metadata.tar${comp} */
 	snprintf(buf, sizeof(buf), "%s/metadata.tar%s", tmpdir, filter);
 	/* this must succeed, no? */
