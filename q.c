@@ -365,11 +365,14 @@ int q_main(int argc, char **argv)
 						strncmp(lastmfile, mfile, s - mfile + 1) != 0 ||
 						lastcbeg != cbeg || lastcend != cend)
 				{
-					*s = '\0';
+					char mfileloc[_Q_PATH_MAX];
+
+					snprintf(mfileloc, sizeof(mfileloc), "%s%.*s",
+							 portroot, (int)(s - mfile), mfile);
+
 					if (buf != NULL)
 						*buf = '\0';
-					eat_file(mfile, &buf, &buflen);
-					*s = ':';
+					eat_file(mfileloc, &buf, &buflen);
 
 					line = 0;
 					for (l = buf; (s = strchr(l, '\n')) != NULL; l = s + 1)
@@ -390,7 +393,7 @@ int q_main(int argc, char **argv)
 						atom));
 
 			if (verbose == 1) {
-				printf(" [%s]\n", (char *)array_get_elem(files, n));
+				printf(" [%s%s]\n", portroot, (char *)array_get_elem(files, n));
 			} else {
 				printf("\n");
 			}
