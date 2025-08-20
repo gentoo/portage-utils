@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2024 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd	       - <solar@gentoo.org>
@@ -18,6 +18,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#ifdef HAVE_LIBARCHIVE
+# include <archive.h>
+# include <archive_entry.h>
+#endif
+
 #include "atom.h"
 #include "basename.h"
 #include "contents.h"
@@ -32,10 +37,11 @@
 #include "xmkdir.h"
 #include "xpak.h"
 
-#define QPKG_FLAGS "cEpP:" COMMON_FLAGS
+#define QPKG_FLAGS "cEgpP:" COMMON_FLAGS
 static struct option const qpkg_long_opts[] = {
 	{"clean",    no_argument, NULL, 'c'},
 	{"eclean",   no_argument, NULL, 'E'},
+	{"gpkg",     no_argument, NULL, 'g'},
 	{"pretend",  no_argument, NULL, 'p'},
 	{"pkgdir",    a_argument, NULL, 'P'},
 	COMMON_LONG_OPTS
@@ -43,6 +49,7 @@ static struct option const qpkg_long_opts[] = {
 static const char * const qpkg_opts_help[] = {
 	"clean pkgdir of files that are not installed",
 	"clean pkgdir of files that are not in the tree anymore",
+	"build gpkg instead of tbz2 package",
 	"pretend only",
 	"alternate package directory",
 	COMMON_OPTS_HELP
@@ -166,6 +173,329 @@ check_pkg_install_mask(char *name)
 	}
 	freeargv(iargc, iargv);
 	return ret;
+}
+
+/* this is a simplified version of write_hadhes from qmanifest, maybe
+ * one day consolidate the two? */
+static void
+write_hashes
+(
+	const char *fname,
+	const char *type,
+	int         fd
+)
+{
+	size_t flen = 0;
+	char sha512[(SHA512_DIGEST_SIZE * 2) + 1];
+	char blak2b[(BLAKE2B_OUTBYTES * 2) + 1];
+	char data[8192];
+	size_t len;
+	const char *name;
+
+	name = strrchr(fname, '/');
+	if (name != NULL)
+		name++;
+	else
+		name = "";
+
+	/* this is HASH_DEFAULT, but we still have to set the right buffers,
+	 * so do it statically */
+	hash_compute_file(fname, NULL, sha512, blak2b, &flen,
+					  HASH_SHA512 | HASH_BLAKE2B);
+
+	len = snprintf(data, sizeof(data), "%s %s %zd", type, name, flen);
+	len += snprintf(data + len, sizeof(data) - len,
+			" SHA512 %s", sha512);
+	len += snprintf(data + len, sizeof(data) - len,
+			" BLAKE2B %s", blak2b);
+	len += snprintf(data + len, sizeof(data) - len, "\n");
+
+	write(fd, data, len);
+}
+
+static char *
+qgpkg_set_compression(struct archive *a)
+{
+	/* we compress the metadata and image using zstd as the compression
+	 * ratios are close, but the decompression speed is a lot faster,
+	 * when unavailable, we go down to xz, bzip2, gzip, lz4 and finally
+	 * none */
+	if (archive_write_add_filter_zstd(a) == ARCHIVE_OK)
+		return ".zst";
+	if (archive_write_add_filter_xz(a) == ARCHIVE_OK)
+		return ".xz";
+	if (archive_write_add_filter_bzip2(a) == ARCHIVE_OK)
+		return ".bz2";
+	if (archive_write_add_filter_gzip(a) == ARCHIVE_OK)
+		return ".gz";
+	if (archive_write_add_filter_lz4(a) == ARCHIVE_OK)
+		return ".lz4";
+
+	/* none, no filtering */
+	return "";
+}
+
+static int
+qgpkg_make(tree_pkg_ctx *pkg)
+{
+#ifdef HAVE_LIBARCHIVE
+	struct archive *a;
+	struct archive_entry *entry;
+	struct stat st;
+	struct dirent **files = NULL;
+	char tmpdir[BUFSIZE];
+	char gpkg[BUFSIZE + 32];
+	char buf[BUFSIZE * 4];
+	char ename[BUFSIZE];
+	char *filter;
+	char *line;
+	char *savep;
+	int i;
+	int cnt;
+	int dirfd;
+	int fd;
+	int mfd;
+	mode_t mask;
+	depend_atom *atom = tree_get_atom(pkg, false);
+	size_t len;
+
+	if (pretend) {
+		printf(" %s-%s %s:\n",
+				GREEN, NORM, atom_format("%[CATEGORY]%[PF]", atom));
+		return 0;
+	}
+
+	line = tree_pkg_meta_get(pkg, CONTENTS);
+	if (line == NULL)
+		return -1;
+
+	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", qpkg_bindir);
+	mask = umask(0077);
+	i = mkstemp(tmpdir);
+	umask(mask);
+	if (i == -1)
+		return -2;
+	close(i);
+	unlink(tmpdir);
+	if (mkdir(tmpdir, 0750))
+		return -3;
+
+	printf(" %s-%s %s: ", GREEN, NORM, atom_format("%[CATEGORY]%[PF]", atom));
+	fflush(stdout);
+
+	snprintf(buf, sizeof(buf), "%s/Manifest", tmpdir);
+	mfd = open(buf, O_WRONLY | O_CREAT | O_TRUNC);
+	if (mfd < 0) {
+		rmdir(tmpdir);
+		printf("%sFAIL%s\n", RED, NORM);
+		return -4;
+	}
+
+	/* we first 1. create metadata (vdb), 2. image (actual data) and
+	 * then 3. the container gpkg image */
+
+	/* 1. VDB into metadata.tar.zst */
+	a = archive_write_new();
+	archive_write_set_format_ustar(a);  /* as required by GLEP-78 */
+	filter = qgpkg_set_compression(a);
+	snprintf(gpkg, sizeof(gpkg), "%s/metadata.tar%s", tmpdir, filter);
+	archive_write_open_filename(a, gpkg);
+
+	snprintf(buf, sizeof(buf), "%s%s/%s/%s",
+			portroot, portvdb, atom->CATEGORY, atom->PF);
+	cnt = 0;
+	if ((dirfd = open(buf, O_RDONLY)) >= 0)
+		cnt = scandirat(dirfd, ".", &files, filter_self_parent, alphasort);
+	for (i = 0; i < cnt; i++) {
+		if ((fd = openat(dirfd, files[i]->d_name, O_RDONLY)) < 0)
+			continue;
+		if (fstat(fd, &st) < 0 || !(st.st_mode & S_IFREG)) {
+			close(fd);
+			continue;
+		}
+
+		entry = archive_entry_new();
+		snprintf(buf, sizeof(buf), "metadata/%s", files[i]->d_name);
+		archive_entry_set_pathname(entry, buf);
+		archive_entry_set_size(entry, st.st_size);
+		archive_entry_set_mtime(entry, st.st_mtime, 0);
+		archive_entry_set_filetype(entry, AE_IFREG);
+		archive_entry_set_perm(entry, 0644);
+		archive_write_header(a, entry);
+		while ((len = read(fd, buf, sizeof(buf))) > 0)
+			archive_write_data(a, buf, len);
+		close(fd);
+		archive_entry_free(entry);
+	}
+	archive_write_close(a);
+	archive_write_free(a);
+	scandir_free(files, cnt);
+	if (dirfd >= 0)
+		close(dirfd);
+	write_hashes(gpkg, "DATA", mfd);
+
+	/* 2. the actual files into image.tar.zst */
+	a = archive_write_new();
+	archive_write_set_format_ustar(a);  /* as required by GLEP-78 */
+	filter = qgpkg_set_compression(a);
+	snprintf(gpkg, sizeof(gpkg), "%s/image.tar%s", tmpdir, filter);
+	archive_write_open_filename(a, gpkg);
+	for (; (line = strtok_r(line, "\n", &savep)) != NULL; line = NULL) {
+		contents_entry *e;
+		e = contents_parse_line(line);
+		if (!e || e->type == CONTENTS_DIR)
+			continue;
+		if (check_pkg_install_mask(e->name) != 0)
+			continue;
+		if (e->type == CONTENTS_OBJ && verbose) {
+			char *hash = hash_file(e->name, HASH_MD5);
+			if (hash != NULL) {
+				if (strcmp(e->digest, hash) != 0)
+					warn("MD5: mismatch expected %s got %s for %s",
+							e->digest, hash, e->name);
+			}
+		}
+
+		if ((fd = open(e->name, O_RDONLY)) < 0)
+			continue;
+		if (fstat(fd, &st) < 0) {
+			close(fd);
+			continue;
+		}
+
+		entry = archive_entry_new();
+		snprintf(buf, sizeof(buf), "image/%s", e->name + 1);
+		archive_entry_set_pathname(entry, buf);
+		archive_entry_set_size(entry, st.st_size);
+		archive_entry_set_mtime(entry, st.st_mtime, 0);
+		archive_entry_set_filetype(entry, st.st_mode & S_IFMT);
+		archive_entry_set_perm(entry, st.st_mode & ~S_IFMT);
+		archive_write_header(a, entry);
+		while ((len = read(fd, buf, sizeof(buf))) > 0)
+			archive_write_data(a, buf, len);
+		close(fd);
+		archive_entry_free(entry);
+	}
+	archive_write_close(a);
+	archive_write_free(a);
+	write_hashes(gpkg, "DATA", mfd);
+
+	/* 3. the final gpkg file (to be renamed properly when it all
+	 * succeeds */
+	snprintf(gpkg, sizeof(gpkg), "%s/bin.gpkg.tar", tmpdir);
+	a = archive_write_new();
+	archive_write_set_format_ustar(a);  /* as required by GLEP-78 */
+	archive_write_open_filename(a, gpkg);
+	/* 3.1 the package format identifier file gpkg-1 */
+	entry = archive_entry_new();
+	snprintf(ename, sizeof(ename), "%s/gpkg-1", atom->PF);
+	archive_entry_set_pathname(entry, ename);
+	/* contractually we don't have to put anything in here, but we drop
+	 * our signature in here */
+	len = snprintf(buf, sizeof(buf), "portage-utils-%s", VERSION);
+	archive_entry_set_size(entry, len);
+	archive_entry_set_filetype(entry, AE_IFREG);
+	archive_entry_set_mtime(entry, time(NULL), 0);
+	archive_entry_set_perm(entry, 0644);
+	archive_write_header(a, entry);
+	archive_write_data(a, buf, len);
+	archive_entry_free(entry);
+	/* 3.2 the metadata archive metadata.tar${comp} */
+	snprintf(buf, sizeof(buf), "%s/metadata.tar%s", tmpdir, filter);
+	/* this must succeed, no? */
+	if ((fd = open(buf, O_RDONLY)) >= 0 &&
+		fstat(fd, &st) >= 0)
+	{
+		entry = archive_entry_new();
+		snprintf(ename, sizeof(ename), "%s/metadata.tar%s", atom->PF, filter);
+		archive_entry_set_pathname(entry, ename);
+		archive_entry_set_size(entry, st.st_size);
+		archive_entry_set_mtime(entry, st.st_mtime, 0);
+		archive_entry_set_filetype(entry, AE_IFREG);
+		archive_entry_set_perm(entry, 0644);
+		archive_write_header(a, entry);
+		while ((len = read(fd, buf, sizeof(buf))) > 0)
+			archive_write_data(a, buf, len);
+		close(fd);
+		archive_entry_free(entry);
+	}
+	unlink(buf);
+	/* 3.3 TODO: with gpgme write metadata signature */
+	/* 3.4 the filesystem image archive image.tar${comp} */
+	snprintf(buf, sizeof(buf), "%s/image.tar%s", tmpdir, filter);
+	/* this must succeed, no? */
+	if ((fd = open(buf, O_RDONLY)) >= 0 &&
+		fstat(fd, &st) >= 0)
+	{
+		entry = archive_entry_new();
+		snprintf(ename, sizeof(ename), "%s/image.tar%s", atom->PF, filter);
+		archive_entry_set_pathname(entry, ename);
+		archive_entry_set_size(entry, st.st_size);
+		archive_entry_set_mtime(entry, st.st_mtime, 0);
+		archive_entry_set_filetype(entry, AE_IFREG);
+		archive_entry_set_perm(entry, 0644);
+		archive_write_header(a, entry);
+		while ((len = read(fd, buf, sizeof(buf))) > 0)
+			archive_write_data(a, buf, len);
+		close(fd);
+		archive_entry_free(entry);
+	}
+	unlink(buf);
+	/* 3.5 TODO: with gpgme write image signature */
+	/* 3.6 the package Manifest data file Manifest (clear-signed when
+	 * gpgme) */
+	close(mfd);
+	snprintf(buf, sizeof(buf), "%s/Manifest", tmpdir);
+	if ((fd = open(buf, O_RDONLY)) >= 0 &&
+		fstat(fd, &st) >= 0)
+	{
+		entry = archive_entry_new();
+		snprintf(ename, sizeof(ename), "%s/Manifest", atom->PF);
+		archive_entry_set_pathname(entry, ename);
+		archive_entry_set_size(entry, st.st_size);
+		archive_entry_set_mtime(entry, st.st_mtime, 0);
+		archive_entry_set_filetype(entry, AE_IFREG);
+		archive_entry_set_perm(entry, 0644);
+		archive_write_header(a, entry);
+		while ((len = read(fd, buf, sizeof(buf))) > 0)
+			archive_write_data(a, buf, len);
+		close(fd);
+		archive_entry_free(entry);
+	}
+	unlink(buf);
+	archive_write_close(a);
+	archive_write_free(a);
+
+	/* create dirs, if necessary */
+	snprintf(buf, sizeof(buf), "%s/%s", qpkg_bindir, atom->CATEGORY);
+	mkdir_p(buf, 0755);
+
+	/* at this point we use PF as package name (and directory above,
+	 * which should match according to GLEP-78), however, Portage seems
+	 * to use <PF>-1 or something, which is unspecified at this point
+	 * what it means, or how to use it */
+	snprintf(buf, sizeof(buf), "%s/%s/%s.gpkg.tar",
+			qpkg_bindir, atom->CATEGORY, atom->PF);
+	if (rename(gpkg, buf)) {
+		warnp("could not move '%s' to '%s'", gpkg, buf);
+		return 1;
+	}
+
+	rmdir(tmpdir);
+
+	if (stat(buf, &st) == -1) {
+		warnp("could not stat '%s': %s", buf, strerror(errno));
+		return 1;
+	}
+
+	printf("%s%s%s KiB\n",
+			RED, make_human_readable_str(st.st_size, 1, KILOBYTE), NORM);
+
+	return 0;
+#else
+	warnp("gpkg support not compiled in");
+	return 1;
+#endif
 }
 
 static int
@@ -308,6 +638,17 @@ qpkg_make(tree_pkg_ctx *pkg)
 }
 
 static int
+qgpkg_cb(tree_pkg_ctx *pkg, void *priv)
+{
+	size_t *pkgs_made = priv;
+
+	if (qgpkg_make(pkg) == 0)
+		(*pkgs_made)++;
+
+	return 0;
+}
+
+static int
 qpkg_cb(tree_pkg_ctx *pkg, void *priv)
 {
 	size_t *pkgs_made = priv;
@@ -321,7 +662,9 @@ qpkg_cb(tree_pkg_ctx *pkg, void *priv)
 int qpkg_main(int argc, char **argv)
 {
 	tree_ctx *ctx;
-	size_t s, pkgs_made;
+	tree_pkg_cb *cb_func = qpkg_cb;
+	size_t s;
+	size_t pkgs_made;
 	int i;
 	struct stat st;
 	depend_atom *atom;
@@ -334,6 +677,7 @@ int qpkg_main(int argc, char **argv)
 		switch (i) {
 		case 'E': eclean = qclean = 1; break;
 		case 'c': qclean = 1; break;
+		case 'g': cb_func = qgpkg_cb; break;
 		case 'p': pretend = 1; break;
 		case 'P':
 			restrict_chmod = 1;
@@ -384,7 +728,7 @@ int qpkg_main(int argc, char **argv)
 	 * completion would do) */
 	pkgs_made = 0;
 	s = strlen(portvdb);
-	for (i = optind; i < argc; ++i) {
+	for (i = optind; i < argc; i++) {
 		size_t asize = strlen(argv[i]);
 		if (asize == 0) {
 			argv[i] = NULL;
@@ -410,13 +754,13 @@ int qpkg_main(int argc, char **argv)
 	}
 
 	/* now try to run through vdb and locate matches for user inputs */
-	for (i = optind; i < argc; ++i) {
+	for (i = optind; i < argc; i++) {
 		if (argv[i] == NULL)
 			continue;
 		if (strcmp(argv[i], "world") == 0) {
 			/* this is a crude hack, we include all packages for this,
 			 * which isn't exactly @world, but all its deps too */
-			tree_foreach_pkg_fast(ctx, qpkg_cb, &pkgs_made, NULL);
+			tree_foreach_pkg_fast(ctx, cb_func, &pkgs_made, NULL);
 			break;  /* no point in continuing since we did everything */
 		}
 		atom = atom_explode(argv[i]);
@@ -424,7 +768,7 @@ int qpkg_main(int argc, char **argv)
 			continue;
 
 		s = pkgs_made;
-		tree_foreach_pkg_fast(ctx, qpkg_cb, &pkgs_made, atom);
+		tree_foreach_pkg_fast(ctx, cb_func, &pkgs_made, atom);
 		if (s == pkgs_made)
 			warn("no match for '%s'", argv[i]);
 		atom_implode(atom);

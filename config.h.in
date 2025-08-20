@@ -677,6 +677,9 @@
 /* Define to 1 if you have the 'gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
 
+/* Define if you have gpgme */
+#undef HAVE_GPGME
+
 /* Define if you have the 'intmax_t' type in <stdint.h> or <inttypes.h>. */
 #undef HAVE_INTMAX_T
 
@@ -704,6 +707,9 @@
 
 /* Define if the ldexp function is available in libc. */
 #undef HAVE_LDEXP_IN_LIBC
+
+/* Define if you have libarchive */
+#undef HAVE_LIBARCHIVE
 
 /* Define to 1 if you have the <libgen.h> header file. */
 #undef HAVE_LIBGEN_H

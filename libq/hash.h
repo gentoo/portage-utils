@@ -13,6 +13,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#ifdef HAVE_BLAKE2B
+# include <blake2.h>
+#endif
+
+#include "md5.h"
+#include "sha1.h"
+#include "sha256.h"
+#include "sha512.h"
+
 enum hash_impls {
 	HASH_MD5       = 1<<0,
 	HASH_SHA1      = 1<<1,

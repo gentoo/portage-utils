@@ -78,6 +78,7 @@ q_CPPFLAGS = \
 	$(OPENMP_CFLAGS) \
 	$(LIBBL2_CFLAGS) \
 	$(LIBZ_CFLAGS) \
+	$(LIBARCHIVE_CFLAGS) \
 	$(NULL)
 q_LDADD = \
 	$(top_builddir)/libq/libq.a \
@@ -86,6 +87,7 @@ q_LDADD = \
 	$(LIBBL2_LIBS) \
 	$(LIBZ_LIBS) \
 	$(GPGME_LIBS) \
+	$(LIBARCHIVE_LIBS) \
 	$(LIB_CRYPTO) \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS) \

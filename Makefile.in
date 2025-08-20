@@ -292,7 +292,8 @@ q_DEPENDENCIES = $(top_builddir)/libq/libq.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -1318,6 +1319,8 @@ LC_MONETARY_IMPLEMENTED = @LC_MONETARY_IMPLEMENTED@
 LC_NUMERIC_IMPLEMENTED = @LC_NUMERIC_IMPLEMENTED@
 LC_TIME_IMPLEMENTED = @LC_TIME_IMPLEMENTED@
 LDFLAGS = @LDFLAGS@
+LIBARCHIVE_CFLAGS = @LIBARCHIVE_CFLAGS@
+LIBARCHIVE_LIBS = @LIBARCHIVE_LIBS@
 LIBBL2_CFLAGS = @LIBBL2_CFLAGS@
 LIBBL2_LIBS = @LIBBL2_LIBS@
 LIBGNU_LIBDEPS = @LIBGNU_LIBDEPS@
@@ -1804,7 +1807,8 @@ q_SOURCES = main.c q.c qatom.c qcheck.c qdepends.c qfile.c qgrep.c \
 	$(am__append_1)
 q_CPPFLAGS = -I$(top_srcdir)/libq -I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib $(OPENMP_CFLAGS) \
-	$(LIBBL2_CFLAGS) $(LIBZ_CFLAGS) $(NULL) $(am__append_2)
+	$(LIBBL2_CFLAGS) $(LIBZ_CFLAGS) $(LIBARCHIVE_CFLAGS) $(NULL) \
+	$(am__append_2)
 q_LDADD = \
 	$(top_builddir)/libq/libq.a \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
@@ -1812,6 +1816,7 @@ q_LDADD = \
 	$(LIBBL2_LIBS) \
 	$(LIBZ_LIBS) \
 	$(GPGME_LIBS) \
+	$(LIBARCHIVE_LIBS) \
 	$(LIB_CRYPTO) \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS) \

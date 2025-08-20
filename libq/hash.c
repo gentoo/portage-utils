@@ -12,15 +12,6 @@
 
 #include "main.h"
 
-#ifdef HAVE_BLAKE2B
-# include <blake2.h>
-#endif
-
-#include "md5.h"
-#include "sha1.h"
-#include "sha256.h"
-#include "sha512.h"
-
 #include "hash.h"
 
 void

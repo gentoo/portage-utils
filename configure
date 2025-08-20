@@ -655,10 +655,12 @@ LTLIBOBJS
 LIBOBJS
 QMANIFEST_ENABLED_FALSE
 QMANIFEST_ENABLED_TRUE
-GPGME_LIBS
-GPGME_CFLAGS
 LIBZ_LIBS
 LIBZ_CFLAGS
+LIBARCHIVE_LIBS
+LIBARCHIVE_CFLAGS
+GPGME_LIBS
+GPGME_CFLAGS
 LIBBL2_LIBS
 LIBBL2_CFLAGS
 PKG_CONFIG_LIBDIR
@@ -2158,10 +2160,12 @@ PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 LIBBL2_CFLAGS
 LIBBL2_LIBS
-LIBZ_CFLAGS
-LIBZ_LIBS
 GPGME_CFLAGS
-GPGME_LIBS'
+GPGME_LIBS
+LIBARCHIVE_CFLAGS
+LIBARCHIVE_LIBS
+LIBZ_CFLAGS
+LIBZ_LIBS'
 
 
 # Initialize some variables set by options.
@@ -2838,11 +2842,15 @@ Some influential environment variables:
   LIBBL2_CFLAGS
               C compiler flags for LIBBL2, overriding pkg-config
   LIBBL2_LIBS linker flags for LIBBL2, overriding pkg-config
-  LIBZ_CFLAGS C compiler flags for LIBZ, overriding pkg-config
-  LIBZ_LIBS   linker flags for LIBZ, overriding pkg-config
   GPGME_CFLAGS
               C compiler flags for GPGME, overriding pkg-config
   GPGME_LIBS  linker flags for GPGME, overriding pkg-config
+  LIBARCHIVE_CFLAGS
+              C compiler flags for LIBARCHIVE, overriding pkg-config
+  LIBARCHIVE_LIBS
+              linker flags for LIBARCHIVE, overriding pkg-config
+  LIBZ_CFLAGS C compiler flags for LIBZ, overriding pkg-config
+  LIBZ_LIBS   linker flags for LIBZ, overriding pkg-config
 
 Use these variables to override the choices made by 'configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -37267,6 +37275,7 @@ then :
 fi
 
 
+# always check libb2, gpgme and libarchive, necessary for gpkg support
 
 
 
@@ -37402,9 +37411,6 @@ fi
 if test -z "$PKG_CONFIG"; then
 	as_fn_error $? "pkg-config not found" "$LINENO" 5
 fi
-if test "x${enable_qmanifest}" != "xno"
-then :
-
 
 pkg_failed=no
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libb2" >&5
@@ -37465,31 +37471,31 @@ fi
         echo "$LIBBL2_PKG_ERRORS" >&5
 
 
-    if test "x${enable_qmanifest}" = "xyes"
+                    if test "x${enable_qmanifest}" = "xyes"
 then :
 
-      { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
 printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
 as_fn_error $? "--enable-qmanifest was given, but libb2.pc could not be found
 See 'config.log' for more details" "$LINENO" 5; }
 
 fi
-    LIBBL2="no: missing dependencies"
+                    LIBBL2="no: missing dependencies"
 
 elif test $pkg_failed = untried; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 
-    if test "x${enable_qmanifest}" = "xyes"
+                    if test "x${enable_qmanifest}" = "xyes"
 then :
 
-      { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
 printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
 as_fn_error $? "--enable-qmanifest was given, but libb2.pc could not be found
 See 'config.log' for more details" "$LINENO" 5; }
 
 fi
-    LIBBL2="no: missing dependencies"
+                    LIBBL2="no: missing dependencies"
 
 else
         LIBBL2_CFLAGS=$pkg_cv_LIBBL2_CFLAGS
@@ -37500,9 +37506,192 @@ printf "%s\n" "yes" >&6; }
 
 printf "%s\n" "#define HAVE_BLAKE2B 1" >>confdefs.h
 
-    LIBBL2="yes"
+                    LIBBL2="yes"
 
 fi
+
+
+pkg_failed=no
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gpgme" >&5
+printf %s "checking for gpgme... " >&6; }
+
+if test -n "$GPGME_CFLAGS"; then
+    pkg_cv_GPGME_CFLAGS="$GPGME_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"gpgme\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "gpgme") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_GPGME_CFLAGS=`$PKG_CONFIG --cflags "gpgme" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$GPGME_LIBS"; then
+    pkg_cv_GPGME_LIBS="$GPGME_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"gpgme\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "gpgme") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_GPGME_LIBS=`$PKG_CONFIG --libs "gpgme" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+                GPGME_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "gpgme" 2>&1`
+        else
+                GPGME_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "gpgme" 2>&1`
+        fi
+        # Put the nasty error message in config.log where it belongs
+        echo "$GPGME_PKG_ERRORS" >&5
+
+
+                    if test "x${enable_qmanifest}" = "xyes"
+then :
+
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-qmanifest was given, but gpgme.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
+                    GPGME="no: missing dependencies"
+
+elif test $pkg_failed = untried; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+                    if test "x${enable_qmanifest}" = "xyes"
+then :
+
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-qmanifest was given, but gpgme.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
+                    GPGME="no: missing dependencies"
+
+else
+        GPGME_CFLAGS=$pkg_cv_GPGME_CFLAGS
+        GPGME_LIBS=$pkg_cv_GPGME_LIBS
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+
+printf "%s\n" "#define HAVE_GPGME 1" >>confdefs.h
+
+                    GPGME="yes"
+
+fi
+
+
+pkg_failed=no
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libarchive" >&5
+printf %s "checking for libarchive... " >&6; }
+
+if test -n "$LIBARCHIVE_CFLAGS"; then
+    pkg_cv_LIBARCHIVE_CFLAGS="$LIBARCHIVE_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libarchive\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libarchive") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBARCHIVE_CFLAGS=`$PKG_CONFIG --cflags "libarchive" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$LIBARCHIVE_LIBS"; then
+    pkg_cv_LIBARCHIVE_LIBS="$LIBARCHIVE_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libarchive\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libarchive") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBARCHIVE_LIBS=`$PKG_CONFIG --libs "libarchive" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+                LIBARCHIVE_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libarchive" 2>&1`
+        else
+                LIBARCHIVE_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libarchive" 2>&1`
+        fi
+        # Put the nasty error message in config.log where it belongs
+        echo "$LIBARCHIVE_PKG_ERRORS" >&5
+
+
+                    LIBARCHIVE="no: missing dependencies"
+
+elif test $pkg_failed = untried; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+                    LIBARCHIVE="no: missing dependencies"
+
+else
+        LIBARCHIVE_CFLAGS=$pkg_cv_LIBARCHIVE_CFLAGS
+        LIBARCHIVE_LIBS=$pkg_cv_LIBARCHIVE_LIBS
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+
+printf "%s\n" "#define HAVE_LIBARCHIVE 1" >>confdefs.h
+
+                    LIBARCHIVE="yes"
+
+fi
+
+if test "x${enable_qmanifest}" != "xno"
+then :
 
 
 pkg_failed=no
@@ -37600,102 +37789,6 @@ printf "%s\n" "yes" >&6; }
 printf "%s\n" "#define HAVE_LIBZ 1" >>confdefs.h
 
     LIBZ="yes"
-
-fi
-
-
-pkg_failed=no
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gpgme" >&5
-printf %s "checking for gpgme... " >&6; }
-
-if test -n "$GPGME_CFLAGS"; then
-    pkg_cv_GPGME_CFLAGS="$GPGME_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"gpgme\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "gpgme") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_GPGME_CFLAGS=`$PKG_CONFIG --cflags "gpgme" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$GPGME_LIBS"; then
-    pkg_cv_GPGME_LIBS="$GPGME_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"gpgme\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "gpgme") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_GPGME_LIBS=`$PKG_CONFIG --libs "gpgme" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-                GPGME_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "gpgme" 2>&1`
-        else
-                GPGME_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "gpgme" 2>&1`
-        fi
-        # Put the nasty error message in config.log where it belongs
-        echo "$GPGME_PKG_ERRORS" >&5
-
-
-    if test "x${enable_qmanifest}" = "xyes"
-then :
-
-      { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
-printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
-as_fn_error $? "--enable-qmanifest was given, but gpgme.pc could not be found
-See 'config.log' for more details" "$LINENO" 5; }
-
-fi
-    GPGME="no: missing dependencies"
-
-elif test $pkg_failed = untried; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-    if test "x${enable_qmanifest}" = "xyes"
-then :
-
-      { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
-printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
-as_fn_error $? "--enable-qmanifest was given, but gpgme.pc could not be found
-See 'config.log' for more details" "$LINENO" 5; }
-
-fi
-    GPGME="no: missing dependencies"
-
-else
-        GPGME_CFLAGS=$pkg_cv_GPGME_CFLAGS
-        GPGME_LIBS=$pkg_cv_GPGME_LIBS
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-
-    GPGME="yes"
 
 fi
 
@@ -40285,4 +40378,6 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 printf "%s\n" "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
+
+# vim: set ts=2 sw=2 softtabstop=2 expandtab:
 
