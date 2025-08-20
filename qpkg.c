@@ -270,7 +270,7 @@ qgpkg_make(tree_pkg_ctx *pkg)
 		return -1;
 
 	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", qpkg_bindir);
-	mask = umask(0077);
+	mask = umask(S_IRWXG | S_IRWXO);
 	i = mkstemp(tmpdir);
 	umask(mask);
 	if (i == -1)
@@ -290,6 +290,7 @@ qgpkg_make(tree_pkg_ctx *pkg)
 		printf("%sFAIL%s\n", RED, NORM);
 		return -4;
 	}
+	fchmod(mfd, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
 	/* we first 1. create metadata (vdb), 2. image (actual data) and
 	 * then 3. the container gpkg image */
@@ -315,8 +316,8 @@ qgpkg_make(tree_pkg_ctx *pkg)
 		}
 
 		entry = archive_entry_new();
-		snprintf(buf, sizeof(buf), "metadata/%s", files[i]->d_name);
-		archive_entry_set_pathname(entry, buf);
+		snprintf(ename, sizeof(ename), "metadata/%s", files[i]->d_name);
+		archive_entry_set_pathname(entry, ename);
 		archive_entry_set_size(entry, st.st_size);
 		archive_entry_set_mtime(entry, st.st_mtime, 0);
 		archive_entry_set_filetype(entry, AE_IFREG);
@@ -364,8 +365,8 @@ qgpkg_make(tree_pkg_ctx *pkg)
 		}
 
 		entry = archive_entry_new();
-		snprintf(buf, sizeof(buf), "image/%s", e->name + 1);
-		archive_entry_set_pathname(entry, buf);
+		snprintf(ename, sizeof(ename), "image/%s", e->name + 1);
+		archive_entry_set_pathname(entry, ename);
 		archive_entry_set_size(entry, st.st_size);
 		archive_entry_set_mtime(entry, st.st_mtime, 0);
 		archive_entry_set_filetype(entry, st.st_mode & S_IFMT);
@@ -419,7 +420,6 @@ qgpkg_make(tree_pkg_ctx *pkg)
 		close(fd);
 		archive_entry_free(entry);
 	}
-	unlink(buf);
 	/* 3.3 TODO: with gpgme write metadata signature */
 	/* 3.4 the filesystem image archive image.tar${comp} */
 	snprintf(buf, sizeof(buf), "%s/image.tar%s", tmpdir, filter);
@@ -440,7 +440,6 @@ qgpkg_make(tree_pkg_ctx *pkg)
 		close(fd);
 		archive_entry_free(entry);
 	}
-	unlink(buf);
 	/* 3.5 TODO: with gpgme write image signature */
 	/* 3.6 the package Manifest data file Manifest (clear-signed when
 	 * gpgme) */
@@ -462,7 +461,6 @@ qgpkg_make(tree_pkg_ctx *pkg)
 		close(fd);
 		archive_entry_free(entry);
 	}
-	unlink(buf);
 	archive_write_close(a);
 	archive_write_free(a);
 
@@ -481,7 +479,7 @@ qgpkg_make(tree_pkg_ctx *pkg)
 		return 1;
 	}
 
-	rmdir(tmpdir);
+	rm_rf(tmpdir);
 
 	if (stat(buf, &st) == -1) {
 		warnp("could not stat '%s': %s", buf, strerror(errno));
