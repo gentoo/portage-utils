@@ -18,6 +18,12 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <assert.h>
+
+#ifdef HAVE_LIBARCHIVE
+# include <archive.h>
+# include <archive_entry.h>
+#endif
+
 #include "stat-time.h"
 
 #include "atom.h"
@@ -1224,27 +1230,176 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	/* Doesn't actually remove $PWD, just everything under it */
 	rm_rf(".");
 
-	mkdir_p("temp", 0755);
 	mkdir_p(portroot, 0755);
-
-	tbz2size = 0;
-
+	mkdir("temp", 0755);
 	mkdir("vdb", 0755);
-	{
-		int vdbfd = open("vdb", O_RDONLY);
-		if (vdbfd == -1)
+	mkdir("image", 0755);
+
+	if (mpkg->pkg->binpkg_isgpkg) {
+#ifdef HAVE_LIBARCHIVE
+		/* unpack the whole thing to temp, dropping the pkg name dir, so
+		 * we end up with generic files in temp */
+		struct archive       *a;
+		struct archive       *t;
+		struct archive_entry *entry;
+
+		xchdir("temp");
+		a = archive_read_new();
+		t = archive_write_disk_new();
+		archive_read_support_format_all(a);
+		if (archive_read_open_filename(a, mpkg->path, BUFSIZ) != ARCHIVE_OK)
+			err("failed to open %s: %s", mpkg->path, archive_error_string(a));
+		while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+			const char *fname = archive_entry_pathname(entry);
+			const void *p;
+			size_t      size;
+			la_int64_t  off;
+
+			/* drop pkg name dir prefix */
+			fname = strchr(fname, '/');
+			if (fname == NULL)
+				continue;
+			fname++;
+
+			/* drop compressor (and "tar" -- not to be misleading) for
+			 * easy access below */
+			if (strncmp(fname, "metadata.tar", sizeof("metadata.tar") - 1) == 0)
+				fname = "metadata";
+			if (strncmp(fname, "image.tar", sizeof("image.tar") - 1) == 0)
+				fname = "image";
+
+			archive_entry_set_pathname(entry, fname);
+
+			if (archive_write_header(t, entry) != ARCHIVE_OK)
+				err("failed to write: %s", archive_error_string(t));
+			while (archive_read_data_block(a, &p, &size, &off) == ARCHIVE_OK) {
+				if (archive_write_data_block(t, p, size, off) != ARCHIVE_OK)
+					err("failed to write %s: %s\n",
+						fname, archive_error_string(t));
+			}
+			archive_write_finish_entry(t);
+		}
+		archive_read_close(a);
+		archive_read_free(a);
+		archive_write_close(t);
+		archive_write_free(t);
+		xchdir("..");
+
+		/* now we unpacked everything, we can extract the VDB (metadata)
+		 * and image */
+		xchdir("vdb");
+		a = archive_read_new();
+		t = archive_write_disk_new();
+		archive_read_support_format_all(a);
+		archive_read_support_filter_all(a);
+		archive_write_disk_set_options(t, (ARCHIVE_EXTRACT_PERM |
+									   	   ARCHIVE_EXTRACT_TIME |
+									   	   ARCHIVE_EXTRACT_ACL |
+									   	   ARCHIVE_EXTRACT_FFLAGS |
+									   	   ARCHIVE_EXTRACT_XATTR));
+		if (archive_read_open_filename(a, "../temp/metadata",
+									   BUFSIZ) != ARCHIVE_OK)
+			err("failed to open metadata: %s", archive_error_string(a));
+		while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+			const char *fname = archive_entry_pathname(entry);
+			const void *p;
+			size_t      size;
+			la_int64_t  off;
+
+			/* drop metadata prefix */
+			fname = strchr(fname, '/');
+			if (fname == NULL)
+				continue;
+			fname++;
+
+			archive_entry_set_pathname(entry, fname);
+
+			if (archive_write_header(t, entry) != ARCHIVE_OK)
+				err("failed to write: %s", archive_error_string(t));
+			while (archive_read_data_block(a, &p, &size, &off) == ARCHIVE_OK) {
+				if (archive_write_data_block(t, p, size, off) != ARCHIVE_OK)
+					err("failed to write %s: %s\n",
+						fname, archive_error_string(t));
+			}
+			archive_write_finish_entry(t);
+		}
+		archive_read_close(a);
+		archive_read_free(a);
+		archive_write_close(t);
+		archive_write_free(t);
+		xchdir("..");
+
+		/* finally the image */
+		xchdir("image");
+		a = archive_read_new();
+		t = archive_write_disk_new();
+		archive_read_support_format_all(a);
+		archive_read_support_filter_all(a);
+		archive_write_disk_set_options(t, (ARCHIVE_EXTRACT_PERM |
+									   	   ARCHIVE_EXTRACT_TIME |
+									   	   ARCHIVE_EXTRACT_ACL |
+									   	   ARCHIVE_EXTRACT_FFLAGS |
+									   	   ARCHIVE_EXTRACT_XATTR));
+		if (archive_read_open_filename(a, "../temp/image",
+									   BUFSIZ) != ARCHIVE_OK)
+			err("failed to open metadata: %s", archive_error_string(a));
+		while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+			const char *fname = archive_entry_pathname(entry);
+			const void *p;
+			size_t      size;
+			la_int64_t  off;
+
+			/* drop image prefix */
+			fname = strchr(fname, '/');
+			if (fname == NULL)
+				continue;
+			fname++;
+
+			archive_entry_set_pathname(entry, fname);
+
+			if (archive_write_header(t, entry) != ARCHIVE_OK)
+				err("failed to write: %s", archive_error_string(t));
+			while (archive_read_data_block(a, &p, &size, &off) == ARCHIVE_OK) {
+				if (archive_write_data_block(t, p, size, off) != ARCHIVE_OK)
+					err("failed to write %s: %s\n",
+						fname, archive_error_string(t));
+			}
+			archive_write_finish_entry(t);
+		}
+		archive_read_close(a);
+		archive_read_free(a);
+		archive_write_close(t);
+		archive_write_free(t);
+		xchdir("..");
+#else
+		err("gpkg support not compiled in for %s", mpkg->path);
+#endif
+	} else {
+		int vdbfd;
+		unsigned char magic[257+6];
+		FILE *mfd;
+		FILE *tarpipe;
+		FILE *tbz2f;
+		unsigned char iobuf[8192];
+		int piped = 0;
+		int err;
+		size_t n;
+		size_t rd;
+		size_t wr;
+
+		tbz2size = 0;
+		if ((vdbfd = open("vdb", O_RDONLY)) == -1)
 			err("failed to open vdb extraction directory");
 		tbz2size = xpak_extract(mpkg->path, &vdbfd, pkg_extract_xpak_cb);
 		close(vdbfd);
-	}
-	if (tbz2size <= 0)
-		err("%s appears not to be a valid tbz2 file", mpkg->path);
+		if (tbz2size <= 0)
+			err("%s appears not to be a valid tbz2 file", mpkg->path);
 
-	/* figure out if the data is compressed differently from what the
-	 * name suggests, bug #660508, usage of BINPKG_COMPRESS,
-	 * due to the minimal nature of where we run, we cannot rely on file
-	 * or GNU tar, so have to do some laymans MAGIC hunting ourselves */
-	{
+		/* figure out if the data is compressed differently from what the
+		 * name suggests, bug #660508, usage of BINPKG_COMPRESS,
+		 * due to the minimal nature of where we run, we cannot rely on file
+		 * or GNU tar, so have to do some laymans MAGIC hunting ourselves */
+
 		/* bz2: 3-byte: 'B' 'Z' 'h'              at byte 0
 		 * gz:  2-byte:  1f  8b                  at byte 0
 		 * xz:  4-byte: '7' 'z' 'X' 'Z'          at byte 1
@@ -1254,8 +1409,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		 * lz:  4-byte: 'L' 'Z' 'I' 'P'          at byte 0
 		 * lzo: 9-byte:  89 'L' 'Z' 'O' 0 d a 1a a at byte 0
 		 * br:  anything else */
-		unsigned char magic[257+6];
-		FILE *mfd;
 
 		compr = "brotli -dc"; /* default: brotli; has no magic header */
 		mfd = fopen(mpkg->path, "r");
@@ -1327,33 +1480,21 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 				compr = "lzop -dc";
 			}
 		}
-	}
 
-	/* extract the binary package data */
-	mkdir("image", 0755);
-	/* busybox's tar has no -I option. Thus, although we possibly
-	 * use busybox's shell and tar, we thus pipe, expecting the
-	 * corresponding (de)compression tool to be in PATH; if not,
-	 * a failure will occur.
-	 * Since some tools (e.g. zstd) complain about the .bz2
-	 * extension, we feed the tool by input redirection. */
-	snprintf(buf, sizeof(buf),
-		BUSYBOX " sh -c '%s%star -x%sf - -C image/'",
-		compr, compr[0] == '\0' ? "" : " | ",
-		((verbose > 1) ? "v" : ""));
+		/* extract the binary package data */
+		/* busybox's tar has no -I option. Thus, although we possibly
+		 * use busybox's shell and tar, we thus pipe, expecting the
+		 * corresponding (de)compression tool to be in PATH; if not,
+		 * a failure will occur.
+		 * Since some tools (e.g. zstd) complain about the .bz2
+		 * extension, we feed the tool by input redirection. */
+		snprintf(buf, sizeof(buf),
+			BUSYBOX " sh -c '%s%star -x%sf - -C image/'",
+			compr, compr[0] == '\0' ? "" : " | ",
+			((verbose > 1) ? "v" : ""));
 
-	/* start the tar pipe and copy tbz2size binpkg bytes into it
-	 * "manually" rather than depending on dd or head */
-	{
-		FILE *tarpipe;
-		FILE *tbz2f;
-		unsigned char iobuf[8192];
-		int piped = 0;
-		int err;
-		size_t n;
-		size_t rd;
-		size_t wr;
-
+		/* start the tar pipe and copy tbz2size binpkg bytes into it
+		 * "manually" rather than depending on dd or head */
 		if ((tarpipe = popen(buf, "w")) == NULL)
 			errp("failed to start %s", buf);
 
@@ -1808,8 +1949,8 @@ pkg_verify_checksums(
 		int                   display)
 {
 	int    ret = 0;
-	char   md5[32+1];
-	char   sha1[40+1];
+	char   md5[(MD5_DIGEST_SIZE * 2) + 1];
+	char   sha1[(SHA1_DIGEST_SIZE * 2) + 1];
 	size_t flen;
 	int    mlen;
 
@@ -1832,9 +1973,9 @@ pkg_verify_checksums(
 						GREEN, NORM, md5, atom_to_string(pkg->atom));
 		} else {
 			if (display)
-				warn("MD5:  [%sER%s] (%s) != (%s) %s",
+				warn("MD5:  [%sERR%s] (%s) != (%s) %s from %s",
 						RED, NORM, md5, pkg->meta->Q_MD5,
-						atom_to_string(pkg->atom));
+						atom_to_string(pkg->atom), pkg->path);
 			ret++;
 		}
 	}
@@ -1846,9 +1987,9 @@ pkg_verify_checksums(
 						GREEN, NORM, sha1, atom_to_string(pkg->atom));
 		} else {
 			if (display)
-				warn("SHA1: [%sER%s] (%s) != (%s) %s",
+				warn("SHA1: [%sERR%s] (%s) != (%s) %s from %s",
 						RED, NORM, sha1, pkg->meta->Q_SHA1,
-						atom_to_string(pkg->atom));
+						atom_to_string(pkg->atom), pkg->path);
 			ret++;
 		}
 	}
