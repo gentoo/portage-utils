@@ -340,6 +340,7 @@ xpak_create(
 			continue;
 		}
 		if (S_ISDIR(st.st_mode)) {
+			dir = NULL;
 			if ((numfiles =
 						scandir(argv[i], &dir, filter_hidden, alphasort)) < 0)
 			{
