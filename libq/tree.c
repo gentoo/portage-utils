@@ -1056,7 +1056,7 @@ static tree_pkg_meta *
 tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 {
 	tree_pkg_meta *m = xzalloc(sizeof(tree_pkg_meta));
-	int newfd;
+	int newfd = -1;
 
 	if (pkg_ctx->binpkg_isgpkg) {
 #ifdef HAVE_LIBARCHIVE
@@ -1088,6 +1088,8 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 			}
 		}
 		archive_read_free(a);
+		newfd = pkg_ctx->fd;
+		pkg_ctx->fd = -1;  /* will be closed by hash_multiple_fd */
 
 		if (buf != NULL)
 		{
@@ -1122,12 +1124,11 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 			free(buf);
 			free(data);
 		}
-
-		newfd = pkg_ctx->fd;
 #else
 		return NULL;
 #endif
 	} else {
+		newfd = dup(pkg_ctx->fd);
 		xpak_process_fd(pkg_ctx->fd, true, m, tree_read_file_binpkg_xpak_cb);
 		pkg_ctx->fd = -1;  /* closed by xpak_process_fd */
 	}
@@ -1137,7 +1138,7 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 	 * fake, but allows to transparantly use a dir of binpkgs */
 	if (newfd != -1) {
 		size_t fsize;
-		size_t needlen = SHA1_DIGEST_SIZE + 1 + 19 + 1;
+		size_t needlen = (SHA1_DIGEST_SIZE * 2) + 1 + 19 + 1;
 		size_t pos = 0;
 		size_t len = 0;
 
@@ -1153,10 +1154,10 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 		}
 
 		m->Q_SHA1 = m->storage->ptr + pos;
-		m->Q_SIZE = m->Q_SHA1 + SHA1_DIGEST_SIZE + 1;
+		m->Q_SIZE = m->Q_SHA1 + (SHA1_DIGEST_SIZE * 2) + 1;
 		m->storage->pos += needlen;
 
-		lseek(newfd, 0, SEEK_SET);  /* reposition at the whole file */
+		lseek(newfd, 0, SEEK_SET);  /* reposition at the start of file */
 		if (hash_multiple_file_fd(newfd, NULL, m->Q_SHA1, NULL, NULL,
 				NULL, &fsize, HASH_SHA1) == 0)
 			snprintf(m->Q_SIZE, 19 + 1, "%zu", fsize);
@@ -1925,6 +1926,7 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 			 * xpak archive, so can just take it over */
 			pkg->meta = meta;
 			ctx->meta = NULL;  /* avoid double free */
+			pkg->binpkg_isgpkg = ctx->binpkg_isgpkg;
 		}
 	} else {
 		pkg->meta = NULL;
