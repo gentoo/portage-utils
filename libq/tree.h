@@ -74,6 +74,7 @@ struct tree_pkg_ctx {
 	size_t slot_len;
 	size_t repo_len;
 	int fd;
+	int binpkg_isgpkg:1;
 	tree_cat_ctx *cat_ctx;
 	depend_atom *atom;
 	tree_pkg_meta *meta;

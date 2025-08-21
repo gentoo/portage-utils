@@ -14,8 +14,11 @@
 #include <sys/stat.h>
 #include <ctype.h>
 #include <xalloc.h>
-#include "md5.h"
-#include "sha1.h"
+
+#ifdef HAVE_LIBARCHIVE
+# include <archive.h>
+# include <archive_entry.h>
+#endif
 
 #include "atom.h"
 #include "eat_file.h"
@@ -26,11 +29,8 @@
 #include "tree.h"
 #include "xpak.h"
 
-#include <ctype.h>
-#include <xalloc.h>
 
 static int tree_pkg_compar(const void *l, const void *r);
-static tree_pkg_ctx *tree_next_pkg_int(tree_cat_ctx *cat_ctx);
 static void tree_close_meta(tree_pkg_meta *cache);
 
 static tree_ctx *
@@ -440,26 +440,38 @@ tree_pkg_ctx *
 tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name)
 {
 	tree_pkg_ctx *pkg_ctx;
+	bool          isgpkg = false;
 
 	if (cat_ctx->ctx->treetype == TREE_EBUILD &&
 		cat_ctx->ctx->ebuilddir_cat_ctx == cat_ctx)
 	{
-		char *p;
-		if ((p = strstr(name, ".ebuild")) == NULL)
+		size_t len = strlen(name);
+		char  *p   = (char *)&name[len - (sizeof(".ebuild") - 1)];
+		if (len <= sizeof(".ebuild") - 1 ||
+			memcmp(p, ".ebuild", sizeof(".ebuild") - 1) != 0)
 			return NULL;  /* invalid, must be some random other file */
 		*p = '\0';
 	} else if (cat_ctx->ctx->treetype == TREE_BINPKGS) {
-		char *p;
-		if ((p = strstr(name, ".tbz2")) == NULL)
-			return NULL;  /* invalid, no support for .gpkg yet */
+		size_t len = strlen(name);
+		char  *p   = (char *)&name[len - (sizeof(".gpkg.tar") - 1)];
+		if (len > sizeof(".gpkg.tar") - 1 &&
+			memcmp(p, ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
+			isgpkg = true;
+
+		if (!isgpkg &&
+			(len <= sizeof(".tbz2") - 1 ||
+			 (p = (char *)&name[len - (sizeof(".tbz2") - 1)]) == NULL ||
+			 memcmp(p, ".tbz2", sizeof(".tbz2") - 1) != 0))
+			return NULL;  /* invalid, like above */
 		*p = '\0';
 	}
 
-	pkg_ctx = xzalloc(sizeof(*pkg_ctx));
-	pkg_ctx->name = name;
-	pkg_ctx->repo = cat_ctx->ctx->repo;
-	pkg_ctx->fd = -1;
-	pkg_ctx->cat_ctx = cat_ctx;
+	pkg_ctx                = xzalloc(sizeof(*pkg_ctx));
+	pkg_ctx->name          = name;
+	pkg_ctx->repo          = cat_ctx->ctx->repo;
+	pkg_ctx->fd            = -1;
+	pkg_ctx->cat_ctx       = cat_ctx;
+	pkg_ctx->binpkg_isgpkg = isgpkg;
 
 	/* see if this pkg matches the query, here we can finally check
 	 * version conditions like >=, etc. */
@@ -1044,10 +1056,81 @@ static tree_pkg_meta *
 tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 {
 	tree_pkg_meta *m = xzalloc(sizeof(tree_pkg_meta));
-	int newfd = dup(pkg_ctx->fd);
+	int newfd;
 
-	xpak_process_fd(pkg_ctx->fd, true, m, tree_read_file_binpkg_xpak_cb);
-	pkg_ctx->fd = -1;  /* closed by xpak_process_fd */
+	if (pkg_ctx->binpkg_isgpkg) {
+#ifdef HAVE_LIBARCHIVE
+		struct archive       *a     = archive_read_new();
+		struct archive_entry *entry;
+		size_t                len   = 0;
+		char                 *buf   = NULL;
+
+		archive_read_support_format_all(a);
+		archive_read_support_filter_all(a);
+
+		if (archive_read_open_fd(a, pkg_ctx->fd, BUFSIZ) != ARCHIVE_OK)
+			return NULL;
+		while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+			const char *pathname = archive_entry_pathname(entry);
+			const char *fname    = strchr(pathname, '/');
+			if (fname == NULL)
+				continue;
+			fname++;
+			if (strncmp(fname, "metadata.tar",
+						sizeof("metadata.tar") - 1) == 0)
+			{
+				/* read this nested tar, it contains the VDB entries
+				 * otherwise stored in xpak */
+				len = archive_entry_size(entry);
+				buf = xmalloc(len);
+				archive_read_data(a, buf, len);
+				break;
+			}
+		}
+		archive_read_free(a);
+
+		if (buf != NULL)
+		{
+			char  *data      = NULL;
+			size_t data_size = 0;
+			size_t data_len  = 0;
+
+			a = archive_read_new();
+			archive_read_support_format_all(a);
+			archive_read_support_filter_all(a);
+			archive_read_open_memory(a, buf, len);
+
+			while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+				const char *pathname = archive_entry_pathname(entry);
+				char       *fname    = strchr(pathname, '/');
+				if (fname == NULL)
+					continue;
+				fname++;
+
+				data_len = archive_entry_size(entry);
+				if (data_len > data_size) {
+					data_size = data_len;
+					data      = xrealloc(data, data_size);
+				}
+				if (archive_read_data(a, data, data_len) < 0)
+					continue;
+				tree_read_file_binpkg_xpak_cb(m,
+											  fname, (int)strlen(fname),
+											  0, data_len, data);
+			}
+			archive_read_free(a);
+			free(buf);
+			free(data);
+		}
+
+		newfd = pkg_ctx->fd;
+#else
+		return NULL;
+#endif
+	} else {
+		xpak_process_fd(pkg_ctx->fd, true, m, tree_read_file_binpkg_xpak_cb);
+		pkg_ctx->fd = -1;  /* closed by xpak_process_fd */
+	}
 
 	/* fill in some properties which are not available, but would be in
 	 * Packages, and used to verify the package ... this is somewhat
@@ -1093,7 +1176,8 @@ tree_pkg_read_openfd_int(tree_pkg_ctx *pkg_ctx)
 		{
 			char buf[_Q_PATH_MAX];
 			snprintf(buf, sizeof(buf), "%s.%s", pkg_ctx->name,
-					 ctx->treetype == TREE_EBUILD ? "ebuild" : "tbz2");
+					 ctx->treetype == TREE_EBUILD ? "ebuild" :
+					 pkg_ctx->binpkg_isgpkg ? "gpkg.tar" : "tbz2");
 			pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, buf,
 								 O_RDONLY | O_CLOEXEC);
 		} else {
@@ -1530,9 +1614,30 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 				}
 				if (meta.Q_BUILDID != NULL)
 					atom->BUILDID = atoi(meta.Q_BUILDID);
-				pkgnamelen = snprintf(pkgname, sizeof(pkgname),
-						"%s.tbz2", atom->PF);
-				pkgname[pkgnamelen - (sizeof(".tbz2") - 1)] = '\0';
+				pkgnamelen = 0;
+				if (meta.Q_PATH != NULL) {
+					size_t len = strlen(meta.Q_PATH);
+					if (len > sizeof(".tbz2") - 1 &&
+						memcmp(meta.Q_PATH + len - sizeof(".tbz2") - 1,
+							   ".tbz2", sizeof(".tbz2") - 1) == 0)
+					{
+						pkgnamelen = snprintf(pkgname, sizeof(pkgname),
+											  "%s.tbz2", atom->PF);
+						pkgname[pkgnamelen - (sizeof(".tbz2") - 1)] = '\0';
+					}
+					if (len > sizeof(".gpkg.tar") - 1 &&
+						memcmp(meta.Q_PATH + len - sizeof(".gpkg.tar") - 1,
+							   ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
+					{
+						pkgnamelen = snprintf(pkgname, sizeof(pkgname),
+											  "%s.gpkg.tar", atom->PF);
+						pkgname[pkgnamelen - (sizeof(".gpkg.tar") - 1)] = '\0';
+					}
+				}
+				if (pkgnamelen == 0) {
+					pkgnamelen = snprintf(pkgname, sizeof(pkgname),
+										  "%s", atom->PF);
+				}
 				pkg.name = pkgname;
 				pkg.slot = meta.Q_SLOT == NULL ? (char *)"0" : meta.Q_SLOT;
 				pkg.repo = ctx->repo;
@@ -1874,8 +1979,9 @@ tree_match_search_cat_int(
 						 (char *)cat_ctx->ctx->path,
 						 cat_ctx->name, pkg_ctx->name,
 						 cat_ctx->ctx->treetype == TREE_EBUILD   ? ".ebuild" :
-						 cat_ctx->ctx->treetype == TREE_BINPKGS  ? ".tbz2"   :
-						 cat_ctx->ctx->treetype == TREE_PACKAGES ? ".tbz2"   :
+						 (cat_ctx->ctx->treetype == TREE_BINPKGS ||
+						  cat_ctx->ctx->treetype == TREE_PACKAGES) ?
+						 (pkg_ctx->binpkg_isgpkg   ? ".gpkg.tar" : ".tbz2")  :
 						                                           "");
 			}
 			if (flags & TREE_MATCH_METADATA)
