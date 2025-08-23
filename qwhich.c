@@ -188,16 +188,6 @@ int qwhich_main(int argc, char **argv)
 				repolen = 0;
 		}
 
-		switch (t->treetype) {
-			case TREE_BINPKGS:
-			case TREE_PACKAGES:
-				ext = "tbz2";
-				break;
-			default:
-				ext = "ebuild";
-				break;
-		}
-
 		array_for_each(atoms, i, atom) {
 			tmc = tree_match_atom(t, atom,
 					(m.match_latest ? TREE_MATCH_LATEST : 0 ) |
@@ -214,14 +204,27 @@ int qwhich_main(int argc, char **argv)
 							t->treetype == TREE_BINPKGS ||
 							t->treetype == TREE_PACKAGES)
 					{
-						if (m.print_path)
+						if (m.print_path) {
 							printf("%s%.*s%s%s%s/%s%s%s\n",
 									GREEN, repolen, reponam,
 									m.print_repo ? "::" : "/",
 									BOLD, tmcw->atom->CATEGORY,
 									DKBLUE, tmcw->atom->PN,
 									NORM);
-						else
+						} else {
+							switch (t->treetype) {
+								case TREE_BINPKGS:
+								case TREE_PACKAGES:
+									if (tmcw->pkg->binpkg_isgpkg)
+										ext = "gpkg.tar";
+									else
+										ext = "tbz2";
+									break;
+								default:
+									ext = "ebuild";
+									break;
+							}
+
 							printf("%s%.*s%s%s%s/%s%s/%s%s%s.%s%s\n",
 									DKGREEN, repolen, reponam,
 									m.print_repo ? "::" : "/",
@@ -229,6 +232,7 @@ int qwhich_main(int argc, char **argv)
 									DKBLUE, tmcw->atom->PN,
 									BLUE, tmcw->atom->PF,
 									DKGREEN, ext, NORM);
+						}
 					} else if (t->treetype == TREE_VDB && !m.print_path) {
 						printf("%s%s/%s%s%s.ebuild%s\n",
 								DKBLUE, tmcw->path,
