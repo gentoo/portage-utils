@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -19,13 +19,22 @@
 #include <libproc.h>
 #endif
 
+#ifdef HAVE_LIBARCHIVE
+# include <archive.h>
+# include <archive_entry.h>
+#endif
+
 #include "atom.h"
 #include "basename.h"
 #include "eat_file.h"
 #include "rmspace.h"
+#include "scandirat.h"
+#include "tree.h"
+#include "xmkdir.h"
 
-#define Q_FLAGS "ioem" COMMON_FLAGS
+#define Q_FLAGS "cioem" COMMON_FLAGS
 static struct option const q_long_opts[] = {
+	{"build-cache",   no_argument, NULL, 'c'},
 	{"install",       no_argument, NULL, 'i'},
 	{"overlays",      no_argument, NULL, 'o'},
 	{"envvar",        no_argument, NULL, 'e'},
@@ -33,6 +42,7 @@ static struct option const q_long_opts[] = {
 	COMMON_LONG_OPTS
 };
 static const char * const q_opts_help[] = {
+	"(Re)Build ebuild/metadata cache for all available overlays",
 	"Install symlinks for applets",
 	"Print available overlays (read from repos.conf)",
 	"Print used variables and their found values",
@@ -95,9 +105,256 @@ int lookup_applet_idx(const char *applet)
 	return 0;
 }
 
+#ifdef HAVE_LIBARCHIVE
+struct q_cache_ctx {
+	struct archive *archive;
+	time_t          buildtime;
+};
+static int q_build_cache_pkg_process_dir(struct q_cache_ctx *ctx,
+										 char               *path,
+										 char               *pbuf,
+										 size_t              pbufsiz,
+										 int                 dfd)
+{
+	struct archive       *a     = ctx->archive;
+	struct archive_entry *entry = NULL;
+	struct dirent       **flist = NULL;
+	struct stat           st;
+	int                   fcnt;
+	int                   i;
+	int                   fd = -1;
+	size_t                len;
+	ssize_t               rlen;
+	char                  buf[BUFSIZ];
+
+	fcnt = scandirat(dfd, ".", &flist, filter_self_parent, alphasort);
+
+	for (i = 0; i < fcnt; i++) {
+		/* skip Manifests here, the whole bundle should be consistent */
+		if (strcmp(flist[i]->d_name, "Manifest.gz") == 0)
+			continue;
+		if (fd >= 0)
+			close(fd);
+		fd = openat(dfd, flist[i]->d_name, O_RDONLY);
+		if (fd < 0 || fstat(fd, &st) < 0)
+			continue;
+		len = snprintf(pbuf, pbufsiz, "/%s", flist[i]->d_name);
+		if (len >= pbufsiz) {
+			/* oops, doesn't fit, don't crash, just skip */
+			warn("file %s too long for path %s", flist[i]->d_name, path);
+			continue;
+		}
+		if (S_ISDIR(st.st_mode)) {
+			q_build_cache_pkg_process_dir(ctx, path,
+										  pbuf + len, pbufsiz - len, fd);
+			continue;
+		}
+		/* the rest, record an entry */
+		entry = archive_entry_new();
+		archive_entry_set_pathname(entry, path);
+		archive_entry_set_size(entry, st.st_size);
+		archive_entry_set_mtime(entry, ctx->buildtime, 0);
+		archive_entry_set_filetype(entry, st.st_mode);
+		archive_entry_set_perm(entry, 0644);
+		archive_write_header(a, entry);
+		while ((rlen = read(fd, buf, sizeof(buf))) > 0)
+			archive_write_data(a, buf, rlen);
+		archive_entry_free(entry);
+	}
+	if (fd >= 0)
+		close(fd);
+
+	scandir_free(flist, fcnt);
+}
+int q_build_cache_pkg(tree_pkg_ctx *pkg, void *priv)
+{
+	struct q_cache_ctx   *ctx   = priv;
+	struct archive       *a     = ctx->archive;
+	struct archive_entry *entry;
+	struct stat           st;
+	depend_atom          *atom  = tree_get_atom(pkg, false);
+	char                  buf[_Q_PATH_MAX];
+	char                 *p;
+	size_t                siz;
+	size_t                len;
+	char                 *qc;
+	size_t                qclen;
+
+	/* construct the common prefix */
+	len = snprintf(buf, sizeof(buf), "ebuilds/%s/%s/",
+				   atom->CATEGORY, atom->PF);
+	p   = buf + len;
+	siz = sizeof(buf) - len;
+
+	/* - ebuilds/CAT/PF
+	 *   + cache/ (keys from md5-cache except _md5_, _eclasses_ and
+	 *             repository, the latter is stored at the top level
+	 *             in addition to this the required eclass names are
+	 *             stored in a new key called eclasses) */
+#define q_cache_add_cache_entry_val(K,V) \
+	do { \
+		qc = V; \
+		if (qc != NULL) { \
+			qclen = strlen(qc); \
+			entry = archive_entry_new(); \
+			snprintf(p, siz, "cache/" #K); \
+			archive_entry_set_pathname(entry, buf); \
+			archive_entry_set_size(entry, qclen); \
+			archive_entry_set_mtime(entry, ctx->buildtime, 0); \
+			archive_entry_set_filetype(entry, AE_IFREG); \
+			archive_entry_set_perm(entry, 0644); \
+			archive_write_header(a, entry); \
+			archive_write_data(a, qc, qclen); \
+			archive_entry_free(entry); \
+		} \
+	} while (false)
+#define q_cache_add_cache_entry(K) \
+	q_cache_add_cache_entry_val(K, tree_pkg_meta_get(pkg, K))
+
+	/* this is a list copied from libq/tree, as there is no runtime
+	 * access to these entries */
+	q_cache_add_cache_entry(DEPEND);
+	q_cache_add_cache_entry(RDEPEND);
+	q_cache_add_cache_entry(SLOT);
+	if (pkg->cat_ctx->ctx->treetype != TREE_PACKAGES)
+		q_cache_add_cache_entry(SRC_URI);
+	q_cache_add_cache_entry(RESTRICT);
+	q_cache_add_cache_entry(LICENSE);
+	q_cache_add_cache_entry(DESCRIPTION);
+	q_cache_add_cache_entry(KEYWORDS);
+	q_cache_add_cache_entry(INHERITED);
+	q_cache_add_cache_entry(IUSE);
+	q_cache_add_cache_entry(CDEPEND);
+	q_cache_add_cache_entry(PDEPEND);
+	q_cache_add_cache_entry(PROVIDE);
+	q_cache_add_cache_entry(EAPI);
+	q_cache_add_cache_entry(PROPERTIES);
+	q_cache_add_cache_entry(BDEPEND);
+	q_cache_add_cache_entry(IDEPEND);
+	q_cache_add_cache_entry(DEFINED_PHASES);
+	q_cache_add_cache_entry(REQUIRED_USE);
+	q_cache_add_cache_entry(CONTENTS);
+	q_cache_add_cache_entry(USE);
+	q_cache_add_cache_entry(EPREFIX);
+	q_cache_add_cache_entry(PATH);
+	q_cache_add_cache_entry(BUILDID);
+	if (pkg->cat_ctx->ctx->treetype == TREE_PACKAGES)
+		q_cache_add_cache_entry(SIZE);
+
+	if (pkg->cat_ctx->ctx->treetype == TREE_EBUILD) {
+		char  tmpbuf[BUFSIZE];
+		char *tp;
+		bool  write;
+
+		/* eclasses, drop the md5 hashes, just leave a list of names */
+		qc = tree_pkg_meta_get(pkg, _eclasses_);
+		if (qc != NULL) {
+			for (tp = tmpbuf, write = true; *qc != '\0'; qc++) {
+				if (*qc == '\t') {
+					if (write)
+						*tp++ = ' ';
+					write = !write;
+				} else if (write)
+					*tp++ = *qc;
+			}
+			*tp = '\0';
+			q_cache_add_cache_entry_val(eclasses, tmpbuf);
+		}
+	}
+#undef q_cache_add_cache_entry
+#undef q_cache_add_cache_entry_val
+
+	/*   + ebuild (the file from the tree)
+	 *   + Manifest (the file from the tree, to verify distfiles)
+	 *   + files/ (the directory from the tree) */
+	if (pkg->cat_ctx->ctx->treetype == TREE_EBUILD) {
+		char   pth[_Q_PATH_MAX];
+		size_t flen;
+		int    dfd;
+		int    ffd;
+
+		/* we could technically pull the ebuild from the VDB, or maybe
+		 * from the binpkg, but for what use? only an ebuild tree is
+		 * meant to be built from, others only use metadata */
+
+		snprintf(pth, sizeof(pth), "%s/%s/%s",
+				 pkg->cat_ctx->ctx->path,
+				 atom->CATEGORY, atom->PN);
+		dfd = open(pth, O_RDONLY);
+		if (dfd < 0)
+			return 1;  /* how? */
+		snprintf(pth, sizeof(pth), "%s.ebuild", atom->PF);
+		ffd = openat(dfd, pth, O_RDONLY);
+		if (ffd >= 0) {
+			if (fstat(ffd, &st) == 0) {
+				entry = archive_entry_new();
+				snprintf(p, siz, "ebuild");
+				archive_entry_set_pathname(entry, buf);
+				archive_entry_set_size(entry, st.st_size);
+				archive_entry_set_mtime(entry, ctx->buildtime, 0);
+				archive_entry_set_filetype(entry, AE_IFREG);
+				archive_entry_set_perm(entry, 0644);
+				archive_write_header(a, entry);
+				while ((flen = read(ffd, pth, sizeof(pth))) > 0)
+					archive_write_data(a, pth, flen);
+				archive_entry_free(entry);
+			}
+			close(ffd);
+		}
+		ffd = openat(dfd, "metadata.xml", O_RDONLY);
+		if (ffd >= 0) {
+			if (fstat(ffd, &st) == 0) {
+				entry = archive_entry_new();
+				snprintf(p, siz, "metadata.xml");
+				archive_entry_set_pathname(entry, buf);
+				archive_entry_set_size(entry, st.st_size);
+				archive_entry_set_mtime(entry, ctx->buildtime, 0);
+				archive_entry_set_filetype(entry, AE_IFREG);
+				archive_entry_set_perm(entry, 0644);
+				archive_write_header(a, entry);
+				while ((flen = read(ffd, pth, sizeof(pth))) > 0)
+					archive_write_data(a, pth, flen);
+				archive_entry_free(entry);
+			}
+			close(ffd);
+		}
+		ffd = openat(dfd, "Manifest", O_RDONLY);
+		if (ffd >= 0) {
+			if (fstat(ffd, &st) == 0) {
+				entry = archive_entry_new();
+				snprintf(p, siz, "Manifest");
+				archive_entry_set_pathname(entry, buf);
+				archive_entry_set_size(entry, st.st_size);
+				archive_entry_set_mtime(entry, ctx->buildtime, 0);
+				archive_entry_set_filetype(entry, AE_IFREG);
+				archive_entry_set_perm(entry, 0644);
+				archive_write_header(a, entry);
+				while ((flen = read(ffd, pth, sizeof(pth))) > 0)
+					archive_write_data(a, pth, flen);
+				archive_entry_free(entry);
+			}
+			close(ffd);
+		}
+		/* process files, unfortunately this can be any number of
+		 * directories deep (remember eblitz?) so we'll have to recurse
+		 * for this one */
+		flen = snprintf(p, siz, "files");
+		ffd  = openat(dfd, "files", O_RDONLY);
+		if (ffd >= 0) {
+			q_build_cache_pkg_process_dir(ctx, buf, p + flen, siz - flen, ffd);
+			close(ffd);
+		}
+		close(dfd);
+	}
+
+	return 0;
+}
+#endif
+
 int q_main(int argc, char **argv)
 {
 	int i;
+	bool build_cache;
 	bool install;
 	bool print_overlays;
 	bool print_vars;
@@ -118,17 +375,19 @@ int q_main(int argc, char **argv)
 	if (argc == 1)
 		q_usage(EXIT_FAILURE);
 
-	install = false;
+	build_cache    = false;
+	install        = false;
 	print_overlays = false;
-	print_vars = false;
-	print_masks = false;
+	print_vars     = false;
+	print_masks    = false;
 	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
-		case 'i': install = true;        break;
+		case 'c': build_cache    = true; break;
+		case 'i': install        = true; break;
 		case 'o': print_overlays = true; break;
-		case 'e': print_vars = true;     break;
-		case 'm': print_masks = true;    break;
+		case 'e': print_vars     = true; break;
+		case 'm': print_masks    = true; break;
 		}
 	}
 
@@ -405,6 +664,125 @@ int q_main(int argc, char **argv)
 
 		xarrayfree_int(masks);
 		xarrayfree_int(files);
+
+		return 0;
+	}
+
+	if (build_cache) {
+		/* traverse all overlays, create a cache for each
+		 * the cache basically is one giant tar with:
+		 * - gtree-1  (mandatory, first file ident)
+		 * - repository
+		 * - ebuilds/CAT/PF
+		 *   + cache/
+		 *   + ebuild (the file from the tree)
+		 *   + metadata.xml (the file from the tree)
+		 *   + Manifest (the file from the tree, to verify distfiles)
+		 *   + files/ (the directory from the tree)
+		 * - eclasses/ (the directory from the tree)
+		 * but all of them within are guaranteed to be consistant with
+		 * each other (it is one snapshot)
+		 * the cache is suitable for distribution
+		 *
+		 * using the cache to install ebuilds, requires to extract the
+		 * ebuild (skipping the cache directory) and the eclasses
+		 * (easily found through the _eclasses_ cache key)
+		 *
+		 * For a Portage or PMS-compatible env this probably means
+		 * constructing a tree out of the tar, but this should be a
+		 * small price to pay once the whole of the dep-resolving can be
+		 * done without questions of validity. */
+		char                 *overlay;
+		size_t                n;
+		tree_ctx             *t;
+		struct archive       *a;
+		struct archive_entry *entry;
+		struct q_cache_ctx    qcctx;
+		char                  buf[BUFSIZ];
+		size_t                len;
+		int                   dfd;
+
+
+		memset(&qcctx, 0, sizeof(qcctx));
+
+		array_for_each(overlays, n, overlay) {
+			if (verbose)
+				printf("building cache for %s\n", overlay);
+
+			t = tree_open(portroot, overlay);
+			if (t == NULL) {
+				warn("could not open overlay at %s", overlay);
+				continue;
+			}
+
+			if (t->treetype != TREE_EBUILD) {
+				/* could be possible, but currently pointless to support
+				 * anything else */
+				warn("ignoring non-ebuild tree");
+				continue;
+			}
+
+			/* we store the cache inside the metadata dir, which means
+			 * it gets wiped on portage sync (good because that would
+			 * invalidate it) and tree_open can transparently locate and
+			 * use it */
+			snprintf(buf, sizeof(buf),
+					 "%s/metadata/repo.gtree.tar.zst", t->path);
+			mkdir_p_at(t->tree_fd, "metadata", 0755);
+
+			a = archive_write_new();
+			archive_write_set_format_ustar(a);  /* GLEP-78, just to be safe */
+			archive_write_add_filter_zstd(a); /* TODO: reuse func from qpkg */
+			archive_write_open_filename(a, buf);
+
+			qcctx.archive   = a;
+			qcctx.buildtime = time(NULL);
+
+			/* add marker file, we populate with our version, although
+			 * nothing should rely on that */
+			len = snprintf(buf, sizeof(buf), "portage-utils-" VERSION);
+			entry = archive_entry_new();
+			archive_entry_set_pathname(entry, "gtree-1");
+			archive_entry_set_size(entry, len);
+			archive_entry_set_mtime(entry, qcctx.buildtime, 0);
+			archive_entry_set_filetype(entry, AE_IFREG);
+			archive_entry_set_perm(entry, 0644);
+			archive_write_header(a, entry);
+			archive_write_data(a, buf, len);
+			archive_entry_free(entry);
+
+			/* write repo name, if any */
+			if (t->repo != 0) {
+				len = strlen(t->repo);
+				entry = archive_entry_new();
+				archive_entry_set_pathname(entry, "repository");
+				archive_entry_set_size(entry, len);
+				archive_entry_set_mtime(entry, qcctx.buildtime, 0);
+				archive_entry_set_filetype(entry, AE_IFREG);
+				archive_entry_set_perm(entry, 0644);
+				archive_write_header(a, entry);
+				archive_write_data(a, t->repo, len);
+				archive_entry_free(entry);
+			}
+
+			/* add ebuilds */
+			tree_foreach_pkg(t, q_build_cache_pkg, &qcctx, true, NULL);
+
+			/* add eclasses */
+			len = snprintf(buf, sizeof(buf), "eclasses");
+			dfd = openat(t->tree_fd, "eclass", O_RDONLY);
+			if (dfd >= 0) {
+				q_build_cache_pkg_process_dir(&qcctx, buf,
+											  buf + len,
+											  sizeof(buf) - len,
+											  dfd);
+				close(dfd);
+			}
+
+			tree_close(t);
+			archive_write_close(a);
+			archive_write_free(a);
+		}
 
 		return 0;
 	}
