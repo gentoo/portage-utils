@@ -279,7 +279,7 @@ tree_open_cat(tree_ctx *ctx, const char *name)
 		return NULL;
 	}
 
-	cat_ctx = xmalloc(sizeof(*cat_ctx));
+	cat_ctx = xzalloc(sizeof(*cat_ctx));
 	cat_ctx->name = name;
 	cat_ctx->fd = fd;
 	cat_ctx->dir = dir;
@@ -589,12 +589,14 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 				tree_ctx *pkgdir = ctx->ebuilddir_ctx;
 
 				if (pkgdir == NULL)
-					pkgdir = ctx->ebuilddir_ctx = xzalloc(sizeof(tree_ctx));
+					pkgdir = ctx->ebuilddir_ctx = xmalloc(sizeof(*pkgdir));
 
+				ctx->ebuilddir_cat_ctx = NULL;
 				ctx->ebuilddir_pkg_ctx = tree_next_pkg_int(cat_ctx);
 				if (ctx->ebuilddir_pkg_ctx == NULL)
 					return NULL;
 
+				memset(pkgdir, 0, sizeof(*pkgdir));
 				pkgdir->portroot_fd = -1;
 				pkgdir->tree_fd = cat_ctx->fd;
 				pkgdir->do_sort = ctx->do_sort;
