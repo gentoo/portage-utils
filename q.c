@@ -109,6 +109,9 @@ int lookup_applet_idx(const char *applet)
 struct q_cache_ctx {
 	struct archive *archive;
 	time_t          buildtime;
+	char           *cbuf;
+	size_t          cbufsiz;
+	size_t          cbuflen;
 };
 static int q_build_cache_pkg_process_dir(struct q_cache_ctx *ctx,
 										 char               *path,
@@ -187,25 +190,33 @@ int q_build_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 	siz = sizeof(buf) - len;
 
 	/* - ebuilds/CAT/PF
-	 *   + cache/ (keys from md5-cache except _md5_, _eclasses_ and
-	 *             repository, the latter is stored at the top level
+	 *   + cache   keys from md5-cache except _md5_, _eclasses_ and
+	 *             repository (the latter is stored at the top level)
 	 *             in addition to this the required eclass names are
-	 *             stored in a new key called eclasses) */
+	 *             stored in a new key called eclasses
+	 *             all of this is stored as key-value file, because
+	 *             storing it as individual keys takes much more storage
+	 *             for no particular benefit */
+
+	/* start over, reusing previous buf allocation */
+	ctx->cbuflen = 0;
+
 #define q_cache_add_cache_entry_val(K,V) \
 	do { \
 		qc = V; \
-		if (qc != NULL) { \
+		if (qc != NULL) \
 			qclen = strlen(qc); \
-			entry = archive_entry_new(); \
-			snprintf(p, siz, "cache/" #K); \
-			archive_entry_set_pathname(entry, buf); \
-			archive_entry_set_size(entry, qclen); \
-			archive_entry_set_mtime(entry, ctx->buildtime, 0); \
-			archive_entry_set_filetype(entry, AE_IFREG); \
-			archive_entry_set_perm(entry, 0644); \
-			archive_write_header(a, entry); \
-			archive_write_data(a, qc, qclen); \
-			archive_entry_free(entry); \
+		else \
+			qclen = 0; \
+		if (qclen > 0) { \
+			if (ctx->cbuflen + qclen + 1 > ctx->cbufsiz) { \
+				ctx->cbufsiz = ctx->cbuflen + qclen + 1; \
+				ctx->cbufsiz = ((ctx->cbufsiz + (1024 - 1)) / 1024) * 1024; \
+				ctx->cbuf    = xrealloc(ctx->cbuf, ctx->cbufsiz); \
+			} \
+			ctx->cbuflen += snprintf(ctx->cbuf + ctx->cbuflen, \
+									 ctx->cbufsiz - ctx->cbuflen, \
+									 #K "=%s\n", qc); \
 		} \
 	} while (false)
 #define q_cache_add_cache_entry(K) \
@@ -246,7 +257,8 @@ int q_build_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 		char *tp;
 		bool  write;
 
-		/* eclasses, drop the md5 hashes, just leave a list of names */
+		/* eclasses, drop the md5 hashes, just leave a list of names
+		 * we don't expect selections on these, so store as data */
 		qc = tree_pkg_meta_get(pkg, _eclasses_);
 		if (qc != NULL) {
 			for (tp = tmpbuf, write = true; *qc != '\0'; qc++) {
@@ -264,7 +276,18 @@ int q_build_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 #undef q_cache_add_cache_entry
 #undef q_cache_add_cache_entry_val
 
-	/*   + ebuild (the file from the tree)
+	entry = archive_entry_new();
+	snprintf(p, siz, "cache");
+	archive_entry_set_pathname(entry, buf);
+	archive_entry_set_size(entry, ctx->cbuflen);
+	archive_entry_set_mtime(entry, ctx->buildtime, 0);
+	archive_entry_set_filetype(entry, AE_IFREG);
+	archive_entry_set_perm(entry, 0644);
+	archive_write_header(a, entry);
+	archive_write_data(a, ctx->cbuf, ctx->cbuflen);
+	archive_entry_free(entry);
+
+	/*   + <PF>.ebuild (the file from the tree)
 	 *   + Manifest (the file from the tree, to verify distfiles)
 	 *   + files/ (the directory from the tree) */
 	if (pkg->cat_ctx->ctx->treetype == TREE_EBUILD) {
@@ -288,7 +311,7 @@ int q_build_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 		if (ffd >= 0) {
 			if (fstat(ffd, &st) == 0) {
 				entry = archive_entry_new();
-				snprintf(p, siz, "ebuild");
+				snprintf(p, siz, "%s.ebuild", atom->PF);
 				archive_entry_set_pathname(entry, buf);
 				archive_entry_set_size(entry, st.st_size);
 				archive_entry_set_mtime(entry, ctx->buildtime, 0);
@@ -672,15 +695,17 @@ int q_main(int argc, char **argv)
 		/* traverse all overlays, create a cache for each
 		 * the cache basically is one giant tar with:
 		 * - gtree-1  (mandatory, first file ident)
-		 * - repository
-		 * - ebuilds/CAT/PF
-		 *   + cache/
-		 *   + ebuild (the file from the tree)
-		 *   + metadata.xml (the file from the tree)
-		 *   + Manifest (the file from the tree, to verify distfiles)
-		 *   + files/ (the directory from the tree)
-		 * - eclasses/ (the directory from the tree)
-		 * but all of them within are guaranteed to be consistant with
+		 * - repo.tar{compr}
+		 *   - repository
+		 *   - ebuilds/CAT/PF
+		 *     + cache (extracted info from the ebuild)
+		 *     + PF.ebuild (the file from the tree)
+		 *     + metadata.xml (the file from the tree)
+		 *     + Manifest (the file from the tree, to verify distfiles)
+		 *     + files/ (the directory from the tree)
+		 *   - eclasses/ (the directory from the tree)
+		 * - repo.tar{compr}.sig
+		 * but all of them within are guaranteed to be consistent with
 		 * each other (it is one snapshot)
 		 * the cache is suitable for distribution
 		 *
@@ -702,12 +727,21 @@ int q_main(int argc, char **argv)
 		size_t                len;
 		int                   dfd;
 
-
 		memset(&qcctx, 0, sizeof(qcctx));
 
 		array_for_each(overlays, n, overlay) {
 			if (verbose)
 				printf("building cache for %s\n", overlay);
+
+			/* we store the cache inside the metadata dir, which means
+			 * it gets wiped on portage sync (good because that would
+			 * invalidate it) and tree_open can transparently locate and
+			 * use it */
+			snprintf(buf, sizeof(buf),
+					 "%s/metadata/repo.gtree.tar.zst", overlay);
+			/* because we're building a new one here, make sure
+			 * tree_open doesn't pick it up */
+			unlink(buf);
 
 			t = tree_open(portroot, overlay);
 			if (t == NULL) {
@@ -722,12 +756,7 @@ int q_main(int argc, char **argv)
 				continue;
 			}
 
-			/* we store the cache inside the metadata dir, which means
-			 * it gets wiped on portage sync (good because that would
-			 * invalidate it) and tree_open can transparently locate and
-			 * use it */
-			snprintf(buf, sizeof(buf),
-					 "%s/metadata/repo.gtree.tar.zst", t->path);
+			/* ensure we can actually write the new cache */
 			mkdir_p_at(t->tree_fd, "metadata", 0755);
 
 			a = archive_write_new();
@@ -783,6 +812,8 @@ int q_main(int argc, char **argv)
 			archive_write_close(a);
 			archive_write_free(a);
 		}
+
+		free(qcctx.cbuf);
 
 		return 0;
 	}
