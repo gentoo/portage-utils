@@ -723,22 +723,26 @@ int q_main(int argc, char **argv)
 		struct archive       *a;
 		struct archive_entry *entry;
 		struct q_cache_ctx    qcctx;
+		struct stat           st;
 		char                  buf[BUFSIZ];
 		size_t                len;
+		ssize_t               rlen;
 		int                   dfd;
+		int                   tfd;
 
 		memset(&qcctx, 0, sizeof(qcctx));
 
 		array_for_each(overlays, n, overlay) {
 			if (verbose)
-				printf("building cache for %s\n", overlay);
+				printf("building cache for %s%s%s/metadata/repo.gtree.tar\n",
+					   BLUE, overlay, NORM);
 
 			/* we store the cache inside the metadata dir, which means
 			 * it gets wiped on portage sync (good because that would
 			 * invalidate it) and tree_open can transparently locate and
 			 * use it */
 			snprintf(buf, sizeof(buf),
-					 "%s/metadata/repo.gtree.tar.zst", overlay);
+					 "%s/metadata/repo.gtree.tar", overlay);
 			/* because we're building a new one here, make sure
 			 * tree_open doesn't pick it up */
 			unlink(buf);
@@ -761,10 +765,8 @@ int q_main(int argc, char **argv)
 
 			a = archive_write_new();
 			archive_write_set_format_ustar(a);  /* GLEP-78, just to be safe */
-			archive_write_add_filter_zstd(a); /* TODO: reuse func from qpkg */
 			archive_write_open_filename(a, buf);
 
-			qcctx.archive   = a;
 			qcctx.buildtime = time(NULL);
 
 			/* add marker file, we populate with our version, although
@@ -780,6 +782,30 @@ int q_main(int argc, char **argv)
 			archive_write_data(a, buf, len);
 			archive_entry_free(entry);
 
+			/* repo.tar.zst
+			 * the nested archive unfortunately cannot be written
+			 * straight to the archive stream above: its size needs to
+			 * be known before data can be written, hence we'll have to
+			 * produce the archive separately first, which sulks, but ok
+			 * in order to kind of protect it from being modified, we
+			 * make the file invisible */
+			snprintf(buf, sizeof(buf),
+					 "%s/metadata/gtree.XXXXXX", overlay);
+			tfd = mkstemp(buf);
+			if (tfd < 0) {
+				warnp("failed to open temp file");
+				tree_close(t);
+				archive_write_close(a);
+				archive_write_free(a);
+				continue;
+			}
+			unlink(buf);  /* make invisible, drop on close */
+
+			qcctx.archive = archive_write_new();
+			archive_write_set_format_ustar(qcctx.archive);
+			archive_write_add_filter_zstd(qcctx.archive);
+			archive_write_open_fd(qcctx.archive, tfd);
+
 			/* write repo name, if any */
 			if (t->repo != 0) {
 				len = strlen(t->repo);
@@ -789,8 +815,8 @@ int q_main(int argc, char **argv)
 				archive_entry_set_mtime(entry, qcctx.buildtime, 0);
 				archive_entry_set_filetype(entry, AE_IFREG);
 				archive_entry_set_perm(entry, 0644);
-				archive_write_header(a, entry);
-				archive_write_data(a, t->repo, len);
+				archive_write_header(qcctx.archive, entry);
+				archive_write_data(qcctx.archive, t->repo, len);
 				archive_entry_free(entry);
 			}
 
@@ -807,6 +833,28 @@ int q_main(int argc, char **argv)
 											  dfd);
 				close(dfd);
 			}
+
+			archive_write_close(qcctx.archive);
+			archive_write_free(qcctx.archive);
+
+			/* now we got the size, put it in the main archive */
+			fstat(tfd, &st);
+			entry = archive_entry_new();
+			archive_entry_set_pathname(entry, "repo.tar.zst");
+			archive_entry_set_size(entry, st.st_size);
+			archive_entry_set_mtime(entry, qcctx.buildtime, 0);
+			archive_entry_set_filetype(entry, AE_IFREG);
+			archive_entry_set_perm(entry, 0644);
+			archive_write_header(a, entry);
+			lseek(tfd, 0, SEEK_SET);  /* reposition at the start of file */
+			while ((rlen = read(tfd, buf, sizeof(buf))) > 0)
+				archive_write_data(a, buf, rlen);
+			archive_entry_free(entry);
+
+			/* TODO: compute and put .sig in here */
+
+			/* cleanup repo archive */
+			close(tfd);
 
 			tree_close(t);
 			archive_write_close(a);
