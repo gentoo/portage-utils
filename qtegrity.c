@@ -56,12 +56,6 @@ struct qtegrity_opt_state {
 #define FILE_EMPTY 2
 #define FILE_RELATIVE 3
 
-#define SHA1_DIGEST_LENGTH 40
-#define SHA256_PREFIX_LENGTH 8
-#define SHA256_DIGEST_LENGTH 64
-#define SHA256_LENGTH (SHA256_PREFIX_LENGTH + SHA256_DIGEST_LENGTH)
-#define SHA512_DIGEST_LENGTH 128
-
 static void
 check_sha(char *ret_digest, char *path, char *algo)
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2024 Gentoo Foundation
+ * Copyright 2018-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
@@ -21,6 +21,14 @@
 #include "sha1.h"
 #include "sha256.h"
 #include "sha512.h"
+
+#define BLAKE2B_DIGEST_SIZE    BLAKE2B_OUTBYTES
+
+#define MD5_DIGEST_LENGTH      (MD5_DIGEST_SIZE * 2)
+#define SHA1_DIGEST_LENGTH     (SHA1_DIGEST_SIZE * 2)
+#define SHA256_DIGEST_LENGTH   (SHA256_DIGEST_SIZE * 2)
+#define SHA512_DIGEST_LENGTH   (SHA512_DIGEST_SIZE * 2)
+#define BLAKE2B_DIGEST_LENGTH  (BLAKE2B_DIGEST_SIZE * 2)
 
 enum hash_impls {
 	HASH_MD5       = 1<<0,

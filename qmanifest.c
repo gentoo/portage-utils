@@ -183,9 +183,9 @@ write_hashes(
 		gzFile gm)
 {
 	size_t flen = 0;
-	char sha256[(SHA256_DIGEST_SIZE * 2) + 1];
-	char sha512[(SHA512_DIGEST_SIZE * 2) + 1];
-	char blak2b[(BLAKE2B_OUTBYTES * 2) + 1];
+	char sha256[SHA256_DIGEST_LENGTH + 1];
+	char sha512[SHA512_DIGEST_LENGTH + 1];
+	char blak2b[BLAKE2B_DIGEST_LENGTH + 1];
 	char data[8192];
 	char fname[8192];
 	size_t len;
@@ -1034,9 +1034,9 @@ verify_file(const char *dir, char *mfline, const char *mfest, verify_msg **msgs)
 	char *p;
 	char buf[8192];
 	size_t flen = 0;
-	char sha256[(SHA256_DIGEST_SIZE * 2) + 1];
-	char sha512[(SHA512_DIGEST_SIZE * 2) + 1];
-	char blak2b[(BLAKE2B_OUTBYTES * 2) + 1];
+	char sha256[SHA256_DIGEST_LENGTH + 1];
+	char sha512[SHA512_DIGEST_LENGTH + 1];
+	char blak2b[BLAKE2B_DIGEST_LENGTH + 1];
 	char ret = 0;
 
 	/* mfline is a Manifest file line with type and leading path

@@ -1140,7 +1140,7 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 	 * fake, but allows to transparantly use a dir of binpkgs */
 	if (newfd != -1) {
 		size_t fsize;
-		size_t needlen = (SHA1_DIGEST_SIZE * 2) + 1 + 19 + 1;
+		size_t needlen = SHA1_DIGEST_LENGTH + 1 + 19 + 1;
 		size_t pos = 0;
 		size_t len = 0;
 
@@ -1156,7 +1156,7 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 		}
 
 		m->Q_SHA1 = m->storage->ptr + pos;
-		m->Q_SIZE = m->Q_SHA1 + (SHA1_DIGEST_SIZE * 2) + 1;
+		m->Q_SIZE = m->Q_SHA1 + SHA1_DIGEST_LENGTH + 1;
 		m->storage->pos += needlen;
 
 		lseek(newfd, 0, SEEK_SET);  /* reposition at the start of file */
@@ -1236,7 +1236,7 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 					 * obviously when the source ebuild doesn't exist,
 					 * we never get here */
 					char   *mdmd5;
-					char    srcmd5[MD5_DIGEST_SIZE];
+					char    srcmd5[MD5_DIGEST_LENGTH + 1];
 					size_t  flen;
 
 					if (hash_multiple_file_fd(pkg_ctx->fd,
@@ -1249,7 +1249,7 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 
 					/* is this a valid cache? use it! */
 					if (mdmd5 != NULL &&
-						memcmp(mdmd5, srcmd5, MD5_DIGEST_SIZE) == 0)
+						memcmp(mdmd5, srcmd5, MD5_DIGEST_LENGTH) == 0)
 					{
 						ret = tree_pkg_read(spkg);
 					}

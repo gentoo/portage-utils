@@ -1949,8 +1949,8 @@ pkg_verify_checksums(
 		int                   display)
 {
 	int    ret = 0;
-	char   md5[(MD5_DIGEST_SIZE * 2) + 1];
-	char   sha1[(SHA1_DIGEST_SIZE * 2) + 1];
+	char   md5[MD5_DIGEST_LENGTH + 1];
+	char   sha1[SHA1_DIGEST_LENGTH + 1];
 	size_t flen;
 	int    mlen;
 

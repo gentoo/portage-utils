@@ -186,8 +186,8 @@ write_hashes
 )
 {
 	size_t flen = 0;
-	char sha512[(SHA512_DIGEST_SIZE * 2) + 1];
-	char blak2b[(BLAKE2B_OUTBYTES * 2) + 1];
+	char sha512[SHA512_DIGEST_LENGTH + 1];
+	char blak2b[BLAKE2B_DIGEST_LENGTH + 1];
 	char data[8192];
 	size_t len;
 	const char *name;
