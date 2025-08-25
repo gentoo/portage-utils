@@ -27,6 +27,7 @@
 #include "atom.h"
 #include "basename.h"
 #include "eat_file.h"
+#include "human_readable.h"
 #include "rmspace.h"
 #include "scandirat.h"
 #include "tree.h"
@@ -745,6 +746,7 @@ int q_main(int argc, char **argv)
 		ssize_t               rlen;
 		int                   dfd;
 		int                   tfd;
+		int                   fd;
 
 		memset(&qcctx, 0, sizeof(qcctx));
 
@@ -778,10 +780,11 @@ int q_main(int argc, char **argv)
 
 			/* ensure we can actually write the new cache */
 			mkdir_p_at(t->tree_fd, "metadata", 0755);
+			fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC);
 
 			a = archive_write_new();
 			archive_write_set_format_ustar(a);  /* GLEP-78, just to be safe */
-			archive_write_open_filename(a, buf);
+			archive_write_open_fd(a, fd);
 
 			qcctx.buildtime = time(NULL);
 
@@ -872,9 +875,22 @@ int q_main(int argc, char **argv)
 			/* cleanup repo archive */
 			close(tfd);
 
-			tree_close(t);
 			archive_write_close(a);
 			archive_write_free(a);
+
+			if (verbose) {
+				if (fstat(fd, &st) < 0)
+					warnp("could not stat produced archive");
+				else
+					printf("%s%s%s: %s%siB%s\n",
+						   GREEN, t->repo == NULL ? "???" : t->repo, NORM,
+						   RED, make_human_readable_str(st.st_size,
+														1, 0), NORM);
+			}
+
+			fchmod(fd, 0644);
+			close(fd);
+			tree_close(t);
 		}
 
 		free(qcctx.cbuf);
