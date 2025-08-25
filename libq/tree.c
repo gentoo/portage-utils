@@ -100,6 +100,7 @@ tree_open(const char *sroot, const char *portdir)
 	ret->subtree = tree_open_int(sroot, buf, true);
 	if (ret->subtree != NULL) {
 		ret->subtree->treetype = TREE_METADATA_MD5;
+		ret->subtree->cache.categories = create_set();
 		return ret;
 	}
 
@@ -107,6 +108,7 @@ tree_open(const char *sroot, const char *portdir)
 	ret->subtree = tree_open_int(sroot, buf, true);
 	if (ret->subtree != NULL) {
 		ret->subtree->treetype = TREE_METADATA_PMS;
+		ret->subtree->cache.categories = create_set();
 		return ret;
 	}
 
@@ -536,7 +538,7 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 				pkg_ctx = cat_ctx->pkg_ctxs[cat_ctx->pkg_cnt++] =
 					tree_open_pkg(cat_ctx, name);
 				if (pkg_ctx == NULL) {
-					/* name was freed by tree_close_pkg on fail */
+					free(name);
 					cat_ctx->pkg_cnt--;
 				}
 			}
@@ -610,6 +612,7 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 				/* opening might fail if what we found wasn't a
 				 * directory or something */
 				if (ctx->ebuilddir_cat_ctx == NULL) {
+					tree_close_pkg(ctx->ebuilddir_pkg_ctx);
 					ctx->ebuilddir_pkg_ctx = NULL;
 					continue;
 				}
@@ -622,6 +625,7 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 			ret = tree_next_pkg_int(ctx->ebuilddir_cat_ctx);
 			if (ret == NULL) {
 				tree_close_cat(ctx->ebuilddir_cat_ctx);
+				tree_close_pkg(ctx->ebuilddir_pkg_ctx);
 				ctx->ebuilddir_pkg_ctx = NULL;
 			}
 		} while (ret == NULL);
@@ -1264,14 +1268,16 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 						 ebld.st_mtim.tv_nsec > pmsc.st_mtim.tv_nsec))
 					{
 						/* fail or ebuild is newer, so ignore */
-						close(spkg->fd);
-						spkg->fd = -1;
 					} else {
 						ret = tree_pkg_read(spkg);
-						close(pkg_ctx->fd);
-						pkg_ctx->fd = -1;
 					}
 				}
+				if (ret != NULL) {
+					/* transplant meta to pkg, so we can free spkg */
+					pkg_ctx->meta = spkg->meta;
+					spkg->meta    = NULL;
+				}
+				tree_close_pkg(spkg);
 			}
 		}
 		if (ret == NULL) {
