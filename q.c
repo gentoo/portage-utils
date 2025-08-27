@@ -113,8 +113,10 @@ struct q_cache_ctx {
 	char           *cbuf;
 	size_t          cbufsiz;
 	size_t          cbuflen;
+	char            last_cat[_Q_PATH_MAX];
+	char            last_pkg[_Q_PATH_MAX];
 };
-static int q_build_cache_pkg_process_dir(struct q_cache_ctx *ctx,
+static int q_build_gtree_pkg_process_dir(struct q_cache_ctx *ctx,
 										 char               *path,
 										 char               *pbuf,
 										 size_t              pbufsiz,
@@ -149,7 +151,7 @@ static int q_build_cache_pkg_process_dir(struct q_cache_ctx *ctx,
 			continue;
 		}
 		if (S_ISDIR(st.st_mode)) {
-			q_build_cache_pkg_process_dir(ctx, path,
+			q_build_gtree_pkg_process_dir(ctx, path,
 										  pbuf + len, pbufsiz - len, fd);
 			continue;
 		}
@@ -169,35 +171,28 @@ static int q_build_cache_pkg_process_dir(struct q_cache_ctx *ctx,
 		close(fd);
 
 	scandir_free(flist, fcnt);
+
+	return 0;
 }
-int q_build_cache_pkg(tree_pkg_ctx *pkg, void *priv)
+int q_build_gtree_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 {
 	struct q_cache_ctx   *ctx   = priv;
 	struct archive       *a     = ctx->archive;
 	struct archive_entry *entry;
-	struct stat           st;
 	depend_atom          *atom  = tree_get_atom(pkg, false);
 	char                  buf[_Q_PATH_MAX];
-	char                 *p;
-	size_t                siz;
-	size_t                len;
 	char                 *qc;
 	size_t                qclen;
 
 	/* construct the common prefix */
-	len = snprintf(buf, sizeof(buf), "ebuilds/%s/%s/",
-				   atom->CATEGORY, atom->PF);
-	p   = buf + len;
-	siz = sizeof(buf) - len;
+	snprintf(buf, sizeof(buf), "caches/%s/%s", atom->CATEGORY, atom->PF);
 
-	/* - ebuilds/CAT/PF
-	 *   + cache   keys from md5-cache except _md5_, _eclasses_ and
-	 *             repository (the latter is stored at the top level)
-	 *             in addition to this the required eclass names are
-	 *             stored in a new key called eclasses
-	 *             all of this is stored as key-value file, because
-	 *             storing it as individual keys takes much more storage
-	 *             for no particular benefit */
+	/* keys from md5-cache except _md5_, _eclasses_ and repository (the
+	 * latter is stored at the top level)
+	 * in addition to this the required eclass names are stored in a new
+	 * key called eclasses for easy retrieval/extraction purposes
+	 * all of this is stored as key-value file, because storing it as
+	 * individual keys takes much more storage for no particular benefit */
 
 	/* start over, reusing previous buf allocation */
 	ctx->cbuflen = 0;
@@ -278,7 +273,6 @@ int q_build_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 #undef q_cache_add_cache_entry_val
 
 	entry = archive_entry_new();
-	snprintf(p, siz, "cache");
 	archive_entry_set_pathname(entry, buf);
 	archive_entry_set_size(entry, ctx->cbuflen);
 	archive_entry_set_mtime(entry, ctx->buildtime, 0);
@@ -288,14 +282,36 @@ int q_build_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 	archive_write_data(a, ctx->cbuf, ctx->cbuflen);
 	archive_entry_free(entry);
 
+	return 0;
+}
+int q_build_gtree_ebuilds_pkg(tree_pkg_ctx *pkg, void *priv)
+{
+	struct q_cache_ctx   *ctx   = priv;
+	struct archive       *a     = ctx->archive;
+	struct archive_entry *entry;
+	struct stat           st;
+	depend_atom          *atom  = tree_get_atom(pkg, false);
+	char                  buf[_Q_PATH_MAX];
+	char                 *p;
+	size_t                siz;
+	size_t                len;
+	char                 *qc;
+
+	/* construct the common prefix */
+	len = snprintf(buf, sizeof(buf), "ebuilds/%s/%s/",
+				   atom->CATEGORY, atom->PN);
+	p   = buf + len;
+	siz = sizeof(buf) - len;
+
 	/*   + <PF>.ebuild (the file from the tree)
 	 *   + Manifest (the file from the tree, to verify distfiles)
 	 *   + files/ (the directory from the tree) */
 	if (pkg->cat_ctx->ctx->treetype == TREE_EBUILD) {
-		char   pth[_Q_PATH_MAX];
+		char   pth[_Q_PATH_MAX * 2];
 		size_t flen;
 		int    dfd;
 		int    ffd;
+		bool   newpkg = true;
 
 		/* we could technically pull the ebuild from the VDB, or maybe
 		 * from the binpkg, but for what use? only an ebuild tree is
@@ -307,6 +323,80 @@ int q_build_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 		dfd = open(pth, O_RDONLY);
 		if (dfd < 0)
 			return 1;  /* how? */
+
+		if (strcmp(ctx->last_cat, atom->CATEGORY) != 0)
+			snprintf(ctx->last_cat, sizeof(ctx->last_cat),
+					 "%s", atom->CATEGORY);
+		else if (strcmp(ctx->last_pkg, atom->PN) != 0)
+			snprintf(ctx->last_pkg, sizeof(ctx->last_pkg),
+					 "%s", atom->PN);
+		else
+			newpkg = false;
+
+		if (newpkg) {
+			ffd = openat(dfd, "metadata.xml", O_RDONLY);
+			if (ffd >= 0) {
+				if (fstat(ffd, &st) == 0) {
+					entry = archive_entry_new();
+					snprintf(p, siz, "metadata.xml");
+					archive_entry_set_pathname(entry, buf);
+					archive_entry_set_size(entry, st.st_size);
+					archive_entry_set_mtime(entry, ctx->buildtime, 0);
+					archive_entry_set_filetype(entry, AE_IFREG);
+					archive_entry_set_perm(entry, 0644);
+					archive_write_header(a, entry);
+					while ((flen = read(ffd, pth, sizeof(pth))) > 0)
+						archive_write_data(a, pth, flen);
+					archive_entry_free(entry);
+				}
+				close(ffd);
+			}
+			/* for Manifest file we perform a "grep" here on the only
+			 * relevant entries: DIST, this reduces the overall size
+			 * of the tree considerably */
+			if (eat_file_at(dfd, "Manifest", &ctx->cbuf, &ctx->cbufsiz)) {
+				bool  start = true;
+				bool  write = false;
+				char *wp;
+				for (qc = ctx->cbuf, wp = ctx->cbuf; *qc != '\0'; qc++) {
+					if (start && strncmp(qc, "DIST ", 5) == 0)
+						write = true;
+					start = false;
+					if (write)
+						*wp++ = *qc;
+					if (*qc == '\r' || *qc == '\n') {
+						start = true;
+						write = false;
+					}
+				}
+				ctx->cbuflen = wp - ctx->cbuf;
+
+				if (ctx->cbuflen > 0) {
+					entry = archive_entry_new();
+					snprintf(p, siz, "Manifest");
+					archive_entry_set_pathname(entry, buf);
+					archive_entry_set_size(entry, ctx->cbuflen);
+					archive_entry_set_mtime(entry, ctx->buildtime, 0);
+					archive_entry_set_filetype(entry, AE_IFREG);
+					archive_entry_set_perm(entry, 0644);
+					archive_write_header(a, entry);
+					archive_write_data(a, ctx->cbuf, ctx->cbuflen);
+					archive_entry_free(entry);
+				}
+			}
+			/* process files, unfortunately this can be any number of
+			 * directories deep (remember eblitz?) so we'll have to recurse
+			 * for this one */
+			flen = snprintf(p, siz, "files");
+			ffd  = openat(dfd, "files", O_RDONLY);
+			if (ffd >= 0) {
+				q_build_gtree_pkg_process_dir(ctx,
+											  buf, p + flen, siz - flen,
+											  ffd);
+				close(ffd);
+			}
+		}
+
 		snprintf(pth, sizeof(pth), "%s.ebuild", atom->PF);
 		ffd = openat(dfd, pth, O_RDONLY);
 		if (ffd >= 0) {
@@ -325,65 +415,7 @@ int q_build_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 			}
 			close(ffd);
 		}
-		ffd = openat(dfd, "metadata.xml", O_RDONLY);
-		if (ffd >= 0) {
-			if (fstat(ffd, &st) == 0) {
-				entry = archive_entry_new();
-				snprintf(p, siz, "metadata.xml");
-				archive_entry_set_pathname(entry, buf);
-				archive_entry_set_size(entry, st.st_size);
-				archive_entry_set_mtime(entry, ctx->buildtime, 0);
-				archive_entry_set_filetype(entry, AE_IFREG);
-				archive_entry_set_perm(entry, 0644);
-				archive_write_header(a, entry);
-				while ((flen = read(ffd, pth, sizeof(pth))) > 0)
-					archive_write_data(a, pth, flen);
-				archive_entry_free(entry);
-			}
-			close(ffd);
-		}
-		/* for Manifest file we perform a "grep" here on the only
-		 * relevant entries: DIST, this reduces the overall size
-		 * of the tree considerably */
-		if (eat_file_at(dfd, "Manifest", &ctx->cbuf, &ctx->cbufsiz)) {
-			bool  start = true;
-			bool  write = false;
-			char *wp;
-			for (qc = ctx->cbuf, wp = ctx->cbuf; *qc != '\0'; qc++) {
-				if (start && strncmp(qc, "DIST ", 5) == 0)
-					write = true;
-				start = false;
-				if (write)
-					*wp++ = *qc;
-				if (*qc == '\r' || *qc == '\n') {
-					start = true;
-					write = false;
-				}
-			}
-			ctx->cbuflen = wp - ctx->cbuf;
 
-			if (ctx->cbuflen > 0) {
-				entry = archive_entry_new();
-				snprintf(p, siz, "Manifest");
-				archive_entry_set_pathname(entry, buf);
-				archive_entry_set_size(entry, ctx->cbuflen);
-				archive_entry_set_mtime(entry, ctx->buildtime, 0);
-				archive_entry_set_filetype(entry, AE_IFREG);
-				archive_entry_set_perm(entry, 0644);
-				archive_write_header(a, entry);
-				archive_write_data(a, ctx->cbuf, ctx->cbuflen);
-				archive_entry_free(entry);
-			}
-		}
-		/* process files, unfortunately this can be any number of
-		 * directories deep (remember eblitz?) so we'll have to recurse
-		 * for this one */
-		flen = snprintf(p, siz, "files");
-		ffd  = openat(dfd, "files", O_RDONLY);
-		if (ffd >= 0) {
-			q_build_cache_pkg_process_dir(ctx, buf, p + flen, siz - flen, ffd);
-			close(ffd);
-		}
 		close(dfd);
 	}
 
@@ -714,9 +746,9 @@ int q_main(int argc, char **argv)
 		 * - gtree-1  (mandatory, first file ident)
 		 * - repo.tar{compr}
 		 *   - repository
-		 *   - ebuilds/CAT/PF
-		 *     + cache (extracted info from the ebuild)
-		 *     + PF.ebuild (the file from the tree)
+		 *   - cache/CAT/PF  (extracted info from the ebuild)
+		 *   - ebuilds/CAT/PN
+		 *     + PF.ebuild (the file from the tree) (repeated for each PF)
 		 *     + metadata.xml (the file from the tree)
 		 *     + Manifest (the file from the tree, to verify distfiles)
 		 *     + files/ (the directory from the tree)
@@ -839,14 +871,17 @@ int q_main(int argc, char **argv)
 				archive_entry_free(entry);
 			}
 
-			/* add ebuilds */
-			tree_foreach_pkg(t, q_build_cache_pkg, &qcctx, true, NULL);
+			/* add cache and ebuilds */
+			tree_foreach_pkg(t, q_build_gtree_cache_pkg, &qcctx, true, NULL);
+			qcctx.last_cat[0] = '\0';
+			qcctx.last_pkg[0] = '\0';
+			tree_foreach_pkg(t, q_build_gtree_ebuilds_pkg, &qcctx, true, NULL);
 
 			/* add eclasses */
 			len = snprintf(buf, sizeof(buf), "eclasses");
 			dfd = openat(t->tree_fd, "eclass", O_RDONLY);
 			if (dfd >= 0) {
-				q_build_cache_pkg_process_dir(&qcctx, buf,
+				q_build_gtree_pkg_process_dir(&qcctx, buf,
 											  buf + len,
 											  sizeof(buf) - len,
 											  dfd);
