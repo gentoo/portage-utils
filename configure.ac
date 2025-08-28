@@ -53,7 +53,15 @@ AC_SUBST([CONFIG_EPREFIX], ["$with_eprefix"])
 AC_ARG_ENABLE([qmanifest], [AS_HELP_STRING([--enable-qmanifest],
 			  [support qmanifest applet])])
 
-# always check libb2, gpgme and libarchive, necessary for gpkg support
+AC_ARG_ENABLE([gpkg],
+              [AS_HELP_STRING([--enable-gpkg],
+                              [support GLEP-78 gpkg packages])])
+AC_ARG_ENABLE([gtree],
+              [AS_HELP_STRING([--enable-gtree],
+                              [support gtree cache])])
+
+
+# always check libb2, gpgme and libarchive
 PKG_CHECK_MODULES([LIBBL2], [libb2],
                   [
                     AC_DEFINE([HAVE_BLAKE2B], [1], [Define if you have blake2b])
@@ -77,6 +85,14 @@ PKG_CHECK_MODULES([GPGME], [gpgme],
                           [
                             AC_MSG_FAILURE([--enable-qmanifest was given, but gpgme.pc could not be found])
                           ])
+                    AS_IF([test "x${enable_gpkg}" = "xyes"],
+                          [
+                            AC_MSG_FAILURE([--enable-gpkg was given, but gpgme.pc could not be found])
+                          ])
+                    AS_IF([test "x${enable_gtree}" = "xyes"],
+                          [
+                            AC_MSG_FAILURE([--enable-gtree was given, but gpgme.pc could not be found])
+                          ])
                     GPGME="no: missing dependencies"
                   ])
 
@@ -86,6 +102,14 @@ PKG_CHECK_MODULES([LIBARCHIVE], [libarchive],
                     LIBARCHIVE="yes"
                   ],
                   [
+                    AS_IF([test "x${enable_gpkg}" = "xyes"],
+                          [
+                            AC_MSG_FAILURE([--enable-gpkg was given, but libarchive.pc could not be found])
+                          ])
+                    AS_IF([test "x${enable_gtree}" = "xyes"],
+                          [
+                            AC_MSG_FAILURE([--enable-gtree was given, but libarchive.pc could not be found])
+                          ])
                     LIBARCHIVE="no: missing dependencies"
                   ])
 
@@ -115,6 +139,42 @@ AM_CONDITIONAL([QMANIFEST_ENABLED], [test "x$enable_qmanifest" != xno])
 if test "x$enable_qmanifest" != xno ; then
 	AC_DEFINE([ENABLE_QMANIFEST], [1],
 			  [Define if qmanifest should be compiled])
+fi
+
+AS_IF([test "x${enable_gpkg}" != "xno"], [
+  AC_MSG_CHECKING([whether to enable gpkg])
+  AS_IF([test "x${GPGME}${LIBARCHIVE}" = "xyesyes"], [
+    AC_MSG_RESULT([yes])
+  ], [
+    AC_MSG_RESULT([no: missing dependencies])
+  ])
+], [
+  AC_MSG_CHECKING([whether to enable gpkg])
+  AC_MSG_RESULT([no: disabled by configure argument])
+])
+
+AM_CONDITIONAL([GPKG_ENABLED], [test "x$enable_gpkg" != xno])
+if test "x$enable_gpkg" != xno ; then
+	AC_DEFINE([ENABLE_GPKG], [1],
+			  [Define if gpkg should be compiled])
+fi
+
+AS_IF([test "x${enable_gtree}" != "xno"], [
+  AC_MSG_CHECKING([whether to enable gtree])
+  AS_IF([test "x${GPGME}${LIBARCHIVE}" = "xyesyes"], [
+    AC_MSG_RESULT([yes])
+  ], [
+    AC_MSG_RESULT([no: missing dependencies])
+  ])
+], [
+  AC_MSG_CHECKING([whether to enable gtree])
+  AC_MSG_RESULT([no: disabled by configure argument])
+])
+
+AM_CONDITIONAL([GTREE_ENABLED], [test "x$enable_gtree" != xno])
+if test "x$enable_gtree" != xno ; then
+	AC_DEFINE([ENABLE_GTREE], [1],
+			  [Define if gtree should be compiled])
 fi
 
 AX_CFLAGS_WARN_ALL

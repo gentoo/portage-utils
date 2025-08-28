@@ -653,6 +653,10 @@ am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+GTREE_ENABLED_FALSE
+GTREE_ENABLED_TRUE
+GPKG_ENABLED_FALSE
+GPKG_ENABLED_TRUE
 QMANIFEST_ENABLED_FALSE
 QMANIFEST_ENABLED_TRUE
 LIBZ_LIBS
@@ -2144,6 +2148,8 @@ enable_cross_guesses
 with_openssl
 with_eprefix
 enable_qmanifest
+enable_gpkg
+enable_gtree
 enable_year2038
 '
       ac_precious_vars='build_alias
@@ -2807,6 +2813,8 @@ Optional Features:
   --enable-cross-guesses={conservative|risky}
                           specify policy for cross-compilation guesses
   --enable-qmanifest      support qmanifest applet
+  --enable-gpkg           support GLEP-78 gpkg packages
+  --enable-gtree          support gtree cache
   --enable-year2038       support timestamps after 2038
 
 Optional Packages:
@@ -37275,7 +37283,21 @@ then :
 fi
 
 
-# always check libb2, gpgme and libarchive, necessary for gpkg support
+# Check whether --enable-gpkg was given.
+if test ${enable_gpkg+y}
+then :
+  enableval=$enable_gpkg;
+fi
+
+# Check whether --enable-gtree was given.
+if test ${enable_gtree+y}
+then :
+  enableval=$enable_gtree;
+fi
+
+
+
+# always check libb2, gpgme and libarchive
 
 
 
@@ -37579,6 +37601,24 @@ as_fn_error $? "--enable-qmanifest was given, but gpgme.pc could not be found
 See 'config.log' for more details" "$LINENO" 5; }
 
 fi
+                    if test "x${enable_gpkg}" = "xyes"
+then :
+
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-gpkg was given, but gpgme.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
+                    if test "x${enable_gtree}" = "xyes"
+then :
+
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-gtree was given, but gpgme.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
                     GPGME="no: missing dependencies"
 
 elif test $pkg_failed = untried; then
@@ -37591,6 +37631,24 @@ then :
                             { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
 printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
 as_fn_error $? "--enable-qmanifest was given, but gpgme.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
+                    if test "x${enable_gpkg}" = "xyes"
+then :
+
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-gpkg was given, but gpgme.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
+                    if test "x${enable_gtree}" = "xyes"
+then :
+
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-gtree was given, but gpgme.pc could not be found
 See 'config.log' for more details" "$LINENO" 5; }
 
 fi
@@ -37669,12 +37727,48 @@ fi
         echo "$LIBARCHIVE_PKG_ERRORS" >&5
 
 
+                    if test "x${enable_gpkg}" = "xyes"
+then :
+
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-gpkg was given, but libarchive.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
+                    if test "x${enable_gtree}" = "xyes"
+then :
+
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-gtree was given, but libarchive.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
                     LIBARCHIVE="no: missing dependencies"
 
 elif test $pkg_failed = untried; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 
+                    if test "x${enable_gpkg}" = "xyes"
+then :
+
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-gpkg was given, but libarchive.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
+                    if test "x${enable_gtree}" = "xyes"
+then :
+
+                            { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-gtree was given, but libarchive.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
                     LIBARCHIVE="no: missing dependencies"
 
 else
@@ -37829,6 +37923,92 @@ fi
 if test "x$enable_qmanifest" != xno ; then
 
 printf "%s\n" "#define ENABLE_QMANIFEST 1" >>confdefs.h
+
+fi
+
+if test "x${enable_gpkg}" != "xno"
+then :
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to enable gpkg" >&5
+printf %s "checking whether to enable gpkg... " >&6; }
+  if test "x${GPGME}${LIBARCHIVE}" = "xyesyes"
+then :
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+else case e in #(
+  e)
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no: missing dependencies" >&5
+printf "%s\n" "no: missing dependencies" >&6; }
+   ;;
+esac
+fi
+
+else case e in #(
+  e)
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to enable gpkg" >&5
+printf %s "checking whether to enable gpkg... " >&6; }
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no: disabled by configure argument" >&5
+printf "%s\n" "no: disabled by configure argument" >&6; }
+ ;;
+esac
+fi
+
+ if test "x$enable_gpkg" != xno; then
+  GPKG_ENABLED_TRUE=
+  GPKG_ENABLED_FALSE='#'
+else
+  GPKG_ENABLED_TRUE='#'
+  GPKG_ENABLED_FALSE=
+fi
+
+if test "x$enable_gpkg" != xno ; then
+
+printf "%s\n" "#define ENABLE_GPKG 1" >>confdefs.h
+
+fi
+
+if test "x${enable_gtree}" != "xno"
+then :
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to enable gtree" >&5
+printf %s "checking whether to enable gtree... " >&6; }
+  if test "x${GPGME}${LIBARCHIVE}" = "xyesyes"
+then :
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+else case e in #(
+  e)
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no: missing dependencies" >&5
+printf "%s\n" "no: missing dependencies" >&6; }
+   ;;
+esac
+fi
+
+else case e in #(
+  e)
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to enable gtree" >&5
+printf %s "checking whether to enable gtree... " >&6; }
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no: disabled by configure argument" >&5
+printf "%s\n" "no: disabled by configure argument" >&6; }
+ ;;
+esac
+fi
+
+ if test "x$enable_gtree" != xno; then
+  GTREE_ENABLED_TRUE=
+  GTREE_ENABLED_FALSE='#'
+else
+  GTREE_ENABLED_TRUE='#'
+  GTREE_ENABLED_FALSE=
+fi
+
+if test "x$enable_gtree" != xno ; then
+
+printf "%s\n" "#define ENABLE_GTREE 1" >>confdefs.h
 
 fi
 
@@ -39031,6 +39211,14 @@ fi
 
 if test -z "${QMANIFEST_ENABLED_TRUE}" && test -z "${QMANIFEST_ENABLED_FALSE}"; then
   as_fn_error $? "conditional \"QMANIFEST_ENABLED\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${GPKG_ENABLED_TRUE}" && test -z "${GPKG_ENABLED_FALSE}"; then
+  as_fn_error $? "conditional \"GPKG_ENABLED\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${GTREE_ENABLED_TRUE}" && test -z "${GTREE_ENABLED_FALSE}"; then
+  as_fn_error $? "conditional \"GTREE_ENABLED\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

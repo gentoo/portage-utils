@@ -19,7 +19,7 @@
 #include <libproc.h>
 #endif
 
-#ifdef HAVE_LIBARCHIVE
+#ifdef ENABLE_GPKG
 # include <archive.h>
 # include <archive_entry.h>
 #endif
@@ -106,7 +106,7 @@ int lookup_applet_idx(const char *applet)
 	return 0;
 }
 
-#ifdef HAVE_LIBARCHIVE
+#ifdef ENABLE_GPKG
 struct q_cache_ctx {
 	struct archive *archive;
 	time_t          buildtime;

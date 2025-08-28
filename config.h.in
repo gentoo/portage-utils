@@ -61,6 +61,12 @@
 /* Define to 1 if // is a file system root distinct from /. */
 #undef DOUBLE_SLASH_IS_DISTINCT_ROOT
 
+/* Define if gpkg should be compiled */
+#undef ENABLE_GPKG
+
+/* Define if gtree should be compiled */
+#undef ENABLE_GTREE
+
 /* Define if qmanifest should be compiled */
 #undef ENABLE_QMANIFEST
 

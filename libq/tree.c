@@ -15,7 +15,7 @@
 #include <ctype.h>
 #include <xalloc.h>
 
-#ifdef HAVE_LIBARCHIVE
+#if defined(ENABLE_GPKG) || defined(ENABLE_GTREE)
 # include <archive.h>
 # include <archive_entry.h>
 #endif
@@ -97,7 +97,7 @@ tree_open(const char *sroot, const char *portdir)
 	}
 
 	/* look for cache trees to speed things up */
-#ifdef HAVE_LIBARCHIVE
+#ifdef ENABLE_GTREE
 	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_gt1);
 	ret->subtree = tree_open_gtree_int(sroot, buf, true);
 	if (ret->subtree != NULL) {
@@ -176,7 +176,7 @@ tree_open_binpkg(const char *sroot, const char *spkg)
 	return ret;
 }
 
-#ifdef HAVE_LIBARCHIVE
+#ifdef ENABLE_GTREE
 tree_ctx *
 tree_open_gtree_int(const char *sroot, const char *tar, bool quiet)
 {
@@ -1145,7 +1145,7 @@ tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
 	int newfd = -1;
 
 	if (pkg_ctx->binpkg_isgpkg) {
-#ifdef HAVE_LIBARCHIVE
+#ifdef ENABLE_GPKG
 		struct archive       *a     = archive_read_new();
 		struct archive_entry *entry;
 		size_t                len   = 0;
@@ -1822,7 +1822,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 	return ret;
 }
 
-#ifdef HAVE_LIBARCHIVE
+#ifdef ENABLE_GTREE
 struct tree_gtree_cb_ctx {
 	struct archive *archive;
 };
@@ -2056,7 +2056,7 @@ tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 	if (ctx->treetype == TREE_PACKAGES)
 		return tree_foreach_packages(ctx, callback, priv);
 
-#ifdef HAVE_LIBARCHIVE
+#ifdef ENABLE_GTREE
 	/* similar a gtree cache can be read sequentially in one go */
 	if (ctx->treetype == TREE_METADATA_GTREE)
 		return tree_foreach_gtree(ctx, callback, priv);
