@@ -19,7 +19,7 @@
 #include <sys/wait.h>
 #include <assert.h>
 
-#ifdef HAVE_LIBARCHIVE
+#ifdef ENABLE_GPKG
 # include <archive.h>
 # include <archive_entry.h>
 #endif
@@ -482,8 +482,8 @@ install_mask_check_dir(
 			int subfd = openat(fd, files[j]->d_name, O_RDONLY);
 			if (subfd < 0)
 				continue;
-			snprintf(npth, _Q_PATH_MAX - (npth - qpth),
-					"/%s", files[j]->d_name);
+			snprintf(npth, _Q_PATH_MAX - (npth - qpth), "/%.*s",
+					(int)(_Q_PATH_MAX - (npth - qpth)), files[j]->d_name);
 			install_mask_check_dir(maskv, maskc, st, subfd,
 					level + 1, child_mode, qpth);
 			close(subfd);
@@ -1251,7 +1251,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 			err("failed to open %s: %s", mpkg->path, archive_error_string(a));
 		while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
 			const char *fname = archive_entry_pathname(entry);
-			const void *p;
 			size_t      size;
 			la_int64_t  off;
 
@@ -1272,7 +1271,9 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 			if (archive_write_header(t, entry) != ARCHIVE_OK)
 				err("failed to write: %s", archive_error_string(t));
-			while (archive_read_data_block(a, &p, &size, &off) == ARCHIVE_OK) {
+			while (archive_read_data_block(a, (const void **)&p,
+										   &size, &off) == ARCHIVE_OK)
+			{
 				if (archive_write_data_block(t, p, size, off) != ARCHIVE_OK)
 					err("failed to write %s: %s\n",
 						fname, archive_error_string(t));
@@ -1302,7 +1303,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 			err("failed to open metadata: %s", archive_error_string(a));
 		while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
 			const char *fname = archive_entry_pathname(entry);
-			const void *p;
 			size_t      size;
 			la_int64_t  off;
 
@@ -1316,7 +1316,9 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 			if (archive_write_header(t, entry) != ARCHIVE_OK)
 				err("failed to write: %s", archive_error_string(t));
-			while (archive_read_data_block(a, &p, &size, &off) == ARCHIVE_OK) {
+			while (archive_read_data_block(a, (const void **)&p,
+										   &size, &off) == ARCHIVE_OK)
+			{
 				if (archive_write_data_block(t, p, size, off) != ARCHIVE_OK)
 					err("failed to write %s: %s\n",
 						fname, archive_error_string(t));
@@ -1345,7 +1347,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 			err("failed to open metadata: %s", archive_error_string(a));
 		while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
 			const char *fname = archive_entry_pathname(entry);
-			const void *p;
 			size_t      size;
 			la_int64_t  off;
 
@@ -1359,7 +1360,9 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 			if (archive_write_header(t, entry) != ARCHIVE_OK)
 				err("failed to write: %s", archive_error_string(t));
-			while (archive_read_data_block(a, &p, &size, &off) == ARCHIVE_OK) {
+			while (archive_read_data_block(a, (const void **)&p,
+										   &size, &off) == ARCHIVE_OK)
+			{
 				if (archive_write_data_block(t, p, size, off) != ARCHIVE_OK)
 					err("failed to write %s: %s\n",
 						fname, archive_error_string(t));

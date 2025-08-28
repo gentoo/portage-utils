@@ -173,7 +173,7 @@ static int q_build_gtree_pkg_process_dir(struct q_cache_ctx *ctx,
 
 	return 0;
 }
-int q_build_gtree_cache_pkg(tree_pkg_ctx *pkg, void *priv)
+static int q_build_gtree_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 {
 	struct q_cache_ctx   *ctx   = priv;
 	struct archive       *a     = ctx->archive;
@@ -283,7 +283,7 @@ int q_build_gtree_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 
 	return 0;
 }
-int q_build_gtree_ebuilds_pkg(tree_pkg_ctx *pkg, void *priv)
+static int q_build_gtree_ebuilds_pkg(tree_pkg_ctx *pkg, void *priv)
 {
 	struct q_cache_ctx   *ctx   = priv;
 	struct archive       *a     = ctx->archive;

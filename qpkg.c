@@ -213,7 +213,7 @@ write_hashes
 	write(fd, data, len);
 }
 
-static char *
+static const char *
 qgpkg_set_compression(struct archive *a)
 {
 	/* we compress the metadata and image using zstd as the compression
@@ -247,7 +247,7 @@ qgpkg_make(tree_pkg_ctx *pkg)
 	char gpkg[BUFSIZE + 32];
 	char buf[BUFSIZE * 4];
 	char ename[BUFSIZE];
-	char *filter;
+	const char *filter;
 	char *line;
 	char *savep;
 	int i;
