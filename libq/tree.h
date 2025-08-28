@@ -32,6 +32,7 @@ struct tree_ctx {
 	bool do_sort:1;
 	enum {
 		TREE_UNSET = 0,
+		TREE_METADATA_GTREE,
 		TREE_METADATA_MD5,
 		TREE_METADATA_PMS,
 		TREE_EBUILD,
@@ -154,6 +155,8 @@ tree_ctx *tree_open(const char *sroot, const char *portdir);
 tree_ctx *tree_open_vdb(const char *sroot, const char *svdb);
 tree_ctx *tree_open_ebuild(const char *sroot, const char *portdir);
 tree_ctx *tree_open_binpkg(const char *sroot, const char *spkg);
+#define tree_open_gtree(R,T) tree_open_gtree_int(R,T,false)
+tree_ctx *tree_open_gtree_int(const char *sroot, const char *tar, bool quiet);
 void tree_close(tree_ctx *ctx);
 tree_cat_ctx *tree_open_cat(tree_ctx *ctx, const char *name);
 void tree_close_cat(tree_cat_ctx *cat_ctx);

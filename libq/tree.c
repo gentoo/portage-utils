@@ -79,6 +79,7 @@ tree_open_int(const char *sroot, const char *tdir, bool quiet)
 
 static const char portcachedir_pms[] = "metadata/cache";
 static const char portcachedir_md5[] = "metadata/md5-cache";
+static const char portcachedir_gt1[] = "metadata/repo.gtree.tar";
 static const char portrepo_name[]    = "profiles/repo_name";
 tree_ctx *
 tree_open(const char *sroot, const char *portdir)
@@ -96,6 +97,15 @@ tree_open(const char *sroot, const char *portdir)
 	}
 
 	/* look for cache trees to speed things up */
+#ifdef HAVE_LIBARCHIVE
+	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_gt1);
+	ret->subtree = tree_open_gtree_int(sroot, buf, true);
+	if (ret->subtree != NULL) {
+		ret->subtree->treetype = TREE_METADATA_GTREE;
+		return ret;
+	}
+#endif
+
 	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_md5);
 	ret->subtree = tree_open_int(sroot, buf, true);
 	if (ret->subtree != NULL) {
@@ -166,6 +176,70 @@ tree_open_binpkg(const char *sroot, const char *spkg)
 	return ret;
 }
 
+#ifdef HAVE_LIBARCHIVE
+tree_ctx *
+tree_open_gtree_int(const char *sroot, const char *tar, bool quiet)
+{
+	tree_ctx             *ctx = xzalloc(sizeof(*ctx));
+	struct archive       *gt;
+	struct archive_entry *entry;
+
+	ctx->portroot_fd = open(sroot, O_RDONLY | O_CLOEXEC | O_PATH);
+	if (ctx->portroot_fd == -1) {
+		if (!quiet)
+			warnp("could not open root: %s", sroot);
+		free(ctx);
+		return NULL;
+	}
+
+	/* Skip the leading slash */
+	tar++;
+	if (*tar == '\0')
+		tar = ".";
+	ctx->tree_fd = openat(ctx->portroot_fd, tar, O_RDONLY | O_CLOEXEC);
+	if (ctx->tree_fd == -1) {
+		if (!quiet)
+			warnp("could not open tree: %s (in root %s)", tar, sroot);
+		close(ctx->portroot_fd);
+		free(ctx);
+		return NULL;
+	}
+
+	if (sroot[0] == '/' && sroot[1] == '\0')
+		sroot = "";
+	snprintf(ctx->path, sizeof(ctx->path), "%s/%s", sroot, tar);
+
+	gt = archive_read_new();
+	archive_read_support_format_all(gt);
+	if (archive_read_open_fd(gt, ctx->tree_fd, BUFSIZ) != ARCHIVE_OK ||
+		archive_read_next_header(gt, &entry) != ARCHIVE_OK)
+	{
+		if (!quiet)
+			warnp("could not open tree: %s (in root %s): %s",
+				  tar, sroot, archive_error_string(gt));
+		archive_read_free(gt);
+		close(ctx->portroot_fd);
+		close(ctx->tree_fd);
+		free(ctx);
+		return NULL;
+	}
+	if (strcmp(archive_entry_pathname(entry), "gtree-1") != 0) {
+		if (!quiet)
+			warnp("could not open tree: %s (in root %s): not a gtree container",
+				  tar, sroot);
+		archive_read_free(gt);
+		close(ctx->portroot_fd);
+		close(ctx->tree_fd);
+		free(ctx);
+		return NULL;
+	}
+	/* defer repo for now */
+	archive_read_free(gt);
+
+	return ctx;
+}
+#endif
+
 void
 tree_close(tree_ctx *ctx)
 {
@@ -189,9 +263,10 @@ tree_close(tree_ctx *ctx)
 	if (ctx->cache.store != NULL)
 		free(ctx->cache.store);
 
-	closedir(ctx->dir);
-	/* closedir() above does this for us: */
-	/* close(ctx->tree_fd); */
+	if (ctx->dir != NULL)
+		closedir(ctx->dir);
+	else if (ctx->tree_fd >= 0)
+		close(ctx->tree_fd); /* closedir() above does this for us */
 	close(ctx->portroot_fd);
 	if (ctx->do_sort)
 		scandir_free(ctx->cat_de, ctx->cat_cnt);
@@ -942,13 +1017,18 @@ tree_read_file_ebuild(tree_pkg_ctx *pkg_ctx)
 								continue;
 							}
 						} else {
-							/* implement line continuation (\ before newline) */
-							if (esc && (*p == '\n' || *p == '\r'))
+							/* stash everything on a single line like
+							 * VDB and md5-cache do */
+							if (*p == '\n' || *p == '\r')
 								*p = ' ';
 							esc = false;
 						}
 
-						*w++ = *p++;
+						/* collapse sequences of spaces */
+						if (*w != ' ' || *p != ' ')
+							*w++ = *p++;
+						else
+							p++;
 					}
 					if (*p == *q && esc) {
 						/* escaped, move along */
@@ -1625,17 +1705,17 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 					atom->BUILDID = atoi(meta.Q_BUILDID);
 				pkgnamelen = 0;
 				if (meta.Q_PATH != NULL) {
-					size_t len = strlen(meta.Q_PATH);
-					if (len > sizeof(".tbz2") - 1 &&
-						memcmp(meta.Q_PATH + len - sizeof(".tbz2") - 1,
+					size_t plen = strlen(meta.Q_PATH);
+					if (plen > sizeof(".tbz2") - 1 &&
+						memcmp(meta.Q_PATH + plen - sizeof(".tbz2") - 1,
 							   ".tbz2", sizeof(".tbz2") - 1) == 0)
 					{
 						pkgnamelen = snprintf(pkgname, sizeof(pkgname),
 											  "%s.tbz2", atom->PF);
 						pkgname[pkgnamelen - (sizeof(".tbz2") - 1)] = '\0';
 					}
-					if (len > sizeof(".gpkg.tar") - 1 &&
-						memcmp(meta.Q_PATH + len - sizeof(".gpkg.tar") - 1,
+					if (plen > sizeof(".gpkg.tar") - 1 &&
+						memcmp(meta.Q_PATH + plen - sizeof(".gpkg.tar") - 1,
 							   ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
 					{
 						pkgnamelen = snprintf(pkgname, sizeof(pkgname),
@@ -1742,6 +1822,222 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 	return ret;
 }
 
+#ifdef HAVE_LIBARCHIVE
+struct tree_gtree_cb_ctx {
+	struct archive *archive;
+};
+static la_ssize_t
+tree_gtree_read_cb(struct archive *a, void *cctx, const void **buf)
+{
+	struct tree_gtree_cb_ctx *ctx = cctx;
+	size_t                    size;
+	la_int64_t                offset;  /* unused */
+	int                       ret;
+
+	ret = archive_read_data_block(ctx->archive, buf, &size, &offset);
+	if (ret == ARCHIVE_EOF)
+		return 0;
+	if (ret != ARCHIVE_OK)
+		return -1;
+	(void)offset;
+	/* at this point I sincerely hope size is not going to be over the
+	 * unsigned variant */
+	return (la_ssize_t)size;
+}
+static int
+tree_gtree_close_cb(struct archive *a, void *cctx)
+{
+	/* noop */
+	return ARCHIVE_OK;
+}
+
+static int
+tree_foreach_gtree(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
+{
+	tree_cat_ctx             *cat         = NULL;
+	tree_pkg_ctx              pkg;
+	tree_pkg_meta             meta;
+	depend_atom              *atom        = NULL;
+	struct archive           *outer;
+	struct archive           *inner;
+	struct archive_entry     *entry;
+	struct tree_gtree_cb_ctx  cb_ctx;
+	char                     *p;
+	const depend_atom        *query       = ctx->query_atom;
+	bool                      foundcaches = false;
+	size_t                    len;
+	int                       ret         = 0;
+
+	/* reused for every entry */
+	cat       = xzalloc(sizeof(*cat));
+	cat->ctx  = ctx;
+	cat->name = "";
+
+	/* rewind the outer tar, and re-read it, it's slight overhead that
+	 * we have to re-read it entirely, but I cannot find an API to
+	 * rewind or use an offset to re-read an entry again, and the
+	 * overhead should be small given the outer is uncompressed and it's
+	 * the second entry */
+	lseek(ctx->tree_fd, 0, SEEK_SET);
+	outer = archive_read_new();
+	archive_read_support_format_all(outer);  /* don't see why not */
+	if (archive_read_open_fd(outer, ctx->tree_fd, BUFSIZ) != ARCHIVE_OK) {
+		warn("unable to read gtree container: %s",
+			 archive_error_string(outer));
+		archive_read_free(outer);
+		return 1;
+	}
+
+	while (archive_read_next_header(outer, &entry) == ARCHIVE_OK) {
+		const char *fname = archive_entry_pathname(entry);
+		if (fname == NULL)
+			continue;
+		if (strncmp(fname, "repo.tar", sizeof("repo.tar") - 1) == 0 &&
+			(fname[sizeof("repo.tar") - 1] == '.' ||
+			 fname[sizeof("repo.tar") - 1] == '\0'))
+			break;
+		entry = NULL;
+	}
+	if (entry == NULL) {
+		archive_read_free(outer);
+		return 1;
+	}
+
+	/* use wrapper to read straight from this archive */
+	inner = archive_read_new();
+	archive_read_support_format_all(inner);
+	archive_read_support_filter_all(inner);
+	memset(&cb_ctx, 0, sizeof(cb_ctx));
+	cb_ctx.archive = outer;
+	if (archive_read_open(inner, &cb_ctx, NULL,
+						  tree_gtree_read_cb,
+						  tree_gtree_close_cb) != ARCHIVE_OK)
+		warn("unable to read gtree data %s: %s", archive_entry_pathname(entry),
+			 archive_error_string(inner));
+
+	while (archive_read_next_header(inner, &entry) == ARCHIVE_OK) {
+		const char *fname = archive_entry_pathname(entry);
+
+		if (fname == NULL)
+			continue;
+
+		if (strncmp(fname, "caches/", sizeof("caches/") - 1) == 0) {
+			char *nexttok = NULL;
+
+			foundcaches = true;
+			fname += sizeof("caches/") - 1;
+			atom = atom_explode(fname);
+			if (query != NULL && atom_compare(atom, query) != EQUAL)
+				continue;
+
+			/* ok, we're in business */
+			len = archive_entry_size(entry);
+			if (len > ctx->cache.storesize) {
+				ctx->cache.storesize = len;
+				ctx->cache.store     = xrealloc(ctx->cache.store, len);
+			}
+			archive_read_data(inner, ctx->cache.store, ctx->cache.storesize);
+
+			memset(&meta, 0, sizeof(meta));
+			/* entries are strictly single line, starting with KEY= (no
+			 * whitespace) */
+			for (p = strtok_r(ctx->cache.store, "=", &nexttok);
+				 p != NULL;
+				 p = strtok_r(NULL, "=", &nexttok))
+			{
+				char **ptr = NULL;
+
+				if (1 == 0) {
+					/* dummy case for syntax */
+				}
+#define match2(K,N) \
+				else if (strcmp(p, #N) == 0) \
+					ptr = &meta.Q_##K
+#define match(K)  match2(K,K)
+				match(DEPEND);
+				match(RDEPEND);
+				match(SLOT);
+				match(SRC_URI);
+				match(RESTRICT);
+				match(LICENSE);
+				match(DESCRIPTION);
+				match(KEYWORDS);
+				match(INHERITED);
+				match(IUSE);
+				match(CDEPEND);
+				match(PDEPEND);
+				match(PROVIDE);
+				match(EAPI);
+				match(PROPERTIES);
+				match(BDEPEND);
+				match(IDEPEND);
+				match(DEFINED_PHASES);
+				match(REQUIRED_USE);
+				match(CONTENTS);
+				match(USE);
+				match(EPREFIX);
+				match(PATH);
+				match(BUILDID);
+				match(SIZE);
+				match2(_eclasses_, eclasses);
+#undef match
+#undef match2
+
+				/* always advance to end of line, even when nothing
+				 * matched */
+				p = strtok_r(NULL, "\n", &nexttok);
+				if (p == NULL)
+					break;
+				if (ptr != NULL)
+					*ptr = p;
+			}
+
+			pkg.name    = atom->PF;
+			pkg.slot    = meta.Q_SLOT == NULL ? (char *)"0" : meta.Q_SLOT;
+			pkg.repo    = ctx->repo;
+			pkg.atom    = atom;
+			pkg.cat_ctx = cat;
+			pkg.fd      = -2;  /* intentional, meta has already been read */
+
+			if (strcmp(cat->name, atom->CATEGORY) != 0)
+			{
+				if (cat->pkg_ctxs != NULL) {
+					atom_implode((depend_atom *)cat->pkg_ctxs);
+					cat->pkg_ctxs = NULL;
+				}
+				cat->name     = atom->CATEGORY;
+				cat->pkg_ctxs = (tree_pkg_ctx **)atom;  /* for name */
+				atom          = NULL;  /* avoid double free */
+			}
+
+			/* do call callback with pkg_atom (populate cat and pkg) */
+			ret |= callback(&pkg, priv);
+
+			if (atom != NULL)
+				atom_implode(atom);
+		} else if (foundcaches) {
+			break;  /* stop searching if we processed all cache entries */
+		} else if (ctx->repo == NULL &&
+				   strcmp(fname, "repository") == 0)
+		{
+			/* fill in repo, so it can be used when requested */
+			len = archive_entry_size(entry);
+			ctx->repo = xmalloc(len);
+			archive_read_data(inner, ctx->repo, len);
+		}
+	}
+
+	/* ensure we don't free double */
+	ctx->repo = NULL;
+	ctx->do_sort = false;
+	if (ctx->cache.storesize > 0)
+		ctx->cache.store[0] = '\0';
+	free(cat);
+
+	return ret;
+}
+#endif
+
 int
 tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 		bool sort, const depend_atom *query)
@@ -1759,6 +2055,16 @@ tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
 	/* handle Packages (binpkgs index) file separately */
 	if (ctx->treetype == TREE_PACKAGES)
 		return tree_foreach_packages(ctx, callback, priv);
+
+#ifdef HAVE_LIBARCHIVE
+	/* similar a gtree cache can be read sequentially in one go */
+	if (ctx->treetype == TREE_METADATA_GTREE)
+		return tree_foreach_gtree(ctx, callback, priv);
+	if (ctx->treetype == TREE_EBUILD &&
+		ctx->subtree != NULL &&
+		ctx->subtree->treetype == TREE_METADATA_GTREE)
+		return tree_foreach_gtree(ctx->subtree, callback, priv);
+#endif
 
 	ret = 0;
 	while ((cat_ctx = tree_next_cat(ctx))) {
