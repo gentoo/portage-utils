@@ -854,7 +854,12 @@ int q_main(int argc, char **argv)
 
 			qcctx.archive = archive_write_new();
 			archive_write_set_format_ustar(qcctx.archive);
-			archive_write_add_filter_zstd(qcctx.archive);
+			/* would love to use this:
+			 * archive_write_add_filter_zstd(qcctx.archive);
+			 * but https://github.com/libarchive/libarchive/issues/957
+			 * suggests there's never going to get to be an interface
+			 * for this, which is a real shame */
+			archive_write_add_filter_program(qcctx.archive, "zstd -19");
 			archive_write_open_fd(qcctx.archive, tfd);
 
 			/* write repo name, if any */
