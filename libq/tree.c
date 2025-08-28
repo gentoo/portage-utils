@@ -1834,6 +1834,8 @@ tree_gtree_read_cb(struct archive *a, void *cctx, const void **buf)
 	la_int64_t                offset;  /* unused */
 	int                       ret;
 
+	(void)a;
+
 	ret = archive_read_data_block(ctx->archive, buf, &size, &offset);
 	if (ret == ARCHIVE_EOF)
 		return 0;
@@ -1847,6 +1849,9 @@ tree_gtree_read_cb(struct archive *a, void *cctx, const void **buf)
 static int
 tree_gtree_close_cb(struct archive *a, void *cctx)
 {
+	(void)a;
+	(void)cctx;
+
 	/* noop */
 	return ARCHIVE_OK;
 }
