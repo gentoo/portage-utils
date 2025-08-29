@@ -177,8 +177,9 @@ if test "x$enable_gtree" != xno ; then
 			  [Define if gtree should be compiled])
 fi
 
-AX_CFLAGS_WARN_ALL
+AX_CFLAGS_WARN_ALL([CWFLAGS])
 AC_DEFUN([PT_CHECK_CFLAG],[AX_CHECK_COMPILER_FLAGS([$1],[CFLAGS="$CFLAGS $1"])])
+# -Wno-sign-compare   gnulib stat-time.h :(
 m4_foreach_w([flag], [
 	-Wunused
 	-Wimplicit
@@ -195,14 +196,11 @@ m4_foreach_w([flag], [
 	-Wsequence-point
 	-Wold-style-definition
 	-Wextra
-	-Wno-format-nonliteral
-	-Wno-expansion-to-defined
+	-Wno-sign-compare
 ], [
-	AX_CHECK_COMPILE_FLAG(flag, AS_VAR_APPEND([CFLAGS], " flag"))
+	AX_CHECK_COMPILE_FLAG(flag, AS_VAR_APPEND([CWFLAGS], " flag"))
 ])
-# gnulib triggers this a lot, just to silence:
-# -Wno-format-nonliteral
-# -Wno-expansion-to-defined
+AC_SUBST([CWFLAGS], ["$CWFLAGS"])
 
 AC_CONFIG_FILES([
 	Makefile

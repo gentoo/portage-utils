@@ -34,4 +34,5 @@ libq_a_CPPFLAGS = \
 	$(OPENMP_CFLAGS) \
 	-I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib \
-	-I$(top_srcdir)
+	-I$(top_srcdir) \
+	$(CWFLAGS)

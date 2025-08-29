@@ -653,6 +653,7 @@ am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+CWFLAGS
 GTREE_ENABLED_FALSE
 GTREE_ENABLED_TRUE
 GPKG_ENABLED_FALSE
@@ -38095,8 +38096,8 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking CFLAGS for most reasonable warnings" >&5
-printf %s "checking CFLAGS for most reasonable warnings... " >&6; }
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking CWFLAGS for most reasonable warnings" >&5
+printf %s "checking CWFLAGS for most reasonable warnings... " >&6; }
 if test ${ac_cv_cflags_warn_all+y}
 then :
   printf %s "(cached) " >&6
@@ -38169,21 +38170,21 @@ then :
   	    if test "x$ac_cv_cflags_warn_all" != "x"
 then :
 
-if test ${CFLAGS+y}
+if test ${CWFLAGS+y}
 then :
 
-  case " $CFLAGS " in #(
+  case " $CWFLAGS " in #(
   *" $ac_cv_cflags_warn_all "*) :
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CFLAGS already contains \$ac_cv_cflags_warn_all"; } >&5
-  (: CFLAGS already contains $ac_cv_cflags_warn_all) 2>&5
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CWFLAGS already contains \$ac_cv_cflags_warn_all"; } >&5
+  (: CWFLAGS already contains $ac_cv_cflags_warn_all) 2>&5
   ac_status=$?
   printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; } ;; #(
   *) :
 
-     CFLAGS="$ac_cv_cflags_warn_all $CFLAGS"
-     { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CFLAGS=\"\$CFLAGS\""; } >&5
-  (: CFLAGS="$CFLAGS") 2>&5
+     CWFLAGS="$ac_cv_cflags_warn_all $CWFLAGS"
+     { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CWFLAGS=\"\$CWFLAGS\""; } >&5
+  (: CWFLAGS="$CWFLAGS") 2>&5
   ac_status=$?
   printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }
@@ -38192,9 +38193,9 @@ esac
 
 else case e in #(
   e)
-  CFLAGS=$ac_cv_cflags_warn_all
-  { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CFLAGS=\"\$CFLAGS\""; } >&5
-  (: CFLAGS="$CFLAGS") 2>&5
+  CWFLAGS=$ac_cv_cflags_warn_all
+  { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CWFLAGS=\"\$CWFLAGS\""; } >&5
+  (: CWFLAGS="$CWFLAGS") 2>&5
   ac_status=$?
   printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }
@@ -38222,6 +38223,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+# -Wno-sign-compare   gnulib stat-time.h :(
 
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether the C compiler accepts -Wunused" >&5
 printf %s "checking whether the C compiler accepts -Wunused... " >&6; }
@@ -38261,7 +38263,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wunused" >&6; }
 if test "x$ax_cv_check_cflags___Wunused" = xyes
 then :
-  as_fn_append CFLAGS " -Wunused"
+  as_fn_append CWFLAGS " -Wunused"
 else case e in #(
   e) : ;;
 esac
@@ -38306,7 +38308,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wimplicit" >&6; }
 if test "x$ax_cv_check_cflags___Wimplicit" = xyes
 then :
-  as_fn_append CFLAGS " -Wimplicit"
+  as_fn_append CWFLAGS " -Wimplicit"
 else case e in #(
   e) : ;;
 esac
@@ -38351,7 +38353,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wshadow" >&6; }
 if test "x$ax_cv_check_cflags___Wshadow" = xyes
 then :
-  as_fn_append CFLAGS " -Wshadow"
+  as_fn_append CWFLAGS " -Wshadow"
 else case e in #(
   e) : ;;
 esac
@@ -38396,7 +38398,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wformat_2" >&6; }
 if test "x$ax_cv_check_cflags___Wformat_2" = xyes
 then :
-  as_fn_append CFLAGS " -Wformat=2"
+  as_fn_append CWFLAGS " -Wformat=2"
 else case e in #(
   e) : ;;
 esac
@@ -38441,7 +38443,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wmissing_declarations" >&6; }
 if test "x$ax_cv_check_cflags___Wmissing_declarations" = xyes
 then :
-  as_fn_append CFLAGS " -Wmissing-declarations"
+  as_fn_append CWFLAGS " -Wmissing-declarations"
 else case e in #(
   e) : ;;
 esac
@@ -38486,7 +38488,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wwrite_strings" >&6; }
 if test "x$ax_cv_check_cflags___Wwrite_strings" = xyes
 then :
-  as_fn_append CFLAGS " -Wwrite-strings"
+  as_fn_append CWFLAGS " -Wwrite-strings"
 else case e in #(
   e) : ;;
 esac
@@ -38531,7 +38533,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wbad_function_cast" >&6; }
 if test "x$ax_cv_check_cflags___Wbad_function_cast" = xyes
 then :
-  as_fn_append CFLAGS " -Wbad-function-cast"
+  as_fn_append CWFLAGS " -Wbad-function-cast"
 else case e in #(
   e) : ;;
 esac
@@ -38576,7 +38578,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wnested_externs" >&6; }
 if test "x$ax_cv_check_cflags___Wnested_externs" = xyes
 then :
-  as_fn_append CFLAGS " -Wnested-externs"
+  as_fn_append CWFLAGS " -Wnested-externs"
 else case e in #(
   e) : ;;
 esac
@@ -38621,7 +38623,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wcomment" >&6; }
 if test "x$ax_cv_check_cflags___Wcomment" = xyes
 then :
-  as_fn_append CFLAGS " -Wcomment"
+  as_fn_append CWFLAGS " -Wcomment"
 else case e in #(
   e) : ;;
 esac
@@ -38666,7 +38668,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Winline" >&6; }
 if test "x$ax_cv_check_cflags___Winline" = xyes
 then :
-  as_fn_append CFLAGS " -Winline"
+  as_fn_append CWFLAGS " -Winline"
 else case e in #(
   e) : ;;
 esac
@@ -38711,7 +38713,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wchar_subscripts" >&6; }
 if test "x$ax_cv_check_cflags___Wchar_subscripts" = xyes
 then :
-  as_fn_append CFLAGS " -Wchar-subscripts"
+  as_fn_append CWFLAGS " -Wchar-subscripts"
 else case e in #(
   e) : ;;
 esac
@@ -38756,7 +38758,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wcast_align" >&6; }
 if test "x$ax_cv_check_cflags___Wcast_align" = xyes
 then :
-  as_fn_append CFLAGS " -Wcast-align"
+  as_fn_append CWFLAGS " -Wcast-align"
 else case e in #(
   e) : ;;
 esac
@@ -38801,7 +38803,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wsequence_point" >&6; }
 if test "x$ax_cv_check_cflags___Wsequence_point" = xyes
 then :
-  as_fn_append CFLAGS " -Wsequence-point"
+  as_fn_append CWFLAGS " -Wsequence-point"
 else case e in #(
   e) : ;;
 esac
@@ -38846,7 +38848,7 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wold_style_definition" >&6; }
 if test "x$ax_cv_check_cflags___Wold_style_definition" = xyes
 then :
-  as_fn_append CFLAGS " -Wold-style-definition"
+  as_fn_append CWFLAGS " -Wold-style-definition"
 else case e in #(
   e) : ;;
 esac
@@ -38891,16 +38893,16 @@ fi
 printf "%s\n" "$ax_cv_check_cflags___Wextra" >&6; }
 if test "x$ax_cv_check_cflags___Wextra" = xyes
 then :
-  as_fn_append CFLAGS " -Wextra"
+  as_fn_append CWFLAGS " -Wextra"
 else case e in #(
   e) : ;;
 esac
 fi
 
 
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether the C compiler accepts -Wno-format-nonliteral" >&5
-printf %s "checking whether the C compiler accepts -Wno-format-nonliteral... " >&6; }
-if test ${ax_cv_check_cflags___Wno_format_nonliteral+y}
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether the C compiler accepts -Wno-sign-compare" >&5
+printf %s "checking whether the C compiler accepts -Wno-sign-compare... " >&6; }
+if test ${ax_cv_check_cflags___Wno_sign_compare+y}
 then :
   printf %s "(cached) " >&6
 else case e in #(
@@ -38909,7 +38911,7 @@ else case e in #(
   if test x"$GCC" = xyes ; then
     add_gnu_werror="-Werror"
   fi
-  CFLAGS="$CFLAGS  -Wno-format-nonliteral $add_gnu_werror"
+  CFLAGS="$CFLAGS  -Wno-sign-compare $add_gnu_werror"
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -38923,74 +38925,28 @@ main (void)
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"
 then :
-  ax_cv_check_cflags___Wno_format_nonliteral=yes
+  ax_cv_check_cflags___Wno_sign_compare=yes
 else case e in #(
-  e) ax_cv_check_cflags___Wno_format_nonliteral=no ;;
+  e) ax_cv_check_cflags___Wno_sign_compare=no ;;
 esac
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
   CFLAGS=$ax_check_save_flags ;;
 esac
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags___Wno_format_nonliteral" >&5
-printf "%s\n" "$ax_cv_check_cflags___Wno_format_nonliteral" >&6; }
-if test "x$ax_cv_check_cflags___Wno_format_nonliteral" = xyes
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags___Wno_sign_compare" >&5
+printf "%s\n" "$ax_cv_check_cflags___Wno_sign_compare" >&6; }
+if test "x$ax_cv_check_cflags___Wno_sign_compare" = xyes
 then :
-  as_fn_append CFLAGS " -Wno-format-nonliteral"
+  as_fn_append CWFLAGS " -Wno-sign-compare"
 else case e in #(
   e) : ;;
 esac
 fi
 
 
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether the C compiler accepts -Wno-expansion-to-defined" >&5
-printf %s "checking whether the C compiler accepts -Wno-expansion-to-defined... " >&6; }
-if test ${ax_cv_check_cflags___Wno_expansion_to_defined+y}
-then :
-  printf %s "(cached) " >&6
-else case e in #(
-  e)
-  ax_check_save_flags=$CFLAGS
-  if test x"$GCC" = xyes ; then
-    add_gnu_werror="-Werror"
-  fi
-  CFLAGS="$CFLAGS  -Wno-expansion-to-defined $add_gnu_werror"
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+CWFLAGS="$CWFLAGS"
 
-int
-main (void)
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-  ax_cv_check_cflags___Wno_expansion_to_defined=yes
-else case e in #(
-  e) ax_cv_check_cflags___Wno_expansion_to_defined=no ;;
-esac
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-  CFLAGS=$ax_check_save_flags ;;
-esac
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags___Wno_expansion_to_defined" >&5
-printf "%s\n" "$ax_cv_check_cflags___Wno_expansion_to_defined" >&6; }
-if test "x$ax_cv_check_cflags___Wno_expansion_to_defined" = xyes
-then :
-  as_fn_append CFLAGS " -Wno-expansion-to-defined"
-else case e in #(
-  e) : ;;
-esac
-fi
-
-
-# gnulib triggers this a lot, just to silence:
-# -Wno-format-nonliteral
-# -Wno-expansion-to-defined
 
 ac_config_files="$ac_config_files Makefile libq/Makefile autotools/gnulib/Makefile tests/init.sh tests/Makefile tests/atom_compare/Makefile tests/atom_explode/Makefile tests/copy_file/Makefile tests/install/Makefile tests/mkdir/Makefile tests/profile/Makefile tests/qatom/Makefile tests/qcheck/Makefile tests/qdepends/Makefile tests/qfile/Makefile tests/qlist/Makefile tests/qlop/Makefile tests/qmanifest/Makefile tests/qmerge/Makefile tests/qtbz2/Makefile tests/quse/Makefile tests/qxpak/Makefile tests/rmspace/Makefile tests/source/Makefile"
 

@@ -383,6 +383,7 @@ CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
+CWFLAGS = @CWFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -1719,7 +1720,8 @@ libq_a_CPPFLAGS = \
 	$(OPENMP_CFLAGS) \
 	-I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib \
-	-I$(top_srcdir)
+	-I$(top_srcdir) \
+	$(CWFLAGS)
 
 all: all-am
 

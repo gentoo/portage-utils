@@ -79,6 +79,7 @@ q_CPPFLAGS = \
 	$(LIBBL2_CFLAGS) \
 	$(LIBZ_CFLAGS) \
 	$(LIBARCHIVE_CFLAGS) \
+	$(CWFLAGS) \
 	$(NULL)
 q_LDADD = \
 	$(top_builddir)/libq/libq.a \
