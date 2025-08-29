@@ -692,7 +692,8 @@ tree_next_pkg(tree_cat_ctx *cat_ctx)
 			ret = tree_next_pkg_int(ctx->ebuilddir_cat_ctx);
 			if (ret == NULL) {
 				tree_close_cat(ctx->ebuilddir_cat_ctx);
-				tree_close_pkg(ctx->ebuilddir_pkg_ctx);
+				if (!cat_ctx->ctx->do_sort || cat_ctx->pkg_ctxs == NULL)
+					tree_close_pkg(ctx->ebuilddir_pkg_ctx);
 				ctx->ebuilddir_pkg_ctx = NULL;
 			}
 		} while (ret == NULL);

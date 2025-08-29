@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2022 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -51,6 +51,6 @@ void dep_print_tree(FILE *fp, const dep_node *root, size_t space, array_t *m, co
 void dep_resolve_tree(dep_node *root, tree_ctx *t);
 void dep_burn_tree(dep_node *root);
 void dep_prune_use(dep_node *root, set *use);
-void dep_flatten_tree(const dep_node *root, array_t *out);
+void dep_flatten_tree(dep_node *root, array_t *out);
 
 #endif

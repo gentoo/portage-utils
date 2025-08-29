@@ -295,6 +295,8 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			}
 		}
 
+		array_for_each(state->deps, m, atom)
+			atom_implode(atom);
 		xarrayfree_int(state->deps);
 		dep_burn_tree(dep_tree);
 	}
