@@ -218,14 +218,6 @@ tree_filter_cat(const struct dirent *de)
 	int i;
 	bool founddash;
 
-#ifdef DT_UNKNOWN
-	/* cat must be a dir */
-	if (de->d_type != DT_UNKNOWN &&
-	    de->d_type != DT_DIR &&
-	    de->d_type != DT_LNK)
-		return 0;
-#endif
-
 	/* PMS 3.1.1 */
 	founddash = false;
 	for (i = 0; de->d_name[i] != '\0'; i++) {
