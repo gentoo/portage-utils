@@ -1,5 +1,5 @@
 /* provide a chdir function that tries not to fail due to ENAMETOOLONG
-   Copyright (C) 2004-2005, 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2004-2005, 2009-2025 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,10 +21,20 @@
 
 #include "pathmax.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /* On systems without PATH_MAX, presume that chdir accepts
    arbitrarily long directory names.  */
 #ifndef PATH_MAX
 # define chdir_long(Dir) chdir (Dir)
 #else
 int chdir_long (char *dir);
+#endif
+
+
+#ifdef __cplusplus
+}
 #endif

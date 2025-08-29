@@ -1,6 +1,6 @@
 /* Work around rename bugs in some systems.
 
-   Copyright (C) 2001-2003, 2005-2006, 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2003, 2005-2006, 2009-2025 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -19,6 +19,7 @@
 
 #include <config.h>
 
+/* Specification.  */
 #include <stdio.h>
 
 #undef rename
@@ -273,6 +274,7 @@ rpl_rename (char const *src, char const *dst)
 # include <unistd.h>
 
 # include "dirname.h"
+# include "issymlink.h"
 # include "same-inode.h"
 
 /* Rename the file SRC to DST, fixing any trailing slash bugs.  */
@@ -389,13 +391,14 @@ rpl_rename (char const *src, char const *dst)
           goto out;
         }
       strip_trailing_slashes (src_temp);
-      if (lstat (src_temp, &src_st))
+      int ret = issymlink (src_temp);
+      if (ret > 0)
+        goto out;
+      if (ret < 0)
         {
           rename_errno = errno;
           goto out;
         }
-      if (S_ISLNK (src_st.st_mode))
-        goto out;
     }
   if (dst_slash)
     {
@@ -406,16 +409,14 @@ rpl_rename (char const *src, char const *dst)
           goto out;
         }
       strip_trailing_slashes (dst_temp);
-      if (lstat (dst_temp, &dst_st))
-        {
-          if (errno != ENOENT)
-            {
-              rename_errno = errno;
-              goto out;
-            }
-        }
-      else if (S_ISLNK (dst_st.st_mode))
+      int ret = issymlink (dst_temp);
+      if (ret > 0)
         goto out;
+      if (ret < 0 && errno != ENOENT)
+        {
+          rename_errno = errno;
+          goto out;
+        }
     }
 # endif /* RENAME_TRAILING_SLASH_SOURCE_BUG || RENAME_DEST_EXISTS_BUG
            || RENAME_HARD_LINK_BUG */

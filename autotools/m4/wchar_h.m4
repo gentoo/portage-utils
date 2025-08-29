@@ -1,13 +1,14 @@
-dnl A placeholder for ISO C99 <wchar.h>, for platforms that have issues.
-
-dnl Copyright (C) 2007-2024 Free Software Foundation, Inc.
+# wchar_h.m4
+# serial 65
+dnl Copyright (C) 2007-2025 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
+
+dnl A placeholder for ISO C99 <wchar.h>, for platforms that have issues.
 
 dnl Written by Eric Blake.
-
-# wchar_h.m4 serial 62
 
 AC_DEFUN_ONCE([gl_WCHAR_H],
 [
@@ -64,8 +65,8 @@ dnl Check whether <wchar.h> is usable at all.
 AC_DEFUN([gl_WCHAR_H_INLINE_OK],
 [
   dnl Test whether <wchar.h> suffers due to the transition from '__inline' to
-  dnl 'gnu_inline'. See <https://sourceware.org/bugzilla/show_bug.cgi?id=4022>
-  dnl and <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=42440>. In summary,
+  dnl 'gnu_inline'. See <https://sourceware.org/PR4022>
+  dnl and <https://gcc.gnu.org/PR42440>. In summary,
   dnl glibc version 2.5 or older, together with gcc version 4.3 or newer and
   dnl the option -std=c99 or -std=gnu99, leads to a broken <wchar.h>.
   AC_REQUIRE([AC_CANONICAL_HOST])
@@ -86,8 +87,8 @@ AC_DEFUN([gl_WCHAR_H_INLINE_OK],
          dnl z/OS when using the XPLINK object format (due to duplicate
          dnl CSECT names). Instead, temporarily redefine $ac_compile so
          dnl that the object file has the latter name from the start.
-         save_ac_compile="$ac_compile"
-         ac_compile=`echo "$save_ac_compile" | sed s/conftest/conftest1/`
+         saved_ac_compile="$ac_compile"
+         ac_compile=`echo "$saved_ac_compile" | sed s/conftest/conftest1/`
          if echo '#include "conftest.c"' >conftest1.c \
             && AC_TRY_EVAL([ac_compile]); then
            AC_LANG_CONFTEST([
@@ -97,7 +98,7 @@ AC_DEFUN([gl_WCHAR_H_INLINE_OK],
                int zero (void) { return 0; }
              ]])])
            dnl See note above about renaming object files.
-           ac_compile=`echo "$save_ac_compile" | sed s/conftest/conftest2/`
+           ac_compile=`echo "$saved_ac_compile" | sed s/conftest/conftest2/`
            if echo '#include "conftest.c"' >conftest2.c \
               && AC_TRY_EVAL([ac_compile]); then
              if $CC -o conftest$ac_exeext $CFLAGS $LDFLAGS conftest1.$ac_objext conftest2.$ac_objext $LIBS >&AS_MESSAGE_LOG_FD 2>&1; then
@@ -107,7 +108,7 @@ AC_DEFUN([gl_WCHAR_H_INLINE_OK],
              fi
            fi
          fi
-         ac_compile="$save_ac_compile"
+         ac_compile="$saved_ac_compile"
          rm -f conftest[12].c conftest[12].$ac_objext conftest$ac_exeext
          ;;
      esac
@@ -256,6 +257,7 @@ AC_DEFUN([gl_WCHAR_H_DEFAULTS],
   REPLACE_WCSWIDTH=0;   AC_SUBST([REPLACE_WCSWIDTH])
   REPLACE_WCSFTIME=0;   AC_SUBST([REPLACE_WCSFTIME])
   REPLACE_WCSCMP=0;     AC_SUBST([REPLACE_WCSCMP])
+  REPLACE_WCSNCAT=0;    AC_SUBST([REPLACE_WCSNCAT])
   REPLACE_WCSNCMP=0;    AC_SUBST([REPLACE_WCSNCMP])
   REPLACE_WCSSTR=0;     AC_SUBST([REPLACE_WCSSTR])
   REPLACE_WCSTOK=0;     AC_SUBST([REPLACE_WCSTOK])

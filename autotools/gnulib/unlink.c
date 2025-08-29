@@ -1,6 +1,6 @@
 /* Work around unlink bugs.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -17,6 +17,7 @@
 
 #include <config.h>
 
+/* Specification.  */
 #include <unistd.h>
 
 #include <errno.h>
@@ -25,6 +26,7 @@
 #include <sys/stat.h>
 
 #include "filename.h"
+#include "issymlink.h"
 
 #undef unlink
 #if defined _WIN32 && !defined __CYGWIN__
@@ -57,7 +59,7 @@ rpl_unlink (char const *name)
          symlink instead of the directory.  Technically, we could use
          realpath to find the canonical directory name to attempt
          deletion on.  But that is a lot of work for a corner case; so
-         we instead just use an lstat on the shortened name, and
+         we instead just use a readlink on the shortened name, and
          reject symlinks with trailing slashes.  The root user of
          unlink(1) will just have to live with the rule that they
          can't delete a directory via a symlink.  */
@@ -72,7 +74,7 @@ rpl_unlink (char const *name)
           memcpy (short_name, name, len);
           while (len && ISSLASH (short_name[len - 1]))
             short_name[--len] = '\0';
-          if (len && (lstat (short_name, &st) || S_ISLNK (st.st_mode)))
+          if (len && issymlink (short_name) != 0)
             {
               free (short_name);
               errno = EPERM;

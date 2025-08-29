@@ -1,6 +1,6 @@
 /* Determine whether two stat buffers are known to refer to the same file.
 
-   Copyright (C) 2006, 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2009-2025 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -29,6 +29,11 @@ _GL_INLINE_HEADER_BEGIN
 #ifndef SAME_INODE_INLINE
 # define SAME_INODE_INLINE _GL_INLINE
 #endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 /* True if A and B point to structs with st_dev and st_ino members
    that are known to represent the same file.
@@ -72,13 +77,23 @@ _GL_INLINE_HEADER_BEGIN
 #define SAME_INODE(a, b) PSAME_INODE (&(a), &(b))
 
 /* True if *A and *B represent the same file.  Unlike PSAME_INODE,
-   args are evaluated once and must point to struct stat.  */
+   args are evaluated once and must point to struct stat,
+   and this function works even on POSIX platforms where fstat etc. do
+   not return useful st_dev and st_ino values for shared memory
+   objects and typed memory objects.  */
 
 SAME_INODE_INLINE bool
 psame_inode (struct stat const *a, struct stat const *b)
 {
-  return PSAME_INODE (a, b);
+  return (! (S_TYPEISSHM (a) | S_TYPEISTMO (a)
+             | S_TYPEISSHM (b) | S_TYPEISTMO (b))
+          && PSAME_INODE (a, b));
 }
+
+
+#ifdef __cplusplus
+}
+#endif
 
 _GL_INLINE_HEADER_END
 

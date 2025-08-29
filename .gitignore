@@ -54,3 +54,47 @@ Makefile
 /quse
 /qwhich
 /qxpak
+
+# BEGIN GNULIB
+# regenerate using:
+#   ls autotools/gnulib/*.in.h | sed -e 's/\.in\.h/.h/' | sed -e 's:_:/:'
+autotools/gnulib/alloca.h
+autotools/gnulib/assert.h
+autotools/gnulib/byteswap.h
+autotools/gnulib/dirent.h
+autotools/gnulib/errno.h
+autotools/gnulib/error.h
+autotools/gnulib/fcntl.h
+autotools/gnulib/float.h
+autotools/gnulib/getopt-cdefs.h
+autotools/gnulib/getopt.h
+autotools/gnulib/inttypes.h
+autotools/gnulib/limits.h
+autotools/gnulib/locale.h
+autotools/gnulib/math.h
+autotools/gnulib/stdckdint.h
+autotools/gnulib/stddef.h
+autotools/gnulib/stdint.h
+autotools/gnulib/stdio.h
+autotools/gnulib/stdlib.h
+autotools/gnulib/string.h
+autotools/gnulib/strings.h
+autotools/gnulib/sys/stat.h
+autotools/gnulib/sys/time.h
+autotools/gnulib/sys/types.h
+autotools/gnulib/time.h
+autotools/gnulib/uchar.h
+autotools/gnulib/unicase.h
+autotools/gnulib/unictype.h
+autotools/gnulib/uninorm.h
+autotools/gnulib/unistd.h
+autotools/gnulib/unitypes.h
+autotools/gnulib/uniwidth.h
+autotools/gnulib/utime.h
+autotools/gnulib/wchar.h
+autotools/gnulib/wctype.h
+# manual additions
+autotools/gnulib/sys
+autotools/gnulib/malloc/scratch_buffer.gl.h
+*.dirstamp
+# END GNULIB

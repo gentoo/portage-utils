@@ -1,5 +1,5 @@
 /* Set the access and modification time of a file relative to directory fd.
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -77,7 +77,7 @@ rpl_utimensat (int fd, char const *file, struct timespec const times[2],
                int flag)
 #  undef utimensat
 {
-#  if defined __linux__ || defined __sun
+#  if defined __linux__ || defined __sun || defined __NetBSD__
   struct timespec ts[2];
 #  endif
 
@@ -86,7 +86,7 @@ rpl_utimensat (int fd, char const *file, struct timespec const times[2],
   if (0 <= utimensat_works_really)
     {
       int result;
-#  if defined __linux__ || defined __sun
+#  if defined __linux__ || defined __sun || defined __NetBSD__
       struct stat st;
       /* As recently as Linux kernel 2.6.32 (Dec 2009), several file
          systems (xfs, ntfs-3g) have bugs with a single UTIME_OMIT,
@@ -97,6 +97,7 @@ rpl_utimensat (int fd, char const *file, struct timespec const times[2],
          UTIME_OMIT would have worked.
 
          The same bug occurs in Solaris 11.1 (Apr 2013).
+         The same bug occurs in NetBSD 10.0 (May 2024).
 
          FIXME: Simplify this in 2024, when these file system bugs are
          no longer common on Gnulib target platforms.  */
@@ -117,9 +118,11 @@ rpl_utimensat (int fd, char const *file, struct timespec const times[2],
             ts[1] = times[1];
           times = ts;
         }
-#   ifdef __hppa__
+#   if defined __hppa || defined __NetBSD__
       /* Linux kernel 2.6.22.19 on hppa does not reject invalid tv_nsec
-         values.  */
+         values.
+
+         The same bug occurs in NetBSD 10.0 (May 2024).  */
       else if (times
                && ((times[0].tv_nsec != UTIME_NOW
                     && ! (0 <= times[0].tv_nsec
@@ -133,8 +136,9 @@ rpl_utimensat (int fd, char const *file, struct timespec const times[2],
         }
 #   endif
 #  endif
-#  if defined __APPLE__ && defined __MACH__
-      /* macOS 10.13 does not reject invalid tv_nsec values either.  */
+#  if (defined __APPLE__ && defined __MACH__) || defined __gnu_hurd__
+      /* macOS 10.13 and GNU Hurd do not reject invalid tv_nsec values
+         either.  */
       if (times
           && ((times[0].tv_nsec != UTIME_OMIT
                && times[0].tv_nsec != UTIME_NOW
@@ -148,6 +152,7 @@ rpl_utimensat (int fd, char const *file, struct timespec const times[2],
           errno = EINVAL;
           return -1;
         }
+#   if defined __APPLE__ && defined __MACH__
       size_t len = strlen (file);
       if (len > 0 && file[len - 1] == '/')
         {
@@ -160,6 +165,7 @@ rpl_utimensat (int fd, char const *file, struct timespec const times[2],
               return -1;
             }
         }
+#   endif
 #  endif
       result = utimensat (fd, file, times, flag);
       /* Linux kernel 2.6.25 has a bug where it returns EINVAL for

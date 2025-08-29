@@ -1,11 +1,12 @@
-# serial 29   -*- Autoconf -*-
+# dirfd.m4
+# serial 30   -*- Autoconf -*-
+dnl Copyright (C) 2001-2006, 2008-2025 Free Software Foundation, Inc.
+dnl This file is free software; the Free Software Foundation
+dnl gives unlimited permission to copy and/or distribute it,
+dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 dnl Find out how to get the file descriptor associated with an open DIR*.
-
-# Copyright (C) 2001-2006, 2008-2024 Free Software Foundation, Inc.
-# This file is free software; the Free Software Foundation
-# gives unlimited permission to copy and/or distribute it,
-# with or without modifications, as long as this notice is preserved.
 
 dnl From Jim Meyering
 
@@ -55,7 +56,7 @@ AC_DEFUN([gl_PREREQ_DIRFD],
   AC_CACHE_CHECK([how to get the file descriptor associated with an open DIR*],
                  [gl_cv_sys_dir_fd_member_name],
     [
-      dirfd_save_CFLAGS=$CFLAGS
+      gl_saved_CFLAGS=$CFLAGS
       for ac_expr in d_fd dd_fd; do
 
         CFLAGS="$CFLAGS -DDIR_FD_MEMBER_NAME=$ac_expr"
@@ -65,7 +66,7 @@ AC_DEFUN([gl_PREREQ_DIRFD],
           [[DIR *dir_p = opendir("."); (void) dir_p->DIR_FD_MEMBER_NAME;]])],
           [dir_fd_found=yes]
         )
-        CFLAGS=$dirfd_save_CFLAGS
+        CFLAGS=$gl_saved_CFLAGS
         test "$dir_fd_found" = yes && break
       done
       test "$dir_fd_found" = yes || ac_expr=no_such_member

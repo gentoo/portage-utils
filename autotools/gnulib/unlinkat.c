@@ -1,6 +1,6 @@
 /* Work around unlinkat bugs on Solaris 9 and Hurd.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 
 #include <config.h>
 
+/* Specification.  */
 #include <unistd.h>
 
 #include <errno.h>
@@ -29,6 +30,7 @@
 #include <stdlib.h>
 
 #include "filename.h"
+#include "issymlink.h"
 #include "openat.h"
 
 #if HAVE_UNLINKAT
@@ -71,8 +73,7 @@ rpl_unlinkat (int fd, char const *name, int flag)
           memcpy (short_name, name, len);
           while (len && ISSLASH (short_name[len - 1]))
             short_name[--len] = '\0';
-          if (len && (fstatat (fd, short_name, &st, AT_SYMLINK_NOFOLLOW)
-                      || S_ISLNK (st.st_mode)))
+          if (len && issymlinkat (fd, short_name) != 0)
             {
               free (short_name);
               errno = EPERM;
