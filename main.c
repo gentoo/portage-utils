@@ -941,7 +941,9 @@ read_repos_conf(const char *configroot, const char *repos_conf, char **primary)
 	} else {
 		for (i = 0; i < count; ++i) {
 			const char *name = confs[i]->d_name;
+			struct stat st;
 
+			/* skip self, parent, and "hidden" files */
 			if (name[0] == '.' || name[0] == '\0')
 				continue;
 
@@ -949,24 +951,12 @@ read_repos_conf(const char *configroot, const char *repos_conf, char **primary)
 			if (name[strlen(name) - 1] == '~')
 				continue;
 
-#ifdef DT_UNKNOWN
-			if (confs[i]->d_type != DT_UNKNOWN &&
-			    confs[i]->d_type != DT_REG &&
-			    confs[i]->d_type != DT_LNK)
-				continue;
-#endif
-
 			xasprintf(&sub_conf, "%s/%s", top_conf, name);
 
-#ifdef DT_UNKNOWN
-			if (confs[i]->d_type != DT_REG)
-#endif
-			{
-				struct stat st;
-				if (stat(sub_conf, &st) || !S_ISREG(st.st_mode)) {
-					free(sub_conf);
-					continue;
-				}
+			/* skip non-files */
+			if (stat(sub_conf, &st) != 0 || !S_ISREG(st.st_mode)) {
+				free(sub_conf);
+				continue;
 			}
 
 			read_one_repos_conf(sub_conf, primary);

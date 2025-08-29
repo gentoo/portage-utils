@@ -426,9 +426,7 @@ install_mask_check_dir(
 	int j;
 	enum inc_exc mode;
 	enum inc_exc child_mode;
-#ifndef DT_DIR
 	struct stat s;
-#endif
 	char *npth = qpth + strlen(qpth);
 
 	cnt = scandirat(fd, ".", &files, filter_self_parent, alphasort);
@@ -472,13 +470,9 @@ install_mask_check_dir(
 			continue;
 		}
 
-#ifdef DT_DIR
-		if (files[j]->d_type == DT_DIR) {
-#else
 		if (fstatat(fd, files[j]->d_name, &s, AT_SYMLINK_NOFOLLOW) != 0)
 			continue;
 		if (S_ISDIR(s.st_mode)) {
-#endif
 			int subfd = openat(fd, files[j]->d_name, O_RDONLY);
 			if (subfd < 0)
 				continue;
