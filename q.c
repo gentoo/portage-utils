@@ -11,6 +11,8 @@
 #include "applets.h"
 
 #include <unistd.h>
+#include <strings.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -33,10 +35,11 @@
 #include "tree.h"
 #include "xmkdir.h"
 
-#define Q_FLAGS "cioem" COMMON_FLAGS
+#define Q_FLAGS "cij:oem" COMMON_FLAGS
 static struct option const q_long_opts[] = {
 	{"build-cache",   no_argument, NULL, 'c'},
 	{"install",       no_argument, NULL, 'i'},
+	{"jobserver",      a_argument, NULL, 'j'},
 	{"overlays",      no_argument, NULL, 'o'},
 	{"envvar",        no_argument, NULL, 'e'},
 	{"masks",         no_argument, NULL, 'm'},
@@ -45,6 +48,7 @@ static struct option const q_long_opts[] = {
 static const char * const q_opts_help[] = {
 	"(Re)Build ebuild/metadata cache for all available overlays",
 	"Install symlinks for applets",
+	"Run minimalistic jobserver for given jobs",
 	"Print available overlays (read from repos.conf)",
 	"Print used variables and their found values",
 	"Print (package.)masks for the current profile",
@@ -416,15 +420,68 @@ static int q_build_gtree_ebuilds_pkg(tree_pkg_ctx *pkg, void *priv)
 }
 #endif
 
+static bool q_js_shutdown = false;
+static void q_js_sighandler(int sig)
+{
+	switch (sig) {
+		case SIGINT:
+		case SIGTERM:
+		case SIGSEGV:
+		case SIGBUS:
+		case SIGABRT:
+		case SIGFPE:
+		case SIGILL:
+			q_js_shutdown = true;
+			break;
+	}
+}
+
+static int q_jobserver(char *path, int njobs)
+{
+	int       pipefds[2];
+	int       i;
+
+	/* install signal handlers so we can cleanup on exit */
+	signal(SIGINT,  q_js_sighandler);
+	signal(SIGTERM, q_js_sighandler);
+	signal(SIGSEGV, q_js_sighandler);
+	signal(SIGBUS,  q_js_sighandler);
+	signal(SIGABRT, q_js_sighandler);
+	signal(SIGFPE,  q_js_sighandler);
+	signal(SIGILL,  q_js_sighandler);
+
+	pipefds[0] = open(path, O_RDONLY | O_NONBLOCK);
+	if (pipefds[0] < 0)
+		return 1;
+	pipefds[1] = open(path, O_WRONLY);
+	if (pipefds[1] < 0) {
+		close(pipefds[0]);
+		return 1;
+	}
+
+	for (i = 0; i < njobs; i++)
+		write(pipefds[1], "q", 1);
+
+	while (!q_js_shutdown)
+		sleep(1);
+
+	close(pipefds[1]);
+	close(pipefds[0]);
+
+	return 0;
+}
+
 int q_main(int argc, char **argv)
 {
 	int i;
 	bool build_cache;
 	bool install;
+	bool run_jobserver;
 	bool print_overlays;
 	bool print_vars;
 	bool print_masks;
 	const char *p;
+	const char *jobs;
 	APPLET func;
 
 	if (argc == 0)
@@ -442,17 +499,20 @@ int q_main(int argc, char **argv)
 
 	build_cache    = false;
 	install        = false;
+	run_jobserver  = false;
 	print_overlays = false;
 	print_vars     = false;
 	print_masks    = false;
 	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
-		case 'c': build_cache    = true; break;
-		case 'i': install        = true; break;
-		case 'o': print_overlays = true; break;
-		case 'e': print_vars     = true; break;
-		case 'm': print_masks    = true; break;
+		case 'c': build_cache    = true;   break;
+		case 'i': install        = true;   break;
+		case 'j': run_jobserver  = true;
+				  jobs           = optarg; break;
+		case 'o': print_overlays = true;   break;
+		case 'e': print_vars     = true;   break;
+		case 'm': print_masks    = true;   break;
 		}
 	}
 
@@ -926,6 +986,179 @@ int q_main(int argc, char **argv)
 		}
 
 		free(qcctx.cbuf);
+
+		return 0;
+	}
+
+	if (run_jobserver) {
+		long    njobs = -1;
+		char   *lastp = NULL;
+		char    jspath[_Q_PATH_MAX];
+		char    jslink[_Q_PATH_MAX];
+		ssize_t len;
+		bool    start_server = false;
+
+		if (jobs == NULL ||
+			jobs[0] == '\0' ||
+			((njobs = strtol(jobs, &lastp, 10)) == 0 &&
+			 errno == EINVAL) ||
+			*lastp != '\0' ||
+			njobs < 0)
+		{
+			warn("invalid argument to --jobserver: '%s'", jobs);
+			return 1;
+		}
+		if (njobs == 1)
+		{
+			warn("number of jobs with --jobserver must be >1");
+			return 1;
+		}
+		if (njobs > 0)
+			njobs--;  /* correct for the assumed token Make takes */
+
+#define Q_JOBS_SOCK ".q-jobserver.sock"
+		/* placing this in /run is pointless, we are an aid for when
+		 * things like steve aren't possible, so likely we run
+		 * unprivileged */
+		snprintf(jspath, sizeof(jspath),
+				 CONFIG_EPREFIX "tmp/" Q_JOBS_SOCK);
+		if ((len = readlink(jspath, jslink, sizeof(jslink))) < 0 ||
+			len == sizeof(jslink))
+		{
+			/* no such file, or invalid/unreadable garbage */
+			unlink(jspath);
+			start_server = true;
+		} else {
+			jslink[len] = '\0';
+			/* see if the target is still alive */
+			if (len > sizeof(Q_JOBS_SOCK) - 1 &&
+				strncmp(jslink, Q_JOBS_SOCK, sizeof(Q_JOBS_SOCK) - 1) == 0 &&
+				jslink[sizeof(Q_JOBS_SOCK) - 1] == '.')
+			{
+				char *endp;
+				long  pid;
+
+				pid = strtol(&jslink[sizeof(Q_JOBS_SOCK)], &endp, 10);
+				if (*endp == '\0' &&
+					pid != 0)
+				{
+					/* valid link, expand it */
+					snprintf(jslink, sizeof(jslink) - 1,
+							 CONFIG_EPREFIX "tmp/" Q_JOBS_SOCK ".%ld",
+							 pid);
+
+					/* let's check if the pid is alive */
+					if (kill((pid_t)pid, 0) == 0) {
+						if (njobs > 0) {
+							warn("jobserver process %ld is already running",
+								 pid);
+						} else { /* must be 0 */
+							/* shutdown existing */
+							return kill((pid_t)pid, SIGTERM);
+						}
+					} else {
+						/* not there, pronounce dead */
+						unlink(jslink);
+						unlink(jspath);
+						start_server = true;
+					}
+				} else {
+					/* invalid, let's assume the link is supposed to be
+					 * ours, so if someone is tinkering with it, YOLO */
+					unlink(jspath);
+					start_server = true;
+				}
+			} else {
+				/* like above, the link is garbage, but we own it */
+				unlink(jspath);
+				start_server = true;
+			}
+		}
+
+		if (start_server) {
+			pid_t child;
+			int   fds[2];
+
+			if (pipe(fds) != 0) {
+				warnp("internal failure trying to start jobserver");
+				return 1;
+			}
+
+			child = fork();
+			if (child < 0) {
+				warnp("failed to create jobserver");
+				return 1;
+			}
+			if (child > 0) {
+				/* parent, read from pipe so we exit when the child
+				 * really started up */
+				close(fds[1]);
+				if ((len = read(fds[0], jslink, sizeof(jslink))) < 0)
+				{
+					warnp("failed to start jobserver");
+					return 1;
+				}
+				if (len <= 3 ||
+					jslink[0] != 'O' ||
+					jslink[1] != 'K' ||
+					jslink[2] != ':')
+				{
+					kill(child, SIGKILL);
+					warnp("internal failure while starting jobserver");
+					return 1;
+				}
+
+				memmove(&jslink[0], &jslink[3], len - 3);
+				jslink[len - 3] = '\0';
+			} else {
+				int ret;
+
+				/* child */
+				close(fds[0]);
+				/* start a new session, so we can properly detach from
+				 * our parent */
+				if (setsid() < 0)
+					errp("failed to create session");
+				child = fork();
+				if (child != 0)
+					close(fds[1]);
+				if (child < 0)
+					errp("failed to fork daemon process");
+				if (child > 0)
+					return 0;
+
+				snprintf(jslink, sizeof(jslink),
+						 CONFIG_EPREFIX "tmp/" Q_JOBS_SOCK ".%u", getpid());
+				if (mkfifo(jslink, 0666) != 0)
+					errp("failed to create jobserver fifo '%s'", jslink);
+				if (symlink(&jslink[sizeof(CONFIG_EPREFIX "tmp/") - 1],
+							jspath) != 0)
+				{
+					warnp("failed to create jobserver symlink '%s'", jspath);
+					unlink(jslink);
+					return 1;
+				}
+
+				/* tell grandparent we've made it */
+				write(fds[1], "OK:", 3);
+				write(fds[1], jslink, strlen(jslink));
+				close(fds[1]);
+				/* close stdio streams */
+				close(0);
+				close(1);
+				close(2);
+
+				/* finally run the jobserver */
+				ret = q_jobserver(jslink, (int)njobs);
+
+				unlink(jslink);
+				unlink(jspath);
+				return ret;
+			}
+		}
+
+		/* success (existing or just started server), return path */
+		printf("fifo:%s\n", jslink);
 
 		return 0;
 	}
