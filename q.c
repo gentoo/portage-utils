@@ -460,7 +460,8 @@ static int q_jobserver(char *path, int njobs)
 	}
 
 	for (i = 0; i < njobs; i++)
-		write(pipefds[1], "q", 1);
+		if (write(pipefds[1], "q", 1) != 1)
+			i--;  /* this is close to impossible though */
 
 	while (!q_js_shutdown)
 		sleep(1);
@@ -865,7 +866,8 @@ int q_main(int argc, char **argv)
 
 			/* ensure we can actually write the new cache */
 			mkdir_p_at(t->tree_fd, "metadata", 0755);
-			fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC);
+			fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC,
+					  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH /* 0644 */);
 
 			a = archive_write_new();
 			archive_write_set_format_ustar(a);  /* GLEP-78, just to be safe */
@@ -1140,8 +1142,9 @@ int q_main(int argc, char **argv)
 				}
 
 				/* tell grandparent we've made it */
-				write(fds[1], "OK:", 3);
-				write(fds[1], jslink, strlen(jslink));
+				if (write(fds[1], "OK:", 3) != 3 ||
+					write(fds[1], jslink, strlen(jslink)) != strlen(jslink))
+					warnp("could not report success");
 				close(fds[1]);
 				/* close stdio streams */
 				close(0);

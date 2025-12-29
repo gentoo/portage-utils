@@ -210,7 +210,8 @@ write_hashes
 			" BLAKE2B %s", blak2b);
 	len += snprintf(data + len, sizeof(data) - len, "\n");
 
-	write(fd, data, len);
+	if (write(fd, data, len) != len)
+		warnp("failed to write hash data");
 }
 
 static const char *
@@ -284,27 +285,28 @@ qgpkg_make(tree_pkg_ctx *pkg)
 	fflush(stdout);
 
 	snprintf(buf, sizeof(buf), "%s/Manifest", tmpdir);
-	mfd = open(buf, O_WRONLY | O_CREAT | O_TRUNC);
+	mfd = open(buf, O_WRONLY | O_CREAT | O_TRUNC,
+			   S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (mfd < 0) {
 		rmdir(tmpdir);
 		printf("%sFAIL%s\n", RED, NORM);
 		return -4;
 	}
-	fchmod(mfd, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
 	snprintf(buf, sizeof(buf), "%s/gpkg-1", tmpdir);
-	fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC);
+	fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC,
+			  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (mfd < 0) {
 		close(mfd);
 		rm_rf(tmpdir);
 		printf("%sFAIL%s\n", RED, NORM);
 		return -5;
 	}
-	fchmod(fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	/* contractually we don't have to put anything in here, but we drop
 	 * our signature so it can be traced back to us */
 	len = snprintf(ename, sizeof(ename), "portage-utils-%s", VERSION);
-	write(fd, ename, len);
+	if (write(fd, ename, len) != len)
+		warnp("could not write self-identifier");
 	close(fd);
 	write_hashes(buf, "DATA", mfd);
 
