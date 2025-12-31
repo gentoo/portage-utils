@@ -311,7 +311,7 @@ best_version(const depend_atom *atom, int mode)
 	int             r;
 
 	if (mode & BV_EBUILD) {
-		warn("BV_EBUILD not yet supported");
+		warn("installing from ebuild not yet supported");
 		return NULL;
 	}
 	if (mode == 0) {
@@ -2004,7 +2004,6 @@ static void
 pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 {
 	int  verifyret;
-	char buf[_Q_PATH_MAX];
 
 	/* qmerge -pv patch */
 	if (pretend) {
@@ -2030,20 +2029,28 @@ pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	}
 
 	if (access(mpkg->path, R_OK) != 0) {
+		char *p;
+
 		if (verbose)
 			printf("Fetching %s\n", atom_to_string(mpkg->atom));
 
 		/* fetch the package */
-		snprintf(buf, sizeof(buf), "%s/%s.tbz2",
-				mpkg->atom->CATEGORY, mpkg->atom->PF);
-		fetch(mpkg->pkg->cat_ctx->ctx->path, buf);
+		p = strrchr(mpkg->path, '/');
+		if (p != NULL)
+			p = strrchr(p, '/');
+		if (p != NULL) {
+			p++;
+			fetch(mpkg->pkg->cat_ctx->ctx->path, p);
+		} else {
+			warn("invalid path: %s, skipping", mpkg->path);
+		}
 
 		/* verify the pkg exists now. unlink if zero bytes */
 		unlink_empty(mpkg->path);
 	}
 
 	if (access(mpkg->path, R_OK) != 0) {
-		warn("Failed to fetch %s.tbz2 from %s", mpkg->atom->PF, binhost);
+		warn("Failed to fetch %s from %s", mpkg->atom->PF, binhost);
 		fflush(stderr);
 		return;
 	}
