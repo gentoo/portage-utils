@@ -110,7 +110,7 @@ int lookup_applet_idx(const char *applet)
 	return 0;
 }
 
-#ifdef ENABLE_GPKG
+#ifdef ENABLE_GTREE
 struct q_cache_ctx {
 	struct archive *archive;
 	time_t          buildtime;
@@ -795,6 +795,7 @@ int q_main(int argc, char **argv)
 	}
 
 	if (build_cache) {
+#ifdef ENABLE_GTREE
 		/* traverse all overlays, create a cache for each
 		 * the cache basically is one giant tar with:
 		 * - gtree-1  (mandatory, first file ident)
@@ -990,6 +991,9 @@ int q_main(int argc, char **argv)
 		free(qcctx.cbuf);
 
 		return 0;
+#else
+		err("gtree support not compiled in");
+#endif
 	}
 
 	if (run_jobserver) {

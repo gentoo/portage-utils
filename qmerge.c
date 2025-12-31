@@ -1230,7 +1230,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	mkdir("image", 0755);
 
 	if (mpkg->pkg->binpkg_isgpkg) {
-#ifdef HAVE_LIBARCHIVE
+#ifdef ENABLE_GPKG
 		/* unpack the whole thing to temp, dropping the pkg name dir, so
 		 * we end up with generic files in temp */
 		struct archive       *a;

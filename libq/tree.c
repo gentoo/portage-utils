@@ -79,7 +79,9 @@ tree_open_int(const char *sroot, const char *tdir, bool quiet)
 
 static const char portcachedir_pms[] = "metadata/cache";
 static const char portcachedir_md5[] = "metadata/md5-cache";
+#ifdef ENABLE_GTREE
 static const char portcachedir_gt1[] = "metadata/repo.gtree.tar";
+#endif
 static const char portrepo_name[]    = "profiles/repo_name";
 tree_ctx *
 tree_open(const char *sroot, const char *portdir)
