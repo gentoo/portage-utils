@@ -1696,8 +1696,20 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 					}
 					cat->pkg_ctxs = (tree_pkg_ctx **)atom;  /* for name */
 				}
-				if (meta.Q_BUILDID != NULL)
+				if (meta.Q_BUILDID != NULL) {
 					atom->BUILDID = atoi(meta.Q_BUILDID);
+				} else if (meta.Q_PATH != NULL) {
+					depend_atom *patom;
+					/* dreadful, but Portage apparently generates a
+					 * Packages file without BUILD_ID while it does
+					 * generate binpkgs with build-ids in them */
+					c = strrchr(meta.Q_PATH, '/');
+					patom = atom_explode(++c);
+					if (patom != NULL) {
+						atom->BUILDID = patom->BUILDID;
+						atom_implode(patom);
+					}
+				}
 				pkgnamelen = 0;
 				if (meta.Q_PATH != NULL) {
 					size_t plen = strlen(meta.Q_PATH);
@@ -1766,7 +1778,10 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 				atom_implode(atom);
 			atom = atom_explode(c);
 			/* pretend this entry is bogus if it doesn't match query */
-			if (query != NULL && atom_compare(atom, query) != EQUAL) {
+			if (query != NULL &&
+				atom != NULL &&
+				atom_compare(atom, query) != EQUAL)
+			{
 				atom_implode(atom);
 				atom = NULL;
 			}
