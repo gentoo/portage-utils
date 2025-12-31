@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2022 Gentoo Foundation
+ * Copyright 2005-2025 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -119,8 +119,29 @@ atom_explode_cat(const char *atom, const char *cat)
 
 	/* eat file name crap when given an (autocompleted) path */
 	if ((ptr = strstr(ret->CATEGORY, ".ebuild")) != NULL ||
-			(ptr = strstr(ret->CATEGORY, ".tbz2")) != NULL)
+		(ptr = strstr(ret->CATEGORY, ".tbz2")) != NULL ||
+		(ptr = strstr(ret->CATEGORY, ".gpkg.tar")) != NULL)
+	{
 		*ptr = '\0';
+		if (ptr[1] == 't' ||
+			ptr[1] == 'g')
+		{
+			bool valid = false;
+			/* probe for the build-id, it should be a number, but it can
+			 * be optional, which is making it difficult because
+			 * in something like PN-VER.gpkg.tar, VER should not be seen
+			 * as BUILDID, while a PN can also contain dashes */
+			while (--ptr > ret->CATEGORY &&
+				   isdigit(*ptr))
+				valid = true;
+			if (valid &&
+				*ptr == '-')
+			{
+				ret->BUILDID = atoll(&ptr[1]);
+				*ptr = '\0';
+			}
+		}
+	}
 
 	/* chip off the trailing ::REPO as needed */
 	if ((ptr = strstr(ret->CATEGORY, "::")) != NULL) {
