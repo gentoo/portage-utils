@@ -21,7 +21,7 @@
 #include <libproc.h>
 #endif
 
-#ifdef ENABLE_GPKG
+#if defined(ENABLE_GPKG) || defined(ENABLE_GTREE)
 # include <archive.h>
 # include <archive_entry.h>
 #endif
