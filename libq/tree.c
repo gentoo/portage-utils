@@ -1700,20 +1700,20 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 				if (meta.Q_PATH != NULL) {
 					size_t plen = strlen(meta.Q_PATH);
 					if (plen > sizeof(".tbz2") - 1 &&
-						memcmp(meta.Q_PATH + plen - sizeof(".tbz2") - 1,
+						memcmp(meta.Q_PATH + plen - (sizeof(".tbz2") - 1),
 							   ".tbz2", sizeof(".tbz2") - 1) == 0)
 					{
 						pkgnamelen = snprintf(pkgname, sizeof(pkgname),
 											  "%s.tbz2", atom->PF);
 						pkgname[pkgnamelen - (sizeof(".tbz2") - 1)] = '\0';
-					}
-					if (plen > sizeof(".gpkg.tar") - 1 &&
-						memcmp(meta.Q_PATH + plen - sizeof(".gpkg.tar") - 1,
+					} else if (plen > sizeof(".gpkg.tar") - 1 &&
+						memcmp(meta.Q_PATH + plen - (sizeof(".gpkg.tar") - 1),
 							   ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
 					{
 						pkgnamelen = snprintf(pkgname, sizeof(pkgname),
 											  "%s.gpkg.tar", atom->PF);
 						pkgname[pkgnamelen - (sizeof(".gpkg.tar") - 1)] = '\0';
+						pkg.binpkg_isgpkg = 1;
 					}
 				}
 				if (pkgnamelen == 0) {
@@ -2238,8 +2238,8 @@ tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
 			 * xpak archive, so can just take it over */
 			pkg->meta = meta;
 			ctx->meta = NULL;  /* avoid double free */
-			pkg->binpkg_isgpkg = ctx->binpkg_isgpkg;
 		}
+		pkg->binpkg_isgpkg = ctx->binpkg_isgpkg;
 	} else {
 		pkg->meta = NULL;
 	}
