@@ -331,6 +331,11 @@ New format:
 1431764460: === Sync completed for gentoo
 1431764493:  *** terminating.
 
+Latest format:
+1764512151: Started emerge on: Nov 30, 2025 15:15:51
+1764512151:  *** emerge --regex-search-auto=y --sync                            1764512151:  === sync
+1764512233:  *** terminating.
+
 *** packages
 
 1547475773:  >>> emerge (53 of 74) app-shells/bash-5.0 to /gentoo/prefix64/
@@ -679,6 +684,7 @@ static int do_emerge_log(
 			}
 			printf("\n");
 		} else if (flags->do_sync && (
+					strpfx(p, "  *** terminating.") == 0 ||
 					strpfx(p, " === Sync completed ") == 0 ||
 					strcmp(p, "  === sync\n") == 0))
 		{
@@ -692,14 +698,20 @@ static int do_emerge_log(
 					continue;  /* sync without start, exclude */
 				elapsed = tstart - sync_start;
 
-				p += 20;
-				if (strpfx(p, "for ") == 0) {
-					p += 4;
-				} else {  /* "with " */
-					p += 5;
+				if (p[2] == '*' &&
+					(q = strchr(p, '\n')) != NULL)
+				{
+					p = (char *)"sync";
+				} else {
+					p += 20;
+					if (strpfx(p, "for ") == 0) {
+						p += 4;
+					} else {  /* "with " */
+						p += 5;
+					}
+					if ((q = strchr(p, '\n')) != NULL)
+						*q = '\0';
 				}
-				if ((q = strchr(p, '\n')) != NULL)
-					*q = '\0';
 
 				if (flags->do_predict || flags->do_average ||
 						flags->do_running)
