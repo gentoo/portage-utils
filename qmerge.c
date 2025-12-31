@@ -1254,6 +1254,8 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 			if (fname == NULL)
 				continue;
 			fname++;
+			if (*fname == '\0')
+				continue;  /* bug #968185 */
 
 			/* drop compressor (and "tar" -- not to be misleading) for
 			 * easy access below */
@@ -1265,12 +1267,13 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 			archive_entry_set_pathname(entry, fname);
 
 			if (archive_write_header(t, entry) != ARCHIVE_OK)
-				err("failed to write: %s", archive_error_string(t));
+				err("failed to unpack from gpkg '%s': %s",
+					fname, archive_error_string(t));
 			while (archive_read_data_block(a, (const void **)&p,
 										   &size, &off) == ARCHIVE_OK)
 			{
 				if (archive_write_data_block(t, p, size, off) != ARCHIVE_OK)
-					err("failed to write %s: %s\n",
+					err("failed to write from gpkg '%s': %s\n",
 						fname, archive_error_string(t));
 			}
 			archive_write_finish_entry(t);
@@ -1306,16 +1309,19 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 			if (fname == NULL)
 				continue;
 			fname++;
+			if (*fname == '\0')
+				continue;  /* bug #968185 */
 
 			archive_entry_set_pathname(entry, fname);
 
 			if (archive_write_header(t, entry) != ARCHIVE_OK)
-				err("failed to write: %s", archive_error_string(t));
+				err("failed to unpack metadata '%s': %s",
+					fname, archive_error_string(t));
 			while (archive_read_data_block(a, (const void **)&p,
 										   &size, &off) == ARCHIVE_OK)
 			{
 				if (archive_write_data_block(t, p, size, off) != ARCHIVE_OK)
-					err("failed to write %s: %s\n",
+					err("failed to write metadata '%s': %s\n",
 						fname, archive_error_string(t));
 			}
 			archive_write_finish_entry(t);
@@ -1350,16 +1356,19 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 			if (fname == NULL)
 				continue;
 			fname++;
+			if (*fname == '\0')
+				continue;  /* bug #968185 */
 
 			archive_entry_set_pathname(entry, fname);
 
 			if (archive_write_header(t, entry) != ARCHIVE_OK)
-				err("failed to write: %s", archive_error_string(t));
+				err("failed to unpack image '%s': %s",
+					fname, archive_error_string(t));
 			while (archive_read_data_block(a, (const void **)&p,
 										   &size, &off) == ARCHIVE_OK)
 			{
 				if (archive_write_data_block(t, p, size, off) != ARCHIVE_OK)
-					err("failed to write %s: %s\n",
+					err("failed to write image '%s': %s\n",
 						fname, archive_error_string(t));
 			}
 			archive_write_finish_entry(t);
