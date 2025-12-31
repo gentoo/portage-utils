@@ -8,6 +8,7 @@ QFILES = \
 	copy_file.c copy_file.h \
 	dep.c dep.h \
 	eat_file.c eat_file.h \
+	file_magic.c file_magic.h \
 	hash.c hash.h \
 	human_readable.c human_readable.h \
 	i18n.h \

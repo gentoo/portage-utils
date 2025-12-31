@@ -31,6 +31,7 @@
 #include "move_file.h"
 #include "contents.h"
 #include "eat_file.h"
+#include "file_magic.h"
 #include "hash.h"
 #include "human_readable.h"
 #include "profile.h"
@@ -1373,8 +1374,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 #endif
 	} else {
 		int vdbfd;
-		unsigned char magic[257+6];
-		FILE *mfd;
+		int mfd;
 		FILE *tarpipe;
 		FILE *tbz2f;
 		unsigned char iobuf[8192];
@@ -1383,6 +1383,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		size_t n;
 		size_t rd;
 		size_t wr;
+		file_magic_type fmt;
 
 		tbz2size = 0;
 		if ((vdbfd = open("vdb", O_RDONLY)) == -1)
@@ -1407,42 +1408,29 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		 * lzo: 9-byte:  89 'L' 'Z' 'O' 0 d a 1a a at byte 0
 		 * br:  anything else */
 
-		compr = "brotli -dc"; /* default: brotli; has no magic header */
-		mfd = fopen(mpkg->path, "r");
-		if (mfd != NULL) {
-			size_t mlen = fread(magic, 1, sizeof(magic), mfd);
-			fclose(mfd);
+		mfd = open(mpkg->path, O_RDONLY);
+		fmt = file_magic_guess_fd(mfd);
+		if (mfd >= 0)
+			close(mfd);
 
-			if (mlen >= 3 && magic[0] == 'B' && magic[1] == 'Z' &&
-					magic[2] == 'h')
-			{
+		compr = "brotli -dc"; /* default: brotli; has no magic header */
+		switch (fmt) {
+			case FMAGIC_BZIP2:
 				compr = "bzip2 -dc";
-			} else if (mlen >= 2 &&
-					magic[0] == 037 && magic[1] == 0213)
-			{
+				break;
+			case FMAGIC_GZIP:
 				compr = "gzip -dc";
-			} else if (mlen >= 5 &&
-					magic[1] == '7' && magic[2] == 'z' &&
-					magic[3] == 'X' && magic[4] == 'Z')
-			{
+				break;
+			case FMAGIC_XZ:
 				compr = "xz -dc";
-			} else if (mlen == 257+6 &&
-					magic[257] == 'u' && magic[258] == 's' &&
-					magic[259] == 't' && magic[260] == 'a' &&
-					magic[261] == 'r' &&
-					(magic[262] == '\0' || magic[262] == ' '))
-			{
+				break;
+			case FMAGIC_TAR:
 				compr = "";
-			} else if (mlen >= 4 &&
-					magic[0] == 0x04 && magic[1] == 0x22 &&
-					magic[2] == 0x4D && magic[3] == 0x18)
-			{
+				break;
+			case FMAGIC_LZ4:
 				compr = "lz4 -dc";
-			} else if (mlen >= 4 &&
-					magic[0] >= 0x22 && magic[0] <= 0x28 &&
-					magic[1] == 0xB5 && magic[2] == 0x2F &&
-					magic[3] == 0xFD)
-			{
+				break;
+			case FMAGIC_ZSTD:
 				/*
 				 * --long=31 is needed to uncompress files compressed with
 				 * --long=xx where xx>27. The option is "safe" in the sense
@@ -1462,20 +1450,16 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 				/* If really tar -I would be used we would have to quote:
 				 * compr = "I \"zstd --long=31\"";
 				 * But actually we use a pipe (see below) */
-			} else if (mlen >= 4 &&
-					magic[0] == 'L' && magic[1] == 'Z' &&
-					magic[2] == 'I' && magic[3] == 'P')
-			{
+				break;
+			case FMAGIC_LZIP:
 				compr = "lzip -dc";
-			} else if (mlen >= 9 &&
-					magic[0] == 0x89 && magic[1] == 'L' &&
-					magic[2] == 'Z' && magic[3] == 'O' &&
-					magic[4] == 0x00 && magic[5] == 0x0D &&
-					magic[6] == 0x0A && magic[7] == 0x1A &&
-					magic[8] == 0x0A)
-			{
+				break;
+			case FMAGIC_LZO:
 				compr = "lzop -dc";
-			}
+				break;
+			default:
+				warn("unhandled compression type, please file a bug");
+				break;
 		}
 
 		/* extract the binary package data */
