@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -45,6 +45,7 @@ char *port_tmpdir;
 set  *features;
 set  *ev_use;
 char *install_mask;
+char *binpkg_format;
 DECLARE_ARRAY(overlays);
 DECLARE_ARRAY(overlay_names);
 DECLARE_ARRAY(overlay_src);
@@ -555,8 +556,8 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 						free(abuf);
 
 						if (!endq)
-							warn("%s:%zu: %s: quote mismatch",
-									file, line, vars[i].name);
+							warn("%s%s:%zu: %s: quote mismatch",
+									portroot, file, line, vars[i].name);
 
 						s = buf + vars[i].name_len + 2;
 					} else {
@@ -569,8 +570,8 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 					s[off] = '\0';
 				}
 
-				snprintf(npath, sizeof(npath), "%s:%zu:%zu-%zu",
-						file, curline, cbeg, cend);
+				snprintf(npath, sizeof(npath), "%s%s:%zu:%zu-%zu",
+						portroot, file, curline, cbeg, cend);
 				set_portage_env_var(&vars[i], s, npath);
 			}
 		} else if (type == PMASK_FILE) {
@@ -583,8 +584,8 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 					free(p);
 			} else {
 				void *e;
-				snprintf(npath, sizeof(npath), "%s:%zu:%zu-%zu",
-						file, line, cbeg, cend);
+				snprintf(npath, sizeof(npath), "%s%s:%zu:%zu-%zu",
+						portroot, file, line, cbeg, cend);
 				/* if not necessary, but do it for static code analysers
 				 * which take into accound that add_set_value might
 				 * allocate a new set when masks would be NULL -- a case
@@ -796,6 +797,7 @@ env_vars vars_to_read[] = {
 	_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             DEFAULT_PORTAGE_BINHOST)
 	_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         CONFIG_EPREFIX "var/tmp/portage/")
 	_Q_EVS(STR,  PKGDIR,              pkgdir,              CONFIG_EPREFIX "var/cache/binpkgs/")
+	_Q_EVS(STR,  BINPKG_FORMAT,       binpkg_format,       "gpkg")
 	_Q_EVS(STR,  Q_VDB,               portvdb,             CONFIG_EPREFIX "var/db/pkg")
 	_Q_EVS(STR,  Q_EDB,               portedb,             CONFIG_EPREFIX "var/cache/edb")
 	{ NULL, 0, _Q_BOOL, { NULL }, 0, NULL, NULL, }

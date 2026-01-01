@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2024 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -177,6 +177,7 @@ extern char *port_tmpdir;
 extern set  *features;
 extern set  *ev_use;
 extern char *install_mask;
+extern char *binpkg_format;
 extern DEFINE_ARRAY(overlays);
 extern DEFINE_ARRAY(overlay_names);
 extern DEFINE_ARRAY(overlay_src);
