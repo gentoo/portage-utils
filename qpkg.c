@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd	       - <solar@gentoo.org>
@@ -74,7 +74,6 @@ qpkg_clean(char *dirp)
 	tree_ctx *t;
 	tree_ctx *pkgs;
 	char *binatomstr;
-	depend_atom *atom;
 	char buf[_Q_PATH_MAX];
 	struct stat st;
 
@@ -117,9 +116,9 @@ qpkg_clean(char *dirp)
 	}
 
 	array_for_each(bins, n, binatomstr) {
-		snprintf(buf, sizeof(buf), "%s/%s.tbz2", dirp, binatomstr);
-		atom = atom_explode(binatomstr);
-		if (lstat(buf, &st) != -1) {
+		depend_atom    *atom = atom_explode(binatomstr);
+		tree_match_ctx *m    = tree_match_atom(pkgs, atom, 0);
+		if (lstat(m->path, &st) != -1) {
 			if (S_ISREG(st.st_mode)) {
 				disp_units = KILOBYTE;
 				if ((st.st_size / KILOBYTE) > 1000)
@@ -129,11 +128,13 @@ qpkg_clean(char *dirp)
 						DKBLUE, GREEN,
 						make_human_readable_str(st.st_size, 1, disp_units),
 						disp_units == MEGABYTE ? "MiB" : "KiB",
-						DKBLUE, NORM, atom_format("%[CAT]/%[PF]", atom));
+						DKBLUE, NORM, atom_format("%[CAT]/%[PF]%[BUILDID]",
+												  m->atom));
 			}
 			if (!pretend)
 				unlink(buf);
 		}
+		tree_match_close(m);
 		atom_implode(atom);
 	}
 
