@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -130,15 +130,24 @@ atom_explode_cat(const char *atom, const char *cat)
 			/* probe for the build-id, it should be a number, but it can
 			 * be optional, which is making it difficult because
 			 * in something like PN-VER.gpkg.tar, VER should not be seen
-			 * as BUILDID, while a PN can also contain dashes */
+			 * as BUILDID, while a PN can also contain dashes
+			 * see below note on PMS 3.2, we do a loose check on -[0-9]
+			 * from the start */
 			while (--ptr > ret->CATEGORY &&
 				   isdigit(*ptr))
 				valid = true;
 			if (valid &&
 				*ptr == '-')
 			{
-				ret->BUILDID = atoll(&ptr[1]);
-				*ptr = '\0';
+				pv = ret->CATEGORY;
+				while ((pv = strchr(pv, '-')) != NULL) {
+					if (isdigit(pv[1]))
+						break;
+				}
+				if (pv != ptr) {
+					ret->BUILDID = atoll(&ptr[1]);
+					*ptr = '\0';
+				}
 			}
 		}
 	}
