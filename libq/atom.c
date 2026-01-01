@@ -476,11 +476,12 @@ atom_clone(depend_atom *atom)
 	}
 
 	ret->blocker = atom->blocker;
-	ret->pfx_op = atom->pfx_op;
-	ret->sfx_op = atom->pfx_op;
-	ret->PR_int = atom->PR_int;
-	ret->letter = atom->letter;
+	ret->pfx_op  = atom->pfx_op;
+	ret->sfx_op  = atom->pfx_op;
+	ret->PR_int  = atom->PR_int;
+	ret->letter  = atom->letter;
 	ret->slotdep = atom->slotdep;
+	ret->BUILDID = atom->BUILDID;
 
 	if (atom->suffixes != NULL) {
 		for (slen = 0; atom->suffixes[slen].suffix != VER_NORM; slen++)
@@ -1012,10 +1013,14 @@ atom_compare_flg(const depend_atom *data, const depend_atom *query, int flags)
 		return _atom_compare_match(NEWER, pfx_op);
 
 	/* binpkg-multi-instance support */
-	if (data->BUILDID < query->BUILDID)
-		return _atom_compare_match(OLDER, pfx_op);
-	if (data->BUILDID > query->BUILDID)
-		return _atom_compare_match(NEWER, pfx_op);
+	if (data->BUILDID > 0 &&
+		query->BUILDID > 0)
+	{
+		if (data->BUILDID < query->BUILDID)
+			return _atom_compare_match(OLDER, pfx_op);
+		if (data->BUILDID > query->BUILDID)
+			return _atom_compare_match(NEWER, pfx_op);
+	}
 
 	return _atom_compare_match(EQUAL, pfx_op);
 }
