@@ -120,10 +120,11 @@ atom_explode_cat(const char *atom, const char *cat)
 	/* eat file name crap when given an (autocompleted) path */
 	if ((ptr = strstr(ret->CATEGORY, ".ebuild")) != NULL ||
 		(ptr = strstr(ret->CATEGORY, ".tbz2")) != NULL ||
+		(ptr = strstr(ret->CATEGORY, ".xpak")) != NULL ||
 		(ptr = strstr(ret->CATEGORY, ".gpkg.tar")) != NULL)
 	{
 		*ptr = '\0';
-		if (ptr[1] == 't' ||
+		if (ptr[1] == 'x' ||
 			ptr[1] == 'g')
 		{
 			bool valid = false;
