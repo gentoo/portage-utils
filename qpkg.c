@@ -37,11 +37,12 @@
 #include "xmkdir.h"
 #include "xpak.h"
 
-#define QPKG_FLAGS "cEgpP:" COMMON_FLAGS
+#define QPKG_FLAGS "cEgxpP:" COMMON_FLAGS
 static struct option const qpkg_long_opts[] = {
 	{"clean",    no_argument, NULL, 'c'},
 	{"eclean",   no_argument, NULL, 'E'},
 	{"gpkg",     no_argument, NULL, 'g'},
+	{"xpak",     no_argument, NULL, 'x'},
 	{"pretend",  no_argument, NULL, 'p'},
 	{"pkgdir",    a_argument, NULL, 'P'},
 	COMMON_LONG_OPTS
@@ -49,7 +50,8 @@ static struct option const qpkg_long_opts[] = {
 static const char * const qpkg_opts_help[] = {
 	"clean pkgdir of files that are not installed",
 	"clean pkgdir of files that are not in the tree anymore",
-	"build gpkg instead of tbz2 package",
+	"force building of gpkg instead of BINPKG_FORMAT",
+	"force building of tbz2/xpak instead of BINPKG_FORMAT",
 	"pretend only",
 	"alternate package directory",
 	COMMON_OPTS_HELP
@@ -722,13 +724,16 @@ int qpkg_main(int argc, char **argv)
 
 	memset(&cb_args, 0, sizeof(cb_args));
 
-	cb_args.bindir = pkgdir;
+	cb_args.bindir     = pkgdir;
+	cb_args.build_gpkg = strcmp(binpkg_format, "gpkg") == 0;
+
 	while ((i = GETOPT_LONG(QPKG, qpkg, "")) != -1) {
 		switch (i) {
 		case 'E': cb_args.clean_notintree = true;  /* fall through */
-		case 'c': qclean = 1; break;
-		case 'g': cb_args.build_gpkg = true; break;
-		case 'p': pretend = 1; break;
+		case 'c': qclean = 1;                       break;
+		case 'g': cb_args.build_gpkg = true;        break;
+		case 'x': cb_args.build_gpkg = false;       break;
+		case 'p': pretend = 1;                      break;
 		case 'P':
 			restrict_chmod = 1;
 			cb_args.bindir = optarg;
