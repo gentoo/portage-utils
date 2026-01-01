@@ -215,6 +215,7 @@ write_hashes
 		warnp("failed to write hash data");
 }
 
+#ifdef ENABLE_GPKG
 static const char *
 qgpkg_set_compression(struct archive *a)
 {
@@ -236,11 +237,12 @@ qgpkg_set_compression(struct archive *a)
 	/* none, no filtering */
 	return "";
 }
+#endif
 
 static int
 qgpkg_make(tree_pkg_ctx *pkg)
 {
-#ifdef HAVE_LIBARCHIVE
+#ifdef ENABLE_GPKG
 	struct archive *a;
 	struct archive_entry *entry;
 	struct stat st;
