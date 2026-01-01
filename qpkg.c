@@ -2,7 +2,7 @@
  * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
- * Copyright 2005-2010 Ned Ludd	       - <solar@gentoo.org>
+ * Copyright 2005-2010 Ned Ludd		   - <solar@gentoo.org>
  * Copyright 2005-2014 Mike Frysinger  - <vapier@gentoo.org>
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
@@ -58,12 +58,18 @@ static const char * const qpkg_opts_help[] = {
 
 extern char pretend;
 
-static char *qpkg_bindir = NULL;
-static int eclean = 0;
+typedef struct qpkg_cb_args {
+	char     *bindir;
+	tree_ctx *binpkg;
+	tree_ctx *vdb;
+	int       clean_notintree:1;
+	int       build_gpkg:1;
+	size_t    pkgs_made;
+} qpkg_cb_args;
 
 /* figure out what dirs we want to process for cleaning and display results. */
 static int
-qpkg_clean(char *dirp)
+qpkg_clean(qpkg_cb_args *args)
 {
 	size_t n;
 	size_t disp_units = 0;
@@ -77,7 +83,7 @@ qpkg_clean(char *dirp)
 	char buf[_Q_PATH_MAX];
 	struct stat st;
 
-	pkgs = tree_open_binpkg(portroot, dirp);
+	pkgs = args->binpkg;
 	if (pkgs == NULL)
 		return 1;
 
@@ -86,7 +92,7 @@ qpkg_clean(char *dirp)
 		return 1;
 	array_set(bin_pkgs, bins);
 
-	if (eclean) {
+	if (args->clean_notintree) {
 		const char *overlay;
 
 		array_for_each(overlays, n, overlay) {
@@ -97,11 +103,9 @@ qpkg_clean(char *dirp)
 			}
 		}
 	} else {
-		t = tree_open_vdb(portroot, portvdb);
-		if (t != NULL) {
+		t = args->vdb;
+		if (t != NULL)
 			known_pkgs = tree_get_atoms(t, true, known_pkgs);
-			tree_close(t);
-		}
 	}
 
 	if (known_pkgs != NULL) {
@@ -240,7 +244,7 @@ qgpkg_set_compression(struct archive *a)
 #endif
 
 static int
-qgpkg_make(tree_pkg_ctx *pkg)
+qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 {
 #ifdef ENABLE_GPKG
 	struct archive *a;
@@ -265,7 +269,7 @@ qgpkg_make(tree_pkg_ctx *pkg)
 
 	if (pretend) {
 		printf(" %s-%s %s:\n",
-				GREEN, NORM, atom_format("%[CATEGORY]%[PF]", atom));
+				GREEN, NORM, atom_format("%[CATEGORY]%[PF]%[BUILDID]", atom));
 		return 0;
 	}
 
@@ -273,7 +277,7 @@ qgpkg_make(tree_pkg_ctx *pkg)
 	if (line == NULL)
 		return -1;
 
-	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", qpkg_bindir);
+	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", args->binpkg->path);
 	mask = umask(S_IRWXG | S_IRWXO);
 	i = mkstemp(tmpdir);
 	umask(mask);
@@ -284,7 +288,8 @@ qgpkg_make(tree_pkg_ctx *pkg)
 	if (mkdir(tmpdir, 0750))
 		return -3;
 
-	printf(" %s-%s %s: ", GREEN, NORM, atom_format("%[CATEGORY]%[PF]", atom));
+	printf(" %s-%s %s: ", GREEN, NORM,
+		   atom_format("%[CATEGORY]%[PF]%[BUILDID]", atom));
 	fflush(stdout);
 
 	snprintf(buf, sizeof(buf), "%s/Manifest", tmpdir);
@@ -323,8 +328,8 @@ qgpkg_make(tree_pkg_ctx *pkg)
 	snprintf(gpkg, sizeof(gpkg), "%s/metadata.tar%s", tmpdir, filter);
 	archive_write_open_filename(a, gpkg);
 
-	snprintf(buf, sizeof(buf), "%s%s/%s/%s",
-			portroot, portvdb, atom->CATEGORY, atom->PF);
+	snprintf(buf, sizeof(buf), "%s/%s/%s",
+			args->vdb->path, atom->CATEGORY, atom->PF);
 	cnt = 0;
 	if ((dirfd = open(buf, O_RDONLY)) >= 0)
 		cnt = scandirat(dirfd, ".", &files, filter_self_parent, alphasort);
@@ -490,15 +495,19 @@ qgpkg_make(tree_pkg_ctx *pkg)
 	archive_write_free(a);
 
 	/* create dirs, if necessary */
-	snprintf(buf, sizeof(buf), "%s/%s", qpkg_bindir, atom->CATEGORY);
+	if (atom->BUILDID > 0)
+		i = snprintf(buf, sizeof(buf), "%s/%s/%s",
+					 args->binpkg->path, atom->CATEGORY, atom->PN);
+	else
+		i = snprintf(buf, sizeof(buf), "%s/%s",
+					 args->binpkg->path, atom->CATEGORY);
 	mkdir_p(buf, 0755);
 
-	/* at this point we use PF as package name (and directory above,
-	 * which should match according to GLEP-78), however, Portage seems
-	 * to use <PF>-1 or something, which is unspecified at this point
-	 * what it means, or how to use it */
-	snprintf(buf, sizeof(buf), "%s/%s/%s.gpkg.tar",
-			qpkg_bindir, atom->CATEGORY, atom->PF);
+	if (atom->BUILDID > 0)
+		snprintf(buf + i, sizeof(buf) - i, "/%s-%u.gpkg.tar",
+				 atom->PF, atom->BUILDID);
+	else
+		snprintf(buf + i, sizeof(buf) - i, "/%s.gpkg.tar", atom->PF);
 	if (rename(gpkg, buf)) {
 		warnp("could not move '%s' to '%s'", gpkg, buf);
 		return 1;
@@ -522,7 +531,7 @@ qgpkg_make(tree_pkg_ctx *pkg)
 }
 
 static int
-qpkg_make(tree_pkg_ctx *pkg)
+qpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 {
 	FILE *out;
 	FILE *fp;
@@ -541,7 +550,7 @@ qpkg_make(tree_pkg_ctx *pkg)
 
 	if (pretend) {
 		printf(" %s-%s %s:\n",
-				GREEN, NORM, atom_format("%[CATEGORY]%[PF]", atom));
+				GREEN, NORM, atom_format("%[CATEGORY]%[PF]%[BUILDID]", atom));
 		return 0;
 	}
 
@@ -549,7 +558,7 @@ qpkg_make(tree_pkg_ctx *pkg)
 	if (line == NULL)
 		return -1;
 
-	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", qpkg_bindir);
+	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", args->binpkg->path);
 	mask = umask(0077);
 	i = mkstemp(tmpdir);
 	umask(mask);
@@ -585,7 +594,7 @@ qpkg_make(tree_pkg_ctx *pkg)
 	fclose(out);
 
 	printf(" %s-%s %s: ", GREEN, NORM,
-			atom_format("%[CATEGORY]%[PF]", atom));
+			atom_format("%[CATEGORY]%[PF]%[BUILDID]", atom));
 	fflush(stdout);
 
 	snprintf(tbz2, sizeof(tbz2), "%s/bin.tbz2", tmpdir);
@@ -608,8 +617,8 @@ qpkg_make(tree_pkg_ctx *pkg)
 	}
 	xpaksize = st.st_size;
 
-	snprintf(buf, sizeof(buf), "%s%s/%s/%s",
-			portroot, portvdb, atom->CATEGORY, atom->PF);
+	snprintf(buf, sizeof(buf), "%s/%s/%s",
+			args->vdb->path, atom->CATEGORY, atom->PF);
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
 	xpak_create(AT_FDCWD, tbz2, 1, xpak_argv, 1, verbose);
@@ -637,11 +646,19 @@ qpkg_make(tree_pkg_ctx *pkg)
 	unlink(filelist);
 
 	/* create dirs, if necessary */
-	snprintf(buf, sizeof(buf), "%s/%s", qpkg_bindir, atom->CATEGORY);
+	if (atom->BUILDID > 0)
+		i = snprintf(buf, sizeof(buf), "%s/%s/%s",
+					 args->binpkg->path, atom->CATEGORY, atom->PN);
+	else
+		i = snprintf(buf, sizeof(buf), "%s/%s",
+					 args->binpkg->path, atom->CATEGORY);
 	mkdir_p(buf, 0755);
 
-	snprintf(buf, sizeof(buf), "%s/%s/%s.tbz2",
-			qpkg_bindir, atom->CATEGORY, atom->PF);
+	if (atom->BUILDID > 0)
+		snprintf(buf + i, sizeof(buf) - i, "/%s-%u.xpak",
+				 atom->PF, atom->BUILDID);
+	else
+		snprintf(buf + i, sizeof(buf) - i, "/%s.tbz2", atom->PF);
 	if (rename(tbz2, buf)) {
 		warnp("could not move '%s' to '%s'", tbz2, buf);
 		return 1;
@@ -661,95 +678,116 @@ qpkg_make(tree_pkg_ctx *pkg)
 }
 
 static int
-qgpkg_cb(tree_pkg_ctx *pkg, void *priv)
-{
-	size_t *pkgs_made = priv;
-
-	if (qgpkg_make(pkg) == 0)
-		(*pkgs_made)++;
-
-	return 0;
-}
-
-static int
 qpkg_cb(tree_pkg_ctx *pkg, void *priv)
 {
-	size_t *pkgs_made = priv;
+	qpkg_cb_args *args = priv;
 
-	if (qpkg_make(pkg) == 0)
-		(*pkgs_made)++;
+	/* check atoms to compute a build-id */
+	if (contains_set("binpkg-multi-instance", features)) {
+		depend_atom    *atom = tree_get_atom(pkg, false);
+		tree_match_ctx *m    = tree_match_atom(args->binpkg, atom,
+											   TREE_MATCH_FIRST);
+		if (m != NULL) {
+			atom->BUILDID = m->atom->BUILDID;
+			tree_match_close(m);
+		}
+
+		/* take the next, we should always start at 1, so either way
+		 * this is fine */
+		atom->BUILDID++;
+	}
+
+	if (args->build_gpkg) {
+		if (qgpkg_make(pkg, args) == 0)
+			args->pkgs_made++;
+	} else {
+		if (qpkg_make(pkg, args) == 0)
+			args->pkgs_made++;
+	}
 
 	return 0;
 }
 
 int qpkg_main(int argc, char **argv)
 {
-	tree_ctx *ctx;
-	tree_pkg_cb *cb_func = qpkg_cb;
 	size_t s;
-	size_t pkgs_made;
 	int i;
 	struct stat st;
 	depend_atom *atom;
 	int restrict_chmod = 0;
 	int qclean = 0;
 	int fd;
+	char bindir[_Q_PATH_MAX];
+	qpkg_cb_args cb_args;
 
-	qpkg_bindir = pkgdir;
+	memset(&cb_args, 0, sizeof(cb_args));
+
+	cb_args.bindir = pkgdir;
 	while ((i = GETOPT_LONG(QPKG, qpkg, "")) != -1) {
 		switch (i) {
-		case 'E': eclean = qclean = 1; break;
+		case 'E': cb_args.clean_notintree = true;  /* fall through */
 		case 'c': qclean = 1; break;
-		case 'g': cb_func = qgpkg_cb; break;
+		case 'g': cb_args.build_gpkg = true; break;
 		case 'p': pretend = 1; break;
 		case 'P':
 			restrict_chmod = 1;
-			qpkg_bindir = optarg;
-			if (access(qpkg_bindir, W_OK) != 0)
-				errp("%s", qpkg_bindir);
+			cb_args.bindir = optarg;
+			if (access(cb_args.bindir, W_OK) != 0)
+				errp("%s", cb_args.bindir);
 			break;
 		COMMON_GETOPTS_CASES(qpkg)
 		}
 	}
-	if (qclean)
-		return qpkg_clean(qpkg_bindir);
-
-	if (argc == optind)
-		qpkg_usage(EXIT_FAILURE);
 
 	/* setup temp dirs */
-	if (qpkg_bindir[0] != '/')
-		err("'%s' is not a valid package destination", qpkg_bindir);
+	if (cb_args.bindir[0] != '/')
+		err("'%s' is not a valid package destination", cb_args.bindir);
 	/* brute force just unlink any file or symlink, if this fails, it's
 	 * actually good :) */
-	unlink(qpkg_bindir);
-	fd = open(qpkg_bindir, O_RDONLY);
-	if ((fd == -1 && mkdir(qpkg_bindir, 0750) == -1) ||
+	snprintf(bindir, sizeof(bindir), "%s%s", portroot, cb_args.bindir);
+	unlink(bindir);
+	fd = open(bindir, O_RDONLY);
+	if ((fd == -1 && mkdir(bindir, 0750) == -1) ||
 			(fd != -1 && (fstat(fd, &st) == -1 || !S_ISDIR(st.st_mode))))
 	{
-		errp("could not create temp bindir '%s'", qpkg_bindir);
+		errp("could not create packages directory '%s'", bindir);
 	}
 	if (fd >= 0) {
 		/* fd is valid, pointing to a directory */
 		if (!restrict_chmod)
 			if (fchmod(fd, 0750) < 0)
-				errp("could not chmod(0750) temp bindir '%s'", qpkg_bindir);
+				errp("could not chmod(0750) packages directory '%s'", bindir);
 		close(fd);
+	}
+	cb_args.binpkg = tree_open_binpkg(portroot, cb_args.bindir);
+	if (cb_args.binpkg == NULL)
+		return EXIT_FAILURE;
+
+	cb_args.vdb = tree_open_vdb(portroot, portvdb);
+	if (!cb_args.vdb)
+		return EXIT_FAILURE;
+
+	if (qclean) {
+		int ret = qpkg_clean(&cb_args);
+		tree_close(cb_args.vdb);
+		tree_close(cb_args.binpkg);
+		return ret;
+	}
+
+	if (argc == optind) {
+		tree_close(cb_args.vdb);
+		tree_close(cb_args.binpkg);
+		qpkg_usage(EXIT_FAILURE);
 	}
 
 	/* we have to change to the root so that we can feed the full paths
 	 * to tar when we create the binary package. */
 	xchdir(portroot);
 
-	ctx = tree_open_vdb(portroot, portvdb);
-	if (!ctx)
-		return EXIT_FAILURE;
-
 	/* first process any arguments which point to /var/db/pkg, an
 	 * undocumented method to allow easily tab-completing into vdb as
 	 * arguments, the trailing / needs to be present for this (as tab
 	 * completion would do) */
-	pkgs_made = 0;
 	s = strlen(portvdb);
 	for (i = optind; i < argc; i++) {
 		size_t asize = strlen(argv[i]);
@@ -783,24 +821,25 @@ int qpkg_main(int argc, char **argv)
 		if (strcmp(argv[i], "world") == 0) {
 			/* this is a crude hack, we include all packages for this,
 			 * which isn't exactly @world, but all its deps too */
-			tree_foreach_pkg_fast(ctx, cb_func, &pkgs_made, NULL);
+			tree_foreach_pkg_fast(cb_args.vdb, qpkg_cb, &cb_args, NULL);
 			break;  /* no point in continuing since we did everything */
 		}
 		atom = atom_explode(argv[i]);
 		if (atom == NULL)
 			continue;
 
-		s = pkgs_made;
-		tree_foreach_pkg_fast(ctx, cb_func, &pkgs_made, atom);
-		if (s == pkgs_made)
+		s = cb_args.pkgs_made;
+		tree_foreach_pkg_fast(cb_args.vdb, qpkg_cb, &cb_args, atom);
+		if (s == cb_args.pkgs_made)
 			warn("no match for '%s'", argv[i]);
 		atom_implode(atom);
 	}
-	tree_close(ctx);
+	tree_close(cb_args.vdb);
+	tree_close(cb_args.binpkg);
 
-	if (pkgs_made)
+	if (cb_args.pkgs_made > 0)
 		qprintf(" %s*%s Packages can be found in %s\n",
-				GREEN, NORM, qpkg_bindir);
+				GREEN, NORM, cb_args.bindir);
 
-	return (pkgs_made ? EXIT_SUCCESS : EXIT_FAILURE);
+	return (cb_args.pkgs_made > 0 ? EXIT_SUCCESS : EXIT_FAILURE);
 }
