@@ -542,7 +542,8 @@ tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name)
 		if (!isgpkg &&
 			(len > sizeof(".tbz2") - 1 &&
 			 (p = (char *)&name[len - (sizeof(".tbz2") - 1)]) != NULL &&
-			 memcmp(p, ".tbz2", sizeof(".tbz2") - 1) == 0))
+			 (memcmp(p, ".tbz2", sizeof(".tbz2") - 1) == 0 ||
+			  memcmp(p, ".xpak", sizeof(".xpak") - 1) == 0)))
 		{
 			isxpk = true;
 			patom  = atom_explode_cat(name, cat_ctx->name);
@@ -1310,7 +1311,8 @@ tree_pkg_read_openfd_int(tree_pkg_ctx *pkg_ctx)
 			char buf[_Q_PATH_MAX];
 			snprintf(buf, sizeof(buf), "%s.%s", pkg_ctx->name,
 					 ctx->treetype == TREE_EBUILD ? "ebuild" :
-					 pkg_ctx->binpkg_isgpkg ? "gpkg.tar" : "tbz2");
+					 pkg_ctx->binpkg_isgpkg ? "gpkg.tar" :
+					 pkg_ctx->binpkg_ismulti ? "xpak" : "tbz2");
 			pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, buf,
 								 O_RDONLY | O_CLOEXEC);
 		} else {
@@ -1771,6 +1773,14 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 						pkgnamelen = snprintf(pkgname, sizeof(pkgname),
 											  "%s.tbz2", atom->PF);
 						pkgname[pkgnamelen - (sizeof(".tbz2") - 1)] = '\0';
+					} else if (plen > sizeof(".xpak") - 1 &&
+							   memcmp(meta.Q_PATH + plen -
+									  (sizeof(".xpak") - 1),
+									  ".xpak", sizeof(".xpak") - 1) == 0)
+					{
+						pkgnamelen = snprintf(pkgname, sizeof(pkgname),
+											  "%s.xpak", atom->PF);
+						pkgname[pkgnamelen - (sizeof(".xpak") - 1)] = '\0';
 					} else if (plen > sizeof(".gpkg.tar") - 1 &&
 						memcmp(meta.Q_PATH + plen - (sizeof(".gpkg.tar") - 1),
 							   ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
@@ -2366,7 +2376,7 @@ tree_match_search_cat_int(
 						 cat_ctx->ctx->treetype == TREE_EBUILD   ? ".ebuild" :
 						 (cat_ctx->ctx->treetype == TREE_BINPKGS ||
 						  cat_ctx->ctx->treetype == TREE_PACKAGES) ?
-						 (pkg_ctx->binpkg_isgpkg   ? ".gpkg.tar" : ".tbz2")  :
+						 (pkg_ctx->binpkg_isgpkg   ? ".gpkg.tar" : ".xpak")  :
 						                                           "");
 			} else {
 				snprintf(n->path, sizeof(n->path), "%s/%s/%s%s",
