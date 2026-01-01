@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -511,7 +511,8 @@ tree_pkg_ctx *
 tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name)
 {
 	tree_pkg_ctx *pkg_ctx;
-	bool          isgpkg = false;
+	bool          isgpkg  = false;
+	depend_atom  *patom   = NULL;
 
 	if (cat_ctx->ctx->treetype == TREE_EBUILD &&
 		cat_ctx->ctx->ebuilddir_cat_ctx == cat_ctx)
@@ -523,18 +524,45 @@ tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name)
 			return NULL;  /* invalid, must be some random other file */
 		*p = '\0';
 	} else if (cat_ctx->ctx->treetype == TREE_BINPKGS) {
-		size_t len = strlen(name);
-		char  *p   = (char *)&name[len - (sizeof(".gpkg.tar") - 1)];
+		size_t len   = strlen(name);
+		char  *p     = (char *)&name[len - (sizeof(".gpkg.tar") - 1)];
+		bool   isxpk = false;
+
+		/* we pre-build the atom here to pick up on the build_id in the
+		 * filename, if any */
+
 		if (len > sizeof(".gpkg.tar") - 1 &&
 			memcmp(p, ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
+		{
 			isgpkg = true;
+			patom  = atom_explode_cat(name, cat_ctx->name);
+			*p     = '\0';
+		}
 
 		if (!isgpkg &&
-			(len <= sizeof(".tbz2") - 1 ||
-			 (p = (char *)&name[len - (sizeof(".tbz2") - 1)]) == NULL ||
-			 memcmp(p, ".tbz2", sizeof(".tbz2") - 1) != 0))
-			return NULL;  /* invalid, like above */
-		*p = '\0';
+			(len > sizeof(".tbz2") - 1 &&
+			 (p = (char *)&name[len - (sizeof(".tbz2") - 1)]) != NULL &&
+			 memcmp(p, ".tbz2", sizeof(".tbz2") - 1) == 0))
+		{
+			isxpk = true;
+			patom  = atom_explode_cat(name, cat_ctx->name);
+			*p    = '\0';
+		}
+
+		if (!isgpkg &&
+			!isxpk)
+		{
+			struct stat sb;
+
+			if (cat_ctx->ctx->ebuilddir_cat_ctx == cat_ctx)
+				return NULL;  /* invalid, like above but only as leaf */
+
+			/* only accept this one if it is a directory (PN) */
+			if (fstatat(cat_ctx->fd, name, &sb, 0) < 0)
+				return NULL;  /* nothing? */
+			if (!S_ISDIR(sb.st_mode))
+				return NULL;  /* invalid random file */
+		}
 	}
 
 	pkg_ctx                = xzalloc(sizeof(*pkg_ctx));
@@ -543,6 +571,7 @@ tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name)
 	pkg_ctx->fd            = -1;
 	pkg_ctx->cat_ctx       = cat_ctx;
 	pkg_ctx->binpkg_isgpkg = isgpkg;
+	pkg_ctx->atom          = patom;
 
 	/* see if this pkg matches the query, here we can finally check
 	 * version conditions like >=, etc. */
@@ -649,58 +678,80 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 tree_pkg_ctx *
 tree_next_pkg(tree_cat_ctx *cat_ctx)
 {
-	tree_ctx *ctx = cat_ctx->ctx;
-	tree_pkg_ctx *ret = NULL;
+	tree_ctx     *ctx     = cat_ctx->ctx;
+	tree_pkg_ctx *ret     = NULL;
+	bool          recurse = false;
+	bool          dofile  = false;
+
+	/* first resume an on-going recursed listing */
+	if (ctx->ebuilddir_pkg_ctx != NULL) {
+		ret = tree_next_pkg_int(ctx->ebuilddir_cat_ctx);
+		if (ret == NULL) {
+			tree_close_cat(ctx->ebuilddir_cat_ctx);
+			if (!cat_ctx->ctx->do_sort ||
+				cat_ctx->pkg_ctxs == NULL)
+				tree_close_pkg(ctx->ebuilddir_pkg_ctx);
+			ctx->ebuilddir_pkg_ctx = NULL;
+		} else {
+			ret->binpkg_ismulti = true;  /* no matter if this is ebuild */
+			return ret;
+		}
+	}
+
+	/* load next entry */
+	ret = tree_next_pkg_int(cat_ctx);
+	if (ret == NULL)
+		return ret;
 
 	if (ctx->treetype == TREE_EBUILD) {
 		/* serve *.ebuild files each as separate pkg_ctx with name set
-		 * to CAT/P like in VDB and metadata */
-		do {
-			if (ctx->ebuilddir_pkg_ctx == NULL) {
-				tree_ctx *pkgdir = ctx->ebuilddir_ctx;
+		 * to CAT/P like in VDB and metadata, this is the only supported
+		 * format, so if there's a non-directory in here, we just ignore
+		 * it, which is fine */
+		recurse = true;
+	} else if (ctx->treetype == TREE_BINPKGS) {
+		/* with FEATURES=binpkg-multi-instance we can have at worst a
+		 * mix here of files and directories, so we must handle both */
+		recurse = true;
+		dofile  = true;
+	}
 
-				if (pkgdir == NULL)
-					pkgdir = ctx->ebuilddir_ctx = xmalloc(sizeof(*pkgdir));
+	if (recurse) {
+		tree_ctx *pkgdir = ctx->ebuilddir_ctx;
 
-				ctx->ebuilddir_cat_ctx = NULL;
-				ctx->ebuilddir_pkg_ctx = tree_next_pkg_int(cat_ctx);
-				if (ctx->ebuilddir_pkg_ctx == NULL)
-					return NULL;
+		if (pkgdir == NULL)
+			pkgdir = ctx->ebuilddir_ctx = xmalloc(sizeof(*pkgdir));
 
-				memset(pkgdir, 0, sizeof(*pkgdir));
-				pkgdir->portroot_fd = -1;
-				pkgdir->tree_fd = cat_ctx->fd;
-				pkgdir->do_sort = ctx->do_sort;
-				pkgdir->repo = ctx->repo;
-				pkgdir->treetype = ctx->treetype;
-				pkgdir->subtree = ctx->subtree;
+		ctx->ebuilddir_cat_ctx = NULL;
+		ctx->ebuilddir_pkg_ctx = ret;
 
-				ctx->ebuilddir_cat_ctx =
-					tree_open_cat(pkgdir, ctx->ebuilddir_pkg_ctx->name);
+		memset(pkgdir, 0, sizeof(*pkgdir));
+		pkgdir->portroot_fd = -1;
+		pkgdir->tree_fd     = cat_ctx->fd;
+		pkgdir->do_sort     = ctx->do_sort;
+		pkgdir->repo        = ctx->repo;
+		pkgdir->treetype    = ctx->treetype;
+		pkgdir->subtree     = ctx->subtree;
 
-				/* opening might fail if what we found wasn't a
-				 * directory or something */
-				if (ctx->ebuilddir_cat_ctx == NULL) {
-					tree_close_pkg(ctx->ebuilddir_pkg_ctx);
-					ctx->ebuilddir_pkg_ctx = NULL;
-					continue;
-				}
+		ctx->ebuilddir_cat_ctx =
+			tree_open_cat(pkgdir, ctx->ebuilddir_pkg_ctx->name);
 
-				/* "zap" the pkg such that it looks like CAT/P */
-				ctx->ebuilddir_cat_ctx->name = cat_ctx->name;
-				ctx->ebuilddir_cat_ctx->ctx = ctx;
-			}
+		/* opening might fail if what we found wasn't a
+		 * directory or something */
+		if (ctx->ebuilddir_cat_ctx == NULL) {
+			ctx->ebuilddir_pkg_ctx = NULL;
+			if (dofile)
+				return ret;
+			else
+				tree_close_pkg(ret);
+		} else {
+			/* "zap" the pkg such that it looks like CAT/P */
+			ctx->ebuilddir_cat_ctx->name = cat_ctx->name;
+			ctx->ebuilddir_cat_ctx->ctx  = ctx;
+		}
 
-			ret = tree_next_pkg_int(ctx->ebuilddir_cat_ctx);
-			if (ret == NULL) {
-				tree_close_cat(ctx->ebuilddir_cat_ctx);
-				if (!cat_ctx->ctx->do_sort || cat_ctx->pkg_ctxs == NULL)
-					tree_close_pkg(ctx->ebuilddir_pkg_ctx);
-				ctx->ebuilddir_pkg_ctx = NULL;
-			}
-		} while (ret == NULL);
-	} else {
-		ret = tree_next_pkg_int(cat_ctx);
+		/* recurse to get the next step */
+		ret = tree_next_pkg(cat_ctx);
 	}
 
 	return ret;
@@ -2302,13 +2353,25 @@ tree_match_search_cat_int(
 			if (cat_ctx->ctx->treetype == TREE_PACKAGES &&
 				pkg_ctx->meta->Q_PATH != NULL)
 			{
-				/* binpkg-multi-instance has a PATH ready for us */
+				/* Packages file has a PATH ready for us */
 				snprintf(n->path, sizeof(n->path), "%s/%s",
 						 (char *)cat_ctx->ctx->path, pkg_ctx->meta->Q_PATH);
+			} else if (pkg_ctx->binpkg_ismulti) {
+				/* FEATURES=binpkg-multi-instance complicates things as
+				 * it creates an intermediate PN directory like ebuilds,
+				 * without multi-instance, it is more flat */
+				snprintf(n->path, sizeof(n->path), "%s/%s/%s/%s%s",
+						 (char *)cat_ctx->ctx->path,
+						 atom->CATEGORY, atom->PN, pkg_ctx->name,
+						 cat_ctx->ctx->treetype == TREE_EBUILD   ? ".ebuild" :
+						 (cat_ctx->ctx->treetype == TREE_BINPKGS ||
+						  cat_ctx->ctx->treetype == TREE_PACKAGES) ?
+						 (pkg_ctx->binpkg_isgpkg   ? ".gpkg.tar" : ".tbz2")  :
+						                                           "");
 			} else {
 				snprintf(n->path, sizeof(n->path), "%s/%s/%s%s",
 						 (char *)cat_ctx->ctx->path,
-						 cat_ctx->name, pkg_ctx->name,
+						 atom->CATEGORY, pkg_ctx->name,
 						 cat_ctx->ctx->treetype == TREE_EBUILD   ? ".ebuild" :
 						 (cat_ctx->ctx->treetype == TREE_BINPKGS ||
 						  cat_ctx->ctx->treetype == TREE_PACKAGES) ?

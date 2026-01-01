@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -76,6 +76,7 @@ struct tree_pkg_ctx {
 	size_t repo_len;
 	int fd;
 	int binpkg_isgpkg:1;
+	int binpkg_ismulti:1;  /* for path reconstruction */
 	tree_cat_ctx *cat_ctx;
 	depend_atom *atom;
 	tree_pkg_meta *meta;
