@@ -1169,7 +1169,7 @@ initialize_portage_env(void)
 
 			if (overlay == NULL) {  /* add PORTDIR to overlays */
 				overlay = xstrdup(main_overlay);
-				xarraypush_ptr(overlays, overlay);
+				xarraypush_ptr(overlays, (char *)overlay);
 				xarraypush_str(overlay_names, "<PORTDIR>");
 				xarraypush_str(overlay_src, var->src);
 			} else {
