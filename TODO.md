@@ -7,12 +7,13 @@
 - tree\_get\_atoms should return atoms iso string set, needs a rewrite
   to use foreach\_pkg and get\_atom -- set is ready for storing objects
   now
+- tree needs an iterator to make the resume logic much more clean, and
+  possibly allow multiple concurrent iterators
 - parse package.accept\_keywords such that we can provide the latest
   "available" version like Portage
 - check timestamps in libq/tree for choosing which method to take:
 	- ignore Packages when it is older than the last directory change
-	- ignore metadata when ebuild is modified
-	- add some method to skip these checks and assume everything is right
+	- add some method to skip freshness checks and assume everything is right
 - add interface to retrieve a list/set of atoms from a tree
   - pkg\_ctx for each found match, NULL otherwise
   - more efficient than traversing the entire tree every time (scandir
