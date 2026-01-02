@@ -530,7 +530,7 @@ int qlist_main(int argc, char **argv)
 		}
 	} else {
 		if (state.do_binpkgs)
-			vdb = tree_open_binpkg("/", pkgdir);
+			vdb = tree_open_binpkg(portroot, pkgdir);
 		else
 			vdb = tree_open_vdb(portroot, portvdb);
 		if (vdb != NULL) {
