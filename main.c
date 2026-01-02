@@ -644,24 +644,66 @@ starts_with(const char *str, const char *prefix, size_t *prefix_len)
 /* Helper to figure out inside of which overlay a path is. Returns
  * null if nonesuch is found. */
 static const char *
-overlay_from_path (const char *path)
+overlay_from_path(const char *path)
 {
 	size_t n;
 	char *overlay;
 	size_t max_match = 0;
 	const char *found_overlay = NULL;
 
-	array_for_each(overlays, n, overlay) {
-		size_t overlay_len;
+	/* won't ever match, a location must be absolute */
+	if (path[0] != '/')
+		return NULL;
 
-		if (!starts_with(path, overlay, &overlay_len))
-			continue;
+	if (portroot[1] == '\0') {
+		/* no ROOT usage, simply ignore it */
+		array_for_each(overlays, n, overlay) {
+			size_t overlay_len;
 
-		if (overlay_len <= max_match)
-			continue;
+			if (!starts_with(path, overlay, &overlay_len))
+				continue;
 
-		max_match = overlay_len;
-		found_overlay = overlay;
+			if (overlay_len <= max_match)
+				continue;
+
+			max_match = overlay_len;
+			found_overlay = overlay;
+
+			if (overlay[overlay_len] == '\0')
+				break;
+		}
+	} else {
+		char rootpath[_Q_PATH_MAX];
+		char ovrlpath[_Q_PATH_MAX];
+		char resolved[_Q_PATH_MAX];
+
+		snprintf(resolved, sizeof(resolved), "%s%s", portroot, &path[1]);
+		if (realpath(resolved, rootpath) == NULL)
+			memcpy(rootpath, resolved, sizeof(resolved));
+
+		array_for_each(overlays, n, overlay) {
+			size_t overlay_len;
+
+			snprintf(resolved, sizeof(resolved), "%s%s", portroot, &overlay[1]);
+			if (realpath(resolved, ovrlpath) == NULL)
+				memcpy(ovrlpath, resolved, sizeof(resolved));
+
+			if (!starts_with(rootpath, ovrlpath, &overlay_len))
+				continue;
+
+			if (overlay_len <= max_match)
+				continue;
+
+			max_match = overlay_len;
+			found_overlay = overlay;
+		}
+	}
+
+	/* we must match at least the overlay location */
+	if (found_overlay &&
+		found_overlay[max_match] != '\0')
+	{
+		found_overlay = NULL;
 	}
 
 	return found_overlay;
@@ -705,7 +747,7 @@ read_portage_profile(const char *profile, env_vars vars[], set *masks)
 
 				if (s[0] == '\0') {
 					/* empty repo name means a repo where the profile is */
-					const char* current_overlay = overlay_from_path (profile);
+					const char* current_overlay = overlay_from_path(profile);
 					if (current_overlay == NULL) {
 						/* bring back the colon to see the ignored
 						 * parent line */
@@ -812,7 +854,6 @@ set *package_masks = NULL;
 static void
 read_one_repos_conf(const char *repos_conf, char **primary)
 {
-	char rrepo[_Q_PATH_MAX];
 	char *main_repo;
 	char *repo;
 	char *buf = NULL;
@@ -886,18 +927,6 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 			void *ele;
 			size_t n;
 			char *overlay;
-			char rootovrl[_Q_PATH_MAX];
-
-			/* try not to get confused by symlinks etc. */
-			if (*e == '/')
-				e++;  /* ROOT ends with / */
-			snprintf(rootovrl, sizeof(rootovrl), "%s%s", portroot, e);
-			n = strlen(portroot);
-			if (realpath(rootovrl, rrepo) != NULL &&
-				strncmp(rrepo, portroot, n) == 0)
-				e = rrepo + n - 1;
-			else
-				e = rootovrl + n - 1;
 
 			array_for_each(overlay_names, n, overlay) {
 				if (strcmp(overlay, repo) == 0)
@@ -1130,33 +1159,24 @@ initialize_portage_env(void)
 	/* handle PORTDIR and primary_overlay to get a unified
 	 * administration in overlays */
 	{
-		char *overlay;
+		const char *overlay;
 		var = &vars_to_read[12];  /* PORTDIR */
 
-		if (strcmp(var->src, STR_DEFAULT) != 0 || array_cnt(overlays) == 0) {
-			char roverlay[_Q_PATH_MAX];
-			char rootovrl[_Q_PATH_MAX];
-			snprintf(rootovrl, sizeof(rootovrl), "%s%s",
-					 portroot, main_overlay);
-			/* get cannonical path, we do so for repos.conf too */
-			if (realpath(rootovrl, roverlay) == NULL)
-				snprintf(roverlay, sizeof(roverlay), "%s", rootovrl);
-			array_for_each(overlays, i, overlay) {
-				if (strcmp(overlay, roverlay) == 0)
-					break;
-				overlay = NULL;
-			}
+		if (strcmp(var->src, STR_DEFAULT) != 0 ||
+			array_cnt(overlays) == 0)
+		{
+			overlay = overlay_from_path(main_overlay);
+
 			if (overlay == NULL) {  /* add PORTDIR to overlays */
-				free(main_overlay);
-				main_overlay = xstrdup(roverlay);
-				xarraypush_ptr(overlays, main_overlay);
+				overlay = xstrdup(main_overlay);
+				xarraypush_ptr(overlays, overlay);
 				xarraypush_str(overlay_names, "<PORTDIR>");
 				xarraypush_str(overlay_src, var->src);
 			} else {
 				/* ignore make.conf and/or env setting origin if defined by
 				 * repos.conf since the former are deprecated */
-				free(main_overlay);
 			}
+			free(main_overlay);
 			main_overlay = NULL;  /* now added to overlays */
 		} else {
 			free(main_overlay);
