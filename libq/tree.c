@@ -255,7 +255,10 @@ tree_close(tree_ctx *ctx)
 		ctx->cache.categories = NULL;  /* must happen before close_cat */
 
 		array_for_each(t, n, cat) {
+			int i;
 			/* ensure we cleanup all pkgs */
+			for (i = 0; i < cat->pkg_cnt; i++)
+				cat->pkg_ctxs[i]->cached = false;
 			cat->pkg_cur = 0;
 			tree_close_cat(cat);
 		}
@@ -454,7 +457,8 @@ void
 tree_close_cat(tree_cat_ctx *cat_ctx)
 {
 	if (cat_ctx->ctx->cache.categories != NULL &&
-			contains_set(cat_ctx->name, cat_ctx->ctx->cache.categories))
+		(cat_ctx->ctx->cache.all_categories ||
+		 contains_set(cat_ctx->name, cat_ctx->ctx->cache.categories)))
 		return;
 
 	/* cleanup unreturned pkgs when sorted (or cache in use) */
@@ -1372,8 +1376,8 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 					size_t  flen;
 
 					if (hash_multiple_file_fd(pkg_ctx->fd,
-										  	  srcmd5, NULL, NULL, NULL,
-										  	  NULL, &flen, HASH_MD5) == 0)
+											  srcmd5, NULL, NULL, NULL,
+											  NULL, &flen, HASH_MD5) == 0)
 						pkg_ctx->fd = -1;
 
 					mdmd5 = tree_pkg_meta_get(spkg, _md5_);
@@ -1659,6 +1663,9 @@ tree_close_metadata(tree_metadata_xml *meta_ctx)
 void
 tree_close_pkg(tree_pkg_ctx *pkg_ctx)
 {
+	if (pkg_ctx->cached)
+		return;
+
 	if (pkg_ctx->fd >= 0)
 		close(pkg_ctx->fd);
 	if (pkg_ctx->atom != NULL)
@@ -1676,21 +1683,84 @@ tree_close_pkg(tree_pkg_ctx *pkg_ctx)
 }
 
 static int
+tree_foreach_cache_populate_cb
+(
+	tree_pkg_ctx *ctx,
+	void         *priv
+)
+{
+	tree_cat_ctx  *cat_ctx;
+	tree_pkg_ctx  *pkg;
+	set           *cache   = priv;
+	tree_ctx      *tctx    = ctx->cat_ctx->ctx;
+	depend_atom   *atom    = tree_get_atom(ctx, true);
+	tree_pkg_meta *meta    = tree_pkg_read(ctx);
+
+	cat_ctx = get_set(atom->CATEGORY, cache);
+	if (cat_ctx == NULL) {
+		cat_ctx = tree_open_cat(tctx, ".");
+		if (cache != NULL)  /* for static code analysers */
+			add_set_value(atom->CATEGORY, cat_ctx, NULL, cache);
+		/* get a pointer from the set */
+		cat_ctx->name = contains_set(atom->CATEGORY, cache);
+	}
+
+	pkg = xcalloc(1, sizeof(*pkg));
+
+	/* intuitively this would feel like it could use a set, but since
+	 * we're going to sort it, we need it as array anyway, so this is
+	 * better, especially given that the tree should not be able to
+	 * produce duplicates */
+	cat_ctx->pkg_cnt++;
+	if (cat_ctx->pkg_cnt > cat_ctx->pkg_siz) {
+		cat_ctx->pkg_siz  = ((cat_ctx->pkg_cnt / 16) + 1) * 16;
+		cat_ctx->pkg_ctxs =
+			xrealloc(cat_ctx->pkg_ctxs,
+					 sizeof(*cat_ctx->pkg_ctxs) * cat_ctx->pkg_siz);
+	}
+	cat_ctx->pkg_ctxs[cat_ctx->pkg_cnt - 1] = pkg;
+	pkg->cached  = true;
+	pkg->cat_ctx = cat_ctx;
+	pkg->atom    = atom_clone(atom);
+	pkg->name    = xstrdup(pkg->atom->PF);
+	pkg->repo    = tctx->repo != NULL ? xstrdup(tctx->repo) : NULL;
+	if (meta != NULL) {
+		pkg->fd = -2;  /* don't try to read, we fill it in here */
+		if (tctx->treetype == TREE_PACKAGES ||
+			tctx->treetype == TREE_METADATA_GTREE)
+		{
+			/* need to copy, source is based on temp space in foreach */
+			pkg->meta = tree_clone_meta(meta);
+		} else if (tctx->treetype == TREE_BINPKGS) {
+			/* BINPKG case, this one is read/allocated separately from
+			 * xpak archive, so can just take it over */
+			pkg->meta = meta;
+			ctx->meta = NULL;  /* avoid double free */
+		}
+		pkg->binpkg_isgpkg = ctx->binpkg_isgpkg;
+	} else {
+		pkg->meta = NULL;
+	}
+
+	return 0;
+}
+
+static int
 tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 {
-	char *p;
-	char *q;
-	char *c;
-	char pkgname[_Q_PATH_MAX];
-	size_t len;
-	int ret = 0;
-	const depend_atom *query = ctx->query_atom;
+	char              *p;
+	char              *q;
+	char              *c;
+	char               pkgname[_Q_PATH_MAX];
+	size_t             len;
+	int                ret      = 0;
+	const depend_atom *query    = ctx->query_atom;
 
 	/* reused for every entry */
-	tree_cat_ctx *cat = NULL;
-	tree_pkg_ctx pkg;
-	tree_pkg_meta meta;
-	depend_atom *atom = NULL;
+	tree_cat_ctx      *cat      = NULL;
+	tree_pkg_ctx       pkg;
+	tree_pkg_meta      meta;
+	depend_atom       *atom     = NULL;
 
 	/* re-read the contents, this is necessary to make it possible to
 	 * call this function multiple times */
@@ -1887,7 +1957,6 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 
 	/* ensure we don't free a garbage pointer */
 	ctx->repo = NULL;
-	ctx->do_sort = false;
 	ctx->cache.store[0] = '\0';
 
 	return ret;
@@ -2103,9 +2172,6 @@ tree_foreach_gtree(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		}
 	}
 
-	/* ensure we don't free double */
-	ctx->repo = NULL;
-	ctx->do_sort = false;
 	if (ctx->cache.storesize > 0)
 		ctx->cache.store[0] = '\0';
 	free(cat);
@@ -2115,51 +2181,132 @@ tree_foreach_gtree(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 #endif
 
 int
-tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
-		bool sort, const depend_atom *query)
+tree_foreach_pkg
+(
+	tree_ctx          *ctx,
+	tree_pkg_cb        callback,
+	void              *priv,
+	bool               sort,
+	const depend_atom *query
+)
 {
 	tree_cat_ctx *cat_ctx;
 	tree_pkg_ctx *pkg_ctx;
-	int ret;
+	int           ret;
+	tree_pkg_cb  *origcb   = callback;
+	void         *origpriv = priv;
+	bool          postsort = false;
+	bool          traverse = true;
 
 	if (ctx == NULL)
 		return EXIT_FAILURE;
 
-	ctx->do_sort = sort;
-	ctx->query_atom = query;
+	if (ctx->cache.all_categories) {
+		/* always exploit the cache if it exists (next_cat doesn't
+		 * consider it if sorting isn't requested) */
+		sort = true;
+	} else {
+		/* perform sorting post retrieval by caching first:
+		 * - binpkgs can be a combination of files and directories,
+		 *   sorting must happen on the total result to be correct
+		 * - packages is an external file that we need to read serially
+		 *   and we can only sort on top of a cache
+		 * - gtree should be fine, but since we can't assume it is
+		 *   (others may start producing them), it's like packages
+		 *   above, something we read serially not necessarily in the
+		 *   correct order */
+		if (sort &&
+			(ctx->treetype == TREE_BINPKGS ||
+			 ctx->treetype == TREE_PACKAGES ||
+			 ctx->treetype == TREE_METADATA_GTREE))
+		{
+			callback = tree_foreach_cache_populate_cb;
+			priv     = (void *)create_set();
+			postsort = true;
+		}
 
-	/* handle Packages (binpkgs index) file separately */
-	if (ctx->treetype == TREE_PACKAGES)
-		return tree_foreach_packages(ctx, callback, priv);
+		/* handle Packages (binpkgs index) file separately */
+		if (ctx->treetype == TREE_PACKAGES) {
+			traverse = false;
+			ret      = tree_foreach_packages(ctx, callback, priv);
+		}
 
 #ifdef ENABLE_GTREE
-	/* similar a gtree cache can be read sequentially in one go */
-	if (ctx->treetype == TREE_METADATA_GTREE)
-		return tree_foreach_gtree(ctx, callback, priv);
-	if (ctx->treetype == TREE_EBUILD &&
-		ctx->subtree != NULL &&
-		ctx->subtree->treetype == TREE_METADATA_GTREE)
-		return tree_foreach_gtree(ctx->subtree, callback, priv);
-#endif
-
-	ret = 0;
-	while ((cat_ctx = tree_next_cat(ctx))) {
-		while ((pkg_ctx = tree_next_pkg(cat_ctx))) {
-			ret |= callback(pkg_ctx, priv);
-			tree_close_pkg(pkg_ctx);
+		/* similar a gtree cache can be read sequentially in one go */
+		if (ctx->treetype == TREE_METADATA_GTREE) {
+			traverse = false;
+			ret      = tree_foreach_gtree(ctx, callback, priv);
 		}
-		tree_close_cat(cat_ctx);
+		if (ctx->treetype == TREE_EBUILD &&
+			ctx->subtree != NULL &&
+			ctx->subtree->treetype == TREE_METADATA_GTREE)
+		{
+			traverse = false;
+			ret      = tree_foreach_gtree(ctx->subtree, callback, priv);
+		}
+#endif
 	}
 
-	/* allow foreach to be called again on the same open tree */
-	if (ctx->do_sort)
-		scandir_free(ctx->cat_de, ctx->cat_cnt);
-	else
-		rewinddir(ctx->dir);
-	ctx->cat_de = NULL;
+	ret = 0;
+	if (traverse)
+	{
+		ctx->do_sort    = postsort ? false : sort;
+		ctx->query_atom = query;
+
+		while ((cat_ctx = tree_next_cat(ctx))) {
+			if (callback != NULL) {
+				while ((pkg_ctx = tree_next_pkg(cat_ctx))) {
+					ret |= callback(pkg_ctx, priv);
+					tree_close_pkg(pkg_ctx);
+				}
+			}
+			tree_close_cat(cat_ctx);
+		}
+
+		/* allow foreach to be called again on the same open tree */
+		if (ctx->do_sort &&
+			ctx->cat_de != NULL)
+		{
+			scandir_free(ctx->cat_de, ctx->cat_cnt);
+		} else if (ctx->dir != NULL) {
+			rewinddir(ctx->dir);
+		}
+	}
+
+	/* reset states */
+	ctx->cat_de  = NULL;
 	ctx->cat_cur = 0;
 	ctx->cat_cnt = 0;
+	ctx->dir     = NULL;
 	ctx->do_sort = false;
+
+	if (postsort) {
+		DECLARE_ARRAY(cats);
+		size_t n;
+
+		/* should never happen, but perhaps a tree implementation
+		 * populated something, then don't leak it */
+		if (ctx->cache.categories != NULL)
+			free_set(ctx->cache.categories);
+		ctx->cache.categories     = priv;
+		ctx->cache.all_categories = true;
+
+		/* loop through all categories, and sort the pkgs */
+		values_set(ctx->cache.categories, cats);
+		array_for_each(cats, n, cat_ctx) {
+			if (cat_ctx->pkg_cnt > 1) {
+				qsort(cat_ctx->pkg_ctxs, cat_ctx->pkg_cnt,
+					  sizeof(*cat_ctx->pkg_ctxs), tree_pkg_compar);
+			}
+		}
+		xarrayfree_int(cats);
+
+		/* do the final run this call was supposed to be for using the
+		 * (sorted) cache, the callback can be empty for tree_match_atom
+		 * when it wants to build a cache first */
+		if (origcb != NULL)
+			ret = tree_foreach_pkg_fast(ctx, origcb, origpriv, ctx->query_atom);
+	}
 
 	return ret;
 }
@@ -2274,57 +2421,6 @@ tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms)
 	return state.cpf;
 }
 
-static int
-tree_match_atom_cache_populate_cb(tree_pkg_ctx *ctx, void *priv)
-{
-	tree_cat_ctx  *cat_ctx;
-	tree_pkg_ctx  *pkg;
-	set           *cache   = priv;
-	tree_ctx      *tctx    = ctx->cat_ctx->ctx;
-	depend_atom   *atom    = tree_get_atom(ctx, true);
-	tree_pkg_meta *meta    = tree_pkg_read(ctx);
-
-	(void)priv;
-
-	cat_ctx = get_set(atom->CATEGORY, cache);
-	if (cat_ctx == NULL) {
-		cat_ctx = tree_open_cat(tctx, ".");
-		if (cache != NULL)  /* for static code analysers */
-			add_set_value(atom->CATEGORY, cat_ctx, NULL, cache);
-		/* get a pointer from the set */
-		cat_ctx->name = contains_set(atom->CATEGORY, cache);
-	}
-
-	pkg = xcalloc(1, sizeof(*pkg));
-
-	/* FIXME: this really could use a set */
-	cat_ctx->pkg_cnt++;
-	cat_ctx->pkg_ctxs = xrealloc(cat_ctx->pkg_ctxs,
-			sizeof(*cat_ctx->pkg_ctxs) * cat_ctx->pkg_cnt);
-	cat_ctx->pkg_ctxs[cat_ctx->pkg_cnt - 1] = pkg;
-	pkg->cat_ctx = cat_ctx;
-	pkg->atom = atom_clone(atom);
-	pkg->name = xstrdup(pkg->atom->PF);
-	pkg->repo = tctx->repo != NULL ? xstrdup(tctx->repo) : NULL;
-	if (meta != NULL) {
-		pkg->fd = -2;  /* don't try to read, we fill it in here */
-		if (tctx->treetype == TREE_PACKAGES) {
-			/* need to copy, source is based on temp space in foreach */
-			pkg->meta = tree_clone_meta(meta);
-		} else {
-			/* BINPKG case, this one is read/allocated separately from
-			 * xpak archive, so can just take it over */
-			pkg->meta = meta;
-			ctx->meta = NULL;  /* avoid double free */
-		}
-		pkg->binpkg_isgpkg = ctx->binpkg_isgpkg;
-	} else {
-		pkg->meta = NULL;
-	}
-
-	return 0;
-}
-
 static tree_match_ctx *
 tree_match_search_cat_int(
 		tree_cat_ctx      *cat_ctx,
@@ -2377,7 +2473,7 @@ tree_match_search_cat_int(
 						 (cat_ctx->ctx->treetype == TREE_BINPKGS ||
 						  cat_ctx->ctx->treetype == TREE_PACKAGES) ?
 						 (pkg_ctx->binpkg_isgpkg   ? ".gpkg.tar" : ".xpak")  :
-						                                           "");
+																   "");
 			} else {
 				snprintf(n->path, sizeof(n->path), "%s/%s/%s%s",
 						 (char *)cat_ctx->ctx->path,
@@ -2386,7 +2482,7 @@ tree_match_search_cat_int(
 						 (cat_ctx->ctx->treetype == TREE_BINPKGS ||
 						  cat_ctx->ctx->treetype == TREE_PACKAGES) ?
 						 (pkg_ctx->binpkg_isgpkg   ? ".gpkg.tar" : ".tbz2")  :
-						                                           "");
+																   "");
 			}
 			if (flags & TREE_MATCH_METADATA)
 				n->meta = tree_pkg_read(pkg_ctx);
@@ -2411,53 +2507,15 @@ tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
 	tree_cat_ctx *cat_ctx;
 	tree_match_ctx *ret = NULL;
 
-	ctx->do_sort = true;     /* sort uses buffer, which cache relies on */
-	ctx->query_atom = NULL;  /* ensure the cache contains ALL pkgs */
-
-	if ((ctx->treetype == TREE_PACKAGES ||
-		 ctx->treetype == TREE_BINPKGS) &&
-		ctx->cache.categories == NULL)
-	{
-		set *cache;
-		DECLARE_ARRAY(cats);
-		size_t n;
-
-		/* Reading these formats requires us to traverse the tree for
-		 * each operation, so we better cache the entire thing in one
-		 * go.  Packages in addition may not store the atoms sorted
-		 * (it's a file with content after all) and since we rely on
-		 * this for latest and first match, it is important that we sort
-		 * the contents so we're sure */
-
-		cache = ctx->cache.categories;
-		if (ctx->cache.categories != NULL)
-			ctx->cache.categories = NULL;
-		else
-			cache = create_set();
-
-		tree_foreach_pkg(ctx,
-				tree_match_atom_cache_populate_cb, cache, true, NULL);
-
-		ctx->do_sort = true;  /* turn it back on after tree_foreach_pkg */
-		ctx->cache.all_categories = true;
-		ctx->cache.categories = cache;
-
-		/* loop through all categories, and sort the pkgs */
-		values_set(cache, cats);
-		array_for_each(cats, n, cat_ctx) {
-			if (cat_ctx->pkg_cnt > 1) {
-				qsort(cat_ctx->pkg_ctxs, cat_ctx->pkg_cnt,
-						sizeof(*cat_ctx->pkg_ctxs), tree_pkg_compar);
-			}
-		}
-		xarrayfree_int(cats);
-	}
+	ctx->query_atom = NULL;  /* if caching, ensure it contains ALL pkgs */
 
 	/* activate cache for future lookups, tree_match_atom relies on
 	 * cache behaviour from tree, which means all categories and
 	 * packages remain in memory until tree_close is being called */
 	if (ctx->cache.categories == NULL)
-		ctx->cache.categories = create_set();
+		tree_foreach_pkg_sorted(ctx, NULL, NULL, NULL);  /* force cache */
+
+	ctx->do_sort = true;     /* often forces/enables cache usage */
 
 	if (query->CATEGORY == NULL) {
 		tree_match_ctx *tret;

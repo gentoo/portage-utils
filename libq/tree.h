@@ -65,6 +65,7 @@ struct tree_cat_ctx {
 	tree_pkg_ctx **pkg_ctxs;
 	size_t pkg_cnt;
 	size_t pkg_cur;
+	size_t pkg_siz;
 };
 
 /* Package context */
@@ -75,8 +76,9 @@ struct tree_pkg_ctx {
 	size_t slot_len;
 	size_t repo_len;
 	int fd;
-	int binpkg_isgpkg:1;
-	int binpkg_ismulti:1;  /* for path reconstruction */
+	bool cached:1;
+	bool binpkg_isgpkg:1;
+	bool binpkg_ismulti:1;  /* for path reconstruction */
 	tree_cat_ctx *cat_ctx;
 	depend_atom *atom;
 	tree_pkg_meta *meta;
