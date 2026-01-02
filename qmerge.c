@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Authors
+ * Copyright 2005-2026 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -334,7 +334,7 @@ best_version(const depend_atom *atom, int mode)
 
 	if (mode & BV_BINPKG) {
 		if (binpkg == NULL) {
-			binpkg = tree_open_binpkg("/", pkgdir);
+			binpkg = tree_open_binpkg(portroot, pkgdir);
 			if (binpkg == NULL) {
 				if (tmv != NULL)
 					tree_match_close(tmv);

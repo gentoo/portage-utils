@@ -7,7 +7,6 @@ set -e
 unset CONFIG_PROTECT CONFIG_PROTECT_MASK EPREFIX
 
 export QMERGE=1
-export PKGDIR=${as}/packages
 export FEATURES='config-protect-if-modified'
 
 mktmpdir
@@ -15,8 +14,12 @@ mktmpdir
 export ROOT=${PWD}/root
 export PORTAGE_TMPDIR=${PWD}
 export Q_VDB=/var/db/pkg
+export PKGDIR=/packages
 
 mkdir -p "${ROOT}/var/db/pkg"
+
+# copy packages into the ROOT
+cp -a "${as}/packages" "${ROOT}/"
 
 set +e
 
@@ -45,7 +48,6 @@ tend $? "qmerge-test: [N] vdb installed"
 tend $? "qmerge-test: [N] installed expected files" || die "$(treedir "${ROOT}")"
 
 # Now do a re-emerge.
-
 out=$(yes | qmerge -F "<qmerge-test-2")
 tend $? "qmerge-test: [R] re-emerge" || die "${out}"
 
@@ -149,9 +151,9 @@ tend $? "qmerge-test: [U] /usr/bin/qmerge-test2 removed" || die "$(treedir "${RO
 # try all compressions we know to see if we handle them properly
 pkgver=qmerge-test-1.3
 rev=0
-mkdir -p pkgs/sys-devel
-qtbz2 -s ${PKGDIR}/sys-devel/${pkgver}.tbz2
-export PKGDIR=${PWD}/pkgs
+mkdir -p "${ROOT}"/pkgs/sys-devel
+qtbz2 -s "${ROOT}${PKGDIR}"/sys-devel/${pkgver}.tbz2
+export PKGDIR=/pkgs
 bzip2 -dc < ${pkgver}.tar.bz2 > ${pkgver}.tar
 for compr in "" brotli gzip bzip2 xz lz4 zstd lzip lzop ; do
 	if [[ ${compr} != "" ]] ; then
@@ -165,8 +167,8 @@ for compr in "" brotli gzip bzip2 xz lz4 zstd lzip lzop ; do
 		f=${pkgver}.tar
 	fi
 	: $((rev++))
-	qtbz2 -j ${f} ${pkgver}.xpak pkgs/sys-devel/${pkgver}-r${rev}.tbz2
-	ls -l pkgs/sys-devel/${pkgver}-r${rev}.tbz2
+	qtbz2 -j ${f} ${pkgver}.xpak "${ROOT}"/pkgs/sys-devel/${pkgver}-r${rev}.tbz2
+	ls -l "${ROOT}"/pkgs/sys-devel/${pkgver}-r${rev}.tbz2
 	qlist -kIv | tee /dev/stderr | wc -l
 
 	# see if we can install this package
@@ -176,7 +178,7 @@ for compr in "" brotli gzip bzip2 xz lz4 zstd lzip lzop ; do
 	out=$(yes | qmerge -FU qmerge-test)
 	tend $? "qmerge-test: [X] uninstall ${pkgver}-r${rev}" || die "${out}"
 
-	rm pkgs/sys-devel/${pkgver}-r${rev}.tbz2
+	rm "${ROOT}"/pkgs/sys-devel/${pkgver}-r${rev}.tbz2
 done
 
 cleantmpdir
