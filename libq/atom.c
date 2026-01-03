@@ -140,8 +140,10 @@ atom_explode_cat(const char *atom, const char *cat)
 			if (valid &&
 				*ptr == '-')
 			{
-				pv = ret->CATEGORY;
-				while ((pv = strchr(pv, '-')) != NULL) {
+				for (pv = ret->CATEGORY;
+					 (pv = strchr(pv, '-')) != NULL;
+					 pv++)
+				{
 					if (isdigit(pv[1]))
 						break;
 				}
