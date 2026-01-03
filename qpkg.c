@@ -356,6 +356,19 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		close(fd);
 		archive_entry_free(entry);
 	}
+	/* non-standard, but useful: add BUILDID */
+	if (atom->BUILDID > 0) {
+		entry = archive_entry_new();
+		archive_entry_set_pathname(entry, "metadata/BUILDID");
+		len = snprintf(ename, sizeof(ename), "%u\n", atom->BUILDID);
+		archive_entry_set_size(entry, (size_t)len);
+		archive_entry_set_mtime(entry, time(NULL), 0);
+		archive_entry_set_filetype(entry, AE_IFREG);
+		archive_entry_set_perm(entry, 0644);
+		archive_write_header(a, entry);
+		archive_write_data(a, ename, (size_t)len);
+		archive_entry_free(entry);
+	}
 	archive_write_close(a);
 	archive_write_free(a);
 	scandir_free(files, cnt);
@@ -376,10 +389,13 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 			continue;
 		if (check_pkg_install_mask(e->name) != 0)
 			continue;
+		if (e->name[0] == '/')
+			e->name++;
 		switch (e->type) {
 			case CONTENTS_OBJ:
 				if (verbose) {
-					char *hash = hash_file(e->name, HASH_MD5);
+					char *hash = hash_file_at(args->vdb->portroot_fd,
+											  e->name, HASH_MD5);
 					if (hash != NULL) {
 						if (strcmp(e->digest, hash) != 0)
 							warn("MD5 mismatch: expected %s got %s for %s",
@@ -387,7 +403,8 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 					}
 				}
 
-				if ((fd = open(e->name, O_RDONLY)) < 0)
+				if ((fd = openat(args->vdb->portroot_fd,
+								 e->name, O_RDONLY)) < 0)
 					continue;
 				if (fstat(fd, &st) < 0) {
 					close(fd);
@@ -395,7 +412,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 				}
 
 				entry = archive_entry_new();
-				snprintf(ename, sizeof(ename), "image/%s", e->name + 1);
+				snprintf(ename, sizeof(ename), "image/%s", e->name);
 				archive_entry_set_pathname(entry, ename);
 				archive_entry_copy_stat(entry, &st);
 				archive_write_header(a, entry);
@@ -406,7 +423,8 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 				break;
 			case CONTENTS_SYM:
 				/* like for files, we take whatever is in the filesystem */
-				if ((len = readlink(e->name, ename, sizeof(ename) - 1)) < 0)
+				if ((len = readlinkat(args->vdb->portroot_fd,
+									  e->name, ename, sizeof(ename) - 1)) < 0)
 					snprintf(ename, sizeof(ename), "%s", e->sym_target);
 				else
 					ename[len] = '\0';
@@ -420,9 +438,11 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 
 				entry = archive_entry_new();
 				archive_entry_set_symlink(entry, ename);
-				snprintf(ename, sizeof(ename), "image/%s", e->name + 1);
+				snprintf(ename, sizeof(ename), "image/%s", e->name);
 				archive_entry_set_pathname(entry, ename);
-				if (lstat(e->name, &st) < 0) {
+				if (fstatat(args->vdb->portroot_fd,
+							e->name, &st, AT_SYMLINK_NOFOLLOW) < 0)
+				{
 					archive_entry_set_mtime(entry, e->mtime, 0);
 					archive_entry_set_filetype(entry, AE_IFLNK);
 					archive_entry_set_mode(entry, 0777);
@@ -433,7 +453,8 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 				archive_entry_free(entry);
 				break;
 			case CONTENTS_DIR:
-				if ((fd = open(e->name, O_RDONLY)) < 0)
+				if ((fd = openat(args->vdb->portroot_fd,
+								 e->name, O_RDONLY)) < 0)
 					continue;
 				if (fstat(fd, &st) < 0) {
 					close(fd);
@@ -442,7 +463,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 				close(fd);
 
 				entry = archive_entry_new();
-				snprintf(ename, sizeof(ename), "image/%s", e->name + 1);
+				snprintf(ename, sizeof(ename), "image/%s", e->name);
 				archive_entry_set_pathname(entry, ename);
 				archive_entry_copy_stat(entry, &st);
 				archive_write_header(a, entry);

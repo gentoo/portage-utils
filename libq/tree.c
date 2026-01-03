@@ -1939,6 +1939,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		match_key(IDEPEND);
 		match_key(PATH);
 		match_key2(BUILD_ID, BUILDID);
+		match_key(BUILDID);
 #undef match_key
 #undef match_key2
 		}
