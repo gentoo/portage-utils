@@ -18,7 +18,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#ifdef HAVE_LIBARCHIVE
+#ifdef ENABLE_GPKG
 # include <archive.h>
 # include <archive_entry.h>
 #endif
@@ -267,7 +267,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	int mfd;
 	mode_t mask;
 	depend_atom *atom = tree_get_atom(pkg, false);
-	size_t len;
+	ssize_t len;
 
 	if (pretend) {
 		printf(" %s-%s %s:\n",
@@ -315,7 +315,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	/* contractually we don't have to put anything in here, but we drop
 	 * our signature so it can be traced back to us */
 	len = snprintf(ename, sizeof(ename), "portage-utils-%s", VERSION);
-	if (write(fd, ename, len) != len)
+	if (write(fd, ename, (size_t)len) != len)
 		warnp("could not write self-identifier");
 	close(fd);
 	write_hashes(buf, "DATA", mfd);
@@ -352,7 +352,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		archive_entry_set_perm(entry, 0644);
 		archive_write_header(a, entry);
 		while ((len = read(fd, buf, sizeof(buf))) > 0)
-			archive_write_data(a, buf, len);
+			archive_write_data(a, buf, (size_t)len);
 		close(fd);
 		archive_entry_free(entry);
 	}
@@ -372,38 +372,83 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	for (; (line = strtok_r(line, "\n", &savep)) != NULL; line = NULL) {
 		contents_entry *e;
 		e = contents_parse_line(line);
-		if (!e || e->type == CONTENTS_DIR)
+		if (!e)
 			continue;
 		if (check_pkg_install_mask(e->name) != 0)
 			continue;
-		if (e->type == CONTENTS_OBJ && verbose) {
-			char *hash = hash_file(e->name, HASH_MD5);
-			if (hash != NULL) {
-				if (strcmp(e->digest, hash) != 0)
-					warn("MD5: mismatch expected %s got %s for %s",
-							e->digest, hash, e->name);
-			}
-		}
+		switch (e->type) {
+			case CONTENTS_OBJ:
+				if (verbose) {
+					char *hash = hash_file(e->name, HASH_MD5);
+					if (hash != NULL) {
+						if (strcmp(e->digest, hash) != 0)
+							warn("MD5 mismatch: expected %s got %s for %s",
+									e->digest, hash, e->name);
+					}
+				}
 
-		if ((fd = open(e->name, O_RDONLY)) < 0)
-			continue;
-		if (fstat(fd, &st) < 0) {
-			close(fd);
-			continue;
-		}
+				if ((fd = open(e->name, O_RDONLY)) < 0)
+					continue;
+				if (fstat(fd, &st) < 0) {
+					close(fd);
+					continue;
+				}
 
-		entry = archive_entry_new();
-		snprintf(ename, sizeof(ename), "image/%s", e->name + 1);
-		archive_entry_set_pathname(entry, ename);
-		archive_entry_set_size(entry, st.st_size);
-		archive_entry_set_mtime(entry, st.st_mtime, 0);
-		archive_entry_set_filetype(entry, st.st_mode & S_IFMT);
-		archive_entry_set_perm(entry, st.st_mode & ~S_IFMT);
-		archive_write_header(a, entry);
-		while ((len = read(fd, buf, sizeof(buf))) > 0)
-			archive_write_data(a, buf, len);
-		close(fd);
-		archive_entry_free(entry);
+				entry = archive_entry_new();
+				snprintf(ename, sizeof(ename), "image/%s", e->name + 1);
+				archive_entry_set_pathname(entry, ename);
+				archive_entry_copy_stat(entry, &st);
+				archive_write_header(a, entry);
+				while ((len = read(fd, buf, sizeof(buf))) > 0)
+					archive_write_data(a, buf, (size_t)len);
+				close(fd);
+				archive_entry_free(entry);
+				break;
+			case CONTENTS_SYM:
+				/* like for files, we take whatever is in the filesystem */
+				if ((len = readlink(e->name, ename, sizeof(ename) - 1)) < 0)
+					snprintf(ename, sizeof(ename), "%s", e->sym_target);
+				else
+					ename[len] = '\0';
+
+				if (verbose) {
+					if (strcmp(e->sym_target, ename) != 0)
+						warn("symlink target mismatch: "
+							 "expected %s got %s for %s",
+							 e->sym_target, ename, e->name);
+				}
+
+				entry = archive_entry_new();
+				archive_entry_set_symlink(entry, ename);
+				snprintf(ename, sizeof(ename), "image/%s", e->name + 1);
+				archive_entry_set_pathname(entry, ename);
+				if (lstat(e->name, &st) < 0) {
+					archive_entry_set_mtime(entry, e->mtime, 0);
+					archive_entry_set_filetype(entry, AE_IFLNK);
+					archive_entry_set_mode(entry, 0777);
+				} else {
+					archive_entry_copy_stat(entry, &st);
+				}
+				archive_write_header(a, entry);
+				archive_entry_free(entry);
+				break;
+			case CONTENTS_DIR:
+				if ((fd = open(e->name, O_RDONLY)) < 0)
+					continue;
+				if (fstat(fd, &st) < 0) {
+					close(fd);
+					continue;
+				}
+				close(fd);
+
+				entry = archive_entry_new();
+				snprintf(ename, sizeof(ename), "image/%s", e->name + 1);
+				archive_entry_set_pathname(entry, ename);
+				archive_entry_copy_stat(entry, &st);
+				archive_write_header(a, entry);
+				archive_entry_free(entry);
+				break;
+		}
 	}
 	archive_write_close(a);
 	archive_write_free(a);
@@ -429,7 +474,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		archive_entry_set_perm(entry, 0644);
 		archive_write_header(a, entry);
 		while ((len = read(fd, buf, sizeof(buf))) > 0)
-			archive_write_data(a, buf, len);
+			archive_write_data(a, buf, (size_t)len);
 		close(fd);
 		archive_entry_free(entry);
 	}
@@ -448,7 +493,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		archive_entry_set_perm(entry, 0644);
 		archive_write_header(a, entry);
 		while ((len = read(fd, buf, sizeof(buf))) > 0)
-			archive_write_data(a, buf, len);
+			archive_write_data(a, buf, (size_t)len);
 		close(fd);
 		archive_entry_free(entry);
 	}
@@ -468,7 +513,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		archive_entry_set_perm(entry, 0644);
 		archive_write_header(a, entry);
 		while ((len = read(fd, buf, sizeof(buf))) > 0)
-			archive_write_data(a, buf, len);
+			archive_write_data(a, buf, (size_t)len);
 		close(fd);
 		archive_entry_free(entry);
 	}
@@ -489,7 +534,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		archive_entry_set_perm(entry, 0644);
 		archive_write_header(a, entry);
 		while ((len = read(fd, buf, sizeof(buf))) > 0)
-			archive_write_data(a, buf, len);
+			archive_write_data(a, buf, (size_t)len);
 		close(fd);
 		archive_entry_free(entry);
 	}
