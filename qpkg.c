@@ -356,10 +356,9 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		close(fd);
 		archive_entry_free(entry);
 	}
-	/* non-standard, but useful: add BUILDID */
 	if (atom->BUILDID > 0) {
 		entry = archive_entry_new();
-		archive_entry_set_pathname(entry, "metadata/BUILDID");
+		archive_entry_set_pathname(entry, "metadata/BUILD_ID");
 		len = snprintf(ename, sizeof(ename), "%u\n", atom->BUILDID);
 		archive_entry_set_size(entry, (size_t)len);
 		archive_entry_set_mtime(entry, time(NULL), 0);
