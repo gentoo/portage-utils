@@ -247,7 +247,7 @@ static int q_build_gtree_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 	q_cache_add_cache_entry(USE);
 	q_cache_add_cache_entry(EPREFIX);
 	q_cache_add_cache_entry(PATH);
-	q_cache_add_cache_entry(BUILDID);
+	q_cache_add_cache_entry(BUILD_ID);
 	if (pkg->cat_ctx->ctx->treetype == TREE_PACKAGES)
 		q_cache_add_cache_entry(SIZE);
 

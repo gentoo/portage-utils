@@ -1819,8 +1819,8 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 					}
 					cat->pkg_ctxs = (tree_pkg_ctx **)atom;  /* for name */
 				}
-				if (meta.Q_BUILDID != NULL) {
-					atom->BUILDID = atoi(meta.Q_BUILDID);
+				if (meta.Q_BUILD_ID != NULL) {
+					atom->BUILDID = atoi(meta.Q_BUILD_ID);
 				} else if (meta.Q_PATH != NULL) {
 					depend_atom *patom;
 					/* dreadful, but Portage apparently generates a
@@ -1938,7 +1938,7 @@ tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 		match_key(BDEPEND);
 		match_key(IDEPEND);
 		match_key(PATH);
-		match_key2(BUILD_ID, BUILDID);
+		match_key(BUILD_ID);
 #undef match_key
 #undef match_key2
 		}
@@ -2122,7 +2122,7 @@ tree_foreach_gtree(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 				match(USE);
 				match(EPREFIX);
 				match(PATH);
-				match(BUILDID);
+				match(BUILD_ID);
 				match(SIZE);
 				match2(_eclasses_, eclasses);
 #undef match

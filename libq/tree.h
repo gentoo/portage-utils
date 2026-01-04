@@ -112,7 +112,7 @@ struct tree_pkg_meta {
 	char *Q_USE;
 	char *Q_EPREFIX;
 	char *Q_PATH;     /* binpkg-multi-instance */
-	char *Q_BUILDID;  /* binpkg-multi-instance */
+	char *Q_BUILD_ID; /* binpkg-multi-instance */
 	char *Q_repository;
 	char *Q_MD5;
 	char *Q_SHA1;
