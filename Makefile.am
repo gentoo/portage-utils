@@ -104,7 +104,7 @@ APPLETS += qmanifest
 endif
 
 man/%.1: q
-	man/mkman.py $<
+	man/mkman.py $@
 
 install-exec-hook:
 	cd $(DESTDIR)$(bindir); \

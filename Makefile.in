@@ -3169,7 +3169,7 @@ uninstall-man: uninstall-man1
 
 
 man/%.1: q
-	man/mkman.py $<
+	man/mkman.py $@
 
 install-exec-hook:
 	cd $(DESTDIR)$(bindir); \
