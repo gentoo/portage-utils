@@ -341,6 +341,14 @@ atom_explode_cat(const char *atom, const char *cat)
 	ret->PVR = ptr;
 	snprintf(ret->PN, slen, "%.*s", (int)(ret->PVR - 1 - ret->PF), ret->PF);
 
+	/* portage-utils addition: BUILDID is present as ~BUILDID, remove it
+	 * from here if we find it, our extension may never be part of the
+	 * official PF/PVR */
+	if ((ptr = strchr(ptr, '~')) != NULL) {
+		ret->BUILDID = atoi(&ptr[1]);
+		*ptr = '\0';
+	}
+
 	/* find -r# */
 	pv = NULL;
 	ptr = ret->PVR + strlen(ret->PVR) - 1;
