@@ -2277,7 +2277,6 @@ tree_foreach_pkg
 	ctx->cat_de  = NULL;
 	ctx->cat_cur = 0;
 	ctx->cat_cnt = 0;
-	ctx->dir     = NULL;
 	ctx->do_sort = false;
 
 	if (postsort) {
