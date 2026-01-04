@@ -1265,6 +1265,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 				fname = "image";
 
 			archive_entry_set_pathname(entry, fname);
+			fname = archive_entry_pathname(entry);  /* re-retrieve for errors */
 
 			if (archive_write_header(t, entry) != ARCHIVE_OK)
 				err("failed to unpack from gpkg '%s': %s",
@@ -1313,6 +1314,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 				continue;  /* bug #968185 */
 
 			archive_entry_set_pathname(entry, fname);
+			fname = archive_entry_pathname(entry);  /* re-retrieve for errors */
 
 			if (archive_write_header(t, entry) != ARCHIVE_OK)
 				err("failed to unpack metadata '%s': %s",
@@ -1360,6 +1362,22 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 				continue;  /* bug #968185 */
 
 			archive_entry_set_pathname(entry, fname);
+			fname = archive_entry_pathname(entry);  /* re-retrieve for errors */
+
+			/* handle hardlinks offset, #968291 */
+			if (archive_entry_hardlink_is_set(entry)) {
+				const char *hlinktrg = archive_entry_hardlink(entry);
+				/* drop image prefix like for the path */
+				hlinktrg = strchr(hlinktrg, '/');
+				if (hlinktrg == NULL ||
+					hlinktrg[1] == '\0')
+				{  /* really, how? */
+					warn("%s has invalid hardlink target '%s', skipping",
+						 fname, archive_entry_hardlink(entry));
+					continue;
+				}
+				archive_entry_set_hardlink(entry, &hlinktrg[1]);
+			}
 
 			if (archive_write_header(t, entry) != ARCHIVE_OK)
 				err("failed to unpack image '%s': %s",
