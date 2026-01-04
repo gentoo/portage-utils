@@ -298,6 +298,16 @@ atom_explode_cat(const char *atom, const char *cat)
 		return ret;
 	}
 
+	/* portage-utils addition: BUILDID is present as ~BUILDID, remove it
+	 * from here if we find it, our extension may never be part of the
+	 * official PF/PVR */
+	if ((ptr = strchr(ret->PF, '~')) != NULL &&
+		isdigit(ptr[1]))
+	{
+		ret->BUILDID = atoi(&ptr[1]);
+		*ptr = '\0';
+	}
+
 	/* CATEGORY should be all set here, PF contains everything up to
 	 * SLOT, REPO or '*'
 	 * PMS 3.1.2 says PN must not end in a hyphen followed by
@@ -326,6 +336,7 @@ atom_explode_cat(const char *atom, const char *cat)
 			lastpv = pv;
 			continue;  /* valid, keep searching */
 		}
+
 		ret->letter = '\0';
 	}
 	ptr = lastpv;
@@ -340,14 +351,6 @@ atom_explode_cat(const char *atom, const char *cat)
 
 	ret->PVR = ptr;
 	snprintf(ret->PN, slen, "%.*s", (int)(ret->PVR - 1 - ret->PF), ret->PF);
-
-	/* portage-utils addition: BUILDID is present as ~BUILDID, remove it
-	 * from here if we find it, our extension may never be part of the
-	 * official PF/PVR */
-	if ((ptr = strchr(ptr, '~')) != NULL) {
-		ret->BUILDID = atoi(&ptr[1]);
-		*ptr = '\0';
-	}
 
 	/* find -r# */
 	pv = NULL;
