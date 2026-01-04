@@ -251,6 +251,8 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 #ifdef ENABLE_GPKG
 	struct archive *a;
 	struct archive_entry *entry;
+	struct archive_entry *sparse;
+	struct archive_entry_linkresolver *lres;
 	struct stat st;
 	struct dirent **files = NULL;
 	char tmpdir[BUFSIZE];
@@ -381,6 +383,8 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	filter = qgpkg_set_compression(a);
 	snprintf(gpkg, sizeof(gpkg), "%s/image.tar%s", tmpdir, filter);
 	archive_write_open_filename(a, gpkg);
+	lres = archive_entry_linkresolver_new();
+	archive_entry_linkresolver_set_strategy(lres, archive_format(a));
 	for (; (line = strtok_r(line, "\n", &savep)) != NULL; line = NULL) {
 		contents_entry *e;
 		e = contents_parse_line(line);
@@ -414,11 +418,20 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 				snprintf(ename, sizeof(ename), "image/%s", e->name);
 				archive_entry_set_pathname(entry, ename);
 				archive_entry_copy_stat(entry, &st);
+				archive_entry_linkify(lres, &entry, &sparse);
 				archive_write_header(a, entry);
-				while ((len = read(fd, buf, sizeof(buf))) > 0)
-					archive_write_data(a, buf, (size_t)len);
-				close(fd);
+				if (sparse != NULL) {
+					archive_write_header(a, sparse);
+					archive_entry_free(entry);
+					entry = sparse;
+				}
+				if (archive_entry_size(entry) > 0)
+				{
+					while ((len = read(fd, buf, sizeof(buf))) > 0)
+						archive_write_data(a, buf, (size_t)len);
+				}
 				archive_entry_free(entry);
+				close(fd);
 				break;
 			case CONTENTS_SYM:
 				/* like for files, we take whatever is in the filesystem */
@@ -470,6 +483,34 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 				break;
 		}
 	}
+	do {
+		const char *fname;
+
+		entry = NULL;
+		archive_entry_linkify(lres, &entry, &sparse);
+		if (entry == NULL)
+			break;
+
+		/* these are hardlinks which apparently have targets outside of
+		 * the package's know filelist, e.g. the user adding a hardlink,
+		 * we need to process them now depending on the archive format,
+		 * which means we'll have to lookup the files to get their body */
+		fname = archive_entry_pathname(entry);
+		if (fname == NULL ||
+			(fname = strchr(fname, '/')) == NULL)
+			continue;  /* not something we would've produced */
+		fname++;
+
+		if ((fd = openat(args->vdb->portroot_fd, fname, O_RDONLY)) < 0)
+			continue;
+
+		archive_write_header(a, entry);
+		while ((len = read(fd, buf, sizeof(buf))) > 0)
+			archive_write_data(a, buf, (size_t)len);
+		archive_entry_free(entry);
+		close(fd);
+	} while (true);
+	archive_entry_linkresolver_free(lres);
 	archive_write_close(a);
 	archive_write_free(a);
 	write_hashes(gpkg, "DATA", mfd);
