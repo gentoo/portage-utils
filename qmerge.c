@@ -159,6 +159,7 @@ static struct option const qmerge_long_opts[] = {
 	{"install", no_argument, NULL, 'K'},
 	{"unmerge", no_argument, NULL, 'U'},
 	{"pretend", no_argument, NULL, 'p'},
+	{"keepwork",no_argument, NULL, 127},
 	{"update",  no_argument, NULL, 'u'},
 	{"yes",     no_argument, NULL, 'y'},
 	{"nodeps",  no_argument, NULL, 'O'},
@@ -172,6 +173,7 @@ static const char * const qmerge_opts_help[] = {
 	"Install package",
 	"Uninstall package",
 	"Pretend only",
+	"Do not cleanup the unpacked binpkgs in qmerge tempdir",
 	"Update only",
 	"Don't prompt before overwriting",
 	"Don't merge dependencies",
@@ -188,6 +190,7 @@ char force_download = 0;
 char follow_rdepends = 1;
 char qmerge_strict = 0;
 char update_only = 0;
+bool keep_work = false;
 bool debug = false;
 const char Packages[] = "Packages";
 
@@ -1734,8 +1737,9 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 	/* clean up our local temp dir */
 	xchdir("..");
-	rm_rf(mpkg->atom->PF);
-	/* don't care about return */
+	if (!keep_work)
+		rm_rf(mpkg->atom->PF);
+	/* don't care about return, but when empty, remove */
 	rmdir("../qmerge");
 
 	printf("%s>>>%s %s\n",
@@ -2272,6 +2276,7 @@ int qmerge_main(int argc, char **argv)
 					  install = 1;         break;
 			case 'y': interactive = 0;     break;
 			case 'O': follow_rdepends = 0; break;
+			case 127: keep_work = true;    break;
 			case 128: debug = true;        break;
 			COMMON_GETOPTS_CASES(qmerge)
 		}
