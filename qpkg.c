@@ -481,13 +481,19 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	a = archive_write_new();
 	archive_write_set_format_ustar(a);  /* as required by GLEP-78 */
 	archive_write_open_filename(a, gpkg);
+
+	if (atom->BUILDID > 0)
+		i = snprintf(ename, sizeof(ename), "%s-%u", atom->PF, atom->BUILDID);
+	else
+		i = snprintf(ename, sizeof(ename), "%s", atom->PF);
+
 	/* 3.1 the package format identifier file gpkg-1 */
 	snprintf(buf, sizeof(buf), "%s/gpkg-1", tmpdir);
 	if ((fd = open(buf, O_RDONLY)) >= 0 &&
 		fstat(fd, &st) >= 0)
 	{
 		entry = archive_entry_new();
-		snprintf(ename, sizeof(ename), "%s/gpkg-1", atom->PF);
+		snprintf(ename + i, sizeof(ename) - i, "/gpkg-1");
 		archive_entry_set_pathname(entry, ename);
 		archive_entry_set_size(entry, st.st_size);
 		archive_entry_set_mtime(entry, st.st_mtime, 0);
@@ -506,7 +512,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		fstat(fd, &st) >= 0)
 	{
 		entry = archive_entry_new();
-		snprintf(ename, sizeof(ename), "%s/metadata.tar%s", atom->PF, filter);
+		snprintf(ename + i, sizeof(ename) - i, "/metadata.tar%s", filter);
 		archive_entry_set_pathname(entry, ename);
 		archive_entry_set_size(entry, st.st_size);
 		archive_entry_set_mtime(entry, st.st_mtime, 0);
@@ -526,7 +532,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		fstat(fd, &st) >= 0)
 	{
 		entry = archive_entry_new();
-		snprintf(ename, sizeof(ename), "%s/image.tar%s", atom->PF, filter);
+		snprintf(ename + i, sizeof(ename) - i, "/image.tar%s", filter);
 		archive_entry_set_pathname(entry, ename);
 		archive_entry_set_size(entry, st.st_size);
 		archive_entry_set_mtime(entry, st.st_mtime, 0);
@@ -547,7 +553,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		fstat(fd, &st) >= 0)
 	{
 		entry = archive_entry_new();
-		snprintf(ename, sizeof(ename), "%s/Manifest", atom->PF);
+		snprintf(ename + i, sizeof(ename) - i, "/Manifest");
 		archive_entry_set_pathname(entry, ename);
 		archive_entry_set_size(entry, st.st_size);
 		archive_entry_set_mtime(entry, st.st_mtime, 0);
@@ -576,6 +582,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 				 atom->PF, atom->BUILDID);
 	else
 		snprintf(buf + i, sizeof(buf) - i, "/%s.gpkg.tar", atom->PF);
+
 	if (rename(gpkg, buf)) {
 		warnp("could not move '%s' to '%s'", gpkg, buf);
 		return 1;
