@@ -3168,6 +3168,9 @@ uninstall-man: uninstall-man1
 .PRECIOUS: Makefile
 
 
+man/%.1: q
+	man/mkman.py $<
+
 install-exec-hook:
 	cd $(DESTDIR)$(bindir); \
 	for applet in $(APPLETS) ; do \

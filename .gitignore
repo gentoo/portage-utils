@@ -32,6 +32,7 @@ INSTALL
 Makefile
 /tests/init.sh
 /tests/qmanifest/root/.gnupg/random_seed
+/man/*.1
 
 /*.old.c
 /q
