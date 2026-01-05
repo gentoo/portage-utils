@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -254,7 +254,13 @@ int qsize_main(int argc, char **argv)
 	if (vdb != NULL) {
 		if (array_cnt(atoms) > 0) {
 			array_for_each(atoms, i, atom) {
-				ret = tree_foreach_pkg_fast(vdb, qsize_cb, &state, atom);
+				if (atom->CATEGORY == NULL &&
+					i + 1 < array_cnt(atoms))
+				{
+					ret = tree_foreach_pkg_cached(vdb, qsize_cb, &state, atom);
+				} else {
+					ret = tree_foreach_pkg_fast(vdb, qsize_cb, &state, atom);
+				}
 			}
 		} else {
 			ret = tree_foreach_pkg_fast(vdb, qsize_cb, &state, NULL);
