@@ -171,12 +171,24 @@ char *tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *ke
 tree_metadata_xml *tree_pkg_metadata(tree_pkg_ctx *pkg_ctx);
 void tree_close_metadata(tree_metadata_xml *meta_ctx);
 void tree_close_pkg(tree_pkg_ctx *pkg_ctx);
-int tree_foreach_pkg(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
-		bool sort, const depend_atom *query);
+
+typedef enum _tree_foreach_type {
+	TREE_FOREACH_FAST,
+	TREE_FOREACH_SORT,
+	TREE_FOREACH_CACHE
+} tree_foreach_type;
+int tree_foreach_pkg_int(tree_ctx *ctx, tree_pkg_cb callback, void *priv,
+		tree_foreach_type mode, const depend_atom *query);
+#define tree_foreach_pkg(ctx, cb, priv, sort, query) \
+	tree_foreach_pkg_int(ctx, cb, priv, \
+						 (sort) ? TREE_FOREACH_SORT : TREE_FOREACH_FAST, query)
 #define tree_foreach_pkg_fast(ctx, cb, priv, query) \
-	tree_foreach_pkg(ctx, cb, priv, false, query)
+	tree_foreach_pkg_int(ctx, cb, priv, TREE_FOREACH_FAST, query)
 #define tree_foreach_pkg_sorted(ctx, cb, priv, query) \
-	tree_foreach_pkg(ctx, cb, priv, true, query)
+	tree_foreach_pkg_int(ctx, cb, priv, TREE_FOREACH_SORT, query)
+#define tree_foreach_pkg_cached(ctx, cb, priv, query) \
+	tree_foreach_pkg_int(ctx, cb, priv, TREE_FOREACH_CACHE, query)
+
 set *tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms);
 depend_atom *tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete);
 tree_match_ctx *tree_match_atom(tree_ctx *t, const depend_atom *q, int flags);

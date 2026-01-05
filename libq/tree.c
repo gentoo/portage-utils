@@ -606,15 +606,18 @@ tree_pkg_compar(const void *l, const void *r)
 static tree_pkg_ctx *
 tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 {
-	tree_pkg_ctx *pkg_ctx = NULL;
+	tree_pkg_ctx        *pkg_ctx = NULL;
 	const struct dirent *de;
-	const depend_atom *qa = cat_ctx->ctx->query_atom;
+	const depend_atom   *qa      = cat_ctx->ctx->query_atom;
+	bool                 filter  = qa != NULL && qa->PN != NULL;
 
 	if (cat_ctx->ctx->do_sort) {
 		if (cat_ctx->pkg_ctxs == NULL) {
 			size_t pkg_size = 0;
+
 			cat_ctx->pkg_cnt = 0;
 			cat_ctx->pkg_cur = 0;
+
 			while ((de = readdir(cat_ctx->dir)) != NULL) {
 				char *name;
 
@@ -627,12 +630,12 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 				 * note that we might over-match, but that's easier than
 				 * trying to deal with end of string or '-' here (which
 				 * still wouldn't be 100% because name rules are complex) */
-				if (qa != NULL && qa->PN != NULL &&
-						strncmp(qa->PN, de->d_name, strlen(qa->PN)) != 0)
+				if (filter &&
+					strncmp(qa->PN, de->d_name, strlen(qa->PN)) != 0)
 					continue;
 
 				if (cat_ctx->pkg_cnt == pkg_size) {
-					pkg_size += 256;
+					pkg_size += 64;
 					cat_ctx->pkg_ctxs = xrealloc(cat_ctx->pkg_ctxs,
 								sizeof(*cat_ctx->pkg_ctxs) * pkg_size);
 				}
@@ -653,8 +656,14 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 		}
 
 		pkg_ctx = NULL;
-		if (cat_ctx->pkg_cur < cat_ctx->pkg_cnt)
+		while (cat_ctx->pkg_cur < cat_ctx->pkg_cnt) {
 			pkg_ctx = cat_ctx->pkg_ctxs[cat_ctx->pkg_cur++];
+			if (!filter ||
+				atom_compare(tree_get_atom(pkg_ctx, qa->SLOT != NULL),
+							 qa) == EQUAL)
+				break;
+			pkg_ctx = NULL;
+		}
 	} else {
 		do {
 			de = readdir(cat_ctx->dir);
@@ -665,8 +674,8 @@ tree_next_pkg_int(tree_cat_ctx *cat_ctx)
 				continue;
 
 			/* perform package name check as for the sorted variant */
-			if (qa != NULL && qa->PN != NULL &&
-					strncmp(qa->PN, de->d_name, strlen(qa->PN)) != 0)
+			if (filter &&
+				strncmp(qa->PN, de->d_name, strlen(qa->PN)) != 0)
 				continue;
 
 			pkg_ctx = tree_open_pkg(cat_ctx, de->d_name);
@@ -1422,10 +1431,8 @@ tree_pkg_read(tree_pkg_ctx *pkg_ctx)
 		ret = (tree_pkg_meta *)pkg_ctx->cat_ctx->ctx->pkgs;
 	}
 
-	pkg_ctx->meta = ret;
+	pkg_ctx->meta = ret;  /* may be NULL when e.g. VDB */
 
-	if (ret == NULL)
-		warn("Unknown/unsupported metadata cache type!");
 	return ret;
 }
 
@@ -1698,7 +1705,7 @@ tree_foreach_cache_populate_cb
 
 	cat_ctx = get_set(atom->CATEGORY, cache);
 	if (cat_ctx == NULL) {
-		cat_ctx = tree_open_cat(tctx, ".");
+		cat_ctx = tree_open_cat(tctx, atom->CATEGORY);
 		if (cache != NULL)  /* for static code analysers */
 			add_set_value(atom->CATEGORY, cat_ctx, NULL, cache);
 		/* get a pointer from the set */
@@ -1739,6 +1746,7 @@ tree_foreach_cache_populate_cb
 		}
 		pkg->binpkg_isgpkg = ctx->binpkg_isgpkg;
 	} else {
+		pkg->fd   = -1;
 		pkg->meta = NULL;
 	}
 
@@ -2181,12 +2189,12 @@ tree_foreach_gtree(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
 #endif
 
 int
-tree_foreach_pkg
+tree_foreach_pkg_int
 (
 	tree_ctx          *ctx,
 	tree_pkg_cb        callback,
 	void              *priv,
-	bool               sort,
+	tree_foreach_type  mode,
 	const depend_atom *query
 )
 {
@@ -2204,7 +2212,7 @@ tree_foreach_pkg
 	if (ctx->cache.all_categories) {
 		/* always exploit the cache if it exists (next_cat doesn't
 		 * consider it if sorting isn't requested) */
-		sort = true;
+		mode = TREE_FOREACH_SORT;
 	} else {
 		/* perform sorting post retrieval by caching first:
 		 * - binpkgs can be a combination of files and directories,
@@ -2214,11 +2222,14 @@ tree_foreach_pkg
 		 * - gtree should be fine, but since we can't assume it is
 		 *   (others may start producing them), it's like packages
 		 *   above, something we read serially not necessarily in the
-		 *   correct order */
-		if (sort &&
-			(ctx->treetype == TREE_BINPKGS ||
-			 ctx->treetype == TREE_PACKAGES ||
-			 ctx->treetype == TREE_METADATA_GTREE))
+		 *   correct order
+		 * of course we should also build the cache when it was
+		 * explicitly requested */
+		if (mode == TREE_FOREACH_CACHE ||
+			(mode == TREE_FOREACH_SORT &&
+			 (ctx->treetype == TREE_BINPKGS ||
+			  ctx->treetype == TREE_PACKAGES ||
+			  ctx->treetype == TREE_METADATA_GTREE)))
 		{
 			callback = tree_foreach_cache_populate_cb;
 			priv     = (void *)create_set();
@@ -2250,15 +2261,18 @@ tree_foreach_pkg
 	ret = 0;
 	if (traverse)
 	{
-		ctx->do_sort    = postsort ? false : sort;
-		ctx->query_atom = query;
+		if (postsort) {
+			ctx->do_sort    = false;
+			ctx->query_atom = NULL;
+		} else {
+			ctx->do_sort    = mode == TREE_FOREACH_SORT;
+			ctx->query_atom = query;
+		}
 
 		while ((cat_ctx = tree_next_cat(ctx))) {
-			if (callback != NULL) {
-				while ((pkg_ctx = tree_next_pkg(cat_ctx))) {
-					ret |= callback(pkg_ctx, priv);
-					tree_close_pkg(pkg_ctx);
-				}
+			while ((pkg_ctx = tree_next_pkg(cat_ctx))) {
+				ret |= callback(pkg_ctx, priv);
+				tree_close_pkg(pkg_ctx);
 			}
 			tree_close_cat(cat_ctx);
 		}
@@ -2304,7 +2318,7 @@ tree_foreach_pkg
 		 * (sorted) cache, the callback can be empty for tree_match_atom
 		 * when it wants to build a cache first */
 		if (origcb != NULL)
-			ret = tree_foreach_pkg_fast(ctx, origcb, origpriv, ctx->query_atom);
+			ret = tree_foreach_pkg_fast(ctx, origcb, origpriv, query);
 	}
 
 	return ret;
@@ -2506,13 +2520,11 @@ tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
 	tree_cat_ctx *cat_ctx;
 	tree_match_ctx *ret = NULL;
 
-	ctx->query_atom = NULL;  /* if caching, ensure it contains ALL pkgs */
-
 	/* activate cache for future lookups, tree_match_atom relies on
 	 * cache behaviour from tree, which means all categories and
 	 * packages remain in memory until tree_close is being called */
 	if (ctx->cache.categories == NULL)
-		tree_foreach_pkg_sorted(ctx, NULL, NULL, NULL);  /* force cache */
+		tree_foreach_pkg_cached(ctx, NULL, NULL, NULL);  /* force cache */
 
 	ctx->do_sort = true;     /* often forces/enables cache usage */
 
