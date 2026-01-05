@@ -590,6 +590,8 @@ install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 				do {
 					*p++ = '\0';
 				} while (*p == '/');
+				if (*p == '\0')
+					break;
 				cnt++;
 				masks[((i - 1) * maxdirs) + cnt] = p;
 			}
