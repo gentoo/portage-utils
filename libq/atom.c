@@ -491,7 +491,7 @@ atom_clone(depend_atom *atom)
 
 	ret->blocker = atom->blocker;
 	ret->pfx_op  = atom->pfx_op;
-	ret->sfx_op  = atom->pfx_op;
+	ret->sfx_op  = atom->sfx_op;
 	ret->PR_int  = atom->PR_int;
 	ret->letter  = atom->letter;
 	ret->slotdep = atom->slotdep;
@@ -512,7 +512,7 @@ atom_clone(depend_atom *atom)
 		for (w = atom->usedeps; w != NULL; w = w->next) {
 			nlen = w->use != NULL ? strlen(w->use) + 1 : 0;
 			if (n == NULL) {
-				atom->usedeps = n = xmalloc(sizeof(*n) + nlen);
+				ret->usedeps = n = xmalloc(sizeof(*n) + nlen);
 			} else {
 				n = n->next = xmalloc(sizeof(*n) + nlen);
 			}
