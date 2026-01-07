@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -48,6 +48,7 @@ int qatom_main(int argc, char **argv)
 	depend_atom *atomc;
 	tree_ctx *tree = NULL;
 	int i;
+	bool clone = getenv("QATOM_CLONE") != NULL;  /* testing purposes */
 
 	while ((i = GETOPT_LONG(QATOM, qatom, "")) != -1) {
 		switch (i) {
@@ -77,6 +78,12 @@ int qatom_main(int argc, char **argv)
 		if (atom == NULL) {
 			warnf("invalid atom: %s\n", argv[i]);
 			continue;
+		}
+
+		if (clone) {
+			depend_atom *new = atom_clone(atom);
+			atom_implode(atom);
+			atom = new;
 		}
 
 		switch (action) {
