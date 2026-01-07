@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -381,8 +381,7 @@ dep_flatten_tree(dep_node *root, array_t *out)
 {
 	if (root->type != DEP_NULL) {
 		if (root->type == DEP_NORM) {
-			xarraypush_ptr(out, root->atom);
-			root->atom = NULL;
+			xarraypush_ptr(out, atom_clone(root->atom));
 		}
 		if (root->children)
 			dep_flatten_tree(root->children, out);
