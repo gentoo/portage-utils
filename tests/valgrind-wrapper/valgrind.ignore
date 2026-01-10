@@ -1,0 +1,29 @@
+# suppressions for known false-positives
+{
+   Solaris_libc_printf_buf
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   fun:_findbuf
+   fun:_ndoprnt
+   fun:printf
+}
+{
+   Solaris_libc_puts_buf
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   fun:_findbuf
+   fun:_wrtchk
+   fun:puts
+}
+{
+   Solaris_libc_fwrite_buf
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   fun:_findbuf
+   fun:_wrtchk
+   fun:_fwrite_unlocked
+   fun:fwrite
+}

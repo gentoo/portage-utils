@@ -11,10 +11,10 @@ test() {
 	shift 2
 	eval "$@" > list || ret=$?
 	if ! diff -u ${as}/list${num}.good list ; then
-		tfail "output does not match"
+		tfail "output does not match for '$*'"
 	fi
 	if [[ ${exp} -ne ${ret} ]] ; then
-		tfail "exit code (${ret}) does not match expected (${exp})"
+		tfail "exit code (${ret}) does not match expected (${exp}) for '$*'"
 	fi
 	tend $? "$*"
 }

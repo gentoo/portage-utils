@@ -5,6 +5,8 @@
 # test the effects of atom_clone on all our inputs
 export QATOM_CLONE=1
 
+mktmpdir
+
 test() {
 	local num=$1 exp=$2 ret=0 out
 	shift 2
@@ -97,5 +99,7 @@ test c12 "cat/pkg-123:0/25 == ^cat/pkg-123:0/26" \
 	-c 'cat/pkg-123:0/25' '^cat/pkg-123:0/26'       # bug 683430 antislot
 test c13 "cat/pkg-123 != ^cat/pkg-123:0/26" \
 	-c 'cat/pkg-123' '^cat/pkg-123:0/26'
+
+cleantmpdir
 
 end

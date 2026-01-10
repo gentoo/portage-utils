@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# --errors-for-leak-kinds= drop possible due to Solaris libc/_findbuf
 valgrind \
 	--leak-check=full \
 	--track-fds=yes \
@@ -8,7 +7,8 @@ valgrind \
 	--malloc-fill=0xdb \
 	--free-fill=0xbd \
 	--log-file=q-valgrind.log \
-	--errors-for-leak-kinds=definite \
+	--suppressions=${BASH_SOURCE[0]%/*}/valgrind.ignore \
+	--gen-suppressions=all \
 	--error-exitcode=234 \
 	"${@}"
 ret=$?
