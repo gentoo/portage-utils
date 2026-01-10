@@ -579,7 +579,7 @@ int q_main(int argc, char **argv)
 		size_t n;
 
 		array_for_each(overlays, n, overlay) {
-			repo_name = xarrayget(overlay_names, n);
+			repo_name = array_get(overlay_names, n);
 			if (strcmp(repo_name, "<PORTDIR>") == 0) {
 				repo_name = NULL;
 				snprintf(buf, sizeof(buf), "%s/profiles/repo_name", overlay);
@@ -595,7 +595,7 @@ int q_main(int argc, char **argv)
 					NORM, overlay,
 					YELLOW, main_overlay == overlay ? " (main)" : "", NORM);
 			if (verbose)
-				printf(" [%s]\n", (char *)xarrayget(overlay_src, n));
+				printf(" [%s]\n", (char *)array_get(overlay_src, n));
 			else
 				printf("\n");
 			if (repo_name_len != 0) {
@@ -642,7 +642,7 @@ int q_main(int argc, char **argv)
 						array_for_each(vals, n, val) {
 							printf("%s%s", n == 0 ? "" : " ", val);
 						}
-						xarrayfree_int(vals);
+						array_free(vals);
 						printf("\"%s", NORM);
 					}	break;
 				}
@@ -678,7 +678,7 @@ int q_main(int argc, char **argv)
 						array_for_each(vals, n, val) {
 							printf("%s%s", n == 0 ? RED : " ", val);
 						}
-						xarrayfree_int(vals);
+						array_free(vals);
 						printf("%s", NORM);
 					}	break;
 				}
@@ -789,8 +789,8 @@ int q_main(int argc, char **argv)
 		if (buf != NULL)
 			free(buf);
 
-		xarrayfree_int(masks);
-		xarrayfree_int(files);
+		array_free(masks);
+		array_free(files);
 
 		return 0;
 	}

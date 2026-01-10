@@ -402,7 +402,7 @@ int qdepends_main(int argc, char **argv)
 		if (!atom)
 			warn("invalid atom: %s", argv[i]);
 		else
-			xarraypush_ptr(state.atoms, atom);
+			array_append(state.atoms, atom);
 	}
 
 	if (state.qmode & QMODE_INSTALLED || verbose)

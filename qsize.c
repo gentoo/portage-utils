@@ -225,7 +225,7 @@ int qsize_main(int argc, char **argv)
 		case 'i': {
 			regex_t regex;
 			xregcomp(&regex, optarg, REG_EXTENDED|REG_NOSUB);
-			xarraypush(state.ignore_regexp, &regex, sizeof(regex));
+			array_append_copy(state.ignore_regexp, &regex, sizeof(regex));
 			break;
 		}
 		}
@@ -238,7 +238,7 @@ int qsize_main(int argc, char **argv)
 		if (!atom)
 			warn("invalid atom: %s", argv[i]);
 		else
-			xarraypush_ptr(state.atoms, atom);
+			array_append(state.atoms, atom);
 	}
 
 	if (state.fmt == NULL) {
@@ -285,10 +285,8 @@ int qsize_main(int argc, char **argv)
 			   state.disp_units ? state.str_disp_units : "");
 	}
 
-	array_for_each(state.atoms, i, atom)
-		atom_implode(atom);
-	xarrayfree_int(state.atoms);
-	xarrayfree(state.ignore_regexp);
+	array_deepfree(state.atoms, (array_free_cb *)atom_implode);
+	array_deepfree(state.ignore_regexp, NULL);
 	free_set(state.uniq_files);
 
 	return ret;

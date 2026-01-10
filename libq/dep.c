@@ -381,7 +381,7 @@ dep_flatten_tree(dep_node *root, array *out)
 {
 	if (root->type != DEP_NULL) {
 		if (root->type == DEP_NORM) {
-			xarraypush_ptr(out, atom_clone(root->atom));
+			array_append(out, atom_clone(root->atom));
 		}
 		if (root->children)
 			dep_flatten_tree(root->children, out);

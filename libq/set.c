@@ -296,7 +296,7 @@ array_set(set *q, array *ret)
 
 	for (i = 0; i < _SET_HASH_SIZE; i++) {
 		for (w = q->buckets[i]; w != NULL; w = w->next)
-			xarraypush_ptr(ret, w->name);
+			array_append(ret, w->name);
 	}
 
 	return q->len;
@@ -314,7 +314,7 @@ values_set(set *q, array *ret)
 
 	for (i = 0; i < _SET_HASH_SIZE; i++) {
 		for (w = q->buckets[i]; w != NULL; w = w->next)
-			xarraypush_ptr(ret, w->val);
+			array_append(ret, w->val);
 	}
 
 	return q->len;

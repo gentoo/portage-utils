@@ -115,7 +115,7 @@ qpkg_clean(qpkg_cb_args *args)
 		 * that the remainder is what we would clean */
 		array_for_each_rev(bins, n, binatomstr) {
 			if (contains_set(binatomstr, known_pkgs))
-				xarraydelete_ptr(bins, n);
+				array_remove(bins, n);
 		}
 
 		free_set(known_pkgs);
@@ -144,7 +144,7 @@ qpkg_clean(qpkg_cb_args *args)
 		atom_implode(atom);
 	}
 
-	xarrayfree_int(bins);
+	array_free(bins);
 	free_set(bin_pkgs);
 
 	disp_units = KILOBYTE;

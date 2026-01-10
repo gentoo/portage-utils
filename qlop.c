@@ -521,9 +521,7 @@ static int do_emerge_log(
 					array *vals = array_new();
 
 					values_set(atomset, vals);
-					array_for_each(vals, i, atomw)
-						atom_implode(atomw);
-					xarrayfree_int(vals);
+					array_deepfree(vals, (array_free_cb *)atomw);
 
 					clear_set(atomset);
 					last_merge = tstart_emerge;
@@ -797,7 +795,7 @@ static int do_emerge_log(
 				pkg->tbegin = tstart;
 				pkg->time = (time_t)0;
 				pkg->cnt = 0;
-				xarraypush_ptr(merge_matches, pkg);
+				array_append(merge_matches, pkg);
 			} else {  /* ::: completed */
 				array_for_each_rev(merge_matches, i, pkgw) {
 					if (strcmp(p + 16, pkgw->id) != 0)
@@ -830,14 +828,14 @@ static int do_emerge_log(
 							if (elapsed > pkg->tbegin)
 								pkg->tbegin = elapsed;
 							atom_implode(pkgw->atom);
-							xarraydelete(merge_matches, i);
+							array_delete(merge_matches, i, NULL);
 						} else {
 							/* new entry */
 							pkgw->id[0] = '\0';
 							pkgw->cnt = 1;
 							pkgw->time = elapsed;
 							pkgw->tbegin = elapsed;
-							xarraydelete_ptr(merge_matches, i);
+							array_remove(merge_matches, i);
 						}
 						break;
 					}
@@ -886,7 +884,7 @@ static int do_emerge_log(
 								atom_format(flags->fmt, pkgw->atom));
 					}
 					atom_implode(pkgw->atom);
-					xarraydelete(merge_matches, i);
+					array_delete(merge_matches, i, NULL);
 					break;
 				}
 			}
@@ -944,7 +942,7 @@ static int do_emerge_log(
 				pkg->tbegin = tstart;
 				pkg->time = (time_t)0;
 				pkg->cnt = 0;
-				xarraypush_ptr(unmerge_matches, pkg);
+				array_append(unmerge_matches, pkg);
 			} else {
 				array_for_each_rev(unmerge_matches, i, pkgw) {
 					if (strcmp(p + 23, pkgw->id) != 0)
@@ -977,14 +975,14 @@ static int do_emerge_log(
 							if (elapsed > pkg->tbegin)
 								pkg->tbegin = elapsed;
 							atom_implode(pkgw->atom);
-							xarraydelete(unmerge_matches, i);
+							array_delete(unmerge_matches, i, NULL);
 						} else {
 							/* new entry */
 							pkgw->id[0] = '\0';
 							pkgw->cnt = 1;
 							pkgw->time = elapsed;
 							pkgw->tbegin = elapsed;
-							xarraydelete_ptr(unmerge_matches, i);
+							array_remove(unmerge_matches, i);
 						}
 						break;
 					}
@@ -1021,7 +1019,7 @@ static int do_emerge_log(
 								atom_format(flags->fmt, pkgw->atom));
 					}
 					atom_implode(pkgw->atom);
-					xarraydelete(unmerge_matches, i);
+					array_delete(unmerge_matches, i, NULL);
 					break;
 				}
 			}
@@ -1180,7 +1178,7 @@ static int do_emerge_log(
 		array *avgs = array_new();
 
 		values_set(merge_averages, avgs);
-		xarraysort(avgs, pkg_sort_cb);
+		array_sort(avgs, pkg_sort_cb);
 		array_for_each(avgs, i, pkg) {
 			printf("%s: %s average for %s%zd%s merge%s\n",
 					atom_format(flags->fmt, pkg->atom),
@@ -1189,11 +1187,11 @@ static int do_emerge_log(
 			total_merges += pkg->cnt;
 			total_time += pkg->time;
 		}
-		xarrayfree_int(avgs);
+		array_free(avgs);
 
 		avgs = array_new();
 		values_set(unmerge_averages, avgs);
-		xarraysort(avgs, pkg_sort_cb);
+		array_sort(avgs, pkg_sort_cb);
 		array_for_each(avgs, i, pkg) {
 			printf("%s: %s average for %s%zd%s unmerge%s\n",
 					atom_format(flags->fmt, pkg->atom),
@@ -1202,7 +1200,7 @@ static int do_emerge_log(
 			total_unmerges += pkg->cnt;
 			total_time += pkg->time;
 		}
-		xarrayfree_int(avgs);
+		array_free(avgs);
 
 		if (sync_cnt > 0) {
 			printf("%ssync%s: %s average for %s%zd%s sync%s\n",
@@ -1236,8 +1234,8 @@ static int do_emerge_log(
 		char found;
 
 		values_set(merge_averages, avgs);
-		xarraysort(avgs, pkg_sort_cb);
-		xarraysort(atoms, atom_compar_cb);
+		array_sort(avgs, pkg_sort_cb);
+		array_sort(atoms, atom_compar_cb);
 
 		/* each atom has its own matches in here, but since it's all
 		 * sorted, we basically can go around here jumping from CAT-PN
@@ -1338,7 +1336,7 @@ static int do_emerge_log(
 				}
 			}
 		}
-		xarrayfree_int(avgs);
+		array_free(avgs);
 	}
 
 	{
@@ -1349,34 +1347,28 @@ static int do_emerge_log(
 			atom_implode(pkgw->atom);
 			free(pkgw);
 		}
-		xarrayfree_int(t);
+		array_free(t);
 		t = array_new();
 		values_set(unmerge_averages, t);
 		array_for_each(t, i, pkgw) {
 			atom_implode(pkgw->atom);
 			free(pkgw);
 		}
-		xarrayfree_int(t);
+		array_free(t);
 	}
 	free_set(merge_averages);
 	free_set(unmerge_averages);
-	array_for_each_rev(merge_matches, i, pkgw) {
+	array_for_each_rev(merge_matches, i, pkgw)
 		atom_implode(pkgw->atom);
-		xarraydelete(merge_matches, i);
-	}
-	xarrayfree(merge_matches);
-	array_for_each_rev(unmerge_matches, i, pkgw) {
+	array_deepfree(merge_matches, NULL);
+	array_for_each_rev(unmerge_matches, i, pkgw)
 		atom_implode(pkgw->atom);
-		xarraydelete(unmerge_matches, i);
-	}
-	xarrayfree(unmerge_matches);
+	array_deepfree(unmerge_matches, NULL);
 	if (atomset != NULL) {
 		array *t = array_new();
 
 		values_set(atomset, t);
-		array_for_each(t, i, atom)
-			atom_implode(atom);
-		xarrayfree_int(t);
+		array_deepfree(t, (array_free_cb *)atom_implode);
 		free_set(atomset);
 	}
 	return 0;
@@ -1444,7 +1436,7 @@ static array *probe_proc(array *atoms)
 						if (atom->CATEGORY == NULL || atom->P == NULL) {
 							atom_implode(atom);
 						} else {
-							xarraypush_ptr(ret_atoms, atom);
+							array_append(ret_atoms, atom);
 							continue;
 						}
 					}
@@ -1517,7 +1509,7 @@ static array *probe_proc(array *atoms)
 						continue;
 					}
 
-					xarraypush_ptr(ret_atoms, atom);
+					array_append(ret_atoms, atom);
 				}
 				scandir_free(links, linkslen);
 			}
@@ -1549,14 +1541,14 @@ static array *probe_proc(array *atoms)
 		array_for_each(atoms, i, atom) {
 			array_for_each(ret_atoms, j, atomr) {
 				if (atom_compare(atomr, atom) != EQUAL) {
-					xarraydelete_ptr(ret_atoms, j);
+					array_remove(ret_atoms, j);
 					atom_implode(atomr);
 					break;
 				}
 			}
 			atom_implode(atom);
 		}
-		xarrayfree_int(atoms);
+		array_free(atoms);
 	}
 
 	/* ret_atoms is allocated on the stack, so copy into atoms which is
@@ -1567,10 +1559,10 @@ static array *probe_proc(array *atoms)
 		atom->PV = NULL;
 		atom->PVR = NULL;
 		atom->PR_int = 0;
-		xarraypush_ptr(atoms, atom);
+		array_append(atoms, atom);
 	}
 
-	xarrayfree_int(ret_atoms);
+	array_free(ret_atoms);
 
 	return atoms;
 }
@@ -1666,7 +1658,7 @@ int qlop_main(int argc, char **argv)
 		if (!atom)
 			warn("invalid atom: %s", argv[i]);
 		else
-			xarraypush_ptr(atoms, atom);
+			array_append(atoms, atom);
 	}
 	for (p = atomfile; p != NULL && *p != '\0'; p = q) {
 		while (isspace((int)(*p)))
@@ -1680,7 +1672,7 @@ int qlop_main(int argc, char **argv)
 		if (!atom)
 			warn("invalid atom: %s", p);
 		else
-			xarraypush_ptr(atoms, atom);
+			array_append(atoms, atom);
 	}
 	if (atomfile)
 		free(atomfile);
@@ -1813,9 +1805,7 @@ int qlop_main(int argc, char **argv)
 	if (start_time < LONG_MAX)
 		do_emerge_log(logfile, &m, atoms, start_time, end_time);
 
-	array_for_each(atoms, i, atom)
-		atom_implode(atom);
-	xarrayfree_int(atoms);
+	array_deepfree(atoms, (array_free_cb *)atom_implode);
 	free(logfile);
 
 	return EXIT_SUCCESS;

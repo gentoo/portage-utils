@@ -1769,7 +1769,7 @@ qmanifest_main(int argc, char **argv)
 		size_t repolen;
 
 		array_for_each(overlays, n, overlay) {
-			repo = xarrayget(overlay_names, n);
+			repo = array_get(overlay_names, n);
 			if (strcmp(repo, "<PORTDIR>") == 0) {
 				repo = NULL;
 				repolen = 0;
@@ -1803,7 +1803,7 @@ qmanifest_main(int argc, char **argv)
 	for (i = 0; i < argc; i++) {
 		array_for_each(overlay_names, n, overlay) {
 			if (strcmp(overlay, argv[i]) == 0) {
-				overlay = xarrayget(overlays, n);
+				overlay = array_get(overlays, n);
 				break;
 			}
 			overlay = NULL;

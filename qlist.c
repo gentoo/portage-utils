@@ -268,7 +268,7 @@ qlist_match(
 				break;
 		}
 
-		xarrayfree_int(masks);
+		array_free(masks);
 
 		if (match)
 			return false;

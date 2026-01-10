@@ -263,7 +263,7 @@ tree_close(tree_ctx *ctx)
 			tree_close_cat(cat);
 		}
 
-		xarrayfree_int(t);
+		array_free(t);
 	}
 	if (ctx->cache.store != NULL)
 		free(ctx->cache.store);
@@ -2316,7 +2316,7 @@ tree_foreach_pkg_int
 					  sizeof(*cat_ctx->pkg_ctxs), tree_pkg_compar);
 			}
 		}
-		xarrayfree_int(cats);
+		array_free(cats);
 
 		/* do the final run this call was supposed to be for using the
 		 * (sorted) cache, the callback can be empty for tree_match_atom

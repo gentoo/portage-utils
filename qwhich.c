@@ -139,26 +139,26 @@ int qwhich_main(int argc, char **argv)
 		if (!atom)
 			warn("invalid atom: %s", argv[i]);
 		else
-			xarraypush_ptr(atoms, atom);
+			array_append(atoms, atom);
 	}
 
 	/* TODO: silence when the path doesn't exist -- reasonable though? */
 	if (m.do_vdb) {
 		t = tree_open_vdb(portroot, portvdb);
 		if (t != NULL)
-			xarraypush_ptr(trees, t);
+			array_append(trees, t);
 	}
 	if (m.do_binpkg) {
 		t = tree_open_binpkg("/", pkgdir);
 		if (t != NULL)
-			xarraypush_ptr(trees, t);
+			array_append(trees, t);
 	}
 
 	if (m.do_tree) {
 		array_for_each(overlays, n, overlay) {
 			t = tree_open(portroot, overlay);
 			if (t != NULL)
-				xarraypush_ptr(trees, t);
+				array_append(trees, t);
 		}
 	}
 
@@ -247,10 +247,8 @@ int qwhich_main(int argc, char **argv)
 		}
 		tree_close(t);
 	}
-	array_for_each(atoms, i, atom)
-		atom_implode(atom);
-	xarrayfree_int(atoms);
-	xarrayfree_int(trees);
+	array_deepfree(atoms, (array_free_cb *)atom_implode);
+	array_free(trees);
 
 	return EXIT_SUCCESS;
 }

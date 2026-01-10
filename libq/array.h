@@ -12,17 +12,6 @@
 
 #include <string.h>  /* strlen in push_str */
 
-#define xarrayget(A,I) array_get(A,I)
-#define xarraypush_ptr(A,E) array_append(A,E)
-#define xarraypush(A,E,L) array_append_copy(A,E,L)
-#define xarraypush_str(A,S) array_append_copy(A,S,strlen(S)+1/*NUL*/)
-#define xarraysort(A,C) array_sort(A,C)
-#define xarraydelete_ptr(A,E) array_remove(A,E)
-#define xarraydelete(A,E) array_delete(A,E,NULL)
-#define xarrayfree_int(A) array_free(A)
-#define xarrayfree(A) array_deepfree(A,NULL)
-
-/* new 2026 interface to array */
 typedef struct array_t array;
 typedef void (array_free_cb)(void *priv);
 

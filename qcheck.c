@@ -450,7 +450,7 @@ int qcheck_main(int argc, char **argv)
 		case 's': {
 			regex_t preg;
 			xregcomp(&preg, optarg, REG_EXTENDED | REG_NOSUB);
-			xarraypush(state.regex_arr, &preg, sizeof(preg));
+			array_append_copy(state.regex_arr, &preg, sizeof(preg));
 			break;
 		}
 		case 'u': state.qc_update = true;                    break;
@@ -474,7 +474,7 @@ int qcheck_main(int argc, char **argv)
 		if (!atom)
 			warn("invalid atom: %s", argv[i]);
 		else
-			xarraypush_ptr(state.atoms, atom);
+			array_append(state.atoms, atom);
 	}
 
 	vdb = tree_open_vdb(portroot, portvdb);
@@ -490,14 +490,13 @@ int qcheck_main(int argc, char **argv)
 		}
 		tree_close(vdb);
 	}
-	if (array_cnt(state.regex_arr) > 0) {
-		void *preg;
-		array_for_each(state.regex_arr, i, preg)
-			regfree(preg);
-	}
-	xarrayfree(state.regex_arr);
-	array_for_each(state.atoms, i, atom)
-		atom_implode(atom);
-	xarrayfree_int(state.atoms);
+
+    if (array_cnt(state.regex_arr) > 0) {
+        void *preg;
+        array_for_each(state.regex_arr, i, preg)
+            regfree(preg);
+    }
+	array_deepfree(state.regex_arr, NULL);
+	array_deepfree(state.atoms, (array_free_cb *)atom_implode);
 	return ret != 0;
 }

@@ -913,12 +913,12 @@ int qkeyword_main(int argc, char **argv)
 			if ((atom = atom_explode(mask)) == NULL)
 				continue;
 			bucket = array_new();
-			xarraypush_ptr(bucket, atom);
+			array_append(bucket, atom);
 			pmasks = add_set_value(atom_format("%[CAT]%[PN]", atom),
 								   bucket, (void **)&ebuck, pmasks);
 			if (ebuck != NULL) {
-				xarraypush_ptr(ebuck, atom);
-				xarrayfree_int(bucket);
+				array_append(ebuck, atom);
+				array_free(bucket);
 			}
 		}
 	}

@@ -764,7 +764,7 @@ read_portage_profile(const char *profile, env_vars vars[], set *masks)
 					/* match the repo */
 					repo_name = NULL;
 					array_for_each(overlays, n, overlay) {
-						repo_name = xarrayget(overlay_names, n);
+						repo_name = array_get(overlay_names, n);
 						if (strcmp(repo_name, s) == 0) {
 							snprintf(profile_file, sizeof(profile_file),
 									"%s/profiles/%s/", overlay, p);
@@ -1171,9 +1171,9 @@ initialize_portage_env(void)
 
 			if (overlay == NULL) {  /* add PORTDIR to overlays */
 				overlay = xstrdup(main_overlay);
-				xarraypush_ptr(overlays, (char *)overlay);
-				xarraypush_str(overlay_names, "<PORTDIR>");
-				xarraypush_str(overlay_src, var->src);
+				array_append(overlays, (char *)overlay);
+				array_append_strcpy(overlay_names, "<PORTDIR>");
+				array_append_strcpy(overlay_src, var->src);
 			} else {
 				/* ignore make.conf and/or env setting origin if defined by
 				 * repos.conf since the former are deprecated */
@@ -1233,7 +1233,7 @@ initialize_portage_env(void)
 						fprintf(stderr, "%s ", val);
 					}
 					fprintf(stderr, "\n");
-					xarrayfree_int(vals);
+					array_free(vals);
 				}	break;
 			}
 		}
@@ -1342,9 +1342,9 @@ int main(int argc, char **argv)
 	optind = 0;
 	i = q_main(argc, argv);
 
-	xarrayfree(overlays);
-	xarrayfree(overlay_names);
-	xarrayfree(overlay_src);
+	array_deepfree(overlays, NULL);
+	array_deepfree(overlay_names, NULL);
+	array_deepfree(overlay_src, NULL);
 
 	if (warnout != stderr)
 		fclose(warnout);
