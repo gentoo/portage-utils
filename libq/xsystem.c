@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2022 Gentoo Foundation
+ * Copyright 2010-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2010-2016 Mike Frysinger  - <vapier@gentoo.org>
@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <xalloc.h>
 
 #include "xasprintf.h"
 #include "xsystem.h"
