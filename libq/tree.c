@@ -2213,6 +2213,8 @@ tree_foreach_pkg_int
 		/* always exploit the cache if it exists (next_cat doesn't
 		 * consider it if sorting isn't requested) */
 		mode = TREE_FOREACH_SORT;
+		if (callback == NULL)
+			traverse = false;
 	} else {
 		/* perform sorting post retrieval by caching first:
 		 * - binpkgs can be a combination of files and directories,
@@ -2523,8 +2525,7 @@ tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
 	/* activate cache for future lookups, tree_match_atom relies on
 	 * cache behaviour from tree, which means all categories and
 	 * packages remain in memory until tree_close is being called */
-	if (ctx->cache.categories == NULL)
-		tree_foreach_pkg_cached(ctx, NULL, NULL, NULL);  /* force cache */
+	tree_foreach_pkg_cached(ctx, NULL, NULL, NULL);  /* force cache */
 
 	ctx->do_sort = true;     /* often forces/enables cache usage */
 
