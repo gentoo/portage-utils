@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2022 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -16,6 +16,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <xalloc.h>
 
 #include "basename.h"
 #include "copy_file.h"
