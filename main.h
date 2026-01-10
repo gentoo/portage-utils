@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2024 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -43,6 +43,9 @@ extern const char *argv0;
 #endif
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*(arr)))
+
+#define VALP_CLEAR(p) memset(p, 0, sizeof(*(p)))
+#define VAL_CLEAR(v) VALP_CLEAR(&(v))
 
 #ifndef BUFSIZE
 # define BUFSIZE 8192

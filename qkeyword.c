@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2023 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2006      Thomas A. Cort - <tcort@gentoo.org>
@@ -898,13 +898,16 @@ int qkeyword_main(int argc, char **argv)
 
 	/* prepare masks for easy(er) matching by key-ing on CAT/PN */
 	{
-		DECLARE_ARRAY(masks);
+		array_t masks_s;
+		array_t *masks;
 		array_t *bucket;
 		array_t *ebuck;
 		size_t n;
 		char *mask;
 		depend_atom *atom;
 
+		VAL_CLEAR(masks_s);
+		masks  = &masks_s;
 		pmasks = create_set();
 
 		array_set(package_masks, masks);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2024 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -429,12 +429,12 @@ int qcheck_main(int argc, char **argv)
 	size_t i;
 	int ret;
 	tree_ctx *vdb;
-	DECLARE_ARRAY(regex_arr);
 	depend_atom *atom;
-	DECLARE_ARRAY(atoms);
+	array_t regex_arr;
+	array_t atoms;
 	struct qcheck_opt_state state = {
-		.atoms = atoms,
-		.regex_arr = regex_arr,
+		.atoms = &atoms,
+		.regex_arr = &regex_arr,
 		.bad_only = false,
 		.qc_update = false,
 		.chk_afk = true,
@@ -445,13 +445,16 @@ int qcheck_main(int argc, char **argv)
 		.fmt = NULL,
 	};
 
+	VAL_CLEAR(regex_arr);
+	VAL_CLEAR(atoms);
+
 	while ((ret = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
 		switch (ret) {
 		COMMON_GETOPTS_CASES(qcheck)
 		case 's': {
 			regex_t preg;
 			xregcomp(&preg, optarg, REG_EXTENDED | REG_NOSUB);
-			xarraypush(regex_arr, &preg, sizeof(preg));
+			xarraypush(state.regex_arr, &preg, sizeof(preg));
 			break;
 		}
 		case 'u': state.qc_update = true;                    break;
@@ -475,15 +478,15 @@ int qcheck_main(int argc, char **argv)
 		if (!atom)
 			warn("invalid atom: %s", argv[i]);
 		else
-			xarraypush_ptr(atoms, atom);
+			xarraypush_ptr(state.atoms, atom);
 	}
 
 	vdb = tree_open_vdb(portroot, portvdb);
 	ret = -1;
 	if (vdb != NULL) {
-		if (array_cnt(atoms) != 0) {
+		if (array_cnt(state.atoms) != 0) {
 			ret = 0;
-			array_for_each(atoms, i, atom) {
+			array_for_each(state.atoms, i, atom) {
 				ret |= tree_foreach_pkg_sorted(vdb, qcheck_cb, &state, atom);
 			}
 		} else {
@@ -491,14 +494,14 @@ int qcheck_main(int argc, char **argv)
 		}
 		tree_close(vdb);
 	}
-	if (array_cnt(regex_arr) > 0) {
+	if (array_cnt(state.regex_arr) > 0) {
 		void *preg;
-		array_for_each(regex_arr, i, preg)
+		array_for_each(state.regex_arr, i, preg)
 			regfree(preg);
 	}
-	xarrayfree(regex_arr);
-	array_for_each(atoms, i, atom)
+	xarrayfree(state.regex_arr);
+	array_for_each(state.atoms, i, atom)
 		atom_implode(atom);
-	xarrayfree_int(atoms);
+	xarrayfree_int(state.atoms);
 	return ret != 0;
 }

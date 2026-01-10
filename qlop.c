@@ -103,7 +103,7 @@ parse_date(const char *sdate, time_t *t)
 	struct tm tm;
 	const char *s;
 
-	memset(&tm, 0, sizeof(tm));
+	VAL_CLEAR(tm);
 
 	s = strchr(sdate, '|');
 	if (s) {
@@ -434,9 +434,11 @@ static int do_emerge_log(
 	depend_atom *atom;
 	depend_atom *atomw;
 	depend_atom *upgrade_atom = NULL;
-	DECLARE_ARRAY(merge_matches);
+	array_t merge_matches_s;
+	array_t unmerge_matches_s;
+	array_t *merge_matches = &merge_matches_s;
+	array_t *unmerge_matches = &unmerge_matches_s;
 	set *merge_averages = create_set();
-	DECLARE_ARRAY(unmerge_matches);
 	set *unmerge_averages = create_set();
 	set *atomset = NULL;
 	size_t i;
@@ -447,6 +449,9 @@ static int do_emerge_log(
 	struct pkg_match *pkg;
 	struct pkg_match *pkgw;
 #define strpfx(X, Y)  strncmp(X, Y, sizeof(Y) - 1)
+
+	VAL_CLEAR(merge_matches_s);
+	VAL_CLEAR(unmerge_matches_s);
 
 	/* support relative path in here and now, when using ROOT, stick to
 	 * it, turning relative into a moot point */
@@ -517,7 +522,10 @@ static int do_emerge_log(
 				 * "valid" one, such that dummy emerge calls (e.g.
 				 * emerge -pv foo) are ignored */
 				if (last_merge != tstart_emerge) {
-					DECLARE_ARRAY(vals);
+					array_t vals_s;
+					array_t *vals = &vals_s;
+
+					VAL_CLEAR(vals_s);
 
 					values_set(atomset, vals);
 					array_for_each(vals, i, atomw)
@@ -1176,7 +1184,10 @@ static int do_emerge_log(
 		size_t total_merges = 0;
 		size_t total_unmerges = 0;
 		time_t total_time = (time_t)0;
-		DECLARE_ARRAY(avgs);
+		array_t avgs_s;
+		array_t *avgs = &avgs_s;
+
+		VAL_CLEAR(avgs_s);
 
 		values_set(merge_averages, avgs);
 		xarraysort(avgs, pkg_sort_cb);
@@ -1227,11 +1238,14 @@ static int do_emerge_log(
 			printf("\n");
 		}
 	} else if (flags->do_predict) {
-		DECLARE_ARRAY(avgs);
+		array_t avgs_s;
+		array_t *avgs = &avgs_s;
 		enum { P_INIT = 0, P_SREV, P_SRCH } pkgstate;
 		size_t j;
 		time_t ptime;
 		char found;
+
+		VAL_CLEAR(avgs_s);
 
 		values_set(merge_averages, avgs);
 		xarraysort(avgs, pkg_sort_cb);
@@ -1340,7 +1354,11 @@ static int do_emerge_log(
 	}
 
 	{
-		DECLARE_ARRAY(t);
+		array_t t_s;
+		array_t *t = &t_s;
+
+		VAL_CLEAR(t_s);
+
 		values_set(merge_averages, t);
 		array_for_each(t, i, pkgw) {
 			atom_implode(pkgw->atom);
@@ -1367,7 +1385,11 @@ static int do_emerge_log(
 	}
 	xarrayfree(unmerge_matches);
 	if (atomset != NULL) {
-		DECLARE_ARRAY(t);
+		array_t t_s;
+		array_t *t = &t_s;
+
+		VAL_CLEAR(t_s);
+
 		values_set(atomset, t);
 		array_for_each(t, i, atom)
 			atom_implode(atom);
@@ -1395,10 +1417,13 @@ static array_t *probe_proc(array_t *atoms)
 	ssize_t rpathlen;
 	char *p;
 	depend_atom *atom;
-	DECLARE_ARRAY(ret_atoms);
+	array_t ret_atoms_s;
+	array_t *ret_atoms = &ret_atoms_s;
 	size_t i;
 	char *cmdline = NULL;
 	size_t cmdlinesize = 0;
+
+	VAL_CLEAR(ret_atoms_s);
 
 	/* /proc/<pid>/path/<[0-9]+link>
 	 * /proc/<pid>/fd/<[0-9]+link> */
@@ -1582,8 +1607,11 @@ int qlop_main(int argc, char **argv)
 	char *p;
 	char *q;
 	depend_atom *atom;
-	DECLARE_ARRAY(atoms);
+	array_t atoms_s;
+	array_t *atoms = &atoms_s;
 	int runningmode = 0;
+
+	VAL_CLEAR(atoms_s);
 
 	start_time = -1;
 	end_time = -1;

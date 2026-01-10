@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2023 Gentoo Authors
+ * Copyright 2005-2026 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -320,11 +320,11 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 int qdepends_main(int argc, char **argv)
 {
 	depend_atom *atom;
-	DECLARE_ARRAY(atoms);
-	DECLARE_ARRAY(deps);
+	array_t atoms;
+	array_t deps;
 	struct qdepends_opt_state state = {
-		.atoms   = atoms,
-		.deps    = deps,
+		.atoms   = &atoms,
+		.deps    = &deps,
 		.udeps   = create_set(),
 		.qmode   = 0,
 		.format  = "%[CATEGORY]%[PF]",
@@ -335,6 +335,9 @@ int qdepends_main(int argc, char **argv)
 	size_t i;
 	int ret;
 	bool do_pretty = false;
+
+	VAL_CLEAR(atoms);
+	VAL_CLEAR(deps);
 
 	if (quiet)
 		state.format = "%[CATEGORY]%[PN]";
@@ -404,7 +407,7 @@ int qdepends_main(int argc, char **argv)
 		if (!atom)
 			warn("invalid atom: %s", argv[i]);
 		else
-			xarraypush_ptr(atoms, atom);
+			xarraypush_ptr(state.atoms, atom);
 	}
 
 	if (state.qmode & QMODE_INSTALLED || verbose)
@@ -421,8 +424,10 @@ int qdepends_main(int argc, char **argv)
 				state.rtree = NULL;
 				if (state.resolve)
 					state.rtree = tree_open(portroot, overlay);
-				if (!(state.qmode & QMODE_REVERSE) && array_cnt(atoms) > 0) {
-					array_for_each(atoms, i, atom) {
+				if (!(state.qmode & QMODE_REVERSE) &&
+					array_cnt(state.atoms) > 0)
+				{
+					array_for_each(state.atoms, i, atom) {
 						ret |= tree_foreach_pkg_sorted(t,
 								qdepends_results_cb, &state, atom);
 					}
@@ -438,8 +443,8 @@ int qdepends_main(int argc, char **argv)
 	} else {  /* INSTALLED */
 		if (state.resolve)
 			state.rtree = tree_open_vdb(portroot, portvdb);
-		if (!(state.qmode & QMODE_REVERSE) && array_cnt(atoms) > 0) {
-			array_for_each(atoms, i, atom) {
+		if (!(state.qmode & QMODE_REVERSE) && array_cnt(state.atoms) > 0) {
+			array_for_each(state.atoms, i, atom) {
 				ret |= tree_foreach_pkg_fast(state.vdb,
 						qdepends_results_cb, &state, atom);
 			}
@@ -456,9 +461,9 @@ int qdepends_main(int argc, char **argv)
 	if (state.depend != NULL)
 		free(state.depend);
 
-	array_for_each(atoms, i, atom)
+	array_for_each(state.atoms, i, atom)
 		atom_implode(atom);
-	xarrayfree_int(atoms);
+	xarrayfree_int(state.atoms);
 	xarrayfree_int(state.deps);
 	free_set(state.udeps);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2024 Gentoo Foundation
+ * Copyright 2003-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2003-2007 Ned Ludd        - <solar@gentoo.org>
@@ -70,9 +70,8 @@ void xarraydelete(array_t *arr, size_t elem)
  */
 void xarrayfree_int(array_t *arr)
 {
-	array_t blank = array_init_decl;
 	free(arr->eles);
-	*arr = blank;
+	VALP_CLEAR(arr);
 }
 
 void xarrayfree(array_t *arr)

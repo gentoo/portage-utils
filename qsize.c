@@ -189,18 +189,18 @@ int qsize_main(int argc, char **argv)
 	size_t i;
 	int ret;
 	tree_ctx *vdb;
-	DECLARE_ARRAY(ignore_regexp);
+	array_t ignore_regexp;
+	array_t atoms;
 	depend_atom *atom;
-	DECLARE_ARRAY(atoms);
 	struct qsize_opt_state state = {
-		.atoms = atoms,
+		.atoms = &atoms,
 		.search_all = 0,
 		.fs_size = 0,
 		.summary = 0,
 		.summary_only = 0,
 		.disp_units = 0,
 		.str_disp_units = NULL,
-		.ignore_regexp = ignore_regexp,
+		.ignore_regexp = &ignore_regexp,
 		.uniq_files = create_set(),
 		.num_all_files = 0,
 		.num_all_nonfiles = 0,
@@ -209,6 +209,9 @@ int qsize_main(int argc, char **argv)
 		.need_full_atom = false,
 		.fmt = NULL,
 	};
+
+	VAL_CLEAR(ignore_regexp);
+	VAL_CLEAR(atoms);
 
 	while ((ret = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
 		switch (ret) {
@@ -252,10 +255,10 @@ int qsize_main(int argc, char **argv)
 
 	vdb = tree_open_vdb(portroot, portvdb);
 	if (vdb != NULL) {
-		if (array_cnt(atoms) > 0) {
-			array_for_each(atoms, i, atom) {
+		if (array_cnt(state.atoms) > 0) {
+			array_for_each(state.atoms, i, atom) {
 				if (atom->CATEGORY == NULL &&
-					i + 1 < array_cnt(atoms))
+					i + 1 < array_cnt(state.atoms))
 				{
 					ret = tree_foreach_pkg_cached(vdb, qsize_cb, &state, atom);
 				} else {

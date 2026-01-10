@@ -46,9 +46,9 @@ set  *features;
 set  *ev_use;
 char *install_mask;
 char *binpkg_format;
-DECLARE_ARRAY(overlays);
-DECLARE_ARRAY(overlay_names);
-DECLARE_ARRAY(overlay_src);
+array_t *overlays;
+array_t *overlay_names;
+array_t *overlay_src;
 
 static char *portedb;
 static char *eprefix;
@@ -1221,9 +1221,12 @@ initialize_portage_env(void)
 					fprintf(stderr, "%s = %s\n", var->name, *var->value.s);
 					break;
 				case _Q_ISET: {
-					DECLARE_ARRAY(vals);
+					array_t vals_s;
+					array_t *vals = &vals_s;
 					size_t n;
 					char  *val;
+
+					VAL_CLEAR(vals_s);
 
 					fprintf(stderr, "%s = ", var->name);
 					array_set(*var->value.t, vals);
@@ -1251,6 +1254,9 @@ int main(int argc, char **argv)
 	struct stat st;
 	struct winsize winsz;
 	int i;
+	array_t overlays_s;
+	array_t overlay_names_s;
+	array_t overlay_src_s;
 
 	warnout = stderr;
 	IF_DEBUG(init_coredumps());
@@ -1258,6 +1264,13 @@ int main(int argc, char **argv)
 
 	/* ensure any err/warn doesn't use unitialised vars */
 	color_clear();
+
+	VAL_CLEAR(overlays_s);
+	VAL_CLEAR(overlay_names_s);
+	VAL_CLEAR(overlay_src_s);
+	overlays      = &overlays_s;
+	overlay_names = &overlay_names_s;
+	overlay_src   = &overlay_src_s;
 
 	/* initialise all the properties with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
@@ -1334,5 +1347,14 @@ int main(int argc, char **argv)
 
 	initialize_portage_env();
 	optind = 0;
-	return q_main(argc, argv);
+	i = q_main(argc, argv);
+
+	xarrayfree(overlays);
+	xarrayfree(overlay_names);
+	xarrayfree(overlay_src);
+
+	if (warnout != stderr)
+		fclose(warnout);
+
+	return i;
 }

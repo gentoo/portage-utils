@@ -246,9 +246,12 @@ void
 tree_close(tree_ctx *ctx)
 {
 	if (ctx->cache.categories != NULL) {
-		DECLARE_ARRAY(t);
+		array_t t_s;
+		array_t *t = &t_s;
 		size_t n;
 		tree_cat_ctx *cat;
+
+		VAL_CLEAR(t_s);
 
 		values_set(ctx->cache.categories, t);
 		free_set(ctx->cache.categories);
@@ -273,7 +276,7 @@ tree_close(tree_ctx *ctx)
 	else if (ctx->tree_fd >= 0)
 		close(ctx->tree_fd); /* closedir() above does this for us */
 	close(ctx->portroot_fd);
-	if (ctx->do_sort)
+	if (ctx->cat_de != NULL)
 		scandir_free(ctx->cat_de, ctx->cat_cnt);
 	if (ctx->repo != NULL)
 		free(ctx->repo);
@@ -388,6 +391,8 @@ tree_next_cat(tree_ctx *ctx)
 				struct dirent **ret;
 
 				/* exploit the cache instead of reading from directory */
+				if (ctx->cat_de != NULL)
+					scandir_free(ctx->cat_de, ctx->cat_cnt);
 				ctx->cat_cnt = cnt_set(ctx->cache.categories);
 				ctx->cat_de = ret = xmalloc(sizeof(*ret) * ctx->cat_cnt);
 				list_set(ctx->cache.categories, &cats);
@@ -2296,8 +2301,11 @@ tree_foreach_pkg_int
 	ctx->do_sort = false;
 
 	if (postsort) {
-		DECLARE_ARRAY(cats);
+		array_t cats_s;
+		array_t *cats = &cats_s;
 		size_t n;
+
+		VAL_CLEAR(cats_s);
 
 		/* should never happen, but perhaps a tree implementation
 		 * populated something, then don't leak it */

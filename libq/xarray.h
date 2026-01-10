@@ -30,9 +30,7 @@ typedef struct {
 #define array_for_each_rev(arr, n, ele) \
 	for (n = array_cnt(arr); n-- > 0 && (ele = (arr)->eles[n]); /*nothing*/)
 #define array_get_elem(arr, n) (arr->eles[n])
-#define array_init_decl { .eles = NULL, .num = 0, }
 #define array_cnt(arr) (arr)->num
-#define DECLARE_ARRAY(arr) array_t _##arr = array_init_decl, *arr = &_##arr
 #define xarraypush_str(arr, ele) xarraypush(arr, ele, strlen(ele) + 1 /*NUL*/)
 #define xarraypush_struct(arr, ele) xarraypush(arr, ele, sizeof(*(ele)))
 

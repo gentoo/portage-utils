@@ -632,9 +632,12 @@ int q_main(int argc, char **argv)
 						printf("%s\"%s\"%s", RED, *var->value.s, NORM);
 						break;
 					case _Q_ISET: {
-						DECLARE_ARRAY(vals);
+						array_t vals_s;
+						array_t *vals = &vals_s;
 						size_t n;
 						char  *val;
+
+						VAL_CLEAR(vals_s);
 
 						printf("%s\"", RED);
 						array_set(*var->value.t, vals);
@@ -669,9 +672,12 @@ int q_main(int argc, char **argv)
 						printf("%s%s%s", RED, *var->value.s, NORM);
 						break;
 					case _Q_ISET: {
-						DECLARE_ARRAY(vals);
+						array_t vals_s;
+						array_t *vals = &vals_s;
 						size_t n;
 						char  *val;
+
+						VAL_CLEAR(vals_s);
 
 						array_set(*var->value.t, vals);
 						array_for_each(vals, n, val) {
@@ -692,8 +698,10 @@ int q_main(int argc, char **argv)
 	}
 
 	if (print_masks) {
-		DECLARE_ARRAY(masks);
-		DECLARE_ARRAY(files);
+		array_t masks_s;
+		array_t files_s;
+		array_t *masks = &masks_s;
+		array_t *files = &files_s;
 		char *mask;
 		size_t n;
 		int j;
@@ -705,6 +713,9 @@ int q_main(int argc, char **argv)
 		size_t buflen = 0;
 		depend_atom *atom;
 		depend_atom *qatom;
+
+		VAL_CLEAR(masks_s);
+		VAL_CLEAR(files_s);
 
 		array_set(package_masks, masks);
 		values_set(package_masks, files);
