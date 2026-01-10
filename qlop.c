@@ -17,6 +17,7 @@
 #include <ctype.h>
 #include <limits.h>
 #include <sys/stat.h>
+#include <xalloc.h>
 
 #include "array.h"
 #include "atom.h"
