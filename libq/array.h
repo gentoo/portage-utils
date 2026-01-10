@@ -7,11 +7,10 @@
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
  */
 
-#ifndef _XARRAY_H
-#define _XARRAY_H 1
+#ifndef _ARRAY_H
+#define _ARRAY_H 1
 
-#include <stdlib.h>
-#include <xalloc.h>
+#include <string.h>  /* strlen in push_str */
 
 typedef struct {
 	void **eles;
