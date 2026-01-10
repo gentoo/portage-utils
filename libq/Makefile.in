@@ -297,16 +297,16 @@ am__v_AR_1 =
 libq_a_AR = $(AR) $(ARFLAGS)
 libq_a_RANLIB = $(RANLIB)
 libq_a_LIBADD =
-am__objects_1 = libq_a-atom.$(OBJEXT) libq_a-basename.$(OBJEXT) \
-	libq_a-colors.$(OBJEXT) libq_a-contents.$(OBJEXT) \
-	libq_a-copy_file.$(OBJEXT) libq_a-dep.$(OBJEXT) \
-	libq_a-eat_file.$(OBJEXT) libq_a-file_magic.$(OBJEXT) \
-	libq_a-hash.$(OBJEXT) libq_a-human_readable.$(OBJEXT) \
-	libq_a-move_file.$(OBJEXT) libq_a-prelink.$(OBJEXT) \
-	libq_a-profile.$(OBJEXT) libq_a-rmspace.$(OBJEXT) \
-	libq_a-safe_io.$(OBJEXT) libq_a-scandirat.$(OBJEXT) \
-	libq_a-set.$(OBJEXT) libq_a-tree.$(OBJEXT) \
-	libq_a-xarray.$(OBJEXT) libq_a-xchdir.$(OBJEXT) \
+am__objects_1 = libq_a-array.$(OBJEXT) libq_a-atom.$(OBJEXT) \
+	libq_a-basename.$(OBJEXT) libq_a-colors.$(OBJEXT) \
+	libq_a-contents.$(OBJEXT) libq_a-copy_file.$(OBJEXT) \
+	libq_a-dep.$(OBJEXT) libq_a-eat_file.$(OBJEXT) \
+	libq_a-file_magic.$(OBJEXT) libq_a-hash.$(OBJEXT) \
+	libq_a-human_readable.$(OBJEXT) libq_a-move_file.$(OBJEXT) \
+	libq_a-prelink.$(OBJEXT) libq_a-profile.$(OBJEXT) \
+	libq_a-rmspace.$(OBJEXT) libq_a-safe_io.$(OBJEXT) \
+	libq_a-scandirat.$(OBJEXT) libq_a-set.$(OBJEXT) \
+	libq_a-tree.$(OBJEXT) libq_a-xchdir.$(OBJEXT) \
 	libq_a-xmkdir.$(OBJEXT) libq_a-xpak.$(OBJEXT) \
 	libq_a-xregex.$(OBJEXT) libq_a-xsystem.$(OBJEXT)
 am_libq_a_OBJECTS = $(am__objects_1)
@@ -326,19 +326,20 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/libq_a-atom.Po \
-	./$(DEPDIR)/libq_a-basename.Po ./$(DEPDIR)/libq_a-colors.Po \
-	./$(DEPDIR)/libq_a-contents.Po ./$(DEPDIR)/libq_a-copy_file.Po \
-	./$(DEPDIR)/libq_a-dep.Po ./$(DEPDIR)/libq_a-eat_file.Po \
+am__depfiles_remade = ./$(DEPDIR)/libq_a-array.Po \
+	./$(DEPDIR)/libq_a-atom.Po ./$(DEPDIR)/libq_a-basename.Po \
+	./$(DEPDIR)/libq_a-colors.Po ./$(DEPDIR)/libq_a-contents.Po \
+	./$(DEPDIR)/libq_a-copy_file.Po ./$(DEPDIR)/libq_a-dep.Po \
+	./$(DEPDIR)/libq_a-eat_file.Po \
 	./$(DEPDIR)/libq_a-file_magic.Po ./$(DEPDIR)/libq_a-hash.Po \
 	./$(DEPDIR)/libq_a-human_readable.Po \
 	./$(DEPDIR)/libq_a-move_file.Po ./$(DEPDIR)/libq_a-prelink.Po \
 	./$(DEPDIR)/libq_a-profile.Po ./$(DEPDIR)/libq_a-rmspace.Po \
 	./$(DEPDIR)/libq_a-safe_io.Po ./$(DEPDIR)/libq_a-scandirat.Po \
 	./$(DEPDIR)/libq_a-set.Po ./$(DEPDIR)/libq_a-tree.Po \
-	./$(DEPDIR)/libq_a-xarray.Po ./$(DEPDIR)/libq_a-xchdir.Po \
-	./$(DEPDIR)/libq_a-xmkdir.Po ./$(DEPDIR)/libq_a-xpak.Po \
-	./$(DEPDIR)/libq_a-xregex.Po ./$(DEPDIR)/libq_a-xsystem.Po
+	./$(DEPDIR)/libq_a-xchdir.Po ./$(DEPDIR)/libq_a-xmkdir.Po \
+	./$(DEPDIR)/libq_a-xpak.Po ./$(DEPDIR)/libq_a-xregex.Po \
+	./$(DEPDIR)/libq_a-xsystem.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -2070,6 +2071,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 QFILES = \
+	array.c array.h \
 	atom.c atom.h \
 	basename.c basename.h \
 	busybox.h \
@@ -2090,7 +2092,6 @@ QFILES = \
 	scandirat.c scandirat.h \
 	set.c set.h \
 	tree.c tree.h \
-	xarray.c xarray.h \
 	xasprintf.h \
 	xchdir.c xchdir.h \
 	xmkdir.c xmkdir.h \
@@ -2156,6 +2157,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-array.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-atom.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-basename.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-colors.Po@am__quote@ # am--include-marker
@@ -2174,7 +2176,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-scandirat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-set.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-tree.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-xarray.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-xchdir.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-xmkdir.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libq_a-xpak.Po@am__quote@ # am--include-marker
@@ -2200,6 +2201,20 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+libq_a-array.o: array.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_a-array.o -MD -MP -MF $(DEPDIR)/libq_a-array.Tpo -c -o libq_a-array.o `test -f 'array.c' || echo '$(srcdir)/'`array.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_a-array.Tpo $(DEPDIR)/libq_a-array.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='array.c' object='libq_a-array.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_a-array.o `test -f 'array.c' || echo '$(srcdir)/'`array.c
+
+libq_a-array.obj: array.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_a-array.obj -MD -MP -MF $(DEPDIR)/libq_a-array.Tpo -c -o libq_a-array.obj `if test -f 'array.c'; then $(CYGPATH_W) 'array.c'; else $(CYGPATH_W) '$(srcdir)/array.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_a-array.Tpo $(DEPDIR)/libq_a-array.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='array.c' object='libq_a-array.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_a-array.obj `if test -f 'array.c'; then $(CYGPATH_W) 'array.c'; else $(CYGPATH_W) '$(srcdir)/array.c'; fi`
 
 libq_a-atom.o: atom.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_a-atom.o -MD -MP -MF $(DEPDIR)/libq_a-atom.Tpo -c -o libq_a-atom.o `test -f 'atom.c' || echo '$(srcdir)/'`atom.c
@@ -2453,20 +2468,6 @@ libq_a-tree.obj: tree.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_a-tree.obj `if test -f 'tree.c'; then $(CYGPATH_W) 'tree.c'; else $(CYGPATH_W) '$(srcdir)/tree.c'; fi`
 
-libq_a-xarray.o: xarray.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_a-xarray.o -MD -MP -MF $(DEPDIR)/libq_a-xarray.Tpo -c -o libq_a-xarray.o `test -f 'xarray.c' || echo '$(srcdir)/'`xarray.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_a-xarray.Tpo $(DEPDIR)/libq_a-xarray.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xarray.c' object='libq_a-xarray.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_a-xarray.o `test -f 'xarray.c' || echo '$(srcdir)/'`xarray.c
-
-libq_a-xarray.obj: xarray.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_a-xarray.obj -MD -MP -MF $(DEPDIR)/libq_a-xarray.Tpo -c -o libq_a-xarray.obj `if test -f 'xarray.c'; then $(CYGPATH_W) 'xarray.c'; else $(CYGPATH_W) '$(srcdir)/xarray.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_a-xarray.Tpo $(DEPDIR)/libq_a-xarray.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xarray.c' object='libq_a-xarray.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libq_a-xarray.obj `if test -f 'xarray.c'; then $(CYGPATH_W) 'xarray.c'; else $(CYGPATH_W) '$(srcdir)/xarray.c'; fi`
-
 libq_a-xchdir.o: xchdir.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libq_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libq_a-xchdir.o -MD -MP -MF $(DEPDIR)/libq_a-xchdir.Tpo -c -o libq_a-xchdir.o `test -f 'xchdir.c' || echo '$(srcdir)/'`xchdir.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libq_a-xchdir.Tpo $(DEPDIR)/libq_a-xchdir.Po
@@ -2661,6 +2662,7 @@ clean: clean-am
 clean-am: clean-generic clean-noinstLIBRARIES mostlyclean-am
 
 distclean: distclean-am
+	-rm -f ./$(DEPDIR)/libq_a-array.Po
 	-rm -f ./$(DEPDIR)/libq_a-atom.Po
 	-rm -f ./$(DEPDIR)/libq_a-basename.Po
 	-rm -f ./$(DEPDIR)/libq_a-colors.Po
@@ -2679,7 +2681,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/libq_a-scandirat.Po
 	-rm -f ./$(DEPDIR)/libq_a-set.Po
 	-rm -f ./$(DEPDIR)/libq_a-tree.Po
-	-rm -f ./$(DEPDIR)/libq_a-xarray.Po
 	-rm -f ./$(DEPDIR)/libq_a-xchdir.Po
 	-rm -f ./$(DEPDIR)/libq_a-xmkdir.Po
 	-rm -f ./$(DEPDIR)/libq_a-xpak.Po
@@ -2730,6 +2731,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
+	-rm -f ./$(DEPDIR)/libq_a-array.Po
 	-rm -f ./$(DEPDIR)/libq_a-atom.Po
 	-rm -f ./$(DEPDIR)/libq_a-basename.Po
 	-rm -f ./$(DEPDIR)/libq_a-colors.Po
@@ -2748,7 +2750,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/libq_a-scandirat.Po
 	-rm -f ./$(DEPDIR)/libq_a-set.Po
 	-rm -f ./$(DEPDIR)/libq_a-tree.Po
-	-rm -f ./$(DEPDIR)/libq_a-xarray.Po
 	-rm -f ./$(DEPDIR)/libq_a-xchdir.Po
 	-rm -f ./$(DEPDIR)/libq_a-xmkdir.Po
 	-rm -f ./$(DEPDIR)/libq_a-xpak.Po
