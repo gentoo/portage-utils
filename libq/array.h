@@ -14,6 +14,7 @@
 
 typedef struct array_t array;
 typedef void (array_free_cb)(void *priv);
+typedef int (array_compar_cb)(const void *l, const void *r);
 
 array *array_new(void);
 void   array_free(array *arr);
@@ -24,20 +25,22 @@ void  *array_remove(array *arr, size_t elem);
 void   array_delete(array *arr, size_t elem, array_free_cb *func);
 size_t array_cnt(array *arr);
 void  *array_get(array *arr, size_t elem);
-void   array_sort(array *arr, int (*compar)(const void *, const void *));
-void  *array_binsearch(array *arr, void *needle, int (*compar)(const void *, const void *), size_t *retoff);
+void   array_sort(array *arr, array_compar_cb *func);
+void  *array_binsearch(array *arr, void *needle, array_compar_cb *func, size_t *retoff);
 
 #define array_append_strcpy(A,S) array_append_copy(A,S,strlen(S)+1/*NUL*/)
 
 #define array_for_each(arr, n, ele) \
-	for (n = 0, ele = NULL; \
-		 (n < array_cnt(arr) && \
-		  (ele = array_get(arr, n))); \
-		 n++)
+  for (n = 0, ele = NULL; \
+       (n < array_cnt(arr) && \
+        (ele = array_get(arr, n))); \
+       n++)
 #define array_for_each_rev(arr, n, ele) \
-	for (n = array_cnt(arr), ele = NULL; \
-		 (n-- > 0 && \
-		  (ele = array_get(arr, n))); \
-		 /*nothing*/)
+  for (n = array_cnt(arr), ele = NULL; \
+       (n-- > 0 && \
+        (ele = array_get(arr, n))); \
+       /*nothing*/)
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
