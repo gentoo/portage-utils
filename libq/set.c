@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2023 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -288,9 +288,6 @@ array_set(set *q, array_t *ret)
 {
 	int i;
 	set_elem *w;
-	array_t blank = array_init_decl;
-
-	*ret = blank;
 
 	/* allow using empty set */
 	if (q == NULL)
@@ -309,9 +306,6 @@ values_set(set *q, array_t *ret)
 {
 	int i;
 	set_elem *w;
-	array_t blank = array_init_decl;
-
-	*ret = blank;
 
 	/* allow using empty set */
 	if (q == NULL)

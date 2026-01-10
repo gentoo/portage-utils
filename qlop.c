@@ -517,12 +517,12 @@ static int do_emerge_log(
 				 * "valid" one, such that dummy emerge calls (e.g.
 				 * emerge -pv foo) are ignored */
 				if (last_merge != tstart_emerge) {
-					array_t vals;
+					DECLARE_ARRAY(vals);
 
-					values_set(atomset, &vals);
-					array_for_each(&vals, i, atomw)
+					values_set(atomset, vals);
+					array_for_each(vals, i, atomw)
 						atom_implode(atomw);
-					xarrayfree_int(&vals);
+					xarrayfree_int(vals);
 
 					clear_set(atomset);
 					last_merge = tstart_emerge;
