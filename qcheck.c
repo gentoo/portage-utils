@@ -14,6 +14,7 @@
 #include <inttypes.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <xalloc.h>
 
 #include "array.h"
 #include "atom.h"
