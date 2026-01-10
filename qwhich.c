@@ -71,10 +71,8 @@ struct qwhich_mode {
 int qwhich_main(int argc, char **argv)
 {
 	depend_atom *atom;
-	array_t atoms_s;
-	array_t trees_s;
-	array_t *atoms = &atoms_s;
-	array_t *trees = &trees_s;
+	array *atoms = array_new();
+	array *trees = array_new();
 	struct qwhich_mode m;
 	struct tree_match_ctx *tmc;
 	struct tree_match_ctx *tmcw;
@@ -90,8 +88,6 @@ int qwhich_main(int argc, char **argv)
 	const char *ext;
 
 	VAL_CLEAR(m);
-	VAL_CLEAR(atoms_s);
-	VAL_CLEAR(trees_s);
 
 	while ((ret = GETOPT_LONG(QWHICH, qwhich, "")) != -1) {
 		switch (ret) {

@@ -230,7 +230,7 @@ dep_print_tree(
 		FILE *fp,
 		const dep_node *root,
 		size_t space,
-		array_t *hlatoms,
+		array *hlatoms,
 		const char *hlcolor,
 		int verbose)
 {
@@ -377,7 +377,7 @@ dep_resolve_tree(dep_node *root, tree_ctx *t)
 }
 
 void
-dep_flatten_tree(dep_node *root, array_t *out)
+dep_flatten_tree(dep_node *root, array *out)
 {
 	if (root->type != DEP_NULL) {
 		if (root->type == DEP_NORM) {

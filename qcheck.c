@@ -59,8 +59,8 @@ static const char * const qcheck_opts_help[] = {
 #define qcprintf(fmt, args...) do { if (!state->bad_only) printf(fmt, ## args); } while (0)
 
 struct qcheck_opt_state {
-	array_t *atoms;
-	array_t *regex_arr;
+	array *atoms;
+	array *regex_arr;
 	bool bad_only;
 	bool qc_update;
 	bool chk_afk;
@@ -431,11 +431,9 @@ int qcheck_main(int argc, char **argv)
 	int ret;
 	tree_ctx *vdb;
 	depend_atom *atom;
-	array_t regex_arr;
-	array_t atoms;
 	struct qcheck_opt_state state = {
-		.atoms = &atoms,
-		.regex_arr = &regex_arr,
+		.atoms = array_new(),
+		.regex_arr = array_new(),
 		.bad_only = false,
 		.qc_update = false,
 		.chk_afk = true,
@@ -445,9 +443,6 @@ int qcheck_main(int argc, char **argv)
 		.undo_prelink = false,
 		.fmt = NULL,
 	};
-
-	VAL_CLEAR(regex_arr);
-	VAL_CLEAR(atoms);
 
 	while ((ret = GETOPT_LONG(QCHECK, qcheck, "")) != -1) {
 		switch (ret) {

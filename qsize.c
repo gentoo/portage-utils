@@ -81,7 +81,7 @@ static const char * const qsize_opts_help[] = {
 #define qsize_usage(ret) usage(ret, QSIZE_FLAGS, qsize_long_opts, qsize_opts_help, NULL, lookup_applet_idx("qsize"))
 
 struct qsize_opt_state {
-	array_t *atoms;
+	array *atoms;
 	char **argv;
 	char search_all;
 	char fs_size;
@@ -89,7 +89,7 @@ struct qsize_opt_state {
 	char summary_only;
 	size_t disp_units;
 	const char *str_disp_units;
-	array_t *ignore_regexp;
+	array *ignore_regexp;
 	const char *fmt;
 	bool need_full_atom:1;
 
@@ -189,18 +189,16 @@ int qsize_main(int argc, char **argv)
 	size_t i;
 	int ret;
 	tree_ctx *vdb;
-	array_t ignore_regexp;
-	array_t atoms;
 	depend_atom *atom;
 	struct qsize_opt_state state = {
-		.atoms = &atoms,
+		.atoms = array_new(),
 		.search_all = 0,
 		.fs_size = 0,
 		.summary = 0,
 		.summary_only = 0,
 		.disp_units = 0,
 		.str_disp_units = NULL,
-		.ignore_regexp = &ignore_regexp,
+		.ignore_regexp = array_new(),
 		.uniq_files = create_set(),
 		.num_all_files = 0,
 		.num_all_nonfiles = 0,
@@ -209,9 +207,6 @@ int qsize_main(int argc, char **argv)
 		.need_full_atom = false,
 		.fmt = NULL,
 	};
-
-	VAL_CLEAR(ignore_regexp);
-	VAL_CLEAR(atoms);
 
 	while ((ret = GETOPT_LONG(QSIZE, qsize, "")) != -1) {
 		switch (ret) {

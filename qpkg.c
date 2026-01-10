@@ -78,8 +78,7 @@ qpkg_clean(qpkg_cb_args *args)
 	uint64_t num_all_bytes = 0;
 	set *known_pkgs = NULL;
 	set *bin_pkgs = NULL;
-	array_t bins_s;
-	array_t *bins = &bins_s;
+	array *bins = array_new();
 	tree_ctx *t;
 	tree_ctx *pkgs;
 	char *binatomstr;
@@ -89,8 +88,6 @@ qpkg_clean(qpkg_cb_args *args)
 	pkgs = args->binpkg;
 	if (pkgs == NULL)
 		return 1;
-
-	VAL_CLEAR(bins_s);
 
 	bin_pkgs = tree_get_atoms(pkgs, true, bin_pkgs);
 	if (bin_pkgs == NULL)

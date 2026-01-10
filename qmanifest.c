@@ -1775,8 +1775,16 @@ qmanifest_main(int argc, char **argv)
 				repolen = 0;
 				snprintf(path, sizeof(path), "%s/profiles/repo_name", overlay);
 				if (eat_file(path, &repo, &repolen)) {
-					free(array_get_elem(overlays, n));
-					array_get_elem(overlays, n) = repo;
+					void *name;
+					void *src;
+
+					array_delete(overlays, n, NULL);
+					name = array_remove(overlay_names, n);
+					src  = array_remove(overlay_src, n);
+
+					array_append(overlays,      repo);
+					array_append(overlay_names, name);
+					array_append(overlay_src,   src);
 				} else {
 					free(repo);
 				}

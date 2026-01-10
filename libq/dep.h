@@ -47,10 +47,10 @@ typedef struct _dep_node dep_node;
 #endif
 
 dep_node *dep_grow_tree(const char *depend);
-void dep_print_tree(FILE *fp, const dep_node *root, size_t space, array_t *m, const char *c, int verbose);
+void dep_print_tree(FILE *fp, const dep_node *root, size_t space, array *m, const char *c, int verbose);
 void dep_resolve_tree(dep_node *root, tree_ctx *t);
 void dep_burn_tree(dep_node *root);
 void dep_prune_use(dep_node *root, set *use);
-void dep_flatten_tree(dep_node *root, array_t *out);
+void dep_flatten_tree(dep_node *root, array *out);
 
 #endif

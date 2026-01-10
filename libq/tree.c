@@ -246,12 +246,9 @@ void
 tree_close(tree_ctx *ctx)
 {
 	if (ctx->cache.categories != NULL) {
-		array_t t_s;
-		array_t *t = &t_s;
+		array *t = array_new();
 		size_t n;
 		tree_cat_ctx *cat;
-
-		VAL_CLEAR(t_s);
 
 		values_set(ctx->cache.categories, t);
 		free_set(ctx->cache.categories);
@@ -2301,11 +2298,8 @@ tree_foreach_pkg_int
 	ctx->do_sort = false;
 
 	if (postsort) {
-		array_t cats_s;
-		array_t *cats = &cats_s;
+		array *cats = array_new();
 		size_t n;
-
-		VAL_CLEAR(cats_s);
 
 		/* should never happen, but perhaps a tree implementation
 		 * populated something, then don't leak it */

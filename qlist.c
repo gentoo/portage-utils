@@ -251,14 +251,11 @@ qlist_match(
 	}
 
 	if (applymasks) {
-		array_t masks_s;
-		array_t *masks = &masks_s;
+		array *masks = array_new();
 		depend_atom *matom;
 		char *mask;
 		size_t n;
 		bool match = false;
-
-		VAL_CLEAR(masks_s);
 
 		array_set(package_masks, masks);
 

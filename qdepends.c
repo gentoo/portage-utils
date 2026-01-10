@@ -58,8 +58,7 @@ static const char * const qdepends_opts_help[] = {
 /* structures / types / etc ... */
 struct qdepends_opt_state {
 	unsigned int  qmode;
-	array_t      *atoms;
-	array_t      *deps;
+	array        *atoms;
 	set          *udeps;
 	char         *depend;
 	size_t        depend_len;
@@ -119,6 +118,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	depend_atom *atom;
 	depend_atom *datom;
 	depend_atom *fatom;
+	array *deps;
 	bool firstmatch = false;
 	char buf[_Q_PATH_MAX];
 	const char **dfile;
@@ -165,7 +165,6 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		printf("%s:", atom_format(state->format, datom));
 	}
 
-	xarrayfree_int(state->deps);
 	clear_set(state->udeps);
 
 #define get_depstr(X) \
@@ -193,6 +192,8 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		if (state->resolve)
 			dep_resolve_tree(dep_tree, state->rtree);
 
+		deps = array_new();
+
 		if (state->qmode & QMODE_TREE &&
 			!(state->qmode & QMODE_REVERSE) &&
 			verbose)
@@ -208,7 +209,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					if (depstr != NULL) {
 						dep_node *dep_vdb = dep_grow_tree(depstr);
 						if (dep_vdb != NULL) {
-							dep_flatten_tree(dep_vdb, state->deps);
+							dep_flatten_tree(dep_vdb, deps);
 							dep_burn_tree(dep_vdb);
 						} else {
 							warn("failed to parse VDB depstring from %s\n",
@@ -222,12 +223,12 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		} else {
 			if (state->qmode & QMODE_FILTERUSE)
 				dep_prune_use(dep_tree, ev_use);
-			dep_flatten_tree(dep_tree, state->deps);
+			dep_flatten_tree(dep_tree, deps);
 		}
 
 		if (verbose) {
 			if (state->qmode & QMODE_REVERSE) {
-				array_for_each(state->deps, m, atom) {
+				array_for_each(deps, m, atom) {
 					array_for_each(state->atoms, n, fatom) {
 						if (atom_compare(atom, fatom) == EQUAL) {
 							fatom = NULL;
@@ -255,13 +256,13 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				}
 			} else {
 				printf("\n%s=\"\n", *dfile);
-				dep_print_tree(stdout, dep_tree, 1, state->deps,
+				dep_print_tree(stdout, dep_tree, 1, deps,
 						GREEN, verbose > 1);
 				printf("\"");
 			}
 		} else {
 			if (state->qmode & QMODE_REVERSE) {
-				array_for_each(state->deps, m, atom) {
+				array_for_each(deps, m, atom) {
 					array_for_each(state->atoms, n, fatom) {
 						if (atom_compare(atom, fatom) == EQUAL) {
 							fatom = NULL;
@@ -289,15 +290,13 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					}
 				}
 			} else {
-				array_for_each(state->deps, m, atom)
+				array_for_each(deps, m, atom)
 					state->udeps = add_set_unique(atom_to_string(atom),
 												  state->udeps, NULL);
 			}
 		}
 
-		array_for_each(state->deps, m, atom)
-			atom_implode(atom);
-		xarrayfree_int(state->deps);
+		array_deepfree(deps, (array_free_cb *)atom_implode);
 		dep_burn_tree(dep_tree);
 	}
 	if (verbose && ret == 1)
@@ -320,11 +319,8 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 int qdepends_main(int argc, char **argv)
 {
 	depend_atom *atom;
-	array_t atoms;
-	array_t deps;
 	struct qdepends_opt_state state = {
-		.atoms   = &atoms,
-		.deps    = &deps,
+		.atoms   = array_new(),
 		.udeps   = create_set(),
 		.qmode   = 0,
 		.format  = "%[CATEGORY]%[PF]",
@@ -335,9 +331,6 @@ int qdepends_main(int argc, char **argv)
 	size_t i;
 	int ret;
 	bool do_pretty = false;
-
-	VAL_CLEAR(atoms);
-	VAL_CLEAR(deps);
 
 	if (quiet)
 		state.format = "%[CATEGORY]%[PN]";
@@ -382,6 +375,7 @@ int qdepends_main(int argc, char **argv)
 
 	if ((argc == optind) && !do_pretty) {
 		free_set(state.udeps);
+		array_free(state.atoms);
 		qdepends_usage(EXIT_FAILURE);
 	}
 
@@ -395,6 +389,7 @@ int qdepends_main(int argc, char **argv)
 			if (optind < argc)
 				fprintf(stdout, "\n");
 		}
+		array_free(state.atoms);
 		free_set(state.udeps);
 		return ret;
 	}
@@ -461,10 +456,7 @@ int qdepends_main(int argc, char **argv)
 	if (state.depend != NULL)
 		free(state.depend);
 
-	array_for_each(state.atoms, i, atom)
-		atom_implode(atom);
-	xarrayfree_int(state.atoms);
-	xarrayfree_int(state.deps);
+	array_deepfree(state.atoms, (array_free_cb *)atom_implode);
 	free_set(state.udeps);
 
 	if (!ret)

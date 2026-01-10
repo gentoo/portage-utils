@@ -46,9 +46,9 @@ set  *features;
 set  *ev_use;
 char *install_mask;
 char *binpkg_format;
-array_t *overlays;
-array_t *overlay_names;
-array_t *overlay_src;
+array *overlays;
+array *overlay_names;
+array *overlay_src;
 
 static char *portedb;
 static char *eprefix;
@@ -935,16 +935,18 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 			}
 			if (overlay != NULL) {
 				/* replace overlay */
-				ele = array_get_elem(overlay_src, n);
-				free(ele);
-				array_get_elem(overlay_src, n) = xstrdup(repos_conf);
-				ele = array_get_elem(overlays, n);
-				free(ele);
-				ele = array_get_elem(overlays, n) = xstrdup(e);
+				array_delete(overlay_src, n, NULL);
+				array_append_strcpy(overlay_src, repos_conf);
+
+				ele = array_remove(overlay_names, n);
+				array_append(overlay_names, ele);
+
+				array_delete(overlays, n, NULL);
+				ele = array_append_strcpy(overlays, e);
 			} else {
-				ele = xarraypush_str(overlays, e);
-				overlay = xarraypush_str(overlay_names, repo);
-				xarraypush_str(overlay_src, repos_conf);
+				ele     = array_append_strcpy(overlays, e);
+				overlay = array_append_strcpy(overlay_names, repo);
+				array_append_strcpy(overlay_src, repos_conf);
 			}
 			if (main_repo && strcmp(repo, main_repo) == 0)
 				*primary = overlay;
@@ -1044,7 +1046,7 @@ initialize_portage_env(void)
 		array_for_each(overlay_names, n, overlay) {
 			if (overlay == primary_overlay) {
 				snprintf(pathbuf, sizeof(pathbuf), "%s/profiles/package.mask",
-						(char *)array_get_elem(overlays, n));
+						(char *)array_get(overlays, n));
 				read_portage_file(pathbuf + 1, PMASK_FILE, package_masks);
 				break;
 			}
@@ -1195,10 +1197,10 @@ initialize_portage_env(void)
 			if (overlay == NULL)
 				i = 0;
 		}
-		main_overlay = array_get_elem(overlays, i);
+		main_overlay = array_get(overlays, i);
 		/* set source for PORTDIR var */
 		free(var->src);
-		var->src = xstrdup((char *)array_get_elem(overlay_src, i));
+		var->src = xstrdup((char *)array_get(overlay_src, i));
 	}
 
 	/* Make sure ROOT always ends in a slash */
@@ -1221,12 +1223,9 @@ initialize_portage_env(void)
 					fprintf(stderr, "%s = %s\n", var->name, *var->value.s);
 					break;
 				case _Q_ISET: {
-					array_t vals_s;
-					array_t *vals = &vals_s;
+					array *vals = array_new();
 					size_t n;
 					char  *val;
-
-					VAL_CLEAR(vals_s);
 
 					fprintf(stderr, "%s = ", var->name);
 					array_set(*var->value.t, vals);
@@ -1254,9 +1253,6 @@ int main(int argc, char **argv)
 	struct stat st;
 	struct winsize winsz;
 	int i;
-	array_t overlays_s;
-	array_t overlay_names_s;
-	array_t overlay_src_s;
 
 	warnout = stderr;
 	IF_DEBUG(init_coredumps());
@@ -1265,12 +1261,9 @@ int main(int argc, char **argv)
 	/* ensure any err/warn doesn't use unitialised vars */
 	color_clear();
 
-	VAL_CLEAR(overlays_s);
-	VAL_CLEAR(overlay_names_s);
-	VAL_CLEAR(overlay_src_s);
-	overlays      = &overlays_s;
-	overlay_names = &overlay_names_s;
-	overlay_src   = &overlay_src_s;
+	overlays      = array_new();
+	overlay_names = array_new();
+	overlay_src   = array_new();
 
 	/* initialise all the properties with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {

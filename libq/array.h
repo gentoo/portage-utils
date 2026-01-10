@@ -12,34 +12,43 @@
 
 #include <string.h>  /* strlen in push_str */
 
-typedef struct {
-	void **eles;
-	size_t num;
-	size_t len;
-} array_t;
+#define xarrayget(A,I) array_get(A,I)
+#define xarraypush_ptr(A,E) array_append(A,E)
+#define xarraypush(A,E,L) array_append_copy(A,E,L)
+#define xarraypush_str(A,S) array_append_copy(A,S,strlen(S)+1/*NUL*/)
+#define xarraysort(A,C) array_sort(A,C)
+#define xarraydelete_ptr(A,E) array_remove(A,E)
+#define xarraydelete(A,E) array_delete(A,E,NULL)
+#define xarrayfree_int(A) array_free(A)
+#define xarrayfree(A) array_deepfree(A,NULL)
 
-#define xrealloc_array(ptr, size, ele_size) xrealloc(ptr, (size) * (ele_size))
-/* The assignment after the check is unfortunate as we do a non-NULL check (we
- * already do not permit pushing of NULL pointers), but we can't put it in the
- * increment phase as that will cause a load beyond the bounds of valid memory.
- */
-/* TODO: remove ele = NULL after checking all consumers don't rely on this */
+/* new 2026 interface to array */
+typedef struct array_t array;
+typedef void (array_free_cb)(void *priv);
+
+array *array_new(void);
+void   array_free(array *arr);
+void   array_deepfree(array *arr, array_free_cb *func);
+void  *array_append(array *arr, void *data);
+void  *array_append_copy(array *arr, const void *data, size_t len);
+void  *array_remove(array *arr, size_t elem);
+void   array_delete(array *arr, size_t elem, array_free_cb *func);
+size_t array_cnt(array *arr);
+void  *array_get(array *arr, size_t elem);
+void   array_sort(array *arr, int (*compar)(const void *, const void *));
+void  *array_binsearch(array *arr, void *needle, int (*compar)(const void *, const void *), size_t *retoff);
+
+#define array_append_strcpy(A,S) array_append_copy(A,S,strlen(S)+1/*NUL*/)
+
 #define array_for_each(arr, n, ele) \
-	for (n = 0, ele = NULL; n < array_cnt(arr) && (ele = (arr)->eles[n]); n++)
+	for (n = 0, ele = NULL; \
+		 (n < array_cnt(arr) && \
+		  (ele = array_get(arr, n))); \
+		 n++)
 #define array_for_each_rev(arr, n, ele) \
-	for (n = array_cnt(arr); n-- > 0 && (ele = (arr)->eles[n]); /*nothing*/)
-#define array_get_elem(arr, n) (arr->eles[n])
-#define array_cnt(arr) (arr)->num
-#define xarraypush_str(arr, ele) xarraypush(arr, ele, strlen(ele) + 1 /*NUL*/)
-#define xarraypush_struct(arr, ele) xarraypush(arr, ele, sizeof(*(ele)))
-
-void *xarrayget(array_t *arr, size_t idx);
-void *xarraypush_ptr(array_t *arr, void *ele);
-void *xarraypush(array_t *arr, const void *ele, size_t ele_len);
-void xarraysort(array_t *arr, int (*compar)(const void *, const void *));
-void xarraydelete_ptr(array_t *arr, size_t elem);
-void xarraydelete(array_t *arr, size_t elem);
-void xarrayfree_int(array_t *arr);
-void xarrayfree(array_t *arr);
+	for (n = array_cnt(arr), ele = NULL; \
+		 (n-- > 0 && \
+		  (ele = array_get(arr, n))); \
+		 /*nothing*/)
 
 #endif

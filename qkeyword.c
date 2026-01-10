@@ -235,7 +235,7 @@ qkeyword_kw(tree_pkg_ctx *pkg_ctx, void *priv, int what)
 {
 	qkeyword_data *data = (qkeyword_data *)priv;
 	depend_atom *atom;
-	array_t *masks;
+	array *masks;
 
 	if (data->keywordsbuf[qkeyword_test_arch] == what)
 	{
@@ -898,23 +898,21 @@ int qkeyword_main(int argc, char **argv)
 
 	/* prepare masks for easy(er) matching by key-ing on CAT/PN */
 	{
-		array_t masks_s;
-		array_t *masks;
-		array_t *bucket;
-		array_t *ebuck;
+		array *masks;
+		array *bucket;
+		array *ebuck;
 		size_t n;
 		char *mask;
 		depend_atom *atom;
 
-		VAL_CLEAR(masks_s);
-		masks  = &masks_s;
+		masks  = array_new();
 		pmasks = create_set();
 
 		array_set(package_masks, masks);
 		array_for_each(masks, n, mask) {
 			if ((atom = atom_explode(mask)) == NULL)
 				continue;
-			bucket = xzalloc(sizeof(array_t));
+			bucket = array_new();
 			xarraypush_ptr(bucket, atom);
 			pmasks = add_set_value(atom_format("%[CAT]%[PN]", atom),
 								   bucket, (void **)&ebuck, pmasks);

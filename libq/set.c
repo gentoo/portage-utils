@@ -16,6 +16,7 @@
 #include <xalloc.h>
 
 #include "set.h"
+#include "array.h"
 
 static unsigned int
 fnv1a32(const char *s)
@@ -284,7 +285,7 @@ list_set(set *q, char ***l)
 }
 
 size_t
-array_set(set *q, array_t *ret)
+array_set(set *q, array *ret)
 {
 	int i;
 	set_elem *w;
@@ -302,7 +303,7 @@ array_set(set *q, array_t *ret)
 }
 
 size_t
-values_set(set *q, array_t *ret)
+values_set(set *q, array *ret)
 {
 	int i;
 	set_elem *w;

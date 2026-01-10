@@ -11,10 +11,10 @@
 
 #include "array.h"
 
-typedef struct elem_t set_elem;
+typedef struct setelem_t set_elem;
 typedef struct set_t set;
 
-struct elem_t {
+struct setelem_t {
 	char *name;
 	unsigned int hash;  /* FNV1a32 */
 	void *val;
@@ -35,8 +35,8 @@ const char *contains_set(const char *name, set *q);
 void *get_set(const char *name, set *q);
 void *del_set(const char *s, set *q, bool *removed);
 size_t list_set(set *q, char ***l);
-size_t array_set(set *q, array_t *ret);
-size_t values_set(set *q, array_t *ret);
+size_t array_set(set *q, array *ret);
+size_t values_set(set *q, array *ret);
 size_t cnt_set(set *q);
 void free_set(set *q);
 void clear_set(set *q);

@@ -415,7 +415,7 @@ deal with e.g. merging python-3.6 with 3.9 installed as well.
 static int do_emerge_log(
 		const char *log,
 		struct qlop_mode *flags,
-		array_t *atoms,
+		array *atoms,
 		time_t tbegin,
 		time_t tend)
 {
@@ -435,10 +435,8 @@ static int do_emerge_log(
 	depend_atom *atom;
 	depend_atom *atomw;
 	depend_atom *upgrade_atom = NULL;
-	array_t merge_matches_s;
-	array_t unmerge_matches_s;
-	array_t *merge_matches = &merge_matches_s;
-	array_t *unmerge_matches = &unmerge_matches_s;
+	array *merge_matches = array_new();
+	array *unmerge_matches = array_new();
 	set *merge_averages = create_set();
 	set *unmerge_averages = create_set();
 	set *atomset = NULL;
@@ -450,9 +448,6 @@ static int do_emerge_log(
 	struct pkg_match *pkg;
 	struct pkg_match *pkgw;
 #define strpfx(X, Y)  strncmp(X, Y, sizeof(Y) - 1)
-
-	VAL_CLEAR(merge_matches_s);
-	VAL_CLEAR(unmerge_matches_s);
 
 	/* support relative path in here and now, when using ROOT, stick to
 	 * it, turning relative into a moot point */
@@ -523,10 +518,7 @@ static int do_emerge_log(
 				 * "valid" one, such that dummy emerge calls (e.g.
 				 * emerge -pv foo) are ignored */
 				if (last_merge != tstart_emerge) {
-					array_t vals_s;
-					array_t *vals = &vals_s;
-
-					VAL_CLEAR(vals_s);
+					array *vals = array_new();
 
 					values_set(atomset, vals);
 					array_for_each(vals, i, atomw)
@@ -595,15 +587,15 @@ static int do_emerge_log(
 				sync_start = 0;
 				while ((i = array_cnt(merge_matches)) > 0) {
 					i--;
-					pkgw = xarrayget(merge_matches, i);
+					pkgw = array_remove(merge_matches, i);
 					atom_implode(pkgw->atom);
-					xarraydelete(merge_matches, i);
+					free(pkgw);
 				}
 				while ((i = array_cnt(unmerge_matches)) > 0) {
 					i--;
-					pkgw = xarrayget(unmerge_matches, i);
+					pkgw = array_remove(unmerge_matches, i);
 					atom_implode(pkgw->atom);
-					xarraydelete(unmerge_matches, i);
+					free(pkgw);
 				}
 			}
 		}
@@ -1185,10 +1177,7 @@ static int do_emerge_log(
 		size_t total_merges = 0;
 		size_t total_unmerges = 0;
 		time_t total_time = (time_t)0;
-		array_t avgs_s;
-		array_t *avgs = &avgs_s;
-
-		VAL_CLEAR(avgs_s);
+		array *avgs = array_new();
 
 		values_set(merge_averages, avgs);
 		xarraysort(avgs, pkg_sort_cb);
@@ -1202,6 +1191,7 @@ static int do_emerge_log(
 		}
 		xarrayfree_int(avgs);
 
+		avgs = array_new();
 		values_set(unmerge_averages, avgs);
 		xarraysort(avgs, pkg_sort_cb);
 		array_for_each(avgs, i, pkg) {
@@ -1239,14 +1229,11 @@ static int do_emerge_log(
 			printf("\n");
 		}
 	} else if (flags->do_predict) {
-		array_t avgs_s;
-		array_t *avgs = &avgs_s;
+		array *avgs = array_new();
 		enum { P_INIT = 0, P_SREV, P_SRCH } pkgstate;
 		size_t j;
 		time_t ptime;
 		char found;
-
-		VAL_CLEAR(avgs_s);
 
 		values_set(merge_averages, avgs);
 		xarraysort(avgs, pkg_sort_cb);
@@ -1355,10 +1342,7 @@ static int do_emerge_log(
 	}
 
 	{
-		array_t t_s;
-		array_t *t = &t_s;
-
-		VAL_CLEAR(t_s);
+		array *t = array_new();
 
 		values_set(merge_averages, t);
 		array_for_each(t, i, pkgw) {
@@ -1366,6 +1350,7 @@ static int do_emerge_log(
 			free(pkgw);
 		}
 		xarrayfree_int(t);
+		t = array_new();
 		values_set(unmerge_averages, t);
 		array_for_each(t, i, pkgw) {
 			atom_implode(pkgw->atom);
@@ -1386,10 +1371,7 @@ static int do_emerge_log(
 	}
 	xarrayfree(unmerge_matches);
 	if (atomset != NULL) {
-		array_t t_s;
-		array_t *t = &t_s;
-
-		VAL_CLEAR(t_s);
+		array *t = array_new();
 
 		values_set(atomset, t);
 		array_for_each(t, i, atom)
@@ -1402,7 +1384,7 @@ static int do_emerge_log(
 
 /* scan through /proc for running merges, this requires portage user
  * or root */
-static array_t *probe_proc(array_t *atoms)
+static array *probe_proc(array *atoms)
 {
 	struct dirent **procs = NULL;
 	int procslen;
@@ -1418,13 +1400,10 @@ static array_t *probe_proc(array_t *atoms)
 	ssize_t rpathlen;
 	char *p;
 	depend_atom *atom;
-	array_t ret_atoms_s;
-	array_t *ret_atoms = &ret_atoms_s;
+	array *ret_atoms = array_new();
 	size_t i;
 	char *cmdline = NULL;
 	size_t cmdlinesize = 0;
-
-	VAL_CLEAR(ret_atoms_s);
 
 	/* /proc/<pid>/path/<[0-9]+link>
 	 * /proc/<pid>/fd/<[0-9]+link> */
@@ -1608,11 +1587,8 @@ int qlop_main(int argc, char **argv)
 	char *p;
 	char *q;
 	depend_atom *atom;
-	array_t atoms_s;
-	array_t *atoms = &atoms_s;
+	array *atoms = array_new();
 	int runningmode = 0;
-
-	VAL_CLEAR(atoms_s);
 
 	start_time = -1;
 	end_time = -1;
@@ -1806,7 +1782,7 @@ int qlop_main(int argc, char **argv)
 		end_time = LONG_MAX;
 
 	if (m.do_running) {
-		array_t *new_atoms = NULL;
+		array *new_atoms = NULL;
 
 		if (runningmode > 1) {
 			warn("running without /proc scanning, heuristics only");
