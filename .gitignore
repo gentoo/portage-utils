@@ -34,27 +34,27 @@ Makefile
 /tests/qmanifest/root/.gnupg/random_seed
 /man/*.1
 
-/*.old.c
-/q
-/qatom
-/qcheck
-/qdepends
-/qfile
-/qglsa
-/qgrep
-/qkeyword
-/qlist
-/qlop
-/qmanifest
-/qmerge
-/qpkg
-/qsearch
-/qsize
-/qtbz2
-/qtegrity
-/quse
-/qwhich
-/qxpak
+# ignore the binary and symlinks produced by q -i
+q
+qatom
+qcheck
+qdepends
+qfile
+qglsa
+qgrep
+qkeyword
+qlist
+qlop
+qmanifest
+qmerge
+qpkg
+qsearch
+qsize
+qtbz2
+qtegrity
+quse
+qwhich
+qxpak
 
 # BEGIN GNULIB
 # regenerate using:
