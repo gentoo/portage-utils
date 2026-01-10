@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 Gentoo Foundation
+ * Copyright 2018-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <xalloc.h>
 #include <zlib.h>
 #include <gpgme.h>
 
