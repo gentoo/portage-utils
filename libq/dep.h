@@ -1,16 +1,16 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
 #ifndef _DEP_H
 #define _DEP_H 1
 
+#include "array.h"
 #include "atom.h"
 #include "colors.h"
 #include "set.h"
 #include "tree.h"
-#include "xarray.h"
 
 typedef enum {
 	DEP_NULL = 0,

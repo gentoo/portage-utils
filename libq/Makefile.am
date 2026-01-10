@@ -1,5 +1,6 @@
 
 QFILES = \
+	array.c array.h \
 	atom.c atom.h \
 	basename.c basename.h \
 	busybox.h \
@@ -20,7 +21,6 @@ QFILES = \
 	scandirat.c scandirat.h \
 	set.c set.h \
 	tree.c tree.h \
-	xarray.c xarray.h \
 	xasprintf.h \
 	xchdir.c xchdir.h \
 	xmkdir.c xmkdir.h \

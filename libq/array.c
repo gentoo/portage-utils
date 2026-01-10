@@ -13,7 +13,7 @@
 #include <string.h>
 #include <xalloc.h>
 
-#include "xarray.h"
+#include "array.h"
 
 #define ARRAY_INC_SIZE 32
 

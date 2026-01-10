@@ -17,11 +17,11 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include "array.h"
 #include "atom.h"
 #include "dep.h"
 #include "set.h"
 #include "tree.h"
-#include "xarray.h"
 #include "xasprintf.h"
 
 static const dep_node null_node = {

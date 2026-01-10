@@ -14,11 +14,11 @@
 #include <xalloc.h>
 #include <assert.h>
 
+#include "array.h"
 #include "atom.h"
 #include "dep.h"
 #include "set.h"
 #include "tree.h"
-#include "xarray.h"
 #include "xasprintf.h"
 #include "xregex.h"
 

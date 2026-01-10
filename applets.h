@@ -31,7 +31,8 @@ extern int	getopt_long(int, char * const *, const char *,
 #include <stdbool.h>
 #include <dirent.h>
 
-#include "xarray.h"
+#include "array.h"
+#include "set.h"
 
 /* applet prototypes */
 typedef int (*APPLET)(int, char **);

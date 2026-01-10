@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005      Petteri Räty    - <betelgeuse@gentoo.org>
@@ -18,9 +18,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include "array.h"
 #include "atom.h"
 #include "tree.h"
-#include "xarray.h"
 #include "xchdir.h"
 #include "xregex.h"
 

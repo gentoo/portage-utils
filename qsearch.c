@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Authors
+ * Copyright 2005-2026 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -18,11 +18,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include "array.h"
 #include "atom.h"
 #include "basename.h"
 #include "rmspace.h"
 #include "tree.h"
-#include "xarray.h"
 #include "xregex.h"
 
 #define QSEARCH_FLAGS "asSNHRF:" COMMON_FLAGS

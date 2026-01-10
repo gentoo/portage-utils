@@ -23,6 +23,7 @@
 # include <archive_entry.h>
 #endif
 
+#include "array.h"
 #include "atom.h"
 #include "basename.h"
 #include "contents.h"
@@ -31,7 +32,6 @@
 #include "scandirat.h"
 #include "set.h"
 #include "tree.h"
-#include "xarray.h"
 #include "xasprintf.h"
 #include "xchdir.h"
 #include "xmkdir.h"

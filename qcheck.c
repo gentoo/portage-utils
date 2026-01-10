@@ -15,13 +15,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include "array.h"
 #include "atom.h"
 #include "contents.h"
 #include "copy_file.h"
 #include "hash.h"
 #include "prelink.h"
 #include "tree.h"
-#include "xarray.h"
 #include "xasprintf.h"
 #include "xregex.h"
 

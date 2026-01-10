@@ -48,11 +48,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "array.h"
 #include "atom.h"
 #include "contents.h"
 #include "human_readable.h"
 #include "tree.h"
-#include "xarray.h"
 #include "xregex.h"
 
 #define QSIZE_FLAGS "fsSmkbi:F:" COMMON_FLAGS

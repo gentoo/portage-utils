@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -18,11 +18,11 @@
 #include <limits.h>
 #include <sys/stat.h>
 
+#include "array.h"
 #include "atom.h"
 #include "eat_file.h"
 #include "scandirat.h"
 #include "set.h"
-#include "xarray.h"
 #include "xasprintf.h"
 
 #define QLOP_DEFAULT_LOGFILE "emerge.log"
