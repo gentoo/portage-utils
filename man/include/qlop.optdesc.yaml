@@ -34,7 +34,7 @@ summary: |
     Useful to compute time it takes to recompile all packages or a set
     of packages (e.g\. world).
 human: |
-    Print elapssed time in human readable format.  This form uses
+    Print elapsed time in human readable format.  This form uses
     minutes, hours and days instead of just seconds.
 current: |
     Show current emerging packages.  This relies on
