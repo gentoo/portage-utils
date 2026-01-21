@@ -106,8 +106,7 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	if (last_atom != NULL)
 		atom_implode(last_atom);
-	last_atom = atom;
-	pkg_ctx->atom = NULL;  /* we stole the atom, make sure it won't get freed */
+	last_atom = atom_clone(atom);
 
 	return EXIT_SUCCESS;
 }

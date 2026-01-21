@@ -220,59 +220,15 @@ static int q_build_gtree_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 		} \
 	} while (false)
 #define q_cache_add_cache_entry(K) \
-	q_cache_add_cache_entry_val(K, tree_pkg_meta_get(pkg, K))
+	if (Q_##K != Q__md5_) \
+		q_cache_add_cache_entry_val(K, tree_pkg_meta(pkg, Q_##K));
 
-	/* this is a list copied from libq/tree, as there is no runtime
-	 * access to these entries */
-	q_cache_add_cache_entry(DEPEND);
-	q_cache_add_cache_entry(RDEPEND);
-	q_cache_add_cache_entry(SLOT);
-	if (pkg->cat_ctx->ctx->treetype != TREE_PACKAGES)
-		q_cache_add_cache_entry(SRC_URI);
-	q_cache_add_cache_entry(RESTRICT);
-	q_cache_add_cache_entry(LICENSE);
-	q_cache_add_cache_entry(DESCRIPTION);
-	q_cache_add_cache_entry(KEYWORDS);
-	q_cache_add_cache_entry(INHERITED);
-	q_cache_add_cache_entry(IUSE);
-	q_cache_add_cache_entry(CDEPEND);
-	q_cache_add_cache_entry(PDEPEND);
-	q_cache_add_cache_entry(PROVIDE);
-	q_cache_add_cache_entry(EAPI);
-	q_cache_add_cache_entry(PROPERTIES);
-	q_cache_add_cache_entry(BDEPEND);
-	q_cache_add_cache_entry(IDEPEND);
-	q_cache_add_cache_entry(DEFINED_PHASES);
-	q_cache_add_cache_entry(REQUIRED_USE);
-	q_cache_add_cache_entry(CONTENTS);
-	q_cache_add_cache_entry(USE);
-	q_cache_add_cache_entry(EPREFIX);
-	q_cache_add_cache_entry(PATH);
-	q_cache_add_cache_entry(BUILD_ID);
-	if (pkg->cat_ctx->ctx->treetype == TREE_PACKAGES)
-		q_cache_add_cache_entry(SIZE);
+	/* try all known keys */
+	TREE_META_KEYS(q_cache_add_cache_entry);
 
-	if (pkg->cat_ctx->ctx->treetype == TREE_EBUILD) {
-		char  tmpbuf[BUFSIZE];
-		char *tp;
-		bool  write;
-
-		/* eclasses, drop the md5 hashes, just leave a list of names
-		 * we don't expect selections on these, so store as data */
-		qc = tree_pkg_meta_get(pkg, _eclasses_);
-		if (qc != NULL) {
-			for (tp = tmpbuf, write = true; *qc != '\0'; qc++) {
-				if (*qc == '\t') {
-					if (write)
-						*tp++ = ' ';
-					write = !write;
-				} else if (write)
-					*tp++ = *qc;
-			}
-			*tp = '\0';
-			q_cache_add_cache_entry_val(eclasses, tmpbuf);
-		}
-	}
+	/* note: _eclasses_ includes md5 hashes, which are redundant/not
+	 * necessary, we could remove it, but then we'd need alternative
+	 * code, so let's keep everything the same */
 #undef q_cache_add_cache_entry
 #undef q_cache_add_cache_entry_val
 
@@ -300,9 +256,8 @@ static int q_build_gtree_ebuilds_pkg(tree_pkg_ctx *pkg, void *priv)
 	size_t                siz;
 	size_t                len;
 	char                 *qc;
-	char                  pth[_Q_PATH_MAX * 2];
+	char                  pth[_Q_PATH_MAX];
 	size_t                flen;
-	int                   dfd;
 	int                   ffd;
 	bool                  newpkg = true;
 
@@ -310,7 +265,7 @@ static int q_build_gtree_ebuilds_pkg(tree_pkg_ctx *pkg, void *priv)
 	 * we could technically pull the ebuild from the VDB, or maybe
 	 * from the binpkg, but for what use? only an ebuild tree is
 	 * meant to be built from, others only use metadata */
-	if (pkg->cat_ctx->ctx->treetype != TREE_EBUILD)
+	if (tree_pkg_get_treetype(pkg) != TREETYPE_EBUILD)
 		return 0;
 
 	/* construct the common prefix */
@@ -319,13 +274,6 @@ static int q_build_gtree_ebuilds_pkg(tree_pkg_ctx *pkg, void *priv)
 	p   = buf + len;
 	siz = sizeof(buf) - len;
 
-	snprintf(pth, sizeof(pth), "%s/%s/%s",
-			 pkg->cat_ctx->ctx->path,
-			 atom->CATEGORY, atom->PN);
-	dfd = open(pth, O_RDONLY);
-	if (dfd < 0)
-		return 1;  /* how? */
-
 	if (strcmp(ctx->last_pkg, buf + (sizeof("ebuilds/") - 1)) != 0)
 		snprintf(ctx->last_pkg, sizeof(ctx->last_pkg),
 				 "%s", buf + (sizeof("ebuilds/") - 1));
@@ -333,6 +281,17 @@ static int q_build_gtree_ebuilds_pkg(tree_pkg_ctx *pkg, void *priv)
 		newpkg = false;
 
 	if (newpkg) {
+		int  dfd;
+
+		snprintf(pth, sizeof(pth), "%s", tree_pkg_get_path(pkg));
+		qc = strrchr(pth, '/');
+		if (qc == NULL)
+			return 1;  /* on an ebuild tree this certainly is invalid */
+		*qc = '\0';
+		dfd = openat(tree_pkg_get_portroot_fd(pkg), pth, O_RDONLY);
+		if (dfd < 0)
+			return 1;  /* how? */
+
 		ffd = openat(dfd, "metadata.xml", O_RDONLY);
 		if (ffd >= 0) {
 			if (fstat(ffd, &st) == 0) {
@@ -394,10 +353,13 @@ static int q_build_gtree_ebuilds_pkg(tree_pkg_ctx *pkg, void *priv)
 										  ffd);
 			close(ffd);
 		}
+
+		close(dfd);
 	}
 
 	snprintf(pth, sizeof(pth), "%s.ebuild", atom->PF);
-	ffd = openat(dfd, pth, O_RDONLY);
+	ffd = openat(tree_pkg_get_portroot_fd(pkg),
+				 tree_pkg_get_path(pkg), O_RDONLY);
 	if (ffd >= 0) {
 		if (fstat(ffd, &st) == 0) {
 			entry = archive_entry_new();
@@ -414,8 +376,6 @@ static int q_build_gtree_ebuilds_pkg(tree_pkg_ctx *pkg, void *priv)
 		}
 		close(ffd);
 	}
-
-	close(dfd);
 
 	return 0;
 }
@@ -847,8 +807,13 @@ int q_main(int argc, char **argv)
 			 * it gets wiped on portage sync (good because that would
 			 * invalidate it) and tree_open can transparently locate and
 			 * use it */
-			snprintf(buf, sizeof(buf),
-					 "%s/metadata/repo.gtree.tar", overlay);
+
+			/* ensure we can actually write the new cache */
+			len = snprintf(buf, sizeof(buf),
+					 	   "%s/%s/metadata", portroot, overlay);
+			mkdir_p(buf, 0755);
+
+			snprintf(buf + len, sizeof(buf) - len, "/repo.gtree.tar");
 			/* because we're building a new one here, make sure
 			 * tree_open doesn't pick it up */
 			unlink(buf);
@@ -859,15 +824,7 @@ int q_main(int argc, char **argv)
 				continue;
 			}
 
-			if (t->treetype != TREE_EBUILD) {
-				/* could be possible, but currently pointless to support
-				 * anything else */
-				warn("ignoring non-ebuild tree");
-				continue;
-			}
-
-			/* ensure we can actually write the new cache */
-			mkdir_p_at(t->tree_fd, "metadata", 0755);
+			/* now open it */
 			fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC,
 					  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH /* 0644 */);
 
@@ -898,7 +855,7 @@ int q_main(int argc, char **argv)
 			 * in order to kind of protect it from being modified, we
 			 * make the file invisible */
 			snprintf(buf, sizeof(buf),
-					 "%s/metadata/gtree.XXXXXX", overlay);
+					 "%s/%s/metadata/gtree.XXXXXX", portroot, overlay);
 			tfd = mkstemp(buf);
 			if (tfd < 0) {
 				warnp("failed to open temp file");
@@ -914,14 +871,15 @@ int q_main(int argc, char **argv)
 			/* would love to use this:
 			 * archive_write_add_filter_zstd(qcctx.archive);
 			 * but https://github.com/libarchive/libarchive/issues/957
-			 * suggests there's never going to get to be an interface
+			 * suggests there's never going to be an interface
 			 * for this, which is a real shame */
 			archive_write_add_filter_program(qcctx.archive, "zstd -19");
 			archive_write_open_fd(qcctx.archive, tfd);
 
 			/* write repo name, if any */
-			if (t->repo != 0) {
-				len = strlen(t->repo);
+			if (tree_get_repo_name(t) != NULL) {
+				char *r = tree_get_repo_name(t);
+				len = strlen(r);
 				entry = archive_entry_new();
 				archive_entry_set_pathname(entry, "repository");
 				archive_entry_set_size(entry, len);
@@ -929,7 +887,7 @@ int q_main(int argc, char **argv)
 				archive_entry_set_filetype(entry, AE_IFREG);
 				archive_entry_set_perm(entry, 0644);
 				archive_write_header(qcctx.archive, entry);
-				archive_write_data(qcctx.archive, t->repo, len);
+				archive_write_data(qcctx.archive, r, len);
 				archive_entry_free(entry);
 			}
 
@@ -939,8 +897,9 @@ int q_main(int argc, char **argv)
 			tree_foreach_pkg(t, q_build_gtree_ebuilds_pkg, &qcctx, true, NULL);
 
 			/* add eclasses */
+			snprintf(buf, sizeof(buf), "%s/%s/eclass", portroot, overlay);
+			dfd = open(buf, O_RDONLY);
 			len = snprintf(buf, sizeof(buf), "eclasses");
-			dfd = openat(t->tree_fd, "eclass", O_RDONLY);
 			if (dfd >= 0) {
 				q_build_gtree_pkg_process_dir(&qcctx, buf,
 											  buf + len,
@@ -975,11 +934,12 @@ int q_main(int argc, char **argv)
 			archive_write_free(a);
 
 			if (verbose) {
+				char *r = tree_get_repo_name(t);
 				if (fstat(fd, &st) < 0)
 					warnp("could not stat produced archive");
 				else
 					printf("%s%s%s: %s%siB%s\n",
-						   GREEN, t->repo == NULL ? "???" : t->repo, NORM,
+						   GREEN, r ? "???" : r, NORM,
 						   RED, make_human_readable_str(st.st_size,
 														1, 0), NORM);
 			}

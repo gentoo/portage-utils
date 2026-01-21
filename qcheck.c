@@ -91,13 +91,15 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int                      cpm_argc;
 	char                   **cp_argv;
 	char                   **cpm_argv;
+	int                      portroot_fd;
 
 	/* get CONTENTS from meta */
 	line = tree_pkg_meta_get(pkg_ctx, CONTENTS);
 	if (line == NULL)
 		return EXIT_FAILURE;
 
-	atom = tree_get_atom(pkg_ctx, false);
+	atom        = tree_get_atom(pkg_ctx, false);
+	portroot_fd = tree_pkg_get_portroot_fd(pkg_ctx);
 
 	qcprintf("%sing %s ...\n",
 		(state->qc_update ? "Updat" : "Check"),
@@ -197,7 +199,7 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		}
 
 		/* check file existence */
-		if (fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd, entry->name + 1,
+		if (fstatat(portroot_fd, entry->name + 1,
 					&st, AT_SYMLINK_NOFOLLOW) != 0)
 		{
 			if (state->chk_afk) {
@@ -270,9 +272,8 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			/* compute hash for file */
 			hash_cb_t hash_cb =
 				state->undo_prelink ? hash_cb_prelink_undo : NULL;
-			f_digest = hash_file_at_cb(
-					pkg_ctx->cat_ctx->ctx->portroot_fd,
-					entry->name + 1, hash_algo, hash_cb);
+			f_digest = hash_file_at_cb(portroot_fd,
+									   entry->name + 1, hash_algo, hash_cb);
 
 			/* Digest-check 2/3:
 			 * do we have digest of the file? */
@@ -381,9 +382,12 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (state->qc_update) {
 		int fd_contents;
 		FILE *fp_contents;
+		char path[_Q_PATH_MAX];
 
+		snprintf(path, sizeof(path), "%s/CONTENTS",
+				 tree_pkg_get_path(pkg_ctx));
 		/* O_TRUNC truncates, but file owner and mode are unchanged */
-		fd_contents = openat(pkg_ctx->fd, "CONTENTS", O_WRONLY | O_TRUNC);
+		fd_contents = openat(portroot_fd, path, O_WRONLY | O_TRUNC);
 		if (fd_contents < 0 ||
 				(fp_contents = fdopen(fd_contents, "w")) == NULL)
 		{

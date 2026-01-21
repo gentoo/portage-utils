@@ -208,6 +208,7 @@ qkeyword_imlate(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	size_t a;
 	qkeyword_data *data = (qkeyword_data *)priv;
+	atom_ctx *atom;
 
 	switch (data->keywordsbuf[qkeyword_test_arch]) {
 		case stable:
@@ -216,12 +217,12 @@ qkeyword_imlate(tree_pkg_ctx *pkg_ctx, void *priv)
 			break;
 
 		default:
+			atom = tree_pkg_atom(pkg_ctx, false);
 			/* match if any of the other arches have stable keywords */
 			for (a = 0; a < archlist_count; a++) {
 				if (data->keywordsbuf[a] != stable)
 					continue;
-				print_keywords(pkg_ctx->cat_ctx->name, pkg_ctx->name,
-						data->keywordsbuf);
+				print_keywords(atom->CATEGORY, atom->PF, data->keywordsbuf);
 
 				return EXIT_SUCCESS;
 			}
@@ -281,10 +282,12 @@ qkeyword_not(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	size_t a;
 	qkeyword_data *data = (qkeyword_data *)priv;
+	atom_ctx *atom;
 
 	if (data->keywordsbuf[qkeyword_test_arch] != testing &&
 			data->keywordsbuf[qkeyword_test_arch] != stable)
 	{
+		atom = tree_pkg_atom(pkg_ctx, false);
 		/* match if any of the other arches have keywords */
 		for (a = 0; a < archlist_count; a++) {
 			if (data->keywordsbuf[a] == stable ||
@@ -292,8 +295,7 @@ qkeyword_not(tree_pkg_ctx *pkg_ctx, void *priv)
 				break;
 		}
 		if (a < archlist_count) {
-			print_keywords(pkg_ctx->cat_ctx->name, pkg_ctx->name,
-					data->keywordsbuf);
+			print_keywords(atom->CATEGORY, atom->PF, data->keywordsbuf);
 			return EXIT_SUCCESS;
 		}
 	}
@@ -305,12 +307,13 @@ static int
 qkeyword_all(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	qkeyword_data *data = (qkeyword_data *)priv;
+	atom_ctx *atom;
 
 	if (data->keywordsbuf[qkeyword_test_arch] == stable ||
 			data->keywordsbuf[qkeyword_test_arch] == testing)
 	{
-		print_keywords(pkg_ctx->cat_ctx->name, pkg_ctx->name,
-				data->keywordsbuf);
+		atom = tree_pkg_atom(pkg_ctx, false);
+		print_keywords(atom->CATEGORY, atom->PF, data->keywordsbuf);
 		return EXIT_SUCCESS;
 	}
 
@@ -330,6 +333,7 @@ qkeyword_dropped(tree_pkg_ctx *pkg_ctx, void *priv)
 	static size_t candkwdslen = 0;
 
 	qkeyword_data *data = (qkeyword_data *)priv;
+	atom_ctx *atom;
 	size_t i;
 	char *p;
 
@@ -348,8 +352,9 @@ qkeyword_dropped(tree_pkg_ctx *pkg_ctx, void *priv)
 	lastpkg = curpkg;
 	curpkg = p;
 	if (pkg_ctx != NULL) {
+		atom = tree_pkg_atom(pkg_ctx, false);
 		snprintf(curpkg, _Q_PATH_MAX, "%s/%s",
-				pkg_ctx->cat_ctx->name, pkg_ctx->name);
+				atom->CATEGORY, atom->PF);
 	} else {
 		curpkg[0] = '\0';
 	}
@@ -528,9 +533,9 @@ qkeyword_stats(tree_pkg_ctx *pkg_ctx, void *priv)
 			xcalloc(archlist_count, sizeof(*current_package_keywords));
 	}
 
-	if (lastcat != pkg_ctx->cat_ctx->name)
+	if (lastcat != tree_pkg_get_cat_name(pkg_ctx))
 		numcat++;
-	lastcat = pkg_ctx->cat_ctx->name;
+	lastcat = tree_pkg_get_cat_name(pkg_ctx);
 
 	atom = tree_get_atom(pkg_ctx, false);
 	if (atom && strcmp(lastpkg, atom->PN) != 0) {
@@ -583,14 +588,16 @@ qkeyword_testing_only(tree_pkg_ctx *pkg_ctx, void *priv)
 	static size_t candkwdslen = 0;
 
 	qkeyword_data *data = (qkeyword_data *)priv;
+	atom_ctx *atom;
 	char *p;
 
 	p = lastpkg;
 	lastpkg = curpkg;
 	curpkg = p;
 	if (pkg_ctx != NULL) {
+		atom = tree_pkg_atom(pkg_ctx, false);
 		snprintf(curpkg, _Q_PATH_MAX, "%s/%s",
-				pkg_ctx->cat_ctx->name, pkg_ctx->name);
+				 atom->CATEGORY, atom->PF);
 	} else {
 		curpkg[0] = '\0';
 	}
@@ -645,10 +652,8 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	int *keywords;
 	qkeyword_data *data = (qkeyword_data *)priv;
-	char buf[_Q_PATH_MAX];
 	depend_atom *patom = NULL;
 	tree_metadata_xml *metadata;
-	struct elist *emailw;
 	int ret;
 
 	patom = tree_get_atom(pkg_ctx, false);
@@ -664,20 +669,17 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		return EXIT_SUCCESS;
 
 	if (data->qmaint != NULL) {
+		bool found = false;
+
 		metadata = tree_pkg_metadata(pkg_ctx);
 		if (metadata == NULL)
 			return EXIT_SUCCESS;
 
-		for (emailw = metadata->email; emailw != NULL; emailw = emailw->next) {
-			if (strcmp(emailw->addr, data->qmaint) != 0)
-				break;
-		}
-		if (metadata->email == NULL)
-			/* arbitrary pointer to trigger exit below */
-			emailw = (struct elist *)buf;
+		found = array_binsearch(metadata->email, data->qmaint,
+								(array_compar_cb *)strcmp, NULL) != NULL;
 
 		tree_close_metadata(metadata);
-		if (emailw != NULL)
+		if (found)
 			return EXIT_SUCCESS;
 	}
 
@@ -686,7 +688,7 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	if (read_keywords(tree_pkg_meta_get(pkg_ctx, KEYWORDS), keywords) < 0) {
 		if (verbose)
 			warn("Failed to read keywords for %s%s/%s%s%s",
-				BOLD, pkg_ctx->cat_ctx->name, BLUE, pkg_ctx->name, NORM);
+				BOLD, patom->CATEGORY, BLUE, patom->PF, NORM);
 		return EXIT_FAILURE;
 	}
 
@@ -697,8 +699,7 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		patom->P = patom->PN;
 		patom->PVR = patom->PN;
 		patom->PR_int = 0;
-		data->lastatom = patom;
-		pkg_ctx->atom = NULL;  /* take tree's atom */
+		data->lastatom = atom_clone(patom);
 	}
 
 	return EXIT_SUCCESS;

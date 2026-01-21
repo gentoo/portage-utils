@@ -96,6 +96,13 @@ cases:
 6. ebuilds/{CAT}/{PN}/{PF}.ebuild, ebuild file
 7. eclasses/{ECLASS}.eclass, eclass file
 
+For each members above, grouping must be applied to CAT and PN (also as
+part of PF), such that a reader can consider a category or package to be
+finished as soon as it sees a next entry that is different.  Ordering of
+version numbers is not required.  The simplest way to group the items is
+by simply sorting the entries, which is sufficient because version
+numbers do not have to be ordered.
+
 Performance
 -----------
 While a single container archive has benefits in compression and

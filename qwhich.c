@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 Gentoo Foundation
+ * Copyright 2021-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2021-     Fabian Groffen  - <grobian@gentoo.org>
@@ -74,8 +74,8 @@ int qwhich_main(int argc, char **argv)
 	array *atoms = array_new();
 	array *trees = array_new();
 	struct qwhich_mode m;
-	struct tree_match_ctx *tmc;
-	struct tree_match_ctx *tmcw;
+	array *tmc;
+	tree_pkg_ctx *tmcw;
 	size_t i;
 	size_t j;
 	char *overlay;
@@ -85,7 +85,6 @@ int qwhich_main(int argc, char **argv)
 	char *repo = NULL;
 	char *reponam;
 	int repolen;
-	const char *ext;
 
 	VAL_CLEAR(m);
 
@@ -108,13 +107,9 @@ int qwhich_main(int argc, char **argv)
 		}
 	}
 
-	/* defaults: no options at all, enable latest match,
-	 *           no selectors, enable tree + overlays */
-	if (!m.do_vdb && !m.do_binpkg && !m.do_tree) {
-		if (!m.print_atom && !m.print_path && !m.match_first && m.fmt == NULL)
-			m.match_latest = true;
+	/* defaults: no selectors, enable tree + overlays */
+	if (!m.do_vdb && !m.do_binpkg && !m.do_tree)
 		m.do_tree = true;
-	}
 
 	/* when printing path, we better just match the first, else we get a
 	 * lot of dups */
@@ -127,6 +122,10 @@ int qwhich_main(int argc, char **argv)
 			m.fmt = "%[CATEGORY]%[PF]";
 		else
 			m.fmt = "%[CATEGORY]%[PN]";
+		/* pointless to report duplicates */
+		if (m.print_atom &&
+			!verbose)
+			m.match_latest = true;
 	} else {
 		/* makes no sense to use formatter if we're not going to use it */
 		m.print_atom = true;
@@ -164,86 +163,61 @@ int qwhich_main(int argc, char **argv)
 
 	/* at least keep the IO constrained to a tree at a time */
 	array_for_each(trees, j, t) {
+		char *reponame = tree_get_repo_name(t);
 		if (repo != NULL &&
-			(t->repo == NULL || strcmp(repo, t->repo) != 0))
+			(reponame == NULL || strcmp(repo, reponame) != 0))
 		{
 			tree_close(t);
 			continue;
 		}
 
-		if (m.print_repo && t->repo != NULL) {
-			reponam = t->repo;
+		if (m.print_repo && reponame != NULL) {
+			reponam = reponame;
 			repolen = strlen(reponam);
 		} else {
-			reponam = t->path;
-			if (t->treetype == TREE_METADATA_MD5)
-				repolen = strlen(t->path) - (sizeof("/metadata/md5-cache") - 1);
-			else if (t->treetype == TREE_METADATA_PMS)
-				repolen = strlen(t->path) - (sizeof("/metadata/cache") - 1);
-			else if (t->treetype == TREE_EBUILD ||
-					t->treetype == TREE_BINPKGS ||
-					t->treetype == TREE_PACKAGES)
-				repolen = strlen(t->path);
-			else
-				repolen = 0;
+			reponam = tree_get_path(t);
+			repolen = strlen(reponam);
 		}
 
 		array_for_each(atoms, i, atom) {
-			tmc = tree_match_atom(t, atom,
+			/* because this is for direct visuals, always require sorted
+			 * order so the output is consistent and predictable */
+			tmc = tree_match_atom(t, atom, TREE_MATCH_SORT |
 					(m.match_latest ? TREE_MATCH_LATEST : 0 ) |
 					(m.match_first  ? TREE_MATCH_FIRST  : 0 ) |
 					(m.skip_virtual ? 0 : TREE_MATCH_VIRTUAL) |
 					(m.skip_acct    ? 0 : TREE_MATCH_ACCT   ));
-			for (tmcw = tmc; tmcw != NULL; tmcw = tmcw->next) {
+			array_for_each(tmc, n, tmcw)
+			{
 				if (m.print_atom) {
-					printf("%s\n", atom_format(m.fmt, tmcw->atom));
+					printf("%s\n", atom_format(m.fmt,
+											   tree_pkg_atom(tmcw, false)));
 				} else {
-					if (t->treetype == TREE_METADATA_MD5 ||
-							t->treetype == TREE_METADATA_PMS ||
-							t->treetype == TREE_EBUILD ||
-							t->treetype == TREE_BINPKGS ||
-							t->treetype == TREE_PACKAGES)
-					{
-						if (m.print_path) {
-							printf("%s%.*s%s%s%s/%s%s%s\n",
-									GREEN, repolen, reponam,
-									m.print_repo ? "::" : "/",
-									BOLD, tmcw->atom->CATEGORY,
-									DKBLUE, tmcw->atom->PN,
-									NORM);
-						} else {
-							switch (t->treetype) {
-								case TREE_BINPKGS:
-								case TREE_PACKAGES:
-									if (tmcw->pkg->binpkg_isgpkg)
-										ext = "gpkg.tar";
-									else
-										ext = "tbz2";
-									break;
-								default:
-									ext = "ebuild";
-									break;
-							}
+					char  *path = tree_pkg_get_path(tmcw) + 1;
+					size_t len  = strlen(path);
 
-							printf("%s%.*s%s%s%s/%s%s/%s%s%s.%s%s\n",
-									DKGREEN, repolen, reponam,
-									m.print_repo ? "::" : "/",
-									BOLD, tmcw->atom->CATEGORY,
-									DKBLUE, tmcw->atom->PN,
-									BLUE, tmcw->atom->PF,
-									DKGREEN, ext, NORM);
-						}
-					} else if (t->treetype == TREE_VDB && !m.print_path) {
-						printf("%s%s/%s%s%s.ebuild%s\n",
-								DKBLUE, tmcw->path,
-								BLUE, tmcw->atom->PF,
-								DKGREEN, NORM);
-					} else {
-						printf("%s%s%s\n", DKBLUE, tmcw->path, NORM);
+					if (len > repolen)
+					{
+						path += repolen;
+						len  -= repolen;
 					}
+
+					if (m.print_path)
+					{
+						char *p = strrchr(path, '/');
+						if (p == NULL)
+							len = 0;
+						else
+							len = p - path;
+					}
+
+					printf("%s%s%.*s%s%s%.*s%s\n",
+						   GREEN, m.print_repo ? "" : "/",
+						   repolen, reponam, m.print_repo ? "::" : "/",
+						   DKBLUE, (int)len, path, NORM);
 				}
 			}
-			tree_match_close(tmc);
+			array_free(tmc);
 		}
 		tree_close(t);
 	}

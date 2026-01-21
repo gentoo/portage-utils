@@ -209,7 +209,7 @@ struct qgrep_grepargs {
 	regex_t preg;
 	const char *query;
 	QGREP_STR_FUNC strfunc;
-	depend_atom **include_atoms;
+	array *include_atoms;
 	const char *portdir;
 };
 
@@ -375,61 +375,66 @@ print_after_context:
 }
 
 static int
-qgrep_cache_cb(tree_pkg_ctx *pkg_ctx, void *priv)
+qgrep_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
-	struct qgrep_grepargs *data = (struct qgrep_grepargs *)priv;
-	char buf[_Q_PATH_MAX];
-	char name[_Q_PATH_MAX];
-	char *label;
-	depend_atom *patom = NULL;
-	tree_ctx *cctx;
-	int ret;
-	int pfd;
+	char                   buf[_Q_PATH_MAX];
+	char                   pth[_Q_PATH_MAX];
+	struct qgrep_grepargs *data  = priv;
+	atom_ctx              *patom = NULL;
+	char                  *path;
 
-	patom = tree_get_atom(pkg_ctx, false);
+	patom = tree_get_atom(pkg_ctx, true);
 	if (patom == NULL)
 		return EXIT_FAILURE;
 
-	if (data->include_atoms != NULL) {
-		depend_atom **d;
-		for (d = data->include_atoms; *d != NULL; d++) {
-			if ((*d)->SLOT != NULL || (*d)->REPO != NULL)
-				patom = tree_get_atom(pkg_ctx, true);
-			if (atom_compare(patom, *d) == EQUAL)
+	if (data->include_atoms != NULL)
+	{
+		atom_ctx *w;
+		size_t    n;
+
+		array_for_each(data->include_atoms, n, w)
+		{
+			if (atom_compare(patom, w) == EQUAL)
 				break;
 		}
-		if (*d == NULL)
+		if (w == NULL)
 			return EXIT_FAILURE;
 	}
 
-	/* need to construct path in portdir to ebuild, pass it to grep */
-	cctx = (tree_ctx *)(pkg_ctx->cat_ctx->ctx);
-	if (cctx->treetype == TREE_EBUILD) {
-		pfd = cctx->tree_fd;
-	} else if (cctx->treetype == TREE_VDB) {
-		pfd = openat(cctx->portroot_fd, data->portdir, O_RDONLY|O_CLOEXEC);
-	} else {
-		pfd = openat(cctx->tree_fd, "../..", O_RDONLY|O_CLOEXEC);
+	path = tree_pkg_get_path(pkg_ctx);
+	if (data->show_name)
+	{
+		atom_format_r(buf, sizeof(buf), "%[CATEGORY]%[PF]%[REPO]", patom);
+	}
+	else if (data->show_filename)
+	{
+		if (tree_pkg_get_treetype(pkg_ctx) == TREETYPE_VDB ||
+			patom->REPO != NULL)
+		{
+			size_t rootlen = strlen(tree_get_path(tree_pkg_get_tree(pkg_ctx)));
+
+			if (tree_pkg_get_treetype(pkg_ctx) == TREETYPE_VDB)
+			{
+				snprintf(pth, sizeof(pth), "%s/%s.ebuild", path, patom->PF);
+				path = pth;
+				snprintf(buf, sizeof(buf), "%svdb%s:%s",
+						 DKBLUE, NORM,
+						 path + rootlen + 1);
+			}
+			else
+			{
+				snprintf(buf, sizeof(buf), "%s%s%s:%s",
+						 GREEN, patom->REPO, NORM,
+						 path + rootlen + 1);
+			}
+		}
+		else
+		{
+			snprintf(buf, sizeof(buf), "/%s", path);
+		}
 	}
 
-	/* cat/pkg/pkg-ver.ebuild */
-	snprintf(buf, sizeof(buf), "%s/%s/%s.ebuild",
-			patom->CATEGORY, patom->PN, patom->PF);
-
-	label = NULL;
-	if (data->show_name) {
-		if (data->show_repo)
-			patom = tree_get_atom(pkg_ctx, true);
-		atom_format_r(name, sizeof(name), "%[CATEGORY]%[PF]%[REPO]", patom);
-		label = name;
-	} else if (data->show_filename) {
-		label = buf;
-	}
-
-	ret = qgrep_grepat(pfd, buf, label, data);
-	close(pfd);
-
-	return ret;
+	return qgrep_grepat(tree_pkg_get_portroot_fd(pkg_ctx), path, buf, data);
 }
 
 int qgrep_main(int argc, char **argv)
@@ -519,12 +524,6 @@ int qgrep_main(int argc, char **argv)
 		args.do_count = false;
 	}
 
-	if (args.show_name && args.show_filename) {
-		warn("--with-name and --with-filename are incompatible options. "
-				"The former wins.");
-		args.show_filename = false;
-	}
-
 	if (args.do_list && args.num_lines_before) {
 		warn("%s and --before are incompatible options. The former wins.",
 				(args.invert_list ? "--invert-list" : "--list"));
@@ -554,17 +553,15 @@ int qgrep_main(int argc, char **argv)
 	}
 
 	if (argc > (optind + 1)) {
-		depend_atom **d = args.include_atoms =
-			xcalloc((argc - optind - 1) + 1, sizeof(depend_atom *));
+		args.include_atoms = array_new();
 		for (i = (optind + 1); i < argc; i++) {
-			*d = atom_explode(argv[i]);
-			if (*d == NULL) {
+			atom_ctx *d = atom_explode(argv[i]);
+			if (d == NULL) {
 				warn("%s: invalid atom, will be ignored", argv[i]);
 			} else {
-				d++;
+				array_append(args.include_atoms, d);
 			}
 		}
-		*d = NULL;
 	}
 
 	/* make it easier to see what needs to be printed */
@@ -591,29 +588,38 @@ int qgrep_main(int argc, char **argv)
 			char buf[_Q_PATH_MAX];
 			char name[_Q_PATH_MAX + 8 /* colours/eclass */];
 			char *label;
+			char *repo = NULL;
+			atom_ctx *atom;
+			tree_ctx *tree;
 			int efd;
 
-			snprintf(buf, sizeof(buf), "%s/%s/eclass", portroot, overlay);
-			efd = open(buf, O_RDONLY|O_CLOEXEC);
+			tree = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
+			if (tree == NULL)
+				continue;
+
+			repo = tree_get_repo_name(tree);
+
+			snprintf(buf, sizeof(buf), "%s/eclass", tree_get_path(tree));
+			efd = openat(tree_get_portroot_fd(tree), buf, O_RDONLY|O_CLOEXEC);
 			if (efd == -1 || (eclass_dir = fdopendir(efd)) == NULL) {
 				if (errno != ENOENT)
 					warnp("opendir(\"%s/eclass\") failed", overlay);
+				tree_close(tree);
 				continue;
 			}
 			while ((dentry = readdir(eclass_dir)) != NULL) {
 				if (strstr(dentry->d_name, ".eclass") == NULL)
 					continue;
 				/* filter the files we grep when there are extra args */
-				if (args.include_atoms != NULL) {
-					depend_atom **d;
-					for (d = args.include_atoms; *d != NULL; d++) {
-						if ((*d)->PN != NULL && strncmp(dentry->d_name,
-									(*d)->PN, strlen((*d)->PN)) == 0)
-							break;
-					}
-					if (*d == NULL)
-						continue;
+				array_for_each(args.include_atoms, n, atom)
+				{
+					if (atom->PN != NULL &&
+						strncmp(dentry->d_name,
+								atom->PN, strlen(atom->PN)) == 0)
+						break;
 				}
+				if (atom == NULL)
+					continue;
 
 				label = NULL;
 				if (args.show_name) {
@@ -622,12 +628,17 @@ int qgrep_main(int argc, char **argv)
 							NORM);
 					label = name;
 				} else if (args.show_filename) {
-					snprintf(name, sizeof(name), "eclass/%s", dentry->d_name);
+					snprintf(name, sizeof(name), "%s%s%seclass/%s",
+							 repo != NULL ? "" : "/",
+							 repo != NULL ? repo : tree_get_path(tree),
+							 repo != NULL ? ":" : "/",
+							 dentry->d_name);
 					label = name;
 				}
 				status = qgrep_grepat(efd, dentry->d_name, label, &args);
 			}
 			closedir(eclass_dir);
+			tree_close(tree);
 		} else { /* do_ebuild || do_installed */
 			tree_ctx *t;
 			if (do_installed) {
@@ -636,7 +647,7 @@ int qgrep_main(int argc, char **argv)
 				t = tree_open(portroot, overlay);
 			}
 			if (t != NULL) {
-				status = tree_foreach_pkg_fast(t, qgrep_cache_cb, &args, NULL);
+				status = tree_foreach_pkg_fast(t, qgrep_cb, &args, NULL);
 				tree_close(t);
 			}
 		}
@@ -646,12 +657,8 @@ int qgrep_main(int argc, char **argv)
 		regfree(&args.preg);
 	if (args.do_regex && args.skip_pattern)
 		regfree(&args.skip_preg);
-	if (args.include_atoms != NULL) {
-		for (i = 0; i < (argc - optind - 1); i++)
-			if (args.include_atoms[i] != NULL)
-				atom_implode(args.include_atoms[i]);
-		free(args.include_atoms);
-	}
+	if (args.include_atoms != NULL)
+		array_deepfree(args.include_atoms, (array_free_cb *)atom_implode);
 	qgrep_buf_list_free(args.buf_list);
 
 	return status;

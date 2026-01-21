@@ -129,19 +129,21 @@ int qatom_main(int argc, char **argv)
 			break;
 		case _LOOKUP:
 			{
-				tree_match_ctx *pkg = tree_match_atom(tree, atom,
-						TREE_MATCH_DEFAULT);
-				if (pkg != NULL) {
-					tree_match_ctx *w;
+				array *pkgs = tree_match_atom(tree, atom, TREE_MATCH_DEFAULT);
+				if (array_cnt(pkgs) > 0)
+				{
+					tree_pkg_ctx *w;
+					size_t        n;
 
-					for (w = pkg; w != NULL; w = w->next) {
+					array_for_each(pkgs, n, w)
+					{
 						if (!quiet)
 							printf("%s: ", atom_to_string(atom));
-						printf("%s\n", atom_format(format, w->atom));
+						printf("%s\n", atom_format(format,
+												   tree_pkg_atom(w, false)));
 					}
-
-					tree_match_close(pkg);
 				}
+				array_free(pkgs);
 			}
 		}
 

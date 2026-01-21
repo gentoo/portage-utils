@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2024 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005 Martin Schlemmer     - <azarah@gentoo.org>
@@ -231,7 +231,7 @@ qlist_match(
 	}
 
 	if (uslot[0] != '\0') {
-		if (pkg_ctx->slot == NULL)
+		if (atom->SLOT == NULL)
 			return false;
 
 		/* Require exact match on SLOTs.  If the user didn't include a

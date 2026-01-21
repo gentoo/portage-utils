@@ -140,7 +140,7 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 		if (e->type == CONTENTS_OBJ || e->type == CONTENTS_SYM) {
 			num_files++;
-			if (fstatat(pkg_ctx->cat_ctx->ctx->portroot_fd,
+			if (fstatat(tree_pkg_get_portroot_fd(pkg_ctx),
 						e->name + 1, &st, AT_SYMLINK_NOFOLLOW) == 0)
 			{
 				snprintf(ikey, sizeof(ikey), "%zx:%zx",

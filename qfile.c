@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -168,7 +168,7 @@ static int qfile_check_plibreg(void *priv)
 static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	struct qfile_opt_state *state          = priv;
-	const char             *catname        = pkg_ctx->cat_ctx->name;
+	const char             *catname        = tree_pkg_get_cat_name(pkg_ctx);
 	qfile_args_t           *args           = &state->args;
 	qfile_str_len_t        *base_names     = args->basenames;
 	qfile_str_len_t        *dir_names      = args->dirnames;

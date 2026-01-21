@@ -201,8 +201,8 @@ struct llist_char_t {
 
 typedef struct llist_char_t llist_char;
 
-static void pkg_fetch(int, const depend_atom *, const tree_match_ctx *);
-static void pkg_merge(int, const depend_atom *, const tree_match_ctx *);
+static void pkg_fetch(int, const depend_atom *, tree_pkg_ctx *);
+static void pkg_merge(int, const depend_atom *, tree_pkg_ctx *);
 static int pkg_unmerge(tree_pkg_ctx *, depend_atom *, set *, int, char **, int, char **);
 
 static bool
@@ -285,7 +285,7 @@ qmerge_initialize(void)
 			errp("could not setup PKGDIR: %s", pkgdir);
 	}
 
-	xasprintf(&buf, "%s/portage/", port_tmpdir);
+	xasprintf(&buf, "%s%s/portage/", portroot, port_tmpdir);
 	mkdir_p(buf, 0755);
 	xchdir(buf);
 
@@ -304,14 +304,14 @@ static tree_ctx *_qmerge_binpkg_tree = NULL;
 #define BV_EBUILD    (1<<0)  /* not yet supported */
 #define BV_VDB       (1<<1)
 #define BV_BINPKG    (1<<2)
-static tree_match_ctx *
+static tree_pkg_ctx *
 best_version(const depend_atom *atom, int mode)
 {
 	tree_ctx       *vdb    = _qmerge_vdb_tree;
 	tree_ctx       *binpkg = _qmerge_binpkg_tree;
-	tree_match_ctx *tmv    = NULL;
-	tree_match_ctx *tmp    = NULL;
-	tree_match_ctx *ret;
+	tree_pkg_ctx   *tmv    = NULL;
+	tree_pkg_ctx   *tmp    = NULL;
+	tree_pkg_ctx   *ret;
 	int             r;
 
 	if (mode & BV_EBUILD) {
@@ -324,32 +324,38 @@ best_version(const depend_atom *atom, int mode)
 	}
 
 	if (mode & BV_VDB) {
+		array *t;
 		if (vdb == NULL) {
 			vdb = tree_open_vdb(portroot, portvdb);
 			if (vdb == NULL)
 				return NULL;
 			_qmerge_vdb_tree = vdb;
 		}
-		tmv = tree_match_atom(vdb, atom,
+		t = tree_match_atom(vdb, atom,
 				TREE_MATCH_LATEST  | TREE_MATCH_FIRST |
 				TREE_MATCH_VIRTUAL | TREE_MATCH_ACCT);
+		if (array_cnt(t) > 0)
+			tmv = array_get(t, 0);
+		array_free(t);
 	}
 
 	if (mode & BV_BINPKG) {
+		array *t;
 		if (binpkg == NULL) {
 			binpkg = tree_open_binpkg(portroot, pkgdir);
 			if (binpkg == NULL) {
-				if (tmv != NULL)
-					tree_match_close(tmv);
 				if (vdb != NULL)
 					tree_close(vdb);
 				return NULL;
 			}
 			_qmerge_binpkg_tree = binpkg;
 		}
-		tmp = tree_match_atom(binpkg, atom,
-				TREE_MATCH_LATEST  | TREE_MATCH_FIRST | TREE_MATCH_METADATA |
+		t = tree_match_atom(binpkg, atom,
+				TREE_MATCH_LATEST  | TREE_MATCH_FIRST |
 				TREE_MATCH_VIRTUAL | TREE_MATCH_ACCT);
+		if (array_cnt(t) > 0)
+			tmv = array_get(t, 0);
+		array_free(t);
 	}
 
 	if (tmv == NULL && tmp == NULL)
@@ -359,16 +365,13 @@ best_version(const depend_atom *atom, int mode)
 	else if (tmv != NULL && tmp == NULL)
 		ret = tmv;
 	else {
-		if ((r = atom_compare(tmv->atom, tmp->atom)) == EQUAL || r == OLDER)
+		if ((r = atom_compare(tree_pkg_atom(tmv, false),
+							  tree_pkg_atom(tmp, false))) == EQUAL ||
+			r == OLDER)
 			ret = tmp;
 		else
 			ret = tmv;
 	}
-
-	if (tmv != NULL && tmv != ret)
-		tree_match_close(tmv);
-	if (tmp != NULL && tmp != ret)
-		tree_match_close(tmp);
 
 	return ret;
 }
@@ -637,10 +640,10 @@ install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 
 static char
 qprint_tree_node(
-		int                   level,
-		const tree_match_ctx *mpkg,
-		const tree_match_ctx *bpkg,
-		int                   replacing)
+		int            level,
+		tree_pkg_ctx  *mpkg,
+		tree_pkg_ctx  *bpkg,
+		int            replacing)
 {
 	char            buf[1024];
 	int             i;
@@ -666,7 +669,7 @@ qprint_tree_node(
 					DKBLUE,
 					(int)(sizeof(install_ver) - 4 -
 						sizeof(DKBLUE) - sizeof(NORM)),
-					bpkg->atom->PVR, NORM);
+					tree_pkg_atom(bpkg, false)->PVR, NORM);
 		}
 		if (update_only && c != 'U')
 			return c;
@@ -696,13 +699,13 @@ qprint_tree_node(
 	for (i = 0; i < level; ++i)
 		putchar(' ');
 	if (verbose) {
-		char *use = mpkg->meta->Q_USE;  /* TODO: compute difference */
+		char *use = tree_pkg_meta(mpkg, Q_USE);  /* TODO: compute difference */
 		printf("%s %s%s%s%s%s%s\n",
-				atom_format("%[CAT]%[PF]", mpkg->atom),
+				atom_format("%[CAT]%[PF]", tree_pkg_atom(mpkg, false)),
 				install_ver, use != NULL ? "(" : "",
 				RED, use, NORM, use != NULL ? ")" : "");
 	} else {
-		printf("%s\n", atom_format("%[CAT]%[PF]", mpkg->atom));
+		printf("%s\n", atom_format("%[CAT]%[PF]", tree_pkg_atom(mpkg, false)));
 	}
 	return c;
 }
@@ -1067,17 +1070,16 @@ pkg_extract_xpak_cb(
 
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
 static void
-pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
+pkg_merge(int level, const depend_atom *qatom, tree_pkg_ctx *mpkg)
 {
 	set            *objs;
-	tree_ctx       *vdb;
-	tree_cat_ctx   *cat_ctx;
-	tree_match_ctx *bpkg;
-	tree_match_ctx *previnst;
-	depend_atom    *slotatom;
+	tree_pkg_ctx   *bpkg;
+	tree_pkg_ctx   *previnst;
+	atom_ctx       *slotatom;
+	atom_ctx       *matom;
 	FILE           *fp;
 	FILE           *contents;
-	char            buf[1024];
+	char            buf[_Q_PATH_MAX];
 	char           *p;
 	char           *D;
 	char           *T;
@@ -1107,43 +1109,48 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 	/* create atom of the installed mpkg without version, with this
 	 * SLOT (without SUBSLOT) */
+	matom    = tree_pkg_atom(mpkg, true);
 	snprintf(buf, sizeof(buf), "%s/%s:%s",
-			mpkg->atom->CATEGORY,
-			mpkg->atom->PN,
-			mpkg->atom->SLOT == NULL ? "0" : mpkg->atom->SLOT);
+			matom->CATEGORY,
+			matom->PN,
+			matom->SLOT == NULL ? "0" : matom->SLOT);
 	slotatom = atom_explode(buf);
 
 	previnst = best_version(slotatom, BV_INSTALLED);
 	if (previnst != NULL) {
+		atom_ctx *atom = tree_pkg_atom(previnst, false);
 		/* drop REPO and SUBSLOT from query, we don't care about where
 		 * the replacement comes from here, SUBSLOT only affects rebuild
 		 * triggering */
-		replacing = atom_compare_flg(mpkg->atom, previnst->atom,
-				ATOM_COMP_NOSUBSLOT | ATOM_COMP_NOREPO);
-		replver   = previnst->atom->PVR;
+		replacing = atom_compare_flg(matom, atom,
+									 ATOM_COMP_NOSUBSLOT | ATOM_COMP_NOREPO);
+		replver   = atom->PVR;
+		warn("matom: %s", atom_to_string(matom));
+		warn("slotatom: %s", atom_to_string(slotatom));
+		warn("previnst: %s", atom_to_string(atom));
+		warn("%s", booga[replacing]);
 	}
 	atom_implode(slotatom);
 
 	(void)qprint_tree_node(level, mpkg, previnst, replacing);
 
-	if (mpkg->meta->Q_RDEPEND != NULL &&
-			mpkg->meta->Q_RDEPEND[0] != '\0' &&
+	p = tree_pkg_meta(mpkg, Q_RDEPEND);
+	if (p != NULL &&
+			p[0] != '\0' &&
 			follow_rdepends)
 	{
-		const char *rdepend = mpkg->meta->Q_RDEPEND;
-
 		IF_DEBUG(fprintf(stderr, "\n+Parent: %s\n+Depstring: %s\n",
-					atom_to_string(mpkg->atom), rdepend));
+					atom_to_string(matom), p));
 
 		/* <hack> */
-		if (strncmp(rdepend, "|| ", 3) == 0) {
+		if (strncmp(p, "|| ", 3) == 0) {
 			if (verbose)
-				qfprintf(stderr, "fix this rdepend hack %s\n", rdepend);
-			rdepend = "";
+				qfprintf(stderr, "fix this rdepend hack %s\n", p);
+			p = (char *)"";
 		}
 		/* </hack> */
 
-		makeargv(rdepend, &ARGC, &ARGV);
+		makeargv(p, &ARGC, &ARGV);
 		/* Walk the rdepends here. Merging what need be. */
 		for (i = 1; i < ARGC; i++) {
 			depend_atom *subatom;
@@ -1163,15 +1170,14 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 						bpkg = best_version(subatom, BV_INSTALLED | BV_BINPKG);
 						if (bpkg == NULL) {
 							warn("cannot resolve %s from rdepend(%s)",
-									name, rdepend);
+									name, p);
 							atom_implode(subatom);
 							continue;
 						}
 
-						if (bpkg->pkg->cat_ctx->ctx->treetype != TREE_VDB)
+						if (tree_pkg_get_treetype(bpkg) == TREETYPE_BINPKG)
 							pkg_fetch(level + 1, subatom, bpkg);
 
-						tree_match_close(bpkg);
 						atom_implode(subatom);
 					} else {
 						qfprintf(stderr, "Cant explode atom %s\n", name);
@@ -1183,59 +1189,38 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	}
 
 	if (pretend == 100) {
-		tree_match_close(previnst);
 		return;
 	}
 
-	/* Get a handle on the main vdb repo */
-	vdb = tree_open_vdb(portroot, portvdb);
-	if (vdb == NULL) {
-		if (pretend) {
-			tree_match_close(previnst);
-			return;
-		}
-		/* try to create a vdb if none exists yet */
-		xasprintf(&p, "%s/%s", portroot, portvdb);
-		mkdir_p(p, 0755);
-		free(p);
-		vdb = tree_open_vdb(portroot, portvdb);
-	}
-	if (vdb == NULL)
-		errf("need access to root, check permissions to access %s", portroot);
-	cat_ctx = tree_open_cat(vdb, mpkg->atom->CATEGORY);
-	if (!cat_ctx) {
-		if (errno != ENOENT) {
-			tree_close(vdb);
-			tree_match_close(previnst);
-			return;
-		}
-		mkdirat(vdb->tree_fd, mpkg->atom->CATEGORY, 0755);
-		cat_ctx = tree_open_cat(vdb, mpkg->atom->CATEGORY);
-		if (!cat_ctx) {
-			tree_close(vdb);
-			tree_match_close(previnst);
-			return;
-		}
+	/* create directories in the vdb repo */
+	if (!pretend)
+	{
+		snprintf(buf, sizeof(buf), "%s/%s/%s",
+				 portroot, portvdb, matom->CATEGORY);
+		mkdir_p(buf, 0755);
 	}
 
 	/* Set up our temp dir to unpack this stuff   FIXME p -> builddir */
-	xasprintf(&p, "%s/qmerge/%s/%s", port_tmpdir,
-			mpkg->atom->CATEGORY, mpkg->atom->PF);
-	mkdir_p(p, 0755);
-	xchdir(p);
-	xasprintf(&D, "%s/image", p);
-	xasprintf(&T, "%s/temp", p);
-	free(p);
+	snprintf(buf, sizeof(buf), "%s%s/qmerge/%s/%s",
+			 portroot, port_tmpdir, matom->CATEGORY, matom->PF);
+	mkdir_p(buf, 0755);
+	xchdir(buf);
+	xasprintf(&D, "%s/image", buf);
+	xasprintf(&T, "%s/temp", buf);
 
 	/* Doesn't actually remove $PWD, just everything under it */
 	rm_rf(".");
 
-	mkdir_p(portroot, 0755);
 	mkdir("temp", 0755);
 	mkdir("vdb", 0755);
 	mkdir("image", 0755);
 
-	if (mpkg->pkg->binpkg_isgpkg) {
+	p = tree_pkg_get_path(mpkg);
+	i = (int)strlen(p);
+	if (i > sizeof(".tar.gpkg") - 1 &&
+		memcmp(&p[i - (sizeof(".tar.gpkg") - 1)],
+			   ".tar.gpkg", sizeof(".tar.gpkg") - 1) == 0)
+	{
 #ifdef ENABLE_GPKG
 		/* unpack the whole thing to temp, dropping the pkg name dir, so
 		 * we end up with generic files in temp */
@@ -1243,12 +1228,15 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		struct archive       *t;
 		struct archive_entry *entry;
 
+		/* construct full path */
+		snprintf(buf, sizeof(buf), "%s/%s", portroot, p);
+
 		xchdir("temp");
 		a = archive_read_new();
 		t = archive_write_disk_new();
 		archive_read_support_format_all(a);
-		if (archive_read_open_filename(a, mpkg->path, BUFSIZ) != ARCHIVE_OK)
-			err("failed to open %s: %s", mpkg->path, archive_error_string(a));
+		if (archive_read_open_filename(a, buf, BUFSIZ) != ARCHIVE_OK)
+			err("failed to open %s: %s", buf, archive_error_string(a));
 		while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
 			const char *fname = archive_entry_pathname(entry);
 			size_t      size;
@@ -1402,7 +1390,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		archive_write_free(t);
 		xchdir("..");
 #else
-		err("gpkg support not compiled in for %s", mpkg->path);
+		err("gpkg support not compiled in for %s", p);
 #endif
 	} else {
 		int vdbfd;
@@ -1417,30 +1405,20 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		size_t wr;
 		file_magic_type fmt;
 
+		/* construct full path */
+		snprintf(buf, sizeof(buf), "%s/%s", portroot, p);
+
 		tbz2size = 0;
 		if ((vdbfd = open("vdb", O_RDONLY)) == -1)
 			err("failed to open vdb extraction directory");
-		tbz2size = xpak_extract(mpkg->path, &vdbfd, pkg_extract_xpak_cb);
+		tbz2size = xpak_extract(buf, &vdbfd, pkg_extract_xpak_cb);
 		close(vdbfd);
 		if (tbz2size <= 0)
-			err("%s appears not to be a valid tbz2 file", mpkg->path);
+			err("%s appears not to be a valid tbz2 file", p);
 
 		/* figure out if the data is compressed differently from what the
-		 * name suggests, bug #660508, usage of BINPKG_COMPRESS,
-		 * due to the minimal nature of where we run, we cannot rely on file
-		 * or GNU tar, so have to do some laymans MAGIC hunting ourselves */
-
-		/* bz2: 3-byte: 'B' 'Z' 'h'              at byte 0
-		 * gz:  2-byte:  1f  8b                  at byte 0
-		 * xz:  4-byte: '7' 'z' 'X' 'Z'          at byte 1
-		 * tar: 6-byte: 'u' 's' 't' 'a' 'r' \0   at byte 257
-		 * lz4: 4-byte:   4  22  4d  18          at byte 0
-		 * zst: 4-byte: 22-28 b5 2f  fd          at byte 0
-		 * lz:  4-byte: 'L' 'Z' 'I' 'P'          at byte 0
-		 * lzo: 9-byte:  89 'L' 'Z' 'O' 0 d a 1a a at byte 0
-		 * br:  anything else */
-
-		mfd = open(mpkg->path, O_RDONLY);
+		 * name suggests, bug #660508, usage of BINPKG_COMPRESS */
+		mfd = open(buf, O_RDONLY);
 		fmt = file_magic_guess_fd(mfd);
 		if (mfd >= 0)
 			close(mfd);
@@ -1511,25 +1489,26 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		if ((tarpipe = popen(buf, "w")) == NULL)
 			errp("failed to start %s", buf);
 
-		if ((tbz2f = fopen(mpkg->path, "r")) == NULL)
-			errp("failed to open %s for reading", mpkg->path);
+		snprintf(buf, sizeof(buf), "%s/%s", portroot, p);
+		if ((tbz2f = fopen(buf, "r")) == NULL)
+			errp("failed to open %s for reading", p);
 
 		for (piped = wr = 0; piped < tbz2size; piped += wr) {
 			n = MIN(tbz2size - piped, (ssize_t)sizeof iobuf);
 			rd = fread(iobuf, 1, n, tbz2f);
 			if (0 == rd) {
 				if ((err = ferror(tbz2f)) != 0)
-					err("reading %s failed: %s", mpkg->path, strerror(err));
+					errp("reading %s failed", p);
 
 				if (feof(tbz2f))
-					err("unexpected EOF in %s: corrupted binpkg", mpkg->path);
+					err("unexpected EOF in %s: corrupted binpkg", p);
 			}
 
 			for (wr = n = 0; wr < rd; wr += n) {
 				n = fwrite(iobuf + wr, 1, rd - wr, tarpipe);
 				if (n != rd - wr) {
 					if ((err = ferror(tarpipe)) != 0)
-						err("failed to unpack binpkg: %s", strerror(err));
+						errp("failed to unpack binpkg");
 
 					if (feof(tarpipe))
 						err("unexpected EOF trying to unpack binpkg");
@@ -1610,7 +1589,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	makeargv(config_protect, &cp_argc, &cp_argv);
 	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
-	/* call pkg_prerm right before we merge the replacment version such
+	/* call pkg_prerm right before we merge the replacement version such
 	 * that any logic it defines, can use stuff installed by the package */
 	switch (replacing) {
 		case NEWER:
@@ -1659,7 +1638,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		case EQUAL:
 			/* We need to really set this unmerge pending after we
 			 * look at contents of the new pkg */
-			pkg_unmerge(previnst->pkg, mpkg->atom, objs,
+			pkg_unmerge(previnst, matom, objs,
 					cp_argc, cp_argv, cpm_argc, cpm_argv);
 			break;
 		default:
@@ -1680,8 +1659,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	if (pm_phases != NULL)
 		free(pm_phases);
 
-	tree_match_close(previnst);
-
 	freeargv(cp_argc, cp_argv);
 	freeargv(cpm_argc, cpm_argv);
 
@@ -1699,11 +1676,12 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	}
 
 	if (!pretend) {
+		size_t len;
 		/* move the local vdb copy to the final place */
-		snprintf(buf, sizeof(buf), "%s%s/%s/",
-				portroot, portvdb, mpkg->atom->CATEGORY);
+		len = snprintf(buf, sizeof(buf), "%s%s/%s",
+				portroot, portvdb, matom->CATEGORY);
 		mkdir_p(buf, 0755);
-		strcat(buf, mpkg->atom->PF);
+		snprintf(buf + len, sizeof(buf) - len, "/%s", matom->PF);
 		rm_rf(buf);  /* get rid of existing dir, empty dir is fine */
 		if (rename("vdb", buf) != 0) {
 			struct stat     vst;
@@ -1740,51 +1718,51 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	/* clean up our local temp dir */
 	xchdir("..");
 	if (!keep_work)
-		rm_rf(mpkg->atom->PF);
+		rm_rf(matom->PF);
 	/* don't care about return, but when empty, remove */
 	rmdir("../qmerge");
 
 	printf("%s>>>%s %s\n",
-			YELLOW, NORM, atom_format("%[CAT]%[PF]", mpkg->atom));
-
-	tree_close_cat(cat_ctx);
-	tree_close(vdb);
+			YELLOW, NORM, atom_format("%[CAT]%[PF]", matom));
 }
 
 static int
 pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
-	tree_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
+	atom_ctx *atom = tree_pkg_atom(pkg_ctx, false);
 	char *phases;
 	char *eprefix;
 	size_t eprefix_len;
-	const char *T;
+	char *contentsp;
 	char *buf;
 	char *savep;
+	char T[_Q_PATH_MAX];
 	int portroot_fd;
 	llist_char *dirs = NULL;
 	bool unmerge_config_protected;
 
 	buf = phases = NULL;
-	T = "${PWD}/temp";
+	snprintf(T, sizeof(T), "%s%s/qmerge._unmerge_.%s",
+			 portroot, port_tmpdir, atom->PF);
 
 	printf("%s***%s unmerging %s\n", YELLOW, NORM,
-			atom_format("%[CATEGORY]%[PF]", tree_get_atom(pkg_ctx, false)));
+			atom_format("%[CATEGORY]%[PF]", atom));
 
-	portroot_fd = cat_ctx->ctx->portroot_fd;
+	portroot_fd = tree_pkg_get_portroot_fd(pkg_ctx);
 
 	/* execute the pkg_prerm step if we're just unmerging, not when
 	 * replacing, pkg_merge will have called prerm right before merging
 	 * the replacement package */
 	if (!pretend && rpkg == NULL) {
-		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
+		buf = tree_pkg_meta(pkg_ctx, Q_EAPI);
 		if (buf == NULL)
 			buf = (char *)"0";  /* default */
-		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
+		phases = tree_pkg_meta(pkg_ctx, Q_DEFINED_PHASES);
 		if (phases != NULL) {
-			mkdirat(pkg_ctx->fd, "temp", 0755);
-			pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_PRERM,
+			mkdir_p(T, 0755);
+			pkg_run_func_at(portroot_fd, tree_pkg_get_path(pkg_ctx),
+							phases, PKG_PRERM,
 							T, T, buf, "");
 		}
 	}
@@ -1799,9 +1777,10 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		contains_set("config-protect-if-modified", features);
 
 	/* get a handle on the things to clean up */
-	buf = tree_pkg_meta_get(pkg_ctx, CONTENTS);
-	if (buf == NULL)
+	contentsp = tree_pkg_meta(pkg_ctx, Q_CONTENTS);
+	if (contentsp == NULL)
 		return 1;
+	buf = xstrdup(contentsp);  /* should not modify pkg_ctx */
 
 	for (; (buf = strtok_r(buf, "\n", &savep)) != NULL; buf = NULL) {
 		bool            del;
@@ -1902,6 +1881,8 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		}
 	}
 
+	free(contentsp);
+
 	/* Then remove all dirs in reverse order */
 	while (dirs != NULL) {
 		llist_char *list;
@@ -1918,38 +1899,48 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	}
 
 	if (!pretend) {
-		buf = tree_pkg_meta_get(pkg_ctx, EAPI);
-		phases = tree_pkg_meta_get(pkg_ctx, DEFINED_PHASES);
+		buf = tree_pkg_meta(pkg_ctx, Q_EAPI);
 		if (buf == NULL)
 			buf = (char *)"0";  /* default */
+		phases = tree_pkg_meta(pkg_ctx, Q_DEFINED_PHASES);
 		if (phases != NULL) {
+			mkdir_p(T, 0755);
 			/* execute the pkg_postrm step */
-			pkg_run_func_at(pkg_ctx->fd, ".", phases, PKG_POSTRM,
-					T, T, buf, rpkg == NULL ? "" : rpkg->PVR);
+			pkg_run_func_at(portroot_fd, tree_pkg_get_path(pkg_ctx),
+							phases, PKG_POSTRM,
+							T, T, buf, rpkg == NULL ? "" : rpkg->PVR);
 		}
 
+		/* remove the tmp */
+		rm_rf(T);
+		rmdir(T);
+
 		/* finally delete the vdb entry */
-		rm_rf_at(pkg_ctx->fd, ".");
-		unlinkat(cat_ctx->fd, pkg_ctx->name, AT_REMOVEDIR);
+		rm_rf_at(portroot_fd, tree_pkg_get_path(pkg_ctx));
+		unlinkat(portroot_fd, tree_pkg_get_path(pkg_ctx), AT_REMOVEDIR);
 
 		/* and prune the category if it's empty */
-		unlinkat(cat_ctx->ctx->tree_fd, cat_ctx->name, AT_REMOVEDIR);
+		snprintf(T, sizeof(T), "%s", tree_pkg_get_path(pkg_ctx));
+		contentsp = strrchr(T, '/');
+		if (contentsp != NULL)
+			*contentsp = '\0';
+		unlinkat(portroot_fd, T, AT_REMOVEDIR);
 	}
 
 	return 0;
 }
 
 static int
-unlink_empty(const char *buf)
+unlink_empty_at(int pfd, const char *buf)
 {
 	struct stat st;
 	int fd;
 	int ret = -1;
 
-	fd = open(buf, O_RDONLY);
+	fd = openat(pfd, buf, O_RDONLY);
 	if (fd != -1 && stat(buf, &st) != -1) {
 		if (st.st_size == 0)
-			ret = unlink(buf);
+			ret = unlinkat(pfd, buf, 0);
 	}
 	if (fd != -1)
 		close(fd);
@@ -1958,57 +1949,72 @@ unlink_empty(const char *buf)
 
 static int
 pkg_verify_checksums(
-		const tree_match_ctx *pkg,
-		int                   strict,
-		int                   display)
+		tree_pkg_ctx   *pkg,
+		int             strict,
+		int             display)
 {
-	int    ret = 0;
-	char   md5[MD5_DIGEST_LENGTH + 1];
-	char   sha1[SHA1_DIGEST_LENGTH + 1];
-	size_t flen;
-	int    mlen;
+	atom_ctx *patom = tree_pkg_atom(pkg, false);
+	char     *path  = tree_pkg_get_path(pkg);
+	int       ret   = 0;
+	char      md5[MD5_DIGEST_LENGTH + 1];
+	char      sha1[SHA1_DIGEST_LENGTH + 1];
+	char     *p;
+	size_t    flen;
+	int       mlen;
+	bool      found = false;
 
-	if (hash_multiple_file(pkg->path, md5, sha1, NULL, NULL, NULL,
-			&flen, HASH_MD5 | HASH_SHA1) == -1)
+	if (hash_multiple_file_at(tree_pkg_get_portroot_fd(pkg), path,
+							  md5, sha1, NULL, NULL, NULL,
+							  &flen, HASH_MD5 | HASH_SHA1) == -1)
 		errf("failed to compute hashes for %s: %s\n",
-				atom_to_string(pkg->atom), strerror(errno));
+				atom_to_string(patom), strerror(errno));
 
-	mlen = atoi(pkg->meta->Q_SIZE);
+	if (display)
+		printf("%s:\n", atom_to_string(patom));
+
+	p = tree_pkg_meta(pkg, Q_SIZE);
+	if (p != NULL)
+		mlen = atoi(p);
+	else
+		mlen = 0;
 	if (flen != (size_t)mlen) {
-		warn("filesize %zu doesn't match requested size %d for %s\n",
-				flen, mlen, atom_to_string(pkg->atom));
+		warn("SIZE: [%sERR%s] %zu != %s for %s from %s\n",
+			 RED, NORM, flen, p, atom_to_string(patom), path);
 		ret++;
 	}
-
-	if (pkg->meta->Q_MD5 != NULL) {
-		if (strcmp(md5, pkg->meta->Q_MD5) == 0) {
-			if (display)
-				printf("MD5:  [%sOK%s] %s %s\n",
-						GREEN, NORM, md5, atom_to_string(pkg->atom));
-		} else {
-			if (display)
-				warn("MD5:  [%sERR%s] (%s) != (%s) %s from %s",
-						RED, NORM, md5, pkg->meta->Q_MD5,
-						atom_to_string(pkg->atom), pkg->path);
-			ret++;
-		}
+	else if (display)
+	{
+		printf("  SIZE: [%s;-)%s] %s\n", GREEN, NORM, p);
 	}
 
-	if (pkg->meta->Q_SHA1 != NULL) {
-		if (strcmp(sha1, pkg->meta->Q_SHA1) == 0) {
+	if ((p = tree_pkg_meta(pkg, Q_MD5)) != NULL) {
+		if (strcmp(md5, p) == 0) {
 			if (display)
-				qprintf("SHA1: [%sOK%s] %s %s\n",
-						GREEN, NORM, sha1, atom_to_string(pkg->atom));
+				printf("  MD5:  [%s;-)%s] %s\n", GREEN, NORM, md5);
 		} else {
 			if (display)
-				warn("SHA1: [%sERR%s] (%s) != (%s) %s from %s",
-						RED, NORM, sha1, pkg->meta->Q_SHA1,
-						atom_to_string(pkg->atom), pkg->path);
+				warn("    MD5:  [%sERR%s] (%s) != (%s) %s from %s",
+					 RED, NORM, md5, p, atom_to_string(patom), path);
 			ret++;
 		}
+		found = true;
 	}
 
-	if (pkg->meta->Q_MD5 == NULL && pkg->meta->Q_SHA1 == NULL)
+	if ((p = tree_pkg_meta(pkg, Q_SHA1)) != NULL) {
+		if (strcmp(sha1, p) == 0) {
+			if (display)
+				qprintf("  SHA1: [%s;-)%s] %s\n", GREEN, NORM, sha1);
+		} else {
+			if (display)
+				warn("   SHA1: [%sERR%s] (%s) != (%s) %s from %s",
+					 RED, NORM, sha1, p, atom_to_string(patom), path);
+			ret++;
+		}
+		found = true;
+	}
+
+	/* never return if we couldn't verify any hash */
+	if (!found)
 		return -1;
 
 	if (strict && ret)
@@ -2018,9 +2024,10 @@ pkg_verify_checksums(
 }
 
 static void
-pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
+pkg_fetch(int level, const depend_atom *qatom, tree_pkg_ctx *mpkg)
 {
-	int  verifyret;
+	atom_ctx *patom     = tree_pkg_atom(mpkg, false);
+	int       verifyret;
 
 	/* qmerge -pv patch */
 	if (pretend) {
@@ -2030,44 +2037,58 @@ pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		return;
 	}
 
-	unlink_empty(mpkg->path);
+	unlink_empty_at(tree_pkg_get_portroot_fd(mpkg), tree_pkg_get_path(mpkg));
 
-	if (mkdir(mpkg->pkg->cat_ctx->ctx->path, 0755) == -1 && errno != EEXIST) {
-		warn("Failed to create %s", mpkg->pkg->cat_ctx->ctx->path);
+	if (mkdir_p_at(tree_pkg_get_portroot_fd(mpkg), pkgdir + 1, 0755) == -1)
+	{
+		warn("Failed to create %s", pkgdir);
 		return;
 	}
 
-	if (force_download && (access(mpkg->path, R_OK) == 0) &&
-			(mpkg->meta->Q_SHA1 != NULL || mpkg->meta->Q_MD5 != NULL))
+	if (force_download &&
+		faccessat(tree_pkg_get_portroot_fd(mpkg),
+				  tree_pkg_get_path(mpkg), R_OK, 0) == 0)
 	{
 		if (pkg_verify_checksums(mpkg, 0, 0) != 0)
 			if (getenv("QMERGE") == NULL)
-				unlink(mpkg->path);
+				unlinkat(tree_pkg_get_portroot_fd(mpkg),
+						 tree_pkg_get_path(mpkg), 0);
 	}
 
-	if (access(mpkg->path, R_OK) != 0) {
+	if (faccessat(tree_pkg_get_portroot_fd(mpkg),
+				  tree_pkg_get_path(mpkg), R_OK, 0) != 0)
+	{
 		char *p;
+		char  dest[_Q_PATH_MAX];
 
 		if (verbose)
-			printf("Fetching %s\n", atom_to_string(mpkg->atom));
+			printf("Fetching %s\n", atom_to_string(patom));
 
-		/* fetch the package */
-		p = strrchr(mpkg->path, '/');
-		if (p != NULL)
-			p = strrchr(p, '/');
-		if (p != NULL) {
-			p++;
-			fetch(mpkg->pkg->cat_ctx->ctx->path, p);
-		} else {
-			warn("invalid path: %s, skipping", mpkg->path);
+		snprintf(dest, sizeof(dest), "%s%s/%s",
+				 portroot, pkgdir, patom->CATEGORY);
+		if (mkdir_p(dest, 0755) != 0)
+		{
+			warnp("Failed to create %s", dest);
+			return;
 		}
 
+		/* fetch the package */
+		p = tree_pkg_meta(mpkg, Q_PATH);
+		if (p != NULL)
+			fetch(dest, p);
+		else
+			warn("invalid or missing path: %s, skipping",
+				 p != NULL ? p : "<missing>");
+
 		/* verify the pkg exists now. unlink if zero bytes */
-		unlink_empty(mpkg->path);
+		unlink_empty_at(tree_pkg_get_portroot_fd(mpkg),
+						tree_pkg_get_path(mpkg));
 	}
 
-	if (access(mpkg->path, R_OK) != 0) {
-		warn("Failed to fetch %s from %s", mpkg->atom->PF, binhost);
+	if (faccessat(tree_pkg_get_portroot_fd(mpkg),
+				  tree_pkg_get_path(mpkg), R_OK, 0) != 0)
+	{
+		warn("Failed to fetch %s from %s", patom->PF, binhost);
 		fflush(stderr);
 		return;
 	}
@@ -2076,7 +2097,7 @@ pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 	verifyret = pkg_verify_checksums(mpkg, qmerge_strict, !quiet);
 	if (verifyret == -1) {
 		warn("No checksum data for %s (try `emaint binhost --fix`)",
-				mpkg->path);
+				tree_pkg_get_path(mpkg));
 		return;
 	} else if (verifyret == 0) {
 		pkg_merge(0, qatom, mpkg);
@@ -2155,7 +2176,7 @@ qmerge_add_set_file(const char *pfx, const char *dir, const char *file, set *q)
 	buf = NULL;
 	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
 		rmspace_len(buf, (size_t)linelen);
-		q = add_set(buf, q);
+		q = add_set_unique(buf, q, NULL);
 	}
 	free(buf);
 
@@ -2200,13 +2221,18 @@ qmerge_add_set(char *buf, set *q)
 		return qmerge_add_set_file(CONFIG_EPREFIX, "/var/lib/portage",
 								   "world", q);
 	} else if (strcmp(buf, "all") == 0) {
-		tree_ctx *ctx = tree_open_vdb(portroot, portvdb);
-		set *ret = NULL;
-		if (ctx != NULL) {
-			ret = tree_get_atoms(ctx, false, NULL);
-			tree_close(ctx);
-		}
-		return ret;
+		tree_ctx     *ctx  = tree_open_vdb(portroot, portvdb);
+		array        *pkgs = tree_match_atom(ctx, NULL, TREE_MATCH_DEFAULT);
+		tree_pkg_ctx *w;
+		size_t        n;
+
+		array_for_each(pkgs, n, w)
+			add_set_unique(atom_format("%[CAT]/%[PN]", tree_pkg_atom(w, false)),
+						   q, NULL);
+
+		array_free(pkgs);
+		tree_close(ctx);
+		return q;
 	} else if (strcmp(buf, "system") == 0) {
 		return q_profile_walk("packages", qmerge_add_set_system, q);
 	} else if (buf[0] == '@') {
@@ -2215,7 +2241,7 @@ qmerge_add_set(char *buf, set *q)
 								   "/etc/portage/sets", buf+1, q);
 	} else {
 		rmspace(buf);
-		return add_set(buf, q);
+		return add_set_unique(buf, q, NULL);
 	}
 }
 
@@ -2234,7 +2260,7 @@ qmerge_run(set *todo)
 			size_t todo_cnt = list_set(todo, &todo_strs);
 			size_t i;
 			depend_atom *atom;
-			tree_match_ctx *bpkg;
+			tree_pkg_ctx *bpkg;
 			int ret = EXIT_FAILURE;
 
 			for (i = 0; i < todo_cnt; i++) {
@@ -2242,7 +2268,6 @@ qmerge_run(set *todo)
 				bpkg = best_version(atom, BV_BINPKG);
 				if (bpkg != NULL) {
 					pkg_fetch(0, atom, bpkg);
-					tree_match_close(bpkg);
 					ret = EXIT_SUCCESS;
 				} else {
 					warn("nothing found for %s", atom_to_string(atom));

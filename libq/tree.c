@@ -29,2540 +29,2513 @@
 #include "tree.h"
 #include "xpak.h"
 
+/* 2026 rewrite
+ * After releases 0.98 and 0.99 it became clear tree had become too much
+ * loaded with functionality that broke things in many ways.  In
+ * particular inconsistent behaviour, as well as crashes and leaks due
+ * to seemingly random return of pointers or copies to be freed or not
+ * based on the calling scenario.
+ *
+ * With the amount of tree types and the cost of traversals, combined
+ * with the need to do selective versus full scans, caching what we read
+ * is an integral part.  Each tree consists of a list of categories, and
+ * per category a list of packages.
+ * - categories: list, populated on first access
+ *   * full scan flags the list as final, e.g. next requests can be
+ *     handled via the cache (including negatives)
+ *   * cat lookup adds the category to the list as existing
+ *   * sorting is performed as necessary (on-demand)
+ * - packages: list attached to their category, can be per package (PN)
+ *   such as in ebuild trees, or full list for a category
+ *   * stores name so cheap pre-filter can be done without atom_compare
+ *   * starts shallow, further getters may retrieve more data
+ *   * metadata may be filled in on demand, or while reading if the data
+ *     is available anywya
+ *   * sorting is performed as necessary like for categories
+ *
+ * Functionality from free is all shielded behind functions, code
+ * outside of tree should not be able to poke in the internal state
+ * structs, nor have the need for that.  Functions return pointers that
+ * should not be freed, everything remains cached until the tree is
+ * closed.  Exception to this is the matching interface which returns an
+ * array that must be freed by the caller.  Callers should not modify
+ * what they get returned, if they have to, they have to clone elements,
+ * e.g. using atom_clone().
+ *
+ * Each tree keeps portroot filedescriptor open for as long as it is
+ * around.  Other descriptors are only kept open for as long as the
+ * operation to read or consume the data takes, in order to reduce the
+ * potentially open descriptors.  The path elements of pkg and tree
+ * structures point to the object relative to the portroot_fd and do not
+ * include the leading '/' for that reason.
+ *
+ * The main two ways of interacting with trees (constructed via
+ * tree_new) are:
+ * - tree_foreach_pkg: iterate over all packages that match an atom via
+ *   a callback function
+ * - tree_match_atom: return all matches for an atom in an array
+ * The two ways are essentially the same, tree_match_atom is implemented
+ * by calling tree_foreach_pkg with a callback of its own to construct
+ * the return array.
+ */
 
-static int tree_pkg_compar(const void *l, const void *r);
-static void tree_close_meta(tree_pkg_meta *cache);
+struct tree_ {
+  char          *path;
+  char          *repo;
+  array         *cats;         /* list of tree_cat_ctx pointers */
+  int            portroot_fd;
+  enum {
+    TREE_UNSET = 0,
+    TREE_EBUILD,
+    TREE_VDB,
+    TREE_PACKAGES,
+    TREE_BINPKGS,
+    TREE_GTREE,
+  }              type;
+  bool           cats_complete:1;
+};
 
-static tree_ctx *
-tree_open_int(const char *sroot, const char *tdir, bool quiet)
-{
-	tree_ctx *ctx = xzalloc(sizeof(*ctx));
+struct tree_cat_ {
+  tree_ctx      *tree;
+  char          *name;
+  array         *pkgs;         /* list of tree_pkg_ctx pointers */
+  bool           pkgs_complete:1;
+};
 
-	ctx->portroot_fd = open(sroot, O_RDONLY | O_CLOEXEC | O_PATH);
-	if (ctx->portroot_fd == -1) {
-		if (!quiet)
-			warnp("could not open root: %s", sroot);
-		goto f_error;
-	}
-
-	/* Skip the leading slash */
-	tdir++;
-	if (*tdir == '\0')
-		tdir = ".";
-	/* Cannot use O_PATH as we want to use fdopendir() */
-	ctx->tree_fd = openat(ctx->portroot_fd, tdir, O_RDONLY | O_CLOEXEC);
-	if (ctx->tree_fd == -1) {
-		if (!quiet)
-			warnp("could not open tree: %s (in root %s)", tdir, sroot);
-		goto cp_error;
-	}
-
-	if (sroot[0] == '/' && sroot[1] == '\0')
-		sroot = "";
-	snprintf(ctx->path, sizeof(ctx->path), "%s/%s", sroot, tdir);
-
-	ctx->dir = fdopendir(ctx->tree_fd);
-	if (ctx->dir == NULL)
-		goto cv_error;
-
-	ctx->do_sort = false;
-	return ctx;
-
- cv_error:
-	close(ctx->tree_fd);
- cp_error:
-	close(ctx->portroot_fd);
- f_error:
-	free(ctx);
-	return NULL;
-}
-
-static const char portcachedir_pms[] = "metadata/cache";
-static const char portcachedir_md5[] = "metadata/md5-cache";
-#ifdef ENABLE_GTREE
-static const char portcachedir_gt1[] = "metadata/repo.gtree.tar";
-#endif
-static const char portrepo_name[]    = "profiles/repo_name";
-tree_ctx *
-tree_open(const char *sroot, const char *portdir)
-{
-	tree_ctx *ret;
-	char buf[_Q_PATH_MAX];
-
-	ret = tree_open_ebuild(sroot, portdir);
-	if (ret == NULL)
-	{
-		warnf("could not open repository at %s (under root %s)",
-			  portdir, sroot);
-
-		return NULL;
-	}
-
-	/* look for cache trees to speed things up */
-#ifdef ENABLE_GTREE
-	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_gt1);
-	ret->subtree = tree_open_gtree_int(sroot, buf, true);
-	if (ret->subtree != NULL) {
-		ret->subtree->treetype = TREE_METADATA_GTREE;
-		return ret;
-	}
-#endif
-
-	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_md5);
-	ret->subtree = tree_open_int(sroot, buf, true);
-	if (ret->subtree != NULL) {
-		ret->subtree->treetype = TREE_METADATA_MD5;
-		ret->subtree->cache.categories = create_set();
-		return ret;
-	}
-
-	snprintf(buf, sizeof(buf), "%s/%s", portdir, portcachedir_pms);
-	ret->subtree = tree_open_int(sroot, buf, true);
-	if (ret->subtree != NULL) {
-		ret->subtree->treetype = TREE_METADATA_PMS;
-		ret->subtree->cache.categories = create_set();
-		return ret;
-	}
-
-	return ret;
-}
-
-tree_ctx *
-tree_open_vdb(const char *sroot, const char *svdb)
-{
-	tree_ctx *ret = tree_open_int(sroot, svdb, false);
-	if (ret != NULL)
-		ret->treetype = TREE_VDB;
-	return ret;
-}
-
-tree_ctx *
-tree_open_ebuild(const char *sroot, const char *portdir)
-{
-	tree_ctx *ret = tree_open_int(sroot, portdir, true);
-	if (ret != NULL) {
-		char buf[_Q_PATH_MAX];
-		char *repo = NULL;
-		size_t repolen = 0;
-
-		snprintf(buf, sizeof(buf), "%s%s/%s", sroot, portdir, portrepo_name);
-		if (eat_file(buf, &repo, &repolen)) {
-			(void)rmspace(repo);
-			ret->repo = repo;
-		}
-		ret->treetype = TREE_EBUILD;
-	}
-	return ret;
-}
-
-static const char binpkg_packages[]  = "Packages";
-tree_ctx *
-tree_open_binpkg(const char *sroot, const char *spkg)
-{
-	tree_ctx *ret = tree_open_int(sroot, spkg, true);
-	int fd;
-
-	if (ret != NULL) {
-		ret->treetype = TREE_BINPKGS;
-
-		fd = openat(ret->tree_fd, binpkg_packages, O_RDONLY | O_CLOEXEC);
-		if (eat_file_fd(fd, &ret->cache.store, &ret->cache.storesize)) {
-			ret->treetype = TREE_PACKAGES;
-		} else if (ret->cache.store != NULL) {
-			free(ret->cache.store);
-			ret->cache.store = NULL;
-		}
-		close(fd);
-	}
-
-	return ret;
-}
+struct tree_pkg_ {
+  tree_cat_ctx  *cat;
+  char          *name;         /* PN, for cheap search purposes */
+  char          *path;         /* full path from root, includes extension etc */
+  atom_ctx      *atom;         /* lazily initialised, thus initially NULL */
+  char          *meta[TREE_META_MAX_KEYS];
+  bool           atom_complete:1;
+  bool           meta_complete:1;
+  bool           cache_invalid:1;
+  bool           binpkg_gpkg:1;
+};
 
 #ifdef ENABLE_GTREE
-tree_ctx *
-tree_open_gtree_int(const char *sroot, const char *tar, bool quiet)
-{
-	tree_ctx             *ctx = xzalloc(sizeof(*ctx));
-	struct archive       *gt;
-	struct archive_entry *entry;
-
-	ctx->portroot_fd = open(sroot, O_RDONLY | O_CLOEXEC | O_PATH);
-	if (ctx->portroot_fd == -1) {
-		if (!quiet)
-			warnp("could not open root: %s", sroot);
-		free(ctx);
-		return NULL;
-	}
-
-	/* Skip the leading slash */
-	tar++;
-	if (*tar == '\0')
-		tar = ".";
-	ctx->tree_fd = openat(ctx->portroot_fd, tar, O_RDONLY | O_CLOEXEC);
-	if (ctx->tree_fd == -1) {
-		if (!quiet)
-			warnp("could not open tree: %s (in root %s)", tar, sroot);
-		close(ctx->portroot_fd);
-		free(ctx);
-		return NULL;
-	}
-
-	if (sroot[0] == '/' && sroot[1] == '\0')
-		sroot = "";
-	snprintf(ctx->path, sizeof(ctx->path), "%s/%s", sroot, tar);
-
-	gt = archive_read_new();
-	archive_read_support_format_all(gt);
-	if (archive_read_open_fd(gt, ctx->tree_fd, BUFSIZ) != ARCHIVE_OK ||
-		archive_read_next_header(gt, &entry) != ARCHIVE_OK)
-	{
-		if (!quiet)
-			warnp("could not open tree: %s (in root %s): %s",
-				  tar, sroot, archive_error_string(gt));
-		archive_read_free(gt);
-		close(ctx->portroot_fd);
-		close(ctx->tree_fd);
-		free(ctx);
-		return NULL;
-	}
-	if (strcmp(archive_entry_pathname(entry), "gtree-1") != 0) {
-		if (!quiet)
-			warnp("could not open tree: %s (in root %s): not a gtree container",
-				  tar, sroot);
-		archive_read_free(gt);
-		close(ctx->portroot_fd);
-		close(ctx->tree_fd);
-		free(ctx);
-		return NULL;
-	}
-	/* defer repo for now */
-	archive_read_free(gt);
-
-	return ctx;
-}
-#endif
-
-void
-tree_close(tree_ctx *ctx)
-{
-	if (ctx->cache.categories != NULL) {
-		array *t = array_new();
-		size_t n;
-		tree_cat_ctx *cat;
-
-		values_set(ctx->cache.categories, t);
-		free_set(ctx->cache.categories);
-		ctx->cache.categories = NULL;  /* must happen before close_cat */
-
-		array_for_each(t, n, cat) {
-			int i;
-			/* ensure we cleanup all pkgs */
-			for (i = 0; i < cat->pkg_cnt; i++)
-				cat->pkg_ctxs[i]->cached = false;
-			cat->pkg_cur = 0;
-			tree_close_cat(cat);
-		}
-
-		array_free(t);
-	}
-	if (ctx->cache.store != NULL)
-		free(ctx->cache.store);
-
-	if (ctx->dir != NULL)
-		closedir(ctx->dir);
-	else if (ctx->tree_fd >= 0)
-		close(ctx->tree_fd); /* closedir() above does this for us */
-	close(ctx->portroot_fd);
-	if (ctx->cat_de != NULL)
-		scandir_free(ctx->cat_de, ctx->cat_cnt);
-	if (ctx->repo != NULL)
-		free(ctx->repo);
-	if (ctx->pkgs != NULL)
-		free(ctx->pkgs);
-	if (ctx->ebuilddir_ctx != NULL)
-		free(ctx->ebuilddir_ctx);
-	if (ctx->subtree != NULL)
-		tree_close(ctx->subtree);
-	free(ctx);
-}
-
-static int
-tree_filter_cat(const struct dirent *de)
-{
-	int i;
-	bool founddash;
-
-	/* PMS 3.1.1 */
-	founddash = false;
-	for (i = 0; de->d_name[i] != '\0'; i++) {
-		switch (de->d_name[i]) {
-			case '_':
-				break;
-			case '-':
-				founddash = true;
-				/* fall through */
-			case '+':
-			case '.':
-				if (i)
-					break;
-				return 0;
-			default:
-				if ((de->d_name[i] >= 'A' && de->d_name[i] <= 'Z') ||
-						(de->d_name[i] >= 'a' && de->d_name[i] <= 'z') ||
-						(de->d_name[i] >= '0' && de->d_name[i] <= '9'))
-					break;
-				return 0;
-		}
-	}
-	if (!founddash && strcmp(de->d_name, "virtual") != 0)
-		return 0;
-
-	return i;
-}
-
-tree_cat_ctx *
-tree_open_cat(tree_ctx *ctx, const char *name)
-{
-	tree_cat_ctx *cat_ctx;
-	int fd;
-	DIR *dir;
-
-	/* lookup in the cache, if any */
-	if (ctx->cache.categories != NULL) {
-		cat_ctx = get_set(name, ctx->cache.categories);
-		if (cat_ctx != NULL) {
-			/* reset state so it can be re-iterated (sort benefits the
-			 * most here) */
-			if (ctx->do_sort) {
-				cat_ctx->pkg_cur = 0;
-			} else {
-				rewinddir(cat_ctx->dir);
-			}
-			return cat_ctx;
-		}
-	}
-
-	/* Cannot use O_PATH as we want to use fdopendir() */
-	fd = openat(ctx->tree_fd, name, O_RDONLY | O_CLOEXEC);
-	if (fd == -1)
-		return NULL;
-
-	dir = fdopendir(fd);
-	if (!dir) {
-		close(fd);
-		return NULL;
-	}
-
-	cat_ctx = xzalloc(sizeof(*cat_ctx));
-	cat_ctx->name = name;
-	cat_ctx->fd = fd;
-	cat_ctx->dir = dir;
-	cat_ctx->ctx = ctx;
-	cat_ctx->pkg_ctxs = NULL;
-	cat_ctx->pkg_cur = 0;
-	cat_ctx->pkg_cnt = 0;
-
-	if (ctx->cache.categories != NULL) {
-		ctx->cache.categories =
-			add_set_value(name, cat_ctx, NULL, ctx->cache.categories);
-		/* ensure name doesn't expire after this instantiation is closed */
-		cat_ctx->name = contains_set(name, ctx->cache.categories);
-	}
-
-	return cat_ctx;
-}
-
-static tree_cat_ctx *
-tree_next_cat(tree_ctx *ctx)
-{
-	/* search for a category directory */
-	tree_cat_ctx *cat_ctx = NULL;
-	const struct dirent *de;
-
-	if (ctx->do_sort) {
-		if (ctx->cat_de == NULL) {
-			if (ctx->cache.all_categories) {
-				char **cats;
-				size_t i;
-				size_t len;
-				struct dirent **ret;
-
-				/* exploit the cache instead of reading from directory */
-				if (ctx->cat_de != NULL)
-					scandir_free(ctx->cat_de, ctx->cat_cnt);
-				ctx->cat_cnt = cnt_set(ctx->cache.categories);
-				ctx->cat_de = ret = xmalloc(sizeof(*ret) * ctx->cat_cnt);
-				list_set(ctx->cache.categories, &cats);
-				for (i = 0; i < ctx->cat_cnt; i++) {
-					len = strlen(cats[i]) + 1;
-					ret[i] = xzalloc(sizeof(*de) + len);
-					snprintf(ret[i]->d_name, len, "%s", cats[i]);
-				}
-				if (i > 1)
-					qsort(ret, ctx->cat_cnt, sizeof(*ret),
-							(int (*)(const void *, const void *))alphasort);
-				free(cats);
-			} else {
-				int sdret = scandirat(ctx->tree_fd, ".",
-									  &ctx->cat_de,
-									  tree_filter_cat, alphasort);
-				/* CID 548426 */
-				if (sdret < 0)
-					ctx->cat_cnt = 0;
-				else
-					ctx->cat_cnt = (size_t)sdret;
-			}
-			ctx->cat_cur = 0;
-		}
-
-		while (ctx->cat_cur < ctx->cat_cnt) {
-			de = ctx->cat_de[ctx->cat_cur++];
-
-			/* match if cat is requested */
-			if (ctx->query_atom != NULL && ctx->query_atom->CATEGORY != NULL &&
-					strcmp(ctx->query_atom->CATEGORY, de->d_name) != 0)
-				continue;
-
-			cat_ctx = tree_open_cat(ctx, de->d_name);
-			if (!cat_ctx)
-				continue;
-
-			break;
-		}
-	} else {
-		/* cheaper "streaming" variant */
-		do {
-			de = readdir(ctx->dir);
-			if (!de)
-				break;
-
-			if (tree_filter_cat(de) == 0)
-				continue;
-
-			/* match if cat is requested */
-			if (ctx->query_atom != NULL && ctx->query_atom->CATEGORY != NULL &&
-					strcmp(ctx->query_atom->CATEGORY, de->d_name) != 0)
-				continue;
-
-			cat_ctx = tree_open_cat(ctx, de->d_name);
-			if (!cat_ctx)
-				continue;
-
-			break;
-		} while (1);
-	}
-
-	return cat_ctx;
-}
-
-void
-tree_close_cat(tree_cat_ctx *cat_ctx)
-{
-	if (cat_ctx->ctx->cache.categories != NULL &&
-		(cat_ctx->ctx->cache.all_categories ||
-		 contains_set(cat_ctx->name, cat_ctx->ctx->cache.categories)))
-		return;
-
-	/* cleanup unreturned pkgs when sorted (or cache in use) */
-	while (cat_ctx->pkg_cur < cat_ctx->pkg_cnt)
-		tree_close_pkg(cat_ctx->pkg_ctxs[cat_ctx->pkg_cur++]);
-
-	closedir(cat_ctx->dir);
-	/* closedir() above does this for us: */
-	/* close(ctx->fd); */
-	if (cat_ctx->ctx->do_sort)
-		free(cat_ctx->pkg_ctxs);
-
-	free(cat_ctx);
-}
-
-static int
-tree_filter_pkg(const struct dirent *de)
-{
-	int i;
-	bool founddash = false;
-
-	/* PMS 3.1.2 */
-	for (i = 0; de->d_name[i] != '\0'; i++) {
-		switch (de->d_name[i]) {
-			case '_':
-				break;
-			case '-':
-				founddash = true;
-				/* fall through */
-			case '+':
-				if (i)
-					break;
-				return 0;
-			default:
-				if ((de->d_name[i] >= 'A' && de->d_name[i] <= 'Z') ||
-						(de->d_name[i] >= 'a' && de->d_name[i] <= 'z') ||
-						(de->d_name[i] >= '0' && de->d_name[i] <= '9'))
-					break;
-				if (founddash)
-					return 1;
-				return 0;
-		}
-	}
-
-	if (i > 0 &&
-		(strcmp(de->d_name, "Manifest") == 0 ||
-		 strcmp(de->d_name, "metadata.xml") == 0))
-		i = 0;
-
-	return i;
-}
-
-tree_pkg_ctx *
-tree_open_pkg(tree_cat_ctx *cat_ctx, const char *name)
-{
-	tree_pkg_ctx *pkg_ctx;
-	bool          isgpkg  = false;
-	depend_atom  *patom   = NULL;
-
-	if (cat_ctx->ctx->treetype == TREE_EBUILD &&
-		cat_ctx->ctx->ebuilddir_cat_ctx == cat_ctx)
-	{
-		size_t len = strlen(name);
-		char  *p   = (char *)&name[len - (sizeof(".ebuild") - 1)];
-		if (len <= sizeof(".ebuild") - 1 ||
-			memcmp(p, ".ebuild", sizeof(".ebuild") - 1) != 0)
-			return NULL;  /* invalid, must be some random other file */
-		*p = '\0';
-	} else if (cat_ctx->ctx->treetype == TREE_BINPKGS) {
-		size_t len   = strlen(name);
-		char  *p     = (char *)&name[len - (sizeof(".gpkg.tar") - 1)];
-		bool   isxpk = false;
-
-		/* we pre-build the atom here to pick up on the build_id in the
-		 * filename, if any */
-
-		if (len > sizeof(".gpkg.tar") - 1 &&
-			memcmp(p, ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
-		{
-			isgpkg = true;
-			patom  = atom_explode_cat(name, cat_ctx->name);
-			*p     = '\0';
-		}
-
-		if (!isgpkg &&
-			(len > sizeof(".tbz2") - 1 &&
-			 (p = (char *)&name[len - (sizeof(".tbz2") - 1)]) != NULL &&
-			 (memcmp(p, ".tbz2", sizeof(".tbz2") - 1) == 0 ||
-			  memcmp(p, ".xpak", sizeof(".xpak") - 1) == 0)))
-		{
-			isxpk = true;
-			patom  = atom_explode_cat(name, cat_ctx->name);
-			*p    = '\0';
-		}
-
-		if (!isgpkg &&
-			!isxpk)
-		{
-			struct stat sb;
-
-			if (cat_ctx->ctx->ebuilddir_cat_ctx == cat_ctx)
-				return NULL;  /* invalid, like above but only as leaf */
-
-			/* only accept this one if it is a directory (PN) */
-			if (fstatat(cat_ctx->fd, name, &sb, 0) < 0)
-				return NULL;  /* nothing? */
-			if (!S_ISDIR(sb.st_mode))
-				return NULL;  /* invalid random file */
-		}
-	}
-
-	pkg_ctx                = xzalloc(sizeof(*pkg_ctx));
-	pkg_ctx->name          = name;
-	pkg_ctx->repo          = cat_ctx->ctx->repo;
-	pkg_ctx->fd            = -1;
-	pkg_ctx->cat_ctx       = cat_ctx;
-	pkg_ctx->binpkg_isgpkg = isgpkg;
-	pkg_ctx->atom          = patom;
-
-	/* see if this pkg matches the query, here we can finally check
-	 * version conditions like >=, etc. */
-	if (cat_ctx->ctx->query_atom != NULL) {
-		(void)tree_get_atom(pkg_ctx, cat_ctx->ctx->query_atom->SLOT != NULL);
-		if (atom_compare(pkg_ctx->atom, cat_ctx->ctx->query_atom) != EQUAL) {
-			pkg_ctx->name = NULL;
-			tree_close_pkg(pkg_ctx);
-			return NULL;
-		}
-	}
-
-	return pkg_ctx;
-}
-
-static int
-tree_pkg_compar(const void *l, const void *r)
-{
-	tree_pkg_ctx *pl = *(tree_pkg_ctx **)l;
-	tree_pkg_ctx *pr = *(tree_pkg_ctx **)r;
-	depend_atom *al = tree_get_atom(pl, false);
-	depend_atom *ar = tree_get_atom(pr, false);
-
-	return atom_compar_cb(&al, &ar);
-}
-
-static tree_pkg_ctx *
-tree_next_pkg_int(tree_cat_ctx *cat_ctx)
-{
-	tree_pkg_ctx        *pkg_ctx = NULL;
-	const struct dirent *de;
-	const depend_atom   *qa      = cat_ctx->ctx->query_atom;
-	bool                 filter  = qa != NULL && qa->PN != NULL;
-
-	if (cat_ctx->ctx->do_sort) {
-		if (cat_ctx->pkg_ctxs == NULL) {
-			size_t pkg_size = 0;
-
-			cat_ctx->pkg_cnt = 0;
-			cat_ctx->pkg_cur = 0;
-
-			while ((de = readdir(cat_ctx->dir)) != NULL) {
-				char *name;
-
-				if (tree_filter_pkg(de) == 0)
-					continue;
-
-				/* perform package name check, for we don't have an atom
-				 * yet, and creating it is expensive, which we better
-				 * defer to pkg time, and filter most stuff out here
-				 * note that we might over-match, but that's easier than
-				 * trying to deal with end of string or '-' here (which
-				 * still wouldn't be 100% because name rules are complex) */
-				if (filter &&
-					strncmp(qa->PN, de->d_name, strlen(qa->PN)) != 0)
-					continue;
-
-				if (cat_ctx->pkg_cnt == pkg_size) {
-					pkg_size += 64;
-					cat_ctx->pkg_ctxs = xrealloc(cat_ctx->pkg_ctxs,
-								sizeof(*cat_ctx->pkg_ctxs) * pkg_size);
-				}
-
-				name = xstrdup(de->d_name);
-				pkg_ctx = cat_ctx->pkg_ctxs[cat_ctx->pkg_cnt++] =
-					tree_open_pkg(cat_ctx, name);
-				if (pkg_ctx == NULL) {
-					free(name);
-					cat_ctx->pkg_cnt--;
-				}
-			}
-
-			if (cat_ctx->pkg_cnt > 1) {
-				qsort(cat_ctx->pkg_ctxs, cat_ctx->pkg_cnt,
-						sizeof(*cat_ctx->pkg_ctxs), tree_pkg_compar);
-			}
-		}
-
-		pkg_ctx = NULL;
-		while (cat_ctx->pkg_cur < cat_ctx->pkg_cnt) {
-			pkg_ctx = cat_ctx->pkg_ctxs[cat_ctx->pkg_cur++];
-			if (!filter ||
-				atom_compare(tree_get_atom(pkg_ctx, qa->SLOT != NULL),
-							 qa) == EQUAL)
-				break;
-			pkg_ctx = NULL;
-		}
-	} else {
-		do {
-			de = readdir(cat_ctx->dir);
-			if (!de)
-				break;
-
-			if (tree_filter_pkg(de) == 0)
-				continue;
-
-			/* perform package name check as for the sorted variant */
-			if (filter &&
-				strncmp(qa->PN, de->d_name, strlen(qa->PN)) != 0)
-				continue;
-
-			pkg_ctx = tree_open_pkg(cat_ctx, de->d_name);
-			if (!pkg_ctx)
-				continue;
-
-			break;
-		} while (1);
-	}
-
-	return pkg_ctx;
-}
-
-tree_pkg_ctx *
-tree_next_pkg(tree_cat_ctx *cat_ctx)
-{
-	tree_ctx     *ctx     = cat_ctx->ctx;
-	tree_pkg_ctx *ret     = NULL;
-	bool          recurse = false;
-	bool          dofile  = false;
-
-	/* first resume an on-going recursed listing */
-	if (ctx->ebuilddir_pkg_ctx != NULL) {
-		ret = tree_next_pkg_int(ctx->ebuilddir_cat_ctx);
-		if (ret == NULL) {
-			tree_close_cat(ctx->ebuilddir_cat_ctx);
-			if (!cat_ctx->ctx->do_sort ||
-				cat_ctx->pkg_ctxs == NULL)
-				tree_close_pkg(ctx->ebuilddir_pkg_ctx);
-			ctx->ebuilddir_pkg_ctx = NULL;
-		} else {
-			ret->binpkg_ismulti = true;  /* no matter if this is ebuild */
-			return ret;
-		}
-	}
-
-	/* load next entry */
-	ret = tree_next_pkg_int(cat_ctx);
-	if (ret == NULL)
-		return ret;
-
-	if (ctx->treetype == TREE_EBUILD) {
-		/* serve *.ebuild files each as separate pkg_ctx with name set
-		 * to CAT/P like in VDB and metadata, this is the only supported
-		 * format, so if there's a non-directory in here, we just ignore
-		 * it, which is fine */
-		recurse = true;
-	} else if (ctx->treetype == TREE_BINPKGS) {
-		/* with FEATURES=binpkg-multi-instance we can have at worst a
-		 * mix here of files and directories, so we must handle both */
-		recurse = true;
-		dofile  = true;
-	}
-
-	if (recurse) {
-		tree_ctx *pkgdir = ctx->ebuilddir_ctx;
-
-		if (pkgdir == NULL)
-			pkgdir = ctx->ebuilddir_ctx = xmalloc(sizeof(*pkgdir));
-
-		ctx->ebuilddir_cat_ctx = NULL;
-		ctx->ebuilddir_pkg_ctx = ret;
-
-		memset(pkgdir, 0, sizeof(*pkgdir));
-		pkgdir->portroot_fd = -1;
-		pkgdir->tree_fd     = cat_ctx->fd;
-		pkgdir->do_sort     = ctx->do_sort;
-		pkgdir->repo        = ctx->repo;
-		pkgdir->treetype    = ctx->treetype;
-		pkgdir->subtree     = ctx->subtree;
-
-		ctx->ebuilddir_cat_ctx =
-			tree_open_cat(pkgdir, ctx->ebuilddir_pkg_ctx->name);
-
-		/* opening might fail if what we found wasn't a
-		 * directory or something */
-		if (ctx->ebuilddir_cat_ctx == NULL) {
-			ctx->ebuilddir_pkg_ctx = NULL;
-			if (dofile)
-				return ret;
-			else
-				tree_close_pkg(ret);
-		} else {
-			/* "zap" the pkg such that it looks like CAT/P */
-			ctx->ebuilddir_cat_ctx->name = cat_ctx->name;
-			ctx->ebuilddir_cat_ctx->ctx  = ctx;
-		}
-
-		/* recurse to get the next step */
-		ret = tree_next_pkg(cat_ctx);
-	}
-
-	return ret;
-}
-
-static int
-tree_pkg_vdb_openat(
-		tree_pkg_ctx *pkg_ctx,
-		const char *file,
-		int flags, mode_t mode)
-{
-	if (pkg_ctx->fd == -1) {
-		pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name,
-				O_RDONLY | O_CLOEXEC | O_PATH);
-		if (pkg_ctx->fd == -1)
-			return -1;
-	}
-
-	return openat(pkg_ctx->fd, file, flags | O_CLOEXEC, mode);
-}
-
-static bool
-tree_pkg_vdb_eat(
-		tree_pkg_ctx *pkg_ctx,
-		const char *file,
-		char **bufptr,
-		size_t *buflen)
-{
-	int fd;
-	bool ret;
-
-	fd = tree_pkg_vdb_openat(pkg_ctx, file, O_RDONLY, 0);
-	ret = eat_file_fd(fd, bufptr, buflen);
-	if (ret)
-		rmspace(*bufptr);
-
-	if (fd != -1)
-		close(fd);
-	return ret;
-}
-
-#define tree_meta_alloc_storage(M,SIZ) { \
-	struct tree_pkg_meta_ll *blk; \
-	size_t                   newlen; \
-\
-	/* calculate new block size, ensuring it covers whatever we \
-	 * need to write this iteration */ \
-	newlen     = ((((SIZ) + 1) / BUFSIZ) + 1) * BUFSIZ; \
-	blk        = xmalloc(sizeof(*blk) + newlen); \
-	memset(blk, 0, sizeof(*blk)); \
-	blk->next  = M->storage; \
-	blk->ptr   = (char *)blk + sizeof(*blk); \
-	blk->len   = newlen; \
-	M->storage = blk; \
-}
-
-static tree_pkg_meta *
-tree_read_file_pms(tree_pkg_ctx *pkg_ctx)
-{
-	struct stat s;
-	char *ptr;
-	FILE *f;
-	tree_pkg_meta *ret = NULL;
-	size_t len;
-
-	if ((f = fdopen(pkg_ctx->fd, "r")) == NULL)
-		goto err;
-
-	if (fstat(pkg_ctx->fd, &s) != 0)
-		goto err;
-
-	len = sizeof(*ret) + s.st_size + 1;
-	ret = xmalloc(len);
-	memset(ret, 0, sizeof(*ret));
-	ptr = (char *)ret + sizeof(*ret);
-	if ((off_t)fread(ptr, 1, s.st_size, f) != s.st_size)
-		goto err;
-	ptr[s.st_size] = '\0';
-
-	ret->Q_DEPEND = ptr;
-#define next_line(curr, next) \
-	if ((ptr = strchr(ret->Q_##curr, '\n')) == NULL) { \
-		warn("Invalid cache file for '%s/%s'", \
-			 pkg_ctx->cat_ctx->name, pkg_ctx->name); \
-		goto err; \
-	} \
-	ret->Q_##next = ptr+1; \
-	*ptr = '\0';
-	next_line(DEPEND, RDEPEND)
-	next_line(RDEPEND, SLOT)
-	next_line(SLOT, SRC_URI)
-	next_line(SRC_URI, RESTRICT)
-	next_line(RESTRICT, HOMEPAGE)
-	next_line(HOMEPAGE, LICENSE)
-	next_line(LICENSE, DESCRIPTION)
-	next_line(DESCRIPTION, KEYWORDS)
-	next_line(KEYWORDS, INHERITED)
-	next_line(INHERITED, IUSE)
-	next_line(IUSE, CDEPEND)
-	next_line(CDEPEND, PDEPEND)
-	next_line(PDEPEND, PROVIDE)
-	next_line(PROVIDE, EAPI)
-	next_line(EAPI, PROPERTIES)
-#undef next_line
-	ptr = strchr(ptr+1, '\n');
-	if (ptr == NULL) {
-		warn("Invalid cache file for '%s/%s' - could not find end of cache data",
-			 pkg_ctx->cat_ctx->name, pkg_ctx->name);
-		goto err;
-	}
-	*ptr = '\0';
-
-	fclose(f);
-	pkg_ctx->fd = -1;
-
-	return ret;
-
-err:
-	if (f)
-		fclose(f);
-	pkg_ctx->fd = -1;
-	if (ret)
-		tree_close_meta(ret);
-	return NULL;
-}
-
-static tree_pkg_meta *
-tree_read_file_md5(tree_pkg_ctx *pkg_ctx)
-{
-	struct stat s;
-	char *ptr, *endptr;
-	FILE *f;
-	tree_pkg_meta *ret = NULL;
-	size_t len;
-
-	if ((f = fdopen(pkg_ctx->fd, "r")) == NULL)
-		goto err;
-
-	if (fstat(pkg_ctx->fd, &s) != 0)
-		goto err;
-
-	len = sizeof(*ret) + s.st_size + 1;
-	ret = xmalloc(len);
-	memset(ret, 0, sizeof(*ret));
-	ptr = (char *)ret + sizeof(*ret);
-	if ((off_t)fread(ptr, 1, s.st_size, f) != s.st_size)
-		goto err;
-	ptr[s.st_size] = '\0';
-
-	/* We have a block of key=value\n data.
-	 * KEY=VALUE\n
-	 * Where KEY does NOT contain:
-	 * \0 \n =
-	 * And VALUE does NOT contain:
-	 * \0 \n
-	 * */
-#define assign_var_cmp(keyname, cmpkey) \
-	if (strncmp(keyptr, cmpkey, strlen(cmpkey)) == 0) { \
-		ret->Q_##keyname = valptr; \
-		continue; \
-	}
-#define assign_var(keyname) \
-	assign_var_cmp(keyname, #keyname);
-
-	endptr = strchr(ptr, '\0');
-	if (endptr == NULL) {
-			warn("Invalid cache file for '%s/%s': "
-					"could not find end of cache data",
-					pkg_ctx->cat_ctx->name, pkg_ctx->name);
-			goto err;
-	}
-
-	while (ptr != NULL && ptr != endptr) {
-		char *keyptr;
-		char *valptr;
-		keyptr = ptr;
-		valptr = strchr(ptr, '=');
-		if (valptr == NULL) {
-			warn("Invalid cache file for '%s/%s': missing val",
-					pkg_ctx->cat_ctx->name, pkg_ctx->name);
-			goto err;
-		}
-		*valptr = '\0';
-		valptr++;
-		ptr = strchr(valptr, '\n');
-		if (ptr == NULL) {
-			warn("Invalid cache file for '%s/%s': missing key",
-					pkg_ctx->cat_ctx->name, pkg_ctx->name);
-			goto err;
-		}
-		*ptr = '\0';
-		ptr++;
-
-		assign_var(CDEPEND);
-		assign_var(DEPEND);
-		assign_var(DESCRIPTION);
-		assign_var(EAPI);
-		assign_var(HOMEPAGE);
-		assign_var(INHERITED);
-		assign_var(IUSE);
-		assign_var(KEYWORDS);
-		assign_var(LICENSE);
-		assign_var(PDEPEND);
-		assign_var(PROPERTIES);
-		assign_var(PROVIDE);
-		assign_var(RDEPEND);
-		assign_var(RESTRICT);
-		assign_var(SLOT);
-		assign_var(SRC_URI);
-		assign_var(DEFINED_PHASES);
-		assign_var(REQUIRED_USE);
-		assign_var(BDEPEND);
-		assign_var(IDEPEND);
-		assign_var(EPREFIX);
-		assign_var(_eclasses_);
-		assign_var(_md5_);
-		IF_DEBUG(warn("Cache file for '%s/%s' has unknown key %s",
-					pkg_ctx->cat_ctx->name, pkg_ctx->name, keyptr));
-	}
-#undef assign_var
-#undef assign_var_cmp
-
-	fclose(f);
-	pkg_ctx->fd = -1;
-
-	return ret;
-
-err:
-	if (f)
-		fclose(f);
-	pkg_ctx->fd = -1;
-	if (ret)
-		tree_close_meta(ret);
-	return NULL;
-}
-
-static tree_pkg_meta *
-tree_read_file_ebuild(tree_pkg_ctx *pkg_ctx)
-{
-	FILE *f;
-	struct stat s;
-	tree_pkg_meta *ret = NULL;
-	size_t len;
-	char *p;
-	char *q;
-	char *w;
-	char **key;
-	bool esc;
-	bool findnl;
-
-	if ((f = fdopen(pkg_ctx->fd, "r")) == NULL)
-		goto err;
-
-	if (fstat(pkg_ctx->fd, &s) != 0)
-		goto err;
-
-	len = sizeof(*ret) + s.st_size + 1;
-	ret = xmalloc(len);
-	memset(ret, 0, sizeof(*ret));
-	p = (char *)ret + sizeof(*ret);
-	if ((off_t)fread(p, 1, s.st_size, f) != s.st_size)
-		goto err;
-	p[s.st_size] = '\0';
-
-	do {
-		q = p;
-		while (*p >= 'A' && *p <= 'Z')
-			p++;
-
-		key = NULL;
-		if (q < p && *p == '=') {
-			*p++ = '\0';
-			/* match variable against which ones we look for */
-#define match_key(X) else if (strcmp(q, #X) == 0) key = &ret->Q_##X
-			if (1 == 0); /* dummy for syntax */
-			match_key(DEPEND);
-			match_key(RDEPEND);
-			match_key(SLOT);
-			match_key(SRC_URI);
-			match_key(RESTRICT);
-			match_key(HOMEPAGE);
-			match_key(LICENSE);
-			match_key(DESCRIPTION);
-			match_key(KEYWORDS);
-			match_key(IUSE);
-			match_key(CDEPEND);
-			match_key(PDEPEND);
-			match_key(EAPI);
-			match_key(REQUIRED_USE);
-			match_key(BDEPEND);
-			match_key(IDEPEND);
-#undef match_key
-		}
-
-		findnl = true;
-		if (key != NULL) {
-			q = p;
-			if (*q == '"' || *q == '\'') {
-				/* find matching quote */
-				p++;
-				w = p;
-				esc = false;
-				do {
-					while (*p != '\0' && *p != *q) {
-						if (*p == '\\') {
-							esc = !esc;
-							if (esc) {
-								p++;
-								continue;
-							}
-						} else {
-							/* stash everything on a single line like
-							 * VDB and md5-cache do */
-							if (*p == '\n' || *p == '\r')
-								*p = ' ';
-							esc = false;
-						}
-
-						/* collapse sequences of spaces */
-						if (*w != ' ' || *p != ' ')
-							*w++ = *p++;
-						else
-							p++;
-					}
-					if (*p == *q && esc) {
-						/* escaped, move along */
-						esc = false;
-						*w++ = *p++;
-						continue;
-					}
-					break;
-				} while (1);
-				q++;
-				*w = '\0';
-			} else {
-				/* find first whitespace */
-				while (!isspace((int)*p))
-					p++;
-				if (*p == '\n')
-					findnl = false;
-			}
-			*p++ = '\0';
-			*key = q;
-		}
-
-		if (findnl && (p = strchr(p, '\n')) != NULL)
-			p++;
-	} while (p != NULL);
-
-	fclose(f);
-	pkg_ctx->fd = -1;
-
-	return ret;
-
-err:
-	if (f)
-		fclose(f);
-	pkg_ctx->fd = -1;
-	if (ret)
-		tree_close_meta(ret);
-	return NULL;
-}
-
-static void
-tree_read_file_binpkg_xpak_cb(
-	void *ctx,
-	char *pathname,
-	int   pathname_len,
-	int   data_offset,
-	int   data_len,
-	char *data)
-{
-	tree_pkg_meta *m = (tree_pkg_meta *)ctx;
-	char         **key;
-	size_t         pos;
-	size_t         len;
-
-#define match_path(K) \
-	else if (pathname_len == (sizeof(#K) - 1) && strcmp(pathname, #K) == 0) \
-		key = &m->Q_##K
-	if (1 == 0); /* dummy for syntax */
-	match_path(DEPEND);
-	match_path(RDEPEND);
-	match_path(SLOT);
-	match_path(SRC_URI);
-	match_path(RESTRICT);
-	match_path(HOMEPAGE);
-	match_path(DESCRIPTION);
-	match_path(KEYWORDS);
-	match_path(INHERITED);
-	match_path(IUSE);
-	match_path(CDEPEND);
-	match_path(PDEPEND);
-	match_path(PROVIDE);
-	match_path(EAPI);
-	match_path(PROPERTIES);
-	match_path(DEFINED_PHASES);
-	match_path(REQUIRED_USE);
-	match_path(BDEPEND);
-	match_path(IDEPEND);
-	match_path(CONTENTS);
-	match_path(USE);
-	match_path(EPREFIX);
-	match_path(repository);
-	else
-		return;
-#undef match_path
-
-	/* get current storage block */
-	if (m->storage != NULL) {
-		pos = m->storage->pos;
-		len = m->storage->len;
-	} else {
-		pos = 0;
-		len = 0;
-	}
-
-	/* trim whitespace (mostly trailing newline) */
-	while (isspace((int)data[data_offset + data_len - 1]))
-		data_len--;
-
-	if (len - pos < (size_t)(data_len + 1)) {
-		tree_meta_alloc_storage(m, data_len + 1);
-		len = m->storage->len;
-		pos = m->storage->pos;
-	}
-
-	*key = m->storage->ptr + pos;
-	snprintf(*key, len - pos, "%.*s", data_len, data + data_offset);
-	m->storage->pos += data_len + 1;
-}
-
-static tree_pkg_meta *
-tree_read_file_binpkg(tree_pkg_ctx *pkg_ctx)
-{
-	tree_pkg_meta *m = xzalloc(sizeof(tree_pkg_meta));
-	int newfd = -1;
-
-	if (pkg_ctx->binpkg_isgpkg) {
-#ifdef ENABLE_GPKG
-		struct archive       *a     = archive_read_new();
-		struct archive_entry *entry;
-		size_t                len   = 0;
-		char                 *buf   = NULL;
-
-		archive_read_support_format_all(a);
-		archive_read_support_filter_all(a);
-
-		if (archive_read_open_fd(a, pkg_ctx->fd, BUFSIZ) != ARCHIVE_OK)
-			return NULL;
-		while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
-			const char *pathname = archive_entry_pathname(entry);
-			const char *fname    = strchr(pathname, '/');
-			if (fname == NULL)
-				continue;
-			fname++;
-			if (strncmp(fname, "metadata.tar",
-						sizeof("metadata.tar") - 1) == 0)
-			{
-				/* read this nested tar, it contains the VDB entries
-				 * otherwise stored in xpak */
-				len = archive_entry_size(entry);
-				buf = xmalloc(len);
-				archive_read_data(a, buf, len);
-				break;
-			}
-		}
-		archive_read_free(a);
-		newfd = pkg_ctx->fd;
-		pkg_ctx->fd = -1;  /* will be closed by hash_multiple_fd */
-
-		if (buf != NULL)
-		{
-			char  *data      = NULL;
-			size_t data_size = 0;
-			size_t data_len  = 0;
-
-			a = archive_read_new();
-			archive_read_support_format_all(a);
-			archive_read_support_filter_all(a);
-			archive_read_open_memory(a, buf, len);
-
-			while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
-				const char *pathname = archive_entry_pathname(entry);
-				char       *fname    = strchr(pathname, '/');
-				if (fname == NULL)
-					continue;
-				fname++;
-
-				data_len = archive_entry_size(entry);
-				if (data_len > data_size) {
-					data_size = data_len;
-					data      = xrealloc(data, data_size);
-				}
-				if (archive_read_data(a, data, data_len) < 0)
-					continue;
-				tree_read_file_binpkg_xpak_cb(m,
-											  fname, (int)strlen(fname),
-											  0, data_len, data);
-			}
-			archive_read_free(a);
-			free(buf);
-			free(data);
-		}
-#else
-		return NULL;
-#endif
-	} else {
-		newfd = dup(pkg_ctx->fd);
-		xpak_process_fd(pkg_ctx->fd, true, m, tree_read_file_binpkg_xpak_cb);
-		pkg_ctx->fd = -1;  /* closed by xpak_process_fd */
-	}
-
-	/* fill in some properties which are not available, but would be in
-	 * Packages, and used to verify the package ... this is somewhat
-	 * fake, but allows to transparantly use a dir of binpkgs */
-	if (newfd != -1) {
-		size_t fsize;
-		size_t needlen = SHA1_DIGEST_LENGTH + 1 + 19 + 1;
-		size_t pos = 0;
-		size_t len = 0;
-
-		if (m->storage != NULL) {
-			pos = m->storage->pos;
-			len = m->storage->len;
-		}
-
-		if (len - pos < needlen) {
-			tree_meta_alloc_storage(m, needlen);
-			len = m->storage->len;
-			pos = m->storage->pos;
-		}
-
-		m->Q_SHA1 = m->storage->ptr + pos;
-		m->Q_SIZE = m->Q_SHA1 + SHA1_DIGEST_LENGTH + 1;
-		m->storage->pos += needlen;
-
-		lseek(newfd, 0, SEEK_SET);  /* reposition at the start of file */
-		if (hash_multiple_file_fd(newfd, NULL, m->Q_SHA1, NULL, NULL,
-				NULL, &fsize, HASH_SHA1) == 0)
-			snprintf(m->Q_SIZE, 19 + 1, "%zu", fsize);
-	}
-
-	return m;
-}
-
-static int
-tree_pkg_read_openfd_int(tree_pkg_ctx *pkg_ctx)
-{
-	tree_ctx *ctx = pkg_ctx->cat_ctx->ctx;
-
-	if (pkg_ctx->fd == -1) {
-		if (ctx->treetype == TREE_EBUILD ||
-			ctx->treetype == TREE_BINPKGS)
-		{
-			char buf[_Q_PATH_MAX];
-			snprintf(buf, sizeof(buf), "%s.%s", pkg_ctx->name,
-					 ctx->treetype == TREE_EBUILD ? "ebuild" :
-					 pkg_ctx->binpkg_isgpkg ? "gpkg.tar" :
-					 pkg_ctx->binpkg_ismulti ? "xpak" : "tbz2");
-			pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, buf,
-								 O_RDONLY | O_CLOEXEC);
-		} else {
-			pkg_ctx->fd = openat(pkg_ctx->cat_ctx->fd, pkg_ctx->name,
-								 O_RDONLY | O_CLOEXEC);
-		}
-	}
-
-	return pkg_ctx->fd;
-}
-
-static tree_pkg_meta *
-tree_pkg_read(tree_pkg_ctx *pkg_ctx)
-{
-	tree_ctx *ctx = pkg_ctx->cat_ctx->ctx;
-	tree_pkg_meta *ret = NULL;
-
-	if (pkg_ctx->meta != NULL)
-		return pkg_ctx->meta;
-
-	if (tree_pkg_read_openfd_int(pkg_ctx) == -1)
-		return NULL;
-
-	if (ctx->treetype == TREE_METADATA_MD5) {
-		ret = tree_read_file_md5(pkg_ctx);
-		/* md5-cache, is sort of documented in egencache man-page
-		 * key-points are that an md5 is provided for the ebuild itself,
-		 * and if it includes eclasses, the md5s for each eclass.  These
-		 * are available as _md5_ and _eclasses_ keys.  The latter uses
-		 * tab-separation of form <eclass-name>\t<md5>\t... */
-	} else if (ctx->treetype == TREE_METADATA_PMS) {
-		ret = tree_read_file_pms(pkg_ctx);
-		/* PMS implies to do an mtime and existence check (the cache may
-		 * contain extra stuff) but since this form of metadata in fact
-		 * is extinct, because these checks are insufficient and
-		 * impossible on e.g. a git-based tree. */
-	} else if (ctx->treetype == TREE_EBUILD) {
-		ret = NULL;
-		if (ctx->subtree != NULL) {
-			tree_cat_ctx  *scat;
-			tree_pkg_ctx  *spkg  = NULL;
-
-			/* the cache takes care of repeated calls here */
-			scat = tree_open_cat(ctx->subtree, pkg_ctx->cat_ctx->name);
-			if (scat != NULL)
-				spkg = tree_open_pkg(scat, pkg_ctx->name);
-
-			if (spkg != NULL) {
-				if (ctx->subtree->treetype == TREE_METADATA_MD5) {
-					/* in this case a cache entry exists, however, it
-					 * may be out of date, for that we need to check the
-					 * md5 hashes with the ebuild/eclass files,
-					 * obviously when the source ebuild doesn't exist,
-					 * we never get here */
-					char   *mdmd5;
-					char    srcmd5[MD5_DIGEST_LENGTH + 1];
-					size_t  flen;
-
-					if (hash_multiple_file_fd(pkg_ctx->fd,
-											  srcmd5, NULL, NULL, NULL,
-											  NULL, &flen, HASH_MD5) == 0)
-						pkg_ctx->fd = -1;
-
-					mdmd5 = tree_pkg_meta_get(spkg, _md5_);
-					/* TODO: eclass compares */
-
-					/* is this a valid cache? use it! */
-					if (mdmd5 != NULL &&
-						memcmp(mdmd5, srcmd5, MD5_DIGEST_LENGTH) == 0)
-					{
-						ret = tree_pkg_read(spkg);
-					}
-				} else if (ctx->subtree->treetype == TREE_METADATA_PMS) {
-					struct stat ebld;
-					struct stat pmsc;
-
-					if (fstat(pkg_ctx->fd, &ebld) != 0 ||
-						fstat(tree_pkg_read_openfd_int(spkg), &pmsc) != 0 ||
-						ebld.st_mtime > pmsc.st_mtime ||
-						(ebld.st_mtime == pmsc.st_mtime &&
-						 ebld.st_mtim.tv_nsec > pmsc.st_mtim.tv_nsec))
-					{
-						/* fail or ebuild is newer, so ignore */
-					} else {
-						ret = tree_pkg_read(spkg);
-					}
-				}
-				if (ret != NULL) {
-					/* transplant meta to pkg, so we can free spkg */
-					pkg_ctx->meta = spkg->meta;
-					spkg->meta    = NULL;
-				}
-				tree_close_pkg(spkg);
-			}
-		}
-		if (ret == NULL) {
-			(void)tree_pkg_read_openfd_int(pkg_ctx);  /* re-open if fallback */
-			ret = tree_read_file_ebuild(pkg_ctx);
-		}
-	} else if (ctx->treetype == TREE_BINPKGS) {
-		ret = tree_read_file_binpkg(pkg_ctx);
-	} else if (ctx->treetype == TREE_PACKAGES) {
-		ret = (tree_pkg_meta *)pkg_ctx->cat_ctx->ctx->pkgs;
-	}
-
-	pkg_ctx->meta = ret;  /* may be NULL when e.g. VDB */
-
-	return ret;
-}
-
-static tree_pkg_meta *
-tree_clone_meta(tree_pkg_meta *m)
-{
-	tree_pkg_meta *ret;
-	size_t         pos = 0;
-	size_t         len = 0;
-	char         **ptr;
-	char          *p;
-
-	/* compute necessary space upfront */
-	len = sizeof(*ret);
-	for (ptr = &m->Q__data; ptr <= &m->Q__last; ptr++)
-		if (*ptr != NULL)
-			len += strlen(*ptr) + 1;
-
-	/* malloc and copy */
-	ret = xzalloc(len);
-	p = (char *)ret + sizeof(*ret);
-	for (ptr = &m->Q__data; ptr <= &m->Q__last; ptr++, pos++) {
-		if (*ptr == NULL)
-			continue;
-		*(&ret->Q__data + pos) = p;
-		len = strlen(*ptr) + 1;
-		memcpy(p, *ptr, len);
-		p += len;
-	}
-
-	return ret;
-}
-
-static void
-tree_close_meta(tree_pkg_meta *cache)
-{
-	struct tree_pkg_meta_ll *blk;
-
-	if (cache == NULL)
-		errf("Cache is empty !");
-	while (cache->storage != NULL) {
-		blk = cache->storage->next;
-		free(cache->storage);
-		cache->storage = blk;
-	}
-	free(cache);
-}
-
-char *
-tree_pkg_meta_get_int(tree_pkg_ctx *pkg_ctx, size_t offset, const char *keyn)
-{
-	tree_ctx *ctx = pkg_ctx->cat_ctx->ctx;
-	char **key;
-
-	/* offset is a byte offset in the tree_pkg_meta struct, pointing to
-	 * key, the tree_pkg_meta_get macro as called by the user takes care
-	 * of offset and keyn pointing to the same thing */
-
-	if (ctx->treetype == TREE_VDB) {
-		if (pkg_ctx->meta == NULL)
-			pkg_ctx->meta = xzalloc(sizeof(tree_pkg_meta));
-
-		key = (char **)((char *)&pkg_ctx->meta->Q__data + offset);
-
-		/* just eat the file if we haven't yet */
-		if (*key == NULL) {
-			int fd = tree_pkg_vdb_openat(pkg_ctx, keyn, O_RDONLY, 0);
-			struct stat s;
-			size_t pos;
-			size_t len;
-			char *p;
-			tree_pkg_meta *m = pkg_ctx->meta;
-
-			if (fd < 0)
-				return NULL;
-			if (fstat(fd, &s) != 0) {
-				close(fd);
-				return NULL;
-			}
-
-			if (m->storage != NULL) {
-				pos = m->storage->pos;
-				len = m->storage->len;
-			} else {
-				pos = 0;
-				len = 0;
-			}
-
-			if (len - pos < (size_t)(s.st_size + 1)) {
-				tree_meta_alloc_storage(m, s.st_size + 1);
-				pos = m->storage->pos;
-				len = m->storage->len;
-			}
-
-			p = *key = m->storage->ptr + pos;
-			if (read(fd, p, s.st_size) == (ssize_t)s.st_size) {
-				p[s.st_size] = '\0';
-				while (s.st_size > 0 && isspace((int)p[s.st_size - 1]))
-					p[--s.st_size] = '\0';
-				m->storage->pos += s.st_size + 1;
-			}
-			else
-			{
-				/* hmmm, couldn't read the whole file?!? */
-				p[0] = '\0';
-				m->storage->pos++;
-			}
-			close(fd);
-		}
-	} else {
-		if (pkg_ctx->meta == NULL)
-			pkg_ctx->meta = tree_pkg_read(pkg_ctx);
-		if (pkg_ctx->meta == NULL)
-			return NULL;
-
-		key = (char **)((char *)&pkg_ctx->meta->Q__data + offset);
-
-		/* Packages are nice, but also a bit daft, because they don't
-		 * contain everything available (for a semi-good reason though)
-		 * We cannot downgrade the tree execution to BINPKGS, because
-		 * we're running from tree_foreach_packages */
-		if (*key == NULL && ctx->treetype == TREE_PACKAGES) {
-			ctx->treetype = TREE_BINPKGS;
-			pkg_ctx->fd = -1;
-
-			/* trigger tree_pkg_read to do something */
-			if ((void *)pkg_ctx->meta != (void *)pkg_ctx->cat_ctx->ctx->pkgs)
-				free(pkg_ctx->meta);
-			pkg_ctx->meta = NULL;
-
-			pkg_ctx->meta = tree_pkg_read(pkg_ctx);
-			ctx->treetype = TREE_PACKAGES;
-			if (pkg_ctx->meta == NULL) {
-				/* hrmffff. */
-				pkg_ctx->fd = -2;
-				pkg_ctx->meta = tree_pkg_read(pkg_ctx);
-			}
-			key = (char **)((char *)&pkg_ctx->meta->Q__data + offset);
-		}
-	}
-	return *key;
-}
-
-tree_metadata_xml *
-tree_pkg_metadata(tree_pkg_ctx *pkg_ctx)
-{
-	tree_ctx *ctx = pkg_ctx->cat_ctx->ctx;
-	int fd;
-	FILE *f;
-	struct stat s;
-	char *xbuf;
-	char *p;
-	char *q;
-	size_t len;
-	tree_metadata_xml *ret = NULL;
-	struct elist *emailw = NULL;
-
-	/* lame @$$ XML parsing, I don't want to pull in a real parser
-	 * library because we only retrieve one element for now: email
-	 * technically speaking, email may occur only once in a maintainer
-	 * tag, but practically speaking we don't care at all, so we can
-	 * just extract everything between <email> and </email> */
-
-	if (ctx->treetype == TREE_EBUILD) {
-		fd = openat(pkg_ctx->cat_ctx->fd, "metadata", O_RDONLY | O_CLOEXEC);
-	} else {
-		char buf[_Q_PATH_MAX];
-		depend_atom *atom = tree_get_atom(pkg_ctx, false);
-		snprintf(buf, sizeof(buf), "../../%s/%s/metadata.xml",
-				atom->CATEGORY, atom->PN);
-		fd = openat(ctx->tree_fd, buf, O_RDONLY | O_CLOEXEC);
-	}
-
-	if (fd == -1)
-		return NULL;
-
-	if ((f = fdopen(fd, "r")) == NULL) {
-		close(fd);
-		return NULL;
-	}
-
-	if (fstat(fd, &s) != 0) {
-		fclose(f);
-		return NULL;
-	}
-
-	len = sizeof(*ret) + s.st_size + 1;
-	p = xbuf = xmalloc(len);
-	if ((off_t)fread(p, 1, s.st_size, f) != s.st_size) {
-		free(p);
-		fclose(f);
-		pkg_ctx->fd = -1;
-		return NULL;
-	}
-	p[s.st_size] = '\0';
-
-	ret = xmalloc(sizeof(*ret));
-	ret->email = NULL;
-
-	while ((q = strstr(p, "<email>")) != NULL) {
-		p = q + sizeof("<email>") - 1;
-		if ((q = strstr(p, "</email>")) == NULL)
-			break;
-		*q = '\0';
-		rmspace(p);
-		if (emailw == NULL) {
-			emailw = ret->email = xmalloc(sizeof(*emailw));
-		} else {
-			emailw = emailw->next = xmalloc(sizeof(*emailw));
-		}
-		emailw->next = NULL;
-		emailw->addr = xstrdup(p);
-		p = q + 1;
-	}
-
-	free(xbuf);
-	fclose(f);
-	return ret;
-}
-
-void
-tree_close_metadata(tree_metadata_xml *meta_ctx)
-{
-	struct elist *e;
-	while (meta_ctx->email != NULL) {
-		e = meta_ctx->email;
-		free(e->addr);
-		e = e->next;
-		free(meta_ctx->email);
-		meta_ctx->email = e;
-	}
-	free(meta_ctx);
-}
-
-void
-tree_close_pkg(tree_pkg_ctx *pkg_ctx)
-{
-	if (pkg_ctx->cached)
-		return;
-
-	if (pkg_ctx->fd >= 0)
-		close(pkg_ctx->fd);
-	if (pkg_ctx->atom != NULL)
-		atom_implode(pkg_ctx->atom);
-	/* avoid freeing tree_ctx' repo */
-	if (pkg_ctx->cat_ctx->ctx->repo != pkg_ctx->repo)
-		free(pkg_ctx->repo);
-	if (pkg_ctx->cat_ctx->ctx->do_sort)
-		free((char *)pkg_ctx->name);
-	free(pkg_ctx->slot);
-	if (pkg_ctx->meta != NULL &&
-			(void *)pkg_ctx->meta != (void *)pkg_ctx->cat_ctx->ctx->pkgs)
-		tree_close_meta(pkg_ctx->meta);
-	free(pkg_ctx);
-}
-
-static int
-tree_foreach_cache_populate_cb
+static tree_ctx *tree_new_gtree
 (
-	tree_pkg_ctx *ctx,
-	void         *priv
+  tree_ctx *ctx,
+  bool      quiet
 )
 {
-	tree_cat_ctx  *cat_ctx;
-	tree_pkg_ctx  *pkg;
-	set           *cache   = priv;
-	tree_ctx      *tctx    = ctx->cat_ctx->ctx;
-	depend_atom   *atom    = tree_get_atom(ctx, true);
-	tree_pkg_meta *meta    = tree_pkg_read(ctx);
+  struct archive       *gt;
+  struct archive_entry *entry;
+  int                   fd;
 
-	cat_ctx = get_set(atom->CATEGORY, cache);
-	if (cat_ctx == NULL) {
-		cat_ctx = tree_open_cat(tctx, atom->CATEGORY);
-		if (cache != NULL)  /* for static code analysers */
-			add_set_value(atom->CATEGORY, cat_ctx, NULL, cache);
-		/* get a pointer from the set */
-		cat_ctx->name = contains_set(atom->CATEGORY, cache);
-	}
+  fd = openat(ctx->portroot_fd, ctx->path, O_RDONLY | O_CLOEXEC);
+  if (fd == -1)
+  {
+    if (!quiet)
+      warnp("could not open gtree '/%s'", ctx->path);
+    tree_close(ctx);
+    return NULL;
+  }
 
-	pkg = xcalloc(1, sizeof(*pkg));
+  gt = archive_read_new();
+  archive_read_support_format_all(gt);
+  if (archive_read_open_fd(gt, fd, BUFSIZ) != ARCHIVE_OK ||
+      archive_read_next_header(gt, &entry) != ARCHIVE_OK)
+  {
+    if (!quiet)
+      warn("could not open gtree '/%s': %s",
+           ctx->path, archive_error_string(gt));
+    archive_read_free(gt);
+    close(fd);
+    tree_close(ctx);
+    return NULL;
+  }
 
-	/* intuitively this would feel like it could use a set, but since
-	 * we're going to sort it, we need it as array anyway, so this is
-	 * better, especially given that the tree should not be able to
-	 * produce duplicates */
-	cat_ctx->pkg_cnt++;
-	if (cat_ctx->pkg_cnt > cat_ctx->pkg_siz) {
-		cat_ctx->pkg_siz  = ((cat_ctx->pkg_cnt / 16) + 1) * 16;
-		cat_ctx->pkg_ctxs =
-			xrealloc(cat_ctx->pkg_ctxs,
-					 sizeof(*cat_ctx->pkg_ctxs) * cat_ctx->pkg_siz);
-	}
-	cat_ctx->pkg_ctxs[cat_ctx->pkg_cnt - 1] = pkg;
-	pkg->cached  = true;
-	pkg->cat_ctx = cat_ctx;
-	pkg->atom    = atom_clone(atom);
-	pkg->name    = xstrdup(pkg->atom->PF);
-	pkg->repo    = tctx->repo != NULL ? xstrdup(tctx->repo) : NULL;
-	if (meta != NULL) {
-		pkg->fd = -2;  /* don't try to read, we fill it in here */
-		if (tctx->treetype == TREE_PACKAGES ||
-			tctx->treetype == TREE_METADATA_GTREE)
-		{
-			/* need to copy, source is based on temp space in foreach */
-			pkg->meta = tree_clone_meta(meta);
-		} else if (tctx->treetype == TREE_BINPKGS) {
-			/* BINPKG case, this one is read/allocated separately from
-			 * xpak archive, so can just take it over */
-			pkg->meta = meta;
-			ctx->meta = NULL;  /* avoid double free */
-		}
-		pkg->binpkg_isgpkg = ctx->binpkg_isgpkg;
-	} else {
-		pkg->fd   = -1;
-		pkg->meta = NULL;
-	}
+  if (strcmp(archive_entry_pathname(entry), "gtree-1") != 0)
+  {
+    if (!quiet)
+      warn("could not open gtree '/%s': not a gtree container", ctx->path);
+    archive_read_free(gt);
+    close(fd);
+    tree_close(ctx);
+    return NULL;
+  }
 
-	return 0;
+  ctx->type = TREE_GTREE;
+
+  /* defer repo until the first read */
+  archive_read_free(gt);
+  close(fd);
+
+  return ctx;
 }
 
-static int
-tree_foreach_packages(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
-{
-	char              *p;
-	char              *q;
-	char              *c;
-	char               pkgname[_Q_PATH_MAX];
-	size_t             len;
-	int                ret      = 0;
-	const depend_atom *query    = ctx->query_atom;
-
-	/* reused for every entry */
-	tree_cat_ctx      *cat      = NULL;
-	tree_pkg_ctx       pkg;
-	tree_pkg_meta      meta;
-	depend_atom       *atom     = NULL;
-
-	/* re-read the contents, this is necessary to make it possible to
-	 * call this function multiple times */
-	if (ctx->cache.store == NULL || ctx->cache.store[0] == '\0') {
-		int fd = openat(ctx->tree_fd, binpkg_packages, O_RDONLY | O_CLOEXEC);
-		if (!eat_file_fd(fd, &ctx->cache.store, &ctx->cache.storesize)) {
-			if (ctx->cache.store != NULL) {
-				free(ctx->cache.store);
-				ctx->cache.store = NULL;
-			}
-			close(fd);
-			return 1;
-		}
-		close(fd);
-	}
-
-	p = ctx->cache.store;
-	len = strlen(ctx->cache.store);  /* sucks, need eat_file change */
-
-	memset(&meta, 0, sizeof(meta));
-
-	do {
-		/* find next line */
-		c = NULL;
-		for (q = p; len > 0 && *q != '\n'; q++, len--)
-			if (c == NULL && *q == ':')
-				c = q;
-
-		if (len == 0)
-			break;
-
-		/* empty line, end of a block */
-		if (p == q) {
-			/* make callback with populated atom */
-			if (atom != NULL) {
-				size_t pkgnamelen;
-
-				memset(&pkg, 0, sizeof(pkg));
-
-				/* store meta ptr in ctx->pkgs, such that get_pkg_meta
-				 * can grab it from there (for free) */
-				ctx->pkgs = (char *)&meta;
-
-				if (cat == NULL || strcmp(cat->name, atom->CATEGORY) != 0)
-				{
-					if (cat != NULL) {
-						atom_implode((depend_atom *)cat->pkg_ctxs);
-						cat->pkg_ctxs = NULL;
-						tree_close_cat(cat);
-					}
-					cat = tree_open_cat(ctx, atom->CATEGORY);
-					if (cat == NULL) {
-						/* probably dir doesn't exist or something,
-						 * generate a dummy cat */
-						cat = tree_open_cat(ctx, ".");
-					}
-					cat->pkg_ctxs = (tree_pkg_ctx **)atom;  /* for name */
-				}
-				if (meta.Q_BUILD_ID != NULL) {
-					atom->BUILDID = atoi(meta.Q_BUILD_ID);
-				} else if (meta.Q_PATH != NULL) {
-					depend_atom *patom;
-					/* dreadful, but Portage apparently generates a
-					 * Packages file without BUILD_ID while it does
-					 * generate binpkgs with build-ids in them */
-					c = strrchr(meta.Q_PATH, '/');
-					patom = atom_explode(++c);
-					if (patom != NULL) {
-						atom->BUILDID = patom->BUILDID;
-						atom_implode(patom);
-					}
-				}
-				pkgnamelen = 0;
-				if (meta.Q_PATH != NULL) {
-					size_t plen = strlen(meta.Q_PATH);
-					if (plen > sizeof(".tbz2") - 1 &&
-						memcmp(meta.Q_PATH + plen - (sizeof(".tbz2") - 1),
-							   ".tbz2", sizeof(".tbz2") - 1) == 0)
-					{
-						pkgnamelen = snprintf(pkgname, sizeof(pkgname),
-											  "%s.tbz2", atom->PF);
-						pkgname[pkgnamelen - (sizeof(".tbz2") - 1)] = '\0';
-					} else if (plen > sizeof(".xpak") - 1 &&
-							   memcmp(meta.Q_PATH + plen -
-									  (sizeof(".xpak") - 1),
-									  ".xpak", sizeof(".xpak") - 1) == 0)
-					{
-						pkgnamelen = snprintf(pkgname, sizeof(pkgname),
-											  "%s.xpak", atom->PF);
-						pkgname[pkgnamelen - (sizeof(".xpak") - 1)] = '\0';
-					} else if (plen > sizeof(".gpkg.tar") - 1 &&
-						memcmp(meta.Q_PATH + plen - (sizeof(".gpkg.tar") - 1),
-							   ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
-					{
-						pkgnamelen = snprintf(pkgname, sizeof(pkgname),
-											  "%s.gpkg.tar", atom->PF);
-						pkgname[pkgnamelen - (sizeof(".gpkg.tar") - 1)] = '\0';
-						pkg.binpkg_isgpkg = 1;
-					}
-				}
-				if (pkgnamelen == 0) {
-					pkgnamelen = snprintf(pkgname, sizeof(pkgname),
-										  "%s", atom->PF);
-				}
-				pkg.name = pkgname;
-				pkg.slot = meta.Q_SLOT == NULL ? (char *)"0" : meta.Q_SLOT;
-				pkg.repo = ctx->repo;
-				pkg.atom = atom;
-				pkg.cat_ctx = cat;
-				pkg.fd = -2;  /* intentional, meta has already been read */
-
-				/* do call callback with pkg_atom (populate cat and pkg) */
-				ret |= callback(&pkg, priv);
-
-				ctx->pkgs = NULL;
-				if (atom != (depend_atom *)cat->pkg_ctxs)
-					atom_implode(atom);
-			}
-
-			memset(&meta, 0, sizeof(meta));
-			atom = NULL;
-			if (len > 0) {  /* hop over \n */
-				p++;
-				len--;
-			}
-			continue;
-		}
-
-		/* skip invalid lines */
-		if (c == NULL || q - c < 3 || c[1] != ' ')
-			continue;
-
-		/* NULL-terminate p and c, file should end with \n */
-		*q = '\0';
-		*c = '\0';
-		c += 2;         /* hop over ": " */
-		if (len > 0) {  /* hop over \n */
-			q++;
-			len--;
-		}
-
-		if (strcmp(p, "REPO") == 0) { /* from global section in older files */
-			ctx->repo = c;
-		} else if (strcmp(p, "CPV") == 0) {
-			if (atom != NULL)
-				atom_implode(atom);
-			atom = atom_explode(c);
-			/* pretend this entry is bogus if it doesn't match query */
-			if (query != NULL &&
-				atom != NULL &&
-				atom_compare(atom, query) != EQUAL)
-			{
-				atom_implode(atom);
-				atom = NULL;
-			}
-#define match_key(X) match_key2(X,X)
-#define match_key2(X,Y) \
-		} else if (strcmp(p, #X) == 0) { \
-			meta.Q_##Y = c
-		match_key(DEFINED_PHASES);
-		match_key(DEPEND);
-		match_key2(DESC, DESCRIPTION);
-		match_key(EAPI);
-		match_key(IUSE);
-		match_key(KEYWORDS);
-		match_key(LICENSE);
-		match_key(MD5);
-		match_key(SHA1);
-		match_key(RDEPEND);
-		match_key(SLOT);
-		match_key(USE);
-		match_key(PDEPEND);
-		match_key2(REPO, repository);
-		match_key(SIZE);
-		match_key(BDEPEND);
-		match_key(IDEPEND);
-		match_key(PATH);
-		match_key(BUILD_ID);
-#undef match_key
-#undef match_key2
-		}
-
-		p = q;
-	} while (len > 0);
-
-	if (cat != NULL) {
-		atom_implode((depend_atom *)cat->pkg_ctxs);
-		cat->pkg_ctxs = NULL;
-		tree_close_cat(cat);
-	}
-
-	if (atom != NULL)
-		atom_implode(atom);
-
-	/* ensure we don't free a garbage pointer */
-	ctx->repo = NULL;
-	ctx->cache.store[0] = '\0';
-
-	return ret;
-}
-
-#ifdef ENABLE_GTREE
 struct tree_gtree_cb_ctx {
 	struct archive *archive;
 };
-static la_ssize_t
-tree_gtree_read_cb(struct archive *a, void *cctx, const void **buf)
+
+static la_ssize_t tree_gtree_read_cb
+(
+  struct archive *a,
+  void           *cctx,
+  const void    **buf
+)
 {
-	struct tree_gtree_cb_ctx *ctx = cctx;
-	size_t                    size;
-	la_int64_t                offset;  /* unused */
-	int                       ret;
+  struct tree_gtree_cb_ctx *ctx    = cctx;
+  size_t                    size;
+  la_int64_t                offset;  /* unused */
+  int                       ret;
 
-	(void)a;
+  (void)a;
 
-	ret = archive_read_data_block(ctx->archive, buf, &size, &offset);
-	if (ret == ARCHIVE_EOF)
-		return 0;
-	if (ret != ARCHIVE_OK)
-		return -1;
-	(void)offset;
-	/* at this point I sincerely hope size is not going to be over the
-	 * unsigned variant */
-	return (la_ssize_t)size;
-}
-static int
-tree_gtree_close_cb(struct archive *a, void *cctx)
-{
-	(void)a;
-	(void)cctx;
-
-	/* noop */
-	return ARCHIVE_OK;
+  ret = archive_read_data_block(ctx->archive, buf, &size, &offset);
+  if (ret == ARCHIVE_EOF)
+    return 0;
+  if (ret != ARCHIVE_OK)
+    return -1;
+  (void)offset;
+  /* at this point I sincerely hope size is not going to be over the
+   * unsigned variant */
+  return (la_ssize_t)size;
 }
 
-static int
-tree_foreach_gtree(tree_ctx *ctx, tree_pkg_cb callback, void *priv)
+static int tree_gtree_close_cb
+(
+  struct archive *a,
+  void           *cctx
+)
 {
-	tree_cat_ctx             *cat         = NULL;
-	tree_pkg_ctx              pkg;
-	tree_pkg_meta             meta;
-	depend_atom              *atom        = NULL;
-	struct archive           *outer;
-	struct archive           *inner;
-	struct archive_entry     *entry;
-	struct tree_gtree_cb_ctx  cb_ctx;
-	char                     *p;
-	const depend_atom        *query       = ctx->query_atom;
-	bool                      foundcaches = false;
-	size_t                    len;
-	int                       ret         = 0;
+  (void)a;
+  (void)cctx;
 
-	/* reused for every entry */
-	cat       = xzalloc(sizeof(*cat));
-	cat->ctx  = ctx;
-	cat->name = "";
+  /* noop */
+  return ARCHIVE_OK;
+}
 
-	/* rewind the outer tar, and re-read it, it's slight overhead that
-	 * we have to re-read it entirely, but I cannot find an API to
-	 * rewind or use an offset to re-read an entry again, and the
-	 * overhead should be small given the outer is uncompressed and it's
-	 * the second entry */
-	lseek(ctx->tree_fd, 0, SEEK_SET);
-	outer = archive_read_new();
-	archive_read_support_format_all(outer);  /* don't see why not */
-	if (archive_read_open_fd(outer, ctx->tree_fd, BUFSIZ) != ARCHIVE_OK) {
-		warn("unable to read gtree container: %s",
-			 archive_error_string(outer));
-		archive_read_free(outer);
-		return 1;
-	}
+static int tree_foreach_pkg_gtree
+(
+  tree_ctx       *tree
+)
+{
+  char                      buf[_Q_PATH_MAX];
+  tree_cat_ctx             *cat         = NULL;
+  tree_pkg_ctx             *pkg         = NULL;
+  atom_ctx                 *atom        = NULL;
+  struct archive           *outer;
+  struct archive           *inner;
+  struct archive_entry     *entry;
+  char                     *p;
+  char                     *rbuf        = NULL;
+  struct tree_gtree_cb_ctx  cb_ctx;
+  bool                      foundcaches = false;
+  size_t                    len;
+  size_t                    rlen        = 0;
+  int                       ret         = 0;
+  int                       fd;
 
-	while (archive_read_next_header(outer, &entry) == ARCHIVE_OK) {
-		const char *fname = archive_entry_pathname(entry);
-		if (fname == NULL)
-			continue;
-		if (strncmp(fname, "repo.tar", sizeof("repo.tar") - 1) == 0 &&
-			(fname[sizeof("repo.tar") - 1] == '.' ||
-			 fname[sizeof("repo.tar") - 1] == '\0'))
-			break;
-		entry = NULL;
-	}
-	if (entry == NULL) {
-		archive_read_free(outer);
-		return 1;
-	}
+  fd = openat(tree->portroot_fd, tree->path, O_RDONLY | O_CLOEXEC);
+  if (fd < 0)
+    return 1;
 
-	/* use wrapper to read straight from this archive */
-	inner = archive_read_new();
-	archive_read_support_format_all(inner);
-	archive_read_support_filter_all(inner);
-	memset(&cb_ctx, 0, sizeof(cb_ctx));
-	cb_ctx.archive = outer;
-	if (archive_read_open(inner, &cb_ctx, NULL,
-						  tree_gtree_read_cb,
-						  tree_gtree_close_cb) != ARCHIVE_OK)
-		warn("unable to read gtree data %s: %s", archive_entry_pathname(entry),
-			 archive_error_string(inner));
+  outer = archive_read_new();
+  archive_read_support_format_all(outer);  /* don't see why not */
+  if (archive_read_open_fd(outer, fd, BUFSIZ) != ARCHIVE_OK)
+  {
+    warn("unable to read gtree container: %s",
+         archive_error_string(outer));
+    archive_read_free(outer);
+    return 1;
+  }
 
-	while (archive_read_next_header(inner, &entry) == ARCHIVE_OK) {
-		const char *fname = archive_entry_pathname(entry);
+  while (archive_read_next_header(outer, &entry) == ARCHIVE_OK)
+  {
+    const char *fname = archive_entry_pathname(entry);
+    if (fname == NULL)
+      continue;
+    if (strncmp(fname, "repo.tar", sizeof("repo.tar") - 1) == 0 &&
+        (fname[sizeof("repo.tar") - 1] == '.' ||
+         fname[sizeof("repo.tar") - 1] == '\0'))
+      break;
+    entry = NULL;
+  }
+  if (entry == NULL) {
+    archive_read_free(outer);
+    return 1;
+  }
 
-		if (fname == NULL)
-			continue;
+  /* must be empty, we always read all cats */
+  tree->cats = array_new();
 
-		if (strncmp(fname, "caches/", sizeof("caches/") - 1) == 0) {
-			char *nexttok = NULL;
+  /* use wrapper to read straight from this archive */
+  inner = archive_read_new();
+  archive_read_support_format_all(inner);
+  archive_read_support_filter_all(inner);
+  VAL_CLEAR(cb_ctx);
+  cb_ctx.archive = outer;
+  if (archive_read_open(inner, &cb_ctx, NULL,
+                        tree_gtree_read_cb,
+                        tree_gtree_close_cb) != ARCHIVE_OK)
+    warn("unable to read gtree data %s: %s", archive_entry_pathname(entry),
+         archive_error_string(inner));
 
-			foundcaches = true;
-			fname += sizeof("caches/") - 1;
-			atom = atom_explode(fname);
-			if (query != NULL && atom_compare(atom, query) != EQUAL)
-				continue;
+  while (archive_read_next_header(inner, &entry) == ARCHIVE_OK)
+  {
+    const char *fname = archive_entry_pathname(entry);
 
-			/* ok, we're in business */
-			len = archive_entry_size(entry);
-			if (len > ctx->cache.storesize) {
-				ctx->cache.storesize = len;
-				ctx->cache.store     = xrealloc(ctx->cache.store, len);
-			}
-			archive_read_data(inner, ctx->cache.store, ctx->cache.storesize);
+    if (fname == NULL)
+      continue;
 
-			memset(&meta, 0, sizeof(meta));
-			/* entries are strictly single line, starting with KEY= (no
-			 * whitespace) */
-			for (p = strtok_r(ctx->cache.store, "=", &nexttok);
-				 p != NULL;
-				 p = strtok_r(NULL, "=", &nexttok))
-			{
-				char **ptr = NULL;
+    if (tree->repo == NULL &&
+        strcmp(fname, "repository") == 0)
+    {
+      /* fill in repo, so it can be used when requested */
+      len = archive_entry_size(entry);
+      tree->repo = xmalloc(len + 1);
+      archive_read_data(inner, tree->repo, len);
+      tree->repo[len] = '\0';
+    }
+    else if (strncmp(fname, "caches/", sizeof("caches/") - 1) == 0)
+    {
+      char *nexttok = NULL;
 
-				if (1 == 0) {
-					/* dummy case for syntax */
-				}
-#define match2(K,N) \
-				else if (strcmp(p, #N) == 0) \
-					ptr = &meta.Q_##K
-#define match(K)  match2(K,K)
-				match(DEPEND);
-				match(RDEPEND);
-				match(SLOT);
-				match(SRC_URI);
-				match(RESTRICT);
-				match(LICENSE);
-				match(DESCRIPTION);
-				match(KEYWORDS);
-				match(INHERITED);
-				match(IUSE);
-				match(CDEPEND);
-				match(PDEPEND);
-				match(PROVIDE);
-				match(EAPI);
-				match(PROPERTIES);
-				match(BDEPEND);
-				match(IDEPEND);
-				match(DEFINED_PHASES);
-				match(REQUIRED_USE);
-				match(CONTENTS);
-				match(USE);
-				match(EPREFIX);
-				match(PATH);
-				match(BUILD_ID);
-				match(SIZE);
-				match2(_eclasses_, eclasses);
+      foundcaches = true;
+      fname += sizeof("caches/") - 1;
+      atom = atom_explode(fname);
+
+      if (cat == NULL ||
+          strcmp(cat->name, atom->CATEGORY) != 0)
+      {
+        cat = xzalloc(sizeof(*cat));
+        cat->name = xstrdup(atom->CATEGORY);
+        cat->tree = tree;
+        cat->pkgs = array_new();
+
+        array_append(tree->cats, cat);
+        /* not yet, but will be */
+        cat->pkgs_complete = true;
+      }
+
+      /* we point to the ebuild, so it looks like md5-cache */
+      snprintf(buf, sizeof(buf), "ebuilds/%s/%s/%s.ebuild",
+               atom->CATEGORY, atom->PN, atom->PF);
+
+      pkg = xzalloc(sizeof(*pkg));
+      pkg->name = xstrdup(atom->PN);
+      pkg->path = xstrdup(buf);
+      pkg->cat  = cat;
+      array_append(cat->pkgs, pkg);
+
+      /* ok, we're in business */
+      len = archive_entry_size(entry);
+      if (len > rlen)
+      {
+        rlen = len + 1;
+        rbuf = xrealloc(rbuf, rlen);
+      }
+      rbuf[len] = '\0';
+      archive_read_data(inner, rbuf, len);
+
+      /* entries are strictly single line, starting with KEY= (no
+       * whitespace) */
+      for (p = strtok_r(rbuf, "=", &nexttok);
+           p != NULL;
+           p = strtok_r(NULL, "=", &nexttok))
+      {
+        char **ptr = NULL;
+
+        if (1 == 0) {
+          /* dummy case for syntax */
+        }
+#define match(K) \
+        else if (strcmp(p, #K) == 0) \
+          do { \
+            ptr = &pkg->meta[Q_##K]; \
+          } while (0)
+        match(DEPEND);
+        match(RDEPEND);
+        match(SLOT);
+        match(SRC_URI);
+        match(RESTRICT);
+        match(LICENSE);
+        match(DESCRIPTION);
+        match(KEYWORDS);
+        match(INHERITED);
+        match(IUSE);
+        match(CDEPEND);
+        match(PDEPEND);
+        match(PROVIDE);
+        match(EAPI);
+        match(PROPERTIES);
+        match(BDEPEND);
+        match(IDEPEND);
+        match(DEFINED_PHASES);
+        match(REQUIRED_USE);
+        match(CONTENTS);
+        match(USE);
+        match(EPREFIX);
+        match(PATH);
+        match(BUILD_ID);
+        match(SIZE);
+        match(_eclasses_);
 #undef match
-#undef match2
 
-				/* always advance to end of line, even when nothing
-				 * matched */
-				p = strtok_r(NULL, "\n", &nexttok);
-				if (p == NULL)
-					break;
-				if (ptr != NULL)
-					*ptr = p;
-			}
+        /* always advance to end of line, even when nothing
+         * matched */
+        p = strtok_r(NULL, "\n", &nexttok);
+        if (p == NULL)
+          break;
+        if (ptr != NULL &&
+            *ptr == NULL)
+          *ptr = xstrdup(p);
+      }
 
-			pkg.name    = atom->PF;
-			pkg.slot    = meta.Q_SLOT == NULL ? (char *)"0" : meta.Q_SLOT;
-			pkg.repo    = ctx->repo;
-			pkg.atom    = atom;
-			pkg.cat_ctx = cat;
-			pkg.fd      = -2;  /* intentional, meta has already been read */
+      pkg->meta_complete = true;
+    } else if (foundcaches) {
+      break;  /* stop searching if we processed all cache entries */
+    }
+  }
 
-			if (strcmp(cat->name, atom->CATEGORY) != 0)
-			{
-				if (cat->pkg_ctxs != NULL) {
-					atom_implode((depend_atom *)cat->pkg_ctxs);
-					cat->pkg_ctxs = NULL;
-				}
-				cat->name     = atom->CATEGORY;
-				cat->pkg_ctxs = (tree_pkg_ctx **)atom;  /* for name */
-				atom          = NULL;  /* avoid double free */
-			}
+  free(rbuf);
 
-			/* do call callback with pkg_atom (populate cat and pkg) */
-			ret |= callback(&pkg, priv);
-
-			if (atom != NULL)
-				atom_implode(atom);
-		} else if (foundcaches) {
-			break;  /* stop searching if we processed all cache entries */
-		} else if (ctx->repo == NULL &&
-				   strcmp(fname, "repository") == 0)
-		{
-			/* fill in repo, so it can be used when requested */
-			len = archive_entry_size(entry);
-			ctx->repo = xmalloc(len);
-			archive_read_data(inner, ctx->repo, len);
-		}
-	}
-
-	if (ctx->cache.storesize > 0)
-		ctx->cache.store[0] = '\0';
-	free(cat);
-
-	return ret;
+  return ret;
 }
 #endif
 
-int
-tree_foreach_pkg_int
+/* opens the tree at path inside portroot and returns a tree object
+ * ready for traversing packages or NULL if an error occurred for which
+ * the reason would be printed to stderr unless quiet is set */
+tree_ctx *tree_new
 (
-	tree_ctx          *ctx,
-	tree_pkg_cb        callback,
-	void              *priv,
-	tree_foreach_type  mode,
-	const depend_atom *query
+  const char         *portroot,
+  const char         *path,
+  enum tree_open_type type,
+  bool                quiet
 )
 {
-	tree_cat_ctx *cat_ctx;
-	tree_pkg_ctx *pkg_ctx;
-	int           ret;
-	tree_pkg_cb  *origcb   = callback;
-	void         *origpriv = priv;
-	bool          postsort = false;
-	bool          traverse = true;
+  tree_ctx    *ret;
+  struct stat  st;
 
-	if (ctx == NULL)
-		return EXIT_FAILURE;
+  if (portroot == NULL ||
+      path == NULL ||
+      portroot[0] != '/')
+    return NULL;
 
-	if (ctx->cache.all_categories) {
-		/* always exploit the cache if it exists (next_cat doesn't
-		 * consider it if sorting isn't requested) */
-		mode = TREE_FOREACH_SORT;
-		if (callback == NULL)
-			traverse = false;
-	} else {
-		/* perform sorting post retrieval by caching first:
-		 * - binpkgs can be a combination of files and directories,
-		 *   sorting must happen on the total result to be correct
-		 * - packages is an external file that we need to read serially
-		 *   and we can only sort on top of a cache
-		 * - gtree should be fine, but since we can't assume it is
-		 *   (others may start producing them), it's like packages
-		 *   above, something we read serially not necessarily in the
-		 *   correct order
-		 * of course we should also build the cache when it was
-		 * explicitly requested */
-		if (mode == TREE_FOREACH_CACHE ||
-			(mode == TREE_FOREACH_SORT &&
-			 (ctx->treetype == TREE_BINPKGS ||
-			  ctx->treetype == TREE_PACKAGES ||
-			  ctx->treetype == TREE_METADATA_GTREE)))
-		{
-			callback = tree_foreach_cache_populate_cb;
-			priv     = (void *)create_set();
-			postsort = true;
-		}
+  /* we require absolute portroot, but path may not start with / in
+   * which case we assume it to be relative to portroot */
+  if (path[0] == '/')
+  {
+    if (path[1] == '\0')
+      path = ".";
+    else
+      path++;
+  }
 
-		/* handle Packages (binpkgs index) file separately */
-		if (ctx->treetype == TREE_PACKAGES) {
-			traverse = false;
-			ret      = tree_foreach_packages(ctx, callback, priv);
-		}
+  ret = xzalloc(sizeof(*ret));
+  ret->portroot_fd = open(portroot, O_RDONLY | O_PATH);
+  if (ret->portroot_fd == -1) {
+    if (!quiet)
+      warnp("could not open root '%s'", portroot);
+    tree_close(ret);
+    return NULL;
+  }
+
+  VAL_CLEAR(st);
+  if (fstatat(ret->portroot_fd, path, &st, 0) < 0)
+  {
+    if (!quiet)
+      warnp("could not open tree '/%s'", path);
+    tree_close(ret);
+    return NULL;
+  }
+  ret->path = xstrdup(path);
+
+  switch (type)
+  {
+  case TREETYPE_EBUILD: /* {{{ */
+    {
+      char   buf[_Q_PATH_MAX];
+      size_t len;
+
+      if (!S_ISDIR(st.st_mode))
+      {
+        if (!quiet)
+          warn("invalid path '/%s' for ebuild tree: must be a directory", path);
+        tree_close(ret);
+        return NULL;
+      }
 
 #ifdef ENABLE_GTREE
-		/* similar a gtree cache can be read sequentially in one go */
-		if (ctx->treetype == TREE_METADATA_GTREE) {
-			traverse = false;
-			ret      = tree_foreach_gtree(ctx, callback, priv);
-		}
-		if (ctx->treetype == TREE_EBUILD &&
-			ctx->subtree != NULL &&
-			ctx->subtree->treetype == TREE_METADATA_GTREE)
-		{
-			traverse = false;
-			ret      = tree_foreach_gtree(ctx->subtree, callback, priv);
-		}
+      /* look for gtree, in which case we will ignore this tree in
+       * favour of the gtree container */
+      snprintf(buf, sizeof(buf), "%s/metadata/metadata.gtree.tar", path);
+      VAL_CLEAR(st);
+      if (fstatat(ret->portroot_fd, buf, &st, 0) == 0 &&
+          S_ISREG(st.st_mode))
+      {
+        free(ret->path);
+        ret->path = xstrdup(buf);
+        return tree_new_gtree(ret, quiet);
+      }
 #endif
-	}
 
-	ret = 0;
-	if (traverse)
-	{
-		if (postsort) {
-			ctx->do_sort    = false;
-			ctx->query_atom = NULL;
-		} else {
-			ctx->do_sort    = mode == TREE_FOREACH_SORT;
-			ctx->query_atom = query;
-		}
+      ret->type = TREE_EBUILD;
 
-		while ((cat_ctx = tree_next_cat(ctx))) {
-			while ((pkg_ctx = tree_next_pkg(cat_ctx))) {
-				ret |= callback(pkg_ctx, priv);
-				tree_close_pkg(pkg_ctx);
-			}
-			tree_close_cat(cat_ctx);
-		}
+      snprintf(buf, sizeof(buf), "%s/profiles/repo_name", path);
+      if (eat_file_at(ret->portroot_fd, buf, &ret->repo, &len) != 0)
+        (void)rmspace(ret->repo);
+    }
+    break; /* }}} */
+  case TREETYPE_VDB: /* {{{ */
+    if (!S_ISDIR(st.st_mode))
+    {
+      if (!quiet)
+        warn("invalid path '/%s' for VDB tree: must be a directory", path);
+      tree_close(ret);
+      return NULL;
+    }
 
-		/* allow foreach to be called again on the same open tree */
-		if (ctx->do_sort &&
-			ctx->cat_de != NULL)
-		{
-			scandir_free(ctx->cat_de, ctx->cat_cnt);
-		} else if (ctx->dir != NULL) {
-			rewinddir(ctx->dir);
-		}
-	}
+    ret->type = TREE_VDB;
+    break; /* }}} */
+  case TREETYPE_BINPKG: /* {{{ */
+    {
+      char   buf[_Q_PATH_MAX];
 
-	/* reset states */
-	ctx->cat_de  = NULL;
-	ctx->cat_cur = 0;
-	ctx->cat_cnt = 0;
-	ctx->do_sort = false;
+      if (!S_ISDIR(st.st_mode))
+      {
+        if (!quiet)
+          warn("invalid path '/%s' for binpkg tree: must be a directory", path);
+        tree_close(ret);
+        return NULL;
+      }
 
-	if (postsort) {
-		array *cats = array_new();
-		size_t n;
+      ret->type = TREE_BINPKGS;
 
-		/* should never happen, but perhaps a tree implementation
-		 * populated something, then don't leak it */
-		if (ctx->cache.categories != NULL)
-			free_set(ctx->cache.categories);
-		ctx->cache.categories     = priv;
-		ctx->cache.all_categories = true;
+      snprintf(buf, sizeof(buf), "%s/Packages", path);
+      if (fstatat(ret->portroot_fd, buf, &st, 0) == 0 &&
+          S_ISREG(st.st_mode))
+      {
+        free(ret->path);
+        ret->path = xstrdup(buf);
+        ret->type = TREE_PACKAGES;
+      }
 
-		/* loop through all categories, and sort the pkgs */
-		values_set(ctx->cache.categories, cats);
-		array_for_each(cats, n, cat_ctx) {
-			if (cat_ctx->pkg_cnt > 1) {
-				qsort(cat_ctx->pkg_ctxs, cat_ctx->pkg_cnt,
-					  sizeof(*cat_ctx->pkg_ctxs), tree_pkg_compar);
-			}
-		}
-		array_free(cats);
+      /* TODO: we can read the Packages.gz file too, need to elevate
+       * zlib check in configure, to unpack it */
+    }
+    break; /* }}} */
+  case TREETYPE_GTREE: /* {{{ */
+#ifdef ENABLE_GTREE
+    ret = tree_new_gtree(ret, quiet);
+#else
+    return NULL;
+#endif
+    break; /* }}} */
+  default:
+    if (!quiet)
+      warn("invalid tree type");
+    tree_close(ret);
+    return NULL;
+  }
 
-		/* do the final run this call was supposed to be for using the
-		 * (sorted) cache, the callback can be empty for tree_match_atom
-		 * when it wants to build a cache first */
-		if (origcb != NULL)
-			ret = tree_foreach_pkg_fast(ctx, origcb, origpriv, query);
-	}
-
-	return ret;
+  return ret;
 }
 
-depend_atom *
-tree_get_atom(tree_pkg_ctx *pkg_ctx, bool complete)
-{
-	if (pkg_ctx->atom == NULL) {
-		pkg_ctx->atom =
-			atom_explode_cat(pkg_ctx->name, (char *)pkg_ctx->cat_ctx->name);
-		if (pkg_ctx->atom == NULL)
-			return NULL;
-	}
-
-	if (complete) {
-		tree_ctx *ctx = pkg_ctx->cat_ctx->ctx;
-		if (ctx->treetype == TREE_VDB) {
-			if (pkg_ctx->atom->SLOT == NULL) {
-				/* FIXME: use tree_meta_get !!! */
-				if (pkg_ctx->slot == NULL)
-					tree_pkg_vdb_eat(pkg_ctx, "SLOT",
-							&pkg_ctx->slot, &pkg_ctx->slot_len);
-				pkg_ctx->atom->SLOT = pkg_ctx->slot;
-			}
-			if (pkg_ctx->atom->REPO == NULL) {
-				if (pkg_ctx->repo == NULL)
-					tree_pkg_vdb_eat(pkg_ctx, "repository",
-							&pkg_ctx->repo, &pkg_ctx->repo_len);
-				pkg_ctx->atom->REPO = pkg_ctx->repo;
-			}
-		} else { /* metadata, ebuild, binpkg or Packages */
-			tree_pkg_meta *meta = NULL;
-			if (pkg_ctx->atom->SLOT == NULL) {
-				if (pkg_ctx->slot == NULL) {
-					meta = tree_pkg_read(pkg_ctx);
-					if (meta != NULL) {
-						if (meta->Q_SLOT != NULL) {
-							pkg_ctx->slot = xstrdup(meta->Q_SLOT);
-							pkg_ctx->slot_len = strlen(pkg_ctx->slot);
-						}
-					}
-				}
-				pkg_ctx->atom->SLOT = pkg_ctx->slot;
-			}
-			/* repo is set from the tree, when found */
-			if (pkg_ctx->atom->REPO == NULL) {
-				if (pkg_ctx->repo == NULL && ctx->treetype == TREE_BINPKGS) {
-					if (meta == NULL)
-						meta = tree_pkg_read(pkg_ctx);
-					if (meta != NULL && meta->Q_repository != NULL) {
-						pkg_ctx->repo = xstrdup(meta->Q_repository);
-						pkg_ctx->repo_len = strlen(pkg_ctx->repo);
-					}
-				}
-				pkg_ctx->atom->REPO = pkg_ctx->repo;
-			}
-		}
-
-		/* this is a bit atom territory, but since we pulled in SLOT we
-		 * need to split it up in SLOT and SUBSLOT for atom_format to
-		 * behave properly, this may be redundant but this probably
-		 * isn't much of an issue */
-		if (pkg_ctx->atom->SUBSLOT == NULL && pkg_ctx->atom->SLOT != NULL) {
-			char *ptr;
-			if ((ptr = strchr(pkg_ctx->atom->SLOT, '/')) != NULL) {
-				*ptr++ = '\0';
-			} else {
-				/* PMS 7.2: When the sub-slot part is omitted from the
-				 * SLOT definition, the package is considered to have an
-				 * implicit sub-slot which is equal to the regular slot. */
-				ptr = pkg_ctx->atom->SLOT;
-			}
-			pkg_ctx->atom->SUBSLOT = ptr;
-		}
-	}
-
-	return pkg_ctx->atom;
-}
-
-struct get_atoms_state {
-	set *cpf;
-	bool fullcpv;
-};
-
-static int tree_get_atoms_cb(tree_pkg_ctx *pkg_ctx, void *priv)
-{
-	struct get_atoms_state *state = (struct get_atoms_state *)priv;
-	depend_atom *atom = tree_get_atom(pkg_ctx, false);
-	char abuf[BUFSIZ];
-
-	if (state->fullcpv) {
-		snprintf(abuf, sizeof(abuf), "%s/%s", atom->CATEGORY, atom->PF);
-		state->cpf = add_set(abuf, state->cpf);
-	} else {
-		snprintf(abuf, sizeof(abuf), "%s/%s", atom->CATEGORY, atom->PN);
-		state->cpf = add_set_unique(abuf, state->cpf, NULL);
-	}
-
-	return 0;
-}
-
-set *
-tree_get_atoms(tree_ctx *ctx, bool fullcpv, set *satoms)
-{
-	struct get_atoms_state state = {
-		.cpf = satoms,
-		.fullcpv = fullcpv
-	};
-
-	tree_foreach_pkg_fast(ctx, tree_get_atoms_cb, &state, NULL);
-
-	return state.cpf;
-}
-
-static tree_match_ctx *
-tree_match_search_cat_int(
-		tree_cat_ctx      *cat_ctx,
-		const depend_atom *query,
-		int                flags
+/* helper to free up resources held by a package */
+static void tree_pkg_close
+(
+  tree_pkg_ctx *pkg
 )
 {
-	tree_pkg_ctx   *pkg_ctx;
-	tree_match_ctx *ret      = NULL;
-	depend_atom    *atom;
-	char           *lastpn   = NULL;
+  enum tree_pkg_meta_keys k;
 
-	while ((pkg_ctx = tree_next_pkg(cat_ctx)) != NULL) {
-		atom = tree_get_atom(pkg_ctx,
-							 (query->SLOT != NULL ||
-							  flags & TREE_MATCH_FULL_ATOM));
-		/* skip virtual/ package as requested */
-		if (!(flags & TREE_MATCH_VIRTUAL ||
-			  strcmp(atom->CATEGORY, "virtual") != 0))
-			continue;
-		/* skip acct-* package as requested */
-		if (!(flags & TREE_MATCH_ACCT ||
-			  strncmp(atom->CATEGORY, "acct-", sizeof("acct-") - 1) != 0))
-			continue;
-		/* see if this atom matches the query */
-		if (atom_compare(atom, query) == EQUAL) {
-			tree_match_ctx *n;
-			/* skip over additional versions for match latest */
-			if (flags & TREE_MATCH_LATEST && lastpn != NULL &&
-				strcmp(lastpn, atom->PN) == 0)
-				continue;
-			/* create a new match result */
-			n = xzalloc(sizeof(tree_match_ctx));
-			n->atom = atom;
-			n->pkg = pkg_ctx;
-			if (cat_ctx->ctx->treetype == TREE_PACKAGES &&
-				pkg_ctx->meta->Q_PATH != NULL)
-			{
-				/* Packages file has a PATH ready for us */
-				snprintf(n->path, sizeof(n->path), "%s/%s",
-						 (char *)cat_ctx->ctx->path, pkg_ctx->meta->Q_PATH);
-			} else if (pkg_ctx->binpkg_ismulti) {
-				/* FEATURES=binpkg-multi-instance complicates things as
-				 * it creates an intermediate PN directory like ebuilds,
-				 * without multi-instance, it is more flat */
-				snprintf(n->path, sizeof(n->path), "%s/%s/%s/%s%s",
-						 (char *)cat_ctx->ctx->path,
-						 atom->CATEGORY, atom->PN, pkg_ctx->name,
-						 cat_ctx->ctx->treetype == TREE_EBUILD   ? ".ebuild" :
-						 (cat_ctx->ctx->treetype == TREE_BINPKGS ||
-						  cat_ctx->ctx->treetype == TREE_PACKAGES) ?
-						 (pkg_ctx->binpkg_isgpkg   ? ".gpkg.tar" : ".xpak")  :
-																   "");
-			} else {
-				snprintf(n->path, sizeof(n->path), "%s/%s/%s%s",
-						 (char *)cat_ctx->ctx->path,
-						 atom->CATEGORY, pkg_ctx->name,
-						 cat_ctx->ctx->treetype == TREE_EBUILD   ? ".ebuild" :
-						 (cat_ctx->ctx->treetype == TREE_BINPKGS ||
-						  cat_ctx->ctx->treetype == TREE_PACKAGES) ?
-						 (pkg_ctx->binpkg_isgpkg   ? ".gpkg.tar" : ".tbz2")  :
-																   "");
-			}
-			if (flags & TREE_MATCH_METADATA)
-				n->meta = tree_pkg_read(pkg_ctx);
-			if (cat_ctx->ctx->treetype == TREE_BINPKGS ||
-				cat_ctx->ctx->treetype == TREE_PACKAGES)
-				n->free_atom = n->free_meta = 0;
-			n->next = ret;
-			ret = n;
-			lastpn = atom->PN;
-		}
-		if (flags & TREE_MATCH_FIRST && ret != NULL)
-			break;
-	}
-	cat_ctx->pkg_cur = 0;  /* reset to allow another traversal */
+  if (pkg == NULL)
+    return;
 
-	return ret;
+  if (pkg->atom != NULL)
+    atom_implode(pkg->atom);
+  for (k = Q_UNKNOWN; k < TREE_META_MAX_KEYS; k++)
+    free(pkg->meta[k]);
+  free(pkg->path);
+  free(pkg->name);
+  free(pkg);
 }
 
-tree_match_ctx *
-tree_match_atom(tree_ctx *ctx, const depend_atom *query, int flags)
+/* helper to free up resources held by a category */
+static void tree_cat_close
+(
+  tree_cat_ctx *cat
+)
 {
-	tree_cat_ctx *cat_ctx;
-	tree_match_ctx *ret = NULL;
+  if (cat == NULL)
+    return;
 
-	/* activate cache for future lookups, tree_match_atom relies on
-	 * cache behaviour from tree, which means all categories and
-	 * packages remain in memory until tree_close is being called */
-	tree_foreach_pkg_cached(ctx, NULL, NULL, NULL);  /* force cache */
+  array_deepfree(cat->pkgs, (array_free_cb *)tree_pkg_close);
 
-	ctx->do_sort = true;     /* often forces/enables cache usage */
-
-	if (query->CATEGORY == NULL) {
-		tree_match_ctx *tret;
-		/* loop through all cats */
-		while ((cat_ctx = tree_next_cat(ctx)) != NULL) {
-			tret = tree_match_search_cat_int(cat_ctx, query, flags);
-			if (tret != NULL)
-				ret = tret;
-			if (ret != NULL && flags & TREE_MATCH_FIRST)
-				break;
-		}
-		/* allow running again through the cats */
-		ctx->cat_cur = 0;
-	} else {
-		/* try CAT, and PN for latest version */
-		if ((cat_ctx = tree_open_cat(ctx, query->CATEGORY)) != NULL)
-			ret = tree_match_search_cat_int(cat_ctx, query, flags);
-	}
-
-	return ret;
+  free(cat->name);
+  free(cat);
 }
 
-void
-tree_match_close(tree_match_ctx *match)
+/* close and free up resources held by this tree context and its
+ * subtrees, if any */
+void tree_close
+(
+  tree_ctx *tree
+)
 {
-	tree_match_ctx *w;
+  if (tree == NULL)
+    return;
 
-	for (w = NULL; match != NULL; match = w) {
-		w = match->next;
-		if (match->free_atom)
-			atom_implode(match->atom);
-		if (match->free_meta && match->meta != NULL)
-			tree_close_meta(match->meta);
-		free(match);
-	}
+  array_deepfree(tree->cats, (array_free_cb *)tree_cat_close);
+
+  free(tree->path);
+  free(tree->repo);
+
+  if (tree->portroot_fd >= 0)
+    close(tree->portroot_fd);
+
+  free(tree);
 }
+
+/* helper to read the contents of a VDB key for a package */
+static bool tree_pkg_vdb_eat
+(
+  tree_pkg_ctx *pkg,
+  const char   *file,
+  char        **bufptr,
+  size_t       *buflen
+)
+{
+  char buf[_Q_PATH_MAX];
+  int  fd;
+  bool ret;
+
+  snprintf(buf, sizeof(buf), "%s/%s", pkg->path, file);
+
+  if ((fd = openat(pkg->cat->tree->portroot_fd, buf, O_RDONLY, 0)) < 0)
+    return false;
+
+  ret = eat_file_fd(fd, bufptr, buflen);
+  if (ret)
+    rmspace(*bufptr);
+
+  close(fd);
+  return ret;
+}
+
+/* read full md5-cache entry into pkgs' meta */
+static bool tree_pkg_md5_read
+(
+  tree_pkg_ctx *pkg,
+  char         *path
+)
+{
+  char       *data;
+  char       *nexttok = NULL;
+  char       *p;
+  size_t      len;
+  int         fd;
+  bool        ret;
+
+  if ((fd = openat(pkg->cat->tree->portroot_fd, path, O_RDONLY, 0)) < 0)
+    return false;
+
+  data = NULL;
+  len  = 0;
+  ret  = eat_file_fd(fd, &data, &len);
+  close(fd);
+
+  if (!ret)
+    return false;
+
+  /* We have a block of key=value\n data.
+   * KEY=VALUE\n
+   * Where KEY does NOT contain:
+   * \0 \t\n =
+   * And VALUE does NOT contain:
+   * \0\n
+   * */
+
+  for (p = strtok_r(data, "=", &nexttok);
+       p != NULL;
+       p = strtok_r(NULL, "=", &nexttok))
+  {
+    char **ptr = NULL;
+
+    if (1 == 0) {
+      /* dummy case for syntax */
+    }
+#define match(K) \
+    else if (strcmp(p, #K) == 0) \
+      ptr = &pkg->meta[Q_##K]
+    match(DEPEND);
+    match(RDEPEND);
+    match(SLOT);
+    match(SRC_URI);
+    match(RESTRICT);
+    match(LICENSE);
+    match(DESCRIPTION);
+    match(KEYWORDS);
+    match(INHERITED);
+    match(IUSE);
+    match(CDEPEND);
+    match(PDEPEND);
+    match(PROVIDE);
+    match(EAPI);
+    match(PROPERTIES);
+    match(BDEPEND);
+    match(IDEPEND);
+    match(DEFINED_PHASES);
+    match(REQUIRED_USE);
+    match(CONTENTS);
+    match(USE);
+    match(EPREFIX);
+    match(PATH);
+    match(BUILD_ID);
+    match(SIZE);
+    match(_eclasses_);
+    match(_md5_);
+#undef match
+
+    /* always advance to end of line, even when nothing
+     * matched */
+    p = strtok_r(NULL, "\n", &nexttok);
+    if (p == NULL)
+      break;
+    if (ptr != NULL &&
+        *ptr == NULL)
+      *ptr = xstrdup(p);
+  }
+
+  free(data);
+
+  return true;
+}
+
+/* attempt to parse ebuild file into pkgs' meta */
+static bool tree_pkg_ebuild_read
+(
+  tree_pkg_ctx *pkg
+)
+{
+  char       *p;
+  char       *q;
+  char       *w;
+  char      **key;
+  size_t      len;
+  int         fd;
+  bool        esc;
+  bool        findnl;
+  bool        ret;
+
+  if ((fd = openat(pkg->cat->tree->portroot_fd, pkg->path, O_RDONLY, 0)) < 0)
+    return false;
+
+  p   = NULL;
+  len = 0;
+  ret = eat_file_fd(fd, &p, &len);
+  close(fd);
+
+  if (!ret)
+    return false;
+
+  do
+  {
+    /* leading whitespace is allowed */
+    while (isspace((int)*p))
+      p++;
+    q = p;
+    while (*p >= 'A' &&
+           *p <= 'Z')
+      p++;
+
+    key = NULL;
+    if (q < p &&
+        *p == '=')
+    {
+      *p++ = '\0';
+      /* match variable against which ones we look for */
+      if (1 == 0); /* dummy for syntax */
+#define match_key(X) \
+      else if (strcmp(q, #X) == 0) key = &pkg->meta[Q_##X]
+      match_key(DEPEND);
+      match_key(RDEPEND);
+      match_key(SLOT);
+      match_key(SRC_URI);
+      match_key(RESTRICT);
+      match_key(HOMEPAGE);
+      match_key(LICENSE);
+      match_key(DESCRIPTION);
+      match_key(KEYWORDS);
+      match_key(IUSE);
+      match_key(CDEPEND);
+      match_key(PDEPEND);
+      match_key(EAPI);
+      match_key(REQUIRED_USE);
+      match_key(BDEPEND);
+      match_key(IDEPEND);
+#undef match_key
+    }
+
+    findnl = true;
+    if (key != NULL)
+    {
+      q = p;
+      if (*q == '"' ||
+          *q == '\'')
+      {
+        /* find matching quote */
+        p++;
+        w = p;
+        esc = false;
+        do
+        {
+          while (*p != '\0' &&
+                 *p != *q)
+          {
+            if (*p == '\\')
+            {
+              esc = !esc;
+              if (esc)
+              {
+                p++;
+                continue;
+              }
+            }
+            else
+            {
+              /* stash everything on a single line like
+               * VDB and md5-cache do */
+              if (*p == '\n' ||
+                  *p == '\r')
+                *p = ' ';
+              esc = false;
+            }
+
+            /* collapse sequences of spaces */
+            if (*w != ' ' ||
+                *p != ' ')
+              *w++ = *p++;
+            else
+              p++;
+          }
+          if (*p == *q &&
+              esc)
+          {
+            /* escaped, move along */
+            esc  = false;
+            *w++ = *p++;
+            continue;
+          }
+          break;
+        }
+        while (true);
+        q++;
+        *w = '\0';
+      }
+      else
+      {
+        /* find first whitespace */
+        while (!isspace((int)*p))
+          p++;
+        if (*p == '\n')
+          findnl = false;
+      }
+      *p++ = '\0';
+      if (*key == NULL)  /* ignore secondary assignments (perhaps if/else) */
+        *key = xstrdup(q);
+    }
+
+    if (findnl &&
+        (p = strchr(p, '\n')) != NULL)
+      p++;
+  }
+  while (*p != '\0');
+
+  return true;
+}
+
+static void tree_pkg_xpak_read_cb
+(
+    void *ctx,
+    char *pathname,
+    int   pathname_len,
+    int   data_offset,
+    int   data_len,
+    char *data)
+{
+  tree_pkg_ctx  *pkg = ctx;
+  char         **key;
+
+#define match_path(K) \
+  else if (pathname_len == (sizeof(#K) - 1) && \
+           strcmp(pathname, #K) == 0) \
+    do { \
+      key = &pkg->meta[Q_##K]; \
+    } while (false)
+
+  if (1 == 0); /* dummy for syntax */
+  match_path(DEPEND);
+  match_path(RDEPEND);
+  match_path(SLOT);
+  match_path(SRC_URI);
+  match_path(RESTRICT);
+  match_path(HOMEPAGE);
+  match_path(DESCRIPTION);
+  match_path(KEYWORDS);
+  match_path(INHERITED);
+  match_path(IUSE);
+  match_path(CDEPEND);
+  match_path(PDEPEND);
+  match_path(PROVIDE);
+  match_path(EAPI);
+  match_path(PROPERTIES);
+  match_path(DEFINED_PHASES);
+  match_path(REQUIRED_USE);
+  match_path(BDEPEND);
+  match_path(IDEPEND);
+  match_path(CONTENTS);
+  match_path(USE);
+  match_path(EPREFIX);
+  match_path(repository);
+  else
+    return;
+#undef match_path
+
+  /* don't overwrite entries */
+  if (*key != NULL)
+    return;
+
+  /* trim whitespace (mostly trailing newline) */
+  while (isspace((int)data[data_offset + data_len - 1]))
+    data_len--;
+
+  /* copy the entry into the meta */
+  *key = xmemdup(data + data_offset, data_len + 1);
+  (*key)[data_len] = '\0';
+}
+
+static bool tree_pkg_binpkg_read
+(
+  tree_pkg_ctx *pkg
+)
+{
+  int fd;
+
+  if (pkg->binpkg_gpkg)
+  {
+#ifdef ENABLE_GPKG
+    struct archive       *a     = archive_read_new();
+    struct archive_entry *entry;
+    size_t                len   = 0;
+    char                 *buf   = NULL;
+
+    archive_read_support_format_all(a);
+    archive_read_support_filter_all(a);
+
+    fd = openat(pkg->cat->tree->portroot_fd, pkg->cat->tree->path, O_RDONLY);
+    if (fd < 0)
+      return false;
+
+    if (archive_read_open_fd(a, fd, BUFSIZ) != ARCHIVE_OK)
+    {
+      close(fd);
+      return false;
+    }
+    while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+      const char *pathname = archive_entry_pathname(entry);
+      const char *fname    = strchr(pathname, '/');
+      if (fname == NULL)
+        continue;
+      fname++;
+      if (strncmp(fname, "metadata.tar",
+                  sizeof("metadata.tar") - 1) == 0)
+      {
+        /* read this nested tar, it contains the VDB entries
+         * otherwise stored in xpak */
+        len = archive_entry_size(entry);
+        buf = xmalloc(len);
+        archive_read_data(a, buf, len);
+        break;
+      }
+    }
+    archive_read_free(a);
+    close(fd);
+
+    if (buf != NULL)
+    {
+      char  *data      = NULL;
+      size_t data_size = 0;
+      size_t data_len  = 0;
+
+      a = archive_read_new();
+      archive_read_support_format_all(a);
+      archive_read_support_filter_all(a);
+      archive_read_open_memory(a, buf, len);
+
+      while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+        const char *pathname = archive_entry_pathname(entry);
+        char       *fname    = strchr(pathname, '/');
+        if (fname == NULL)
+          continue;
+        fname++;
+
+        data_len = archive_entry_size(entry);
+        if (data_len > data_size) {
+          data_size = data_len;
+          data      = xrealloc(data, data_size);
+        }
+        if (archive_read_data(a, data, data_len) < 0)
+          continue;
+        tree_pkg_xpak_read_cb(pkg, fname, (int)strlen(fname),
+                              0, data_len, data);
+      }
+      archive_read_free(a);
+      free(buf);
+      free(data);
+    }
+#else
+    return false;
+#endif
+  }
+  else
+  {
+    fd = openat(pkg->cat->tree->portroot_fd, pkg->path, O_RDONLY);
+    if (fd < 0)
+      return false;
+    xpak_process_fd(fd, true, pkg, tree_pkg_xpak_read_cb);
+    /* xpak_process closes the input fd */
+  }
+
+  /* get some numbers to emulate Packages for convenience */
+  if (pkg->meta[Q_SIZE] == NULL ||
+      pkg->meta[Q_MD5] == NULL ||
+      pkg->meta[Q_SHA1] == NULL)
+  {
+    char   md5[MD5_DIGEST_LENGTH + 1];
+    char   sha1[SHA1_DIGEST_LENGTH + 1];
+    size_t flen;
+
+    fd = openat(pkg->cat->tree->portroot_fd, pkg->path, O_RDONLY);
+    if (fd < 0)
+      return false;
+
+    if (hash_multiple_file_fd(fd, md5, sha1, NULL, NULL,
+                              NULL, &flen, HASH_MD5 | HASH_SHA1) == 0)
+    {
+      if (pkg->meta[Q_MD5] == NULL)
+        pkg->meta[Q_MD5] = xstrdup(md5);
+      if (pkg->meta[Q_SHA1] == NULL)
+        pkg->meta[Q_SHA1] = xstrdup(sha1);
+
+      if (pkg->meta[Q_SIZE] == NULL)
+      {
+        snprintf(md5, sizeof(md5), "%zu", flen);
+        pkg->meta[Q_SIZE] = xstrdup(md5);
+      }
+    }
+
+    close(fd);
+  }
+  
+  return true;
+}
+
+static const char *tree_meta_key_name[] = {
+  "unknown",
+  TREE_META_KEYS(TREE_META_KEY_NAME)
+};
+
+/* returns the value for the given metadata key, or NULL if absent
+ * all values returned are strings, the caller should copy the strings
+ * before modifying them */
+char *tree_pkg_meta
+(
+  tree_pkg_ctx           *pkg,
+  enum tree_pkg_meta_keys key
+)
+{
+  if (key == Q_UNKNOWN ||
+      key >= TREE_META_MAX_KEYS)
+    return NULL;
+
+  /* repository/REPO is an odd one out, it doesn't live in the pkg meta,
+   * but in the tree instead for some repo types */
+  if (key == Q_repository &&
+      pkg->cat->tree->repo != NULL)
+    return pkg->cat->tree->repo;
+  /* similar for PATH which is only in Packages file */
+  if (key == Q_PATH)
+    return pkg->path;
+
+  if (pkg->meta[key] == NULL &&
+      !pkg->meta_complete)
+  {
+    tree_ctx *tree = pkg->cat->tree;
+    
+    switch (tree->type)
+    {
+    case TREE_EBUILD: /* {{{ */
+      if (!pkg->cache_invalid)
+      {
+        char      buf[_Q_PATH_MAX];
+        atom_ctx *atom = tree_pkg_atom(pkg, false);
+
+        /* attempt to read the cache file from the location it should be */
+        snprintf(buf, sizeof(buf), "%s/metadata/md5-cache/%s/%s",
+                 tree->path, atom->CATEGORY, atom->PF);
+        if (tree_pkg_md5_read(pkg, buf))
+        {
+          char   *mdmd5;
+          char    srcmd5[MD5_DIGEST_LENGTH + 1];
+          size_t  flen;
+          int     k;
+
+          /* in this case a cache entry exists, however, it may be
+           * out of date, for that we need to check the md5 hashes
+           * with the ebuild/eclass files, obviously when the source
+           * ebuild doesn't exist, we never get here */
+
+          if (hash_multiple_file_at(tree->portroot_fd, pkg->path,
+                                    srcmd5, NULL, NULL, NULL,
+                                    NULL, &flen, HASH_MD5) == 0)
+          {
+            mdmd5 = pkg->meta[Q__md5_];
+
+            /* TODO: eclass compares */
+
+            /* is this a valid cache? use it! */
+            if (mdmd5 != NULL &&
+                memcmp(mdmd5, srcmd5, MD5_DIGEST_LENGTH) == 0)
+            {
+              pkg->meta_complete = true;
+              break;
+            }
+          }
+
+          /* we read the meta, but apparently it was wrong, so clear
+           * whatever we read */
+          for (k = Q_UNKNOWN; k < TREE_META_MAX_KEYS; k++)
+            free(pkg->meta[k]);
+        }
+
+        /* avoid trying to do this again */
+        pkg->cache_invalid = true;
+      }
+        
+      /* if we reach down here, we'll have to try and get what we need
+       * from the ebuild itself */
+      if (tree_pkg_ebuild_read(pkg))
+        pkg->meta_complete = true;
+      /* else, the file is not readable or doesn't exist, which is
+       * funny, so we'll take the hit for it every time */
+
+      break; /* }}} */
+    case TREE_VDB: /* {{{ */
+      {
+        size_t len;
+        tree_pkg_vdb_eat(pkg, tree_meta_key_name[key], &pkg->meta[key], &len);
+      }
+      break; /* }}} */
+    case TREE_BINPKGS:
+    case TREE_PACKAGES:
+      {
+        if (tree_pkg_binpkg_read(pkg))
+          pkg->meta_complete = true;
+      }
+      break;
+    default:
+      break;
+    }
+  }
+
+  return pkg->meta[key];
+}
+
+/* returns the atom for the package, performing possibly more expensive
+ * measures to find SLOT and REPO when full is set to true */
+atom_ctx *tree_pkg_atom
+(
+  tree_pkg_ctx *pkg,
+  bool          full
+)
+{
+  if (pkg->atom != NULL)
+  {
+    if (pkg->atom_complete ||
+        !full)
+      return pkg->atom;
+  }
+
+  if (pkg->atom == NULL)
+  {
+    char *p;
+
+    /* while atom_explode is fine with getting a full path, it does
+     * pre-calculate necessary storage size based on the input, so while
+     * maybe confusing, it also wastes a lot of memory, which we want to
+     * avoid here, so search for the last path component */
+    p = strrchr(pkg->path, '/');
+    if (p == NULL)
+      p = pkg->path;
+    else
+      p++;
+
+    pkg->atom = atom_explode_cat(p, pkg->cat->name);
+  }
+
+  if (full)
+  {
+    if (pkg->atom->REPO == NULL)
+      pkg->atom->REPO = tree_pkg_meta(pkg, Q_repository);
+    if (pkg->atom->SLOT == NULL)
+    {
+      pkg->atom->SLOT = tree_pkg_meta(pkg, Q_SLOT);
+      if (pkg->atom->SLOT != NULL)
+      {
+        char *p;
+
+        /* this is a bit atom territory, but since we pulled in SLOT we
+         * need to split it up in SLOT and SUBSLOT for atom_format to
+         * behave properly, this may be redundant but this probably
+         * isn't much of an issue performance wise (on top of doing it
+         * in atom_explode when given as input) */
+        if ((p = strchr(pkg->atom->SLOT, '/')) != NULL)
+        {
+          *p++ = '\0';
+        }
+        else
+        {
+          /* PMS 7.2: When the sub-slot part is omitted from the
+           * SLOT definition, the package is considered to have an
+           * implicit sub-slot which is equal to the regular slot. */
+          p = pkg->atom->SLOT;
+        }
+        pkg->atom->SUBSLOT = p;
+      }
+    }
+
+    pkg->atom_complete = true;
+  }
+
+  return pkg->atom;
+}
+
+/* comparator function for category cache, operating on a tree_cat_ctx */
+static int tree_cat_compar
+(
+  const void *l,
+  const void *r
+)
+{
+  tree_cat_ctx *left  = *(tree_cat_ctx **)l;
+  tree_cat_ctx *right = *(tree_cat_ctx **)r;
+
+  if (left == NULL &&
+      right == NULL)
+    return 0;
+  else if (left == NULL)
+    return 1;
+  else if (right == NULL)
+    return -1;
+  else
+    return strcmp(left->name, right->name);
+}
+
+/* comparator function for packages cache, operating on a tree_pkg_ctx
+ * the comparison is "cheap" using strcmp only, when either side does
+ * not have an atom populated, otherwise atom_compare is used to order
+ * the results with identical name (PN)
+ * NOTE: this comparator does not respect atom CATEGORY, as it assumes
+ *       it is only sorting packages inside a category */
+static int tree_pkg_compar
+(
+  const void *d,
+  const void *q
+)
+{
+  tree_pkg_ctx *data  = *(tree_pkg_ctx **)d;
+  tree_pkg_ctx *query = *(tree_pkg_ctx **)q;
+
+  if (data == NULL &&
+      query == NULL)
+    return 0;
+  else if (data == NULL)
+    return 1;
+  else if (query == NULL)
+    return -1;
+  else
+  {
+    int ret = strcmp(data->name, query->name);
+    if (ret == 0)
+    {
+      atom_ctx *qa = tree_pkg_atom(query, false);
+      atom_ctx *da;
+
+      /* ensure we fetch SLOT and REPO when the query includes them, so
+       * we have a chance of matching */
+      da = tree_pkg_atom(data, (qa->SLOT != NULL ||
+                                qa->REPO != NULL));
+
+      /* never makes sense to compare repository here */
+      switch (atom_compare(da, qa))
+      {
+      case EQUAL:  ret =  0;  break;
+      case NEWER:  ret = -1;  break;
+      case OLDER:  ret =  1;  break;
+      case NOT_EQUAL:
+      default:
+        /* we only get here when PN is equal, so NOT_EQUAL is impossible
+         * unless there's operators used on query, which should only be
+         * when we're matching results */
+                   ret = -1;  break;
+      }
+    }
+    return ret;
+  }
+}
+
+/* helper to delect valid category names from readdir */
+static int tree_filter_cat
+(
+  const struct dirent *de
+)
+{
+  int  i;
+  bool founddash;
+
+  /* PMS 3.1.1 */
+  founddash = false;
+  for (i = 0; de->d_name[i] != '\0'; i++)
+  {
+    switch (de->d_name[i])
+    {
+    case '_':
+      break;
+    case '-':
+      founddash = true;
+      /* fall through */
+    case '+':
+    case '.':
+      if (i)
+        break;
+      return 0;
+    default:
+      if ((de->d_name[i] >= 'A' &&
+           de->d_name[i] <= 'Z') ||
+          (de->d_name[i] >= 'a' &&
+           de->d_name[i] <= 'z') ||
+          (de->d_name[i] >= '0' &&
+           de->d_name[i] <= '9'))
+        break;
+      return 0;
+    }
+  }
+  if (!founddash &&
+      strcmp(de->d_name, "virtual") != 0)
+    return 0;
+
+  return i;
+}
+
+/* helper to delect valid package names from readdir */
+static int tree_filter_pkg
+(
+  const struct dirent *de
+)
+{
+  int  i;
+  bool founddash = false;
+
+  /* PMS 3.1.2 */
+  for (i = 0; de->d_name[i] != '\0'; i++)
+  {
+    switch (de->d_name[i])
+    {
+    case '_':
+      break;
+    case '-':
+      founddash = true;
+      /* fall through */
+    case '+':
+      if (i)
+        break;
+      return 0;
+    default:
+      if ((de->d_name[i] >= 'A' &&
+           de->d_name[i] <= 'Z') ||
+          (de->d_name[i] >= 'a' &&
+           de->d_name[i] <= 'z') ||
+          (de->d_name[i] >= '0' &&
+           de->d_name[i] <= '9'))
+        break;
+      if (founddash)
+        return 1;
+      return 0;
+    }
+  }
+
+  if (i > 0 &&
+      (strcmp(de->d_name, "Manifest") == 0 ||
+       strcmp(de->d_name, "metadata.xml") == 0))
+    i = 0;
+
+  return i;
+}
+
+/* iterates over the given category in its tree, invoking the callback
+ * function for packages matching the query */
+static int tree_cat_foreach_pkg
+(
+  tree_cat_ctx   *cat,
+  tree_pkg_cb     callback,
+  void           *priv,
+  bool            sorted,
+  const atom_ctx *query
+)
+{
+  tree_ctx       *tree     = cat->tree;
+  tree_pkg_ctx   *pkg;
+  tree_pkg_ctx   *nref;
+  tree_pkg_ctx    needle;
+  char           *pn       = NULL;
+  int             ret      = 0;
+  bool            filterpn = false;
+
+  VAL_CLEAR(needle);
+  nref = &needle;
+
+  if (query != NULL &&
+      query->PN != NULL)
+    filterpn = true;
+  
+  /* handle directed query on our cache */
+  if (filterpn &&
+      cat->pkgs != NULL)
+  {
+    size_t       elem;
+
+    needle.name = query->PN;
+    needle.path = query->PN;
+    needle.cat  = cat;
+    /* keep atom away while we search for the package, we want to know
+     * the package is seen (in the cache), so we can also handle
+     * negative responses here */
+    pkg = array_binsearch(cat->pkgs, &needle, tree_pkg_compar, &elem);
+    /* cleanup atom created implicitly for comparison */
+    if (needle.atom)
+      atom_implode(needle.atom);
+    if (pkg != NULL)
+    {
+      /* now use the original atom to refine the query */
+      needle.atom = (atom_ctx *)query;
+
+      do
+      {
+        if (tree_pkg_compar(&pkg, &nref) == 0)
+          ret |= callback(pkg, priv);
+      }
+      while (++elem < array_cnt(cat->pkgs) &&
+             (pkg = array_get(cat->pkgs, elem)) != NULL &&
+             strcmp(nref->name, pkg->name) == 0);
+
+      return ret;
+    }
+    else if (cat->pkgs_complete)
+    {
+      return 0;
+    }
+
+    VAL_CLEAR(needle);
+  }
+
+  /* for below to run, there must be no filter */
+  if (cat->pkgs_complete)
+  {
+    size_t n;
+
+    if (sorted)
+      array_sort(cat->pkgs, tree_pkg_compar);
+
+    array_for_each(cat->pkgs, n, pkg)
+      ret |= callback(pkg, priv);
+
+    return ret;
+  }
+
+  if (filterpn)
+  {
+    needle.name = query->PN;
+    needle.atom = (atom_ctx *)query;
+  }
+
+  switch (tree->type)
+  {
+  case TREE_EBUILD: /* {{{ */
+    {
+      char           buf[_Q_PATH_MAX];
+      tree_pkg_ctx   lookup;
+      struct stat    sb;
+      struct dirent *de;
+      DIR           *catdir   = NULL;
+      int            catfd    = -1;
+      bool           domatch  = cat->pkgs != NULL;
+      bool           mfound   = false;
+
+      VAL_CLEAR(lookup);
+
+      /* if query has PN, then attempt opening it and load the ebuilds
+       * as pkgs into the cache, else do full iteration over dirs and
+       * all ebuilds inside */
+      if (filterpn)
+      {
+        pn = query->PN;
+      }
+      else
+      {
+        snprintf(buf, sizeof(buf), "%s/%s", tree->path, cat->name);
+        if ((catfd = openat(tree->portroot_fd, buf, O_RDONLY | O_CLOEXEC)) < 0)
+          return 0;
+        if ((catdir = fdopendir(catfd)) == NULL)
+        {
+          close(catfd);
+          return 0;
+        }
+      }
+
+      for (;; pn = NULL)
+      {
+        DIR        *dir;
+        size_t      len;
+        int         fd;
+
+        if (pn == NULL)
+        {
+          if (catfd == -1)
+            break;
+
+          /* load next PN dir */
+          if ((de = readdir(catdir)) == NULL)
+            break;
+
+          if (tree_filter_pkg(de) == 0)
+            continue;
+
+          pn = de->d_name;
+
+          if (domatch)
+          {
+            lookup.name = pn;
+            lookup.path = pn;
+            lookup.atom = NULL;
+            pkg = array_binsearch(cat->pkgs, &lookup, tree_pkg_compar, NULL);
+            if (lookup.atom != NULL)
+              atom_implode(lookup.atom);
+            if (pkg != NULL)
+              continue;
+          }
+        }
+
+        len = snprintf(buf, sizeof(buf), "%s/%s/%s",
+                       tree->path, cat->name, pn);
+        if ((fd = openat(tree->portroot_fd, buf, O_RDONLY | O_CLOEXEC)) < 0)
+          continue;
+        if ((dir = fdopendir(fd)) == NULL)
+        {
+          close(fd);
+          continue;
+        }
+
+        while (true)
+        {
+          size_t         nlen;
+
+          if ((de = readdir(dir)) == NULL)
+            break;
+
+          nlen = strlen(de->d_name);
+          if (nlen <= sizeof(".ebuild") - 1 ||
+              memcmp(de->d_name + (nlen - (sizeof(".ebuild") - 1)),
+                     ".ebuild", (sizeof(".ebuild") - 1)) != 0)
+            continue;
+
+          snprintf(buf + len, sizeof(buf) - len, "/%.*s",
+                   (int)nlen, de->d_name);
+          if (fstatat(tree->portroot_fd, buf, &sb, 0) < 0 ||
+              !S_ISREG(sb.st_mode))
+            continue;
+
+          pkg       = xzalloc(sizeof(*pkg));
+          pkg->name = xstrdup(pn);
+          pkg->path = xstrdup(buf);
+          pkg->cat  = cat;
+
+          if (cat->pkgs == NULL)
+            cat->pkgs = array_new();
+          array_append(cat->pkgs, pkg);
+          mfound = true;
+
+          if (!sorted &&
+              (!filterpn ||
+               tree_pkg_compar(&pkg, &nref) == 0))
+            ret |= callback(pkg, priv);
+        }
+
+        closedir(dir);
+        close(fd);
+      }
+
+      if (catfd != -1)
+      {
+        closedir(catdir);
+        close(catfd);
+      }
+
+      if (!filterpn)
+        cat->pkgs_complete = true;
+
+      if (mfound &&
+          sorted)
+      {
+        /* recurse, now use the built cache */
+        ret = tree_cat_foreach_pkg(cat, callback, priv, sorted, query);
+      }
+
+      return ret;
+    }
+    break; /* }}} */
+  case TREE_BINPKGS: /* {{{ */
+    {
+      char           buf[_Q_PATH_MAX];
+      struct stat    sb;
+      struct dirent *de;
+      DIR           *catdir = NULL;
+      int            catfd  = -1;
+      size_t         len;
+
+      /* this is hybrid these days with PN dirs and files, possibly being
+       * for the same PN too ... so we'll be just listing the whole lot
+       * and recurse through directories as we see them, while we could
+       * limit our search to PN directories, since we cannot be sure
+       * there are no files for the same PN too, we just do the whole
+       * thing and let the cache sort it out to ensure something
+       * coherent */
+
+      len = snprintf(buf, sizeof(buf), "%s/%s", tree->path, cat->name);
+      if ((catfd = openat(tree->portroot_fd, buf, O_RDONLY | O_CLOEXEC)) < 0)
+        return 0;
+      if ((catdir = fdopendir(catfd)) == NULL)
+      {
+        close(catfd);
+        return 0;
+      }
+
+      if (filterpn)
+      {
+        VAL_CLEAR(needle);
+        needle.name = query->PN;
+        needle.atom = (atom_ctx *)query;
+      }
+
+      if (cat->pkgs == NULL)
+        cat->pkgs = array_new();
+
+      while (true)
+      {
+        size_t pnlen;
+        size_t nlen;
+        int    fd;
+
+        if ((de = readdir(catdir)) == NULL)
+          break;
+
+        if (de->d_name[0] == '.' &&
+            (de->d_name[1] == '\0' ||
+             (de->d_name[1] == '.' &&
+              de->d_name[2] == '\0')))
+          continue;
+
+        pnlen = snprintf(buf + len, sizeof(buf) - len, "/%s", de->d_name);
+        if ((fd = openat(tree->portroot_fd, buf, O_RDONLY | O_CLOEXEC)) < 0 ||
+            fstat(fd, &sb) < 0)
+          continue;
+
+        if (S_ISDIR(sb.st_mode))
+        {
+          DIR *dir;
+
+          /* PN dir, need to look inside */
+          if (tree_filter_pkg(de) == 0 ||
+              (dir = fdopendir(fd)) == NULL)
+          {
+            close(fd);
+            continue;
+          }
+
+          while (true)
+          {
+            if ((de = readdir(dir)) == NULL)
+              break;
+
+            snprintf(buf + len + pnlen, sizeof(buf) - len - pnlen,
+                     "/%s", de->d_name);
+            if (fstatat(tree->portroot_fd, buf, &sb, 0) < 0 ||
+                !S_ISREG(sb.st_mode))
+              continue;
+
+            /* Portage says that when inside a PN (multi-binpkg) the
+             * extension of pre-gpkg files is xpak, as opposed to .tbz2 */
+            nlen = strlen(de->d_name);
+            if (nlen > sizeof(".xpak") - 1 &&
+                memcmp(de->d_name + (nlen - (sizeof(".xpak") - 1)),
+                       ".xpak", (sizeof(".xpak") - 1)) == 0)
+            {
+              pkg       = xzalloc(sizeof(*pkg));
+              pkg->atom = atom_explode_cat(de->d_name, cat->name);
+              pkg->name = xstrdup(pkg->atom->PN);
+              pkg->path = xstrdup(buf);
+              pkg->cat  = cat;
+
+              array_append(cat->pkgs, pkg);
+
+              if (!sorted &&
+                  (!filterpn ||
+                   tree_pkg_compar(&pkg, &nref) == 0))
+                ret |= callback(pkg, priv);
+            }
+            else if (nlen > sizeof(".gpkg.tar") - 1 &&
+                     memcmp(de->d_name + (nlen - (sizeof(".gpkg.tar") - 1)),
+                            ".gpkg.tar", (sizeof(".gpkg.tar") - 1)) == 0)
+            {
+              pkg              = xzalloc(sizeof(*pkg));
+              pkg->atom        = atom_explode_cat(de->d_name, cat->name);
+              pkg->name        = xstrdup(pkg->atom->PN);
+              pkg->path        = xstrdup(buf);
+              pkg->cat         = cat;
+              pkg->binpkg_gpkg = true;
+
+              array_append(cat->pkgs, pkg);
+
+              if (!sorted &&
+                  (!filterpn ||
+                   tree_pkg_compar(&pkg, &nref) == 0))
+                ret |= callback(pkg, priv);
+            }
+          }
+          closedir(dir);
+        }
+        else
+        {
+          /* regular file */
+          nlen = strlen(de->d_name);
+          if (nlen > sizeof(".tbz2") - 1 &&
+              memcmp(de->d_name + (nlen - (sizeof(".tbz2") - 1)),
+                     ".tbz2", (sizeof(".tbz2") - 1)) == 0)
+          {
+            pkg       = xzalloc(sizeof(*pkg));
+            pkg->atom = atom_explode_cat(de->d_name, cat->name);
+            pkg->name = xstrdup(pkg->atom->PN);
+            pkg->path = xstrdup(buf);
+            pkg->cat  = cat;
+
+            array_append(cat->pkgs, pkg);
+
+            if (!sorted &&
+                (!filterpn ||
+                 tree_pkg_compar(&pkg, &nref) == 0))
+              ret |= callback(pkg, priv);
+          }
+          else if (nlen > sizeof(".gpkg.tar") - 1 &&
+                   memcmp(de->d_name + (nlen - (sizeof(".gpkg.tar") - 1)),
+                          ".gpkg.tar", (sizeof(".gpkg.tar") - 1)) == 0)
+          {
+            pkg              = xzalloc(sizeof(*pkg));
+            pkg->atom        = atom_explode_cat(de->d_name, cat->name);
+            pkg->name        = xstrdup(pkg->atom->PN);
+            pkg->path        = xstrdup(buf);
+            pkg->cat         = cat;
+            pkg->binpkg_gpkg = true;
+
+            array_append(cat->pkgs, pkg);
+
+            if (!sorted &&
+                (!filterpn ||
+                 tree_pkg_compar(&pkg, &nref) == 0))
+              ret |= callback(pkg, priv);
+          }
+        }
+        close(fd);
+      }
+
+      closedir(catdir);
+      close(catfd);
+
+      cat->pkgs_complete = true;
+
+      if (sorted)
+      {
+        /* recurse, now use the built cache */
+        ret = tree_cat_foreach_pkg(cat, callback, priv, sorted, query);
+      }
+
+      return ret;
+    }
+    break; /* }}} */
+  case TREE_VDB: /* {{{ */
+    {
+      char           buf[_Q_PATH_MAX];
+      struct stat    sb;
+      struct dirent *de;
+      DIR           *catdir = NULL;
+      int            catfd  = -1;
+      size_t         len;
+
+      /* this has dirs with name PF, so we can easily populate all pkgs
+       * with a single directory traversal */
+      len = snprintf(buf, sizeof(buf), "%s/%s", tree->path, cat->name);
+      if ((catfd = openat(tree->portroot_fd, buf, O_RDONLY | O_CLOEXEC)) < 0)
+        return 0;
+      if ((catdir = fdopendir(catfd)) == NULL)
+      {
+        close(catfd);
+        return 0;
+      }
+
+      if (filterpn)
+      {
+        VAL_CLEAR(needle);
+        needle.name = query->PN;
+        needle.atom = (atom_ctx *)query;
+      }
+
+      if (cat->pkgs == NULL)
+        cat->pkgs = array_new();
+
+      while (true)
+      {
+        if ((de = readdir(catdir)) == NULL)
+          break;
+
+        if (de->d_name[0] == '.' &&
+            (de->d_name[1] == '\0' ||
+             (de->d_name[1] == '.' &&
+              de->d_name[2] == '\0')))
+          continue;
+
+        snprintf(buf + len, sizeof(buf) - len, "/%s", de->d_name);
+        if (fstatat(tree->portroot_fd, buf, &sb, 0) < 0 ||
+            !S_ISDIR(sb.st_mode))
+          continue;
+
+        pkg       = xzalloc(sizeof(*pkg));
+        pkg->atom = atom_explode_cat(de->d_name, cat->name);
+        pkg->name = xstrdup(pkg->atom->PN);
+        pkg->path = xstrdup(buf);
+        pkg->cat  = cat;
+
+        array_append(cat->pkgs, pkg);
+
+        if (!sorted &&
+            (!filterpn ||
+             tree_pkg_compar(&pkg, &nref) == 0))
+          ret |= callback(pkg, priv);
+      }
+
+      closedir(catdir);
+      close(catfd);
+
+      cat->pkgs_complete = true;
+
+      if (sorted)
+      {
+        /* recurse, now use the built cache */
+        ret = tree_cat_foreach_pkg(cat, callback, priv, sorted, query);
+      }
+
+      return ret;
+    }
+    break; /* }}} */
+  default:
+    return 0;
+  }
+
+  /* unreachable */
+  return 0;
+}
+
+/* iterates over the given tree, invoking the callback function for
+ * packages matching the query, or all when absent
+ * the sorted parameter ensures the callback sees packages in order
+ * defined by atom_compare */
+int tree_foreach_pkg
+(
+  tree_ctx       *tree,
+  tree_pkg_cb     callback,
+  void           *priv,
+  bool            sorted,
+  const atom_ctx *query
+)
+{
+  tree_cat_ctx *cat       = NULL;
+  int           ret       = 0;
+  bool          filtercat = false;
+
+  /* if we have a query with category, see if we have it already */
+  if (query != NULL &&
+      query->CATEGORY != NULL)
+    filtercat = true;
+
+  if (filtercat &&
+      tree->cats != NULL)
+  {
+    tree_cat_ctx needle;
+
+    VAL_CLEAR(needle);
+    needle.name = query->CATEGORY;
+    cat = array_binsearch(tree->cats, &needle, tree_cat_compar, NULL);
+    if (cat != NULL)
+      return tree_cat_foreach_pkg(cat, callback, priv, sorted, query);
+    else if (tree->cats_complete)
+      return 0;
+  }
+
+  /* if our cache is complete, use it, due to above conditions, at this
+   * point we either have a filter but no cats (so cannot be complete)
+   * or no filter, for which we need all categories to be there */
+  if (tree->cats_complete)
+  {
+    size_t n;
+
+    if (sorted)
+      array_sort(tree->cats, tree_cat_compar);
+
+    array_for_each(tree->cats, n, cat)
+      ret |= tree_cat_foreach_pkg(cat, callback, priv, sorted, query);
+
+    return ret;
+  }
+
+  /* call the tree walker to populate the categories */
+  switch (tree->type)
+  {
+  case TREE_EBUILD:
+  case TREE_VDB:
+  case TREE_BINPKGS:
+    /* {{{ */
+    if (filtercat)
+    {
+      char        buf[_Q_PATH_MAX];
+      struct stat sb;
+
+      /* just probe to see if there is a directory named like this */
+      snprintf(buf, sizeof(buf), "%s/%s", tree->path, query->CATEGORY);
+      VAL_CLEAR(sb);
+      if (fstatat(tree->portroot_fd, buf, &sb, 0) < 0 ||
+          !S_ISDIR(sb.st_mode))
+        return 0;
+
+      cat       = xzalloc(sizeof(*cat));
+      cat->name = xstrdup(query->CATEGORY);
+      cat->tree = tree;
+
+      if (tree->cats == NULL)
+        tree->cats = array_new();
+      array_append(tree->cats, cat);
+
+      return tree_cat_foreach_pkg(cat, callback, priv, sorted, query);
+    }
+    else
+    {
+      tree_cat_ctx  needle;
+      DIR          *dir;
+      int           fd;
+      bool          domatch = tree->cats != NULL;
+
+      /* loop over directory and populate cache as side-effect, unless
+       * sort is requested, then populate first, sort and run from the
+       * cache afterwards */
+      fd = openat(tree->portroot_fd, tree->path, O_RDONLY | O_CLOEXEC);
+      if (fd < 0)
+        return 0;
+      dir = fdopendir(fd);
+      if (dir == NULL)
+      {
+        close(fd);
+        return 0;
+      }
+
+      if (tree->cats == NULL)
+        tree->cats = array_new();
+
+      VAL_CLEAR(needle);
+      while (true)
+      {
+        struct dirent *de = readdir(dir);
+
+        if (de == NULL)
+          break;
+
+        if (tree_filter_cat(de) == 0)
+          continue;
+
+        cat = NULL;
+        if (domatch)
+        {
+          needle.name = de->d_name;
+          cat = array_binsearch(tree->cats, &needle, tree_cat_compar, NULL);
+        }
+
+        if (cat == NULL)
+        {
+          cat       = xzalloc(sizeof(*cat));
+          cat->name = xstrdup(de->d_name);
+          cat->tree = tree;
+          array_append(tree->cats, cat);
+        }
+
+        if (!sorted)
+          ret |= tree_cat_foreach_pkg(cat, callback, priv, sorted, query);
+      }
+
+      tree->cats_complete = true;
+
+      closedir(dir);
+      close(fd);
+
+      if (sorted)
+      {
+        /* recurse, now use the built cache */
+        ret = tree_foreach_pkg(tree, callback, priv, sorted, query);
+      }
+
+      return ret;
+    }
+    break; /* }}} */
+  case TREE_PACKAGES: /* {{{ */
+    {
+	    tree_pkg_ctx      *pkg      = NULL;
+      tree_cat_ctx       needle;
+	    char              *buf;
+	    char              *k;
+	    char              *v;
+	    char              *cpv;
+	    char              *nexttok;
+	    size_t             len;
+	    size_t             rootlen;
+	    int                fd;
+	    bool               eret;
+
+      fd = openat(tree->portroot_fd, tree->path, O_RDONLY | O_CLOEXEC);
+      if (fd < 0)
+        return 1;
+
+      buf  = NULL;
+      len  = 0;
+      eret = eat_file_fd(fd, &buf, &len);
+      close(fd);
+
+      if (!eret)
+        return 1;
+
+      k = strrchr(tree->path, '/');
+      if (k != NULL)
+        rootlen = k - tree->path;
+      else
+        rootlen = strlen(tree->path);
+
+      tree->cats = array_new();
+      VAL_CLEAR(needle);
+
+      for (k = strtok_r(buf, ":", &nexttok);
+           k != NULL;
+           k = strtok_r(NULL, ":", &nexttok))
+      {
+        k = rmspace(k);
+
+        v = strtok_r(NULL, "\n", &nexttok);
+        if (v == NULL)
+          break;
+        v = rmspace(v);
+
+        if (pkg == NULL)
+        {
+          /* don't attempt to do anything, this is the header which we
+           * ignore/not store anything of currently */
+        }
+        else if (strcmp(k, "CPV") == 0)
+		    {
+		      cpv = v;
+			  }
+#define match_key(X) match_key2(X,X)
+#define match_key2(X,Y) \
+		    else if (strcmp(k, #X) == 0) \
+		      do { \
+		        if (pkg->meta[Q_##Y] == NULL) \
+			        pkg->meta[Q_##Y] = xstrdup(v); \
+			    } while (false)
+		    match_key(DEFINED_PHASES);
+		    match_key(DEPEND);
+		    match_key2(DESC, DESCRIPTION);
+		    match_key(EAPI);
+		    match_key(IUSE);
+		    match_key(KEYWORDS);
+		    match_key(LICENSE);
+		    match_key(MD5);
+		    match_key(SHA1);
+		    match_key(RDEPEND);
+		    match_key(SLOT);
+		    match_key(USE);
+		    match_key(PDEPEND);
+		    match_key2(REPO, repository);
+		    match_key(SIZE);
+		    match_key(BDEPEND);
+		    match_key(IDEPEND);
+		    match_key(PATH);
+		    match_key(BUILD_ID);
+#undef match_key
+#undef match_key2
+
+        if (*nexttok == '\n')
+        {
+          /* double newline, finish a block */
+          if (pkg != NULL)
+          {
+            char pth[_Q_PATH_MAX];
+            /* create atom from the path if we have it, else use cpv */
+            if (pkg->meta[Q_PATH] != NULL)
+            {
+              /* construct full path */
+              snprintf(pth, sizeof(pth), "%.*s/%s",
+                       (int)rootlen, tree->path, pkg->meta[Q_PATH]);
+
+              pkg->path = xstrdup(pth);
+              pkg->atom = atom_explode(pkg->meta[Q_PATH]);
+
+              len = strlen(k);
+					    if (len > sizeof(".gpkg.tar") - 1 &&
+						      memcmp(cpv + len - (sizeof(".gpkg.tar") - 1),
+							           ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
+							  pkg->binpkg_gpkg = true;
+            }
+            else if (cpv != NULL)
+            {
+              /* this might be an old repo or something, so compute the
+               * path assuming it's from the base in PN/PF.tbz2 */
+              snprintf(pth, sizeof(pth), "%.*s/%s.tbz2",
+                       (int)rootlen, tree->path, cpv);
+              pkg->path = xstrdup(pth);
+              pkg->atom = atom_explode(cpv);
+            }
+            else
+            {
+              /* have no version or anything, skip this */
+              tree_pkg_close(pkg);
+              cpv = NULL;
+              pkg = xzalloc(sizeof(*pkg));
+              continue;
+            }
+            pkg->name = xstrdup(pkg->atom->PN);
+
+            /* BUILD_ID sanity */
+            if (pkg->atom->BUILDID == 0 &&
+                pkg->meta[Q_BUILD_ID] != NULL)
+              pkg->atom->BUILDID = atoi(pkg->meta[Q_BUILD_ID]);
+
+            /* find category for this package */
+            needle.name = pkg->atom->CATEGORY;
+            cat = array_binsearch(tree->cats, &needle, tree_cat_compar, NULL);
+
+            if (cat == NULL)
+            {
+              cat = xzalloc(sizeof(*cat));
+              cat->name = xstrdup(pkg->atom->CATEGORY);
+              cat->tree = tree;
+              array_append(tree->cats, cat);
+            }
+            if (cat->pkgs == NULL)
+              cat->pkgs = array_new();
+
+            pkg->cat = cat;
+            array_append(cat->pkgs, pkg);
+          }
+
+          /* prepare new package */
+          cpv = NULL;
+          pkg = xzalloc(sizeof(*pkg));
+        }
+      }
+
+      free(pkg);
+      free(buf);
+
+      array_for_each(tree->cats, len, cat)
+        cat->pkgs_complete = true;
+
+      tree->cats_complete = true;
+
+      /* ok, now do it for real */
+      return tree_foreach_pkg(tree, callback, priv, sorted, query);
+    }
+    break; /* }}} */
+  case TREE_GTREE: /* {{{ */
+#ifdef ENABLE_GTREE
+    /* we don't optimise anything because reading a single file is fast
+     * enough, it just takes some memory, but any retrieval afterwards
+     * comes straight from cache */
+    if (tree_foreach_pkg_gtree(tree) != 0)
+      return 1;
+    return tree_foreach_pkg(tree, callback, priv, sorted, query);
+#else
+    return 0;
+#endif
+    break; /* }}} */
+  default:
+    return 0;
+  }
+
+  return 0;
+}
+
+/* callback for tree_foreach_pkg that appends the pkg to the array given
+ * via priv */
+static int tree_match_atom_cb
+(
+  tree_pkg_ctx *pkg,
+  void         *priv
+)
+{
+  array *arr = priv;
+
+  array_append(arr, pkg);
+
+  return 0;
+}
+
+/* searches the given tree for packages matching the given atom, returns
+ * the matching packages, or all when atom is NULL, in an array
+ * the returned array contains pointers to tree_pkg_ctx structures
+ * backed by the input tree, and as such only the array should be freed,
+ * using array_free() */
+array *tree_match_atom
+(
+  tree_ctx       *tree,
+  const atom_ctx *atom,
+  int             flags
+)
+{
+  array        *ret    = array_new();
+  tree_pkg_ctx *w;
+  size_t        n;
+  bool          sorted = false;
+
+  /* a note on the flags that we control the output results with:
+   * - LATEST:  only return the best (latest version) match for each PN
+   * - FIRST:   stop searching after the first match (e.g. atom without
+   *            category), implies LATEST
+   * - VIRTUAL: include the virtual category in results
+   * - ACCT:    include the acct-user and acct-group categories in results
+   * - SORT:    return the results in sorted order, this is implied by
+   *            LATEST and FIRST, and provided because the sort
+   *            comparator is not exposed
+   * the flags are currently not supported by tree_foreach_pkg, so we
+   * manually fixup the array after traversal */
+
+  if (flags & TREE_MATCH_FIRST  ||
+      flags & TREE_MATCH_LATEST ||
+      flags & TREE_MATCH_SORT   )
+    sorted = true;
+
+  tree_foreach_pkg(tree, tree_match_atom_cb, ret, sorted, atom);
+
+  if (!(flags & TREE_MATCH_VIRTUAL))
+  {
+    array_for_each_rev(ret, n, w)
+      if (strcmp(tree_pkg_get_cat_name(w), "virtual") == 0)
+        array_remove(ret, n);
+  }
+
+  if (!(flags & TREE_MATCH_ACCT))
+  {
+    array_for_each_rev(ret, n, w)
+      if (strncmp("acct-", tree_pkg_get_cat_name(w), sizeof("acct-") - 1) == 0)
+        array_remove(ret, n);
+  }
+
+  if (flags & TREE_MATCH_FIRST &&
+      array_cnt(ret) > 1)
+  {
+    /* a bit crude, we can optimise this later */
+    array *new = array_new();
+    array_append(new, array_get(ret, 0));
+    array_free(ret);
+    ret = new;
+  }
+
+  if (flags & TREE_MATCH_LATEST)
+  {
+    tree_pkg_ctx *suc;
+
+    array_for_each_rev(ret, n, w)
+    {
+      if (n == 0)
+        break;
+      suc = array_get(ret, n - 1);
+      if (tree_pkg_get_cat_name(suc) == tree_pkg_get_cat_name(w) &&
+          strcmp(tree_pkg_atom(suc, false)->PN,
+                 tree_pkg_atom(w, false)->PN) == 0)
+        array_remove(ret, n);
+    }
+  }
+
+  return ret;
+}
+
+/* reads metadata.xml next to an ebuild and produces a tree_metadata_xml
+ * structure */
+tree_metadata_xml *tree_pkg_metadata
+(
+  tree_pkg_ctx *pkg_ctx
+)
+{
+  tree_metadata_xml *ret    = NULL;
+  struct stat        s;
+  char               buf[_Q_PATH_MAX];
+  FILE              *f;
+  char              *xbuf;
+  char              *p;
+  char              *q;
+  size_t             len;
+  int                fd;
+
+  /* lame @$$ XML parsing, I don't want to pull in a real parser
+   * library because we only retrieve one element for now: email
+   * technically speaking, email may occur only once in a maintainer
+   * tag, but practically speaking we don't care at all, so we can
+   * just extract everything between <email> and </email> */
+
+  p   = tree_pkg_get_path(pkg_ctx);
+  len = snprintf(buf, sizeof(buf), "%s", p == NULL ? "" : p);
+  p   = strrchr(buf, '/');
+  if (p != NULL)
+    len = p - buf;
+  snprintf(buf + len, sizeof(buf) - len, "/metadata.xml");
+  fd = openat(tree_pkg_get_portroot_fd(pkg_ctx), buf, O_RDONLY | O_CLOEXEC);
+
+  if (fd == -1)
+    return NULL;
+
+  if ((f = fdopen(fd, "r")) == NULL) {
+    close(fd);
+    return NULL;
+  }
+
+  if (fstat(fd, &s) != 0) {
+    fclose(f);
+    return NULL;
+  }
+
+  len = sizeof(*ret) + s.st_size + 1;
+  p = xbuf = xmalloc(len);
+  if ((off_t)fread(p, 1, s.st_size, f) != s.st_size) {
+    free(p);
+    fclose(f);
+    return NULL;
+  }
+  p[s.st_size] = '\0';
+
+  ret = xmalloc(sizeof(*ret));
+  ret->email = array_new();
+
+  while ((q = strstr(p, "<email>")) != NULL) {
+    p = q + sizeof("<email>") - 1;
+    if ((q = strstr(p, "</email>")) == NULL)
+      break;
+    *q = '\0';
+    rmspace(p);
+    array_append_copy(ret->email, p, strlen(p));
+    p = q + 1;
+  }
+
+  free(xbuf);
+  fclose(f);
+  return ret;
+}
+
+/* frees up resources used by a tree_metadata_xml structure produced by
+ * tree_pkg_metadata */
+void tree_close_metadata
+(
+  tree_metadata_xml *meta_ctx
+)
+{
+  array_deepfree(meta_ctx->email, NULL);
+  free(meta_ctx);
+}
+
+/* utility function to retrieve the repository name, if defined */
+char *tree_get_repo_name
+(
+  tree_ctx *tree
+)
+{
+  if (tree == NULL)
+    return NULL;
+
+  return tree->repo;
+}
+
+/* utility function to retrieve the base path of this tree */
+char *tree_get_path
+(
+  tree_ctx *tree
+)
+{
+  if (tree == NULL)
+    return NULL;
+
+  return tree->path;
+}
+
+/* utility function to retrieve the open filedescriptor to the root used
+ * with this tree */
+int tree_get_portroot_fd
+(
+  tree_ctx *tree
+)
+{
+  if (tree == NULL)
+    return -1;
+
+  return tree->portroot_fd;
+}
+
+/* utility function to retrieve the type of this tree */
+enum tree_open_type tree_get_treetype
+(
+  tree_ctx *tree
+)
+{
+  if (tree == NULL)
+    return 0;
+
+  switch (tree->type)
+  {
+  case TREE_EBUILD:
+    return TREETYPE_EBUILD;
+  case TREE_VDB:
+    return TREETYPE_VDB;
+  case TREE_PACKAGES:
+  case TREE_BINPKGS:
+    return TREETYPE_BINPKG;
+  case TREE_GTREE:
+    return TREETYPE_GTREE;
+  default:
+    /* metadata trees should never be top-level trees (we at least
+     * cannot create them as such */
+    return 0;
+  }
+
+  /* unreachable */
+}
+
+/* utility function to retrieve the name of the category, without
+ * requesting the atom (which may not exist yet) */
+char *tree_pkg_get_cat_name
+(
+  tree_pkg_ctx *pkg
+)
+{
+  if (pkg == NULL)
+    return NULL;
+
+  return pkg->cat->name;
+}
+
+/* utility function to retrieve the versioned name of the package,
+ * without requesting the atom (which may not be necessary depending on
+ * the tree type) */
+char *tree_pkg_get_pf_name
+(
+  tree_pkg_ctx *pkg
+)
+{
+  char *ret;
+
+  if (pkg == NULL)
+    return NULL;
+
+  /* if the atom is there, always use it, it should never be wrong */
+  if (pkg->atom != NULL)
+    return pkg->atom->PF;
+
+  switch (pkg->cat->tree->type)
+  {
+  case TREE_VDB:
+  case TREE_GTREE:
+    /* the path here is exactly what we're looking for, so a cheap way
+     * to retrieve the name */
+    ret = strrchr(pkg->path, '/');
+    if (ret != NULL)
+      ret++;
+    else
+      ret = pkg->path;
+    break;
+  default:
+    tree_pkg_atom(pkg, false);
+    ret = pkg->atom->PF;
+    break;
+  }
+
+  return ret;
+}
+
+/* utility function to retrieve the path to the package including file
+ * extensions and leading directories for access or printing */
+char *tree_pkg_get_path
+(
+  tree_pkg_ctx *pkg
+)
+{
+  if (pkg == NULL)
+    return NULL;
+
+  return pkg->path;
+}
+
+/* utility function to allow callbacks in e.g. tree_foreach_pkg to get
+ * the portroot fd to perform openat with the path provided by the
+ * package */
+int tree_pkg_get_portroot_fd
+(
+  tree_pkg_ctx *pkg
+)
+{
+  if (pkg == NULL)
+    return -1;
+  
+  return pkg->cat->tree->portroot_fd;
+}
+
+/* utility function to retrieve the treetype for this package as
+ * introspection for e.g. when multiple trees are combined in results
+ * (think of vdb, binpkg and ebuild trees in resolving situations) */
+enum tree_open_type tree_pkg_get_treetype
+(
+  tree_pkg_ctx *pkg
+)
+{
+  if (pkg == NULL)
+    return 0;  /* invalid */
+
+  return tree_get_treetype(pkg->cat->tree);
+}
+
+/* utility function to retrieve the associated tree to this pkg */
+tree_ctx *tree_pkg_get_tree
+(
+  tree_pkg_ctx *pkg
+)
+{
+  if (pkg == NULL)
+    return NULL;
+
+  return pkg->cat->tree;
+}
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */

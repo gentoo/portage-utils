@@ -4,26 +4,15 @@
 	- -e foo
 	- -r (-R ?) regexp foo.\*
 - make default -e for apps like quse/qdepends/qlist?
-- tree\_get\_atoms should return atoms iso string set, needs a rewrite
-  to use foreach\_pkg and get\_atom -- set is ready for storing objects
-  now
-- tree needs an iterator to make the resume logic much more clean, and
-  possibly allow multiple concurrent iterators
 - parse package.accept\_keywords such that we can provide the latest
   "available" version like Portage
 - check timestamps in libq/tree for choosing which method to take:
 	- ignore Packages when it is older than the last directory change
 	- add some method to skip freshness checks and assume everything is right
-- add interface to retrieve a list/set of atoms from a tree
-  - pkg\_ctx for each found match, NULL otherwise
-  - more efficient than traversing the entire tree every time (scandir
-    or parsing Packages)
-  - cached, such that repeated matches for the same thing are served off
-    the cache (set), as frequently happens in dependency calculations
-  - tree\_{open,close}\_cat can be made static afterwards
 - make tree\_get\_metadata also retrieve maintainer type, such that
   qlist can query for maintainer email or type, ideally to do
   qlist -Iv $(portageq --repo gentoo --orphaned) in one step (bug 711466#c3)
+- handle compressed Packages.gz file in tree
 
 # tests
 - add test for qsearch to avoid repetitions like
@@ -33,10 +22,10 @@
 - dep resolver needs spanktastic love.
 - needs safe deleting (merge in place rather than unmerge;merge)
 - multiple binary repos (talk to zmedico)
-- handle compressed Packages file (talk to zmedico)
 - gpg sign the packages file (before compression)
 - binary vdb (sqlite) ... talk to zmedico
-- remote vdb
+- remote binhost
+- vdb tree is opened multiple times, need 1 global one (context?)
 - parallel fetch tbz2s
 - env is not saved/restored between pkg\_{pre,post}inst (see portage and REPO\_LAYOUT\_CONF\_WARN)
 - support installing via path to tbz2 package
@@ -58,9 +47,6 @@
   pkg\_install\_mask too
 - make world agument really read world file, add @all?
 - produce and/or update Packages (and Packages.gz) file
-
-# qgrep
-- make it use standard xarray instead of its own buf\_list
 
 # quse
 - make -v only print requested USE-flag when flags given

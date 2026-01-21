@@ -37,7 +37,7 @@ tend $? "qmerge-test: [N] no FAIL messages" || die "${out}"
 
 order=$(echo "${out}" | awk '$1 == "@@@" && $2 ~ /^pkg_/ { printf "%s ", $NF }')
 [[ ${order} == "pkg_pretend pkg_setup pkg_preinst pkg_postinst " ]]
-tend $? "qmerge-test: [N] pkg_* order of execution" || die "$(printf '%s\n' "${order}" "${out}")"
+tend $? "qmerge-test: [N] pkg_* order of execution" || die "$(printf 'got: %s\n%s\n' "${order}" "${out}")"
 
 ls -d "${ROOT}"/var/db/pkg/sys-devel/qmerge-test-* >/dev/null
 tend $? "qmerge-test: [N] vdb installed"
@@ -57,7 +57,7 @@ tend $? "qmerge-test: [R] installed expected files" || die "$(treedir "${ROOT}")
 order=$(echo "${out}" | awk '$1 == "@@@" && $2 ~ /^pkg_/ { printf "%s ", $NF }')
 # PMS 9.2
 [[ ${order} == "pkg_pretend pkg_setup pkg_preinst pkg_prerm pkg_postrm pkg_postinst " ]]
-tend $? "qmerge-test: [R] pkg_* order of execution" || die "$(printf '%s\n' "${order}" "${out}")"
+tend $? "qmerge-test: [R] pkg_* order of execution" || die "$(printf 'got: %s\n%s\n' "${order}" "${out}")"
 
 [[ -x ${ROOT}/usr/bin/qmerge-test && \
    -f ${ROOT}/etc/some.conf && \

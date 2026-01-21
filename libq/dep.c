@@ -356,16 +356,17 @@ dep_resolve_tree(dep_node *root, tree_ctx *t)
 {
 	if (root->type != DEP_NULL) {
 		if (root->type == DEP_NORM && root->atom && !root->atom_resolved) {
-			depend_atom    *d = root->atom;
-			tree_match_ctx *r = tree_match_atom(t, d,
-											 	TREE_MATCH_DEFAULT |
-											 	TREE_MATCH_LATEST);
-			if (r != NULL) {
+			depend_atom *d = root->atom;
+			array       *r = tree_match_atom(t, d,
+											 TREE_MATCH_DEFAULT |
+											 TREE_MATCH_LATEST);
+			if (array_cnt(r) > 0) {
+				tree_pkg_ctx *pkg = array_get(r, 0);
 				atom_implode(d);
-				root->atom = atom_clone(r->atom);
+				root->atom = atom_clone(tree_pkg_atom(pkg, false));
 				root->atom_resolved = 1;
-				tree_match_close(r);
 			}
+			array_free(r);
 		}
 
 		if (root->children)

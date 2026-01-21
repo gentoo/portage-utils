@@ -76,55 +76,72 @@ qpkg_clean(qpkg_cb_args *args)
 	size_t n;
 	size_t disp_units = 0;
 	uint64_t num_all_bytes = 0;
-	set *known_pkgs = NULL;
-	set *bin_pkgs = NULL;
-	array *bins = array_new();
+	array *bins;
+	array *trees = array_new();
 	tree_ctx *t;
 	tree_ctx *pkgs;
-	char *binatomstr;
-	char buf[_Q_PATH_MAX];
+	tree_pkg_ctx *binpkg;
 	struct stat st;
 
 	pkgs = args->binpkg;
 	if (pkgs == NULL)
 		return 1;
 
-	bin_pkgs = tree_get_atoms(pkgs, true, bin_pkgs);
-	if (bin_pkgs == NULL)
-		return 1;
-	array_set(bin_pkgs, bins);
+	bins = tree_match_atom(pkgs, NULL, TREE_MATCH_DEFAULT);
 
 	if (args->clean_notintree) {
 		const char *overlay;
 
 		array_for_each(overlays, n, overlay) {
 			t = tree_open(portroot, overlay);
-			if (t != NULL) {
-				known_pkgs = tree_get_atoms(t, true, known_pkgs);
-				tree_close(t);
-			}
+			if (t != NULL)
+				array_append(trees, t);
 		}
 	} else {
 		t = args->vdb;
 		if (t != NULL)
-			known_pkgs = tree_get_atoms(t, true, known_pkgs);
+			array_append(trees, t);
 	}
 
-	if (known_pkgs != NULL) {
-		/* check which binpkgs exist in the known_pkgs (vdb or trees), such
-		 * that the remainder is what we would clean */
-		array_for_each_rev(bins, n, binatomstr) {
-			if (contains_set(binatomstr, known_pkgs))
+	/* check which binpkgs exist in the trees (vdb or ebuilds), such
+	 * that the remainder is what we would clean */
+	array_for_each_rev(bins, n, binpkg) {
+		size_t m;
+		array_for_each(trees, m, t)
+		{
+			array *mx = tree_match_atom(t, tree_pkg_atom(binpkg, false),
+									    (TREE_MATCH_DEFAULT |
+									     TREE_MATCH_FIRST));
+			size_t l  = array_cnt(mx);
+			array_free(mx);
+
+			if (l > 0)
+			{
 				array_remove(bins, n);
+				break;
+			}
 		}
-
-		free_set(known_pkgs);
 	}
 
-	array_for_each(bins, n, binatomstr) {
-		depend_atom    *atom = atom_explode(binatomstr);
-		tree_match_ctx *m    = tree_match_atom(pkgs, atom, 0);
-		if (lstat(m->path, &st) != -1) {
+	array_deepfree(trees, (array_free_cb *)tree_close);
+	trees = NULL;
+
+	array_for_each(bins, n, binpkg) {
+		array        *mx   = tree_match_atom(pkgs,
+											 tree_pkg_atom(binpkg, false),
+										 	 (TREE_MATCH_DEFAULT |
+										  	  TREE_MATCH_FIRST));
+		tree_pkg_ctx *pkg  = array_get(mx, 0);
+		
+		array_free(mx);
+
+		if (pkg == NULL)
+			continue;
+
+		if (fstatat(tree_pkg_get_portroot_fd(pkg),
+					tree_pkg_get_path(pkg),
+					&st, AT_SYMLINK_NOFOLLOW) != -1)
+		{
 			if (S_ISREG(st.st_mode)) {
 				disp_units = KILOBYTE;
 				if ((st.st_size / KILOBYTE) > 1000)
@@ -135,17 +152,15 @@ qpkg_clean(qpkg_cb_args *args)
 						make_human_readable_str(st.st_size, 1, disp_units),
 						disp_units == MEGABYTE ? "MiB" : "KiB",
 						DKBLUE, NORM, atom_format("%[CAT]/%[PF]%[BUILDID]",
-												  m->atom));
+												  tree_pkg_atom(pkg, false)));
 			}
 			if (!pretend)
-				unlink(buf);
+				unlinkat(tree_pkg_get_portroot_fd(pkg),
+						 tree_pkg_get_path(pkg), 0);
 		}
-		tree_match_close(m);
-		atom_implode(atom);
 	}
 
 	array_free(bins);
-	free_set(bin_pkgs);
 
 	disp_units = KILOBYTE;
 	if ((num_all_bytes / KILOBYTE) > 1000)
@@ -269,7 +284,10 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	int mfd;
 	mode_t mask;
 	depend_atom *atom = tree_get_atom(pkg, false);
+	int portroot_fd = tree_pkg_get_portroot_fd(pkg);
 	ssize_t len;
+
+	(void)args;  /* not used for now */
 
 	if (pretend) {
 		printf(" %s-%s %s:\n",
@@ -281,7 +299,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	if (line == NULL)
 		return -1;
 
-	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", args->binpkg->path);
+	snprintf(tmpdir, sizeof(tmpdir), "%s%s/qpkg.XXXXXX", portroot, pkgdir);
 	mask = umask(S_IRWXG | S_IRWXO);
 	i = mkstemp(tmpdir);
 	umask(mask);
@@ -332,15 +350,15 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	snprintf(gpkg, sizeof(gpkg), "%s/metadata.tar%s", tmpdir, filter);
 	archive_write_open_filename(a, gpkg);
 
-	snprintf(buf, sizeof(buf), "%s/%s/%s",
-			args->vdb->path, atom->CATEGORY, atom->PF);
 	cnt = 0;
-	if ((dirfd = open(buf, O_RDONLY)) >= 0)
+	if ((dirfd = openat(portroot_fd,
+						tree_pkg_get_path(pkg),
+						O_RDONLY)) >= 0)
 		cnt = scandirat(dirfd, ".", &files, filter_self_parent, alphasort);
 	for (i = 0; i < cnt; i++) {
 		if ((fd = openat(dirfd, files[i]->d_name, O_RDONLY)) < 0)
 			continue;
-		if (fstat(fd, &st) < 0 || !(st.st_mode & S_IFREG)) {
+		if (fstat(fd, &st) < 0 || !S_ISREG(st.st_mode)) {
 			close(fd);
 			continue;
 		}
@@ -397,8 +415,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		switch (e->type) {
 			case CONTENTS_OBJ:
 				if (verbose) {
-					char *hash = hash_file_at(args->vdb->portroot_fd,
-											  e->name, HASH_MD5);
+					char *hash = hash_file_at(portroot_fd, e->name, HASH_MD5);
 					if (hash != NULL) {
 						if (strcmp(e->digest, hash) != 0)
 							warn("MD5 mismatch: expected %s got %s for %s",
@@ -406,8 +423,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 					}
 				}
 
-				if ((fd = openat(args->vdb->portroot_fd,
-								 e->name, O_RDONLY)) < 0)
+				if ((fd = openat(portroot_fd, e->name, O_RDONLY)) < 0)
 					continue;
 				if (fstat(fd, &st) < 0) {
 					close(fd);
@@ -435,7 +451,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 				break;
 			case CONTENTS_SYM:
 				/* like for files, we take whatever is in the filesystem */
-				if ((len = readlinkat(args->vdb->portroot_fd,
+				if ((len = readlinkat(portroot_fd,
 									  e->name, ename, sizeof(ename) - 1)) < 0)
 					snprintf(ename, sizeof(ename), "%s", e->sym_target);
 				else
@@ -452,7 +468,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 				archive_entry_set_symlink(entry, ename);
 				snprintf(ename, sizeof(ename), "image/%s", e->name);
 				archive_entry_set_pathname(entry, ename);
-				if (fstatat(args->vdb->portroot_fd,
+				if (fstatat(portroot_fd,
 							e->name, &st, AT_SYMLINK_NOFOLLOW) < 0)
 				{
 					archive_entry_set_mtime(entry, e->mtime, 0);
@@ -465,8 +481,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 				archive_entry_free(entry);
 				break;
 			case CONTENTS_DIR:
-				if ((fd = openat(args->vdb->portroot_fd,
-								 e->name, O_RDONLY)) < 0)
+				if ((fd = openat(portroot_fd, e->name, O_RDONLY)) < 0)
 					continue;
 				if (fstat(fd, &st) < 0) {
 					close(fd);
@@ -501,7 +516,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 			continue;  /* not something we would've produced */
 		fname++;
 
-		if ((fd = openat(args->vdb->portroot_fd, fname, O_RDONLY)) < 0)
+		if ((fd = openat(portroot_fd, fname, O_RDONLY)) < 0)
 			continue;
 
 		archive_write_header(a, entry);
@@ -610,11 +625,11 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 
 	/* create dirs, if necessary */
 	if (atom->BUILDID > 0)
-		i = snprintf(buf, sizeof(buf), "%s/%s/%s",
-					 args->binpkg->path, atom->CATEGORY, atom->PN);
+		i = snprintf(buf, sizeof(buf), "%s%s/%s/%s",
+					 portroot, pkgdir, atom->CATEGORY, atom->PN);
 	else
-		i = snprintf(buf, sizeof(buf), "%s/%s",
-					 args->binpkg->path, atom->CATEGORY);
+		i = snprintf(buf, sizeof(buf), "%s%s/%s",
+					 portroot, pkgdir, atom->CATEGORY);
 	mkdir_p(buf, 0755);
 
 	if (atom->BUILDID > 0)
@@ -641,6 +656,8 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	return 0;
 #else
 	warnp("gpkg support not compiled in");
+	(void)pkg;
+	(void)args;
 	return 1;
 #endif
 }
@@ -663,6 +680,8 @@ qpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	mode_t mask;
 	depend_atom *atom = tree_get_atom(pkg, false);
 
+	(void)args;  /* not used yet */
+
 	if (pretend) {
 		printf(" %s-%s %s:\n",
 				GREEN, NORM, atom_format("%[CATEGORY]%[PF]%[BUILDID]", atom));
@@ -673,7 +692,7 @@ qpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	if (line == NULL)
 		return -1;
 
-	snprintf(tmpdir, sizeof(tmpdir), "%s/qpkg.XXXXXX", args->binpkg->path);
+	snprintf(tmpdir, sizeof(tmpdir), "%s%s/qpkg.XXXXXX", portroot, pkgdir);
 	mask = umask(0077);
 	i = mkstemp(tmpdir);
 	umask(mask);
@@ -732,8 +751,8 @@ qpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	}
 	xpaksize = st.st_size;
 
-	snprintf(buf, sizeof(buf), "%s/%s/%s",
-			args->vdb->path, atom->CATEGORY, atom->PF);
+	snprintf(buf, sizeof(buf), "%s%s/%s/%s",
+			 portroot, pkgdir, atom->CATEGORY, atom->PF);
 	xpak_argv[0] = buf;
 	xpak_argv[1] = NULL;
 	xpak_create(AT_FDCWD, tbz2, 1, xpak_argv, 1, verbose);
@@ -762,11 +781,11 @@ qpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 
 	/* create dirs, if necessary */
 	if (atom->BUILDID > 0)
-		i = snprintf(buf, sizeof(buf), "%s/%s/%s",
-					 args->binpkg->path, atom->CATEGORY, atom->PN);
+		i = snprintf(buf, sizeof(buf), "%s%s/%s/%s",
+					 portroot, pkgdir, atom->CATEGORY, atom->PN);
 	else
-		i = snprintf(buf, sizeof(buf), "%s/%s",
-					 args->binpkg->path, atom->CATEGORY);
+		i = snprintf(buf, sizeof(buf), "%s%s/%s",
+					 portroot, pkgdir, atom->CATEGORY);
 	mkdir_p(buf, 0755);
 
 	if (atom->BUILDID > 0)
@@ -799,13 +818,13 @@ qpkg_cb(tree_pkg_ctx *pkg, void *priv)
 
 	/* check atoms to compute a build-id */
 	if (contains_set("binpkg-multi-instance", features)) {
-		depend_atom    *atom = tree_get_atom(pkg, false);
-		tree_match_ctx *m    = tree_match_atom(args->binpkg, atom,
-											   TREE_MATCH_FIRST);
-		if (m != NULL) {
-			atom->BUILDID = m->atom->BUILDID;
-			tree_match_close(m);
+		atom_ctx *atom = tree_get_atom(pkg, false);
+		array    *m    = tree_match_atom(args->binpkg, atom, TREE_MATCH_FIRST);
+		if (array_cnt(m) > 0) {
+			tree_pkg_ctx *p = array_get(m, 0);
+			atom->BUILDID = tree_pkg_atom(p, false)->BUILDID;
 		}
+		array_free(m);
 
 		/* take the next, we should always start at 1, so either way
 		 * this is fine */

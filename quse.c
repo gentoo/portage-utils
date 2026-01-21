@@ -451,7 +451,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			return 0;
 
 		if (state->do_describe) {
-			portdirfd = openat(pkg_ctx->cat_ctx->ctx->portroot_fd,
+			portdirfd = openat(tree_pkg_get_portroot_fd(pkg_ctx),
 					state->overlay == NULL ? main_overlay : state->overlay,
 					O_RDONLY | O_CLOEXEC | O_PATH);
 			if (portdirfd == -1)
@@ -730,7 +730,7 @@ int quse_main(int argc, char **argv)
 			if (state.need_full_atom)
 				t = tree_open(portroot, overlay);  /* used for repo */
 			if (t != NULL)
-				state.repo = t->repo;
+				state.repo = tree_get_repo_name(t);
 			if (quse_describe_flag(portroot, overlay, &state))
 				ret = EXIT_SUCCESS;
 			if (t != NULL)
@@ -751,7 +751,8 @@ int quse_main(int argc, char **argv)
 			tree_ctx *t = tree_open(portroot, overlay);
 			state.overlay = overlay;
 			if (t != NULL) {
-				state.repo = state.need_full_atom ? t->repo : NULL;
+				state.repo =
+					state.need_full_atom ? tree_get_repo_name(t) : NULL;
 				if (tree_foreach_pkg_sorted(t, quse_results_cb,
 							&state, state.match) > 0)
 					ret = EXIT_SUCCESS;

@@ -167,19 +167,19 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	clear_set(state->udeps);
 
-#define get_depstr(X) \
-	i == QMODE_DEPEND  ? tree_pkg_meta_get(pkg_ctx, DEPEND)  : \
-	i == QMODE_RDEPEND ? tree_pkg_meta_get(pkg_ctx, RDEPEND) : \
-	i == QMODE_PDEPEND ? tree_pkg_meta_get(pkg_ctx, PDEPEND) : \
-	i == QMODE_BDEPEND ? tree_pkg_meta_get(pkg_ctx, BDEPEND) : \
-		                 tree_pkg_meta_get(pkg_ctx, IDEPEND) ;
+#define get_depstr(X,Y) \
+	X == QMODE_DEPEND  ? tree_pkg_meta_get(Y, DEPEND)  : \
+	X == QMODE_RDEPEND ? tree_pkg_meta_get(Y, RDEPEND) : \
+	X == QMODE_PDEPEND ? tree_pkg_meta_get(Y, PDEPEND) : \
+	X == QMODE_BDEPEND ? tree_pkg_meta_get(Y, BDEPEND) : \
+		                 tree_pkg_meta_get(Y, IDEPEND) ;
 
 	dfile = depend_files;
 	for (i = QMODE_DEP_FIRST; i <= QMODE_DEP_LAST; i <<= 1, dfile++) {
 		if (!(state->qmode & i))
 			continue;
 
-		depstr = get_depstr(i);
+		depstr = get_depstr(i, pkg_ctx);
 		if (depstr == NULL)
 			continue;
 		dep_tree = dep_grow_tree(depstr);
@@ -198,28 +198,26 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			!(state->qmode & QMODE_REVERSE) &&
 			verbose)
 		{
+			array *match = 
+				tree_match_atom(state->vdb, datom, TREE_MATCH_DEFAULT);
+
 			/* pull in flags in use if possible */
-			tree_cat_ctx *vcat =
-				tree_open_cat(state->vdb, pkg_ctx->cat_ctx->name);
-			if (vcat != NULL) {
-				tree_pkg_ctx *vpkg =
-					tree_open_pkg(vcat, pkg_ctx->name);
-				if (vpkg != NULL) {
-					depstr = get_depstr(i);
-					if (depstr != NULL) {
-						dep_node *dep_vdb = dep_grow_tree(depstr);
-						if (dep_vdb != NULL) {
-							dep_flatten_tree(dep_vdb, deps);
-							dep_burn_tree(dep_vdb);
-						} else {
-							warn("failed to parse VDB depstring from %s\n",
-								 atom_to_string(datom));
-						}
+			if (array_cnt(match) > 0)
+			{
+				tree_pkg_ctx *pkg = array_get(match, 0);
+				depstr = get_depstr(i, pkg);
+				if (depstr != NULL) {
+					dep_node *dep_vdb = dep_grow_tree(depstr);
+					if (dep_vdb != NULL) {
+						dep_flatten_tree(dep_vdb, deps);
+						dep_burn_tree(dep_vdb);
+					} else {
+						warn("failed to parse VDB depstring from %s\n",
+							 atom_to_string(datom));
 					}
-					tree_close_pkg(vpkg);
 				}
-				tree_close_cat(vcat);
 			}
+			array_free(match);
 		} else {
 			if (state->qmode & QMODE_FILTERUSE)
 				dep_prune_use(dep_tree, ev_use);
