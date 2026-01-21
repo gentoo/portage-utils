@@ -903,7 +903,8 @@ static void tree_pkg_xpak_read_cb
     return;
 
   /* trim whitespace (mostly trailing newline) */
-  while (isspace((int)data[data_offset + data_len - 1]))
+  while (data_len > 0 &&
+         isspace((int)data[data_offset + data_len - 1]))
     data_len--;
 
   /* copy the entry into the meta */
@@ -1030,8 +1031,7 @@ static bool tree_pkg_binpkg_read
         pkg->meta[Q_SIZE] = xstrdup(md5);
       }
     }
-
-    close(fd);
+    /* fd is closed by hash_multiple_file_fd */
   }
   
   return true;
@@ -1578,14 +1578,10 @@ static int tree_cat_foreach_pkg
         }
 
         closedir(dir);
-        close(fd);
       }
 
       if (catfd != -1)
-      {
         closedir(catdir);
-        close(catfd);
-      }
 
       if (!filterpn)
         cat->pkgs_complete = true;
@@ -1759,12 +1755,12 @@ static int tree_cat_foreach_pkg
                  tree_pkg_compar(&pkg, &nref) == 0))
               ret |= callback(pkg, priv);
           }
+
+          close(fd);
         }
-        close(fd);
       }
 
       closedir(catdir);
-      close(catfd);
 
       cat->pkgs_complete = true;
 
@@ -1838,7 +1834,6 @@ static int tree_cat_foreach_pkg
       }
 
       closedir(catdir);
-      close(catfd);
 
       cat->pkgs_complete = true;
 
@@ -1996,7 +1991,6 @@ int tree_foreach_pkg
       tree->cats_complete = true;
 
       closedir(dir);
-      close(fd);
 
       if (sorted)
       {
