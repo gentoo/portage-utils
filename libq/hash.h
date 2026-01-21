@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 Gentoo Foundation
+ * Copyright 2018-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2018-     Fabian Groffen  - <grobian@gentoo.org>
@@ -56,6 +56,8 @@ int hash_multiple_file_at_cb(
 		char *blak2b, size_t *flen, int hashes);
 #define hash_multiple_file(f, m, s1, s2, s5, b, l, h) \
 	hash_multiple_file_at_cb(AT_FDCWD, f, NULL, m, s1, s2, s5, b, l, h)
+#define hash_multiple_file_at(a, f, m, s1, s2, s5, b, l, h) \
+	hash_multiple_file_at_cb(a, f, NULL, m, s1, s2, s5, b, l, h)
 #define hash_compute_file(f, s2, s5, b, l, h) \
 	hash_multiple_file_at_cb(AT_FDCWD, f, NULL, NULL, NULL, s2, s5, b, l, h)
 char *hash_file_at_cb(int pfd, const char *filename, int hash_algo, hash_cb_t cb);
