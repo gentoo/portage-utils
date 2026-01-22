@@ -766,10 +766,17 @@ process_dir_gen(void)
 
 		gerr = gpgme_get_key(gctx, gpg_sign_key, &gkey, 0);
 		if (gerr != GPG_ERR_NO_ERROR)
+		{
+			gpgme_release(gctx);
 			return "failed to get GPG key";
+		}
 		gerr = gpgme_signers_add(gctx, gkey);
 		if (gerr != GPG_ERR_NO_ERROR)
+		{
+			gpgme_key_unref(gkey);
+			gpgme_release(gctx);
 			return "failed to add GPG key to sign list, is it a suitable key?";
+		}
 		gpgme_key_unref(gkey);
 
 		gpg_pass = NULL;
@@ -802,18 +809,29 @@ process_dir_gen(void)
 		}
 
 		if ((f = fopen(str_manifest, "r+")) == NULL)
+		{
+			gpgme_release(gctx);
 			return "could not open top-level Manifest file";
+		}
 
 		/* finally, sign the Manifest */
 		if (gpgme_data_new_from_stream(&manifest, f) != GPG_ERR_NO_ERROR)
+		{
+			gpgme_release(gctx);
 			return "failed to create GPG data from Manifest";
+		}
 
 		if (gpgme_data_new(&out) != GPG_ERR_NO_ERROR)
+		{
+			gpgme_release(gctx);
 			return "failed to create GPG output buffer";
+		}
 
 		gerr = gpgme_op_sign(gctx, manifest, out, GPGME_SIG_MODE_CLEAR);
 		if (gerr != GPG_ERR_NO_ERROR) {
 			warn("%s: %s", gpgme_strsource(gerr), gpgme_strerror(gerr));
+			gpgme_data_release(out);
+			gpgme_release(gctx);
 			return "failed to GPG sign Manifest";
 		}
 
