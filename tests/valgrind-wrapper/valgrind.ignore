@@ -1,29 +1,40 @@
 # suppressions for known false-positives
 {
-   Solaris_libc_printf_buf
+   Solaris_libc_FILE_findbuf
    Memcheck:Leak
    match-leak-kinds: possible
    fun:malloc
    fun:_findbuf
-   fun:_ndoprnt
-   fun:printf
 }
 {
-   Solaris_libc_puts_buf
-   Memcheck:Leak
-   match-leak-kinds: possible
-   fun:malloc
-   fun:_findbuf
-   fun:_wrtchk
-   fun:puts
+   GPGME_global_state_pipe
+   CoreError:FdNotClosed
+   fun:pipe2
+   fun:_gpgme_io_pipe
+   fun:read_gpgconf_dirs
+   fun:get_gpgconf_item
+   fun:gpgme_get_engine_info
+   fun:_gpgme_engine_info_copy
 }
 {
-   Solaris_libc_fwrite_buf
-   Memcheck:Leak
-   match-leak-kinds: possible
-   fun:malloc
-   fun:_findbuf
-   fun:_wrtchk
-   fun:_fwrite_unlocked
-   fun:fwrite
+   GPGME_global_state_dirty_close
+   CoreError:FdBadClose
+   fun:__close
+   fun:closefrom
+   fun:_gpgme_io_spawn
+   fun:read_gpgconf_dirs
+   fun:get_gpgconf_item
+   fun:gpgme_get_engine_info
+   fun:_gpgme_engine_info_copy
+}
+{
+   GPGME_global_subsystem_fd
+   CoreError:FdNotClosed
+   fun:_syscall6
+   fun:open
+   fun:_gpgrt_fopen
+   fun:set_file_fd
+   fun:_gpgme_debug_subsystem_init
+   fun:gpgme_check_version
+   fun:gpgme_check_version_internal
 }

@@ -31,10 +31,8 @@ export TZ='UTC 0'
 # create symlinks for applets
 q -i -q
 
-# inject valgrind wrapper if necessary, unfortunately valgrind on Ubuntu
-# causes qmanifest to print stuff double, so skip it for that applet
+# inject valgrind wrapper if necessary
 dovalgrind=${Q_RUN_WITH_VALGRIND}
-[[ ${RUNNER_OS}:${as##*/} == Linux:qmanifest ]] && dovalgrind=
 if [[ -n ${dovalgrind} ]] ; then
 	chmod 755 "@abs_top_srcdir@/tests/valgrind-wrapper/qvalgrind"
 	for f in @abs_top_builddir@/q?* ; do
