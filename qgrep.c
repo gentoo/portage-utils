@@ -586,7 +586,7 @@ int qgrep_main(int argc, char **argv)
 		args.portdir = overlay;
 		if (do_eclass) {
 			char buf[_Q_PATH_MAX];
-			char name[_Q_PATH_MAX + 8 /* colours/eclass */];
+			char name[_Q_PATH_MAX * 2];
 			char *label;
 			char *repo = NULL;
 			atom_ctx *atom;

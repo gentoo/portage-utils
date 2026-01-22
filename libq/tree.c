@@ -1598,7 +1598,7 @@ static int tree_cat_foreach_pkg
     break; /* }}} */
   case TREE_BINPKGS: /* {{{ */
     {
-      char           buf[_Q_PATH_MAX];
+      char           buf[_Q_PATH_MAX * 2];
       struct stat    sb;
       struct dirent *de;
       DIR           *catdir = NULL;
@@ -1775,7 +1775,7 @@ static int tree_cat_foreach_pkg
     break; /* }}} */
   case TREE_VDB: /* {{{ */
     {
-      char           buf[_Q_PATH_MAX];
+      char           buf[_Q_PATH_MAX * 2];
       struct stat    sb;
       struct dirent *de;
       DIR           *catdir = NULL;
