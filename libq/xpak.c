@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -364,7 +364,7 @@ xpak_create(
 				}
 				_xpak_add_file(fd, path, &st,
 						findex, &index_len, fdata, &data_len, verbose);
-				close(fd);
+				/* _xpak_add_file closes fd */
 			}
 			scandir_free(dir, numfiles);
 		} else if (S_ISREG(st.st_mode)) {
@@ -375,7 +375,7 @@ xpak_create(
 			}
 			_xpak_add_file(fd, argv[i], &st,
 					findex, &index_len, fdata, &data_len, verbose);
-			close(fd);
+			/* _xpak_add_file closes fd */
 		} else
 			warn("Skipping non file/directory '%s'", argv[i]);
 	}
