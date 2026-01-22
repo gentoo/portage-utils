@@ -168,7 +168,7 @@ static tree_ctx *tree_new_gtree
 }
 
 struct tree_gtree_cb_ctx {
-	struct archive *archive;
+  struct archive *archive;
 };
 
 static la_ssize_t tree_gtree_read_cb
@@ -2003,17 +2003,17 @@ int tree_foreach_pkg
     break; /* }}} */
   case TREE_PACKAGES: /* {{{ */
     {
-	    tree_pkg_ctx      *pkg      = NULL;
+      tree_pkg_ctx      *pkg      = NULL;
       tree_cat_ctx       needle;
-	    char              *buf;
-	    char              *k;
-	    char              *v;
-	    char              *cpv;
-	    char              *nexttok;
-	    size_t             len;
-	    size_t             rootlen;
-	    int                fd;
-	    bool               eret;
+      char              *buf;
+      char              *k;
+      char              *v;
+      char              *cpv;
+      char              *nexttok;
+      size_t             len;
+      size_t             rootlen;
+      int                fd;
+      bool               eret;
 
       fd = openat(tree->portroot_fd, tree->path, O_RDONLY | O_CLOEXEC);
       if (fd < 0)
@@ -2053,35 +2053,35 @@ int tree_foreach_pkg
            * ignore/not store anything of currently */
         }
         else if (strcmp(k, "CPV") == 0)
-		    {
-		      cpv = v;
-			  }
+        {
+          cpv = v;
+        }
 #define match_key(X) match_key2(X,X)
 #define match_key2(X,Y) \
-		    else if (strcmp(k, #X) == 0) \
-		      do { \
-		        if (pkg->meta[Q_##Y] == NULL) \
-			        pkg->meta[Q_##Y] = xstrdup(v); \
-			    } while (false)
-		    match_key(DEFINED_PHASES);
-		    match_key(DEPEND);
-		    match_key2(DESC, DESCRIPTION);
-		    match_key(EAPI);
-		    match_key(IUSE);
-		    match_key(KEYWORDS);
-		    match_key(LICENSE);
-		    match_key(MD5);
-		    match_key(SHA1);
-		    match_key(RDEPEND);
-		    match_key(SLOT);
-		    match_key(USE);
-		    match_key(PDEPEND);
-		    match_key2(REPO, repository);
-		    match_key(SIZE);
-		    match_key(BDEPEND);
-		    match_key(IDEPEND);
-		    match_key(PATH);
-		    match_key(BUILD_ID);
+        else if (strcmp(k, #X) == 0) \
+          do { \
+            if (pkg->meta[Q_##Y] == NULL) \
+              pkg->meta[Q_##Y] = xstrdup(v); \
+          } while (false)
+        match_key(DEFINED_PHASES);
+        match_key(DEPEND);
+        match_key2(DESC, DESCRIPTION);
+        match_key(EAPI);
+        match_key(IUSE);
+        match_key(KEYWORDS);
+        match_key(LICENSE);
+        match_key(MD5);
+        match_key(SHA1);
+        match_key(RDEPEND);
+        match_key(SLOT);
+        match_key(USE);
+        match_key(PDEPEND);
+        match_key2(REPO, repository);
+        match_key(SIZE);
+        match_key(BDEPEND);
+        match_key(IDEPEND);
+        match_key(PATH);
+        match_key(BUILD_ID);
 #undef match_key
 #undef match_key2
 
@@ -2101,11 +2101,11 @@ int tree_foreach_pkg
               pkg->path = xstrdup(pth);
               pkg->atom = atom_explode(pkg->meta[Q_PATH]);
 
-              len = strlen(k);
-					    if (len > sizeof(".gpkg.tar") - 1 &&
-						      memcmp(cpv + len - (sizeof(".gpkg.tar") - 1),
-							           ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
-							  pkg->binpkg_gpkg = true;
+              len = strlen(pkg->meta[Q_PATH]);
+              if (len > sizeof(".gpkg.tar") - 1 &&
+                  memcmp(pkg->meta[Q_PATH] + len - (sizeof(".gpkg.tar") - 1),
+                         ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
+                pkg->binpkg_gpkg = true;
             }
             else if (cpv != NULL)
             {
