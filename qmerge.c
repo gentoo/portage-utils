@@ -1125,10 +1125,6 @@ pkg_merge(int level, const depend_atom *qatom, tree_pkg_ctx *mpkg)
 		replacing = atom_compare_flg(matom, atom,
 									 ATOM_COMP_NOSUBSLOT | ATOM_COMP_NOREPO);
 		replver   = atom->PVR;
-		warn("matom: %s", atom_to_string(matom));
-		warn("slotatom: %s", atom_to_string(slotatom));
-		warn("previnst: %s", atom_to_string(atom));
-		warn("%s", booga[replacing]);
 	}
 	atom_implode(slotatom);
 
@@ -1780,9 +1776,12 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	contentsp = tree_pkg_meta(pkg_ctx, Q_CONTENTS);
 	if (contentsp == NULL)
 		return 1;
-	buf = xstrdup(contentsp);  /* should not modify pkg_ctx */
+	contentsp = xstrdup(contentsp);  /* should not modify pkg_ctx */
 
-	for (; (buf = strtok_r(buf, "\n", &savep)) != NULL; buf = NULL) {
+	for (buf = strtok_r(contentsp, "\n", &savep);
+		 buf != NULL;
+		 buf = strtok_r(NULL, "\n", &savep))
+	{
 		bool            del;
 		contents_entry *e;
 		char            zing[20];
