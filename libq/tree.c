@@ -313,8 +313,8 @@ static int tree_foreach_pkg_gtree
       }
 
       /* we point to the ebuild, so it looks like md5-cache */
-      snprintf(buf, sizeof(buf), "ebuilds/%s/%s/%s.ebuild",
-               atom->CATEGORY, atom->PN, atom->PF);
+      snprintf(buf, sizeof(buf), "%s/ebuilds/%s/%s/%s.ebuild",
+               tree->path, atom->CATEGORY, atom->PN, atom->PF);
 
       pkg = xzalloc(sizeof(*pkg));
       pkg->name = xstrdup(atom->PN);
@@ -394,6 +394,8 @@ static int tree_foreach_pkg_gtree
 
   free(rbuf);
 
+  tree->cats_complete = true;
+
   return ret;
 }
 #endif
@@ -464,7 +466,7 @@ tree_ctx *tree_new
 #ifdef ENABLE_GTREE
       /* look for gtree, in which case we will ignore this tree in
        * favour of the gtree container */
-      snprintf(buf, sizeof(buf), "%s/metadata/metadata.gtree.tar", path);
+      snprintf(buf, sizeof(buf), "%s/metadata/repo.gtree.tar", path);
       VAL_CLEAR(st);
       if (fstatat(ret->portroot_fd, buf, &st, 0) == 0 &&
           S_ISREG(st.st_mode))
