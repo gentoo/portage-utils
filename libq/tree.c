@@ -338,52 +338,77 @@ static int tree_foreach_pkg_gtree
            p != NULL;
            p = strtok_r(NULL, "=", &nexttok))
       {
-        char **ptr = NULL;
+        char *key = p;
 
-        if (1 == 0) {
-          /* dummy case for syntax */
-        }
-#define match(K) \
-        else if (strcmp(p, #K) == 0) \
-          do { \
-            ptr = &pkg->meta[Q_##K]; \
-          } while (0)
-        match(DEPEND);
-        match(RDEPEND);
-        match(SLOT);
-        match(SRC_URI);
-        match(RESTRICT);
-        match(LICENSE);
-        match(DESCRIPTION);
-        match(KEYWORDS);
-        match(INHERITED);
-        match(IUSE);
-        match(CDEPEND);
-        match(PDEPEND);
-        match(PROVIDE);
-        match(EAPI);
-        match(PROPERTIES);
-        match(BDEPEND);
-        match(IDEPEND);
-        match(DEFINED_PHASES);
-        match(REQUIRED_USE);
-        match(CONTENTS);
-        match(USE);
-        match(EPREFIX);
-        match(PATH);
-        match(BUILD_ID);
-        match(SIZE);
-        match(_eclasses_);
-#undef match
-
-        /* always advance to end of line, even when nothing
-         * matched */
+        /* always advance to end of line */
         p = strtok_r(NULL, "\n", &nexttok);
         if (p == NULL)
+          break;  /* end of input */
+
+        switch (key[0])
+        {
+        case '_':
+#define keycmp(P,K) \
+          if (strcmp(&P[1], &(#K)[1]) == 0) \
+          { \
+            if (pkg->meta[Q_##K] == NULL) \
+              pkg->meta[Q_##K] = xstrdup(p); \
+            continue; \
+          }
+          keycmp(key, _eclasses_);
           break;
-        if (ptr != NULL &&
-            *ptr == NULL)
-          *ptr = xstrdup(p);
+        case 'B':
+          keycmp(key, BDEPEND);
+          keycmp(key, BUILD_ID);
+          break;
+        case 'C':
+          keycmp(key, CDEPEND);
+          keycmp(key, CONTENTS);
+          break;
+        case 'D':
+          keycmp(key, DEFINED_PHASES);
+          keycmp(key, DEPEND);
+          keycmp(key, DESCRIPTION);
+          break;
+        case 'E':
+          keycmp(key, EAPI);
+          keycmp(key, EPREFIX);
+          break;
+        case 'I':
+          keycmp(key, IDEPEND);
+          keycmp(key, INHERITED);
+          keycmp(key, IUSE);
+          break;
+        case 'K':
+          keycmp(key, KEYWORDS);
+          break;
+        case 'L':
+          keycmp(key, LICENSE);
+          break;
+        case 'P':
+          keycmp(key, PATH);
+          keycmp(key, PDEPEND);
+          keycmp(key, PROPERTIES);
+          keycmp(key, PROVIDE);
+          break;
+        case 'R':
+          keycmp(key, RDEPEND);
+          keycmp(key, REQUIRED_USE);
+          keycmp(key, RESTRICT);
+          break;
+        case 'S':
+          keycmp(key, SIZE);
+          keycmp(key, SLOT);
+          keycmp(key, SRC_URI);
+          break;
+        case 'U':
+          keycmp(key, USE);
+          break;
+#undef keycmp
+        default:
+          /* don't care/unknown */
+          break;
+        }
       }
 
       pkg->meta_complete = true;
@@ -656,51 +681,78 @@ static bool tree_pkg_md5_read
        p != NULL;
        p = strtok_r(NULL, "=", &nexttok))
   {
-    char **ptr = NULL;
+    char *key = p;
 
-    if (1 == 0) {
-      /* dummy case for syntax */
-    }
-#define match(K) \
-    else if (strcmp(p, #K) == 0) \
-      ptr = &pkg->meta[Q_##K]
-    match(DEPEND);
-    match(RDEPEND);
-    match(SLOT);
-    match(SRC_URI);
-    match(RESTRICT);
-    match(LICENSE);
-    match(DESCRIPTION);
-    match(KEYWORDS);
-    match(INHERITED);
-    match(IUSE);
-    match(CDEPEND);
-    match(PDEPEND);
-    match(PROVIDE);
-    match(EAPI);
-    match(PROPERTIES);
-    match(BDEPEND);
-    match(IDEPEND);
-    match(DEFINED_PHASES);
-    match(REQUIRED_USE);
-    match(CONTENTS);
-    match(USE);
-    match(EPREFIX);
-    match(PATH);
-    match(BUILD_ID);
-    match(SIZE);
-    match(_eclasses_);
-    match(_md5_);
-#undef match
-
-    /* always advance to end of line, even when nothing
-     * matched */
+    /* always advance to end of line */
     p = strtok_r(NULL, "\n", &nexttok);
     if (p == NULL)
+      break;  /* end of input */
+
+    switch (key[0])
+    {
+    case '_':
+#define keycmp(P,K) \
+      if (strcmp(&P[1], &(#K)[1]) == 0) \
+      { \
+        if (pkg->meta[Q_##K] == NULL) \
+          pkg->meta[Q_##K] = xstrdup(p); \
+        continue; \
+      }
+      keycmp(key, _eclasses_);
+      keycmp(key, _md5_);
       break;
-    if (ptr != NULL &&
-        *ptr == NULL)
-      *ptr = xstrdup(p);
+    case 'B':
+      keycmp(key, BDEPEND);
+      keycmp(key, BUILD_ID);
+      break;
+    case 'C':
+      keycmp(key, CDEPEND);
+      keycmp(key, CONTENTS);
+      break;
+    case 'D':
+      keycmp(key, DEFINED_PHASES);
+      keycmp(key, DEPEND);
+      keycmp(key, DESCRIPTION);
+      break;
+    case 'E':
+      keycmp(key, EAPI);
+      keycmp(key, EPREFIX);
+      break;
+    case 'I':
+      keycmp(key, IDEPEND);
+      keycmp(key, INHERITED);
+      keycmp(key, IUSE);
+      break;
+    case 'K':
+      keycmp(key, KEYWORDS);
+      break;
+    case 'L':
+      keycmp(key, LICENSE);
+      break;
+    case 'P':
+      keycmp(key, PATH);
+      keycmp(key, PDEPEND);
+      keycmp(key, PROPERTIES);
+      keycmp(key, PROVIDE);
+      break;
+    case 'R':
+      keycmp(key, RDEPEND);
+      keycmp(key, REQUIRED_USE);
+      keycmp(key, RESTRICT);
+      break;
+    case 'S':
+      keycmp(key, SIZE);
+      keycmp(key, SLOT);
+      keycmp(key, SRC_URI);
+      break;
+    case 'U':
+      keycmp(key, USE);
+      break;
+    default:
+      /* don't care/unknown */
+      break;
+#undef keycmp
+    }
   }
 
   free(data);
@@ -751,26 +803,57 @@ static bool tree_pkg_ebuild_read
     {
       *p++ = '\0';
       /* match variable against which ones we look for */
-      if (1 == 0); /* dummy for syntax */
-#define match_key(X) \
-      else if (strcmp(q, #X) == 0) key = &pkg->meta[Q_##X]
-      match_key(DEPEND);
-      match_key(RDEPEND);
-      match_key(SLOT);
-      match_key(SRC_URI);
-      match_key(RESTRICT);
-      match_key(HOMEPAGE);
-      match_key(LICENSE);
-      match_key(DESCRIPTION);
-      match_key(KEYWORDS);
-      match_key(IUSE);
-      match_key(CDEPEND);
-      match_key(PDEPEND);
-      match_key(EAPI);
-      match_key(REQUIRED_USE);
-      match_key(BDEPEND);
-      match_key(IDEPEND);
-#undef match_key
+      switch (q[0])
+      {
+      case 'B':
+#define keycmp(P,K) \
+        if (strcmp(&P[1], &(#K)[1]) == 0) \
+        { \
+          key = &pkg->meta[Q_##K]; \
+          break; \
+        }
+        keycmp(q, BDEPEND);
+        break;
+      case 'C':
+        keycmp(q, CDEPEND);
+        break;
+      case 'D':
+        keycmp(q, DEPEND);
+        keycmp(q, DESCRIPTION);
+        break;
+      case 'E':
+        keycmp(q, EAPI);
+        break;
+      case 'H':
+        keycmp(q, HOMEPAGE);
+        break;
+      case 'I':
+        keycmp(q, IDEPEND);
+        keycmp(q, IUSE);
+        break;
+      case 'K':
+        keycmp(q, KEYWORDS);
+        break;
+      case 'L':
+        keycmp(q, LICENSE);
+        break;
+      case 'P':
+        keycmp(q, PDEPEND);
+        break;
+      case 'R':
+        keycmp(q, RDEPEND);
+        keycmp(q, REQUIRED_USE);
+        keycmp(q, RESTRICT);
+        break;
+      case 'S':
+        keycmp(q, SLOT);
+        keycmp(q, SRC_URI);
+        break;
+      default:
+        /* don't care/unknown */
+        break;
+#undef keycmp
+      }
     }
 
     findnl = true;
@@ -863,40 +946,67 @@ static void tree_pkg_xpak_read_cb
   tree_pkg_ctx  *pkg = ctx;
   char         **key;
 
-#define match_path(K) \
-  else if (pathname_len == (sizeof(#K) - 1) && \
-           strcmp(pathname, #K) == 0) \
-    do { \
-      key = &pkg->meta[Q_##K]; \
-    } while (false)
-
-  if (1 == 0); /* dummy for syntax */
-  match_path(DEPEND);
-  match_path(RDEPEND);
-  match_path(SLOT);
-  match_path(SRC_URI);
-  match_path(RESTRICT);
-  match_path(HOMEPAGE);
-  match_path(DESCRIPTION);
-  match_path(KEYWORDS);
-  match_path(INHERITED);
-  match_path(IUSE);
-  match_path(CDEPEND);
-  match_path(PDEPEND);
-  match_path(PROVIDE);
-  match_path(EAPI);
-  match_path(PROPERTIES);
-  match_path(DEFINED_PHASES);
-  match_path(REQUIRED_USE);
-  match_path(BDEPEND);
-  match_path(IDEPEND);
-  match_path(CONTENTS);
-  match_path(USE);
-  match_path(EPREFIX);
-  match_path(repository);
-  else
+  if (pathname_len < 3)
     return;
-#undef match_path
+
+  switch (pathname[0])
+  {
+  case 'B':
+#define keycmp(P,K) \
+    if (pathname_len == sizeof(#K) - 1 && \
+        strcmp(&P[1], &(#K)[1]) == 0) \
+    { \
+      key = &pkg->meta[Q_##K]; \
+      break; \
+    }
+    keycmp(pathname, BDEPEND);
+    break;
+  case 'C':
+    keycmp(pathname, CDEPEND);
+    keycmp(pathname, CONTENTS);
+    break;
+  case 'D':
+    keycmp(pathname, DEFINED_PHASES);
+    keycmp(pathname, DEPEND);
+    keycmp(pathname, DESCRIPTION);
+    break;
+  case 'E':
+    keycmp(pathname, EAPI);
+    keycmp(pathname, EPREFIX);
+    break;
+  case 'H':
+    keycmp(pathname, HOMEPAGE);
+    break;
+  case 'I':
+    keycmp(pathname, IDEPEND);
+    keycmp(pathname, INHERITED);
+    keycmp(pathname, IUSE);
+    break;
+  case 'K':
+    keycmp(pathname, KEYWORDS);
+    break;
+  case 'P':
+    keycmp(pathname, PDEPEND);
+    keycmp(pathname, PROPERTIES);
+    keycmp(pathname, PROVIDE);
+    break;
+  case 'R':
+    keycmp(pathname, RDEPEND);
+    keycmp(pathname, REQUIRED_USE);
+    keycmp(pathname, RESTRICT);
+    break;
+  case 'r':
+    keycmp(pathname, repository);
+    break;
+  case 'S':
+    keycmp(pathname, SLOT);
+    keycmp(pathname, SRC_URI);
+    break;
+  case 'U':
+    keycmp(pathname, USE);
+    break;
+#undef keycmp
+  }
 
   /* don't overwrite entries */
   if (*key != NULL)
