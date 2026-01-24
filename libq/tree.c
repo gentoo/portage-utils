@@ -1109,10 +1109,14 @@ char *tree_pkg_meta
             }
           }
 
+          IF_DEBUG(warn("%s/%s has invalid md5-cache entry",
+                        atom->CATEGORY, atom->PF));
+
           /* we read the meta, but apparently it was wrong, so clear
            * whatever we read */
           for (k = Q_UNKNOWN; k < TREE_META_MAX_KEYS; k++)
             free(pkg->meta[k]);
+          VAL_CLEAR(pkg->meta);
         }
 
         /* avoid trying to do this again */
