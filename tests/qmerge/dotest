@@ -181,6 +181,22 @@ for compr in "" brotli gzip bzip2 xz lz4 zstd lzip lzop ; do
 	rm "${ROOT}"/pkgs/sys-devel/${pkgver}-r${rev}.tbz2
 done
 
+# create a gpkg and merge it
+qtbz2 -j ${f} ${pkgver}.xpak "${ROOT}"/pkgs/sys-devel/${pkgver}-r${rev}.tbz2
+out=$(yes | qmerge -Fv =${pkgver}-r${rev})
+tend $? "qmerge-test: [ ] install ${pkgver}-r${rev}" || die "${out}"
+out=$(qpkg -g ${pkgver}-r${rev})
+tend $? "qmerge-test: [ ] build gpkg.tar" || die "${out}"
+ls -l "${ROOT}"/pkgs/sys-devel/
+rm "${ROOT}"/pkgs/sys-devel/${pkgver}-r${rev}.tbz2
+ls -l "${ROOT}"/pkgs/sys-devel/
+qlist -kIv
+out=$(yes | qmerge -Fv =${pkgver}-r${rev})
+tend $? "qmerge-test: [G] install ${pkgver}-r${rev}" || die "${out}"
+out=$(yes | qmerge -FU qmerge-test)
+tend $? "qmerge-test: [G] uninstall ${pkgver}-r${rev}" || die "${out}"
+
+
 cleantmpdir
 
 set -e
