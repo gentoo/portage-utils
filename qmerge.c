@@ -1213,9 +1213,9 @@ pkg_merge(int level, const depend_atom *qatom, tree_pkg_ctx *mpkg)
 
 	p = tree_pkg_get_path(mpkg);
 	i = (int)strlen(p);
-	if (i > sizeof(".tar.gpkg") - 1 &&
-		memcmp(&p[i - (sizeof(".tar.gpkg") - 1)],
-			   ".tar.gpkg", sizeof(".tar.gpkg") - 1) == 0)
+	if (i > sizeof(".gpkg.tar") - 1 &&
+		memcmp(&p[i - (sizeof(".gpkg.tar") - 1)],
+			   ".gpkg.tar", sizeof(".gpkg.tar") - 1) == 0)
 	{
 #ifdef ENABLE_GPKG
 		/* unpack the whole thing to temp, dropping the pkg name dir, so
@@ -1978,7 +1978,7 @@ pkg_verify_checksums(
 		mlen = 0;
 	if (flen != (size_t)mlen) {
 		warn("SIZE: [%sERR%s] %zu != %s for %s from %s\n",
-			 RED, NORM, flen, p, atom_to_string(patom), path);
+			 RED, NORM, flen, p == NULL ? "?" : p, atom_to_string(patom), path);
 		ret++;
 	}
 	else if (display)
