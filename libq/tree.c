@@ -2284,7 +2284,24 @@ int tree_foreach_pkg
 #ifdef ENABLE_GTREE
     /* we don't optimise anything because reading a single file is fast
      * enough, it just takes some memory, but any retrieval afterwards
-     * comes straight from cache */
+     * comes straight from cache
+     * gtree is designed to be efficient when doing dependency
+     * resolution, e.g. many lookups for atoms and their metadata
+     * when you have to read the gtree twice, any benefit of skipping
+     * reading metadata or pkgs is undone, some numbers to illustrate
+     * this:
+     * - reading the full tree creating all pkgs + metadata: 0.77s
+     * - reading the full tree creating all pkgs no meta:    0.46s
+     * - reading the full tree creating only categories:     0.33s
+     * - reading the full tree creating nothing (a scan)     0.30s
+     * from this we can see that reading no metadata is 0.30s faster,
+     * but retrieving one package's metadata would take at least 0.30s
+     * since we don't know when we'd need metadata and when not, we
+     * basically take the worst case, for it is fastest when > 1 pkg is
+     * looked up
+     * note that the above is from a VM with bad/slow IO, running the
+     * same on a reasonable laptop, spends only 0.14s, so the perceived
+     * slowness is virtually absent in that case */
     if (tree_foreach_pkg_gtree(tree) != 0)
       return 1;
     return tree_foreach_pkg(tree, callback, priv, sorted, query);
