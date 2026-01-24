@@ -26,7 +26,6 @@ static struct option const qwhich_long_opts[] = {
 	{"tree",      no_argument, NULL, 't'},
 	{"pretty",    no_argument, NULL, 'p'},
 	{"dir",       no_argument, NULL, 'd'},
-	{"repo",       a_argument, NULL, 'r'},
 	{"printrepo", no_argument, NULL, 'R'},
 	{"first",     no_argument, NULL, 'f'},
 	{"latest",    no_argument, NULL, 'l'},
@@ -41,7 +40,6 @@ static const char * const qwhich_opts_help[] = {
 	"Look in main tree and overlays",
 	"Print (pretty) atom instead of path for use with -F",
 	"Print directory instead of path",
-	"Only look in given repo",
 	"Print repository name instead of path for tree/overlay matches",
 	"Stop searching after first match (implies -l)",
 	"Only return latest version for each match",
@@ -82,7 +80,6 @@ int qwhich_main(int argc, char **argv)
 	size_t n;
 	int ret;
 	tree_ctx *t;
-	char *repo = NULL;
 	char *reponam;
 	int repolen;
 
@@ -97,7 +94,6 @@ int qwhich_main(int argc, char **argv)
 			case 't': m.do_tree = true;      break;
 			case 'p': m.print_atom = true;   break;
 			case 'd': m.print_path = true;   break;
-			case 'r': repo = optarg;         break;
 			case 'R': m.print_repo = true;   break;
 			case 'f': m.match_first = true;  break;
 			case 'l': m.match_latest = true; break;
@@ -164,12 +160,6 @@ int qwhich_main(int argc, char **argv)
 	/* at least keep the IO constrained to a tree at a time */
 	array_for_each(trees, j, t) {
 		char *reponame = tree_get_repo_name(t);
-		if (repo != NULL &&
-			(reponame == NULL || strcmp(repo, reponame) != 0))
-		{
-			tree_close(t);
-			continue;
-		}
 
 		if (m.print_repo && reponame != NULL) {
 			reponam = reponame;

@@ -13,3 +13,6 @@ returned.
 .P
 \fIqwhich\fR accepts atoms to search for, which can be any valid atom,
 including e.g\. version specifications to narrow the search.
+.P
+The \fB-r\fR or \fB--repo\fR argument was removed in favour of the
+global \fB--overlay\fR option.
