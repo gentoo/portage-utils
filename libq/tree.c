@@ -954,7 +954,7 @@ static void tree_pkg_xpak_read_cb
   case 'B':
 #define keycmp(P,K) \
     if (pathname_len == sizeof(#K) - 1 && \
-        strcmp(&P[1], &(#K)[1]) == 0) \
+        memcmp(&P[1], &(#K)[1], pathname_len - 1) == 0) \
     { \
       key = &pkg->meta[Q_##K]; \
       break; \
@@ -1041,7 +1041,7 @@ static bool tree_pkg_binpkg_read
     archive_read_support_format_all(a);
     archive_read_support_filter_all(a);
 
-    fd = openat(pkg->cat->tree->portroot_fd, pkg->cat->tree->path, O_RDONLY);
+    fd = openat(pkg->cat->tree->portroot_fd, pkg->path, O_RDONLY);
     if (fd < 0)
       return false;
 
@@ -1250,10 +1250,8 @@ char *tree_pkg_meta
       break; /* }}} */
     case TREE_BINPKGS:
     case TREE_PACKAGES:
-      {
-        if (tree_pkg_binpkg_read(pkg))
-          pkg->meta_complete = true;
-      }
+      if (tree_pkg_binpkg_read(pkg))
+        pkg->meta_complete = true;
       break;
     default:
       break;
@@ -2166,38 +2164,77 @@ int tree_foreach_pkg
           /* don't attempt to do anything, this is the header which we
            * ignore/not store anything of currently */
         }
-        else if (strcmp(k, "CPV") == 0)
+        else
         {
-          cpv = v;
+          switch (k[0])
+          {
+          case 'B':
+#define keycmp(P,K) \
+            if (strcmp(&P[1], &(#K)[1]) == 0) \
+            { \
+              if (pkg->meta[Q_##K] == NULL) \
+                pkg->meta[Q_##K] = xstrdup(v); \
+              break; \
+            }
+            keycmp(k, BDEPEND);
+            keycmp(k, BUILD_ID);
+            break;
+          case 'C':
+            if (strcmp(&k[1], "PV") == 0)
+              cpv = v;
+            break;
+          case 'D':
+            keycmp(k, DEFINED_PHASES);
+            keycmp(k, DEPEND);
+            if (strcmp(&k[1], "ESC") == 0)
+            {
+              if (pkg->meta[Q_DESCRIPTION] == NULL)
+                pkg->meta[Q_DESCRIPTION] = xstrdup(v);
+              break;
+            }
+            break;
+          case 'E':
+            keycmp(k, EAPI);
+            break;
+          case 'I':
+            keycmp(k, IDEPEND);
+            keycmp(k, IUSE);
+            break;
+          case 'K':
+            keycmp(k, KEYWORDS);
+            break;
+          case 'L':
+            keycmp(k, LICENSE);
+            break;
+          case 'M':
+            keycmp(k, MD5);
+            break;
+          case 'P':
+            keycmp(k, PATH);
+            keycmp(k, PDEPEND);
+            break;
+          case 'R':
+            keycmp(k, RDEPEND);
+            if (strcmp(&k[1], "EPO") == 0)
+            {
+              if (pkg->meta[Q_repository] == NULL)
+                pkg->meta[Q_repository] = xstrdup(v);
+              break;
+            }
+            break;
+          case 'S':
+            keycmp(k, SHA1);
+            keycmp(k, SIZE);
+            keycmp(k, SLOT);
+            break;
+          case 'U':
+            keycmp(k, USE);
+            break;
+          default:
+            /* don't care/ignored */
+            break;
+          }
         }
-#define match_key(X) match_key2(X,X)
-#define match_key2(X,Y) \
-        else if (strcmp(k, #X) == 0) \
-          do { \
-            if (pkg->meta[Q_##Y] == NULL) \
-              pkg->meta[Q_##Y] = xstrdup(v); \
-          } while (false)
-        match_key(DEFINED_PHASES);
-        match_key(DEPEND);
-        match_key2(DESC, DESCRIPTION);
-        match_key(EAPI);
-        match_key(IUSE);
-        match_key(KEYWORDS);
-        match_key(LICENSE);
-        match_key(MD5);
-        match_key(SHA1);
-        match_key(RDEPEND);
-        match_key(SLOT);
-        match_key(USE);
-        match_key(PDEPEND);
-        match_key2(REPO, repository);
-        match_key(SIZE);
-        match_key(BDEPEND);
-        match_key(IDEPEND);
-        match_key(PATH);
-        match_key(BUILD_ID);
-#undef match_key
-#undef match_key2
 
         if (*nexttok == '\n')
         {
@@ -2208,12 +2245,26 @@ int tree_foreach_pkg
             /* create atom from the path if we have it, else use cpv */
             if (pkg->meta[Q_PATH] != NULL)
             {
+              char *pn     = strrchr(pkg->meta[Q_PATH], '/');
+              char *catend = strchr(pkg->meta[Q_PATH], '/');
+
+              if (pn == NULL) /* implies catend == NULL */
+              {
+                /* have no version or anything, skip this */
+                tree_pkg_close(pkg);
+                cpv = NULL;
+                pkg = xzalloc(sizeof(*pkg));
+                continue;
+              }
+
               /* construct full path */
               snprintf(pth, sizeof(pth), "%.*s/%s",
                        (int)rootlen, tree->path, pkg->meta[Q_PATH]);
-
               pkg->path = xstrdup(pth);
-              pkg->atom = atom_explode(pkg->meta[Q_PATH]);
+
+              snprintf(pth, sizeof(pth), "%.*s",
+                       (int)(catend - pkg->meta[Q_PATH]), pkg->meta[Q_PATH]);
+              pkg->atom = atom_explode_cat(pn + 1, pth);
 
               len = strlen(pkg->meta[Q_PATH]);
               if (len > sizeof(".gpkg.tar") - 1 &&
