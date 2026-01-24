@@ -1252,6 +1252,7 @@ int main(int argc, char **argv)
 {
 	struct stat st;
 	struct winsize winsz;
+	char *overlay = NULL;
 	int i;
 
 	warnout = stderr;
@@ -1300,8 +1301,8 @@ int main(int argc, char **argv)
 	 * the first non-option argument) because otherwise argv is
 	 * modified, this basically sulks, because ideally we parse and
 	 * handle the common options here.  Because we are parsing profiles
-	 * and stuff at this point we need -q for bug #735134, and --root so
-	 * do lame matching for that */
+	 * and stuff at this point we need -q for bug #735134, and
+	 * --root/--overlay so do lame matching for that */
 	for (i = 1; i < argc; i++) {
 		if (argv[i] != NULL && argv[i][0] == '-') {
 			if (argv[i][1] == '-') {
@@ -1318,6 +1319,10 @@ int main(int argc, char **argv)
 						errp("--root argument could not be resolved");
 					set_portage_env_var(&vars_to_read[0], root,
 										"command line");  /* ROOT */
+				} else if (strcmp(&argv[i][2], "overlay") == 0 &&
+						   argv[i + 1] != NULL)
+				{
+					overlay = argv[i + 1];
 				}
 			} else {
 				char *p;
@@ -1339,6 +1344,64 @@ int main(int argc, char **argv)
 		setup_quiet();
 
 	initialize_portage_env();
+
+	/* select or implicitly create overlay when given */
+	if (overlay != NULL)
+	{
+		char buf[_Q_PATH_MAX];
+		const char *match;
+		char *oname;
+		size_t n;
+
+		if (overlay[0] != '/' &&
+			getcwd(buf, sizeof(buf)) != NULL)
+		{
+			size_t len = strlen(buf);
+			snprintf(buf + len, sizeof(buf) - len, "/%s", overlay);
+			/* first try as relative path */
+			match = overlay_from_path(buf);
+			if (match == NULL)
+			{
+				/* then as overlay name */
+				array_for_each(overlay_names, n, oname)
+				{
+					if (strcmp(oname, overlay) == 0)
+					{
+						match = array_get(overlays, n);
+						break;
+					}
+				}
+			}
+
+			if (match == NULL)
+				err("no such overlay '%s'", overlay);
+		}
+		else
+		{
+			match = overlay_from_path(overlay);
+			if (match == NULL)
+			{
+				/* this is an absolute path, so create it as overlay,
+				 * which allows for easy testing */
+				match = array_append_strcpy(overlays, overlay);
+
+				array_append_strcpy(overlay_names, "implicit");
+				array_append_strcpy(overlay_src,   "--overlay");
+			}
+		}
+
+		/* at this point match should always be set to something */
+		array_for_each_rev(overlays, n, oname)
+		{
+			if (oname != match)
+			{
+				array_delete(overlays,      n, NULL);
+				array_delete(overlay_names, n, NULL);
+				array_delete(overlay_src,   n, NULL);
+			}
+		}
+	}
+
 	optind = 0;
 	i = q_main(argc, argv);
 

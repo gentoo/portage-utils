@@ -128,15 +128,17 @@ static const struct applet_t {
 #define COMMON_FLAGS "vqChV"
 #define COMMON_LONG_OPTS \
 	{"root",       a_argument, NULL, 0x1}, \
+	{"overlay",    a_argument, NULL, 0x2}, \
 	{"verbose",   no_argument, NULL, 'v'}, \
 	{"quiet",     no_argument, NULL, 'q'}, \
 	{"nocolor",   no_argument, NULL, 'C'}, \
-	{"color",     no_argument, NULL, 0x2}, \
+	{"color",     no_argument, NULL, 0x3}, \
 	{"help",      no_argument, NULL, 'h'}, \
 	{"version",   no_argument, NULL, 'V'}, \
 	{NULL,        no_argument, NULL, 0x0}
 #define COMMON_OPTS_HELP \
 	"Set the ROOT env var", \
+	"Select the given overlay for use, instead of all found (see q -o)", \
 	"Report full package versions, emit more elaborate output", \
 	"Tighter output; suppress warnings", \
 	"Don't output color", \
@@ -146,6 +148,7 @@ static const struct applet_t {
 	NULL
 #define COMMON_GETOPTS_CASES(applet) \
 	case 0x1: /* already handled early in main */ break; \
+	case 0x2: /* already handled early in main */ break; \
 	case 'v': ++verbose; break; \
 	case 'q': /* already handled early in main */ break; \
 	case 'V': version_barf(); break; \
@@ -155,7 +158,7 @@ static const struct applet_t {
 				  color_clear(); \
 				  setenv("NOCOLOR", "true", 1); \
 			  } break; \
-	case 0x2: if (nocolor) { \
+	case 0x3: if (nocolor) { \
 				  nocolor = 0; \
 				  color_remap(); \
 				  setenv("NOCOLOR", "false", 1); \
