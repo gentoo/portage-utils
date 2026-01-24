@@ -944,7 +944,7 @@ static void tree_pkg_xpak_read_cb
     char *data)
 {
   tree_pkg_ctx  *pkg = ctx;
-  char         **key;
+  char         **key = NULL;
 
   if (pathname_len < 3)
     return;
@@ -1009,7 +1009,8 @@ static void tree_pkg_xpak_read_cb
   }
 
   /* don't overwrite entries */
-  if (*key != NULL)
+  if (key == NULL ||
+      *key != NULL)
     return;
 
   /* trim whitespace (mostly trailing newline) */
