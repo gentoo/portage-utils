@@ -438,7 +438,6 @@ tree_ctx *tree_new
     return NULL;
   }
 
-  VAL_CLEAR(st);
   if (fstatat(ret->portroot_fd, path, &st, 0) < 0)
   {
     if (!quiet)
@@ -467,7 +466,6 @@ tree_ctx *tree_new
       /* look for gtree, in which case we will ignore this tree in
        * favour of the gtree container */
       snprintf(buf, sizeof(buf), "%s/metadata/repo.gtree.tar", path);
-      VAL_CLEAR(st);
       if (fstatat(ret->portroot_fd, buf, &st, 0) == 0 &&
           S_ISREG(st.st_mode))
       {
@@ -1922,7 +1920,6 @@ int tree_foreach_pkg
 
       /* just probe to see if there is a directory named like this */
       snprintf(buf, sizeof(buf), "%s/%s", tree->path, query->CATEGORY);
-      VAL_CLEAR(sb);
       if (fstatat(tree->portroot_fd, buf, &sb, 0) < 0 ||
           !S_ISDIR(sb.st_mode))
         return 0;
