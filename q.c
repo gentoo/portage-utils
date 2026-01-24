@@ -191,10 +191,8 @@ static int q_build_gtree_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 	/* construct the common prefix */
 	snprintf(buf, sizeof(buf), "caches/%s/%s", atom->CATEGORY, atom->PF);
 
-	/* keys from md5-cache except _md5_, _eclasses_ and repository (the
-	 * latter is stored at the top level)
-	 * in addition to this the required eclass names are stored in a new
-	 * key called eclasses for easy retrieval/extraction purposes
+	/* keys from md5-cache except _md5_ and repository (the latter is
+	 * stored at the top level)
 	 * all of this is stored as key-value file, because storing it as
 	 * individual keys takes much more storage for no particular benefit */
 
@@ -209,6 +207,7 @@ static int q_build_gtree_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 		else \
 			qclen = 0; \
 		if (qclen > 0) { \
+			qclen += sizeof(#K) - 1 + 1 /*=*/; \
 			if (ctx->cbuflen + qclen + 1 > ctx->cbufsiz) { \
 				ctx->cbufsiz = ctx->cbuflen + qclen + 1; \
 				ctx->cbufsiz = ((ctx->cbufsiz + (1024 - 1)) / 1024) * 1024; \
@@ -220,7 +219,8 @@ static int q_build_gtree_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 		} \
 	} while (false)
 #define q_cache_add_cache_entry(K) \
-	if (Q_##K != Q__md5_) \
+	if (Q_##K != Q__md5_ && \
+		Q_##K != Q_repository) \
 		q_cache_add_cache_entry_val(K, tree_pkg_meta(pkg, Q_##K));
 
 	/* try all known keys */
@@ -939,7 +939,7 @@ int q_main(int argc, char **argv)
 					warnp("could not stat produced archive");
 				else
 					printf("%s%s%s: %s%siB%s\n",
-						   GREEN, r ? "???" : r, NORM,
+						   GREEN, r == NULL ? "???" : r, NORM,
 						   RED, make_human_readable_str(st.st_size,
 														1, 0), NORM);
 			}
