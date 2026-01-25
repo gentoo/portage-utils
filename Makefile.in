@@ -3168,7 +3168,8 @@ uninstall-man: uninstall-man1
 .PRECIOUS: Makefile
 
 
-man/%.1: q
+man/%.1: %.c applets.h
+	$(MAKE) q
 	man/mkman.py $@
 
 install-exec-hook:
