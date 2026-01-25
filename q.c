@@ -739,7 +739,7 @@ int q_main(int argc, char **argv)
 						atom));
 
 			if (verbose == 1) {
-				printf(" [%s%s]\n", portroot, (char *)array_get(files, n));
+				printf(" [%s]\n", (char *)array_get(files, n));
 			} else {
 				printf("\n");
 			}

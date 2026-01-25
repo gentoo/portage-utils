@@ -444,7 +444,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 	env_vars *vars = data;
 	set *masks = data;
 
-	snprintf(npath, sizeof(npath), "%s%s", portroot, file);
+	snprintf(npath, sizeof(npath), "%s%s", portroot, file + 1);
 	if ((dentslen = scandir(npath, &dents, NULL, alphasort)) > 0) {
 		int di;
 		struct dirent *d;
@@ -557,7 +557,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 
 						if (!endq)
 							warn("%s%s:%zu: %s: quote mismatch",
-									portroot, file, line, vars[i].name);
+									portroot, file + 1, line, vars[i].name);
 
 						s = buf + vars[i].name_len + 2;
 					} else {
@@ -571,7 +571,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 				}
 
 				snprintf(npath, sizeof(npath), "%s%s:%zu:%zu-%zu",
-						portroot, file, curline, cbeg, cend);
+						portroot, file + 1, curline, cbeg, cend);
 				set_portage_env_var(&vars[i], s, npath);
 			}
 		} else if (type == PMASK_FILE) {
@@ -585,7 +585,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 			} else {
 				void *e;
 				snprintf(npath, sizeof(npath), "%s%s:%zu:%zu-%zu",
-						portroot, file, line, cbeg, cend);
+						portroot, file + 1, line, cbeg, cend);
 				/* if not necessary, but do it for static code analysers
 				 * which take into accound that add_set_value might
 				 * allocate a new set when masks would be NULL -- a case
@@ -605,7 +605,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 	free(buf);
 
 	if (getenv("DEBUG"))
-		fprintf(stderr, "read profile %s%s\n", portroot, file);
+		fprintf(stderr, "read profile %s%s\n", portroot, file + 1);
 }
 
 /* Helper to check if a string starts with a prefix. If so, returns
@@ -800,9 +800,9 @@ read_portage_profile(const char *profile, env_vars vars[], set *masks)
 
 	/* now consume *this* profile's make.defaults and package.mask */
 	strcpy(profile_file + profile_len, "make.defaults");
-	read_portage_file(profile_file + 1, ENV_FILE, vars);
+	read_portage_file(profile_file, ENV_FILE, vars);
 	strcpy(profile_file + profile_len, "package.mask");
-	read_portage_file(profile_file + 1, PMASK_FILE, masks);
+	read_portage_file(profile_file, PMASK_FILE, masks);
 }
 
 env_vars vars_to_read[] = {
@@ -854,26 +854,29 @@ set *package_masks = NULL;
 static void
 read_one_repos_conf(const char *repos_conf, char **primary)
 {
-	char *main_repo;
-	char *repo;
-	char *buf = NULL;
+	char   pth[_Q_PATH_MAX];
+	char  *main_repo;
+	char  *repo;
+	char  *buf = NULL;
 	size_t buf_len = 0;
-	char *s = NULL;  /* pacify compiler */
-	char *p;
-	char *q;
-	char *r;
-	char *e;
-	bool do_trim;
-	bool is_default;
+	char  *s = NULL;  /* pacify compiler */
+	char  *p;
+	char  *q;
+	char  *r;
+	char  *e;
+	bool   do_trim;
+	bool   is_default;
 
+	snprintf(pth, sizeof(pth), "%s%s", portroot, repos_conf);
 	if (getenv("DEBUG"))
-		fprintf(stderr, "  parse %s\n", repos_conf);
+		fprintf(stderr, "  parse %s\n", pth);
 
-	if (!eat_file(repos_conf, &buf, &buf_len)) {
+	if (!eat_file(pth, &buf, &buf_len)) {
 		if (buf != NULL)
 			free(buf);
 		return;
 	}
+	snprintf(pth, sizeof(pth), "/%s", repos_conf);
 
 	main_repo = NULL;
 	repo = NULL;
@@ -936,7 +939,7 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 			if (overlay != NULL) {
 				/* replace overlay */
 				array_delete(overlay_src, n, NULL);
-				array_append_strcpy(overlay_src, repos_conf);
+				array_append_strcpy(overlay_src, pth);
 
 				ele = array_remove(overlay_names, n);
 				array_append(overlay_names, ele);
@@ -946,7 +949,7 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 			} else {
 				ele     = array_append_strcpy(overlays, e);
 				overlay = array_append_strcpy(overlay_names, repo);
-				array_append_strcpy(overlay_src, repos_conf);
+				array_append_strcpy(overlay_src, pth);
 			}
 			if (main_repo && strcmp(repo, main_repo) == 0)
 				*primary = overlay;
@@ -960,19 +963,24 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 static void
 read_repos_conf(const char *configroot, const char *repos_conf, char **primary)
 {
-	char *top_conf, *sub_conf;
-	int i, count;
+	char            top_conf[_Q_PATH_MAX];
 	struct dirent **confs;
+	int             i;
+	int             count;
 
-	xasprintf(&top_conf, "%s%s%s", portroot, configroot, repos_conf);
+	snprintf(top_conf, sizeof(top_conf), "%s%s%s",
+			 portroot, configroot, repos_conf);
 	if (getenv("DEBUG"))
 		fprintf(stderr, "repos.conf.d scanner %s\n", top_conf);
 	count = scandir(top_conf, &confs, NULL, alphasort);
 	if (count == -1) {
 		if (errno == ENOTDIR)
-			read_one_repos_conf(top_conf, primary);
+			read_one_repos_conf(top_conf + strlen(portroot), primary);
 	} else {
-		for (i = 0; i < count; ++i) {
+		char sub_conf[_Q_PATH_MAX * 2];
+
+		for (i = 0; i < count; i++)
+		{
 			const char *name = confs[i]->d_name;
 			struct stat st;
 
@@ -984,20 +992,17 @@ read_repos_conf(const char *configroot, const char *repos_conf, char **primary)
 			if (name[strlen(name) - 1] == '~')
 				continue;
 
-			xasprintf(&sub_conf, "%s/%s", top_conf, name);
+			snprintf(sub_conf, sizeof(sub_conf), "%s/%s", top_conf, name);
 
 			/* skip non-files */
-			if (stat(sub_conf, &st) != 0 || !S_ISREG(st.st_mode)) {
-				free(sub_conf);
+			if (stat(sub_conf, &st) != 0 ||
+				!S_ISREG(st.st_mode))
 				continue;
-			}
 
-			read_one_repos_conf(sub_conf, primary);
-			free(sub_conf);
+			read_one_repos_conf(sub_conf + strlen(portroot), primary);
 		}
 		scandir_free(confs, count);
 	}
-	free(top_conf);
 }
 
 static void
@@ -1035,7 +1040,7 @@ initialize_portage_env(void)
 
 	/* consider Portage's defaults */
 	snprintf(pathbuf, sizeof(pathbuf),
-			"%.*s/usr/share/portage/config/make.globals",
+			"/%.*s/usr/share/portage/config/make.globals",
 			(int)i, configroot);
 	read_portage_file(pathbuf, ENV_FILE, vars_to_read);
 
@@ -1047,7 +1052,7 @@ initialize_portage_env(void)
 			if (overlay == primary_overlay) {
 				snprintf(pathbuf, sizeof(pathbuf), "%s/profiles/package.mask",
 						(char *)array_get(overlays, n));
-				read_portage_file(pathbuf + 1, PMASK_FILE, package_masks);
+				read_portage_file(pathbuf, PMASK_FILE, package_masks);
 				break;
 			}
 		}
@@ -1066,10 +1071,10 @@ initialize_portage_env(void)
 			vars_to_read, package_masks);
 
 	/* now read all Portage's config files */
-	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/make.conf",
+	snprintf(pathbuf, sizeof(pathbuf), "/%.*s/etc/make.conf",
 			(int)i, configroot);
 	read_portage_file(pathbuf, ENV_FILE, vars_to_read);
-	snprintf(pathbuf, sizeof(pathbuf), "%.*s/etc/portage/make.conf",
+	snprintf(pathbuf, sizeof(pathbuf), "/%.*s/etc/portage/make.conf",
 			(int)i, configroot);
 	read_portage_file(pathbuf, ENV_FILE, vars_to_read);
 
