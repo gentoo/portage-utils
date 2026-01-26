@@ -319,6 +319,7 @@ static int tree_foreach_pkg_gtree
       pkg = xzalloc(sizeof(*pkg));
       pkg->name = xstrdup(atom->PN);
       pkg->path = xstrdup(buf);
+      pkg->atom = atom;
       pkg->cat  = cat;
       array_append(cat->pkgs, pkg);
 
@@ -412,7 +413,9 @@ static int tree_foreach_pkg_gtree
       }
 
       pkg->meta_complete = true;
-    } else if (foundcaches) {
+    }
+    else if (foundcaches)
+    {
       break;  /* stop searching if we processed all cache entries */
     }
   }
