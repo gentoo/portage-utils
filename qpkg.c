@@ -326,7 +326,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	snprintf(buf, sizeof(buf), "%s/gpkg-1", tmpdir);
 	fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC,
 			  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-	if (mfd < 0) {
+	if (fd < 0) {
 		close(mfd);
 		rm_rf(tmpdir);
 		printf("%sFAIL%s\n", RED, NORM);
