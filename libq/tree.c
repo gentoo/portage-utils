@@ -932,7 +932,8 @@ static bool tree_pkg_ebuild_read
         (p = strchr(p, '\n')) != NULL)
       p++;
   }
-  while (*p != '\0');
+  while (p != NULL &&
+         *p != '\0');
 
   return true;
 }
