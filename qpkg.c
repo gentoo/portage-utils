@@ -557,9 +557,11 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		archive_write_header(a, entry);
 		while ((len = read(fd, buf, sizeof(buf))) > 0)
 			archive_write_data(a, buf, (size_t)len);
-		close(fd);
 		archive_entry_free(entry);
 	}
+	if (fd >= 0)
+		close(fd);
+
 	/* 3.2 the metadata archive metadata.tar${comp} */
 	snprintf(buf, sizeof(buf), "%s/metadata.tar%s", tmpdir, filter);
 	/* this must succeed, no? */
@@ -576,9 +578,11 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		archive_write_header(a, entry);
 		while ((len = read(fd, buf, sizeof(buf))) > 0)
 			archive_write_data(a, buf, (size_t)len);
-		close(fd);
 		archive_entry_free(entry);
 	}
+	if (fd >= 0)
+		close(fd);
+
 	/* 3.3 TODO: with gpgme write metadata signature */
 	/* 3.4 the filesystem image archive image.tar${comp} */
 	snprintf(buf, sizeof(buf), "%s/image.tar%s", tmpdir, filter);
@@ -596,9 +600,11 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		archive_write_header(a, entry);
 		while ((len = read(fd, buf, sizeof(buf))) > 0)
 			archive_write_data(a, buf, (size_t)len);
-		close(fd);
 		archive_entry_free(entry);
 	}
+	if (fd >= 0)
+		close(fd);
+
 	/* 3.5 TODO: with gpgme write image signature */
 	/* 3.6 the package Manifest data file Manifest (clear-signed when
 	 * gpgme) */
@@ -617,9 +623,11 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		archive_write_header(a, entry);
 		while ((len = read(fd, buf, sizeof(buf))) > 0)
 			archive_write_data(a, buf, (size_t)len);
-		close(fd);
 		archive_entry_free(entry);
 	}
+	if (fd >= 0)
+		close(fd);
+
 	archive_write_close(a);
 	archive_write_free(a);
 
