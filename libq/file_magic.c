@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Gentoo Foundation
+ * Copyright 2025-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2025-     Fabian Groffen  - <grobian@gentoo.org>
@@ -103,6 +103,8 @@ file_magic_type file_magic_guess_fd
 		ret = FMAGIC_LZO;
 	}
 
-	lseek(fd, SEEK_CUR, (off_t)-mlen);
+	/* try to rewind, if this fails, what can we do? we still have found
+	 * what it should be... */
+	(void)lseek(fd, SEEK_CUR, (off_t)-mlen);
 	return ret;
 }
