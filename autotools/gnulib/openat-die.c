@@ -1,6 +1,6 @@
 /* Report a save- or restore-cwd failure in our openat replacement and then exit.
 
-   Copyright (C) 2005-2006, 2008-2025 Free Software Foundation, Inc.
+   Copyright (C) 2005-2006, 2008-2026 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@
 #include "exitfail.h"
 
 #include "gettext.h"
-#define _(msgid) dgettext ("gnulib", msgid)
+#define _(msgid) dgettext (GNULIB_TEXT_DOMAIN, msgid)
 
 _Noreturn void
 openat_save_fail (int errnum)

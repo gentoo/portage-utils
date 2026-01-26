@@ -1,4 +1,4 @@
-# Copyright (C) 2002-2025 Free Software Foundation, Inc.
+# Copyright (C) 2002-2026 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -42,14 +42,14 @@
 #  crypto/sha1-buffer \
 #  crypto/sha256-buffer \
 #  crypto/sha512-buffer \
-#  dirent \
+#  dirent-h \
 #  faccessat \
 #  fdopendir \
 #  fstatat \
 #  futimens \
 #  getline \
 #  getopt-posix \
-#  inttypes \
+#  inttypes-h \
 #  mkdirat \
 #  openat \
 #  readlinkat \
@@ -59,10 +59,9 @@
 #  strncat \
 #  strtoll \
 #  symlinkat \
-#  sys_stat \
+#  sys_stat-h \
 #  unlinkat \
 #  utimensat \
-#  vasprintf-posix \
 #  xalloc
 
 # Specification in the form of a few gnulib-tool.m4 macro invocations:
@@ -72,14 +71,14 @@ gl_MODULES([
   crypto/sha1-buffer
   crypto/sha256-buffer
   crypto/sha512-buffer
-  dirent
+  dirent-h
   faccessat
   fdopendir
   fstatat
   futimens
   getline
   getopt-posix
-  inttypes
+  inttypes-h
   mkdirat
   openat
   readlinkat
@@ -89,10 +88,9 @@ gl_MODULES([
   strncat
   strtoll
   symlinkat
-  sys_stat
+  sys_stat-h
   unlinkat
   utimensat
-  vasprintf-posix
   xalloc
 ])
 gl_AVOID([])

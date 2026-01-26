@@ -1250,7 +1250,7 @@ case $cpu-$vendor in
 			| 580 \
 			| [cjt]90 \
 			| a29k \
-			| aarch64 | arm64 \
+			| aarch64 \
 			| aarch64_be \
 			| aarch64c \
 			| abacus \
@@ -1270,7 +1270,7 @@ case $cpu-$vendor in
 			| arc32 \
 			| arc64 \
 			| arceb \
-			| arm | arm64 \
+			| arm \
 			| arm64e \
 			| arm64ec \
 			| arm[lb]e \

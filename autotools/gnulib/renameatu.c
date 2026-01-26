@@ -1,5 +1,5 @@
 /* Rename a file relative to open directories.
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
 # include <sys/syscall.h>
 #endif
 
-#include "issymlink.h"
+#include "issymlinkat.h"
 
 static int
 errno_fail (int e)
@@ -117,22 +117,23 @@ renameatu (int fd1, char const *src, int fd2, char const *dst,
   err = errno;
 #endif
 
-  if (! (ret_val < 0 && (err == EINVAL || err == ENOSYS || err == ENOTSUP)))
+
+  if (! (ret_val < 0 && (err == EINVAL || err == ENOSYS || err == ENOTSUP
+#if RENAME_TRAILING_SLASH_SOURCE_BUG
+                         || ! (err == ENOTDIR
+                               && ! (0 < strlen (src)
+                                     && src[strlen (src) - 1] == '/'))
+#endif
+#if RENAME_TRAILING_SLASH_DEST_BUG
+                         || ! (err == ENOENT
+                               && ! (0 < strlen (dst)
+                                     && dst[strlen (dst) - 1] == '/'))
+#endif
+                        )))
     return ret_val;
 
 #if HAVE_RENAMEAT
-  {
-  size_t src_len;
-  size_t dst_len;
-  char *src_temp = (char *) src;
-  char *dst_temp = (char *) dst;
-  bool src_slash;
-  bool dst_slash;
-  int rename_errno = ENOTDIR;
-  struct stat src_st;
-  struct stat dst_st;
   bool dst_found_nonexistent = false;
-
   switch (flags)
     {
     case 0:
@@ -144,12 +145,15 @@ renameatu (int fd1, char const *src, int fd2, char const *dst,
          is defined, because RENAME_EXCL is buggy on macOS 11.2:
          renameatx_np (fd, "X", fd, "X", RENAME_EXCL) incorrectly
          succeeds when X exists.  */
-      if (fstatat (fd2, dst, &dst_st, AT_SYMLINK_NOFOLLOW) == 0
-          || errno == EOVERFLOW)
-        return errno_fail (EEXIST);
-      if (errno != ENOENT)
-        return -1;
-      dst_found_nonexistent = true;
+      {
+        struct stat dst_st;
+        if (fstatat (fd2, dst, &dst_st, AT_SYMLINK_NOFOLLOW) == 0
+            || errno == EOVERFLOW)
+          return errno_fail (EEXIST);
+        if (errno != ENOENT)
+          return -1;
+        dst_found_nonexistent = true;
+      }
       break;
 
     case RENAME_EXCHANGE:
@@ -161,13 +165,13 @@ renameatu (int fd1, char const *src, int fd2, char const *dst,
     }
 
   /* Let strace see any ENOENT failure.  */
-  src_len = strlen (src);
-  dst_len = strlen (dst);
+  size_t src_len = strlen (src);
+  size_t dst_len = strlen (dst);
   if (!src_len || !dst_len)
     return renameat2ish (fd1, src, fd2, dst, flags);
 
-  src_slash = src[src_len - 1] == '/';
-  dst_slash = dst[dst_len - 1] == '/';
+  bool src_slash = src[src_len - 1] == '/';
+  bool dst_slash = dst[dst_len - 1] == '/';
   if (!src_slash && !dst_slash)
     return renameat2ish (fd1, src, fd2, dst, flags);
 
@@ -175,6 +179,8 @@ renameatu (int fd1, char const *src, int fd2, char const *dst,
      the source does not exist, or if the destination cannot be turned
      into a directory, give up now.  Otherwise, strip trailing slashes
      before calling rename.  */
+  struct stat src_st;
+  struct stat dst_st;
   if (fstatat (fd1, src, &src_st, AT_SYMLINK_NOFOLLOW))
     return -1;
   if (dst_found_nonexistent)
@@ -192,6 +198,10 @@ renameatu (int fd1, char const *src, int fd2, char const *dst,
   else if (!S_ISDIR (src_st.st_mode))
     return errno_fail (EISDIR);
 
+  int rename_errno = ENOTDIR;
+
+  char *src_temp = (char *) src;
+  char *dst_temp = (char *) dst;
 # if RENAME_TRAILING_SLASH_SOURCE_BUG
   /* See the lengthy comment in rename.c why Solaris 9 is forced to
      GNU behavior, while Solaris 10 is left with POSIX behavior,
@@ -251,7 +261,6 @@ renameatu (int fd1, char const *src, int fd2, char const *dst,
     free (dst_temp);
   errno = rename_errno;
   return ret_val;
-  }
 #else /* !HAVE_RENAMEAT */
 
   /* RENAME_NOREPLACE is the only flag currently supported.  */

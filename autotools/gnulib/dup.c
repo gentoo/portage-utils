@@ -1,6 +1,6 @@
 /* Duplicate an open file descriptor.
 
-   Copyright (C) 2011-2025 Free Software Foundation, Inc.
+   Copyright (C) 2011-2026 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -61,17 +61,19 @@ static int
 dup_nothrow (int fd)
 {
   int dupfd;
-  struct stat sbuf;
 
   dupfd = dup (fd);
-  if (dupfd == -1 && errno == ENOTSUP \
-      && !fstat (fd, &sbuf) && S_ISDIR (sbuf.st_mode))
+  if (dupfd == -1 && errno == ENOTSUP)
     {
-      char path[_MAX_PATH];
+      struct stat sbuf;
+      if (!fstat (fd, &sbuf) && S_ISDIR (sbuf.st_mode))
+        {
+          char path[_MAX_PATH];
 
-      /* Get a path from fd */
-      if (!__libc_Back_ioFHToPath (fd, path, sizeof (path)))
-        dupfd = open (path, O_RDONLY);
+          /* Get a path from fd */
+          if (!__libc_Back_ioFHToPath (fd, path, sizeof (path)))
+            dupfd = open (path, O_RDONLY);
+        }
     }
 
   return dupfd;

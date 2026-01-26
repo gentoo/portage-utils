@@ -32,14 +32,14 @@ mods="
 	crypto/sha1-buffer
 	crypto/sha256-buffer
 	crypto/sha512-buffer
-	dirent
+	dirent-h
 	faccessat
 	fdopendir
 	fstatat
 	futimens
 	getline
 	getopt-posix
-	inttypes
+	inttypes-h
 	mkdirat
 	openat
 	readlinkat
@@ -49,10 +49,9 @@ mods="
 	strncat
 	strtoll
 	symlinkat
-	sys_stat
+	sys_stat-h
 	unlinkat
 	utimensat
-	vasprintf-posix
 	xalloc
 "
 v gnulib-tool \
