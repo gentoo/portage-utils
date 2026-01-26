@@ -922,6 +922,8 @@ int qkeyword_main(int argc, char **argv)
 				array_free(bucket);
 			}
 		}
+
+		array_free(masks);
 	}
 
 	switch (action) {
