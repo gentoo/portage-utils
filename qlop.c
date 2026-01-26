@@ -521,7 +521,7 @@ static int do_emerge_log(
 					array *vals = array_new();
 
 					values_set(atomset, vals);
-					array_deepfree(vals, (array_free_cb *)atomw);
+					array_deepfree(vals, (array_free_cb *)atom_implode);
 
 					clear_set(atomset);
 					last_merge = tstart_emerge;
