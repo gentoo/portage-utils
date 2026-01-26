@@ -1518,6 +1518,7 @@ static array *probe_proc(array *atoms)
 	} else {
 		/* flag /proc doesn't exist */
 		warn("/proc doesn't exist, running merges are based on heuristics");
+		array_deepfree(ret_atoms, (array_free_cb *)atom_implode);
 		return NULL;
 	}
 
@@ -1529,29 +1530,37 @@ static array *probe_proc(array *atoms)
 		if (geteuid() != 0) {
 			warn("insufficient privileges for full /proc access, "
 					"running merges are based on heuristics");
+			array_deepfree(ret_atoms, (array_free_cb *)atom_implode);
 			return NULL;
 		}
 	}
 
 	if (array_cnt(atoms) > 0) {
-		size_t j;
 		depend_atom *atomr;
+		size_t       j;
+		bool         found;
 
 		/* calculate intersection */
-		array_for_each(atoms, i, atom) {
-			array_for_each(ret_atoms, j, atomr) {
-				if (atom_compare(atomr, atom) != EQUAL) {
-					array_remove(ret_atoms, j);
-					atom_implode(atomr);
+		array_for_each_rev(atoms, i, atom)
+		{
+			found = false;
+			array_for_each(ret_atoms, j, atomr)
+			{
+				if (atom_compare(atomr, atom) == EQUAL)
+				{
+					found = true;
 					break;
 				}
 			}
-			atom_implode(atom);
+			if (found)
+				array_delete(ret_atoms, j, (array_free_cb *)atom_implode);
+			else
+				array_delete(atoms, i, (array_free_cb *)atom_implode);
 		}
 	}
 
-	/* ret_atoms is allocated on the stack, so copy into atoms which is
-	 * empty at this point */
+	/* caller expects us to return atoms or NULL, so copy ret_atoms
+	 * contents to atoms */
 	array_for_each(ret_atoms, i, atom)
 	{
 		/* bug #731122: match running packages without version */
