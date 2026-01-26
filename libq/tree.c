@@ -1089,6 +1089,9 @@ static bool tree_pkg_binpkg_read
         fname++;
 
         data_len = archive_entry_size(entry);
+        if (data_len == 0)
+          continue;
+
         if (data_len > data_size) {
           data_size = data_len;
           data      = xrealloc(data, data_size);
