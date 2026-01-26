@@ -76,18 +76,22 @@ def MkMan(applets, applet, output):
     authors = COMMON_AUTHORS[:]
     see_also = sorted(['.BR %s (1)' % x for x in applets if x != applet])
 
-    description = ''
+    description = None
     desc_file = os.path.join(FRAGS_DIR, '%s.desc' % applet)
     if os.path.exists(desc_file):
         fh = open(desc_file)
         description = fh.read().rstrip()
         fh.close()
+    if not description:
+        description = ''
 
-    optdescs = []
+    optdescs = None
     desc_file = os.path.join(FRAGS_DIR, '%s.optdesc.yaml' % applet)
     if os.path.exists(desc_file):
         with open(desc_file) as fh:
             optdescs = yaml.safe_load(fh)
+    if not optdescs:
+        optdescs = []
 
     # Extract all the options
     options = []
