@@ -660,6 +660,9 @@ am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
 CWFLAGS
+GTREE_ENABLED
+GPKG_ENABLED
+QMANIFEST_ENABLED
 GTREE_ENABLED_FALSE
 GTREE_ENABLED_TRUE
 GPKG_ENABLED_FALSE
@@ -31244,6 +31247,7 @@ printf "%s\n" "no: disabled by configure argument" >&6; }
 esac
 fi
 
+do_qmanifest=""
  if test "x$enable_qmanifest" != xno; then
   QMANIFEST_ENABLED_TRUE=
   QMANIFEST_ENABLED_FALSE='#'
@@ -31256,6 +31260,7 @@ if test "x$enable_qmanifest" != xno ; then
 
 printf "%s\n" "#define ENABLE_QMANIFEST 1" >>confdefs.h
 
+	do_qmanifest="yes"
 fi
 
 if test "x${enable_gpkg}" != "xno"
@@ -31287,6 +31292,7 @@ printf "%s\n" "no: disabled by configure argument" >&6; }
 esac
 fi
 
+do_gpkg=""
  if test "x$enable_gpkg" != xno; then
   GPKG_ENABLED_TRUE=
   GPKG_ENABLED_FALSE='#'
@@ -31299,6 +31305,7 @@ if test "x$enable_gpkg" != xno ; then
 
 printf "%s\n" "#define ENABLE_GPKG 1" >>confdefs.h
 
+	do_gpkg="yes"
 fi
 
 if test "x${enable_gtree}" != "xno"
@@ -31330,6 +31337,7 @@ printf "%s\n" "no: disabled by configure argument" >&6; }
 esac
 fi
 
+do_gtree=""
  if test "x$enable_gtree" != xno; then
   GTREE_ENABLED_TRUE=
   GTREE_ENABLED_FALSE='#'
@@ -31342,7 +31350,14 @@ if test "x$enable_gtree" != xno ; then
 
 printf "%s\n" "#define ENABLE_GTREE 1" >>confdefs.h
 
+	do_gtree="yes"
 fi
+QMANIFEST_ENABLED="$do_qmanifest"
+
+GPKG_ENABLED="$do_gpkg"
+
+GTREE_ENABLED="$do_gtree"
+
 
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for C compiler vendor" >&5
 printf %s "checking for C compiler vendor... " >&6; }

@@ -142,10 +142,12 @@ AS_IF([test "x${enable_qmanifest}" != "xno"], [
   AC_MSG_RESULT([no: disabled by configure argument])
 ])
 
+do_qmanifest=""
 AM_CONDITIONAL([QMANIFEST_ENABLED], [test "x$enable_qmanifest" != xno])
 if test "x$enable_qmanifest" != xno ; then
 	AC_DEFINE([ENABLE_QMANIFEST], [1],
 			  [Define if qmanifest should be compiled])
+	do_qmanifest="yes"
 fi
 
 AS_IF([test "x${enable_gpkg}" != "xno"], [
@@ -160,10 +162,12 @@ AS_IF([test "x${enable_gpkg}" != "xno"], [
   AC_MSG_RESULT([no: disabled by configure argument])
 ])
 
+do_gpkg=""
 AM_CONDITIONAL([GPKG_ENABLED], [test "x$enable_gpkg" != xno])
 if test "x$enable_gpkg" != xno ; then
 	AC_DEFINE([ENABLE_GPKG], [1],
 			  [Define if gpkg should be compiled])
+	do_gpkg="yes"
 fi
 
 AS_IF([test "x${enable_gtree}" != "xno"], [
@@ -178,11 +182,16 @@ AS_IF([test "x${enable_gtree}" != "xno"], [
   AC_MSG_RESULT([no: disabled by configure argument])
 ])
 
+do_gtree=""
 AM_CONDITIONAL([GTREE_ENABLED], [test "x$enable_gtree" != xno])
 if test "x$enable_gtree" != xno ; then
 	AC_DEFINE([ENABLE_GTREE], [1],
 			  [Define if gtree should be compiled])
+	do_gtree="yes"
 fi
+AC_SUBST([QMANIFEST_ENABLED], ["$do_qmanifest"])
+AC_SUBST([GPKG_ENABLED], ["$do_gpkg"])
+AC_SUBST([GTREE_ENABLED], ["$do_gtree"])
 
 AX_CFLAGS_WARN_ALL([CWFLAGS])
 AC_DEFUN([PT_CHECK_CFLAG],[AX_CHECK_COMPILER_FLAGS([$1],[CFLAGS="$CFLAGS $1"])])
