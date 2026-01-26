@@ -39,7 +39,8 @@ jobs:
       - name: install deps
         run: >
           sudo apt-get install -y
-          libgpgme-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
+          libgpgme-dev gnupg2 libarchive-dev
+          liblz4-tool lzop zstd lzip brotli libb2-dev
       - uses: actions/checkout@v2
       - name: configure variant ${{ matrix.features }}
         run: >
@@ -89,7 +90,8 @@ jobs:
       - name: install deps
         run: >
           sudo apt-get install -y
-          libgpgme-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
+          libgpgme-dev gnupg2 libarchive-dev
+          liblz4-tool lzop zstd lzip brotli libb2-dev
       - uses: actions/checkout@v2
       - name: configure
         run: >
@@ -107,13 +109,14 @@ jobs:
       - name: install deps
         run: >
           sudo apt-get install -y
-          libgpgme-dev gnupg2 liblz4-tool lzop zstd lzip brotli libb2-dev
+          libgpgme-dev gnupg2 libarchive-dev
+          liblz4-tool lzop zstd lzip brotli libb2-dev
           valgrind
       - uses: actions/checkout@v2
       - name: configure
         run: >
           ./configure
           --disable-maintainer-mode --disable-openmp
-          --enable-qmanifest --enable-qtegrity
+          --enable-qmanifest --enable-gpkg --enable-gtree
       - name: make
         run: make CFLAGS="-g -pipe" Q_RUN_WITH_VALGRIND=1 V=1 check
