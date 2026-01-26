@@ -827,6 +827,12 @@ int q_main(int argc, char **argv)
 			/* now open it */
 			fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC,
 					  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH /* 0644 */);
+			if (fd < 0)
+			{
+				warnp("failed to open gtree for writing at %s", buf);
+				tree_close(t);
+				continue;
+			}
 
 			a = archive_write_new();
 			archive_write_set_format_ustar(a);  /* GLEP-78, just to be safe */
