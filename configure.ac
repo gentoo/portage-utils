@@ -1,10 +1,10 @@
-# Copyright 2011-2025 Gentoo Authors
+# Copyright 2011-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 #
 # Copyright 2011-2014 Mike Frysinger  - <vapier@gentoo.org>
 # Copyright 2011-     Fabian Groffen  - <grobian@gentoo.org>
 
-AC_PREREQ([2.71])
+AC_PREREQ([2.72])
 AC_INIT([portage-utils],[git])
 AM_INIT_AUTOMAKE([1.11 dist-xz foreign no-dist-gzip silent-rules -Wall])
 AM_SILENT_RULES([yes]) # AM_INIT_AUTOMAKE([silent-rules]) is broken atm
@@ -107,13 +107,10 @@ PKG_CHECK_MODULES([LIBARCHIVE], [libarchive],
                     save_LIBS="$LIBS"
                     LIBS="$LIBS $LIBARCHIVE_LIBS"
                     AC_MSG_CHECKING([whether for archive_entry_hardlink_is_set])
-                    AC_TRY_LINK([#include <archive.h>
-                                 #include <archive_entry.h>],
-                                [archive_entry_hardlink_is_set(NULL);],
-                                [AC_DEFINE([HAVE_ARCHIVE_ENTRY_HARDLINK_IS_SET],
+                    AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <archive.h>
+                                 #include <archive_entry.h>]], [[archive_entry_hardlink_is_set(NULL);]])],[AC_DEFINE([HAVE_ARCHIVE_ENTRY_HARDLINK_IS_SET],
                                           [1], [Define if you have archive_entry_hardlink_is_set])
-                                 AC_MSG_RESULT([yes])],
-                                [AC_MSG_RESULT([no])])
+                                 AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
                     LIBS="$save_LIBS"
                   ],
                   [
