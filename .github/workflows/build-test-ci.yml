@@ -25,10 +25,12 @@ jobs:
           - gcc
           - clang
         features:
-          - --enable-qmanifest --enable-qtegrity
-          - --disable-qmanifest --enable-qtegrity
-          - --enable-qmanifest --disable-qtegrity
-          - --disable-qmanifest --disable-qtegrity
+          - --enable-qmanifest  --enable-gpkg  --enable-gtree
+          - --enable-qmanifest  --disable-gpkg --enable-gtree
+          - --enable-qmanifest  --disable-gpkg --disable-gtree
+          - --disable-qmanifest --enable-gpkg  --enable-gtree
+          - --disable-qmanifest --disable-gpkg --enable-gtree
+          - --disable-qmanifest --disable-gpkg --disable-gtree
           - ""
     runs-on: ${{ matrix.os }}
     env:
