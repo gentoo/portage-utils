@@ -417,6 +417,9 @@
 /* Define to 1 if <alloca.h> works. */
 #undef HAVE_ALLOCA_H
 
+/* Define if you have archive_entry_hardlink_is_set */
+#undef HAVE_ARCHIVE_ENTRY_HARDLINK_IS_SET
+
 /* Define if you have blake2b */
 #undef HAVE_BLAKE2B
 

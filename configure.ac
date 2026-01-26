@@ -104,6 +104,17 @@ PKG_CHECK_MODULES([LIBARCHIVE], [libarchive],
                   [
                     AC_DEFINE([HAVE_LIBARCHIVE], [1], [Define if you have libarchive])
                     LIBARCHIVE="yes"
+                    save_LIBS="$LIBS"
+                    LIBS="$LIBS $LIBARCHIVE_LIBS"
+                    AC_MSG_CHECKING([whether for archive_entry_hardlink_is_set])
+                    AC_TRY_LINK([#include <archive.h>
+                                 #include <archive_entry.h>],
+                                [archive_entry_hardlink_is_set(NULL);],
+                                [AC_DEFINE([HAVE_ARCHIVE_ENTRY_HARDLINK_IS_SET],
+                                          [1], [Define if you have archive_entry_hardlink_is_set])
+                                 AC_MSG_RESULT([yes])],
+                                [AC_MSG_RESULT([no])])
+                    LIBS="$save_LIBS"
                   ],
                   [
                     AS_IF([test "x${enable_gpkg}" = "xyes"],

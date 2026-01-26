@@ -1354,7 +1354,14 @@ pkg_merge(int level, const depend_atom *qatom, tree_pkg_ctx *mpkg)
 			fname = archive_entry_pathname(entry);  /* re-retrieve for errors */
 
 			/* handle hardlinks offset, #968291 */
-			if (archive_entry_hardlink_is_set(entry)) {
+#ifdef HAVE_ARCHIVE_ENTRY_HARDLINK_IS_SET
+			if (archive_entry_hardlink_is_set(entry))
+#else
+			/* for Ubuntu, older libarchive has no
+			 * archive_entry_hardlink_is_set */
+			if (archive_entry_hardlink(entry) != NULL)
+#endif
+			{
 				const char *hlinktrg = archive_entry_hardlink(entry);
 				/* drop image prefix like for the path */
 				hlinktrg = strchr(hlinktrg, '/');
