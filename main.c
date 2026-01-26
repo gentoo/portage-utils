@@ -34,6 +34,7 @@ bool nocolor;
 char pretend = 0;
 char *portarch;
 char *portroot;
+char *configroot;
 char *config_protect;
 char *config_protect_mask;
 char *portvdb;
@@ -806,7 +807,7 @@ read_portage_profile(const char *profile, env_vars vars[], set *masks)
 }
 
 env_vars vars_to_read[] = {
-#define _Q_EV(t, V, set, lset, d) \
+#define _Q_EV(t, V, set, lset, d, E) \
 { \
 	.name = #V, \
 	.name_len = sizeof(#V) - 1, \
@@ -815,34 +816,36 @@ env_vars vars_to_read[] = {
 	lset, \
 	.default_value = d, \
 	.src = NULL, \
+	.fromenv = E, \
 },
-#define _Q_EVS(t, V, v, D) \
-	_Q_EV(t, V, .value.s = &v, .value_len = sizeof(D) - 1, D)
-#define _Q_EVB(t, V, v, D) \
-	_Q_EV(t, V, .value.b = &v, .value_len = 0, D)
-#define _Q_EVT(T, V, v, D) \
-	_Q_EV(T, V, .value.t = &v, .value_len = 0, D)
+#define _Q_EVS(t, V, v, E, D) \
+	_Q_EV(t, V, .value.s = &v, .value_len = sizeof(D) - 1, D, E)
+#define _Q_EVB(t, V, v, E, D) \
+	_Q_EV(t, V, .value.b = &v, .value_len = 0, D, E)
+#define _Q_EVT(T, V, v, E, D) \
+	_Q_EV(T, V, .value.t = &v, .value_len = 0, D, E)
 
-	_Q_EVS(STR,  ROOT,                portroot,            "/")
-	_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      "")
-	_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        "")
-	_Q_EVS(ISTR, PKG_INSTALL_MASK,    pkg_install_mask,    "")
-	_Q_EVS(STR,  ARCH,                portarch,            "")
-	_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      "/etc")
-	_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, "")
-	_Q_EVB(BOOL, NOCOLOR,             nocolor,             false)
-	_Q_EVT(ISET, FEATURES,            features,            NULL)
-	_Q_EVT(ISET, USE,                 ev_use,              NULL)
-	_Q_EVS(STR,  EPREFIX,             eprefix,             CONFIG_EPREFIX)
-	_Q_EVS(STR,  EMERGE_LOG_DIR,      portlogdir,          CONFIG_EPREFIX "var/log")
-	_Q_EVS(STR,  PORTDIR,             main_overlay,        CONFIG_EPREFIX "var/db/repos/gentoo")
-	_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             DEFAULT_PORTAGE_BINHOST)
-	_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         CONFIG_EPREFIX "var/tmp/portage/")
-	_Q_EVS(STR,  PKGDIR,              pkgdir,              CONFIG_EPREFIX "var/cache/binpkgs/")
-	_Q_EVS(STR,  BINPKG_FORMAT,       binpkg_format,       "gpkg")
-	_Q_EVS(STR,  Q_VDB,               portvdb,             CONFIG_EPREFIX "var/db/pkg")
-	_Q_EVS(STR,  Q_EDB,               portedb,             CONFIG_EPREFIX "var/cache/edb")
-	{ NULL, 0, _Q_BOOL, { NULL }, 0, NULL, NULL, }
+	_Q_EVS(STR,  ROOT,                portroot,            true,  "/")
+	_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      true,  "")
+	_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        true,  "")
+	_Q_EVS(ISTR, PKG_INSTALL_MASK,    pkg_install_mask,    true,  "")
+	_Q_EVS(STR,  ARCH,                portarch,            true,  "")
+	_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      true,  "/etc")
+	_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, true,  "")
+	_Q_EVB(BOOL, NOCOLOR,             nocolor,             true,  false)
+	_Q_EVT(ISET, FEATURES,            features,            true,  NULL)
+	_Q_EVT(ISET, USE,                 ev_use,              true,  NULL)
+	_Q_EVS(STR,  EPREFIX,             eprefix,             true,  CONFIG_EPREFIX)
+	_Q_EVS(STR,  EMERGE_LOG_DIR,      portlogdir,          true,  CONFIG_EPREFIX "var/log")
+	_Q_EVS(STR,  PORTDIR,             main_overlay,        true,  CONFIG_EPREFIX "var/db/repos/gentoo")
+	_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             true,   DEFAULT_PORTAGE_BINHOST)
+	_Q_EVS(STR,  PORTAGE_CONFIGROOT,  configroot,          false, CONFIG_EPREFIX)
+	_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         true,  CONFIG_EPREFIX "var/tmp/portage/")
+	_Q_EVS(STR,  PKGDIR,              pkgdir,              true,  CONFIG_EPREFIX "var/cache/binpkgs/")
+	_Q_EVS(STR,  BINPKG_FORMAT,       binpkg_format,       true,  "gpkg")
+	_Q_EVS(STR,  Q_VDB,               portvdb,             true,  CONFIG_EPREFIX "var/db/pkg")
+	_Q_EVS(STR,  Q_EDB,               portedb,             true,  CONFIG_EPREFIX "var/cache/edb")
+	{ NULL, 0, _Q_BOOL, { NULL }, 0, NULL, false, NULL, }
 
 #undef _Q_EV
 #undef _Q_EVS
@@ -961,7 +964,7 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 
 /* Handle a possible directory of files. */
 static void
-read_repos_conf(const char *configroot, const char *repos_conf, char **primary)
+read_repos_conf(const char *repos_conf, char **primary)
 {
 	char            top_conf[_Q_PATH_MAX];
 	struct dirent **confs;
@@ -1008,40 +1011,54 @@ read_repos_conf(const char *configroot, const char *repos_conf, char **primary)
 static void
 initialize_portage_env(void)
 {
-	size_t i;
+	char        pathbuf[_Q_PATH_MAX];
+	char        rpathbuf[_Q_PATH_MAX];
 	const char *s;
-	env_vars *var;
-	char pathbuf[_Q_PATH_MAX];
-	char rpathbuf[_Q_PATH_MAX];
-	const char *configroot = getenv("PORTAGE_CONFIGROOT");
-	char *primary_overlay = NULL;
+	char       *primary_overlay;
+	env_vars   *var;
+	size_t      i;
 
 	package_masks = create_set();
 
-	/* figure out where to find our config files */
-	if (!configroot)
-		configroot = CONFIG_EPREFIX;
+	/* figure out where to find our config files, we need to do this
+	 * before handling the files, as it specifies where to find them */
+	s = getenv("PORTAGE_CONFIGROOT");
+	if (s == NULL)
+	{
+		s = vars_to_read[14].default_value;
+		primary_overlay = (char *)"built-in";
+	}
+	else
+	{
+		primary_overlay = (char *)"PORTAGE_CONFIGROOT";
+	}
 
-	if (*configroot != '/')
+	/* allow configroot to be empty */
+	if (s[0] != '/' &&
+		s[0] != '\0')
 		err("PORTAGE_CONFIGROOT must be an absolute path");
-	configroot++;  /* strip leading /, ROOT always ends with one */
 
 	/* rstrip /-es */
-	i = strlen(configroot);
-	while (i > 0 && configroot[i - 1] == '/')
+	i = strlen(s);
+	while (i > 0 &&
+		   s[i - 1] == '/')
 		i--;
+	/* construct configroot, ensure it is always at least / (contrast to
+	 * what we accept above) so in code we can always assume
+	 * configroot + 1 is valid */
+	snprintf(pathbuf, sizeof(pathbuf), "%s%.*s",
+			 i == 0 ? "/" : "", (int)i, s);
+	set_portage_env_var(&vars_to_read[14], pathbuf, primary_overlay);
 
 	/* read overlays first so we can resolve repo references in profile
 	 * parent files (non PMS feature?) */
-	snprintf(pathbuf, sizeof(pathbuf), "%.*s", (int)i, configroot);
-	read_repos_conf(pathbuf, "/usr/share/portage/config/repos.conf",
-			&primary_overlay);
-	read_repos_conf(pathbuf, "/etc/portage/repos.conf", &primary_overlay);
+	primary_overlay = NULL;
+	read_repos_conf("/usr/share/portage/config/repos.conf", &primary_overlay);
+	read_repos_conf("/etc/portage/repos.conf", &primary_overlay);
 
 	/* consider Portage's defaults */
 	snprintf(pathbuf, sizeof(pathbuf),
-			"/%.*s/usr/share/portage/config/make.globals",
-			(int)i, configroot);
+			 "%s/usr/share/portage/config/make.globals", configroot);
 	read_portage_file(pathbuf, ENV_FILE, vars_to_read);
 
 	/* start with base masks, Portage behaviour PMS 5.2.8 */
@@ -1059,29 +1076,33 @@ initialize_portage_env(void)
 	}
 
 	/* walk all the stacked profiles */
-	snprintf(pathbuf, sizeof(pathbuf), "%s%.*s/etc/make.profile",
-			 portroot, (int)i, configroot);
+	snprintf(pathbuf, sizeof(pathbuf), "%s%s/etc/make.profile",
+			 portroot, configroot + 1);
 	read_portage_profile(
 			realpath(pathbuf, rpathbuf) == NULL ? pathbuf : rpathbuf,
 			vars_to_read, package_masks);
-	snprintf(pathbuf, sizeof(pathbuf), "%s%.*s/etc/portage/make.profile",
-			 portroot, (int)i, configroot);
+	snprintf(pathbuf, sizeof(pathbuf), "%s%s/etc/portage/make.profile",
+			 portroot, configroot + 1);
 	read_portage_profile(
 			realpath(pathbuf, rpathbuf) == NULL ? pathbuf : rpathbuf,
 			vars_to_read, package_masks);
 
 	/* now read all Portage's config files */
-	snprintf(pathbuf, sizeof(pathbuf), "/%.*s/etc/make.conf",
-			(int)i, configroot);
+	snprintf(pathbuf, sizeof(pathbuf), "%s/etc/make.conf",
+			 configroot);
 	read_portage_file(pathbuf, ENV_FILE, vars_to_read);
-	snprintf(pathbuf, sizeof(pathbuf), "/%.*s/etc/portage/make.conf",
-			(int)i, configroot);
+	snprintf(pathbuf, sizeof(pathbuf), "%s/etc/portage/make.conf",
+			 configroot);
 	read_portage_file(pathbuf, ENV_FILE, vars_to_read);
 
 	/* finally, check the env */
-	for (i = 0; vars_to_read[i].name; i++) {
+	for (i = 0; vars_to_read[i].name; i++)
+	{
+		if (!vars_to_read[i].fromenv)
+			continue;
+
 		var = &vars_to_read[i];
-		s = getenv(var->name);
+		s   = getenv(var->name);
 		if (s != NULL)
 			set_portage_env_var(var, s, var->name);
 	}

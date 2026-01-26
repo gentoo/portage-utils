@@ -150,17 +150,18 @@ extern FILE *warnout;
 
 typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR, _Q_ISET } var_types;
 typedef struct {
-	const char *name;
-	const size_t name_len;
+	const char     *name;
+	const size_t    name_len;
 	const var_types type;
 	union {
-		char **s;
-		bool *b;
-		set **t;
-	} value;
-	size_t value_len;
-	const char *default_value;
-	char *src;
+		char      **s;
+		bool       *b;
+		set       **t;
+	}               value;
+	size_t          value_len;
+	const char     *default_value;
+	char           *src;
+	bool            fromenv;
 } env_vars;
 extern env_vars vars_to_read[];
 extern set *package_masks;

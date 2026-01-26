@@ -167,6 +167,7 @@ static const struct applet_t {
 
 extern char *portarch;
 extern char *portroot;
+extern char *configroot;
 extern int verbose;
 extern int quiet;
 extern char pretend;
