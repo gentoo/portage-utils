@@ -1548,7 +1548,6 @@ static array *probe_proc(array *atoms)
 			}
 			atom_implode(atom);
 		}
-		array_free(atoms);
 	}
 
 	/* ret_atoms is allocated on the stack, so copy into atoms which is
