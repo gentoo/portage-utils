@@ -403,8 +403,18 @@ int qdepends_main(int argc, char **argv)
 			array_append(state.atoms, atom);
 	}
 
-	if (state.qmode & QMODE_INSTALLED || verbose)
+	if (state.qmode & QMODE_INSTALLED ||
+		verbose)
+	{
 		state.vdb = tree_open_vdb(portroot, portvdb);
+		if (state.vdb == NULL)
+		{
+			free_set(state.udeps);
+			array_deepfree(state.atoms, (array_free_cb *)atom_implode);
+			err("failed to open VDB at %s", portvdb);
+		}
+	}
+
 	ret = 0;
 	if (state.qmode & QMODE_TREE) {
 		char *overlay;
