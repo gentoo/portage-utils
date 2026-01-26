@@ -910,7 +910,10 @@ int qpkg_main(int argc, char **argv)
 
 	cb_args.vdb = tree_open_vdb(portroot, portvdb);
 	if (!cb_args.vdb)
+	{
+		tree_close(cb_args.binpkg);
 		return EXIT_FAILURE;
+	}
 
 	if (qclean) {
 		int ret = qpkg_clean(&cb_args);
