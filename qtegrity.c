@@ -462,6 +462,7 @@ int qtegrity_main(int argc, char **argv)
 			puts("Error flushing stream!");
 
 		free(file_digest);
+		fclose(fp_qtegrity_custom);
 	}
 
 	if (state.add)
