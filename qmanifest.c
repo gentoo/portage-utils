@@ -1788,7 +1788,9 @@ qmanifest_main(int argc, char **argv)
 
 		array_for_each(overlays, n, overlay) {
 			repo = array_get(overlay_names, n);
-			if (strcmp(repo, "<PORTDIR>") == 0) {
+			if (repo != NULL &&
+				strcmp(repo, "<PORTDIR>") == 0)
+			{
 				repo = NULL;
 				repolen = 0;
 				snprintf(path, sizeof(path), "%s/profiles/repo_name", overlay);
