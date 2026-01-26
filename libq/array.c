@@ -205,10 +205,12 @@ void array_sort
 )
 {
   if (arr != NULL &&
-      arr->len > 1 &&
       !arr->sorted)
-    qsort(arr->eles, arr->len, sizeof(void *), compar);
-  arr->sorted = true;
+  {
+    if (arr->len > 1)
+      qsort(arr->eles, arr->len, sizeof(void *), compar);
+    arr->sorted = true;
+  }
 }
 
 /* binary search over the array, returning the first element for which
