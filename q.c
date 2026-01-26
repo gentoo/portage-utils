@@ -918,18 +918,20 @@ int q_main(int argc, char **argv)
 			archive_write_free(qcctx.archive);
 
 			/* now we got the size, put it in the main archive */
-			fstat(tfd, &st);
-			entry = archive_entry_new();
-			archive_entry_set_pathname(entry, "repo.tar.zst");
-			archive_entry_set_size(entry, st.st_size);
-			archive_entry_set_mtime(entry, qcctx.buildtime, 0);
-			archive_entry_set_filetype(entry, AE_IFREG);
-			archive_entry_set_perm(entry, 0644);
-			archive_write_header(a, entry);
-			lseek(tfd, 0, SEEK_SET);  /* reposition at the start of file */
-			while ((rlen = read(tfd, buf, sizeof(buf))) > 0)
-				archive_write_data(a, buf, rlen);
-			archive_entry_free(entry);
+			if (fstat(tfd, &st) >= 0) 
+			{
+				entry = archive_entry_new();
+				archive_entry_set_pathname(entry, "repo.tar.zst");
+				archive_entry_set_size(entry, st.st_size);
+				archive_entry_set_mtime(entry, qcctx.buildtime, 0);
+				archive_entry_set_filetype(entry, AE_IFREG);
+				archive_entry_set_perm(entry, 0644);
+				archive_write_header(a, entry);
+				lseek(tfd, 0, SEEK_SET);  /* reposition at the start of file */
+				while ((rlen = read(tfd, buf, sizeof(buf))) > 0)
+					archive_write_data(a, buf, rlen);
+				archive_entry_free(entry);
+			}
 
 			/* TODO: compute and put .sig in here */
 
