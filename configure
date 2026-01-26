@@ -30821,6 +30821,7 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     LIBBL2="no: missing dependencies"
+                    enable_qmanifest=no
 
 elif test $pkg_failed = untried; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -30836,6 +30837,7 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     LIBBL2="no: missing dependencies"
+                    enable_qmanifest=no
 
 else
         LIBBL2_CFLAGS=$pkg_cv_LIBBL2_CFLAGS
@@ -30938,6 +30940,9 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     GPGME="no: missing dependencies"
+                    enable_qmanifest=no
+                    enable_gpkg=no
+                    enable_gtree=no
 
 elif test $pkg_failed = untried; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -30971,6 +30976,9 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     GPGME="no: missing dependencies"
+                    enable_qmanifest=no
+                    enable_gpkg=no
+                    enable_gtree=no
 
 else
         GPGME_CFLAGS=$pkg_cv_GPGME_CFLAGS
@@ -31064,6 +31072,8 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     LIBARCHIVE="no: missing dependencies"
+                    enable_gpkg=no
+                    enable_gtree=no
 
 elif test $pkg_failed = untried; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -31088,6 +31098,8 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     LIBARCHIVE="no: missing dependencies"
+                    enable_gpkg=no
+                    enable_gtree=no
 
 else
         LIBARCHIVE_CFLAGS=$pkg_cv_LIBARCHIVE_CFLAGS
@@ -31175,6 +31187,7 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
     LIBZ="no: missing dependencies"
+    enable_qmanifest=no
 
 elif test $pkg_failed = untried; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -31190,6 +31203,7 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
     LIBZ="no: missing dependencies"
+    enable_qmanifest=no
 
 else
         LIBZ_CFLAGS=$pkg_cv_LIBZ_CFLAGS

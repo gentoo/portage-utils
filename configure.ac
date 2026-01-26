@@ -73,6 +73,7 @@ PKG_CHECK_MODULES([LIBBL2], [libb2],
                             AC_MSG_FAILURE([--enable-qmanifest was given, but libb2.pc could not be found])
                           ])
                     LIBBL2="no: missing dependencies"
+                    enable_qmanifest=no
                   ])
 
 PKG_CHECK_MODULES([GPGME], [gpgme],
@@ -94,6 +95,9 @@ PKG_CHECK_MODULES([GPGME], [gpgme],
                             AC_MSG_FAILURE([--enable-gtree was given, but gpgme.pc could not be found])
                           ])
                     GPGME="no: missing dependencies"
+                    enable_qmanifest=no
+                    enable_gpkg=no
+                    enable_gtree=no
                   ])
 
 PKG_CHECK_MODULES([LIBARCHIVE], [libarchive],
@@ -111,6 +115,8 @@ PKG_CHECK_MODULES([LIBARCHIVE], [libarchive],
                             AC_MSG_FAILURE([--enable-gtree was given, but libarchive.pc could not be found])
                           ])
                     LIBARCHIVE="no: missing dependencies"
+                    enable_gpkg=no
+                    enable_gtree=no
                   ])
 
 AS_IF([test "x${enable_qmanifest}" != "xno"], [
@@ -122,6 +128,7 @@ AS_IF([test "x${enable_qmanifest}" != "xno"], [
       AC_MSG_FAILURE([--enable-qmanifest was given, but zlib.pc could not be found])
     ])
     LIBZ="no: missing dependencies"
+    enable_qmanifest=no
   ])
 
   AC_MSG_CHECKING([whether to enable qmanifest])
