@@ -324,7 +324,7 @@ static int tree_foreach_pkg_gtree
 
       /* ok, we're in business */
       len = archive_entry_size(entry);
-      if (len > rlen)
+      if (len + 1 > rlen)
       {
         rlen = len + 1;
         rbuf = xrealloc(rbuf, rlen);
