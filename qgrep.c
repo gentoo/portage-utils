@@ -433,6 +433,10 @@ qgrep_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			snprintf(buf, sizeof(buf), "/%s", path);
 		}
 	}
+	else
+	{
+		buf[0] = '\0';
+	}
 
 	return qgrep_grepat(tree_pkg_get_portroot_fd(pkg_ctx), path, buf, data);
 }
