@@ -77,7 +77,7 @@ qpkg_clean(qpkg_cb_args *args)
 	size_t disp_units = 0;
 	uint64_t num_all_bytes = 0;
 	array *bins;
-	array *trees = array_new();
+	array *trees;
 	tree_ctx *t;
 	tree_ctx *pkgs;
 	tree_pkg_ctx *binpkg;
@@ -87,7 +87,8 @@ qpkg_clean(qpkg_cb_args *args)
 	if (pkgs == NULL)
 		return 1;
 
-	bins = tree_match_atom(pkgs, NULL, TREE_MATCH_DEFAULT);
+	bins  = tree_match_atom(pkgs, NULL, TREE_MATCH_DEFAULT);
+	trees = array_new();
 
 	if (args->clean_notintree) {
 		const char *overlay;
