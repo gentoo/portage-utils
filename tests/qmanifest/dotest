@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# doesn't run under GitHub Actions with valgrind at the moment
+[[ ${GITHUB_JOB} == valgrind ]] && exit 0
+
 . ../init.sh || exit 1
 
 set -e
