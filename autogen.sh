@@ -60,5 +60,24 @@ v gnulib-tool \
 	--no-vc-files \
 	${mods}
 
+{
+	sed -e '/^# BEGIN GNULIB/,/^# END GNULIB/d' .gitignore
+	cat <<- EOM
+		# BEGIN GNULIB  --  keep this at the end of this file
+		# regenerate using:
+		#   ls autotools/gnulib/*.in.h | sed -e 's/\.in\.h/.h/' | sed -e 's:_:/:'
+		# or use autogen.sh
+	EOM
+	ls autotools/gnulib/*.in.h | sed -e 's/\.in\.h/.h/' | sed -e 's:_:/:'
+	cat <<- EOM
+		# manual additions
+		autotools/gnulib/sys
+		autotools/gnulib/malloc/scratch_buffer.gl.h
+		*.dirstamp
+		# END GNULIB
+	EOM
+} > .gitignore.new
+[[ -s .gitignore.new ]] && mv .gitignore.new .gitignore
+
 export AUTOMAKE="automake --foreign"
 v autoreconf -i -f
