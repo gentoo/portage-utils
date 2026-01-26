@@ -1226,7 +1226,10 @@ initialize_portage_env(void)
 		main_overlay = array_get(overlays, i);
 		/* set source for PORTDIR var */
 		free(var->src);
-		var->src = xstrdup((char *)array_get(overlay_src, i));
+		overlay = array_get(overlay_src, i);
+		if (overlay == NULL)
+			overlay = "???";
+		var->src = xstrdup(overlay);
 	}
 
 	/* Make sure ROOT always ends in a slash */
