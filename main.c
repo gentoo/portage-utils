@@ -967,7 +967,7 @@ static void
 read_repos_conf(const char *repos_conf, char **primary)
 {
 	char            top_conf[_Q_PATH_MAX];
-	struct dirent **confs;
+	struct dirent **confs = NULL;
 	int             i;
 	int             count;
 
