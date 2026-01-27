@@ -203,24 +203,24 @@ AC_SUBST([GTREE_ENABLED], ["$do_gtree"])
 
 AX_CFLAGS_WARN_ALL([CWFLAGS])
 AC_DEFUN([PT_CHECK_CFLAG],[AX_CHECK_COMPILER_FLAGS([$1],[CFLAGS="$CFLAGS $1"])])
-# -Wno-sign-compare   gnulib stat-time.h :(
 m4_foreach_w([flag], [
-	-Wunused
-	-Wimplicit
-	-Wshadow
-	-Wformat=2
-	-Wmissing-declarations
-	-Wwrite-strings
 	-Wbad-function-cast
-	-Wnested-externs
-	-Wcomment
-	-Winline
-	-Wchar-subscripts
 	-Wcast-align
-	-Wsequence-point
-	-Wold-style-definition
+	-Wchar-subscripts
+	-Wcomment
+	-Wdiscarded-qualifiers
 	-Wextra
+	-Wformat=2
+	-Wimplicit
+	-Winline
+	-Wmissing-declarations
+	-Wnested-externs
 	-Wno-sign-compare
+	-Wold-style-definition
+	-Wsequence-point
+	-Wshadow
+	-Wunused
+	-Wwrite-strings
 ], [
 	AX_CHECK_COMPILE_FLAG(flag, AS_VAR_APPEND([CWFLAGS], " flag"))
 ])
