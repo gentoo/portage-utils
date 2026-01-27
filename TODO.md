@@ -13,6 +13,7 @@
   qlist can query for maintainer email or type, ideally to do
   qlist -Iv $(portageq --repo gentoo --orphaned) in one step (bug 711466#c3)
 - handle compressed Packages.gz file in tree
+- rename atom\_ctx to atom\_t and similar for all structures like array
 
 # tests
 - add test for qsearch to avoid repetitions like

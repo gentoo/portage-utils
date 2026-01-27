@@ -41,4 +41,34 @@ size_t cnt_set(set *q);
 void free_set(set *q);
 void clear_set(set *q);
 
+/* 2026 forward API */
+typedef struct set_t set_t;
+#define set_new()              create_set()
+#define set_add(S,K)           add_set(K,S)
+#define set_add_unique(S,K,U)  add_set_unique(K,S,U)
+#define set_contains(S,K)      (contains_set(K,S) == NULL ? false : true)
+#define set_get_key(S,K)       contains_set(K,S)
+#define set_delete(S,K)        del_set(K,S,NULL)
+#if 0
+#define set_keys(S)            TODO
+#endif
+#define set_size(S)            cnt_set(S)
+#define set_clear(S)           clear_set(S)
+#define set_free(S)            free_set(S)
+
+typedef struct set_t hash_t;
+#define hash_new()             create_set()
+#define hash_add(S,K,V,P)      add_set_value(K,V,P,S)
+#define hash_get(S,K)          get_set(K,S)
+#define hash_delete(S,K)       del_set(K,S,NULL)
+#define hash_delete_chk(S,K,R) del_set(K,S,R)
+#if 0
+#define hash_keys(S)           TODO
+#define hash_values(S)         TODO
+#endif
+#define hash_size(S)           cnt_set(S)
+#define hash_clear(S)          clear_set(S)
+#define hash_free(S)           free_set(S)
+
+
 #endif
