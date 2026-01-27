@@ -1087,7 +1087,7 @@ static bool tree_pkg_binpkg_read
 
       while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
         const char *pathname = archive_entry_pathname(entry);
-        char       *fname    = strchr(pathname, '/');
+        char       *fname    = (char *)strchr(pathname, '/');
         if (fname == NULL)
           continue;
         fname++;

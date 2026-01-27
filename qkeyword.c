@@ -710,8 +710,8 @@ keyword_sort(const void *l, const void *r)
 {
 	const char **ls = (const char **)l;
 	const char **rs = (const char **)r;
-	char *ld = strchr(*ls, '-');
-	char *rd = strchr(*rs, '-');
+	const char *ld  = strchr(*ls, '-');
+	const char *rd  = strchr(*rs, '-');
 
 	if (ld == NULL && rd != NULL)
 		return -1;

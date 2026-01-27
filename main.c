@@ -499,7 +499,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 					/* handle relative paths */
 					size_t file_path_len;
 
-					s = strrchr(file, '/');
+					s = (char *)strrchr(file, '/');
 					file_path_len = s - file + 1;
 
 					snprintf(npath, sizeof(npath), "%.*s/%s",
