@@ -103,8 +103,7 @@ dist_man_MANS += man/qmanifest.1
 APPLETS += qmanifest
 endif
 
-man/%.1: %.c applets.h man/include/%.optdesc.yaml man/include/%.desc
-	$(MAKE) q
+man/%.1: %.c applets.h man/include/%.optdesc.yaml man/include/%.desc | q
 	man/mkman.py $@
 
 install-exec-hook:
