@@ -58,19 +58,6 @@ struct dep_node_ {
   bool              atom_resolved:1;
 };
 
-static void dep_burn_node
-(
-  dep_node_t *node
-)
-{
-  if (node == NULL)
-    return;
-
-  if (node->atom)
-    atom_implode(node->atom);
-  free(node);
-}
-
 dep_node_t *dep_grow_tree
 (
   const char *depend
@@ -208,7 +195,7 @@ dep_node_t *dep_grow_tree
       if (ret->parent == NULL)
       {
         warnf("Internal error, missing node for level %d", level);
-        dep_burn_node(ret);
+        dep_burn_tree(ret);
         ret = NULL;
         goto dep_grow_tree_fail;
       }
@@ -251,7 +238,7 @@ dep_node_t *dep_grow_tree
       if (ret->parent == NULL)
       {
         warnf("Internal error, missing node for level %d", level);
-        dep_burn_node(ret);
+        dep_burn_tree(ret);
         ret = NULL;
         goto dep_grow_tree_fail;
       }
@@ -318,7 +305,7 @@ dep_node_t *dep_grow_tree
           if (ret->parent == NULL)
           {
             warnf("Internal error, missing node for level %d", level);
-            dep_burn_node(ret);
+            dep_burn_tree(ret);
             ret = NULL;
             goto dep_grow_tree_fail;
           }
@@ -344,7 +331,7 @@ dep_node_t *dep_grow_tree
         if (ret->parent == NULL)
         {
           warnf("Internal error, missing node for level %d", level);
-          dep_burn_node(ret);
+          dep_burn_tree(ret);
           ret = NULL;
           goto dep_grow_tree_fail;
         }
@@ -370,13 +357,14 @@ dep_node_t *dep_grow_tree
   }
 #endif
 
-  ret = array_get(res, 0);  /* pseudo top-level again */
+  ret = array_remove(res, 0);  /* pseudo top-level again */
 
 dep_grow_tree_fail:
-  array_deepfree(tokens, (array_free_cb *)dep_burn_node);
+  array_deepfree(tokens, (array_free_cb *)dep_burn_tree);
   array_deepfree(res, (array_free_cb *)array_free);
 
   if (ret != NULL &&
+      ret->members != NULL &&
       array_cnt(ret->members) == 0)
     ret->type = DEP_NULL;
 
@@ -524,7 +512,11 @@ void dep_burn_tree
 
   if (root->members != NULL)
     array_deepfree(root->members, (array_free_cb *)dep_burn_tree);
-  dep_burn_node(root);
+
+  if (root->atom)
+    atom_implode(root->atom);
+
+  free(root);
 }
 
 /* eliminate all DEP_USE nodes in the dep tree that do not match the set

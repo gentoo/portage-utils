@@ -294,7 +294,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			}
 		}
 
-		array_deepfree(deps, (array_free_cb *)atom_implode);
+		array_free(deps);
 		dep_burn_tree(dep_tree);
 	}
 	if (verbose && ret == 1)
