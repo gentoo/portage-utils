@@ -3,27 +3,22 @@
 
 name: Build+Test CI
 
-on:
-  push:
-    branches:
-      - master
-    tags:
-      - v*
-  pull_request:
-    types:
-      - opened
-    branches:
-      - master
+on: [pull_request, push]
 
 jobs:
   make-check-ubuntu-x64:
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
         cc:
           - gcc
           - clang
+        sanitizer:
+          - none
+          - asan
+          - ubsan
         features:
           - --enable-qmanifest  --enable-gpkg  --enable-gtree
           - --enable-qmanifest  --disable-gpkg --enable-gtree
@@ -35,6 +30,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CC: ${{ matrix.cc }}
+      ASAN_OPTIONS: "detect_leaks=0" # TODO: poke at leaks in atom_explode/dotest
+      SANITIZER: ${{ matrix.sanitizer }}
     steps:
       - name: install deps
         run: >
@@ -48,7 +45,25 @@ jobs:
           --disable-maintainer-mode --disable-openmp
           ${{ matrix.features }}
       - name: make variant ${{ matrix.features }}
-        run: make CFLAGS="-O3 -Wall -Wshadow -pipe" V=1 check
+        run: >
+          export CFLAGS="-O3 -Wall -Wshadow -pipe"
+          export ASAN_OPTIONS="${ASAN_OPTIONS}:halt_on_error=1:abort_on_error=1:print_summary=1"
+          export UBSAN_OPTIONS="${UBSAN_OPTIONS}:halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1"
+
+          case "$SANITIZER" in
+            none)
+               ;;
+            asan)
+               export CFLAGS="${CFLAGS} -ggdb3 -fsanitize=address"
+               export LDFLAGS="-fsanitize=address"
+               ;;
+            ubsan)
+               export CFLAGS="${CFLAGS} -ggdb3 -fsanitize=undefined"
+               export LDFLAGS="-fsanitize=undefined"
+               ;;
+          esac
+
+          make CFLAGS="${CFLAGS}" V=1 check
 
 # I'm too tired for now to make it work
 #  make-check-macos-x64:
