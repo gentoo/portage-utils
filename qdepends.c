@@ -93,7 +93,7 @@ const char *depend_files[] = {  /* keep *DEPEND aligned with above defines */
 static bool
 qdepends_print_depend(FILE *fp, const char *depend)
 {
-	dep_node *dep_tree;
+	dep_node_t *dep_tree;
 
 	dep_tree = dep_grow_tree(depend);
 	if (dep_tree == NULL)
@@ -126,7 +126,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	size_t n;
 	size_t m;
 	int ret = 0;
-	dep_node *dep_tree;
+	dep_node_t *dep_tree;
 	char **d;
 	char *depstr;
 
@@ -207,7 +207,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				tree_pkg_ctx *pkg = array_get(match, 0);
 				depstr = get_depstr(i, pkg);
 				if (depstr != NULL) {
-					dep_node *dep_vdb = dep_grow_tree(depstr);
+					dep_node_t *dep_vdb = dep_grow_tree(depstr);
 					if (dep_vdb != NULL) {
 						dep_flatten_tree(dep_vdb, deps);
 						dep_burn_tree(dep_vdb);

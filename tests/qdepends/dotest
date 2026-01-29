@@ -69,6 +69,22 @@ testq() { test "$1" "${3:-0}" -q "$2"; }
 # forward checks #504636
 testq 08 xdm
 
+# liberal tokenisation tests
+testf 09 'use ? ( bla )'
+testf 09 'use?(bla)'
+testf 10 '|| ( foo ( bar baz ) )'
+testf 10 '||(foo(bar baz))'
+testf 11 \
+'|| (
+	foo
+	(
+		bar
+		baz
+	)
+	!use? ( fnord )
+)'
+testf 11 '||(foo(bar baz)!use?(fnord))'
+
 cleantmpdir
 
 end

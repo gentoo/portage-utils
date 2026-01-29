@@ -12,45 +12,16 @@
 #include "set.h"
 #include "tree.h"
 
-typedef enum {
-	DEP_NULL = 0,
-	DEP_NORM = 1,
-	DEP_USE = 2,
-	DEP_OR = 3,
-	DEP_GROUP = 4
-} dep_type;
-
-static const char * const _dep_names[] = {
-	"NULL",
-	"NORM",
-	"USE",
-	"OR",
-	"GROUP"
-};
-
-struct _dep_node {
-	dep_type          type;
-	char             *info;
-	char              atom_resolved:1;
-	depend_atom      *atom;
-	struct _dep_node *parent;
-	struct _dep_node *neighbor;
-	struct _dep_node *children;
-};
-typedef struct _dep_node dep_node;
+typedef struct dep_node_ dep_node_t;
 
 /* prototypes */
-#ifdef NDEBUG
-# define dep_dump_tree(r)
-#else
-# define dep_dump_tree(r) dep_print_tree(stdout, r, 0, NULL, NORM, 0)
-#endif
-
-dep_node *dep_grow_tree(const char *depend);
-void dep_print_tree(FILE *fp, const dep_node *root, size_t space, array *m, const char *c, int verbose);
-void dep_resolve_tree(dep_node *root, tree_ctx *t);
-void dep_burn_tree(dep_node *root);
-void dep_prune_use(dep_node *root, set *use);
-void dep_flatten_tree(dep_node *root, array *out);
+dep_node_t *dep_grow_tree(const char *depend);
+void dep_print_tree(FILE *fp, const dep_node_t *root, size_t space, array *m, const char *c, int verbose);
+void dep_resolve_tree(dep_node_t *root, tree_ctx *t);
+void dep_burn_tree(dep_node_t *root);
+void dep_prune_use(dep_node_t *root, set *use);
+void dep_flatten_tree(dep_node_t *root, array *out);
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
