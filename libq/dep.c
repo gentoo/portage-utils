@@ -208,6 +208,7 @@ dep_node_t *dep_grow_tree
       if (ret->parent == NULL)
       {
         warnf("Internal error, missing node for level %d", level);
+        dep_burn_node(ret);
         ret = NULL;
         goto dep_grow_tree_fail;
       }
@@ -250,6 +251,7 @@ dep_node_t *dep_grow_tree
       if (ret->parent == NULL)
       {
         warnf("Internal error, missing node for level %d", level);
+        dep_burn_node(ret);
         ret = NULL;
         goto dep_grow_tree_fail;
       }
@@ -316,6 +318,7 @@ dep_node_t *dep_grow_tree
           if (ret->parent == NULL)
           {
             warnf("Internal error, missing node for level %d", level);
+            dep_burn_node(ret);
             ret = NULL;
             goto dep_grow_tree_fail;
           }
@@ -341,6 +344,7 @@ dep_node_t *dep_grow_tree
         if (ret->parent == NULL)
         {
           warnf("Internal error, missing node for level %d", level);
+          dep_burn_node(ret);
           ret = NULL;
           goto dep_grow_tree_fail;
         }
