@@ -205,6 +205,12 @@ dep_node_t *dep_grow_tree
       ret->type    = DEP_ALL;
       ret->members = array_new();
       ret->parent  = array_get(res, level);
+      if (ret->parent == NULL)
+      {
+        warnf("Internal error, missing node for level %d", level);
+        ret = NULL;
+        goto dep_grow_tree_fail;
+      }
       array_append(ret->parent->members, ret);
 
       array_append(res, ret);
@@ -228,8 +234,11 @@ dep_node_t *dep_grow_tree
       if (next_node == NULL ||
           next_node->type != DEP_POPEN)
       {
-        warn("Missing ( after ||, got %s (in %s)",
-             dep_type_names[next_node->type], depend);
+        if (next_node == NULL)
+          warn("Missing ( after ||, truncated data? (in %s)", depend);
+        else
+          warn("Missing ( after ||, got %s (in %s)",
+               dep_type_names[next_node->type], depend);
         ret = NULL;
         goto dep_grow_tree_fail;
       }
@@ -238,6 +247,12 @@ dep_node_t *dep_grow_tree
       ret->type    = DEP_ANY;
       ret->members = array_new();
       ret->parent  = array_get(res, level);
+      if (ret->parent == NULL)
+      {
+        warnf("Internal error, missing node for level %d", level);
+        ret = NULL;
+        goto dep_grow_tree_fail;
+      }
       array_append(ret->parent->members, ret);
 
       array_append(res, ret);
@@ -298,6 +313,12 @@ dep_node_t *dep_grow_tree
                  curr_node->word, curr_node->wordlen);
           ((char *)ret)[sizeof(*ret) + ret->wordlen] = '\0';
           ret->parent  = array_get(res, level);
+          if (ret->parent == NULL)
+          {
+            warnf("Internal error, missing node for level %d", level);
+            ret = NULL;
+            goto dep_grow_tree_fail;
+          }
           array_append(ret->parent->members, ret);
 
           array_append(res, ret);
@@ -317,6 +338,12 @@ dep_node_t *dep_grow_tree
         ret->type    = DEP_ATOM;
         ret->atom    = atom_explode(buf);
         ret->parent  = array_get(res, level);
+        if (ret->parent == NULL)
+        {
+          warnf("Internal error, missing node for level %d", level);
+          ret = NULL;
+          goto dep_grow_tree_fail;
+        }
         array_append(ret->parent->members, ret);
       }
       nots = 0;
@@ -420,7 +447,7 @@ void dep_print_tree
   }
   else if (root->type == DEP_ATOM)
   {
-    bool match;
+    bool match = false;
 
     if (dohl)
     {
