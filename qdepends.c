@@ -198,26 +198,8 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			!(state->qmode & QMODE_REVERSE) &&
 			verbose)
 		{
-			array *match = 
-				tree_match_atom(state->vdb, datom, TREE_MATCH_DEFAULT);
-
-			/* pull in flags in use if possible */
-			if (array_cnt(match) > 0)
-			{
-				tree_pkg_ctx *pkg = array_get(match, 0);
-				depstr = get_depstr(i, pkg);
-				if (depstr != NULL) {
-					dep_node_t *dep_vdb = dep_grow_tree(depstr);
-					if (dep_vdb != NULL) {
-						dep_flatten_tree(dep_vdb, deps);
-						dep_burn_tree(dep_vdb);
-					} else {
-						warn("failed to parse VDB depstring from %s\n",
-							 atom_to_string(datom));
-					}
-				}
-			}
-			array_free(match);
+			if (!state->resolve)
+				dep_resolve_tree(dep_tree, state->vdb);
 		} else {
 			if (state->qmode & QMODE_FILTERUSE)
 				dep_prune_use(dep_tree, ev_use);

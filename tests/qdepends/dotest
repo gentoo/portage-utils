@@ -40,7 +40,7 @@ test() {
 	if [[ ! -e ${good} ]] ; then
 		cp list "${good}"
 	fi
-	diff -u --label "${cmd[*]}" list "${good}"
+	diff -u --label "${cmd[*]}" "${good}" list
 	tend $? "${num} ${cmd[*]}"
 }
 

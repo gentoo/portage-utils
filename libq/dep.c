@@ -404,59 +404,42 @@ dep_grow_tree_fail:
   return ret;
 }
 
-void dep_print_tree
+static void dep_print_tree_int
 (
   FILE             *fp,
   const dep_node_t *root,
   size_t            space,
   array            *hlatoms,
   const char       *hlcolor,
-  int               verbose
+  int               verbose,
+  bool              first
 )
 {
   dep_node_t *memb;
   size_t      s;
   int         indent      = 4;      /* Gentoo 4-wide indent standard */
-  bool        nonewline   = false;
-  bool        dohl        = false;
+  bool        newline     = true;
 
   if (root == NULL)
     return;
 
   if (verbose < 0)
   {
-    nonewline = true;
-    verbose   = -verbose - 1;
+    newline = false;
+    verbose = -verbose - 1;
   }
-
-  /* handle pseudo root node */
-  if (root->parent == NULL)
-  {
-    array_for_each(root->members, s, memb)
-    {
-      dep_print_tree(fp, memb, space, hlatoms, hlcolor, verbose);
-    }
-    if (!nonewline &&
-        array_cnt(root->members) > 0)
-      fprintf(fp, "\n");
-    return;
-  }
-
-  if (hlatoms != NULL &&
-      array_cnt(hlatoms) > 0)
-    dohl = true;
 
   if (verbose > 0)
     fprintf(fp, "Node [%s]: ", dep_type_names[root->type]);
 
-  if (nonewline)
+  if (!newline)
   {
-    if (space > 1)
+    if (!first > 0)
       fprintf(fp, " ");
   }
   else
   {
-    if (space > 1)
+    if (!first > 0)
       fprintf(fp, "\n");
     for (s = space; s > 0; s--)
       fprintf(fp, "%*s", indent, "");
@@ -476,9 +459,13 @@ void dep_print_tree
     bool      match = false;
 
     if (root->pkg != NULL)
+    {
       a = tree_pkg_atom(root->pkg, false);
+      if (hlatoms == NULL)
+        match = true;
+    }
 
-    if (dohl)
+    if (hlatoms != NULL)
     {
       size_t       i;
       depend_atom *m;
@@ -520,13 +507,17 @@ void dep_print_tree
 
     array_for_each(root->members, s, memb)
     {
-      dep_print_tree(fp, memb,
-                     singlechild ? 0 : space + 1,
-                     hlatoms, hlcolor, singlechild ? -verbose - 1 : verbose);
+      dep_print_tree_int(fp,
+                         memb,
+                         singlechild ? 0 : space + 1,
+                         hlatoms,
+                         hlcolor,
+                         singlechild ? -verbose - 1 : verbose,
+                         singlechild ? true : false);
     }
 
     if (singlechild ||
-        nonewline)
+        !newline)
     {
       fprintf(fp, " )");
     }
@@ -538,6 +529,37 @@ void dep_print_tree
       fprintf(fp, ")");
     }
   }
+}
+
+void dep_print_tree
+(
+  FILE             *fp,
+  const dep_node_t *root,
+  size_t            space,
+  array            *hlatoms,
+  const char       *hlcolor,
+  int               verbose
+)
+{
+  dep_node_t *memb;
+  size_t      s;
+
+  if (root == NULL)
+    return;
+
+  /* simplify checks from here on out */
+  if (hlatoms != NULL &&
+      array_cnt(hlatoms) == 0)
+    hlatoms = NULL;
+
+  array_for_each(root->members, s, memb)
+    dep_print_tree_int(fp, memb, space, hlatoms, hlcolor, verbose, s == 0);
+
+  if (verbose >= 0 &&
+      array_cnt(root->members) > 0)
+    fprintf(fp, "\n");
+
+  return;
 }
 
 void dep_burn_tree
