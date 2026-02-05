@@ -22,6 +22,24 @@
 #include "set.h"
 #include "tree.h"
 
+/* dep_prune_use: mutilates the tree, setting nodes to NULL that are not
+ * active -> should it return a new tree instead?
+ * dep_resolve_tree: looks up atoms in the tree and populates pkg
+ * pointer for a matching tree_pkg_ctx, doesn't do anything with ||,
+ * leaves nodes alone that don't resolve -> useless?
+ *
+ * needed functionality:
+ * - prune phase -> remove use-dep-groups that are not active
+ *                  downgrade use-dep nodes into group nodes
+ * - resolving   -> simple match of atom to a package from a tree
+ *                  - consider multiple trees, in priorities
+ *                  any-groups downgraded to all-group with the first
+ *                  block from the any-group that matches
+ * - flattening  -> assume all reductions to be done that one wants
+ *                  remove all groups (any, all, use) and return the atom
+ *                  nodes in an array
+ */
+
 #define DEP_TYPES(X) \
   X(NULL) \
   X(ATOM) \
@@ -51,11 +69,11 @@ struct dep_node_ {
   const char       *word;
   size_t            wordlen;
   depend_atom      *atom;
+  tree_pkg_ctx     *pkg;
   dep_node_t       *parent;
   array            *members;
   dep_type_t        type;
   bool              invert:1;
-  bool              atom_resolved:1;
 };
 
 dep_node_t *dep_grow_tree
@@ -454,7 +472,11 @@ void dep_print_tree
   }
   else if (root->type == DEP_ATOM)
   {
-    bool match = false;
+    atom_ctx *a     = root->atom;
+    bool      match = false;
+
+    if (root->pkg != NULL)
+      a = tree_pkg_atom(root->pkg, false);
 
     if (dohl)
     {
@@ -466,7 +488,8 @@ void dep_print_tree
         /* make m query, such that any specifics (SLOT,
          * pfx/sfx) from the depstring are ignored while
          * highlighting */
-        if (atom_compare(root->atom, m) == EQUAL) {
+        if (atom_compare(a, m) == EQUAL)
+        {
           match = true;
           break;
         }
@@ -475,7 +498,7 @@ void dep_print_tree
 
     fprintf(fp, "%s%s%s",
             match ? hlcolor : "",
-            atom_to_string(root->atom),
+            atom_to_string(a),
             match ? NORM : "");
   }
 
@@ -575,18 +598,13 @@ void dep_resolve_tree
 
   if (root->type == DEP_ATOM &&
       root->atom &&
-      !root->atom_resolved)
+      root->pkg == NULL)
   {
     atom_ctx *d = root->atom;
     array    *r = tree_match_atom(t, d, (TREE_MATCH_DEFAULT |
                                          TREE_MATCH_LATEST));
     if (array_cnt(r) > 0)
-    {
-      tree_pkg_ctx *pkg = array_get(r, 0);
-      atom_implode(d);
-      root->atom = atom_clone(tree_pkg_atom(pkg, false));
-      root->atom_resolved = 1;
-    }
+      root->pkg = array_get(r, 0);
     array_free(r);
   }
 
