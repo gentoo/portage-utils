@@ -73,7 +73,7 @@ dep_node_t *dep_grow_tree
   const char *ptr             = NULL;
   const char *word;
   size_t      n;
-  int         level           = 0;
+  int         level;
   int         nots            = 0;
 
   /* the language is mostly token oriented, and officially whitespace is
@@ -147,9 +147,23 @@ dep_node_t *dep_grow_tree
     case '[':
       /* these are atom's USE-conditionals which may include ( ) ? !
        * too, so just scan until matching ], luckily these can't be
-       * nested */
-      for (ptr++; *ptr != '\0' && *ptr != ']'; ptr++)
-        ;
+       * nested -- except when we get unexpanded bash stuff like
+       * ${LIB_DEPEND//[static-libs([+-])]} it does, so check it */
+      level = 0;
+      for (ptr++; *ptr != '\0'; ptr++)
+      {
+        if (*ptr == ']')
+        {
+          if (level == 0)
+            break;
+          else
+            level--;
+        }
+        else if (*ptr == '[')
+        {
+          level++;
+        }
+      }
       ptr--;  /* rewind for outer for-loop */
       continue;
     default:
@@ -180,7 +194,8 @@ dep_node_t *dep_grow_tree
   ret->type    = DEP_ALL;
   ret->members = array_new();
   array_append(res, ret);  /* == level */
-  ret = NULL;
+  ret   = NULL;
+  level = 0;
 
   array_for_each(tokens, n, curr_node)
   {
