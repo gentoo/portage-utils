@@ -115,10 +115,10 @@ umapstr(tree_pkg_ctx *pkg_ctx)
 	int u;
 	int d;
 
-	use = tree_pkg_meta_get(pkg_ctx, USE);
+	use = tree_pkg_meta(pkg_ctx, Q_USE);
 	if (use == NULL || *use == '\0')
 		return;
-	iuse = tree_pkg_meta_get(pkg_ctx, IUSE);
+	iuse = tree_pkg_meta(pkg_ctx, Q_IUSE);
 	if (iuse == NULL || *iuse == '\0')
 		return;
 
@@ -210,7 +210,7 @@ qlist_match(
 		pf_len = strlen(name);
 	}
 
-	atom = tree_get_atom(pkg_ctx, uslot[0] != '\0' || urepo != NULL);
+	atom = tree_pkg_atom(pkg_ctx, uslot[0] != '\0' || urepo != NULL);
 
 	/* maybe they're using a version range */
 	switch (name[0]) {
@@ -365,7 +365,7 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			return 0;
 	}
 
-	atom = tree_get_atom(pkg_ctx, state->need_full_atom);
+	atom = tree_pkg_atom(pkg_ctx, state->need_full_atom);
 	if (state->just_pkgname) {
 		printf("%s", atom_format(state->fmt, atom));
 		if (state->show_umap)
@@ -379,7 +379,7 @@ qlist_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		printf("%s %sCONTENTS%s:\n",
 				atom_format(state->fmt, atom), DKBLUE, NORM);
 
-	if ((contents = tree_pkg_meta_get(pkg_ctx, CONTENTS)) == NULL)
+	if ((contents = tree_pkg_meta(pkg_ctx, Q_CONTENTS)) == NULL)
 		return 1;
 
 	while ((line = strtok_r(contents, "\n", &savep)) != NULL) {
@@ -522,7 +522,7 @@ int qlist_main(int argc, char **argv)
 		const char *overlay;
 
 		array_for_each(overlays, n, overlay) {
-			vdb = tree_open(portroot, overlay);
+			vdb = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
 			if (vdb != NULL) {
 				ret |= tree_foreach_pkg_sorted(vdb, qlist_cb, &state, NULL);
 				tree_close(vdb);
@@ -530,9 +530,9 @@ int qlist_main(int argc, char **argv)
 		}
 	} else {
 		if (state.do_binpkgs)
-			vdb = tree_open_binpkg(portroot, pkgdir);
+			vdb = tree_new(portroot, pkgdir, TREETYPE_BINPKG, false);
 		else
-			vdb = tree_open_vdb(portroot, portvdb);
+			vdb = tree_new(portroot, portvdb, TREETYPE_VDB, false);
 		if (vdb != NULL) {
 			ret = tree_foreach_pkg_sorted(vdb, qlist_cb, &state, NULL);
 			tree_close(vdb);

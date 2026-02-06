@@ -383,7 +383,7 @@ qgrep_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	atom_ctx              *patom = NULL;
 	char                  *path;
 
-	patom = tree_get_atom(pkg_ctx, true);
+	patom = tree_pkg_atom(pkg_ctx, true);
 	if (patom == NULL)
 		return EXIT_FAILURE;
 
@@ -646,9 +646,9 @@ int qgrep_main(int argc, char **argv)
 		} else { /* do_ebuild || do_installed */
 			tree_ctx *t;
 			if (do_installed) {
-				t = tree_open_vdb(portroot, portvdb);
+				t = tree_new(portroot, portvdb, TREETYPE_VDB, false);
 			} else {
-				t = tree_open(portroot, overlay);
+				t = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
 			}
 			if (t != NULL) {
 				status = tree_foreach_pkg_fast(t, qgrep_cb, &args, NULL);

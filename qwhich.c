@@ -139,19 +139,19 @@ int qwhich_main(int argc, char **argv)
 
 	/* TODO: silence when the path doesn't exist -- reasonable though? */
 	if (m.do_vdb) {
-		t = tree_open_vdb(portroot, portvdb);
+		t = tree_new(portroot, portvdb, TREETYPE_VDB, false);
 		if (t != NULL)
 			array_append(trees, t);
 	}
 	if (m.do_binpkg) {
-		t = tree_open_binpkg("/", pkgdir);
+		t = tree_new(portroot, pkgdir, TREETYPE_BINPKG, false);
 		if (t != NULL)
 			array_append(trees, t);
 	}
 
 	if (m.do_tree) {
 		array_for_each(overlays, n, overlay) {
-			t = tree_open(portroot, overlay);
+			t = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
 			if (t != NULL)
 				array_append(trees, t);
 		}

@@ -94,7 +94,7 @@ qpkg_clean(qpkg_cb_args *args)
 		const char *overlay;
 
 		array_for_each(overlays, n, overlay) {
-			t = tree_open(portroot, overlay);
+			t = tree_new(portroot, overlay, TREETYPE_EBUILD, true);
 			if (t != NULL)
 				array_append(trees, t);
 		}
@@ -284,7 +284,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	int fd;
 	int mfd;
 	mode_t mask;
-	depend_atom *atom = tree_get_atom(pkg, false);
+	depend_atom *atom = tree_pkg_atom(pkg, false);
 	int portroot_fd = tree_pkg_get_portroot_fd(pkg);
 	ssize_t len;
 
@@ -296,7 +296,7 @@ qgpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		return 0;
 	}
 
-	line = tree_pkg_meta_get(pkg, CONTENTS);
+	line = tree_pkg_meta(pkg, Q_CONTENTS);
 	if (line == NULL)
 		return -1;
 
@@ -687,7 +687,7 @@ qpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 	char *xpak_argv[2];
 	struct stat st;
 	mode_t mask;
-	depend_atom *atom = tree_get_atom(pkg, false);
+	depend_atom *atom = tree_pkg_atom(pkg, false);
 
 	(void)args;  /* not used yet */
 
@@ -697,7 +697,7 @@ qpkg_make(tree_pkg_ctx *pkg, qpkg_cb_args *args)
 		return 0;
 	}
 
-	line = tree_pkg_meta_get(pkg, CONTENTS);
+	line = tree_pkg_meta(pkg, Q_CONTENTS);
 	if (line == NULL)
 		return -1;
 
@@ -827,7 +827,7 @@ qpkg_cb(tree_pkg_ctx *pkg, void *priv)
 
 	/* check atoms to compute a build-id */
 	if (contains_set("binpkg-multi-instance", features)) {
-		atom_ctx *atom = tree_get_atom(pkg, false);
+		atom_ctx *atom = tree_pkg_atom(pkg, false);
 		array    *m    = tree_match_atom(args->binpkg, atom, TREE_MATCH_FIRST);
 		if (array_cnt(m) > 0) {
 			tree_pkg_ctx *p = array_get(m, 0);
@@ -905,11 +905,11 @@ int qpkg_main(int argc, char **argv)
 				errp("could not chmod(0750) packages directory '%s'", bindir);
 		close(fd);
 	}
-	cb_args.binpkg = tree_open_binpkg(portroot, cb_args.bindir);
+	cb_args.binpkg = tree_new(portroot, cb_args.bindir, TREETYPE_BINPKG, false);
 	if (cb_args.binpkg == NULL)
 		return EXIT_FAILURE;
 
-	cb_args.vdb = tree_open_vdb(portroot, portvdb);
+	cb_args.vdb = tree_new(portroot, portvdb, TREETYPE_VDB, false);
 	if (!cb_args.vdb)
 	{
 		tree_close(cb_args.binpkg);

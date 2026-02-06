@@ -581,7 +581,7 @@ tree_ctx *tree_merge
   tree_ctx *tree2
 )
 {
-  tree_ctx *ret;
+  tree_ctx *ret = NULL;
 
   if (tree1 == NULL ||
       tree2 == NULL)

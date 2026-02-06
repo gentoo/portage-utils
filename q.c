@@ -183,7 +183,7 @@ static int q_build_gtree_cache_pkg(tree_pkg_ctx *pkg, void *priv)
 	struct q_cache_ctx   *ctx   = priv;
 	struct archive       *a     = ctx->archive;
 	struct archive_entry *entry;
-	depend_atom          *atom  = tree_get_atom(pkg, false);
+	depend_atom          *atom  = tree_pkg_atom(pkg, false);
 	char                  buf[_Q_PATH_MAX];
 	char                 *qc;
 	size_t                qclen;
@@ -250,7 +250,7 @@ static int q_build_gtree_ebuilds_pkg(tree_pkg_ctx *pkg, void *priv)
 	struct archive       *a     = ctx->archive;
 	struct archive_entry *entry;
 	struct stat           st;
-	depend_atom          *atom  = tree_get_atom(pkg, false);
+	depend_atom          *atom  = tree_pkg_atom(pkg, false);
 	char                  buf[_Q_PATH_MAX];
 	char                 *p;
 	size_t                siz;
@@ -818,7 +818,7 @@ int q_main(int argc, char **argv)
 			 * tree_open doesn't pick it up */
 			unlink(buf);
 
-			t = tree_open(portroot, overlay);
+			t = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
 			if (t == NULL) {
 				warn("could not open overlay at %s", overlay);
 				continue;

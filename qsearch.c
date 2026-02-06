@@ -69,7 +69,7 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	char *desc;
 	bool match;
 
-	atom = tree_get_atom(pkg_ctx, 0);
+	atom = tree_pkg_atom(pkg_ctx, 0);
 	if (atom == NULL)
 		return 0;
 
@@ -87,9 +87,9 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			(!match && state->search_desc))
 	{
 		if (state->show_homepage)
-			desc = tree_pkg_meta_get(pkg_ctx, HOMEPAGE);
+			desc = tree_pkg_meta(pkg_ctx, Q_HOMEPAGE);
 		else if (state->show_desc)
-			desc = tree_pkg_meta_get(pkg_ctx, DESCRIPTION);
+			desc = tree_pkg_meta(pkg_ctx, Q_DESCRIPTION);
 	}
 
 	if (!match && state->search_desc && desc != NULL &&
@@ -97,7 +97,7 @@ qsearch_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		match = true;
 
 	if (match) {
-		atom = tree_get_atom(pkg_ctx, state->need_full_atom);
+		atom = tree_pkg_atom(pkg_ctx, state->need_full_atom);
 		printf("%s%s%s\n",
 				atom_format(state->fmt, atom),
 				(state->show_name ? "" : ": "),
@@ -171,7 +171,7 @@ int qsearch_main(int argc, char **argv)
 
 	/* use sorted order here so the duplicate reduction works reliably */
 	array_for_each(overlays, n, overlay) {
-		tree_ctx *t = tree_open(portroot, overlay);
+		tree_ctx *t = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
 		if (t != NULL) {
 			ret |= tree_foreach_pkg_sorted(t, qsearch_cb, &state, NULL);
 			tree_close(t);

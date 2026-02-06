@@ -243,7 +243,7 @@ qkeyword_kw(tree_pkg_ctx *pkg_ctx, void *priv, int what)
 		size_t n;
 		depend_atom *mask;
 
-		atom = tree_get_atom(pkg_ctx, false);
+		atom = tree_pkg_atom(pkg_ctx, false);
 		masks = get_set(atom_format("%[CAT]%[PN]", atom), pmasks);
 		if (masks != NULL) {
 			array_for_each(masks, n, mask) {
@@ -251,14 +251,14 @@ qkeyword_kw(tree_pkg_ctx *pkg_ctx, void *priv, int what)
 					if (verbose) {
 						printf("masked by %s: ", atom_to_string(mask));
 						printf("%s\n", atom_format(data->fmt,
-									tree_get_atom(pkg_ctx, true)));
+									tree_pkg_atom(pkg_ctx, true)));
 					}
 					return EXIT_FAILURE;
 				}
 			}
 		}
 
-		printf("%s\n", atom_format(data->fmt, tree_get_atom(pkg_ctx, true)));
+		printf("%s\n", atom_format(data->fmt, tree_pkg_atom(pkg_ctx, true)));
 		return EXIT_SUCCESS;
 	}
 
@@ -537,7 +537,7 @@ qkeyword_stats(tree_pkg_ctx *pkg_ctx, void *priv)
 		numcat++;
 	lastcat = tree_pkg_get_cat_name(pkg_ctx);
 
-	atom = tree_get_atom(pkg_ctx, false);
+	atom = tree_pkg_atom(pkg_ctx, false);
 	if (atom && strcmp(lastpkg, atom->PN) != 0) {
 		for (a = 0; a < archlist_count; a++) {
 			switch (current_package_keywords[a]) {
@@ -656,7 +656,7 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	tree_metadata_xml *metadata;
 	int ret;
 
-	patom = tree_get_atom(pkg_ctx, false);
+	patom = tree_pkg_atom(pkg_ctx, false);
 	if (patom == NULL)
 		return EXIT_FAILURE;
 
@@ -685,7 +685,7 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	keywords = data->keywordsbuf;
 
-	if (read_keywords(tree_pkg_meta_get(pkg_ctx, KEYWORDS), keywords) < 0) {
+	if (read_keywords(tree_pkg_meta(pkg_ctx, Q_KEYWORDS), keywords) < 0) {
 		if (verbose)
 			warn("Failed to read keywords for %s%s/%s%s%s",
 				BOLD, patom->CATEGORY, BLUE, patom->PF, NORM);
@@ -808,7 +808,7 @@ qkeyword_traverse(tree_pkg_cb func, void *priv)
 	data->runfunc = func;
 	ret = 0;
 	array_for_each(overlays, n, overlay) {
-		tree_ctx *t = tree_open(portroot, overlay);
+		tree_ctx *t = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
 		if (t != NULL) {
 			ret |= tree_foreach_pkg_sorted(t,
 					qkeyword_results_cb, priv, data->qatom);

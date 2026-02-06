@@ -193,7 +193,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		if (state->exclude_atom->CATEGORY &&
 		    strcmp(state->exclude_atom->CATEGORY, catname))
 			goto dont_skip_pkg;
-		atom = tree_get_atom(pkg_ctx,
+		atom = tree_pkg_atom(pkg_ctx,
 				state->exclude_atom->SLOT != NULL ||
 				state->exclude_atom->REPO != NULL);
 		if (atom_compare(atom, state->exclude_atom) != EQUAL)
@@ -202,13 +202,13 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		if (state->exclude_slot == NULL)
 			goto qlist_done;
 		/* retrieve atom, this time with SLOT */
-		atom = tree_get_atom(pkg_ctx, true);
+		atom = tree_pkg_atom(pkg_ctx, true);
 		if (strcmp(state->exclude_slot, atom->SLOT) == 0)
 			goto qlist_done; /* "(CAT/)?(PN|PF):SLOT" matches */
 	}
  dont_skip_pkg: /* End of the package exclusion tests. */
 
-	line = tree_pkg_meta_get(pkg_ctx, CONTENTS);
+	line = tree_pkg_meta(pkg_ctx, Q_CONTENTS);
 	if (line == NULL)
 		goto qlist_done;
 
@@ -249,7 +249,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 						 state->real_root, e->name);
 				if (realpath(fullpath, rpath) == NULL) {
 					if (verbose) {
-						atom = tree_get_atom(pkg_ctx, false);
+						atom = tree_pkg_atom(pkg_ctx, false);
 						warnp("Could not read real path of \"%s\" (from %s)",
 								fullpath,
 								atom_format("%[CATEGORY]%[PF]", atom));
@@ -312,7 +312,7 @@ static int qfile_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				continue;
 
 			if (non_orphans == NULL) {
-				atom = tree_get_atom(pkg_ctx, state->need_full_atom);
+				atom = tree_pkg_atom(pkg_ctx, state->need_full_atom);
 
 				printf("%s", atom_format(state->format, atom));
 				if (quiet)
@@ -595,7 +595,7 @@ int qfile_main(int argc, char **argv)
 
 	/* Now do the actual `qfile` checking by looking at CONTENTS of all pkgs */
 	if (nb_of_queries > 0) {
-		tree_ctx *vdb = tree_open_vdb(portroot, portvdb);
+		tree_ctx *vdb = tree_new(portroot, portvdb, TREETYPE_VDB, false);
 		if (vdb != NULL) {
 			found += tree_foreach_pkg_sorted(vdb, qfile_cb, &state, NULL);
 			tree_close(vdb);

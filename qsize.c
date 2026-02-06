@@ -116,7 +116,7 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	size_t cur_uniq = cnt_set(state->uniq_files);
 	bool isuniq;
 
-	if ((line = tree_pkg_meta_get(pkg_ctx, CONTENTS)) == NULL)
+	if ((line = tree_pkg_meta(pkg_ctx, Q_CONTENTS)) == NULL)
 		return EXIT_SUCCESS;
 
 	num_ignored = num_files = num_nonfiles = num_bytes = 0;
@@ -164,7 +164,7 @@ qsize_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		char uniqbuf[32];
 
 		cur_uniq = cnt_set(state->uniq_files) - cur_uniq;
-		atom = tree_get_atom(pkg_ctx, state->need_full_atom);
+		atom = tree_pkg_atom(pkg_ctx, state->need_full_atom);
 
 		if (cur_uniq != num_files)
 			snprintf(uniqbuf, sizeof(uniqbuf), " (%zu unique)", cur_uniq);
@@ -248,18 +248,11 @@ int qsize_main(int argc, char **argv)
 			state.fmt = "%[CATEGORY]%[PN]";
 	}
 
-	vdb = tree_open_vdb(portroot, portvdb);
+	vdb = tree_new(portroot, portvdb, TREETYPE_VDB, false);
 	if (vdb != NULL) {
 		if (array_cnt(state.atoms) > 0) {
-			array_for_each(state.atoms, i, atom) {
-				if (atom->CATEGORY == NULL &&
-					i + 1 < array_cnt(state.atoms))
-				{
-					ret = tree_foreach_pkg_cached(vdb, qsize_cb, &state, atom);
-				} else {
-					ret = tree_foreach_pkg_fast(vdb, qsize_cb, &state, atom);
-				}
-			}
+			array_for_each(state.atoms, i, atom)
+				ret = tree_foreach_pkg_fast(vdb, qsize_cb, &state, atom);
 		} else {
 			ret = tree_foreach_pkg_fast(vdb, qsize_cb, &state, NULL);
 		}

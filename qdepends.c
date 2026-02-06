@@ -138,7 +138,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	 * *DEPEND alters the search somewhat and affects results printing.
 	 */
 
-	datom = tree_get_atom(pkg_ctx, false);
+	datom = tree_pkg_atom(pkg_ctx, false);
 	if (datom == NULL)
 		return ret;
 
@@ -148,7 +148,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			if (atom->blocker != ATOM_BL_NONE ||
 					atom->SLOT != NULL ||
 					atom->REPO != NULL)
-				datom = tree_get_atom(pkg_ctx, true);
+				datom = tree_pkg_atom(pkg_ctx, true);
 			if (atom_compare(datom, atom) == EQUAL) {
 				atom = NULL;
 				break;
@@ -161,18 +161,18 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 		ret = 1;
 
-		datom = tree_get_atom(pkg_ctx, true);
+		datom = tree_pkg_atom(pkg_ctx, true);
 		printf("%s:", atom_format(state->format, datom));
 	}
 
 	clear_set(state->udeps);
 
 #define get_depstr(X,Y) \
-	X == QMODE_DEPEND  ? tree_pkg_meta_get(Y, DEPEND)  : \
-	X == QMODE_RDEPEND ? tree_pkg_meta_get(Y, RDEPEND) : \
-	X == QMODE_PDEPEND ? tree_pkg_meta_get(Y, PDEPEND) : \
-	X == QMODE_BDEPEND ? tree_pkg_meta_get(Y, BDEPEND) : \
-		                 tree_pkg_meta_get(Y, IDEPEND) ;
+	X == QMODE_DEPEND  ? tree_pkg_meta(Y, Q_DEPEND)  : \
+	X == QMODE_RDEPEND ? tree_pkg_meta(Y, Q_RDEPEND) : \
+	X == QMODE_PDEPEND ? tree_pkg_meta(Y, Q_PDEPEND) : \
+	X == QMODE_BDEPEND ? tree_pkg_meta(Y, Q_BDEPEND) : \
+		                 tree_pkg_meta(Y, Q_IDEPEND) ;
 
 	dfile = depend_files;
 	for (i = QMODE_DEP_FIRST; i <= QMODE_DEP_LAST; i <<= 1, dfile++) {
@@ -224,7 +224,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					ret = 1;
 
 					if (!firstmatch) {
-						datom = tree_get_atom(pkg_ctx, true);
+						datom = tree_pkg_atom(pkg_ctx, true);
 						printf("%s:", atom_format(state->format, datom));
 					}
 					firstmatch = true;
@@ -253,7 +253,7 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 						ret = 1;
 
 						if (!firstmatch) {
-							datom = tree_get_atom(pkg_ctx, true);
+							datom = tree_pkg_atom(pkg_ctx, true);
 							printf("%s%s", atom_format(state->format, datom),
 									quiet < 2 ? ":" : "");
 						}
@@ -388,7 +388,7 @@ int qdepends_main(int argc, char **argv)
 	if (state.qmode & QMODE_INSTALLED ||
 		verbose)
 	{
-		state.vdb = tree_open_vdb(portroot, portvdb);
+		state.vdb = tree_new(portroot, portvdb, TREETYPE_VDB, false);
 		if (state.vdb == NULL)
 		{
 			free_set(state.udeps);
@@ -404,11 +404,12 @@ int qdepends_main(int argc, char **argv)
 		tree_ctx *t;
 
 		array_for_each(overlays, n, overlay) {
-			t = tree_open(portroot, overlay);
+			t = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
 			if (t != NULL) {
 				state.rtree = NULL;
 				if (state.resolve)
-					state.rtree = tree_open(portroot, overlay);
+					state.rtree = tree_new(portroot, overlay,
+										   TREETYPE_EBUILD, false);
 				if (!(state.qmode & QMODE_REVERSE) &&
 					array_cnt(state.atoms) > 0)
 				{
@@ -427,7 +428,7 @@ int qdepends_main(int argc, char **argv)
 		}
 	} else {  /* INSTALLED */
 		if (state.resolve)
-			state.rtree = tree_open_vdb(portroot, portvdb);
+			state.rtree = tree_new(portroot, portvdb, TREETYPE_VDB, false);
 		if (!(state.qmode & QMODE_REVERSE) && array_cnt(state.atoms) > 0) {
 			array_for_each(state.atoms, i, atom) {
 				ret |= tree_foreach_pkg_fast(state.vdb,

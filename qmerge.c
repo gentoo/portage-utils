@@ -326,7 +326,7 @@ best_version(const depend_atom *atom, int mode)
 	if (mode & BV_VDB) {
 		array *t;
 		if (vdb == NULL) {
-			vdb = tree_open_vdb(portroot, portvdb);
+			vdb = tree_new(portroot, portvdb, TREETYPE_VDB, true);
 			if (vdb == NULL)
 				return NULL;
 			_qmerge_vdb_tree = vdb;
@@ -342,7 +342,7 @@ best_version(const depend_atom *atom, int mode)
 	if (mode & BV_BINPKG) {
 		array *t;
 		if (binpkg == NULL) {
-			binpkg = tree_open_binpkg(portroot, pkgdir);
+			binpkg = tree_new(portroot, pkgdir, TREETYPE_BINPKG, true);
 			if (binpkg == NULL) {
 				if (vdb != NULL)
 					tree_close(vdb);
@@ -1770,7 +1770,7 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 		}
 	}
 
-	eprefix = tree_pkg_meta_get(pkg_ctx, EPREFIX);
+	eprefix = tree_pkg_meta(pkg_ctx, Q_EPREFIX);
 	if (eprefix == NULL)
 		eprefix_len = 0;
 	else
@@ -2151,7 +2151,7 @@ qmerge_unmerge_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 static int
 unmerge_packages(set *todo)
 {
-	tree_ctx *vdb = tree_open_vdb(portroot, portvdb);
+	tree_ctx *vdb = tree_new(portroot, portvdb, TREETYPE_VDB, true);
 	int ret = 1;
 	if (vdb != NULL) {
 		ret = tree_foreach_pkg_fast(vdb, qmerge_unmerge_cb, todo, NULL);
@@ -2227,7 +2227,7 @@ qmerge_add_set(char *buf, set *q)
 		return qmerge_add_set_file(CONFIG_EPREFIX, "/var/lib/portage",
 								   "world", q);
 	} else if (strcmp(buf, "all") == 0) {
-		tree_ctx     *ctx  = tree_open_vdb(portroot, portvdb);
+		tree_ctx     *ctx  = tree_new(portroot, portvdb, TREETYPE_VDB, true);
 		array        *pkgs = tree_match_atom(ctx, NULL, TREE_MATCH_DEFAULT);
 		tree_pkg_ctx *w;
 		size_t        n;

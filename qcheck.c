@@ -94,11 +94,11 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int                      portroot_fd;
 
 	/* get CONTENTS from meta */
-	line = tree_pkg_meta_get(pkg_ctx, CONTENTS);
+	line = tree_pkg_meta(pkg_ctx, Q_CONTENTS);
 	if (line == NULL)
 		return EXIT_FAILURE;
 
-	atom        = tree_get_atom(pkg_ctx, false);
+	atom        = tree_pkg_atom(pkg_ctx, false);
 	portroot_fd = tree_pkg_get_portroot_fd(pkg_ctx);
 
 	qcprintf("%sing %s ...\n",
@@ -128,7 +128,7 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		makeargv(config_protect, &cp_argc, &cp_argv);
 		makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
-		eprefix = tree_pkg_meta_get(pkg_ctx, EPREFIX);
+		eprefix = tree_pkg_meta(pkg_ctx, Q_EPREFIX);
 		if (eprefix != NULL)
 			eprefix_len = strlen(eprefix);
 	}
@@ -481,7 +481,7 @@ int qcheck_main(int argc, char **argv)
 			array_append(state.atoms, atom);
 	}
 
-	vdb = tree_open_vdb(portroot, portvdb);
+	vdb = tree_new(portroot, portvdb, TREETYPE_VDB, false);
 	ret = -1;
 	if (vdb != NULL) {
 		if (array_cnt(state.atoms) != 0) {

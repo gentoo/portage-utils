@@ -68,7 +68,7 @@ int qatom_main(int argc, char **argv)
 		err("compare needs even number of arguments");
 
 	if (action == _LOOKUP) {
-		tree = tree_open(portroot, main_overlay);
+		tree = tree_new(portroot, main_overlay, TREETYPE_EBUILD, false);
 		if (tree == NULL)
 			err("failed to open tree");
 	}

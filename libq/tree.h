@@ -86,6 +86,11 @@ void                tree_close(tree_ctx *tree);
 int                 tree_foreach_pkg(tree_ctx *tree, tree_pkg_cb callback,
                                      void *priv, bool sorted,
                                      const atom_ctx *query);
+#define tree_foreach_pkg_fast(ctx, cb, priv, query) \
+	tree_foreach_pkg(ctx, cb, priv, false, query)
+#define tree_foreach_pkg_sorted(ctx, cb, priv, query) \
+	tree_foreach_pkg(ctx, cb, priv, true, query)
+
 array              *tree_match_atom(tree_ctx *tree, const atom_ctx *query,
                                     int flags);
 #define TREE_MATCH_LATEST     (1<<3)
@@ -114,23 +119,6 @@ char               *tree_pkg_get_pf_name(tree_pkg_ctx *pkg);
 char               *tree_pkg_get_path(tree_pkg_ctx *pkg);
 int                 tree_pkg_get_portroot_fd(tree_pkg_ctx *pkg);
 enum tree_open_type tree_pkg_get_treetype(tree_pkg_ctx *pkg);
-
-
-/* backwards compat crap */
-#define tree_open(R,P)         tree_new(R,P,TREETYPE_EBUILD,false)
-#define tree_open_vdb(R,P)     tree_new(R,P,TREETYPE_VDB,false)
-#define tree_open_ebuild(R,P)  tree_new(R,P,TREETYPE_EBUILD,false)
-#define tree_open_binpkg(R,P)  tree_new(R,P,TREETYPE_BINPKG,false)
-#define tree_open_gtree(R,P)   tree_new(R,P,TREETYPE_GTREE,false)
-#define tree_get_atom(P,C)     tree_pkg_atom(P,C)
-#define tree_pkg_meta_get(P,X) tree_pkg_meta(P, Q_##X)
-
-#define tree_foreach_pkg_fast(ctx, cb, priv, query) \
-	tree_foreach_pkg(ctx, cb, priv, false, query)
-#define tree_foreach_pkg_sorted(ctx, cb, priv, query) \
-	tree_foreach_pkg(ctx, cb, priv, true, query)
-#define tree_foreach_pkg_cached(ctx, cb, priv, query) \
-	tree_foreach_pkg(ctx, cb, priv, true, query)
 
 #endif
 

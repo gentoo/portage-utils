@@ -441,13 +441,13 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int ret = 0;
 
 	if (state->match || state->do_describe) {
-		atom = tree_get_atom(pkg_ctx, false);
+		atom = tree_pkg_atom(pkg_ctx, false);
 		if (atom == NULL)
 			return 0;
 	}
 
 	if (!state->do_licence) {
-		if ((s = tree_pkg_meta_get(pkg_ctx, IUSE)) == NULL)
+		if ((s = tree_pkg_meta(pkg_ctx, Q_IUSE)) == NULL)
 			return 0;
 
 		if (state->do_describe) {
@@ -459,7 +459,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		}
 
 		/* available when dealing with VDB or binpkgs */
-		if ((p = tree_pkg_meta_get(pkg_ctx, USE)) != NULL) {
+		if ((p = tree_pkg_meta(pkg_ctx, Q_USE)) != NULL) {
 			while ((q = strchr(p, (int)' ')) != NULL) {
 				*q++ = '\0';
 				use = add_set(p, use);
@@ -469,7 +469,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 				use = add_set(p, use);
 		}
 	} else {
-		if ((s = tree_pkg_meta_get(pkg_ctx, LICENSE)) == NULL)
+		if ((s = tree_pkg_meta(pkg_ctx, Q_LICENSE)) == NULL)
 			return 0;
 	}
 
@@ -541,7 +541,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 	if (match) {
 		ret++;
-		atom = tree_get_atom(pkg_ctx, state->need_full_atom);
+		atom = tree_pkg_atom(pkg_ctx, state->need_full_atom);
 		if (quiet) {
 			printf("%s\n", atom_format(state->fmt, atom));
 		} else if (state->do_describe && !state->do_licence) {
@@ -561,7 +561,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 			printf("%s\n", atom_format(state->fmt, atom));
 
-			q = p = tree_pkg_meta_get(pkg_ctx, IUSE);
+			q = p = tree_pkg_meta(pkg_ctx, Q_IUSE);
 			buf[0] = '\0';
 			v = buf;
 			w = buf + sizeof(buf);
@@ -728,7 +728,8 @@ int quse_main(int argc, char **argv)
 		array_for_each(overlays, n, overlay) {
 			tree_ctx *t = NULL;
 			if (state.need_full_atom)
-				t = tree_open(portroot, overlay);  /* used for repo */
+				t = tree_new(portroot, overlay,
+							 TREETYPE_EBUILD, false);  /* used for repo */
 			if (t != NULL)
 				state.repo = tree_get_repo_name(t);
 			if (quse_describe_flag(portroot, overlay, &state))
@@ -737,7 +738,7 @@ int quse_main(int argc, char **argv)
 				tree_close(t);
 		}
 	} else if (state.do_installed) {
-		tree_ctx *t = tree_open_vdb(portroot, portvdb);
+		tree_ctx *t = tree_new(portroot, portvdb, TREETYPE_VDB, false);
 		if (t != NULL) {
 			state.overlay = NULL;
 			state.repo = NULL;
@@ -748,7 +749,7 @@ int quse_main(int argc, char **argv)
 		}
 	} else {
 		array_for_each(overlays, n, overlay) {
-			tree_ctx *t = tree_open(portroot, overlay);
+			tree_ctx *t = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
 			state.overlay = overlay;
 			if (t != NULL) {
 				state.repo =
