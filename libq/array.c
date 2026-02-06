@@ -119,6 +119,29 @@ void *array_append_copy
   return ret;
 }
 
+/* moves all elements from src into dst, leaving src an empty array */
+void array_move
+(
+  array *dst,
+  array *src
+)
+{
+  void   *elem;
+  size_t  n;
+
+  if (dst == NULL ||
+      src == NULL ||
+      array_cnt(src) == 0)
+    return;
+
+  array_for_each(src, n, elem)
+    array_append(dst, elem);
+
+  /* we lack an array_clear or something, sofar we didn't really have a
+   * need for it, so simply declare the src empty */
+  src->len = 0;
+}
+
 /* removes the given element from the array and returns the pointer to
  * the data removed from the array
  * the caller should ensure the pointer is freed if necessary */

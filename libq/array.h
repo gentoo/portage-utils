@@ -21,6 +21,7 @@ void   array_free(array *arr);
 void   array_deepfree(array *arr, array_free_cb *func);
 void  *array_append(array *arr, void *data);
 void  *array_append_copy(array *arr, const void *data, size_t len);
+void   array_move(array *dst, array *src);
 void  *array_remove(array *arr, size_t elem);
 void   array_delete(array *arr, size_t elem, array_free_cb *func);
 size_t array_cnt(array *arr);
