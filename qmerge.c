@@ -1566,6 +1566,11 @@ pkg_merge(int level, const depend_atom *qatom, tree_pkg_ctx *mpkg)
 		imask = xmalloc(masklen);
 		/* rely on INSTALL_MASK code to remove optional dirs */
 		maskp = snprintf(imask, masklen, "%s ", install_mask);
+		/* normalize newlines and tabs to spaces in INSTALL_MASK */
+		for (i = 0; i < (int)maskp; i++) {
+			if (imask[i] == '\n' || imask[i] == '\t' || imask[i] == '\r')
+				imask[i] = ' ';
+		}
 		if (contains_set("noinfo", features))
 			maskp += snprintf(imask + maskp, masklen - maskp,
 					"/usr/share/info ");
