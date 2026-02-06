@@ -83,6 +83,7 @@ struct tree_ {
   char          *path;
   char          *repo;
   array         *cats;         /* list of tree_cat_ctx pointers */
+  array         *srctrees;     /* in case of TREE_MERGED */
   int            portroot_fd;
   enum {
     TREE_UNSET = 0,
@@ -91,6 +92,7 @@ struct tree_ {
     TREE_PACKAGES,
     TREE_BINPKGS,
     TREE_GTREE,
+    TREE_MERGED,
   }              type;
   bool           cats_complete:1;
 };
@@ -561,6 +563,57 @@ tree_ctx *tree_new
     tree_close(ret);
     return NULL;
   }
+
+  return ret;
+}
+
+/* produces a new tree that is the merger of the trees tree1 and tree2
+ * NOTES:
+ * - the trees given should not be freed for as long as the merged tree
+ *   is around (not closed)
+ * - the individual trees (tree1, tree2) may be used outside of the
+ *   returned tree (except being freed)
+ * - no attempt is made to check for duplicates, the caller should merge
+ *   trees sensibly! */
+tree_ctx *tree_merge
+(
+  tree_ctx *tree1,
+  tree_ctx *tree2
+)
+{
+  tree_ctx *ret;
+
+  if (tree1 == NULL ||
+      tree2 == NULL)
+    return NULL;
+
+  if (tree1->type == TREE_MERGED)
+  {
+    ret   = tree1;
+    tree1 = NULL;
+  }
+  if (tree2->type == TREE_MERGED)
+  {
+    ret   = tree2;
+    tree2 = NULL;
+  }
+
+  if (tree1 == NULL &&
+      tree2 == NULL)
+    return NULL;  /* can't merge two merged trees for now */
+
+  if (ret == NULL)
+  {
+    ret = xzalloc(sizeof(*ret));
+    ret->type        = TREE_MERGED;
+    ret->srctrees    = array_new();
+    ret->portroot_fd = -1;
+  }
+
+  if (tree1 != NULL)
+    array_append(ret->srctrees, tree1);
+  if (tree2 != NULL)
+    array_append(ret->srctrees, tree2);
 
   return ret;
 }
@@ -1991,6 +2044,10 @@ int tree_foreach_pkg
   int           ret       = 0;
   bool          filtercat = false;
 
+  if (tree->type == TREE_MERGED)
+    err("programmer error: "
+        "cannot call tree_foreach_pkg on a tree of type MERGED");
+
   /* if we have a query with category, see if we have it already */
   if (query != NULL &&
       query->CATEGORY != NULL)
@@ -2410,7 +2467,7 @@ array *tree_match_atom
   /* a note on the flags that we control the output results with:
    * - LATEST:  only return the best (latest version) match for each PN
    * - FIRST:   stop searching after the first match (e.g. atom without
-   *            category), implies LATEST
+   *            category), implies LATEST on non-MERGED trees
    * - VIRTUAL: include the virtual category in results
    * - ACCT:    include the acct-user and acct-group categories in results
    * - SORT:    return the results in sorted order, this is implied by
@@ -2424,30 +2481,66 @@ array *tree_match_atom
       flags & TREE_MATCH_SORT   )
     sorted = true;
 
-  tree_foreach_pkg(tree, tree_match_atom_cb, ret, sorted, atom);
-
-  if (!(flags & TREE_MATCH_VIRTUAL))
+  /* handle merged tree separately */
+  if (tree->type == TREE_MERGED)
   {
-    array_for_each_rev(ret, n, w)
-      if (strcmp(tree_pkg_get_cat_name(w), "virtual") == 0)
-        array_remove(ret, n);
+    tree_ctx *stree;
+    array    *match;
+
+    /* behaviour of flags is in line here, but because the context is
+     * slightly different:
+     * - LATEST: find the highest version in all of the trees
+     * - FIRST:  return the pkg from the first tree with a match
+     * this allows to respect the order (e.g. VDB -> BINPKG -> TREE) of
+     * preference without any extra checks from the caller */
+    array_for_each(tree->srctrees, n, stree)
+    {
+      match = tree_match_atom(stree, atom, flags);
+      if (array_cnt(match) > 0)
+      {
+        array_move(ret, match);
+        array_free(match);
+        if (flags & TREE_MATCH_FIRST)
+          break;
+      }
+      else
+      {
+        array_free(match);
+      }
+    }
+
+    /* need to re-sort because we pushed results from multiple trees */
+    if (sorted)
+      array_sort(ret, tree_pkg_compar);
   }
-
-  if (!(flags & TREE_MATCH_ACCT))
+  else
   {
-    array_for_each_rev(ret, n, w)
-      if (strncmp("acct-", tree_pkg_get_cat_name(w), sizeof("acct-") - 1) == 0)
-        array_remove(ret, n);
-  }
+    tree_foreach_pkg(tree, tree_match_atom_cb, ret, sorted, atom);
 
-  if (flags & TREE_MATCH_FIRST &&
-      array_cnt(ret) > 1)
-  {
-    /* a bit crude, we can optimise this later */
-    array *new = array_new();
-    array_append(new, array_get(ret, 0));
-    array_free(ret);
-    ret = new;
+    if (!(flags & TREE_MATCH_VIRTUAL))
+    {
+      array_for_each_rev(ret, n, w)
+        if (strcmp(tree_pkg_get_cat_name(w), "virtual") == 0)
+          array_remove(ret, n);
+    }
+
+    if (!(flags & TREE_MATCH_ACCT))
+    {
+      array_for_each_rev(ret, n, w)
+        if (strncmp("acct-",
+                    tree_pkg_get_cat_name(w), sizeof("acct-") - 1) == 0)
+          array_remove(ret, n);
+    }
+
+    if (flags & TREE_MATCH_FIRST &&
+        array_cnt(ret) > 1)
+    {
+      /* a bit crude, we can optimise this later */
+      array *new = array_new();
+      array_append(new, array_get(ret, 0));
+      array_free(ret);
+      ret = new;
+    }
   }
 
   if (flags & TREE_MATCH_LATEST)

@@ -78,30 +78,35 @@ enum tree_pkg_meta_keys {
   TREE_META_MAX_KEYS
 };
 
-tree_ctx *tree_new(const char *portroot, const char *path, enum tree_open_type type, bool quiet);
-void tree_close(tree_ctx *tree);
+tree_ctx           *tree_new(const char *portroot, const char *path,
+                             enum tree_open_type type, bool quiet);
+tree_ctx           *tree_merge(tree_ctx *tree1, tree_ctx *tree2);
+void                tree_close(tree_ctx *tree);
 
-int tree_foreach_pkg(tree_ctx *tree, tree_pkg_cb callback, void *priv, bool sorted, const atom_ctx *query);
-
-array *tree_match_atom(tree_ctx *tree, const atom_ctx *query, int flags);
+int                 tree_foreach_pkg(tree_ctx *tree, tree_pkg_cb callback,
+                                     void *priv, bool sorted,
+                                     const atom_ctx *query);
+array              *tree_match_atom(tree_ctx *tree, const atom_ctx *query,
+                                    int flags);
 #define TREE_MATCH_LATEST     (1<<3)
 #define TREE_MATCH_FIRST      (1<<4)
 #define TREE_MATCH_VIRTUAL    (1<<5)
 #define TREE_MATCH_ACCT       (1<<6)
 #define TREE_MATCH_SORT       (1<<7)
 #define TREE_MATCH_DEFAULT    (TREE_MATCH_VIRTUAL | \
-                               TREE_MATCH_ACCT | \
-                               TREE_MATCH_SORT)
+                               TREE_MATCH_ACCT    | \
+                               TREE_MATCH_SORT    )
 
-tree_metadata_xml *tree_pkg_metadata(tree_pkg_ctx *pkg_ctx);
-void               tree_close_metadata(tree_metadata_xml *meta_ctx);
+tree_metadata_xml  *tree_pkg_metadata(tree_pkg_ctx *pkg_ctx);
+void                tree_close_metadata(tree_metadata_xml *meta_ctx);
 
 char               *tree_get_repo_name(tree_ctx *tree);
 char               *tree_get_path(tree_ctx *tree);
 int                 tree_get_portroot_fd(tree_ctx *tree);
 enum tree_open_type tree_get_treetype(tree_ctx *tree);
 
-char               *tree_pkg_meta(tree_pkg_ctx *pkg, enum tree_pkg_meta_keys key);
+char               *tree_pkg_meta(tree_pkg_ctx *pkg,
+                                  enum tree_pkg_meta_keys key);
 atom_ctx           *tree_pkg_atom(tree_pkg_ctx *pkg, bool full);
 tree_ctx           *tree_pkg_get_tree(tree_pkg_ctx *pkg);
 char               *tree_pkg_get_cat_name(tree_pkg_ctx *pkg);
