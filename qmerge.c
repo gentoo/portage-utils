@@ -593,10 +593,13 @@ install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 				do {
 					*p++ = '\0';
 				} while (*p == '/');
+				/* p now points past the slashes, check if we hit end */
 				if (*p == '\0')
 					break;
+				/* p is now at the start of next component */
 				cnt++;
 				masks[((i - 1) * maxdirs) + cnt] = p;
+				/* decrement because for-loop will increment */
 				p--;
 			}
 		}
