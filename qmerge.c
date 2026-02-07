@@ -593,10 +593,14 @@ install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 				do {
 					*p++ = '\0';
 				} while (*p == '/');
+				/* p now points past the slashes, check if we hit end */
 				if (*p == '\0')
 					break;
+				/* p is now at the start of next component */
 				cnt++;
 				masks[((i - 1) * maxdirs) + cnt] = p;
+				/* decrement because for-loop will increment */
+				p--;
 			}
 		}
 		/* brute force cast below values, a pointer basically is size_t,
@@ -1566,6 +1570,9 @@ pkg_merge(int level, const depend_atom *qatom, tree_pkg_ctx *mpkg)
 		imask = xmalloc(masklen);
 		/* rely on INSTALL_MASK code to remove optional dirs */
 		maskp = snprintf(imask, masklen, "%s ", install_mask);
+		/* normalize newlines and tabs to spaces in INSTALL_MASK */
+		remove_extra_space(imask);
+		rmspace(imask);
 		if (contains_set("noinfo", features))
 			maskp += snprintf(imask + maskp, masklen - maskp,
 					"/usr/share/info ");
