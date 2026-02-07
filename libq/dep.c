@@ -30,7 +30,7 @@
  *
  * needed functionality:
  * - prune phase -> remove use-dep-groups that are not active
- *                  downgrade use-dep nodes into group nodes
+ *                  downgrade use-dep nodes into all-group nodes
  * - resolving   -> simple match of atom to a package from a tree
  *                  - consider multiple trees, in priorities
  *                  any-groups downgraded to all-group with the first
@@ -579,9 +579,10 @@ void dep_burn_tree
   free(root);
 }
 
-/* eliminate all DEP_USE nodes in the dep tree that do not match the set
- * of given USE words by setting them to DEP_NULL, this takes into
- * account negatives/inverted conditionals */
+/* eliminate all DEP_USE nodes in the dep tree, nodes that do not match
+ * the set of given USE words are removed, matching ones are converted
+ * to DEP_ALL nodes, this takes into account negatives/inverted
+ * conditionals */
 void dep_prune_use
 (
   dep_node_t *root,
@@ -594,8 +595,16 @@ void dep_prune_use
 
     if (!found ^ root->invert)
     {
+      /* it's hard to free the node here, because we have no return to
+       * flag the parent to remove it from its member list, so we flag
+       * it to be skipped next time */
       root->type = DEP_NULL;
-      return;  /* skip traversal of members */
+      return;
+    }
+    else
+    {
+      /* this node is "active", so turn it into a regular one */
+      root->type = DEP_ALL;
     }
   }
 
