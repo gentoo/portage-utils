@@ -32,62 +32,63 @@ INSTALL
 Makefile
 /tests/init.sh
 /tests/qmanifest/root/.gnupg/random_seed
+/tests/install/
 /man/*.1
 
 # ignore the binary and symlinks produced by q -i
-q
-qatom
-qcheck
-qdepends
-qfile
-qglsa
-qgrep
-qkeyword
-qlist
-qlop
-qmanifest
-qmerge
-qpkg
-qsearch
-qsize
-qtbz2
-qtegrity
-quse
-qwhich
-qxpak
+/q
+/qatom
+/qcheck
+/qdepends
+/qfile
+/qglsa
+/qgrep
+/qkeyword
+/qlist
+/qlop
+/qmanifest
+/qmerge
+/qpkg
+/qsearch
+/qsize
+/qtbz2
+/qtegrity
+/quse
+/qwhich
+/qxpak
 
 # BEGIN GNULIB  --  keep this at the end of this file
 # regenerate using:
-#   ls autotools/gnulib/*.in.h | sed -e 's/\.in\.h/.h/' | sed -e 's:_:/:'
+#   ls autotools/gnulib/*.in.h | sed -e 's/\.in\.h/.h/' | sed -e 's:_:/: | sed -e 's:^:/:'
 # or use autogen.sh
-autotools/gnulib/alloca.h
-autotools/gnulib/assert.h
-autotools/gnulib/byteswap.h
-autotools/gnulib/dirent.h
-autotools/gnulib/errno.h
-autotools/gnulib/error.h
-autotools/gnulib/fcntl.h
-autotools/gnulib/getopt-cdefs.h
-autotools/gnulib/getopt.h
-autotools/gnulib/inttypes.h
-autotools/gnulib/limits.h
-autotools/gnulib/locale.h
-autotools/gnulib/stdckdint.h
-autotools/gnulib/stddef.h
-autotools/gnulib/stdint.h
-autotools/gnulib/stdio.h
-autotools/gnulib/stdlib.h
-autotools/gnulib/string.h
-autotools/gnulib/strings.h
-autotools/gnulib/sys/stat.h
-autotools/gnulib/sys/time.h
-autotools/gnulib/sys/types.h
-autotools/gnulib/time.h
-autotools/gnulib/unistd.h
-autotools/gnulib/utime.h
-autotools/gnulib/wchar.h
+/autotools/gnulib/alloca.h
+/autotools/gnulib/assert.h
+/autotools/gnulib/byteswap.h
+/autotools/gnulib/dirent.h
+/autotools/gnulib/errno.h
+/autotools/gnulib/error.h
+/autotools/gnulib/fcntl.h
+/autotools/gnulib/getopt-cdefs.h
+/autotools/gnulib/getopt.h
+/autotools/gnulib/inttypes.h
+/autotools/gnulib/limits.h
+/autotools/gnulib/locale.h
+/autotools/gnulib/stdckdint.h
+/autotools/gnulib/stddef.h
+/autotools/gnulib/stdint.h
+/autotools/gnulib/stdio.h
+/autotools/gnulib/stdlib.h
+/autotools/gnulib/string.h
+/autotools/gnulib/strings.h
+/autotools/gnulib/sys/stat.h
+/autotools/gnulib/sys/time.h
+/autotools/gnulib/sys/types.h
+/autotools/gnulib/time.h
+/autotools/gnulib/unistd.h
+/autotools/gnulib/utime.h
+/autotools/gnulib/wchar.h
 # manual additions
-autotools/gnulib/sys
-autotools/gnulib/malloc/scratch_buffer.gl.h
+/autotools/gnulib/sys
+/autotools/gnulib/malloc/scratch_buffer.gl.h
 *.dirstamp
 # END GNULIB
