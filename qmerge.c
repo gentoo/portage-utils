@@ -597,6 +597,7 @@ install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 					break;
 				cnt++;
 				masks[((i - 1) * maxdirs) + cnt] = p;
+				p--;
 			}
 		}
 		/* brute force cast below values, a pointer basically is size_t,
@@ -1567,10 +1568,8 @@ pkg_merge(int level, const depend_atom *qatom, tree_pkg_ctx *mpkg)
 		/* rely on INSTALL_MASK code to remove optional dirs */
 		maskp = snprintf(imask, masklen, "%s ", install_mask);
 		/* normalize newlines and tabs to spaces in INSTALL_MASK */
-		for (i = 0; i < (int)maskp; i++) {
-			if (imask[i] == '\n' || imask[i] == '\t' || imask[i] == '\r')
-				imask[i] = ' ';
-		}
+		remove_extra_space(imask);
+		rmspace(imask);
 		if (contains_set("noinfo", features))
 			maskp += snprintf(imask + maskp, masklen - maskp,
 					"/usr/share/info ");
