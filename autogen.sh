@@ -65,14 +65,17 @@ v gnulib-tool \
 	cat <<- EOM
 		# BEGIN GNULIB  --  keep this at the end of this file
 		# regenerate using:
-		#   ls autotools/gnulib/*.in.h | sed -e 's/\.in\.h/.h/' | sed -e 's:_:/:'
+		#   ls autotools/gnulib/*.in.h | sed -e 's/\.in\.h/.h/' | sed -e 's:_:/: | sed -e 's:^:/:'
 		# or use autogen.sh
 	EOM
-	ls autotools/gnulib/*.in.h | sed -e 's/\.in\.h/.h/' | sed -e 's:_:/:'
+	ls autotools/gnulib/*.in.h \
+		| sed -e 's/\.in\.h/.h/' \
+		| sed -e 's:_:/:' \
+		| sed -e 's:^:/:'
 	cat <<- EOM
 		# manual additions
-		autotools/gnulib/sys
-		autotools/gnulib/malloc/scratch_buffer.gl.h
+		/autotools/gnulib/sys
+		/autotools/gnulib/malloc/scratch_buffer.gl.h
 		*.dirstamp
 		# END GNULIB
 	EOM
