@@ -1,0 +1,3 @@
+DEPEND="
+    use? ( bla )
+"

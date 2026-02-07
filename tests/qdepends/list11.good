@@ -1,0 +1,10 @@
+DEPEND="
+    || (
+        foo
+        (
+            bar
+            baz
+        )
+        !use? ( fnord )
+    )
+"

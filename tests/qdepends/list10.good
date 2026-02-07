@@ -1,0 +1,9 @@
+DEPEND="
+    || (
+        foo
+        (
+            bar
+            baz
+        )
+    )
+"
