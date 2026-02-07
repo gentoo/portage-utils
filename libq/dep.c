@@ -451,7 +451,7 @@ static void dep_print_tree_int
   }
   else if (root->type == DEP_USE)
   {
-    fprintf(fp, "%s? ", root->word);
+    fprintf(fp, "%s%s? ", root->invert ? "!" : "", root->word);
   }
   else if (root->type == DEP_ATOM)
   {
