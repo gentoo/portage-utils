@@ -498,6 +498,7 @@ static void
 install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 {
 	char *p;
+	char *q;
 	int i;
 	size_t cnt;
 	size_t maxdirs;
@@ -574,32 +575,50 @@ install_mask_pwd(int iargc, char **iargv, const struct stat * const st, int fd)
 
 	/* allocate and populate matrix */
 	masksc = iargc - 1;
-	masks = xmalloc(sizeof(char *) * (maxdirs * masksc));
+	masks  = xmalloc(sizeof(char *) * (maxdirs * masksc));
 	masksv = xmalloc(sizeof(char **) * (masksc));
-	for (i = 1; i < iargc; i++) {
+	for (i = 1; i < iargc; i++)
+	{
 		masksv[i - 1] = &masks[(i - 1) * maxdirs];
-		p = iargv[i];
-		cnt = 1;  /* start after count */
+		p             = iargv[i];
+		cnt           = 1;  /* first level is reserved for count */
+
 		/* ignore include marker */
 		if (*p == '-')
 			p++;
-		/* strip of leading slash(es) */
-		while (*p == '/')
-			p++;
-		masks[((i - 1) * maxdirs) + cnt] = p;
-		for (; *p != '\0'; p++) {
-			if (*p == '/') {
-				/* fold duplicate slashes */
-				do {
-					*p++ = '\0';
-				} while (*p == '/');
+		for (q = p; *p != '\0'; p++)
+		{
+			if (*p == '/')
+			{
+				/* make new entry if non-zero (such as at the start of
+				 * the path) */
+				if (q != p)
+				{
+					masks[((i - 1) * maxdirs) + cnt] = q;
+					cnt++;
+				}
+
+				/* terminate part and fold duplicate slashes */
+				do
+				{
+					if (cnt == 1)  /* retain / at start of iargv[i] */
+						p++;
+					else
+						*p++ = '\0';
+				}
+				while (*p == '/');
 				if (*p == '\0')
 					break;
-				cnt++;
-				masks[((i - 1) * maxdirs) + cnt] = p;
+
+				/* start new entry */
+				q = p;
 			}
 		}
-		/* brute force cast below values, a pointer basically is size_t,
+		/* write final component, if any */
+		if (q != p)
+			masks[((i - 1) * maxdirs) + cnt] = q;
+
+		/* brute force cast below values, a pointer hopefully is size_t,
 		 * which is large enough to store what we need here */
 		p = iargv[i];
 		/* set include bit */
