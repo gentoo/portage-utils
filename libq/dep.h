@@ -6,6 +6,8 @@
 #ifndef _DEP_H
 #define _DEP_H 1
 
+#include <unistd.h>
+
 #include "array.h"
 #include "atom.h"
 #include "colors.h"
@@ -17,9 +19,9 @@ typedef struct dep_node_ dep_node_t;
 /* prototypes */
 dep_node_t *dep_grow_tree(const char *depend);
 void        dep_print_tree(FILE *fp, const dep_node_t *root, size_t space, array *m, const char *c, int verbose);
-void        dep_resolve_tree(dep_node_t *root, tree_ctx *t);
+bool        dep_resolve_tree(dep_node_t *root, tree_ctx *t, set_t *use);
 void        dep_burn_tree(dep_node_t *root);
-void        dep_prune_use(dep_node_t *root, set *use);
+void        dep_prune_use(dep_node_t *root, set_t *use);
 void        dep_flatten_tree(dep_node_t *root, array *out);
 
 /* 2026 API boring (but predictable) names for grow/burn */

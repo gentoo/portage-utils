@@ -22,8 +22,7 @@
 #include "set.h"
 #include "tree.h"
 
-/* dep_prune_use: mutilates the tree, setting nodes to NULL that are not
- * active -> should it return a new tree instead?
+/* TODO
  * dep_resolve_tree: looks up atoms in the tree and populates pkg
  * pointer for a matching tree_pkg_ctx, doesn't do anything with ||,
  * leaves nodes alone that don't resolve -> useless?
@@ -32,7 +31,7 @@
  * - prune phase -> remove use-dep-groups that are not active
  *                  downgrade use-dep nodes into all-group nodes
  * - resolving   -> simple match of atom to a package from a tree
- *                  - consider multiple trees, in priorities
+ *                  (may be a merged tree from libq/tree)
  *                  any-groups downgraded to all-group with the first
  *                  block from the any-group that matches
  * - flattening  -> assume all reductions to be done that one wants
@@ -618,35 +617,81 @@ void dep_prune_use
   }
 }
 
-void dep_resolve_tree
+bool dep_resolve_tree
 (
   dep_node_t *root,
-  tree_ctx   *t
+  tree_ctx   *tree,
+  set_t      *use
 )
 {
-  if (root->type == DEP_NULL)
-    return;  /* avoid recursing below */
+  bool ret = true;  /* resolving succeed */
 
-  if (root->type == DEP_ATOM &&
-      root->atom &&
-      root->pkg == NULL)
+  switch (root->type)
   {
-    atom_ctx *d = root->atom;
-    array    *r = tree_match_atom(t, d, (TREE_MATCH_DEFAULT |
-                                         TREE_MATCH_LATEST));
-    if (array_cnt(r) > 0)
-      root->pkg = array_get(r, 0);
-    array_free(r);
+  case DEP_NULL:
+    break;  /* nothing to do here */
+  case DEP_ATOM:
+    if (root->atom &&
+        root->pkg == NULL)
+    {
+      array *r = tree_match_atom(tree, root->atom, (TREE_MATCH_DEFAULT |
+                                                    TREE_MATCH_LATEST));
+      if (array_cnt(r) > 0)
+        root->pkg = array_get(r, 0);
+      else
+        ret       = false;
+      array_free(r);
+    }
+    break;
+  case DEP_USE:
+    /* we do a similiar thing like prune_use, but we don't want to
+     * require prune_use here, for a resolver that wants to print the
+     * original dep-tree, would not want to see the tree be modified
+     * (which is what prune_use does) */
+    if ((!set_contains(use, root->word)) ^ root->invert)
+      break;
+    /* TODO: maybe flag the node as being selected or something? */
+    /* fall through -- handle as ALL-group */
+  case DEP_ALL:
+    if (root->members)
+    {
+      dep_node_t *memb;
+      size_t      n;
+
+      array_for_each(root->members, n, memb)
+      {
+        if (!dep_resolve_tree(memb, tree, use))
+        {
+          ret = false;
+          break;  /* no point in continuing */
+        }
+      }
+    }
+    break;
+  case DEP_ANY:
+    /* hardest one, take the first member that fully matches */
+    if (root->members)
+    {
+      dep_node_t *memb;
+      size_t      n;
+
+      ret = false;
+      array_for_each(root->members, n, memb)
+      {
+        if (dep_resolve_tree(memb, tree, use))
+        {
+          ret = true;
+          break;  /* got one, don't look further */
+        }
+      }
+    }
+    break;
+  default:
+    /* shouldn't be here */
+    break;
   }
 
-  if (root->members)
-  {
-    dep_node_t *memb;
-    size_t      n;
-
-    array_for_each(root->members, n, memb)
-      dep_resolve_tree(memb, t);
-  }
+  return ret;
 }
 
 /* drop any (USE-)indirections and add all atoms in the dep node to the
