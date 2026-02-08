@@ -188,18 +188,28 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			continue;
 		}
 
-		/* try and resolve expressions to real package atoms */
-		if (state->resolve)
-			dep_resolve_tree(dep_tree, state->rtree);
-
 		deps = array_new();
 
 		if (state->qmode & QMODE_TREE &&
 			!(state->qmode & QMODE_REVERSE) &&
 			verbose)
 		{
-			if (!state->resolve)
-				dep_resolve_tree(dep_tree, state->vdb);
+			if (state->resolve)
+			{
+				set_t *use = NULL;
+				array *ma  = tree_match_atom(state->vdb,
+											 datom,
+											 (TREE_MATCH_DEFAULT |
+											  TREE_MATCH_FIRST));
+				if (array_cnt(ma) > 0)
+				{
+					tree_pkg_ctx *p = array_get(ma, 0);
+					use = set_add_from_string(NULL, tree_pkg_meta(p, Q_USE));
+				}
+				dep_resolve_tree(dep_tree, state->vdb, use);
+				array_free(ma);
+				set_free(use);
+			}
 		} else {
 			if (state->qmode & QMODE_FILTERUSE)
 				dep_prune_use(dep_tree, ev_use);
@@ -235,6 +245,10 @@ qdepends_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 					printf("\"");
 				}
 			} else {
+				/* try and resolve expressions to real package atoms */
+				if (state->resolve)
+					dep_resolve_tree(dep_tree, state->vdb, ev_use);
+
 				printf("\n%s=\"\n", *dfile);
 				dep_print_tree(stdout, dep_tree, 1, deps,
 						GREEN, verbose > 1);
