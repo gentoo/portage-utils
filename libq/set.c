@@ -287,34 +287,6 @@ void *set_delete
   return ret;
 }
 
-/* DEPRECATED -- use set_keys()/hash_keys()
- * return the contents of a set as an array of strings
- * the length of the list is returned, and the array is terminated with
- * a NULL (not included in returned length)
- * the caller should free l, but not the strings within */
-size_t list_set
-(
-  set_t  *q,
-  char ***l
-)
-{
-  set_elem_t *w;
-  char      **ret;
-  int         i;
-
-  ret = *l = xmalloc(sizeof(char *) * (cnt_set(q) + 1));
-  for (i = 0; q != NULL && i < _SET_HASH_SIZE; i++)
-  {
-    for (w = q->buckets[i]; w != NULL; w = w->next)
-    {
-      *ret = w->name;
-      ret++;
-    }
-  }
-  *ret = NULL;
-  return q->len;
-}
-
 /* DEPRECATED -- use set_keys()/hash_keys() */
 size_t array_set
 (

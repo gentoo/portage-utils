@@ -47,7 +47,6 @@ typedef struct set_ set;
 #define contains_set(K,S)      set_get_key(S,K)
 #define get_set(K,S)           hash_get((hash_t *)S,K)
 #define del_set(K,S,R)         set_delete(S,K,R)
-size_t  list_set(set_t *q, char ***l);
 size_t  array_set(set_t *q, array *ret);   /* use hash_keys() */
 size_t  values_set(set_t *q, array *ret);  /* use hash_values() */
 #define cnt_set(S)             set_size(S)

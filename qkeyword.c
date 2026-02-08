@@ -75,8 +75,7 @@ typedef struct {
 } qkeyword_data;
 
 static set *archs = NULL;
-static char **archlist = NULL;
-static size_t archlist_count;
+static array *archlist = NULL;
 static size_t arch_longest_len;
 static const char status[3] = {'-', '~', '+'};
 static int qkeyword_test_arch = 0;
@@ -115,7 +114,7 @@ decode_status(char c)
 static int
 decode_arch(const char *arch)
 {
-	char **q;
+	char *q;
 	int a;
 	const char *p;
 
@@ -123,8 +122,9 @@ decode_arch(const char *arch)
 	if (*p == '~' || *p == '-')
 		p++;
 
-	for (q = archlist, a = 0; *q != NULL; q++, a++) {
-		if (strcmp(*q, p) == 0)
+	array_for_each(archlist, a, q)
+	{
+		if (strcmp(q, p) == 0)
 			return a;
 	}
 
@@ -141,17 +141,18 @@ decode_arch(const char *arch)
 static void
 print_keywords(const char *category, const char *ebuild, int *keywords)
 {
-	char **arch = archlist;
-	size_t a;
+	char   *arch;
+	size_t  a;
 
 	printf("%s%s/%s%s%s ", BOLD, category, BLUE, ebuild, NORM);
-	for (a = 0; a < archlist_count; a++) {
+	array_for_each(archlist, a, arch)
+	{
 		switch (keywords[a]) {
 			case stable:
-				printf("%s%c%s%s ", GREEN, status[keywords[a]], arch[a], NORM);
+				printf("%s%c%s%s ", GREEN, status[keywords[a]], arch, NORM);
 				break;
 			case testing:
-				printf("%s%c%s%s ", YELLOW, status[keywords[a]], arch[a], NORM);
+				printf("%s%c%s%s ", YELLOW, status[keywords[a]], arch, NORM);
 				break;
 		}
 	}
@@ -176,17 +177,19 @@ read_keywords(char *s, int *keywords)
 	char *savep;
 	size_t slen;
 	size_t a;
+	size_t siz;
 	int i;
 
 	if (!s)
 		return -1;
 
-	memset(keywords, 0, sizeof(*keywords) * archlist_count);
+	siz = array_cnt(archlist);
+	memset(keywords, 0, sizeof(*keywords) * siz);
 
 	/* handle -* */
 	slen = strlen(s);
 	if (slen >= 2 && s[0] == '-' && s[1] == '*')
-		for (a = 0; a < archlist_count; ++a)
+		for (a = 0; a < siz; ++a)
 			keywords[a] = minus;
 
 	if (!slen)
@@ -207,6 +210,7 @@ static int
 qkeyword_imlate(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	size_t a;
+	size_t siz = array_cnt(archlist);
 	qkeyword_data *data = (qkeyword_data *)priv;
 	atom_ctx *atom;
 
@@ -219,7 +223,7 @@ qkeyword_imlate(tree_pkg_ctx *pkg_ctx, void *priv)
 		default:
 			atom = tree_pkg_atom(pkg_ctx, false);
 			/* match if any of the other arches have stable keywords */
-			for (a = 0; a < archlist_count; a++) {
+			for (a = 0; a < siz; a++) {
 				if (data->keywordsbuf[a] != stable)
 					continue;
 				print_keywords(atom->CATEGORY, atom->PF, data->keywordsbuf);
@@ -281,6 +285,7 @@ static int
 qkeyword_not(tree_pkg_ctx *pkg_ctx, void *priv)
 {
 	size_t a;
+	size_t siz = array_cnt(archlist);
 	qkeyword_data *data = (qkeyword_data *)priv;
 	atom_ctx *atom;
 
@@ -289,12 +294,12 @@ qkeyword_not(tree_pkg_ctx *pkg_ctx, void *priv)
 	{
 		atom = tree_pkg_atom(pkg_ctx, false);
 		/* match if any of the other arches have keywords */
-		for (a = 0; a < archlist_count; a++) {
+		for (a = 0; a < siz; a++) {
 			if (data->keywordsbuf[a] == stable ||
 					data->keywordsbuf[a] == testing)
 				break;
 		}
-		if (a < archlist_count) {
+		if (a < siz) {
 			print_keywords(atom->CATEGORY, atom->PF, data->keywordsbuf);
 			return EXIT_SUCCESS;
 		}
@@ -335,6 +340,7 @@ qkeyword_dropped(tree_pkg_ctx *pkg_ctx, void *priv)
 	qkeyword_data *data = (qkeyword_data *)priv;
 	atom_ctx *atom;
 	size_t i;
+	size_t archlist_count = array_cnt(archlist);
 	char *p;
 
 	/* a keyword is "dropped", if:
@@ -447,12 +453,13 @@ qkeyword_stats(tree_pkg_ctx *pkg_ctx, void *priv)
 	static char lastpkg[_Q_PATH_MAX];
 
 	size_t a;
+	size_t archlist_count = array_cnt(archlist);
 	depend_atom *atom;
 	qkeyword_data *data = (qkeyword_data *)priv;
 
 	/* Is this the last time we'll be called? */
 	if (!data) {
-		char **arch;
+		char *arch;
 		const char border[] = "------------------------------------------------------------------";
 
 		/* no packages, nothing to report */
@@ -499,9 +506,9 @@ qkeyword_stats(tree_pkg_ctx *pkg_ctx, void *priv)
 			(int)arch_longest_len, "", RED, "only", NORM);
 		printf("+%.*s+\n", (int)(arch_longest_len + 46), border);
 
-		arch = archlist;
-		for (a = 0; a < archlist_count; a++) {
-			printf("| %s%*s%s |", GREEN, (int)arch_longest_len, arch[a], NORM);
+		array_for_each(archlist, a, arch)
+		{
+			printf("| %s%*s%s |", GREEN, (int)arch_longest_len, arch, NORM);
 			printf("%s%8d%s |", BLUE, packages_stable[a], NORM);
 			printf("%s%8d%s |", BLUE, packages_testing[a], NORM);
 			printf("%s%8d%s |",
@@ -699,7 +706,7 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 		patom->P = patom->PN;
 		patom->PVR = patom->PN;
 		patom->PR_int = 0;
-		data->lastatom = atom_clone(patom);
+		data->lastatom = patom;
 	}
 
 	return EXIT_SUCCESS;
@@ -754,7 +761,6 @@ qkeyword_load_arches(const char *overlay)
 		bool ok;
 		archs = add_set_unique(buf, archs, &ok);
 		if (ok) {
-			archlist_count++;
 			buflen = strlen(buf);
 			if (arch_longest_len < buflen)
 				arch_longest_len = buflen;
@@ -764,11 +770,11 @@ qkeyword_load_arches(const char *overlay)
 
 	/* materialise into a list */
 	if (archlist != NULL)
-		free(archlist);
-	list_set(archs, &archlist);
+		array_free(archlist);
+	archlist = set_keys(archs);
 
 	/* sort so the output makes more 'sense' */
-	qsort(archlist, archlist_count, sizeof(archlist[0]), keyword_sort);
+	array_sort(archlist, keyword_sort);
 
 	fclose(fp);
  done:
@@ -780,6 +786,7 @@ qkeyword_traverse(tree_pkg_cb func, void *priv)
 {
 	int ret;
 	size_t n;
+	size_t archlist_count;
 	const char *overlay;
 	qkeyword_data *data = (qkeyword_data *)priv;
 
@@ -788,14 +795,16 @@ qkeyword_traverse(tree_pkg_cb func, void *priv)
 	array_for_each(overlays, n, overlay)
 		qkeyword_load_arches(overlay);
 
-	if (archlist_count == 0 || archlist == NULL) {
+	archlist_count = array_cnt(archlist);
+	if (archlist_count == 0)
+	{
 		warnf("no arches could be found in your active overlays (see q -o), "
 			  "do you have profiles/arch.list files present?\n");
 		return EXIT_FAILURE;
 	}
 
 	/* allocate memory (once) for the list used by various funcs */
-	if (archlist_count > data->keywordsbuflen) {
+	if (array_cnt(archlist) > data->keywordsbuflen) {
 		data->keywordsbuf = xrealloc(data->keywordsbuf,
 				archlist_count * sizeof(data->keywordsbuf[0]));
 		data->keywordsbuflen = archlist_count;
@@ -889,7 +898,6 @@ int qkeyword_main(int argc, char **argv)
 		data.fmt = "%[CATEGORY]%[PF]";
 
 	archs = create_set();
-	archlist_count = 0;
 	arch_longest_len = 0;
 
 	data.lastatom = NULL;
@@ -943,7 +951,8 @@ int qkeyword_main(int argc, char **argv)
 
 	if (data.qatom != NULL)
 		atom_implode(data.qatom);
-	free(archlist);
+	free(data.keywordsbuf);
+	array_free(archlist);
 	free_set(archs);
 	if (i == -2)
 		qkeyword_usage(EXIT_FAILURE);

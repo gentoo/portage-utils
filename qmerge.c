@@ -2147,20 +2147,22 @@ qmerge_unmerge_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	int cpm_argc;
 	char **cp_argv;
 	char **cpm_argv;
-	char **todo;
-	char **p;
+	char *p;
+	array *todo;
+	size_t n;
 
 	makeargv(config_protect, &cp_argc, &cp_argv);
 	makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
-	(void)list_set(priv, &todo);
-	for (p = todo; *p != NULL; p++) {
-		if (qlist_match(pkg_ctx, *p, NULL, true, false))
+	todo = set_keys(priv);
+	array_for_each(todo, n, p)
+	{
+		if (qlist_match(pkg_ctx, p, NULL, true, false))
 			pkg_unmerge(pkg_ctx, NULL, NULL,
 					cp_argc, cp_argv, cpm_argc, cpm_argv);
 	}
+	array_free(todo);
 
-	free(todo);
 	freeargv(cp_argc, cp_argv);
 	freeargv(cpm_argc, cpm_argv);
 
@@ -2281,15 +2283,16 @@ qmerge_run(set *todo)
 
 			return EXIT_SUCCESS;
 		} else {
-			char **todo_strs;
-			size_t todo_cnt = list_set(todo, &todo_strs);
+			array *todo_keys = set_keys(todo);
+			char *key;
 			size_t i;
 			depend_atom *atom;
 			tree_pkg_ctx *bpkg;
 			int ret = EXIT_FAILURE;
 
-			for (i = 0; i < todo_cnt; i++) {
-				atom = atom_explode(todo_strs[i]);
+			array_for_each(todo_keys, i, key)
+			{
+				atom = atom_explode(key);
 				bpkg = best_version(atom, BV_BINPKG);
 				if (bpkg != NULL) {
 					pkg_fetch(0, atom, bpkg);
@@ -2299,7 +2302,7 @@ qmerge_run(set *todo)
 				}
 				atom_implode(atom);
 			}
-			free(todo_strs);
+			array_free(todo_keys);
 
 			return ret;
 		}

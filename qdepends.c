@@ -128,7 +128,6 @@ qdepends_results_cb
   array                     *deps;
   dep_node_t                *dep_tree;
   char                      *depstr;
-  char                     **d;
   const char               **dfile;
   size_t                     i;
   size_t                     n;
@@ -335,10 +334,12 @@ qdepends_results_cb
     if ((state->qmode & QMODE_REVERSE) == 0 ||
         ret == 1)
     {
-      for (n = list_set(state->udeps, &d); n > 0; n--)
-        printf(" %s", d[n -1]);
-      free(d);
+      char  *dep;
+      deps = set_keys(state->udeps);
+      array_for_each(deps, n, dep)
+        printf(" %s", dep);
       printf("\n");
+      array_free(deps);
     }
   }
 
