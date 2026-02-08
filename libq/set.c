@@ -525,6 +525,50 @@ void *hash_delete_chk
   return set_delete((set_t *)q, key, removed);
 }
 
+array *hash_keys
+(
+  hash_t *h
+)
+{
+  array      *ret;
+  set_elem_t *w;
+  size_t      i;
+
+  if (h == NULL)
+    return NULL;
+
+  ret = array_new();
+  for (i = 0; i < _SET_HASH_SIZE; i++)
+  {
+    for (w = h->buckets[i]; w != NULL; w = w->next)
+      array_append(ret, w->name);
+  }
+
+  return ret;
+}
+
+array *hash_values
+(
+  hash_t *h
+)
+{
+  array      *ret;
+  set_elem_t *w;
+  size_t      i;
+
+  if (h == NULL)
+    return NULL;
+
+  ret = array_new();
+  for (i = 0; i < _SET_HASH_SIZE; i++)
+  {
+    for (w = h->buckets[i]; w != NULL; w = w->next)
+      array_append(ret, w->val);
+  }
+
+  return ret;
+}
+
 size_t hash_size
 (
   hash_t *h
