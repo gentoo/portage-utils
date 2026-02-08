@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2020 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005      Petteri Räty    - <betelgeuse@gentoo.org>
@@ -555,7 +555,7 @@ int qgrep_main(int argc, char **argv)
 
 	if (argc > (optind + 1)) {
 		depend_atom **d = args.include_atoms =
-			xcalloc(sizeof(depend_atom *), (argc - optind - 1) + 1);
+			xzalloc(sizeof(depend_atom *) * ((argc - optind - 1) + 1));
 		for (i = (optind + 1); i < argc; i++) {
 			*d = atom_explode(argv[i]);
 			if (*d == NULL) {
