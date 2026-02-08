@@ -65,7 +65,6 @@ struct qdepends_opt_state {
   const char   *format;
   char          resolve:1;
   tree_ctx     *vdb;
-  tree_ctx     *rtree;
 };
 
 #define QMODE_DEPEND     (1<<0)
@@ -355,7 +354,6 @@ int qdepends_main(int argc, char **argv)
     .format  = "%[CATEGORY]%[PF]",
     .resolve = false,
     .vdb     = NULL,
-    .rtree   = NULL,
   };
   atom_ctx *atom;
   size_t    i;
@@ -474,10 +472,6 @@ int qdepends_main(int argc, char **argv)
     {
       t = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
       if (t != NULL) {
-        state.rtree = NULL;
-        if (state.resolve)
-          state.rtree = tree_new(portroot, overlay,
-                                 TREETYPE_EBUILD, false);
         if (!(state.qmode & QMODE_REVERSE) &&
             array_cnt(state.atoms) > 0)
         {
@@ -493,15 +487,11 @@ int qdepends_main(int argc, char **argv)
                                          qdepends_results_cb, &state, NULL);
         }
         tree_close(t);
-        if (state.rtree)
-          tree_close(state.rtree);
       }
     }
   }
   else
   {  /* INSTALLED */
-    if (state.resolve)
-      state.rtree = tree_new(portroot, portvdb, TREETYPE_VDB, false);
     if (!(state.qmode & QMODE_REVERSE) &&
         array_cnt(state.atoms) > 0)
     {
@@ -516,8 +506,6 @@ int qdepends_main(int argc, char **argv)
       ret |= tree_foreach_pkg_fast(state.vdb,
                                    qdepends_results_cb, &state, NULL);
     }
-    if (state.rtree)
-      tree_close(state.rtree);
   }
 
   if (state.vdb != NULL)
