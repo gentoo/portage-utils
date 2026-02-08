@@ -1,6 +1,6 @@
 /* xmalloc.c -- malloc with out of memory checking
 
-   Copyright (C) 1990-2000, 2002-2006, 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2000, 2002-2006, 2008-2026 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,10 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
-#include <config.h>
-
 #define XALLOC_INLINE _GL_EXTERN_INLINE
-
+#include <config.h>
 #include "xalloc.h"
 
 #include "ialloc.h"
@@ -30,7 +28,7 @@
 #include <string.h>
 
 static void * _GL_ATTRIBUTE_PURE
-nonnull (void *p)
+check_nonnull (void *p)
 {
   if (!p)
     xalloc_die ();
@@ -42,13 +40,13 @@ nonnull (void *p)
 void *
 xmalloc (size_t s)
 {
-  return nonnull (malloc (s));
+  return check_nonnull (malloc (s));
 }
 
 void *
 ximalloc (idx_t s)
 {
-  return nonnull (imalloc (s));
+  return check_nonnull (imalloc (s));
 }
 
 char *
@@ -64,7 +62,7 @@ void *
 xrealloc (void *p, size_t s)
 {
   void *r = realloc (p, s);
-  if (!r && (!p || s))
+  if (!r)
     xalloc_die ();
   return r;
 }
@@ -72,7 +70,7 @@ xrealloc (void *p, size_t s)
 void *
 xirealloc (void *p, idx_t s)
 {
-  return nonnull (irealloc (p, s));
+  return check_nonnull (irealloc (p, s));
 }
 
 /* Change the size of an allocated block of memory P to an array of N
@@ -82,7 +80,7 @@ void *
 xreallocarray (void *p, size_t n, size_t s)
 {
   void *r = reallocarray (p, n, s);
-  if (!r && (!p || (n && s)))
+  if (!r)
     xalloc_die ();
   return r;
 }
@@ -90,7 +88,7 @@ xreallocarray (void *p, size_t n, size_t s)
 void *
 xireallocarray (void *p, idx_t n, idx_t s)
 {
-  return nonnull (ireallocarray (p, n, s));
+  return check_nonnull (ireallocarray (p, n, s));
 }
 
 /* Allocate an array of N objects, each with S bytes of memory,
@@ -224,12 +222,12 @@ x2nrealloc (void *p, size_t *pn, size_t s)
 void *
 xpalloc (void *pa, idx_t *pn, idx_t n_incr_min, ptrdiff_t n_max, idx_t s)
 {
-  idx_t n0 = *pn;
-
   /* The approximate size to use for initial small allocation
      requests.  This is the largest "small" request for the GNU C
      library malloc.  */
   enum { DEFAULT_MXFAST = 64 * sizeof (size_t) / 4 };
+
+  idx_t n0 = *pn;
 
   /* If the array is tiny, grow it to about (but no greater than)
      DEFAULT_MXFAST bytes.  Otherwise, grow it by about 50%.
@@ -295,13 +293,13 @@ xizalloc (idx_t s)
 void *
 xcalloc (size_t n, size_t s)
 {
-  return nonnull (calloc (n, s));
+  return check_nonnull (calloc (n, s));
 }
 
 void *
 xicalloc (idx_t n, idx_t s)
 {
-  return nonnull (icalloc (n, s));
+  return check_nonnull (icalloc (n, s));
 }
 
 /* Clone an object P of size S, with error checking.  There's no need

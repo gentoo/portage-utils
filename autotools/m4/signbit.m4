@@ -1,8 +1,10 @@
-# signbit.m4 serial 22
-dnl Copyright (C) 2007-2024 Free Software Foundation, Inc.
+# signbit.m4
+# serial 23
+dnl Copyright (C) 2007-2026 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 AC_DEFUN([gl_SIGNBIT],
 [
@@ -197,7 +199,7 @@ double m0d = -p0d;
    But that expression does not work on other platforms, such as when
    cross-compiling to PowerPC on Mac OS X 10.5.  */
 long double p0l = 0.0L;
-#if defined __hpux || defined __sgi
+#if defined __hpux
 long double m0l = -LDBL_MIN * LDBL_MIN;
 #else
 long double m0l = -p0l;

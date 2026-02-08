@@ -1,6 +1,6 @@
 /* Work around rmdir bugs.
 
-   Copyright (C) 1988, 1990, 1999, 2003-2006, 2009-2024 Free Software
+   Copyright (C) 1988, 1990, 1999, 2003-2006, 2009-2026 Free Software
    Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
@@ -38,7 +38,6 @@ rpl_rmdir (char const *dir)
 {
   /* Work around cygwin 1.5.x bug where rmdir("dir/./") succeeds.  */
   size_t len = strlen (dir);
-  int result;
   while (len && ISSLASH (dir[len - 1]))
     len--;
   if (len && dir[len - 1] == '.' && (1 == len || ISSLASH (dir[len - 2])))
@@ -46,7 +45,7 @@ rpl_rmdir (char const *dir)
       errno = EINVAL;
       return -1;
     }
-  result = rmdir (dir);
+  int result = rmdir (dir);
   /* Work around mingw bug, where rmdir("file/") fails with EINVAL
      instead of ENOTDIR.  We've already filtered out trailing ., the
      only reason allowed by POSIX for EINVAL.  */

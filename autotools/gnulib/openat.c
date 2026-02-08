@@ -1,5 +1,5 @@
 /* provide a replacement openat function
-   Copyright (C) 2004-2024 Free Software Foundation, Inc.
+   Copyright (C) 2004-2026 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,24 +35,27 @@ orig_openat (int fd, char const *filename, int flags, mode_t mode)
 }
 #endif
 
-#ifdef __osf__
-/* Write "fcntl.h" here, not <fcntl.h>, otherwise OSF/1 5.1 DTK cc eliminates
-   this include because of the preliminary #include <fcntl.h> above.  */
-# include "fcntl.h"
-#else
-# include <fcntl.h>
-#endif
+/* Specification.  */
+#include <fcntl.h>
 
 #include "openat.h"
 
 #include "cloexec.h"
 
+#include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <errno.h>
+
+#ifndef HAVE_WORKING_O_DIRECTORY
+# define HAVE_WORKING_O_DIRECTORY false
+#endif
+
+#ifndef OPEN_TRAILING_SLASH_BUG
+# define OPEN_TRAILING_SLASH_BUG false
+#endif
 
 #if HAVE_OPENAT
 
@@ -61,17 +64,8 @@ orig_openat (int fd, char const *filename, int flags, mode_t mode)
 int
 rpl_openat (int dfd, char const *filename, int flags, ...)
 {
-  /* 0 = unknown, 1 = yes, -1 = no.  */
-#if GNULIB_defined_O_CLOEXEC
-  int have_cloexec = -1;
-#else
-  static int have_cloexec;
-#endif
+  mode_t mode = 0;
 
-  mode_t mode;
-  int fd;
-
-  mode = 0;
   if (flags & O_CREAT)
     {
       va_list arg;
@@ -84,7 +78,6 @@ rpl_openat (int dfd, char const *filename, int flags, ...)
       va_end (arg);
     }
 
-# if OPEN_TRAILING_SLASH_BUG
   /* Fail if one of O_CREAT, O_WRONLY, O_RDWR is specified and the filename
      ends in a slash, as POSIX says such a filename must name a directory
      <https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_13>:
@@ -103,21 +96,56 @@ rpl_openat (int dfd, char const *filename, int flags, ...)
          directories,
        - if O_WRONLY or O_RDWR is specified, open() must fail because the
          file does not contain a '.' directory.  */
-  if ((flags & O_CREAT)
-      || (flags & O_ACCMODE) == O_RDWR
-      || (flags & O_ACCMODE) == O_WRONLY)
+  bool check_for_slash_bug;
+  if (OPEN_TRAILING_SLASH_BUG)
     {
       size_t len = strlen (filename);
-      if (len > 0 && filename[len - 1] == '/')
+      check_for_slash_bug = len && filename[len - 1] == '/';
+    }
+  else
+    check_for_slash_bug = false;
+
+  if (check_for_slash_bug
+      && (flags & O_CREAT
+          || (flags & O_ACCMODE) == O_RDWR
+          || (flags & O_ACCMODE) == O_WRONLY))
+    {
+      errno = EISDIR;
+      return -1;
+    }
+
+  /* With the trailing slash bug or without working O_DIRECTORY, check with
+     stat first lest we hang trying to open a fifo.  Although there is
+     a race between this and opening the file, we can do no better.
+     After opening the file we will check again with fstat.  */
+  bool check_directory =
+    (check_for_slash_bug
+     || (!HAVE_WORKING_O_DIRECTORY && flags & O_DIRECTORY));
+  if (check_directory)
+    {
+      struct stat statbuf;
+      int fstatat_flags = flags & O_NOFOLLOW ? AT_SYMLINK_NOFOLLOW : 0;
+      if (fstatat (dfd, filename, &statbuf, fstatat_flags) < 0)
         {
-          errno = EISDIR;
+          if (! (flags & O_CREAT && errno == ENOENT))
+            return -1;
+        }
+      else if (!S_ISDIR (statbuf.st_mode))
+        {
+          errno = ENOTDIR;
           return -1;
         }
     }
+
+  /* 0 = unknown, 1 = yes, -1 = no.  */
+# if GNULIB_defined_O_CLOEXEC
+  int have_cloexec = -1;
+# else
+  static int have_cloexec;
 # endif
 
-  fd = orig_openat (dfd, filename,
-                    flags & ~(have_cloexec < 0 ? O_CLOEXEC : 0), mode);
+  int fd = orig_openat (dfd, filename,
+                        flags & ~(have_cloexec < 0 ? O_CLOEXEC : 0), mode);
 
   if (flags & O_CLOEXEC)
     {
@@ -136,10 +164,8 @@ rpl_openat (int dfd, char const *filename, int flags, ...)
     }
 
 
-# if OPEN_TRAILING_SLASH_BUG
-  /* If the filename ends in a slash and fd does not refer to a directory,
-     then fail.
-     Rationale: POSIX says such a filename must name a directory
+  /* If checking for directories, fail if fd does not refer to a directory.
+     Rationale: A filename ending in slash cannot name a non-directory
      <https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_13>:
        "A pathname that contains at least one non-<slash> character and that
         ends with one or more trailing <slash> characters shall not be resolved
@@ -147,23 +173,18 @@ rpl_openat (int dfd, char const *filename, int flags, ...)
         <slash> characters names an existing directory"
      If the named file without the slash is not a directory, open() must fail
      with ENOTDIR.  */
-  if (fd >= 0)
+  if (check_directory && 0 <= fd)
     {
-      /* We know len is positive, since open did not fail with ENOENT.  */
-      size_t len = strlen (filename);
-      if (filename[len - 1] == '/')
+      struct stat statbuf;
+      int r = fstat (fd, &statbuf);
+      if (r < 0 || !S_ISDIR (statbuf.st_mode))
         {
-          struct stat statbuf;
-
-          if (fstat (fd, &statbuf) >= 0 && !S_ISDIR (statbuf.st_mode))
-            {
-              close (fd);
-              errno = ENOTDIR;
-              return -1;
-            }
+          int err = r < 0 ? errno : ENOTDIR;
+          close (fd);
+          errno = err;
+          return -1;
         }
     }
-# endif
 
   return fd;
 }
@@ -217,11 +238,6 @@ int
 openat_permissive (int fd, char const *file, int flags, mode_t mode,
                    int *cwd_errno)
 {
-  struct saved_cwd saved_cwd;
-  int saved_errno;
-  int err;
-  bool save_ok;
-
   if (fd == AT_FDCWD || IS_ABSOLUTE_FILE_NAME (file))
     return open (file, flags, mode);
 
@@ -245,41 +261,55 @@ openat_permissive (int fd, char const *file, int flags, mode_t mode,
       }
   }
 
-  save_ok = (save_cwd (&saved_cwd) == 0);
-  if (! save_ok)
+  struct saved_cwd saved_cwd;
+  int save_failed = save_cwd (&saved_cwd) < 0 ? errno : 0;
+
+  /* If save_cwd allocated a descriptor DFD other than FD, do another
+     save_cwd and then close DFD, so that the later open (if successful)
+     returns DFD (the lowest-numbered descriptor) as POSIX requires.  */
+  int dfd = saved_cwd.desc;
+  if (0 <= dfd && dfd != fd)
     {
-      if (! cwd_errno)
-        openat_save_fail (errno);
-      *cwd_errno = errno;
+      save_failed = save_cwd (&saved_cwd) < 0 ? errno : 0;
+      close (dfd);
+      dfd = saved_cwd.desc;
     }
-  if (0 <= fd && fd == saved_cwd.desc)
+
+  /* If saving the working directory collides with the user's requested fd,
+     then the user's fd must have been closed to begin with.  */
+  if (0 <= dfd && dfd == fd)
     {
-      /* If saving the working directory collides with the user's
-         requested fd, then the user's fd must have been closed to
-         begin with.  */
       free_cwd (&saved_cwd);
       errno = EBADF;
       return -1;
     }
 
-  err = fchdir (fd);
-  saved_errno = errno;
+  if (save_failed)
+    {
+      if (! cwd_errno)
+        openat_save_fail (save_failed);
+      *cwd_errno = save_failed;
+    }
 
-  if (! err)
+  int err = fchdir (fd);
+  int saved_errno = errno;
+
+  if (0 <= err)
     {
       err = open (file, flags, mode);
       saved_errno = errno;
-      if (save_ok && restore_cwd (&saved_cwd) != 0)
+      if (!save_failed && restore_cwd (&saved_cwd) < 0)
         {
+          int restore_cwd_errno = errno;
           if (! cwd_errno)
             {
-              /* Don't write a message to just-created fd 2.  */
-              saved_errno = errno;
-              if (err == STDERR_FILENO)
+              /* Do not leak ERR.  This also stops openat_restore_fail
+                 from messing up if ERR happens to equal STDERR_FILENO.  */
+              if (0 <= err)
                 close (err);
-              openat_restore_fail (saved_errno);
+              openat_restore_fail (restore_cwd_errno);
             }
-          *cwd_errno = errno;
+          *cwd_errno = restore_cwd_errno;
         }
     }
 

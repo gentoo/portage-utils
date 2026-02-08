@@ -1,5 +1,5 @@
 /* signbit() macro: Determine the sign bit of a floating-point number.
-   Copyright (C) 2007-2024 Free Software Foundation, Inc.
+   Copyright (C) 2007-2026 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -32,7 +32,7 @@ gl_signbitd (double arg)
 {
 #if defined DBL_SIGNBIT_WORD && defined DBL_SIGNBIT_BIT
   /* The use of a union to extract the bits of the representation of a
-     'long double' is safe in practice, despite of the "aliasing rules" of
+     'double' is safe in practice, despite of the "aliasing rules" of
      C99, because the GCC docs say
        "Even with '-fstrict-aliasing', type-punning is allowed, provided the
         memory is accessed through the union type."
@@ -56,7 +56,7 @@ gl_signbitd (double arg)
       /* Distinguish 0.0 and -0.0.  */
       static double plus_zero = 0.0;
       double arg_mem = arg;
-      return (memcmp (&plus_zero, &arg_mem, SIZEOF_DBL) != 0);
+      return !memeq (&plus_zero, &arg_mem, SIZEOF_DBL);
     }
   else
     return 0;

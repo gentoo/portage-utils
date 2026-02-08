@@ -1,16 +1,23 @@
-# getprogname.m4 - check for getprogname or replacements for it
+# getprogname.m4
+# serial 9
+dnl Copyright (C) 2016-2026 Free Software Foundation, Inc.
+dnl This file is free software; the Free Software Foundation
+dnl gives unlimited permission to copy and/or distribute it,
+dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
-# Copyright (C) 2016-2024 Free Software Foundation, Inc.
-# This file is free software; the Free Software Foundation
-# gives unlimited permission to copy and/or distribute it,
-# with or without modifications, as long as this notice is preserved.
-
-# serial 8
+# Check for getprogname or replacements for it
 
 AC_DEFUN([gl_FUNC_GETPROGNAME],
 [
   AC_REQUIRE([gl_STDLIB_H_DEFAULTS])
   AC_REQUIRE([gl_USE_SYSTEM_EXTENSIONS])
+  AC_CHECK_HEADERS_ONCE([sys/process.h])
+  if test $ac_cv_header_sys_process_h = yes; then
+    HAVE_SYS_PROCESS_H=1
+  else
+    HAVE_SYS_PROCESS_H=0
+  fi
   gl_CHECK_FUNCS_ANDROID([getprogname], [[#include <stdlib.h>]])
   if test $ac_cv_func_getprogname = no; then
     HAVE_GETPROGNAME=0

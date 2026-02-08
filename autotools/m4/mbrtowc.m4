@@ -1,9 +1,11 @@
-# mbrtowc.m4 serial 44  -*- coding: utf-8 -*-
-dnl Copyright (C) 2001-2002, 2004-2005, 2008-2024 Free Software Foundation,
+# mbrtowc.m4
+# serial 47
+dnl Copyright (C) 2001-2002, 2004-2005, 2008-2026 Free Software Foundation,
 dnl Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 AC_DEFUN([gl_FUNC_MBRTOWC],
 [
@@ -31,7 +33,6 @@ AC_DEFUN([gl_FUNC_MBRTOWC],
       REPLACE_MBRTOWC=1
     else
       gl_MBRTOWC_NULL_ARG1
-      gl_MBRTOWC_NULL_ARG2
       gl_MBRTOWC_RETVAL
       gl_MBRTOWC_NUL_RETVAL
       gl_MBRTOWC_STORES_INCOMPLETE
@@ -41,13 +42,6 @@ AC_DEFUN([gl_FUNC_MBRTOWC],
         *yes) ;;
         *) AC_DEFINE([MBRTOWC_NULL_ARG1_BUG], [1],
              [Define if the mbrtowc function has the NULL pwc argument bug.])
-           REPLACE_MBRTOWC=1
-           ;;
-      esac
-      case "$gl_cv_func_mbrtowc_null_arg2" in
-        *yes) ;;
-        *) AC_DEFINE([MBRTOWC_NULL_ARG2_BUG], [1],
-             [Define if the mbrtowc function has the NULL string argument bug.])
            REPLACE_MBRTOWC=1
            ;;
       esac
@@ -159,7 +153,7 @@ AC_DEFUN([gl_MBRTOWC_INCOMPLETE_STATE],
 [
   AC_REQUIRE([AC_PROG_CC])
   AC_REQUIRE([gt_LOCALE_JA])
-  AC_REQUIRE([gt_LOCALE_FR_UTF8])
+  AC_REQUIRE([gt_LOCALE_EN_UTF8])
   AC_REQUIRE([AC_CANONICAL_HOST]) dnl for cross-compiles
   AC_CACHE_CHECK([whether mbrtowc handles incomplete characters],
     [gl_cv_func_mbrtowc_incomplete_state],
@@ -168,10 +162,10 @@ AC_DEFUN([gl_MBRTOWC_INCOMPLETE_STATE],
       dnl is present.
 changequote(,)dnl
       case "$host_os" in
-                     # Guess no on AIX and OSF/1.
-        aix* | osf*) gl_cv_func_mbrtowc_incomplete_state="guessing no" ;;
-                     # Guess yes otherwise.
-        *)           gl_cv_func_mbrtowc_incomplete_state="guessing yes" ;;
+              # Guess no on AIX.
+        aix*) gl_cv_func_mbrtowc_incomplete_state="guessing no" ;;
+              # Guess yes otherwise.
+        *)    gl_cv_func_mbrtowc_incomplete_state="guessing yes" ;;
       esac
 changequote([,])dnl
       if test $LOCALE_JA != none; then
@@ -199,7 +193,7 @@ int main ()
           [gl_cv_func_mbrtowc_incomplete_state=no],
           [:])
       else
-        if test $LOCALE_FR_UTF8 != none; then
+        if test "$LOCALE_EN_UTF8" != none; then
           AC_RUN_IFELSE(
             [AC_LANG_SOURCE([[
 #include <locale.h>
@@ -207,7 +201,7 @@ int main ()
 #include <wchar.h>
 int main ()
 {
-  if (setlocale (LC_ALL, "$LOCALE_FR_UTF8") != NULL)
+  if (setlocale (LC_ALL, "$LOCALE_EN_UTF8") != NULL)
     {
       const char input[] = "B\303\274\303\237er"; /* "Büßer" */
       mbstate_t state;
@@ -287,7 +281,7 @@ dnl Result is gl_cv_func_mbrtowc_null_arg1.
 AC_DEFUN([gl_MBRTOWC_NULL_ARG1],
 [
   AC_REQUIRE([AC_PROG_CC])
-  AC_REQUIRE([gt_LOCALE_FR_UTF8])
+  AC_REQUIRE([gt_LOCALE_EN_UTF8])
   AC_REQUIRE([AC_CANONICAL_HOST]) dnl for cross-compiles
   AC_CACHE_CHECK([whether mbrtowc handles a NULL pwc argument],
     [gl_cv_func_mbrtowc_null_arg1],
@@ -302,7 +296,7 @@ changequote(,)dnl
         *)        gl_cv_func_mbrtowc_null_arg1="guessing yes" ;;
       esac
 changequote([,])dnl
-      if test $LOCALE_FR_UTF8 != none; then
+      if test "$LOCALE_EN_UTF8" != none; then
         AC_RUN_IFELSE(
           [AC_LANG_SOURCE([[
 #include <locale.h>
@@ -313,7 +307,7 @@ int main ()
 {
   int result = 0;
 
-  if (setlocale (LC_ALL, "$LOCALE_FR_UTF8") != NULL)
+  if (setlocale (LC_ALL, "$LOCALE_EN_UTF8") != NULL)
     {
       char input[] = "\303\237er";
       mbstate_t state;
@@ -344,57 +338,6 @@ int main ()
     ])
 ])
 
-dnl Test whether mbrtowc supports a NULL string argument correctly.
-dnl Result is gl_cv_func_mbrtowc_null_arg2.
-
-AC_DEFUN([gl_MBRTOWC_NULL_ARG2],
-[
-  AC_REQUIRE([AC_PROG_CC])
-  AC_REQUIRE([gt_LOCALE_FR_UTF8])
-  AC_REQUIRE([AC_CANONICAL_HOST]) dnl for cross-compiles
-  AC_CACHE_CHECK([whether mbrtowc handles a NULL string argument],
-    [gl_cv_func_mbrtowc_null_arg2],
-    [
-      dnl Initial guess, used when cross-compiling or when no suitable locale
-      dnl is present.
-changequote(,)dnl
-      case "$host_os" in
-              # Guess no on OSF/1.
-        osf*) gl_cv_func_mbrtowc_null_arg2="guessing no" ;;
-              # Guess yes otherwise.
-        *)    gl_cv_func_mbrtowc_null_arg2="guessing yes" ;;
-      esac
-changequote([,])dnl
-      if test $LOCALE_FR_UTF8 != none; then
-        AC_RUN_IFELSE(
-          [AC_LANG_SOURCE([[
-#include <locale.h>
-#include <string.h>
-#include <wchar.h>
-int main ()
-{
-  if (setlocale (LC_ALL, "$LOCALE_FR_UTF8") != NULL)
-    {
-      mbstate_t state;
-      wchar_t wc;
-      int ret;
-
-      memset (&state, '\0', sizeof (mbstate_t));
-      wc = (wchar_t) 0xBADFACE;
-      mbrtowc (&wc, NULL, 5, &state);
-      /* Check that wc was not modified.  */
-      if (wc != (wchar_t) 0xBADFACE)
-        return 2;
-    }
-  return 0;
-}]])],
-          [gl_cv_func_mbrtowc_null_arg2=yes],
-          [gl_cv_func_mbrtowc_null_arg2=no],
-          [:])
-      fi
-    ])
-])
-
 dnl Test whether mbrtowc, when parsing the end of a multibyte character,
 dnl correctly returns the number of bytes that were needed to complete the
 dnl character (not the total number of bytes of the multibyte character).
@@ -403,7 +346,7 @@ dnl Result is gl_cv_func_mbrtowc_retval.
 AC_DEFUN([gl_MBRTOWC_RETVAL],
 [
   AC_REQUIRE([AC_PROG_CC])
-  AC_REQUIRE([gt_LOCALE_FR_UTF8])
+  AC_REQUIRE([gt_LOCALE_EN_UTF8])
   AC_REQUIRE([gt_LOCALE_JA])
   AC_REQUIRE([AC_CANONICAL_HOST])
   AC_CACHE_CHECK([whether mbrtowc has a correct return value],
@@ -421,7 +364,7 @@ changequote(,)dnl
           gl_cv_func_mbrtowc_retval="guessing yes" ;;
       esac
 changequote([,])dnl
-      if test $LOCALE_FR_UTF8 != none || test $LOCALE_JA != none \
+      if test "$LOCALE_EN_UTF8" != none || test $LOCALE_JA != none \
          || { case "$host_os" in mingw* | windows*) true;; *) false;; esac; }; then
         AC_RUN_IFELSE(
           [AC_LANG_SOURCE([[
@@ -433,8 +376,8 @@ int main ()
   int result = 0;
   int found_some_locale = 0;
   /* This fails on Solaris.  */
-  if (strcmp ("$LOCALE_FR_UTF8", "none") != 0
-      && setlocale (LC_ALL, "$LOCALE_FR_UTF8") != NULL)
+  if (strcmp ("$LOCALE_EN_UTF8", "none") != 0
+      && setlocale (LC_ALL, "$LOCALE_EN_UTF8") != NULL)
     {
       char input[] = "B\303\274\303\237er"; /* "Büßer" */
       mbstate_t state;
@@ -648,8 +591,8 @@ int main ()
            [:])
          ;;
        *)
-         AC_REQUIRE([gt_LOCALE_FR_UTF8])
-         if test $LOCALE_FR_UTF8 != none; then
+         AC_REQUIRE([gt_LOCALE_EN_UTF8])
+         if test "$LOCALE_EN_UTF8" != none; then
            AC_RUN_IFELSE(
              [AC_LANG_SOURCE([[
 #include <locale.h>
@@ -657,7 +600,7 @@ int main ()
 #include <wchar.h>
 int main ()
 {
-  if (setlocale (LC_ALL, "$LOCALE_FR_UTF8") != NULL)
+  if (setlocale (LC_ALL, "$LOCALE_EN_UTF8") != NULL)
     {
       wchar_t wc = (wchar_t) 0xBADFACE;
       mbstate_t state;
@@ -714,7 +657,7 @@ AC_DEFUN([gl_MBRTOWC_EMPTY_INPUT],
 dnl Test whether mbrtowc reports encoding errors in the C locale.
 dnl Although POSIX was never intended to allow this, the GNU C Library
 dnl and other implementations do it.  See:
-dnl https://sourceware.org/bugzilla/show_bug.cgi?id=19932
+dnl https://sourceware.org/PR19932
 dnl POSIX has now clarified it:
 dnl <https://pubs.opengroup.org/onlinepubs/9699919799/functions/mbrtowc.html>
 dnl says: "In the POSIX locale an [EILSEQ] error cannot occur since all byte

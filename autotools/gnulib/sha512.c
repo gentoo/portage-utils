@@ -1,7 +1,7 @@
 /* sha512.c - Functions to compute SHA512 and SHA384 message digest of files or
    memory blocks according to the NIST specification FIPS-180-2.
 
-   Copyright (C) 2005-2006, 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2005-2006, 2008-2026 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -35,7 +35,7 @@
 #ifdef WORDS_BIGENDIAN
 # define SWAP(n) (n)
 #else
-# define SWAP(n) bswap_64 (n)
+# define SWAP(n) u64bswap (n)
 #endif
 
 #if ! HAVE_OPENSSL_SHA512
@@ -96,10 +96,9 @@ set_uint64 (char *cp, u64 v)
 void *
 sha512_read_ctx (const struct sha512_ctx *ctx, void *resbuf)
 {
-  int i;
   char *r = resbuf;
 
-  for (i = 0; i < 8; i++)
+  for (int i = 0; i < 8; i++)
     set_uint64 (r + i * sizeof ctx->state[0], SWAP (ctx->state[i]));
 
   return resbuf;
@@ -108,10 +107,9 @@ sha512_read_ctx (const struct sha512_ctx *ctx, void *resbuf)
 void *
 sha384_read_ctx (const struct sha512_ctx *ctx, void *resbuf)
 {
-  int i;
   char *r = resbuf;
 
-  for (i = 0; i < 6; i++)
+  for (int i = 0; i < 6; i++)
     set_uint64 (r + i * sizeof ctx->state[0], SWAP (ctx->state[i]));
 
   return resbuf;
@@ -367,9 +365,8 @@ sha512_process_block (const void *buffer, size_t len, struct sha512_ctx *ctx)
 
   while (words < endp)
     {
-      int t;
       /* FIXME: see sha1.c for a better implementation.  */
-      for (t = 0; t < 16; t++)
+      for (int t = 0; t < 16; t++)
         {
           x[t] = SWAP (*words);
           words++;

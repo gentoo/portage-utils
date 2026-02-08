@@ -1,8 +1,10 @@
-# frexp.m4 serial 19
-dnl Copyright (C) 2007-2024 Free Software Foundation, Inc.
+# frexp.m4
+# serial 21
+dnl Copyright (C) 2007-2026 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 AC_DEFUN([gl_FUNC_FREXP],
 [
@@ -13,7 +15,7 @@ AC_DEFUN([gl_FUNC_FREXP],
     AC_CACHE_CHECK([whether frexp() can be used with libm],
       [gl_cv_func_frexp_in_libm],
       [
-        save_LIBS="$LIBS"
+        saved_LIBS="$LIBS"
         LIBS="$LIBS -lm"
         AC_LINK_IFELSE(
           [AC_LANG_PROGRAM(
@@ -22,7 +24,7 @@ AC_DEFUN([gl_FUNC_FREXP],
              [[int e; return frexp (x, &e) > 0;]])],
           [gl_cv_func_frexp_in_libm=yes],
           [gl_cv_func_frexp_in_libm=no])
-        LIBS="$save_LIBS"
+        LIBS="$saved_LIBS"
       ])
     if test $gl_cv_func_frexp_in_libm = yes; then
       FREXP_LIBM=-lm
@@ -30,10 +32,10 @@ AC_DEFUN([gl_FUNC_FREXP],
   fi
   if test $gl_cv_func_frexp_no_libm = yes \
      || test $gl_cv_func_frexp_in_libm = yes; then
-    save_LIBS="$LIBS"
+    saved_LIBS="$LIBS"
     LIBS="$LIBS $FREXP_LIBM"
     gl_FUNC_FREXP_WORKS
-    LIBS="$save_LIBS"
+    LIBS="$saved_LIBS"
     case "$gl_cv_func_frexp_works" in
       *yes) gl_func_frexp=yes ;;
       *)    gl_func_frexp=no; REPLACE_FREXP=1; FREXP_LIBM= ;;
@@ -87,8 +89,8 @@ AC_DEFUN([gl_CHECK_FREXP_NO_LIBM],
 ])
 
 dnl Test whether frexp() works also on denormalized numbers (this fails e.g. on
-dnl NetBSD 3.0), on infinite numbers (this fails e.g. on IRIX 6.5 and mingw),
-dnl and on negative zero (this fails e.g. on NetBSD 4.99 and mingw).
+dnl NetBSD 3.0), on infinite numbers (this fails e.g. on mingw), and on negative
+dnl zero (this fails e.g. on NetBSD 4.99 and mingw).
 AC_DEFUN([gl_FUNC_FREXP_WORKS],
 [
   AC_REQUIRE([AC_PROG_CC])
@@ -109,7 +111,7 @@ AC_DEFUN([gl_FUNC_FREXP_WORKS],
    ICC 10.0 has a bug when optimizing the expression -zero.
    The expression -DBL_MIN * DBL_MIN does not work when cross-compiling
    to PowerPC on Mac OS X 10.5.  */
-#if defined __hpux || defined __sgi || defined __ICC
+#if defined __hpux || defined __ICC
 static double
 compute_minus_zero (void)
 {
@@ -165,7 +167,7 @@ int main()
         [gl_cv_func_frexp_works=yes],
         [gl_cv_func_frexp_works=no],
         [case "$host_os" in
-           netbsd* | irix*) gl_cv_func_frexp_works="guessing no" ;;
+           netbsd*) gl_cv_func_frexp_works="guessing no" ;;
            # Guess yes with MSVC, no with mingw.
            windows*-msvc*)
              gl_cv_func_frexp_works="guessing yes"

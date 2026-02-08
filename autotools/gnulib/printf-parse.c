@@ -1,5 +1,5 @@
 /* Formatted output to strings.
-   Copyright (C) 1999-2000, 2002-2003, 2006-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2000, 2002-2003, 2006-2026 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -323,8 +323,6 @@ PRINTF_PARSE (const CHAR_T *format, DIRECTIVES *d, arguments *a)
             }
 
           {
-            arg_type type;
-
             /* Parse argument type/size specifiers.  */
             /* Relevant for the conversion characters d, i.  */
             arg_type signed_type = TYPE_INT;
@@ -558,8 +556,10 @@ PRINTF_PARSE (const CHAR_T *format, DIRECTIVES *d, arguments *a)
                 cp += 3;
               }
 #endif
+            (void) pointer_type;
 
             /* Read the conversion character.  */
+            arg_type type;
             c = *cp++;
             switch (c)
               {
@@ -599,26 +599,22 @@ PRINTF_PARSE (const CHAR_T *format, DIRECTIVES *d, arguments *a)
                 if (signed_type == TYPE_LONGINT
                     /* For backward compatibility only.  */
                     || signed_type == TYPE_LONGLONGINT)
-#if HAVE_WCHAR_T
                   type = TYPE_WIDE_STRING;
-#else
-                  goto error;
-#endif
                 else
                   type = TYPE_STRING;
                 break;
-#if HAVE_WCHAR_T
               case 'S':
                 type = TYPE_WIDE_STRING;
                 c = 's';
                 break;
-#endif
               case 'p':
                 type = TYPE_POINTER;
                 break;
+#if NEED_PRINTF_WITH_N_DIRECTIVE
               case 'n':
                 type = pointer_type;
                 break;
+#endif
 #if ENABLE_UNISTDIO
               /* The unistdio extensions.  */
               case 'U':
@@ -657,17 +653,14 @@ PRINTF_PARSE (const CHAR_T *format, DIRECTIVES *d, arguments *a)
           d->count++;
           if (d->count >= d_allocated)
             {
-              size_t memory_size;
-              DIRECTIVE *memory;
-
               d_allocated = xtimes (d_allocated, 2);
-              memory_size = xtimes (d_allocated, sizeof (DIRECTIVE));
+              size_t memory_size = xtimes (d_allocated, sizeof (DIRECTIVE));
               if (size_overflow_p (memory_size))
                 /* Overflow, would lead to out of memory.  */
                 goto out_of_memory;
-              memory = (DIRECTIVE *) (d->dir != d->direct_alloc_dir
-                                      ? realloc (d->dir, memory_size)
-                                      : malloc (memory_size));
+              DIRECTIVE *memory = (DIRECTIVE *) (d->dir != d->direct_alloc_dir
+                                                 ? realloc (d->dir, memory_size)
+                                                 : malloc (memory_size));
               if (memory == NULL)
                 /* Out of memory.  */
                 goto out_of_memory;

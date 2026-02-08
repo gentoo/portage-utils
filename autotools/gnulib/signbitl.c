@@ -1,5 +1,5 @@
 /* signbit() macro: Determine the sign bit of a floating-point number.
-   Copyright (C) 2007, 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2007, 2009-2026 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -56,7 +56,7 @@ gl_signbitl (long double arg)
       /* Distinguish 0.0L and -0.0L.  */
       static long double plus_zero = 0.0L;
       long double arg_mem = arg;
-      return (memcmp (&plus_zero, &arg_mem, SIZEOF_LDBL) != 0);
+      return !memeq (&plus_zero, &arg_mem, SIZEOF_LDBL);
     }
   else
     return 0;

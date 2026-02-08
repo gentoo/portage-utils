@@ -1,6 +1,6 @@
 /* Concatenate two arbitrary file names.
 
-   Copyright (C) 1996-1997, 2003, 2005, 2007, 2009-2024 Free Software
+   Copyright (C) 1996-1997, 2003, 2005, 2007, 2009-2026 Free Software
    Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
@@ -25,6 +25,11 @@
 
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #if GNULIB_FILENAMECAT
 char *file_name_concat (char const *dir, char const *base,
                         char **base_in_result)
@@ -35,3 +40,8 @@ char *file_name_concat (char const *dir, char const *base,
 char *mfile_name_concat (char const *dir, char const *base,
                          char **base_in_result)
   _GL_ATTRIBUTE_MALLOC _GL_ATTRIBUTE_DEALLOC_FREE;
+
+
+#ifdef __cplusplus
+}
+#endif

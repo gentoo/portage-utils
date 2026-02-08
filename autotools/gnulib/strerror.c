@@ -1,6 +1,6 @@
 /* strerror.c --- POSIX compatible system error routine
 
-   Copyright (C) 2007-2024 Free Software Foundation, Inc.
+   Copyright (C) 2007-2026 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -31,12 +31,17 @@
 /* Use the system functions, not the gnulib overrides in this file.  */
 #undef sprintf
 
+/* macOS 12's "warning: 'sprintf' is deprecated" is pointless,
+   as sprintf is used safely here.  */
+#if defined __APPLE__ && defined __MACH__ && _GL_GNUC_PREREQ (4, 2)
+# pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 char *
 strerror (int n)
 #undef strerror
 {
   static char buf[STACKBUF_LEN];
-  size_t len;
 
   /* Cast away const, due to the historical signature of strerror;
      callers should not be modifying the string.  */
@@ -61,7 +66,7 @@ strerror (int n)
     }
 
   /* Fix STACKBUF_LEN if this ever aborts.  */
-  len = strlen (msg);
+  size_t len = strlen (msg);
   if (sizeof buf <= len)
     abort ();
 

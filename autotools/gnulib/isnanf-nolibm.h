@@ -1,5 +1,5 @@
 /* Test for NaN that does not need libm.
-   Copyright (C) 2007-2024 Free Software Foundation, Inc.
+   Copyright (C) 2007-2026 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -30,17 +30,17 @@
 # elif defined isnan
 #  undef isnanf
 #  define isnanf(x) isnan ((float)(x))
-# else
-   /* Get declaration of isnanf(), if not declared in <math.h>.  */
-#  if defined __sgi
-   /* We can't include <ieeefp.h>, because it conflicts with our definition of
-      isnand.  Therefore declare isnanf separately.  */
-extern int isnanf (float x);
-#  endif
 # endif
 #else
 /* Test whether X is a NaN.  */
 # undef isnanf
 # define isnanf rpl_isnanf
-extern int isnanf (float x);
+extern
+# ifdef __cplusplus
+"C"
+# endif
+int isnanf (float x);
 #endif
+
+/* Tell <math.h> that our isnanf does not need libm.  */
+#define HAVE_ISNANF_NOLIBM 1

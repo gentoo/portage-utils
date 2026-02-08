@@ -1,8 +1,10 @@
-# frexpl.m4 serial 23
-dnl Copyright (C) 2007-2024 Free Software Foundation, Inc.
+# frexpl.m4
+# serial 25
+dnl Copyright (C) 2007-2026 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 AC_DEFUN([gl_FUNC_FREXPL],
 [
@@ -23,7 +25,7 @@ AC_DEFUN([gl_FUNC_FREXPL],
       AC_CACHE_CHECK([whether frexpl() can be used with libm],
         [gl_cv_func_frexpl_in_libm],
         [
-          save_LIBS="$LIBS"
+          saved_LIBS="$LIBS"
           LIBS="$LIBS -lm"
           AC_LINK_IFELSE(
             [AC_LANG_PROGRAM(
@@ -32,7 +34,7 @@ AC_DEFUN([gl_FUNC_FREXPL],
                [[int e; return frexpl (x, &e) > 0;]])],
             [gl_cv_func_frexpl_in_libm=yes],
             [gl_cv_func_frexpl_in_libm=no])
-          LIBS="$save_LIBS"
+          LIBS="$saved_LIBS"
         ])
       if test $gl_cv_func_frexpl_in_libm = yes; then
         FREXPL_LIBM=-lm
@@ -40,10 +42,10 @@ AC_DEFUN([gl_FUNC_FREXPL],
     fi
     if test $gl_cv_func_frexpl_no_libm = yes \
        || test $gl_cv_func_frexpl_in_libm = yes; then
-      save_LIBS="$LIBS"
+      saved_LIBS="$LIBS"
       LIBS="$LIBS $FREXPL_LIBM"
       gl_FUNC_FREXPL_WORKS
-      LIBS="$save_LIBS"
+      LIBS="$saved_LIBS"
       case "$gl_cv_func_frexpl_works" in
         *yes) gl_func_frexpl=yes ;;
         *)    gl_func_frexpl=no; REPLACE_FREXPL=1 ;;
@@ -115,7 +117,7 @@ AC_DEFUN([gl_CHECK_FREXPL_NO_LIBM],
 dnl Test whether frexpl() works on finite numbers (this fails on
 dnl Mac OS X 10.4/PowerPC, on AIX 5.1, and on BeOS), on denormalized numbers
 dnl (this fails on Mac OS X 10.5/i386), and also on infinite numbers (this
-dnl fails e.g. on IRIX 6.5 and mingw).
+dnl fails e.g. on mingw).
 AC_DEFUN([gl_FUNC_FREXPL_WORKS],
 [
   AC_REQUIRE([AC_PROG_CC])
@@ -138,12 +140,6 @@ AC_DEFUN([gl_FUNC_FREXPL_WORKS],
 #if (defined _ARCH_PPC || defined _POWER) && defined _AIX && (LDBL_MANT_DIG == 106) && defined __GNUC__
 # undef LDBL_MIN_EXP
 # define LDBL_MIN_EXP DBL_MIN_EXP
-#endif
-#if defined __sgi && (LDBL_MANT_DIG >= 106)
-# if defined __GNUC__
-#  undef LDBL_MIN_EXP
-#  define LDBL_MIN_EXP DBL_MIN_EXP
-# endif
 #endif
 extern
 #ifdef __cplusplus
@@ -223,7 +219,7 @@ int main()
         [
 changequote(,)dnl
          case "$host_os" in
-           aix | aix[3-6]* | beos* | darwin* | irix* | mingw* | windows* | pw*)
+           aix | aix[3-6]* | beos* | darwin* | mingw* | windows* | pw*)
               gl_cv_func_frexpl_works="guessing no";;
            *) gl_cv_func_frexpl_works="guessing yes";;
          esac

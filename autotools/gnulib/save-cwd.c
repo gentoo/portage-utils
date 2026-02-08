@@ -1,6 +1,6 @@
 /* save-cwd.c -- Save and restore current working directory.
 
-   Copyright (C) 1995, 1997-1998, 2003-2006, 2009-2024 Free Software
+   Copyright (C) 1995, 1997-1998, 2003-2006, 2009-2026 Free Software
    Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
@@ -28,12 +28,9 @@
 #include <stdlib.h>
 
 #include "chdir-long.h"
-#include "unistd--.h"
 
 #if GNULIB_FCNTL_SAFER
 # include "fcntl--.h"
-#else
-# define GNULIB_FCNTL_SAFER 0
 #endif
 
 /* Record the location of the current working directory in CWD so that
@@ -52,10 +49,10 @@
    the getcwd-lgpl module, but to be truly robust, use the getcwd module.
 
    Some systems lack fchdir altogether: e.g., OS/2, pre-2001 Cygwin,
-   SCO Xenix.  Also, SunOS 4 and Irix 5.3 provide the function, yet it
-   doesn't work for partitions on which auditing is enabled.  If
-   you're still using an obsolete system with these problems, please
-   send email to the maintainer of this code.  */
+   SCO Xenix.  Also, SunOS 4 provides the function, yet it doesn't work
+   for partitions on which auditing is enabled.  If you're still using
+   an obsolete system with these problems, please send email to the
+   maintainer of this code.  */
 
 int
 save_cwd (struct saved_cwd *cwd)
@@ -63,8 +60,6 @@ save_cwd (struct saved_cwd *cwd)
   cwd->name = NULL;
 
   cwd->desc = open (".", O_SEARCH | O_CLOEXEC);
-  if (!GNULIB_FCNTL_SAFER)
-    cwd->desc = fd_safer_flag (cwd->desc, O_CLOEXEC);
   if (cwd->desc < 0)
     {
       cwd->name = getcwd (NULL, 0);
