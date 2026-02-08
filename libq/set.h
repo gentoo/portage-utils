@@ -11,16 +11,17 @@
 
 #include "array.h"
 
-/* 2026 forward API */
+/* 2026 set API */
 typedef struct set_ set_t;
 set_t      *set_new(void);
 set_t      *set_add(set_t *s, const char *key);
 set_t      *set_add_unique(set_t *s, const char *key, bool *unique);
+set_t      *set_add_from_string(set_t *s, const char *buf);
 #define     set_contains(S,K)  (set_get_key(S,K) == NULL ? false : true)
 const char *set_get_key(set_t *s, const char *key);
 void       *set_delete(set_t *s, const char *key, bool *removed);
 #if 0
-#define     set_keys(S)        hash_keys(S)
+#define     set_keys(S)        hash_keys((hash_t *)S)
 #endif
 size_t      set_size(set_t *s);
 void        set_clear(set_t *s);
@@ -51,8 +52,8 @@ typedef struct set_ set;
 #define get_set(K,S)           hash_get((hash_t *)S,K)
 #define del_set(K,S,R)         set_delete(S,K,R)
 size_t  list_set(set_t *q, char ***l);
-size_t  array_set(set_t *q, array *ret);
-size_t  values_set(set_t *q, array *ret);
+size_t  array_set(set_t *q, array *ret);   /* hash_keys() */
+size_t  values_set(set_t *q, array *ret);  /* hash_values() */
 #define cnt_set(S)             set_size(S)
 #define clear_set(S)           set_clear(S)
 #define free_set(S)            set_free(S)

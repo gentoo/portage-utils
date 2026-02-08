@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <xalloc.h>
 
 #include "set.h"
@@ -140,6 +141,51 @@ set_t *set_add_unique
   if (unique)
     *unique = uniq;
   return q;
+}
+
+/* splits buf on whitespace and adds the resulting tokens into the given
+ * set, ignoring any duplicates
+ * NOTE: if the input has keys > _Q_PATH_MAX this function misbehaves
+ *       and doesn't function properly (currently there's no reasonable
+ *       need for this though) */
+set_t *set_add_from_string
+(
+  set_t      *s,
+  const char *buf
+)
+{
+  char        key[_Q_PATH_MAX];
+  const char *p;
+  size_t      len;
+
+  if (buf == NULL)
+    return s;
+
+  if (s == NULL)
+    s = set_new();
+
+  for (p = buf, len = 0; len < sizeof(key) - 1; p++)
+  {
+    if (*p == '\0' ||
+        isspace((int)*p))
+    {
+      if (len > 0)
+      {
+        key[len] = '\0';
+        set_add_unique(s, key, NULL);
+      }
+
+      len = 0;
+      if (*p == '\0')
+        break;
+      else
+        continue;
+    }
+
+    key[len++] = *p;
+  }
+
+  return s;
 }
 
 /* returns whether name is in set, and if so, the set-internal key
