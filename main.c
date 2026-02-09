@@ -443,7 +443,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 	char npath[_Q_PATH_MAX * 2];
 	int i;
 	env_vars *vars = data;
-	set *masks = data;
+	hash_t *masks = data;
 
 	snprintf(npath, sizeof(npath), "%s%s", portroot, file + 1);
 	if ((dentslen = scandir(npath, &dents, NULL, alphasort)) > 0) {
@@ -581,7 +581,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 				 * note that this only supports exact matches (PMS
 				 * 5.2.5) so we don't even have to parse and use
 				 * atom-compare here */
-				if ((p = del_set(buf + 1, masks, NULL)) != NULL)
+				if ((p = hash_delete(masks, buf + 1)) != NULL)
 					free(p);
 			} else {
 				void *e;
@@ -593,7 +593,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 				 * which would never happen */
 				if (masks != NULL) {
 					p = xstrdup(npath);
-					add_set_value(buf, p, &e, masks);
+					hash_add(masks, buf, p, &e);
 					if (e != NULL)
 						free(p);
 				}
@@ -712,7 +712,7 @@ overlay_from_path(const char *path)
 
 /* Helper to recursively read stacked make.defaults in profiles */
 static void
-read_portage_profile(const char *profile, env_vars vars[], set *masks)
+read_portage_profile(const char *profile, env_vars vars[], hash_t *masks)
 {
 	char profile_file[_Q_PATH_MAX * 3];
 	char rpath[_Q_PATH_MAX];
@@ -851,7 +851,7 @@ env_vars vars_to_read[] = {
 #undef _Q_EVS
 #undef _Q_EVB
 };
-set *package_masks = NULL;
+hash_t *package_masks = NULL;
 
 /* Handle a single file in the repos.conf format. */
 static void
@@ -1018,7 +1018,7 @@ initialize_portage_env(void)
 	env_vars   *var;
 	size_t      i;
 
-	package_masks = create_set();
+	package_masks = hash_new();
 
 	/* figure out where to find our config files, we need to do this
 	 * before handling the files, as it specifies where to find them */
@@ -1252,12 +1252,12 @@ initialize_portage_env(void)
 					fprintf(stderr, "%s = %s\n", var->name, *var->value.s);
 					break;
 				case _Q_ISET: {
-					array *vals = array_new();
-					size_t n;
+					array *vals;
 					char  *val;
+					size_t n;
 
 					fprintf(stderr, "%s = ", var->name);
-					array_set(*var->value.t, vals);
+					vals = set_keys(*var->value.t);
 					array_for_each(vals, n, val) {
 						fprintf(stderr, "%s ", val);
 					}

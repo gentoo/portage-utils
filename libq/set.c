@@ -190,7 +190,7 @@ set_t *set_add_from_string
 
 /* returns whether name is in set, and if so, the set-internal key
  * representation (an internal copy of name made during addition) */
-const char *set_get_key
+const char *set_get
 (
   set_t      *q,
   const char *name
@@ -285,52 +285,6 @@ void *set_delete
   if (removed != NULL)
     *removed = rmd;
   return ret;
-}
-
-/* DEPRECATED -- use set_keys()/hash_keys() */
-size_t array_set
-(
-  set_t *q,
-  array *ret
-)
-{
-  set_elem_t *w;
-  int         i;
-
-  /* allow using empty set */
-  if (q == NULL)
-    return 0;
-
-  for (i = 0; i < _SET_HASH_SIZE; i++)
-  {
-    for (w = q->buckets[i]; w != NULL; w = w->next)
-      array_append(ret, w->name);
-  }
-
-  return q->len;
-}
-
-/* DEPRECATED -- use hash_values() */
-size_t values_set
-(
-  set_t *q,
-  array *ret
-)
-{
-  set_elem_t *w;
-  int         i;
-
-  /* allow using empty set */
-  if (q == NULL)
-    return 0;
-
-  for (i = 0; i < _SET_HASH_SIZE; i++)
-  {
-    for (w = q->buckets[i]; w != NULL; w = w->next)
-      array_append(ret, w->val);
-  }
-
-  return q->len;
 }
 
 size_t set_size

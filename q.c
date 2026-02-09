@@ -593,12 +593,12 @@ int q_main(int argc, char **argv)
 						printf("%s\"%s\"%s", RED, *var->value.s, NORM);
 						break;
 					case _Q_ISET: {
-						array *vals = array_new();
-						size_t n;
+						array *vals;
 						char  *val;
+						size_t n;
 
 						printf("%s\"", RED);
-						array_set(*var->value.t, vals);
+						vals = set_keys(*var->value.t);
 						array_for_each(vals, n, val) {
 							printf("%s%s", n == 0 ? "" : " ", val);
 						}
@@ -630,11 +630,11 @@ int q_main(int argc, char **argv)
 						printf("%s%s%s", RED, *var->value.s, NORM);
 						break;
 					case _Q_ISET: {
-						array *vals = array_new();
-						size_t n;
+						array *vals;
 						char  *val;
+						size_t n;
 
-						array_set(*var->value.t, vals);
+						vals = set_keys(*var->value.t);
 						array_for_each(vals, n, val) {
 							printf("%s%s", n == 0 ? RED : " ", val);
 						}
@@ -653,8 +653,8 @@ int q_main(int argc, char **argv)
 	}
 
 	if (print_masks) {
-		array *masks = array_new();
-		array *files = array_new();
+		array *masks;
+		array *files;
 		char *mask;
 		size_t n;
 		int j;
@@ -667,8 +667,8 @@ int q_main(int argc, char **argv)
 		depend_atom *atom;
 		depend_atom *qatom;
 
-		array_set(package_masks, masks);
-		values_set(package_masks, files);
+		masks = hash_keys(package_masks);
+		files = hash_values(package_masks);
 
 		array_for_each(masks, n, mask) {
 			if ((atom = atom_explode(mask)) == NULL)

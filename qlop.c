@@ -437,9 +437,9 @@ static int do_emerge_log(
 	depend_atom *upgrade_atom = NULL;
 	array *merge_matches = array_new();
 	array *unmerge_matches = array_new();
-	set *merge_averages = create_set();
-	set *unmerge_averages = create_set();
-	set *atomset = NULL;
+	hash_t *merge_averages = hash_new();
+	hash_t *unmerge_averages = hash_new();
+	hash_t *atomset = NULL;
 	size_t i;
 	size_t parallel_emerge = 0;
 	bool all_atoms = false;
@@ -463,7 +463,7 @@ static int do_emerge_log(
 
 	all_atoms = array_cnt(atoms) == 0;
 	if (all_atoms || flags->show_lastmerge) {
-		atomset = create_set();
+		atomset = hash_new();
 
 		/* assemble list of atoms */
 		while (fgets(buf, sizeof(buf), fp) != NULL) {
@@ -518,16 +518,15 @@ static int do_emerge_log(
 				 * "valid" one, such that dummy emerge calls (e.g.
 				 * emerge -pv foo) are ignored */
 				if (last_merge != tstart_emerge) {
-					array *vals = array_new();
+					array *vals = hash_values(atomset);
 
-					values_set(atomset, vals);
 					array_deepfree(vals, (array_free_cb *)atom_implode);
 
-					clear_set(atomset);
+					hash_clear(atomset);
 					last_merge = tstart_emerge;
 				}
 
-				atomset = add_set_value(afmt, atom, (void **)&atomw, atomset);
+				atomset = hash_add(atomset, afmt, atom, (void **)&atomw);
 				if (atomw != NULL)
 					atom_implode(atom);
 			}
@@ -782,7 +781,7 @@ static int do_emerge_log(
 				} else {
 					snprintf(afmt, sizeof(afmt), "%s/%s",
 							atom->CATEGORY, atom->PN);
-					atomw = get_set(afmt, atomset);
+					atomw = hash_get(atomset, afmt);
 				}
 				if (atomw == NULL) {
 					atom_implode(atom);
@@ -818,9 +817,8 @@ static int do_emerge_log(
 									pkgw->atom->CATEGORY, pkgw->atom->PN);
 						}
 
-						merge_averages =
-							add_set_value(afmt, pkgw,
-										  (void **)&pkg, merge_averages);
+						merge_averages = hash_add(merge_averages,
+												  afmt, pkgw, (void **)&pkg);
 						if (pkg != NULL) {
 							pkg->cnt++;
 							pkg->time += elapsed;
@@ -929,7 +927,7 @@ static int do_emerge_log(
 				} else {
 					snprintf(afmt, sizeof(afmt), "%s/%s",
 							atom->CATEGORY, atom->PN);
-					atomw = get_set(afmt, atomset);
+					atomw = hash_get(atomset, afmt);
 				}
 				if (atomw == NULL) {
 					atom_implode(atom);
@@ -965,9 +963,8 @@ static int do_emerge_log(
 									pkgw->atom->CATEGORY, pkgw->atom->PN);
 						}
 
-						unmerge_averages =
-							add_set_value(afmt, pkgw,
-										  (void **)&pkg, unmerge_averages);
+						unmerge_averages = hash_add(unmerge_averages,
+									 				afmt, pkgw, (void **)&pkg);
 						if (pkg != NULL) {
 							pkg->cnt++;
 							pkg->time += elapsed;
@@ -1078,7 +1075,7 @@ static int do_emerge_log(
 				continue;
 
 			elapsed = tstart - pkgw->tbegin;
-			pkg = get_set(afmt, merge_averages);
+			pkg = hash_get(merge_averages, afmt);
 			if (pkg != NULL) {
 				maxtime = pkg->time / pkg->cnt;
 				/* add 14% of the diff between avg and max, to avoid
@@ -1140,7 +1137,7 @@ static int do_emerge_log(
 				continue;
 
 			elapsed = tstart - pkgw->tbegin;
-			pkg = get_set(afmt, unmerge_averages);
+			pkg = hash_get(unmerge_averages, afmt);
 			if (pkg != NULL) {
 				maxtime = pkg->time / pkg->cnt;
 				if (elapsed >= maxtime) {
@@ -1175,9 +1172,8 @@ static int do_emerge_log(
 		size_t total_merges = 0;
 		size_t total_unmerges = 0;
 		time_t total_time = (time_t)0;
-		array *avgs = array_new();
+		array *avgs = hash_values(merge_averages);
 
-		values_set(merge_averages, avgs);
 		array_sort(avgs, pkg_sort_cb);
 		array_for_each(avgs, i, pkg) {
 			printf("%s: %s average for %s%zd%s merge%s\n",
@@ -1189,8 +1185,7 @@ static int do_emerge_log(
 		}
 		array_free(avgs);
 
-		avgs = array_new();
-		values_set(unmerge_averages, avgs);
+		avgs = hash_values(unmerge_averages);
 		array_sort(avgs, pkg_sort_cb);
 		array_for_each(avgs, i, pkg) {
 			printf("%s: %s average for %s%zd%s unmerge%s\n",
@@ -1227,13 +1222,12 @@ static int do_emerge_log(
 			printf("\n");
 		}
 	} else if (flags->do_predict) {
-		array *avgs = array_new();
+		array *avgs = hash_values(merge_averages);
 		enum { P_INIT = 0, P_SREV, P_SRCH } pkgstate;
 		size_t j;
 		time_t ptime;
 		char found;
 
-		values_set(merge_averages, avgs);
 		array_sort(avgs, pkg_sort_cb);
 		array_sort(atoms, atom_compar_cb);
 
@@ -1340,24 +1334,22 @@ static int do_emerge_log(
 	}
 
 	{
-		array *t = array_new();
+		array *t = hash_values(merge_averages);
 
-		values_set(merge_averages, t);
 		array_for_each(t, i, pkgw) {
 			atom_implode(pkgw->atom);
 			free(pkgw);
 		}
 		array_free(t);
-		t = array_new();
-		values_set(unmerge_averages, t);
+		t = hash_values(unmerge_averages);
 		array_for_each(t, i, pkgw) {
 			atom_implode(pkgw->atom);
 			free(pkgw);
 		}
 		array_free(t);
 	}
-	free_set(merge_averages);
-	free_set(unmerge_averages);
+	hash_free(merge_averages);
+	hash_free(unmerge_averages);
 	array_for_each_rev(merge_matches, i, pkgw)
 		atom_implode(pkgw->atom);
 	array_deepfree(merge_matches, NULL);
@@ -1365,11 +1357,9 @@ static int do_emerge_log(
 		atom_implode(pkgw->atom);
 	array_deepfree(unmerge_matches, NULL);
 	if (atomset != NULL) {
-		array *t = array_new();
-
-		values_set(atomset, t);
+		array *t = hash_values(atomset);
 		array_deepfree(t, (array_free_cb *)atom_implode);
-		free_set(atomset);
+		hash_free(atomset);
 	}
 	return 0;
 }

@@ -79,7 +79,7 @@ static array *archlist = NULL;
 static size_t arch_longest_len;
 static const char status[3] = {'-', '~', '+'};
 static int qkeyword_test_arch = 0;
-static set *pmasks = NULL;
+static hash_t *pmasks = NULL;
 
 enum { none = 0, testing, stable, minus };
 
@@ -248,7 +248,7 @@ qkeyword_kw(tree_pkg_ctx *pkg_ctx, void *priv, int what)
 		depend_atom *mask;
 
 		atom = tree_pkg_atom(pkg_ctx, false);
-		masks = get_set(atom_format("%[CAT]%[PN]", atom), pmasks);
+		masks = hash_get(pmasks, atom_format("%[CAT]%[PN]", atom));
 		if (masks != NULL) {
 			array_for_each(masks, n, mask) {
 				if (atom_compare(atom, mask) == EQUAL) {
@@ -914,17 +914,16 @@ int qkeyword_main(int argc, char **argv)
 		char *mask;
 		depend_atom *atom;
 
-		masks  = array_new();
 		pmasks = create_set();
 
-		array_set(package_masks, masks);
+		masks = hash_keys(package_masks);
 		array_for_each(masks, n, mask) {
 			if ((atom = atom_explode(mask)) == NULL)
 				continue;
 			bucket = array_new();
 			array_append(bucket, atom);
-			pmasks = add_set_value(atom_format("%[CAT]%[PN]", atom),
-								   bucket, (void **)&ebuck, pmasks);
+			pmasks = hash_add(pmasks, atom_format("%[CAT]%[PN]", atom),
+							  bucket, (void **)&ebuck);
 			if (ebuck != NULL) {
 				array_append(ebuck, atom);
 				array_free(bucket);

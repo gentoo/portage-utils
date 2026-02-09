@@ -251,13 +251,13 @@ qlist_match(
 	}
 
 	if (applymasks) {
-		array *masks = array_new();
+		array *masks;
 		depend_atom *matom;
 		char *mask;
 		size_t n;
 		bool match = false;
 
-		array_set(package_masks, masks);
+		masks = hash_keys(package_masks);
 
 		array_for_each(masks, n, mask) {
 			if ((matom = atom_explode(mask)) == NULL)

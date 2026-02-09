@@ -17,8 +17,8 @@ set_t      *set_new(void);
 set_t      *set_add(set_t *s, const char *key);
 set_t      *set_add_unique(set_t *s, const char *key, bool *unique);
 set_t      *set_add_from_string(set_t *s, const char *buf);
-#define     set_contains(S,K)  (set_get_key(S,K) == NULL ? false : true)
-const char *set_get_key(set_t *s, const char *key);
+#define     set_contains(S,K)  (set_get(S,K) == NULL ? false : true)
+const char *set_get(set_t *s, const char *key);
 void       *set_delete(set_t *s, const char *key, bool *removed);
 #define     set_keys(S)        hash_keys((hash_t *)S)
 size_t      set_size(set_t *s);
@@ -44,11 +44,9 @@ typedef struct set_ set;
 #define add_set(K,S)           set_add(S,K)
 #define add_set_unique(K,S,U)  set_add_unique(S,K,U)
 #define add_set_value(K,V,P,S) hash_add((hash_t *)S,K,V,P)
-#define contains_set(K,S)      set_get_key(S,K)
+#define contains_set(K,S)      set_get(S,K)
 #define get_set(K,S)           hash_get((hash_t *)S,K)
 #define del_set(K,S,R)         set_delete(S,K,R)
-size_t  array_set(set_t *q, array *ret);   /* use hash_keys() */
-size_t  values_set(set_t *q, array *ret);  /* use hash_values() */
 #define cnt_set(S)             set_size(S)
 #define clear_set(S)           set_clear(S)
 #define free_set(S)            set_free(S)
