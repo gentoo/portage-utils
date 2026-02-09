@@ -205,6 +205,9 @@ static void pkg_fetch(int, const depend_atom *, tree_pkg_ctx *);
 static void pkg_merge(int, const depend_atom *, tree_pkg_ctx *);
 static int pkg_unmerge(tree_pkg_ctx *, depend_atom *, set *, int, char **, int, char **);
 
+/* track packages being processed to detect circular dependencies */
+static set *merge_stack = NULL;
+
 static bool
 qmerge_prompt(const char *p)
 {
@@ -1135,6 +1138,17 @@ pkg_merge(int level, const depend_atom *qatom, tree_pkg_ctx *mpkg)
 			matom->SLOT == NULL ? "0" : matom->SLOT);
 	slotatom = atom_explode(buf);
 
+	/* circular dependency detection */
+	if (merge_stack == NULL)
+		merge_stack = create_set();
+	
+	if (contains_set(buf, merge_stack)) {
+		warn("circular dependency detected: %s", buf);
+		atom_implode(slotatom);
+		return;
+	}
+	add_set(buf, merge_stack);
+
 	previnst = best_version(slotatom, BV_INSTALLED);
 	if (previnst != NULL) {
 		atom_ctx *atom = tree_pkg_atom(previnst, false);
@@ -1204,6 +1218,15 @@ pkg_merge(int level, const depend_atom *qatom, tree_pkg_ctx *mpkg)
 	}
 
 	if (pretend == 100) {
+		/* if we do full -p, remove from circular dependency tracking */
+		if (merge_stack != NULL) {
+			char pkgkey[_Q_PATH_MAX];
+			snprintf(pkgkey, sizeof(pkgkey), "%s/%s:%s",
+					matom->CATEGORY,
+					matom->PN,
+					matom->SLOT == NULL ? "0" : matom->SLOT);
+			del_set(pkgkey, merge_stack, NULL);
+		}
 		return;
 	}
 
@@ -1743,6 +1766,16 @@ pkg_merge(int level, const depend_atom *qatom, tree_pkg_ctx *mpkg)
 		rm_rf(matom->PF);
 	/* don't care about return, but when empty, remove */
 	rmdir("../qmerge");
+
+	/* remove from circular dependency tracking */
+	if (merge_stack != NULL) {
+		char pkgkey[_Q_PATH_MAX];
+		snprintf(pkgkey, sizeof(pkgkey), "%s/%s:%s",
+				matom->CATEGORY,
+				matom->PN,
+				matom->SLOT == NULL ? "0" : matom->SLOT);
+		del_set(pkgkey, merge_stack, NULL);
+	}
 
 	printf("%s>>>%s %s\n",
 			YELLOW, NORM, atom_format("%[CAT]%[PF]", matom));
@@ -2395,6 +2428,9 @@ int qmerge_main(int argc, char **argv)
 	ret = qmerge_run(todo);
 	if (todo != NULL)
 		free_set(todo);
+
+	if (merge_stack != NULL)
+		free_set(merge_stack);
 
 	if (_qmerge_binpkg_tree != NULL)
 		tree_close(_qmerge_binpkg_tree);
