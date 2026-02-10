@@ -69,6 +69,7 @@ struct dep_node_ {
   size_t            wordlen;
   depend_atom      *atom;
   tree_pkg_ctx     *pkg;
+  tree_pkg_ctx     *ipkg;
   dep_node_t       *parent;
   array            *members;
   dep_type_t        type;
@@ -617,14 +618,24 @@ void dep_prune_use
   }
 }
 
-bool dep_resolve_tree
+/* resolve the dep-tree against the given (libq/)tree, considering the
+ * given USE-flags and blockers
+ * returns:
+ * - RESOLVE_OK: everything was matched onto atoms from the given tree
+ * - RESOLVE_FAIL: there was a failure to match, the respective error
+ *   can be retrieved using TODO(FIXME)
+ * - RESOLVE_NEWBLOCKER: like RESOLVE_OK, but a new blocker was added to
+ *   the blockers list, and the caller should re-resolve the full tree
+ */
+dep_status_t dep_resolve_tree
 (
   dep_node_t *root,
   tree_ctx   *tree,
-  set_t      *use
+  set_t      *use,
+  hash_t     *blockers
 )
 {
-  bool ret = true;  /* resolving succeed */
+  dep_status_t ret = DEP_OK;  /* resolving succeed */
 
   switch (root->type)
   {
@@ -634,13 +645,97 @@ bool dep_resolve_tree
     if (root->atom &&
         root->pkg == NULL)
     {
-      array *r = tree_match_atom(tree, root->atom, (TREE_MATCH_DEFAULT |
-                                                    TREE_MATCH_LATEST));
-      if (array_cnt(r) > 0)
-        root->pkg = array_get(r, 0);
+      if (root->atom->blocker != ATOM_BL_NONE)
+      {
+        atom_ctx *prevatom;
+
+        if (blockers == NULL)
+          break;  /* ignore */
+
+        /* add blocker to the list of blockers under CAT/PN:SLOT key */
+        blockers = hash_add(blockers,
+                            atom_format("%[CAT]%[PN]%[SLOT]", root->atom),
+                            atom_clone(root->atom), (void **)&prevatom);
+        ret = DEP_NEWBLOCKER;
+
+        /* FIXME: this means we have two blockers that cover the same
+         * key, which doesn't mean they are the same or that they are
+         * compatible, e.g. !foo-1 and !foo-2, how should we handle
+         * this? */
+        if (prevatom != NULL)
+          atom_implode(prevatom);
+      }
       else
-        ret       = false;
-      array_free(r);
+      {
+        array        *r;
+        atom_ctx     *blkatom;
+        tree_pkg_ctx *pkgw;
+        size_t        n;
+
+        blkatom = hash_get(blockers,
+                           atom_format("%[CAT]%[PN]%[SLOT]", root->atom));
+        r = tree_match_atom(tree, root->atom,
+                            (TREE_MATCH_DEFAULT |
+                             (blkatom == NULL ? TREE_MATCH_LATEST : 0)));
+
+        if (blkatom != NULL)
+        {
+          atom_equality eq;
+          array_for_each(r, n, pkgw)
+          {
+            eq = atom_compare(tree_pkg_atom(pkgw, true), blkatom);
+            if (blkatom->blocker != ATOM_BL_NONE)  /* blocker */
+            {
+              if (eq == EQUAL)
+              {
+                if (root->pkg != NULL)
+                  root->pkg = pkgw;
+                if (tree_pkg_get_treetype(pkgw) == TREETYPE_VDB)
+                {
+                  root->ipkg = pkgw;
+                  break;
+                }
+              }
+            }
+            else  /* mask entry */
+            {
+              if (eq == NOT_EQUAL ||
+                  eq == NEWER)
+              {
+                if (root->pkg != NULL)
+                  root->pkg = pkgw;
+                if (tree_pkg_get_treetype(pkgw) == TREETYPE_VDB)
+                {
+                  root->ipkg = pkgw;
+                  break;
+                }
+              }
+            }
+          }
+          if (root->pkg == NULL)
+            ret = DEP_FAIL;
+        }
+        else
+        {
+          root->pkg = array_get(r, 0);
+          if (root->pkg != NULL)
+          {
+            array_for_each(r, n, pkgw)
+            {
+              if (tree_pkg_get_treetype(pkgw) == TREETYPE_VDB)
+              {
+                root->ipkg = pkgw;
+                break;
+              }
+            }
+          }
+          else
+          {
+            ret = DEP_FAIL;
+          }
+        }
+        array_free(r);
+      }
     }
     break;
   case DEP_USE:
@@ -655,34 +750,41 @@ bool dep_resolve_tree
   case DEP_ALL:
     if (root->members)
     {
-      dep_node_t *memb;
-      size_t      n;
+      dep_node_t  *memb;
+      size_t       n;
+      dep_status_t sret;
 
       array_for_each(root->members, n, memb)
       {
-        if (!dep_resolve_tree(memb, tree, use))
+        if ((sret = dep_resolve_tree(memb, tree, use, blockers)) == DEP_FAIL)
         {
-          ret = false;
+          ret = DEP_FAIL;
           break;  /* no point in continuing */
         }
+        if (sret == DEP_NEWBLOCKER)
+          ret = DEP_NEWBLOCKER;
       }
     }
     break;
   case DEP_ANY:
-    /* hardest one, take the first member that fully matches */
+    /* hardest one, because there may be blockers (which we do not
+     * necessarily know about upfront) we still have to resolve all, but
+     * not return failure when one of the options cannot be met */
     if (root->members)
     {
-      dep_node_t *memb;
-      size_t      n;
+      dep_node_t  *memb;
+      size_t       n;
+      dep_status_t sret;
 
-      ret = false;
+      ret = DEP_FAIL;
       array_for_each(root->members, n, memb)
       {
-        if (dep_resolve_tree(memb, tree, use))
-        {
-          ret = true;
-          break;  /* got one, don't look further */
-        }
+        if ((sret = dep_resolve_tree(memb, tree, use, blockers)) == DEP_FAIL)
+          continue;
+        if (sret == DEP_NEWBLOCKER)
+          ret = DEP_NEWBLOCKER;
+        if (ret == DEP_FAIL)
+          ret = DEP_OK;
       }
     }
     break;
@@ -694,12 +796,7 @@ bool dep_resolve_tree
   return ret;
 }
 
-/* drop any (USE-)indirections and add all atoms in the dep node to the
- * array pointed to by out
- * because there is no knowledge here of the tree, ANY nodes are treated
- * as ALL nodes, e.g. all of their atoms are added
- * use dep_prune_tree to eliminate USE-conditionals */
-void dep_flatten_tree
+static void dep_flatten_tree_int
 (
   dep_node_t *root,
   array      *out
@@ -715,12 +812,31 @@ void dep_flatten_tree
     size_t      n;
 
     array_for_each(root->members, n, memb)
-      dep_flatten_tree(memb, out);
+      dep_flatten_tree_int(memb, out);
   }
   else if (root->atom != NULL)
   {
     array_append(out, root->atom);
   }
+}
+
+/* drop any (USE-)indirections and add all atoms in the dep node to the
+ * returned array
+ * because there is no knowledge here of the tree, ANY nodes are treated
+ * as ALL nodes, e.g. all of their atoms are added
+ * use dep_prune_tree to eliminate USE-conditionals */
+array *dep_flatten_tree
+(
+  dep_node_t *root
+)
+{
+  array *out = array_new();
+
+  /* simple wrapper around weird interface which is very suitable for
+   * recursive behaviour */
+  dep_flatten_tree_int(root, out);
+
+  return out;
 }
 
 /* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */

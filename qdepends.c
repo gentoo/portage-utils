@@ -196,7 +196,7 @@ qdepends_results_cb
       continue;
     }
 
-    deps = array_new();
+    deps = NULL;
 
     if (state->qmode & QMODE_TREE &&
         !(state->qmode & QMODE_REVERSE) &&
@@ -214,7 +214,7 @@ qdepends_results_cb
           tree_pkg_ctx *p = array_get(ma, 0);
           use = set_add_from_string(NULL, tree_pkg_meta(p, Q_USE));
         }
-        dep_resolve_tree(dep_tree, state->vdb, use);
+        dep_resolve_tree(dep_tree, state->vdb, use, NULL /*TODO masks*/);
         array_free(ma);
         set_free(use);
       }
@@ -223,7 +223,7 @@ qdepends_results_cb
     {
       if (state->qmode & QMODE_FILTERUSE)
         dep_prune_use(dep_tree, ev_use);
-      dep_flatten_tree(dep_tree, deps);
+      deps = dep_flatten_tree(dep_tree);
     }
 
     if (verbose) {
@@ -266,7 +266,7 @@ qdepends_results_cb
       {
         /* try and resolve expressions to real package atoms */
         if (state->resolve)
-          dep_resolve_tree(dep_tree, state->vdb, ev_use);
+          dep_resolve_tree(dep_tree, state->vdb, ev_use, NULL /*TODO masks*/);
 
         printf("\n%s=\"\n", *dfile);
         dep_print_tree(stdout, dep_tree, 1, deps,

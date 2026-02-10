@@ -588,7 +588,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 				snprintf(npath, sizeof(npath), "%s%s:%zu:%zu-%zu",
 						portroot, file + 1, line, cbeg, cend);
 				/* if not necessary, but do it for static code analysers
-				 * which take into accound that add_set_value might
+				 * which take into accound that hash_add might
 				 * allocate a new set when masks would be NULL -- a case
 				 * which would never happen */
 				if (masks != NULL) {
