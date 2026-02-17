@@ -51,7 +51,6 @@ typedef struct set_ set;
 #define clear_set(S)           set_clear(S)
 #define free_set(S)            set_free(S)
 
-
 #endif
 
 /* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */

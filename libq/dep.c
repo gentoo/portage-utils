@@ -404,6 +404,23 @@ dep_grow_tree_fail:
   return ret;
 }
 
+dep_node_t *dep_new_atom
+(
+  atom_ctx *atom
+)
+{
+  dep_node_t *ret;
+
+  if (atom == NULL)
+    return NULL;
+
+  ret = xzalloc(sizeof(*ret));
+  ret->type    = DEP_ATOM;
+  ret->atom    = atom_clone(atom);
+
+  return ret;
+}
+
 static void dep_print_tree_int
 (
   FILE             *fp,
@@ -799,7 +816,8 @@ dep_status_t dep_resolve_tree
 static void dep_flatten_tree_int
 (
   dep_node_t *root,
-  array      *out
+  array      *out,
+  bool        atom
 )
 {
   if (root->type == DEP_NULL ||
@@ -812,11 +830,14 @@ static void dep_flatten_tree_int
     size_t      n;
 
     array_for_each(root->members, n, memb)
-      dep_flatten_tree_int(memb, out);
+      dep_flatten_tree_int(memb, out, atom);
   }
   else if (root->atom != NULL)
   {
-    array_append(out, root->atom);
+    if (atom)
+      array_append(out, root->atom);
+    else
+      array_append(out, root);
   }
 }
 
@@ -834,9 +855,54 @@ array *dep_flatten_tree
 
   /* simple wrapper around weird interface which is very suitable for
    * recursive behaviour */
-  dep_flatten_tree_int(root, out);
+  dep_flatten_tree_int(root, out, true);
 
   return out;
+}
+
+array *dep_nodes
+(
+  dep_node_t *root
+)
+{
+  array *out = array_new();
+
+  dep_flatten_tree_int(root, out, false);
+
+  return out;
+}
+
+tree_pkg_ctx *dep_node_pkg
+(
+  dep_node_t *node
+)
+{
+  if (node == NULL)
+    return NULL;
+
+  return node->pkg;
+}
+
+tree_pkg_ctx *dep_node_ipkg
+(
+  dep_node_t *node
+)
+{
+  if (node == NULL)
+    return NULL;
+
+  return node->ipkg;
+}
+
+atom_ctx *dep_node_atom
+(
+  dep_node_t *node
+)
+{
+  if (node == NULL)
+    return NULL;
+
+  return node->atom;
 }
 
 /* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */

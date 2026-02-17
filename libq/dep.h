@@ -34,12 +34,17 @@ array        *dep_flatten_tree(dep_node_t *root);
 void          dep_burn_tree(dep_node_t *root);
 
 /* 2026 API boring (but predictable) names */
-#define dep_new(D)              dep_grow_tree(D)
-#define dep_print(F,D,S,M,C,V)  dep_print_tree(F,D,S,M,C,V)
-#define dep_resolve(D,T,U,B)    dep_resolve_tree(D,T,U,B)
-#define dep_prune(D,U)          dep_prune_use(D,U)
-#define dep_flatten(D)          dep_flatten_tree(D);
-#define dep_free(D)             dep_burn_tree(D)
+#define       dep_new(D)              dep_grow_tree(D)
+dep_node_t   *dep_new_atom(atom_ctx *atom);
+#define       dep_print(F,D,S,M,C,V)  dep_print_tree(F,D,S,M,C,V)
+#define       dep_resolve(D,T,U,B)    dep_resolve_tree(D,T,U,B)
+#define       dep_prune(D,U)          dep_prune_use(D,U)
+#define       dep_flatten(D)          dep_flatten_tree(D);
+#define       dep_free(D)             dep_burn_tree(D)
+array        *dep_nodes(dep_node_t *node);
+tree_pkg_ctx *dep_node_pkg(dep_node_t *node);
+tree_pkg_ctx *dep_node_ipkg(dep_node_t *node);
+atom_ctx     *dep_node_atom(dep_node_t *node);
 
 #endif
 
