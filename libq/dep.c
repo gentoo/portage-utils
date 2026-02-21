@@ -680,7 +680,11 @@ dep_status_t dep_resolve_tree
          * compatible, e.g. !foo-1 and !foo-2, how should we handle
          * this? */
         if (prevatom != NULL)
+        {
+          if (atom_compare(root->atom, prevatom) == EQUAL)
+            ret = DEP_OK;
           atom_implode(prevatom);
+        }
       }
       else
       {
@@ -705,7 +709,7 @@ dep_status_t dep_resolve_tree
             {
               if (eq == EQUAL)
               {
-                if (root->pkg != NULL)
+                if (root->pkg == NULL)
                   root->pkg = pkgw;
                 if (tree_pkg_get_treetype(pkgw) == TREETYPE_VDB)
                 {
@@ -719,7 +723,7 @@ dep_status_t dep_resolve_tree
               if (eq == NOT_EQUAL ||
                   eq == NEWER)
               {
-                if (root->pkg != NULL)
+                if (root->pkg == NULL)
                   root->pkg = pkgw;
                 if (tree_pkg_get_treetype(pkgw) == TREETYPE_VDB)
                 {
@@ -769,17 +773,11 @@ dep_status_t dep_resolve_tree
     {
       dep_node_t  *memb;
       size_t       n;
-      dep_status_t sret;
 
       array_for_each(root->members, n, memb)
       {
-        if ((sret = dep_resolve_tree(memb, tree, use, blockers)) == DEP_FAIL)
-        {
-          ret = DEP_FAIL;
-          break;  /* no point in continuing */
-        }
-        if (sret == DEP_NEWBLOCKER)
-          ret = DEP_NEWBLOCKER;
+        if ((ret = dep_resolve_tree(memb, tree, use, blockers)) != DEP_OK)
+          break;
       }
     }
     break;
