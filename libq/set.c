@@ -394,6 +394,7 @@ hash_t *hash_add
       {
         if (prevval != NULL)
           *prevval = w->val;
+        w->val = val;
         return q;
       }
     }
