@@ -110,6 +110,7 @@ typedef enum {
 #define ATOM_COMP_NOSLOT     (1<<1)
 #define ATOM_COMP_NOSUBSLOT  (1<<2)
 #define ATOM_COMP_NOREPO     (1<<3)
+#define ATOM_COMP_EXACT      (1<<4)  /* check if d and q are the same */
 
 atom_ctx *atom_explode_cat(const char *atom, const char *cat);
 #define atom_explode(A) atom_explode_cat(A, NULL)

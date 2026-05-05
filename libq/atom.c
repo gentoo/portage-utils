@@ -672,6 +672,101 @@ static atom_equality _atom_compare_match
 #undef E
 }
 
+/* exact comparison of two atoms, no interpretation, just comparison */
+static bool atom_compare_exact
+(
+  const atom_ctx *l,
+  const atom_ctx *r,
+  int             flags
+)
+{
+  if (l->blocker != r->blocker)
+    return false;
+  if (l->pfx_op != r->pfx_op)
+    return false;
+  if (l->sfx_op != r->sfx_op)
+    return false;
+  if (l->CATEGORY != r->CATEGORY)
+  {
+    if (l->CATEGORY == NULL ||
+        r->CATEGORY == NULL)
+      return false;
+    if (strcmp(l->CATEGORY, r->CATEGORY) != 0)
+      return false;
+  }
+  if (flags & ATOM_COMP_NOREV)
+  {
+    if (l->PN != r->PN)
+    {
+      if (l->PN == NULL ||
+          r->PN == NULL)
+        return false;
+      if (strcmp(l->PN, r->PN) != 0)
+        return false;
+    }
+    if (l->PV != r->PV)
+    {
+      if (l->PV == NULL ||
+          r->PV == NULL)
+        return false;
+      if (strcmp(l->PV, r->PV) != 0)
+        return false;
+    }
+  }
+  else
+  {
+    if (l->PF != r->PF)
+    {
+      if (l->PF == NULL ||
+          r->PF == NULL)
+        return false;
+      if (strcmp(l->PF, r->PF) != 0)
+        return false;
+    }
+  }
+  if (!(flags & ATOM_COMP_NOSLOT))
+  {
+    if (l->SLOT != r->SLOT)
+    {
+      if (l->SLOT == NULL ||
+          r->SLOT == NULL)
+        return false;
+      if (strcmp(l->SLOT, r->SLOT) != 0)
+        return false;
+    }
+    if (!(flags & ATOM_COMP_NOSUBSLOT))
+    {
+      if (l->SUBSLOT != r->SUBSLOT)
+      {
+        if (l->SUBSLOT == NULL ||
+            r->SUBSLOT == NULL)
+          return false;
+        if (strcmp(l->SUBSLOT, r->SUBSLOT) != 0)
+          return false;
+      }
+    }
+    if (l->slotdep != r->slotdep)
+      return false;
+  }
+  if (!(flags & ATOM_COMP_NOREPO))
+  {
+    if (l->REPO != r->REPO)
+    {
+      if (l->REPO == NULL ||
+          r->REPO == NULL)
+        return false;
+      if (strcmp(l->REPO, r->REPO) != 0)
+        return false;
+    }
+  }
+  if (l->BUILDID != r->BUILDID)
+    return false;
+
+  /* suffixes? */
+
+  return true;
+}
+
 /* a1 <return value> a2
  * foo-1 <EQUAL> foo-1
  * foo-1 <OLDER> foo-2
@@ -690,7 +785,10 @@ atom_equality atom_compare_flg
   unsigned int  ver_bits;
 
   /* remember:
-   * query should have operators, if data has them, they are ignored */
+   * query should have operators, if data has them, they are ignored,
+   * unless ATOM_COMP_EXACT is set */
+  if (flags & ATOM_COMP_EXACT)
+    return atom_compare_exact(data, query, flags) ? EQUAL : NOT_EQUAL;
 
   /* here comes the antislot: bug #683430
    * it basically is a feature to select versions that are *not*
