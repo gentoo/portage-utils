@@ -17,6 +17,7 @@ set_t      *set_new(void);
 set_t      *set_add(set_t *s, const char *key);
 set_t      *set_add_unique(set_t *s, const char *key, bool *unique);
 set_t      *set_add_from_string(set_t *s, const char *buf);
+set_t      *set_clone(set_t *s);
 #define     set_contains(S,K)  (set_get(S,K) == NULL ? false : true)
 const char *set_get(set_t *s, const char *key);
 void       *set_delete(set_t *s, const char *key, bool *removed);

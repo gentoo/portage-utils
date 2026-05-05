@@ -188,6 +188,39 @@ set_t *set_add_from_string
   return s;
 }
 
+/* returns a clone of the input set, after this call nothing is shared
+ * between the two sets */
+set_t *set_clone
+(
+  set_t      *q
+)
+{
+  set_t      *ret;
+  set_elem_t *w;
+  set_elem_t *e;
+  int         i;
+
+  if (q == NULL)
+    return NULL;
+
+  ret = set_new();
+
+  for (i = 0; i < _SET_HASH_SIZE; i++)
+  {
+    for (w = q->buckets[i]; w != NULL; w = w->next)
+    {
+      e = xzalloc(sizeof(*e));
+      e->name = xstrdup(w->name);
+      e->hash = w->hash;
+      e->next = ret->buckets[i];
+      ret->buckets[i] = e;
+    }
+  }
+  ret->len = q->len;
+
+  return ret;
+}
+
 /* returns whether name is in set, and if so, the set-internal key
  * representation (an internal copy of name made during addition) */
 const char *set_get
