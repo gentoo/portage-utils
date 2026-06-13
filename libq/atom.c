@@ -254,7 +254,7 @@ atom_ctx *atom_explode_cat
           }
           else if (strncmp(ptr, "(-)", 3) == 0)
           {
-            w->sfx_cond = ATOM_UC_PREV_ENABLED;
+            w->sfx_cond = ATOM_UC_PREV_DISABLED;
             *ptr = '\0';
             ptr += 3;
           }
