@@ -164,6 +164,6 @@ typedef struct {
 	bool            fromenv;
 } env_vars;
 extern env_vars vars_to_read[];
-extern set *package_masks;
+extern hash_t *package_masks;
 
 #endif

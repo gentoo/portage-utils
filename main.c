@@ -45,11 +45,13 @@ char *pkgdir;
 char *port_tmpdir;
 set  *features;
 set  *ev_use;
+set  *accept_keywords;
 char *install_mask;
 char *binpkg_format;
 array *overlays;
 array *overlay_names;
 array *overlay_src;
+hash_t *package_masks = NULL;
 
 static char *portedb;
 static char *eprefix;
@@ -817,7 +819,7 @@ env_vars vars_to_read[] = {
 	.default_value = d, \
 	.src = NULL, \
 	.fromenv = E, \
-},
+}
 #define _Q_EVS(t, V, v, E, D) \
 	_Q_EV(t, V, .value.s = &v, .value_len = sizeof(D) - 1, D, E)
 #define _Q_EVB(t, V, v, E, D) \
@@ -825,33 +827,33 @@ env_vars vars_to_read[] = {
 #define _Q_EVT(T, V, v, E, D) \
 	_Q_EV(T, V, .value.t = &v, .value_len = 0, D, E)
 
-	_Q_EVS(STR,  ROOT,                portroot,            true,  "/")
-	_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      true,  "")
-	_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        true,  "")
-	_Q_EVS(ISTR, PKG_INSTALL_MASK,    pkg_install_mask,    true,  "")
-	_Q_EVS(STR,  ARCH,                portarch,            true,  "")
-	_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      true,  "/etc")
-	_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, true,  "")
-	_Q_EVB(BOOL, NOCOLOR,             nocolor,             true,  false)
-	_Q_EVT(ISET, FEATURES,            features,            true,  NULL)
-	_Q_EVT(ISET, USE,                 ev_use,              true,  NULL)
-	_Q_EVS(STR,  EPREFIX,             eprefix,             true,  CONFIG_EPREFIX)
-	_Q_EVS(STR,  EMERGE_LOG_DIR,      portlogdir,          true,  CONFIG_EPREFIX "var/log")
-	_Q_EVS(STR,  PORTDIR,             main_overlay,        true,  CONFIG_EPREFIX "var/db/repos/gentoo")
-	_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             true,   DEFAULT_PORTAGE_BINHOST)
-	_Q_EVS(STR,  PORTAGE_CONFIGROOT,  configroot,          false, CONFIG_EPREFIX)
-	_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         true,  CONFIG_EPREFIX "var/tmp/portage/")
-	_Q_EVS(STR,  PKGDIR,              pkgdir,              true,  CONFIG_EPREFIX "var/cache/binpkgs/")
-	_Q_EVS(STR,  BINPKG_FORMAT,       binpkg_format,       true,  "gpkg")
-	_Q_EVS(STR,  Q_VDB,               portvdb,             true,  CONFIG_EPREFIX "var/db/pkg")
-	_Q_EVS(STR,  Q_EDB,               portedb,             true,  CONFIG_EPREFIX "var/cache/edb")
+	_Q_EVS(STR,  ROOT,                portroot,            true,  "/"),
+	_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      true,  ""),
+	_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        true,  ""),
+	_Q_EVS(ISTR, PKG_INSTALL_MASK,    pkg_install_mask,    true,  ""),
+	_Q_EVS(STR,  ARCH,                portarch,            true,  ""),
+	_Q_EVT(ISET, ACCEPT_KEYWORDS,     accept_keywords,     true,  NULL),
+	_Q_EVS(ISTR, CONFIG_PROTECT,      config_protect,      true,  "/etc"),
+	_Q_EVS(ISTR, CONFIG_PROTECT_MASK, config_protect_mask, true,  ""),
+	_Q_EVB(BOOL, NOCOLOR,             nocolor,             true,  false),
+	_Q_EVT(ISET, FEATURES,            features,            true,  NULL),
+	_Q_EVT(ISET, USE,                 ev_use,              true,  NULL),
+	_Q_EVS(STR,  EPREFIX,             eprefix,             true,  CONFIG_EPREFIX),
+	_Q_EVS(STR,  EMERGE_LOG_DIR,      portlogdir,          true,  CONFIG_EPREFIX "var/log"),
+	_Q_EVS(STR,  PORTDIR,             main_overlay,        true,  CONFIG_EPREFIX "var/db/repos/gentoo"),
+	_Q_EVS(STR,  PORTAGE_BINHOST,     binhost,             true,   DEFAULT_PORTAGE_BINHOST),
+	_Q_EVS(STR,  PORTAGE_CONFIGROOT,  configroot,          false, CONFIG_EPREFIX),
+	_Q_EVS(STR,  PORTAGE_TMPDIR,      port_tmpdir,         true,  CONFIG_EPREFIX "var/tmp/portage/"),
+	_Q_EVS(STR,  PKGDIR,              pkgdir,              true,  CONFIG_EPREFIX "var/cache/binpkgs/"),
+	_Q_EVS(STR,  BINPKG_FORMAT,       binpkg_format,       true,  "gpkg"),
+	_Q_EVS(STR,  Q_VDB,               portvdb,             true,  CONFIG_EPREFIX "var/db/pkg"),
+	_Q_EVS(STR,  Q_EDB,               portedb,             true,  CONFIG_EPREFIX "var/cache/edb"),
 	{ NULL, 0, _Q_BOOL, { NULL }, 0, NULL, false, NULL, }
 
 #undef _Q_EV
 #undef _Q_EVS
 #undef _Q_EVB
 };
-hash_t *package_masks = NULL;
 
 /* Handle a single file in the repos.conf format. */
 static void
@@ -1025,7 +1027,10 @@ initialize_portage_env(void)
 	s = getenv("PORTAGE_CONFIGROOT");
 	if (s == NULL)
 	{
-		s = vars_to_read[14].default_value;
+		var = get_portage_env_var(vars_to_read, "PORTAGE_CONFIGROOT");
+		if (var == NULL)
+			exit(153); /* impossible */
+		s = var->default_value;
 		primary_overlay = (char *)"built-in";
 	}
 	else
@@ -1048,7 +1053,10 @@ initialize_portage_env(void)
 	 * configroot + 1 is valid */
 	snprintf(pathbuf, sizeof(pathbuf), "%s%.*s",
 			 i == 0 ? "/" : "", (int)i, s);
-	set_portage_env_var(&vars_to_read[14], pathbuf, primary_overlay);
+	var = get_portage_env_var(vars_to_read, "PORTAGE_CONFIGROOT");
+	if (var == NULL)
+		exit(153); /* impossible */
+	set_portage_env_var(var, pathbuf, primary_overlay);
 
 	/* read overlays first so we can resolve repo references in profile
 	 * parent files (non PMS feature?) */
@@ -1111,7 +1119,12 @@ initialize_portage_env(void)
 	 * accept it (as override of NOCOLOR) */
 	s = getenv("NO_COLOR");
 	if (s != NULL)
-		set_portage_env_var(&vars_to_read[7], s, "NO_COLOR");
+	{
+		var = get_portage_env_var(vars_to_read, "NOCOLOR");
+		if (var == NULL)
+		    exit(153); /* impossible */
+		set_portage_env_var(var, s, "NO_COLOR");
+	}
 
 	/* expand any nested variables e.g. PORTDIR=${EPREFIX}/usr/portage */
 	for (i = 0; vars_to_read[i].name; ++i) {
@@ -1188,7 +1201,10 @@ initialize_portage_env(void)
 	 * administration in overlays */
 	{
 		const char *overlay;
-		var = &vars_to_read[12];  /* PORTDIR */
+
+		var = get_portage_env_var(vars_to_read, "PORTDIR");
+		if (var == NULL)
+		    exit(153); /* impossible */
 
 		if (strcmp(var->src, STR_DEFAULT) != 0 ||
 			array_cnt(overlays) == 0)
@@ -1233,7 +1249,10 @@ initialize_portage_env(void)
 	}
 
 	/* Make sure ROOT always ends in a slash */
-	var = &vars_to_read[0];  /* ROOT */
+	var = get_portage_env_var(vars_to_read, "ROOT");
+	if (var == NULL)
+	    exit(153); /* impossible */
+
 	if (var->value_len == 0 || (*var->value.s)[var->value_len - 1] != '/') {
 		portroot = xrealloc(portroot, var->value_len + 2);
 		portroot[var->value_len] = '/';
@@ -1324,7 +1343,12 @@ int main(int argc, char **argv)
 		nocolor = true;
 	}
 	if (nocolor)
-		set_portage_env_var(&vars_to_read[7], "true", "terminal"); /* NOCOLOR */
+	{
+		env_vars *var = get_portage_env_var(vars_to_read, "NOCOLOR");
+		if (var == NULL)
+		    exit(153); /* impossible */
+		set_portage_env_var(var, "true", "terminal");
+	}
 
 	/* We can use getopt here, but only in POSIX mode (which stops at
 	 * the first non-option argument) because otherwise argv is
@@ -1340,14 +1364,20 @@ int main(int argc, char **argv)
 				} else if (strcmp(&argv[i][2], "root") == 0 &&
 						 argv[i + 1] != NULL)
 				{
-					char  realroot[_Q_PATH_MAX];
-					char *root;
+					char      realroot[_Q_PATH_MAX];
+					char     *root;
+					env_vars *var;
+
 					if (realpath(argv[i + 1], realroot) != NULL)
 						root = realroot;
 					else
 						errp("--root argument could not be resolved");
-					set_portage_env_var(&vars_to_read[0], root,
-										"command line");  /* ROOT */
+
+					var = get_portage_env_var(vars_to_read, "ROOT");
+					if (var == NULL)
+					    exit(153); /* impossible */
+
+					set_portage_env_var(var, root, "command line");
 				} else if (strcmp(&argv[i][2], "overlay") == 0 &&
 						   argv[i + 1] != NULL)
 				{
