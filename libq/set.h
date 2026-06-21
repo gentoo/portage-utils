@@ -7,6 +7,7 @@
 #define _SET_H 1
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 #include "array.h"
@@ -22,6 +23,7 @@ set_t      *set_clone(set_t *s);
 const char *set_get(set_t *s, const char *key);
 void       *set_delete(set_t *s, const char *key, bool *removed);
 #define     set_keys(S)        hash_keys((hash_t *)S)
+bool        set_has_intersection(set_t *l, set_t *r);
 size_t      set_size(set_t *s);
 void        set_clear(set_t *s);
 void        set_free(set_t *s);

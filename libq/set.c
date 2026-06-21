@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
 #include <xalloc.h>
@@ -318,6 +319,44 @@ void *set_delete
   if (removed != NULL)
     *removed = rmd;
   return ret;
+}
+
+/* this is a cheap version of intersect that just returns whether there
+ * is at least one element common in both sets */
+bool set_has_intersection
+(
+  set_t *l,
+  set_t *r
+)
+{
+  set_t      *s;
+  set_elem_t *w1;
+  set_elem_t *w2;
+  size_t      i;
+
+  /* find smallest set, assign to s, let l be largest */
+  if (l->len < r->len)
+  {
+    s = l;
+    l = r;
+  }
+  else
+  {
+    s = r;
+  }
+
+  for (i = 0; i < _SET_HASH_SIZE; i++)
+  {
+    for (w1 = s->buckets[i]; w1 != NULL; w1 = w1->next)
+    {
+      for (w2 = l->buckets[i]; w2 != NULL; w2 = w1->next)
+        if (w1->hash == w2->hash &&
+            strcmp(w1->name, w2->name) == 0)
+          return true;
+    }
+  }
+
+  return false;
 }
 
 size_t set_size
