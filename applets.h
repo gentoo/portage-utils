@@ -28,8 +28,13 @@ extern int	getopt_long(int, char * const *, const char *,
 # include <getopt.h>
 #endif
 
+#define GETOPT_LONG(A, a, ex) \
+	getopt_long(argc, argv, ex A ## _FLAGS, a ## _long_opts, NULL)
+
+#define a_argument required_argument
+#define opt_argument optional_argument
+
 #include <stdbool.h>
-#include <dirent.h>
 
 #include "array.h"
 #include "set.h"
@@ -165,6 +170,23 @@ static const struct applet_t {
 			  } break; \
 	default:  applet ## _usage(EXIT_FAILURE); break;
 
+typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR, _Q_ISET } var_types;
+typedef struct {
+	const char     *name;
+	const size_t    name_len;
+	const var_types type;
+	union {
+		char      **s;
+		bool       *b;
+		set       **t;
+	}               value;
+	size_t          value_len;
+	const char     *default_value;
+	char           *src;
+	bool            fromenv;
+} env_vars;
+extern env_vars vars_to_read[];
+
 extern char *portarch;
 extern char *portroot;
 extern char *configroot;
@@ -181,6 +203,8 @@ extern char *pkgdir;
 extern char *port_tmpdir;
 extern set  *features;
 extern set  *ev_use;
+extern set  *accept_keywords;
+extern hash_t *package_masks;
 extern char *install_mask;
 extern char *binpkg_format;
 extern array *overlays;

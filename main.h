@@ -22,8 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "colors.h"
-#include "set.h"
+#include "colors.h"  /* because err/warn macros use it */
 
 extern const char *argv0;
 
@@ -115,12 +114,6 @@ extern const char *argv0;
 # define USE_CLEANUP 0
 #endif
 
-#define GETOPT_LONG(A, a, ex) \
-	getopt_long(argc, argv, ex A ## _FLAGS, a ## _long_opts, NULL)
-
-#define a_argument required_argument
-#define opt_argument optional_argument
-
 /* we need the space before the last comma or we trigger a bug in gcc-2 :( */
 extern FILE *warnout;
 #if defined OPTIMIZE_FOR_SIZE && (OPTIMIZE_FOR_SIZE > 1)
@@ -148,22 +141,5 @@ extern FILE *warnout;
 #define errp(fmt, args...) _err(warnp, fmt , ## args)
 #define errfp(fmt, args...) _err(warnfp, fmt, ## args)
 
-typedef enum { _Q_BOOL, _Q_STR, _Q_ISTR, _Q_ISET } var_types;
-typedef struct {
-	const char     *name;
-	const size_t    name_len;
-	const var_types type;
-	union {
-		char      **s;
-		bool       *b;
-		set       **t;
-	}               value;
-	size_t          value_len;
-	const char     *default_value;
-	char           *src;
-	bool            fromenv;
-} env_vars;
-extern env_vars vars_to_read[];
-extern hash_t *package_masks;
 
 #endif
