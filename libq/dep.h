@@ -20,6 +20,8 @@ typedef enum dep_status_ dep_status_t;
 enum dep_status_ {
   DEP_OK = 1,
   DEP_FAIL,
+  DEP_MASK,
+  DEP_KEYWORD,
   DEP_NEWBLOCKER,
 };
 
@@ -28,7 +30,7 @@ dep_node_t   *dep_grow_tree(const char *depend);
 void          dep_print_tree(FILE *fp, const dep_node_t *root, size_t space,
                              array *m, const char *c, int verbose);
 dep_status_t  dep_resolve_tree(dep_node_t *root, tree_ctx *t,
-                               set_t *use, hash_t *blockers);
+                               set_t *use, hash_t *blockers, set_t *keywords);
 void          dep_prune_use(dep_node_t *root, set_t *use);
 array        *dep_flatten_tree(dep_node_t *root);
 void          dep_burn_tree(dep_node_t *root);
@@ -45,6 +47,8 @@ array        *dep_nodes(dep_node_t *node);
 tree_pkg_ctx *dep_node_pkg(dep_node_t *node);
 tree_pkg_ctx *dep_node_ipkg(dep_node_t *node);
 atom_ctx     *dep_node_atom(dep_node_t *node);
+atom_ctx     *dep_node_mask(dep_node_t *node);
+atom_ctx     *dep_node_fail_input(dep_node_t *node);
 
 #endif
 

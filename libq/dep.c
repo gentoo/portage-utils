@@ -72,8 +72,11 @@ struct dep_node_ {
   tree_pkg_ctx     *ipkg;
   dep_node_t       *parent;
   array            *members;
+  atom_ctx         *blockatom;
+  dep_node_t       *fail;
   dep_type_t        type;
   bool              invert:1;
+  bool              inactive:1;
 };
 
 dep_node_t *dep_grow_tree
@@ -478,7 +481,8 @@ static void dep_print_tree_int
     if (root->pkg != NULL)
     {
       a = tree_pkg_atom(root->pkg, false);
-      if (hlatoms == NULL)
+      if (hlatoms == NULL &&
+          hlcolor != NULL)
         match = true;
     }
 
@@ -643,13 +647,18 @@ void dep_prune_use
  *   can be retrieved using TODO(FIXME)
  * - RESOLVE_NEWBLOCKER: like RESOLVE_OK, but a new blocker was added to
  *   the blockers list, and the caller should re-resolve the full tree
+ * blockers is a hash containing arrays to multiple masks or blockers
+ * can be stored while still allowing to lookup per PN
+ * accept_keywords a set of keywords of which one should match with the
+ * one defined in KEYWORDS for the package
  */
 dep_status_t dep_resolve_tree
 (
   dep_node_t *root,
   tree_ctx   *tree,
   set_t      *use,
-  hash_t     *blockers
+  hash_t     *blockers,
+  set_t      *accept_keywords
 )
 {
   dep_status_t ret = DEP_OK;  /* resolving succeed */
@@ -664,97 +673,140 @@ dep_status_t dep_resolve_tree
     {
       if (root->atom->blocker != ATOM_BL_NONE)
       {
+        array    *atoms;
         atom_ctx *prevatom;
+        size_t    n;
 
         if (blockers == NULL)
           break;  /* ignore */
 
-        /* add blocker to the list of blockers under CAT/PN:SLOT key */
-        blockers = hash_add(blockers,
-                            atom_format("%[CAT]%[PN]%[SLOT]", root->atom),
-                            atom_clone(root->atom), (void **)&prevatom);
-        ret = DEP_NEWBLOCKER;
-
-        /* FIXME: this means we have two blockers that cover the same
-         * key, which doesn't mean they are the same or that they are
-         * compatible, e.g. !foo-1 and !foo-2, how should we handle
-         * this? */
-        if (prevatom != NULL)
+        atoms = hash_get(blockers,
+                         atom_format("%[CAT]%[PN]%[SLOT]", root->atom));
+        if (atoms == NULL)
         {
-          if (atom_compare(root->atom, prevatom) == EQUAL)
-            ret = DEP_OK;
-          atom_implode(prevatom);
+          atoms = array_new();
+          hash_add(blockers,
+                   atom_format("%[CAT]%[PN]%[SLOT]", root->atom),
+                   atoms, NULL /* must be unset */);
         }
+
+        ret = DEP_NEWBLOCKER;
+        array_for_each(atoms, n, prevatom)
+        {
+          /* atom_compare cannot work with blocker or range ops on both
+           * sides, so check the two atoms to be identical instead */
+          if (atom_compare_flg(root->atom, prevatom,
+                               (ATOM_COMP_EXACT |
+                                ATOM_COMP_NOREPO)) == EQUAL)
+          {
+            ret = DEP_OK;
+            break;
+          }
+        }
+
+        /* add new/different blocker */
+        if (ret == DEP_NEWBLOCKER)
+          array_append(atoms, atom_clone(root->atom));
       }
       else
       {
         array        *r;
+        array        *blkatoms;
         atom_ctx     *blkatom;
         tree_pkg_ctx *pkgw;
         size_t        n;
+        size_t        m;
+        bool          ismasked = false;
+        bool          isunkeyw = false;
 
-        blkatom = hash_get(blockers,
-                           atom_format("%[CAT]%[PN]%[SLOT]", root->atom));
+        blkatoms = hash_get(blockers,
+                            atom_format("%[CAT]%[PN]%[SLOT]", root->atom));
         r = tree_match_atom(tree, root->atom,
                             (TREE_MATCH_DEFAULT |
-                             (blkatom == NULL ? TREE_MATCH_LATEST : 0)));
+                             TREE_MATCH_SORT));
 
-        if (blkatom != NULL)
+        /* consume from the returned matches the first VDB and non-VDB
+         * that are not covered by masks or keywords */
+        array_for_each(r, n, pkgw)
         {
-          atom_equality eq;
-          array_for_each(r, n, pkgw)
+          atom_ctx *atom     = tree_pkg_atom(pkgw, true);
+          char     *kwstr;
+          set_t    *keywords;
+
+          /* check whether masks apply */
+          ismasked = false;
+          array_for_each(blkatoms, m, blkatom)
           {
-            eq = atom_compare(tree_pkg_atom(pkgw, true), blkatom);
+            atom_equality eq;
+
+            eq = atom_compare(atom, blkatom);
             if (blkatom->blocker != ATOM_BL_NONE)  /* blocker */
             {
-              if (eq == EQUAL)
+              if (eq != EQUAL)
               {
-                if (root->pkg == NULL)
-                  root->pkg = pkgw;
-                if (tree_pkg_get_treetype(pkgw) == TREETYPE_VDB)
-                {
-                  root->ipkg = pkgw;
-                  break;
-                }
+                ismasked = true;
+                break;
               }
             }
             else  /* mask entry */
             {
-              if (eq == NOT_EQUAL ||
-                  eq == NEWER)
+              if (eq == EQUAL)
               {
-                if (root->pkg == NULL)
-                  root->pkg = pkgw;
-                if (tree_pkg_get_treetype(pkgw) == TREETYPE_VDB)
-                {
-                  root->ipkg = pkgw;
-                  break;
-                }
-              }
-            }
-          }
-          if (root->pkg == NULL)
-            ret = DEP_FAIL;
-        }
-        else
-        {
-          root->pkg = array_get(r, 0);
-          if (root->pkg != NULL)
-          {
-            array_for_each(r, n, pkgw)
-            {
-              if (tree_pkg_get_treetype(pkgw) == TREETYPE_VDB)
-              {
-                root->ipkg = pkgw;
+                ismasked = true;
                 break;
               }
             }
           }
-          else
+
+          if (ismasked)
+            continue;
+
+          /* check keywords */
+          kwstr = tree_pkg_meta(pkgw, Q_KEYWORDS);
+          if (kwstr == NULL)
           {
-            ret = DEP_FAIL;
+            isunkeyw = true;
+            continue;
+          }
+
+          keywords = set_add_from_string(set_new(), kwstr);
+          if (!set_has_intersection(keywords, accept_keywords))
+          {
+            isunkeyw = true;
+            continue;
+          }
+          set_free(keywords);
+
+          /* finally, assign */
+          if (root->pkg == NULL)
+            root->pkg = pkgw;
+          if (tree_pkg_get_treetype(pkgw) == TREETYPE_VDB)
+          {
+            if (root->ipkg == NULL)
+              root->ipkg = pkgw;
+            break;
+          }
+
+          if (root->pkg != NULL &&
+              root->ipkg != NULL)
+            break;  /* stop searching, we got 'em */
+        }
+
+        if (root->pkg == NULL)
+        {
+          ret = DEP_FAIL;
+          if (ismasked)
+          {
+            root->blockatom = blkatom;
+            if (blkatom->blocker == ATOM_BL_NONE)
+              ret = DEP_MASK;  /* masked */
+          }
+          else if (isunkeyw)
+          {
+            ret = DEP_KEYWORD;  /* missing keyword */
           }
         }
+
         array_free(r);
       }
     }
@@ -765,8 +817,11 @@ dep_status_t dep_resolve_tree
      * original dep-tree, would not want to see the tree be modified
      * (which is what prune_use does) */
     if ((!set_contains(use, root->word)) ^ root->invert)
+    {
+      root->inactive = true;
       break;
-    /* TODO: maybe flag the node as being selected or something? */
+    }
+    root->inactive = false;
     /* fall through -- handle as ALL-group */
   case DEP_ALL:
     if (root->members)
@@ -776,9 +831,13 @@ dep_status_t dep_resolve_tree
 
       array_for_each(root->members, n, memb)
       {
-        if ((ret = dep_resolve_tree(memb, tree, use, blockers)) != DEP_OK)
+        if ((ret = dep_resolve_tree(memb, tree, use,
+                                    blockers, accept_keywords)) != DEP_OK)
           break;
       }
+
+      if (ret != DEP_FAIL)
+        root->fail = memb;
     }
     break;
   case DEP_ANY:
@@ -794,7 +853,8 @@ dep_status_t dep_resolve_tree
       ret = DEP_FAIL;
       array_for_each(root->members, n, memb)
       {
-        if ((sret = dep_resolve_tree(memb, tree, use, blockers)) == DEP_FAIL)
+        if ((sret = dep_resolve_tree(memb, tree, use,
+                                     blockers, accept_keywords)) == DEP_FAIL)
           continue;
         if (sret == DEP_NEWBLOCKER)
           ret = DEP_NEWBLOCKER;
@@ -819,6 +879,7 @@ static void dep_flatten_tree_int
 )
 {
   if (root->type == DEP_NULL ||
+      root->inactive ||
       out == NULL)
     return;
 
@@ -899,6 +960,32 @@ atom_ctx *dep_node_atom
 {
   if (node == NULL)
     return NULL;
+
+  return node->atom;
+}
+
+atom_ctx *dep_node_mask
+(
+  dep_node_t *node
+)
+{
+  if (node == NULL)
+    return NULL;
+
+  return node->blockatom;
+}
+
+atom_ctx *dep_node_fail_input
+(
+  dep_node_t *node
+)
+{
+  if (node == NULL)
+    return NULL;
+
+  /* skip over USE */
+  while (node->fail != NULL)
+    node = node->fail;
 
   return node->atom;
 }
