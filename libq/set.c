@@ -349,10 +349,12 @@ bool set_has_intersection
   {
     for (w1 = s->buckets[i]; w1 != NULL; w1 = w1->next)
     {
-      for (w2 = l->buckets[i]; w2 != NULL; w2 = w1->next)
+      for (w2 = l->buckets[i]; w2 != NULL; w2 = w2->next)
+      {
         if (w1->hash == w2->hash &&
             strcmp(w1->name, w2->name) == 0)
           return true;
+      }
     }
   }
 
