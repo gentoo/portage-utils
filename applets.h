@@ -205,6 +205,7 @@ extern set  *features;
 extern set  *ev_use;
 extern set  *accept_keywords;
 extern hash_t *package_masks;
+extern hash_t *use_masks;
 extern char *install_mask;
 extern char *binpkg_format;
 extern array *overlays;

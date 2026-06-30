@@ -52,6 +52,7 @@ array *overlays;
 array *overlay_names;
 array *overlay_src;
 hash_t *package_masks = NULL;
+hash_t *use_masks = NULL;
 
 static char *portedb;
 static char *eprefix;
@@ -427,7 +428,7 @@ set_portage_env_var(env_vars *var, const char *value, const char *src)
 /* Helper to read a portage file (e.g. make.conf, package.mask), or
  * recursively if it points to a directory (we don't care about EAPI for
  * dirs, basically PMS 5.2.5 EAPI restriction is ignored) */
-enum portage_file_type { ENV_FILE, PMASK_FILE };
+enum portage_file_type { ENV_FILE, PMASK_FILE, UMASK_FILE };
 static void
 read_portage_file(const char *file, enum portage_file_type type, void *data)
 {
@@ -577,7 +578,8 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 						portroot, file + 1, curline, cbeg, cend);
 				set_portage_env_var(&vars[i], s, npath);
 			}
-		} else if (type == PMASK_FILE) {
+		} else if (type == PMASK_FILE ||
+				   type == UMASK_FILE) {
 			if (*buf == '-') {
 				/* negation/removal, lookup and drop mask if it exists;
 				 * note that this only supports exact matches (PMS
@@ -590,7 +592,7 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 				snprintf(npath, sizeof(npath), "%s%s:%zu:%zu-%zu",
 						portroot, file + 1, line, cbeg, cend);
 				/* if not necessary, but do it for static code analysers
-				 * which take into accound that hash_add might
+				 * which take into account that hash_add might
 				 * allocate a new set when masks would be NULL -- a case
 				 * which would never happen */
 				if (masks != NULL) {
@@ -714,7 +716,13 @@ overlay_from_path(const char *path)
 
 /* Helper to recursively read stacked make.defaults in profiles */
 static void
-read_portage_profile(const char *profile, env_vars vars[], hash_t *masks)
+read_portage_profile
+(
+	const char *profile,
+	env_vars    vars[],
+	hash_t     *masks,
+	hash_t     *umasks
+)
 {
 	char profile_file[_Q_PATH_MAX * 3];
 	char rpath[_Q_PATH_MAX];
@@ -791,7 +799,7 @@ read_portage_profile(const char *profile, env_vars vars[], hash_t *masks)
 			}
 			read_portage_profile(
 					realpath(profile_file, rpath) == NULL ?
-					profile_file : rpath, vars, masks);
+					profile_file : rpath, vars, masks, umasks);
 			/* restore original path in case we were repointed by profile */
 			if (p != NULL)
 				snprintf(profile_file, sizeof(profile_file), "%s/", profile);
@@ -806,6 +814,8 @@ read_portage_profile(const char *profile, env_vars vars[], hash_t *masks)
 	read_portage_file(profile_file, ENV_FILE, vars);
 	strcpy(profile_file + profile_len, "package.mask");
 	read_portage_file(profile_file, PMASK_FILE, masks);
+	strcpy(profile_file + profile_len, "use.mask");
+	read_portage_file(profile_file, UMASK_FILE, umasks);
 }
 
 env_vars vars_to_read[] = {
@@ -1021,6 +1031,7 @@ initialize_portage_env(void)
 	size_t      i;
 
 	package_masks = hash_new();
+	use_masks     = hash_new();
 
 	/* figure out where to find our config files, we need to do this
 	 * before handling the files, as it specifies where to find them */
@@ -1078,6 +1089,9 @@ initialize_portage_env(void)
 				snprintf(pathbuf, sizeof(pathbuf), "%s/profiles/package.mask",
 						(char *)array_get(overlays, n));
 				read_portage_file(pathbuf, PMASK_FILE, package_masks);
+				snprintf(pathbuf, sizeof(pathbuf), "%s/profiles/use.mask",
+						(char *)array_get(overlays, n));
+				read_portage_file(pathbuf, UMASK_FILE, use_masks);
 				break;
 			}
 		}
@@ -1088,12 +1102,12 @@ initialize_portage_env(void)
 			 portroot, configroot + 1);
 	read_portage_profile(
 			realpath(pathbuf, rpathbuf) == NULL ? pathbuf : rpathbuf,
-			vars_to_read, package_masks);
+			vars_to_read, package_masks, use_masks);
 	snprintf(pathbuf, sizeof(pathbuf), "%s%s/etc/portage/make.profile",
 			 portroot, configroot + 1);
 	read_portage_profile(
 			realpath(pathbuf, rpathbuf) == NULL ? pathbuf : rpathbuf,
-			vars_to_read, package_masks);
+			vars_to_read, package_masks, use_masks);
 
 	/* now read all Portage's config files */
 	snprintf(pathbuf, sizeof(pathbuf), "%s/etc/make.conf",
@@ -1195,6 +1209,42 @@ initialize_portage_env(void)
 				post_len + 1);
 			memcpy(*var->value.s + pre_len, sval, slen);
 		}
+	}
+
+	/* process use.mask in a funky way: simply find the flags in ev_use
+	 * and replace them with the name of the flag wrapped in
+	 * parenthesis, this makes it look like how Portage does it, and as
+	 * well will be impossible to match to a USE-flag lateron */
+	if (hash_size(use_masks) > 0)
+	{
+		char   usebuf[32];
+		char  *usebufp   = usebuf;
+		array *usemasks  = hash_keys(use_masks);
+		char  *use;
+		size_t n;
+		size_t usebuflen = sizeof(usebuf);
+
+		array_for_each(usemasks, n, use)
+		{
+			bool found = false;
+			set_delete(ev_use, use, &found);
+			if (found)
+			{
+				size_t needlen = strlen(use) + 2;
+				if (usebuflen <= needlen)
+				{
+					if (usebufp != usebuf)
+						free(usebufp);
+					usebuflen = needlen + 1;
+					usebufp = xmalloc(usebuflen);
+				}
+				snprintf(usebufp, usebuflen, "(%s)", use);
+				set_add(ev_use, usebufp);
+			}
+		}
+
+		if (usebufp != usebuf)
+			free(usebufp);
 	}
 
 	/* handle PORTDIR and primary_overlay to get a unified
