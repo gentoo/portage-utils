@@ -70,6 +70,7 @@ struct quse_state {
 	const char *fmt;
 };
 
+static const atom_ctx *quse_last_atom;
 static char *_quse_getline_buf = NULL;
 static size_t _quse_getline_buflen = 0;
 #define GETLINE(FD, BUF, LEN) \
@@ -642,7 +643,13 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			free(us.retv);
 			free(us.argv);
 		} else {
-			printf("%s: %s\n", atom_format(state->fmt, atom), v);
+			if (quse_last_atom == NULL ||
+					strcmp(atom->CATEGORY, quse_last_atom->CATEGORY) != 0 ||
+					strcmp(atom->PN, quse_last_atom->PN) != 0)
+			{
+				quse_last_atom = atom;
+				printf("%s: %s\n", atom_format(state->fmt, atom), v);
+			}
 		}
 	}
 
