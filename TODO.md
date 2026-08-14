@@ -51,7 +51,6 @@
 
 # quse
 - make -v only print requested USE-flag when flags given
-- list each package only once (e.g. quse -e lz4)
 
 # qkeyword
 - drop -c argument? it can be fully expressed using -p cat/

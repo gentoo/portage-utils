@@ -70,6 +70,7 @@ struct quse_state {
 	const char *fmt;
 };
 
+static char *quse_last_atom_name = "";
 static char *_quse_getline_buf = NULL;
 static size_t _quse_getline_buflen = 0;
 #define GETLINE(FD, BUF, LEN) \
@@ -642,7 +643,11 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			free(us.retv);
 			free(us.argv);
 		} else {
-			printf("%s: %s\n", atom_format(state->fmt, atom), v);
+			/* we can skip consecutive duplicate atoms since they are already sorted */
+			if(strcmp(atom->PN, quse_last_atom_name) != 0) {
+				quse_last_atom_name = atom->PN;
+				printf("%s: %s\n", atom_format(state->fmt, atom), v);
+			}
 		}
 	}
 
