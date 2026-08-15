@@ -773,6 +773,7 @@ dep_status_t dep_resolve_tree
           if (!set_has_intersection(keywords, accept_keywords))
           {
             isunkeyw = true;
+            set_free(keywords);
             continue;
           }
           set_free(keywords);
