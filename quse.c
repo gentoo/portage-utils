@@ -644,6 +644,7 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			free(us.argv);
 		} else {
 			if (quse_last_atom == NULL ||
+					verbose ||
 					strcmp(atom->CATEGORY, quse_last_atom->CATEGORY) != 0 ||
 					strcmp(atom->PN, quse_last_atom->PN) != 0)
 			{
