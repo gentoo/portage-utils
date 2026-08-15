@@ -1243,6 +1243,8 @@ initialize_portage_env(void)
 			}
 		}
 
+		array_free(usemasks);
+
 		if (usebufp != usebuf)
 			free(usebufp);
 	}
