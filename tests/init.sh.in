@@ -111,10 +111,14 @@ mkportdir() {
 
 	export PORTAGE_CONFIGROOT=${PWD}
 	mkdir -p etc/portage/
-	cat <<-EOF >etc/portage/repos.conf
-	[DEFAULT]
-	main-repo = utils-test
-	[utils-test]
-	location = ${PORTDIR}
+	cat <<-EOF > etc/portage/repos.conf
+		[DEFAULT]
+		main-repo = utils-test
+		[utils-test]
+		location = ${PORTDIR}
+	EOF
+	cat <<-EOF > etc/portage/make.conf
+		# in absence of a valid profile
+		ACCEPT_KEYWORDS="~amd64"
 	EOF
 }
