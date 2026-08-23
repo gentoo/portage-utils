@@ -20,18 +20,16 @@
   https://bugs.gentoo.org/701470
 
 # qmerge
-- dep resolver needs spanktastic love.
 - needs safe deleting (merge in place rather than unmerge;merge)
-- multiple binary repos (talk to zmedico)
-- gpg sign the packages file (before compression)
-- binary vdb (sqlite) ... talk to zmedico
-- remote binhost
-- vdb tree is opened multiple times, need 1 global one (context?)
-- parallel fetch tbz2s
+- multiple binary repos
+  possibly using `--binhost URL --binhost URL` and/or a config bit we can
+  pick up from make.conf perhaps?
+- verify gpg sign the packages file (before compression)
+- parallel fetch binpkgs?
 - env is not saved/restored between pkg\_{pre,post}inst (see portage and REPO\_LAYOUT\_CONF\_WARN)
 - support installing via path to tbz2 package
 - support TTL field in binpkgs file
-- unmerging should clean out @world set
+- unmerging should clean out atom from @world set if present
 - fixup lame misnaming of force\_download (--fetch/--force) actually
   not-forcing things
 
