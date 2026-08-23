@@ -334,6 +334,10 @@ bool set_has_intersection
   set_elem_t *w2;
   size_t      i;
 
+  if (l == NULL ||
+      r == NULL)
+    return false;
+
   /* find smallest set, assign to s, let l be largest */
   if (l->len < r->len)
   {
