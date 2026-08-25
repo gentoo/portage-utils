@@ -2705,14 +2705,17 @@ static dep_status_t qmerge_resolve
   }
   else if (strcmp(thing, "all") == 0)
   {
-    tree_ctx     *ctx  = tree_new(portroot, portvdb, TREETYPE_VDB, true);
-    array        *pkgs = tree_match_atom(ctx, NULL, TREE_MATCH_DEFAULT);
+    tree_ctx     *ctx;
+    array        *pkgs;
     tree_pkg_ctx *w;
     const char   *fmt;
     char         *a;
 
     if (root->type != NTYPE_ROOT)
       return DEP_FAIL;
+
+    ctx  = tree_new(portroot, portvdb, TREETYPE_VDB, true);
+    pkgs = tree_match_atom(ctx, NULL, TREE_MATCH_DEFAULT);
 
     /* maybe: if we want to re-install the exact same versions:
       fmt = "%[CAT]%[PF]";
