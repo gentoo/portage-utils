@@ -663,6 +663,9 @@ void tree_close
   if (tree == NULL)
     return;
 
+  if (tree->type == TREE_MERGED)
+    array_deepfree(tree->srctrees, (array_free_cb *)tree_close);
+
   array_deepfree(tree->cats, (array_free_cb *)tree_cat_close);
 
   free(tree->path);
