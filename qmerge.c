@@ -2702,21 +2702,20 @@ static dep_status_t qmerge_resolve
     tree_pkg_ctx *w;
     const char   *fmt;
     char         *a;
-    bool          exact_match = false;
 
     if (root->type != NTYPE_ROOT)
       return DEP_FAIL;
 
-    if (exact_match)
+    /* maybe: if we want to re-install the exact same versions:
       fmt = "%[CAT]%[PF]";
-    else
-      fmt = "%[CAT]%[PN]%[SLOT]";
+     */
+    fmt = "%[CAT]%[PN]%[SLOT]";
 
     alist = array_new();
 
     array_for_each(pkgs, n, w)
     {
-      a = atom_format(fmt, tree_pkg_atom(w, !exact_match));
+      a = atom_format(fmt, tree_pkg_atom(w, true));
       array_append_strcpy(alist, a);
     }
 
