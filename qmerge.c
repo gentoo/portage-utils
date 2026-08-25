@@ -2963,7 +2963,6 @@ int qmerge_main
   char **argv
 )
 {
-  array          *trees = array_new();   /* to free */
   array          *args  = array_new();
   tree_ctx       *tree;
   tree_ctx       *vdb;
@@ -2983,7 +2982,6 @@ int qmerge_main
   tree = vdb = tree_new(portroot, portvdb, TREETYPE_VDB, false);
   if (tree == NULL)
     err("cannot function without VDB");
-  array_append(trees, tree);
   rstate.tree     = tree;
   rstate.blockers = hash_new();
 
@@ -3004,7 +3002,6 @@ int qmerge_main
     /* in case tree has https support, something like this could/should
      * work:
     case 'P': tree = tree_new(portroot, argv[optind], TREETYPE_BINPKG, false);
-              array_append(trees, tree);
               rstate.tree = tree_merge(rstate.tree, tree);
      */
               COMMON_GETOPTS_CASES(qmerge)
@@ -3025,10 +3022,7 @@ int qmerge_main
   {
     tree = tree_new(portroot, pkgdir, TREETYPE_BINPKG, true);
     if (tree != NULL)
-    {
-      array_append(trees, tree);
       rstate.tree = tree_merge(rstate.tree, tree);
-    }
   }
 
   /* add ebuild trees */
@@ -3042,10 +3036,7 @@ int qmerge_main
     {
       tree = tree_new(portroot, overlay, TREETYPE_EBUILD, true);
       if (tree != NULL)
-      {
-        array_append(trees, tree);
         rstate.tree = tree_merge(rstate.tree, tree);
-      }
     }
   }
 
@@ -3206,7 +3197,7 @@ int qmerge_main
   }
 
   qmerge_free_node(root);
-  array_deepfree(trees, (array_free_cb *)tree_close);
+  tree_close(rstate.tree);
 
   return ret;
 }
