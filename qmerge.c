@@ -1284,9 +1284,12 @@ static int pkg_merge
    * everything under it) */
   rm_rf(".");
 
-  mkdir("temp", 0755);
-  mkdir("vdb", 0755);
-  mkdir("image", 0755);
+  if (mkdir("temp", 0755) < 0 ||
+      mkdir("vdb", 0755) < 0 ||
+      mkdir("image", 0755) < 0)
+  {
+    errf("could not create temp, vdb and image dirs!");
+  }
 
   p = tree_pkg_get_path(mpkg);
   i = (int)strlen(p);
