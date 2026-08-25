@@ -2282,6 +2282,7 @@ static bool qmerge_print_node_d
   case TREETYPE_EBUILD:   tc = BLUE;    t = 'E';   break;
   case TREETYPE_GTREE:    tc = BLUE;    t = 'E';   break;
   case TREETYPE_VDB:      tc = DKGREEN; t = 'i';   break;
+  default:                tc = RED;     t = '?';   break;
   }
 
   /* the tree columns indicate state: [123]
@@ -2334,6 +2335,7 @@ static bool qmerge_print_node_d
     case TREETYPE_EBUILD:   tc = BLUE;    t = 'E';   break;
     case TREETYPE_GTREE:    tc = BLUE;    t = 'E';   break;
     case TREETYPE_VDB:      tc = DKGREEN; t = 'I';   break;
+    default:                tc = RED;     t = '?';   break;
     }
     printf(" %s!%s %s%c%s %*s %s\n", RED, NORM, tc, t, NORM, level, "", atom);
     printf("      %sthe two packages above cannot be installed "
@@ -2374,14 +2376,14 @@ static bool qmerge_print_node_d
     break;
   case NTYPE_MASKED:
   case NTYPE_ERROR:
-    if (n->atom != NULL)
-    {
-      atom_to_string_r(atom, sizeof(atom), n->atom);
-    }
-    else if (n->pkg != NULL)
+    if (n->pkg != NULL)
     {
       atom_format_r(atom, sizeof(atom), "%[CAT]%[PF]%[SLOT]%[REPO]",
                     tree_pkg_atom(n->pkg, true));
+    }
+    else if (n->atom != NULL)
+    {
+      atom_to_string_r(atom, sizeof(atom), n->atom);
     }
     else
     {
@@ -2403,10 +2405,13 @@ static bool qmerge_print_node_d
         atom_to_string_r(atom, sizeof(atom), failatom);
       array_free(failatoms);
     }
-    printf("      %scould not find a package matching %s%s%s",
-           RED, DKBLUE, atom, NORM);
     if (n->type == NTYPE_MASKED)
-      printf(": masked by %s", n->mask);
+      printf("      %scould not find a package matching %s%s%s, "
+             "%s is masked by %s",
+             RED, DKBLUE, atom_to_string(n->atom), NORM, atom, n->mask);
+    else
+      printf("      %scould not find a package matching %s%s%s",
+             RED, DKBLUE, atom, NORM);
 
     stop = true;
     break;
@@ -2598,8 +2603,8 @@ static dep_status_t qmerge_resolve_dep
       {
         node_t *err = qmerge_new_node(NTYPE_MASKED, node);
         err->pkg  = node->pkg;
-        err->atom = dep_node_atom(depw);
-        err->mask = xstrdup(atom_to_string(dep_node_mask(depw)));
+        err->atom = dep_node_atom(deps);
+        err->mask = xstrdup(atom_to_string(dep_node_mask(deps)));
         err->dep  = deps;
         deps      = NULL;
         array_append(depends[i].store, err);
@@ -2608,7 +2613,7 @@ static dep_status_t qmerge_resolve_dep
       {
         node_t *err = qmerge_new_node(NTYPE_MASKED, node);
         err->pkg  = node->pkg;
-        err->atom = dep_node_atom(depw);
+        err->atom = dep_node_atom(deps);
         err->mask = xstrdup("missing keyword");
         err->dep  = deps;
         deps      = NULL;
@@ -2963,7 +2968,7 @@ int qmerge_main
   resolve_state_t rstate;
   dep_status_t    res_state;
   int             i;
-  int             ret;
+  int             ret   = EXIT_SUCCESS;
   bool            abort;
   bool            binpkgonly = false;
 
@@ -3043,7 +3048,7 @@ int qmerge_main
 
   /* create a list we can modify if we have to resolve things */
   for (i = optind; i < argc; i++)
-    array_append(args, argv[i]);
+    array_append_strcpy(args, argv[i]);
 
   /* convert masks into a form that can be used */
   if (!uninstall)
@@ -3188,7 +3193,7 @@ int qmerge_main
       ret = qmerge_merge_pkgs(root, parents_seen,
                               cp_argc, cp_argv,
                               cpm_argc, cpm_argv);
-      if (ret != 0)
+      if (ret == 1)
         ret = EXIT_FAILURE;
 
       freeargv(cp_argc, cp_argv);
@@ -3198,7 +3203,6 @@ int qmerge_main
   }
 
   array_deepfree(trees, (array_free_cb *)tree_close);
-  tree_close(rstate.tree);
 
   return ret;
 }
