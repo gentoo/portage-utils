@@ -3205,6 +3205,7 @@ int qmerge_main
   qmerge_free_node(root);
   tree_close(rstate.tree);
   hash_free(rstate.blockers);
+  array_deepfree(args, NULL);
 
   return ret;
 }
