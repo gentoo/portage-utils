@@ -668,7 +668,10 @@ static void pkg_run_func_at
 
   /* EAPI officially is a string, but since the official ones are only
    * numbers, we'll just go with the numbers */
-  eapi = (int)strtol(EAPI, NULL, 10);
+  if (EAPI != NULL)
+    eapi = (int)strtol(EAPI, NULL, 10);
+  else
+    eapi = 0;
   if (eapi > MAX_EAPI)
     eapi = MAX_EAPI;  /* let's hope latest known EAPI is closest */
 
