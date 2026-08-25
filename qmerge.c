@@ -3166,15 +3166,16 @@ int qmerge_main
       if (uninstall)
       {
         if (!qmerge_prompt("OK to unmerge these packages"))
-          return EXIT_FAILURE;
+          ret = EXIT_FAILURE;
       }
       else
       {
         if (!qmerge_prompt("OK to merge these packages"))
-          return EXIT_FAILURE;
+          ret = EXIT_FAILURE;
       }
     }
 
+    if (ret != EXIT_FAILURE)
     {
       set_t *parents_seen = set_new();
       char **cp_argv;
@@ -3188,6 +3189,8 @@ int qmerge_main
       ret = qmerge_merge_pkgs(root, parents_seen,
                               cp_argc, cp_argv,
                               cpm_argc, cpm_argv);
+      if (ret != 0)
+        ret = EXIT_FAILURE;
 
       freeargv(cp_argc, cp_argv);
       freeargv(cpm_argc, cpm_argv);
