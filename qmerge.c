@@ -2690,14 +2690,14 @@ static dep_status_t qmerge_resolve
   }
   else if (strcmp(thing, "system") == 0)
   {
-    set_t *q = set_new();
+    set_t *q;
     array *a;
     char  *p;
 
     if (root->type != NTYPE_ROOT)
       return DEP_FAIL;
 
-    q = q_profile_walk("packages", qmerge_add_set_system, q);
+    q = q_profile_walk("packages", qmerge_add_set_system, set_new());
 
     alist = array_new();
     a     = set_keys(q);
