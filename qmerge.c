@@ -1020,7 +1020,7 @@ static int pkg_unmerge
 {
   char      T[_Q_PATH_MAX];
   atom_ctx *atom = tree_pkg_atom(pkg_ctx, false);
-  array    *dirs = array_new();
+  array    *dirs;
   char     *phases;
   char     *eprefix;
   char     *dir;
@@ -1074,6 +1074,7 @@ static int pkg_unmerge
     return 1;
   contentsp = xstrdup(contentsp);  /* should not modify pkg_ctx */
 
+  dirs = array_new();
   for (buf = strtok_r(contentsp, "\n", &savep);
        buf != NULL;
        buf = strtok_r(NULL, "\n", &savep))
@@ -1116,8 +1117,7 @@ static int pkg_unmerge
       break;
 
     case CONTENTS_SYM:
-      if (fstatat(portroot_fd,
-                  e->name + 1, &st, AT_SYMLINK_NOFOLLOW))
+      if (fstatat(portroot_fd, e->name + 1, &st, AT_SYMLINK_NOFOLLOW))
       {
         if (errno != ENOENT)
         {
@@ -1147,7 +1147,8 @@ static int pkg_unmerge
              protected ? YELLOW : GREEN,
              protected ? "***" : "<<<" , NORM);
 
-    if (protected) {
+    if (protected)
+    {
       qprintf("%s %s\n", zing, e->name);
       continue;
     }
@@ -1162,7 +1163,9 @@ static int pkg_unmerge
     /* No match, so unmerge it */
     if (!quiet)
       printf("%s %s\n", zing, e->name);
-    if (!keep || !del) {
+    if (!keep ||
+        !del)
+    {
       char *p;
 
       if (!pretend &&
