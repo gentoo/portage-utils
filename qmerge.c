@@ -180,6 +180,16 @@ struct qmerge_node_ {
   bool          found:1;   /* for NTYPE_ERROR */
 };
 
+typedef struct resolve_state_ {
+  tree_ctx *tree;
+  hash_t   *nodes;
+  hash_t   *blockers;
+  array    *world;
+  bool      unmerge:1;
+  bool      upgrade:1;      /* only upgrade versions for explicit arguments */
+  bool      upgrade_all:1;  /* deep upgrade, also for dependencies */
+  bool      interactive:1;
+} resolve_state_t;
 
 #define QMERGE_FLAGS "fFskKUpuyO" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
@@ -226,6 +236,7 @@ bool debug = false;
 const char Packages[] = "Packages";
 
 static void pkg_fetch(int, const depend_atom *, tree_pkg_ctx *);
+static int qmerge_update_world_file(resolve_state_t *, char *, int);
 
 static bool qmerge_prompt
 (
@@ -1012,13 +1023,14 @@ static void pkg_extract_xpak_cb
 
 static int pkg_unmerge
 (
-  tree_pkg_ctx *pkg_ctx,
-  depend_atom  *rpkg,
-  set_t        *keep,
-  int           cp_argc,
-  char        **cp_argv,
-  int           cpm_argc,
-  char        **cpm_argv
+  tree_pkg_ctx     *pkg_ctx,
+  depend_atom      *rpkg,
+  set_t            *keep,
+  resolve_state_t  *rstate,
+  int               cp_argc,
+  char            **cp_argv,
+  int               cpm_argc,
+  char            **cpm_argv
 )
 {
   char      T[_Q_PATH_MAX];
@@ -1034,6 +1046,7 @@ static int pkg_unmerge
   size_t    n;
   int       portroot_fd;
   bool      unmerge_config_protected;
+  size_t    retelem;
 
   buf = phases = NULL;
   snprintf(T, sizeof(T), "%s%s/qmerge._unmerge_.%s",
@@ -1204,6 +1217,13 @@ static int pkg_unmerge
 
   if (!pretend)
   {
+    if (array_binsearch(rstate->world, atom_format("%{#}%[CAT]%[PN]%[SLOT]", atom),
+      NULL, &retelem) != NULL)
+    {
+      array_delete(rstate->world, retelem, NULL);
+      if (qmerge_update_world_file(rstate, T, portroot_fd) < 0)
+        warnp("failed rewrite world");
+    }
     buf = tree_pkg_meta(pkg_ctx, Q_EAPI);
     if (buf == NULL)
       buf = (char *)"0";  /* default */
@@ -1236,14 +1256,59 @@ static int pkg_unmerge
   return 0;
 }
 
+static int qmerge_update_world_file
+(
+  resolve_state_t *w,
+  char            *tmpdir,
+  int              portroot_fd
+)
+{
+  char       path[_Q_PATH_MAX];
+  int        tempdirfd;
+  int        fd;
+  char      *e;
+  size_t     n;
+  FILE      *out;
+
+  snprintf(path, sizeof(path), "%svar/lib/portage/world", configroot);
+  tempdirfd = open(tmpdir, O_RDONLY | O_DIRECTORY);
+
+  if (tempdirfd < 0) {
+    warnp("open(%s) failed", tmpdir);
+    return -1;
+  }
+
+  fd = openat(tempdirfd, "qmerge._unmerge_temp_world", O_WRONLY | O_CREAT, 0644);
+  out = fdopen(fd, "w");
+
+  if (fd < 0) {
+    warnp("openat failed for qmerge._unmerge_temp_world in %s", tmpdir);
+    return -1;
+  }
+
+  array_for_each(w->world, n, e)
+    fprintf(out, "%s\n", e);
+
+  fclose(out);
+  close(fd);
+
+  if (move_file(tempdirfd, "qmerge._unmerge_temp_world", portroot_fd, path, NULL) != 0) {
+    warnp("failed to move file from %s", tmpdir);
+  }
+
+  close(tempdirfd);
+  return 0;
+}
+
 static int pkg_merge
 (
-  tree_pkg_ctx   *mpkg,
-  tree_pkg_ctx   *ipkg,
-  int             cp_argc,
-  char          **cp_argv,
-  int             cpm_argc,
-  char          **cpm_argv
+  tree_pkg_ctx    *mpkg,
+  tree_pkg_ctx    *ipkg,
+  resolve_state_t *rstate,
+  int              cp_argc,
+  char           **cp_argv,
+  int              cpm_argc,
+  char           **cpm_argv
 )
 {
   char            buf[_Q_PATH_MAX];
@@ -1733,7 +1798,7 @@ static int pkg_merge
   {
     /* we need to really set this unmerge pending after we
      * look at contents of the new pkg */
-    pkg_unmerge(ipkg, matom, objs,
+    pkg_unmerge(ipkg, matom, objs, rstate,
                 cp_argc, cp_argv, cpm_argc, cpm_argv);
   }
 
@@ -2014,12 +2079,13 @@ static void pkg_fetch
 
 static int qmerge_merge_pkgs
 (
-  node_t  *n,
-  set_t   *parents_seen,
-  int      cp_argc,
-  char   **cp_argv,
-  int      cpm_argc,
-  char   **cpm_argv
+  node_t           *n,
+  set_t            *parents_seen,
+  resolve_state_t  *rstate,
+  int               cp_argc,
+  char            **cp_argv,
+  int               cpm_argc,
+  char            **cpm_argv
 )
 {
   char                atom[_Q_PATH_MAX];
@@ -2030,7 +2096,7 @@ static int qmerge_merge_pkgs
 
   array_for_each(n->predeps, i, dep)
   {
-    if (qmerge_merge_pkgs(dep, parents_seen,
+    if (qmerge_merge_pkgs(dep, parents_seen, rstate,
                           cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
   }
@@ -2072,32 +2138,32 @@ static int qmerge_merge_pkgs
   {
   case NTYPE_MERGE:
     printf("%s***%s merging %s\n", GREEN, NORM, atom);
-    if (pkg_merge(n->pkg, n->ipkg,
+    if (pkg_merge(n->pkg, n->ipkg, rstate,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
     break;
   case NTYPE_UNMERGE:
-    if (pkg_unmerge(n->pkg, NULL, NULL,
+    if (pkg_unmerge(n->pkg, NULL, NULL, rstate,
                     cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
     break;
   case NTYPE_REMERGE:
     printf("%s***%s remerging %s\n", YELLOW, NORM, atom);
-    if (pkg_merge(n->pkg, n->ipkg,
+    if (pkg_merge(n->pkg, n->ipkg, rstate,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
     break;
   case NTYPE_UPGRADE:
     printf("%s***%s upgrading %s [%s]\n",
            GREEN, NORM, atom, tree_pkg_atom(n->ipkg, false)->PVR);
-    if (pkg_merge(n->pkg, n->ipkg,
+    if (pkg_merge(n->pkg, n->ipkg, rstate,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
     break;
   case NTYPE_DOWNGRADE:
     printf("%s***%s downgrading %s [%s]\n",
            YELLOW, NORM, atom, tree_pkg_atom(n->ipkg, false)->PVR);
-    if (pkg_merge(n->pkg, n->ipkg,
+    if (pkg_merge(n->pkg, n->ipkg, rstate,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
     break;
@@ -2108,7 +2174,7 @@ static int qmerge_merge_pkgs
   /* post deps depend on us */
   array_for_each(n->postdeps, i, dep)
   {
-    if (qmerge_merge_pkgs(dep, parents_seen,
+    if (qmerge_merge_pkgs(dep, parents_seen, rstate,
                           cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
   }
@@ -2116,15 +2182,7 @@ static int qmerge_merge_pkgs
   return 0;
 }
 
-typedef struct resolve_state_ {
-  tree_ctx *tree;
-  hash_t   *nodes;
-  hash_t   *blockers;
-  bool      unmerge:1;
-  bool      upgrade:1;      /* only upgrade versions for explicit arguments */
-  bool      upgrade_all:1;  /* deep upgrade, also for dependencies */
-  bool      interactive:1;
-} resolve_state_t;
+
 
 static array *qmerge_read_file
 (
@@ -2667,9 +2725,11 @@ static dep_status_t qmerge_resolve
     if (root->type != NTYPE_ROOT)
       return DEP_FAIL;
 
-    alist = qmerge_read_file("/var/lib/portage", "world");
-    if (alist == NULL)
+    if (state->world == NULL)
       return DEP_FAIL;
+
+    alist = array_clone(state->world, (array_clone_cb*)xstrdup);
+
     isset = false;
   }
   else if (strcmp(thing, "system") == 0)
@@ -2744,6 +2804,7 @@ static dep_status_t qmerge_resolve
       if ((ret = qmerge_resolve(patom, state, root)) != DEP_OK)
         break;
     }
+
     array_deepfree(alist, NULL);
 
     return ret;
@@ -2966,6 +3027,7 @@ int qmerge_main
   int             ret   = EXIT_SUCCESS;
   bool            abort;
   bool            binpkgonly = false;
+  char            worldbufpath[_Q_PATH_MAX];
 
   if (argc < 2)
     qmerge_usage(EXIT_FAILURE);
@@ -2973,10 +3035,12 @@ int qmerge_main
   VAL_CLEAR(rstate);
 
   tree = vdb = tree_new(portroot, portvdb, TREETYPE_VDB, false);
+  snprintf(worldbufpath, sizeof(worldbufpath), "%s/var/lib/portage", portroot);
   if (tree == NULL)
     err("cannot function without VDB");
   rstate.tree     = tree;
   rstate.blockers = hash_new();
+  rstate.world = qmerge_read_file(worldbufpath, "world");
 
   while ((i = GETOPT_LONG(QMERGE, qmerge, "")) != -1)
   {
@@ -3177,7 +3241,7 @@ int qmerge_main
       makeargv(config_protect, &cp_argc, &cp_argv);
       makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
-      ret = qmerge_merge_pkgs(root, parents_seen,
+      ret = qmerge_merge_pkgs(root, parents_seen, &rstate,
                               cp_argc, cp_argv,
                               cpm_argc, cpm_argv);
       if (ret == 1)
@@ -3190,6 +3254,7 @@ int qmerge_main
   }
 
   qmerge_free_node(root);
+  array_deepfree(rstate.world, NULL);
   tree_close(rstate.tree);
   hash_free(rstate.blockers);
   array_deepfree(args, NULL);
