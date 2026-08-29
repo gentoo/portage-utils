@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2025 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -64,6 +64,8 @@ const char *MAGENTA;
 const char *RED;
 const char *WHITE;
 const char *YELLOW;
+
+static bool colour_mapped = false;
 
 /* all of the above need to be referenced in the list below */
 static colourpair colour_pairs[] = {
@@ -215,6 +217,8 @@ color_remap(void)
 
 	free(buf);
 	fclose(fp);
+
+	colour_mapped = true;
 }
 
 void
@@ -224,4 +228,12 @@ color_clear(void)
 
 	for (i = 0; i < ARRAY_SIZE(colour_pairs); i++)
 		*(colour_pairs[i].var) = "";
+
+	colour_mapped = false;
+}
+
+bool
+color_mapped(void)
+{
+	return colour_mapped;
 }
