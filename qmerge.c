@@ -2327,12 +2327,8 @@ static bool qmerge_print_node_d
       printf(" (%s)", atom_format("%[PVR]%[SLOT]", iatom));
     break;
   case NTYPE_INSTALLED:
-    if (!nocolor)
-      color_clear();
     atom_format_r(atom, sizeof(atom),
-                  "%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", patom);
-    if (!nocolor)
-      color_remap();
+                  "%{#}%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", patom);
     printf("%s[  %c]%*s %s%s", BRYELLOW, t, level, "", atom, NORM);
     break;
   case NTYPE_CONFLICT:
@@ -2358,12 +2354,8 @@ static bool qmerge_print_node_d
 
       array_for_each(n->pkgs, i, pkg)
       {
-        if (!nocolor)
-          color_clear();
-        atom_format_r(atom, sizeof(atom), "%[CAT]%[PF]%[SLOT]%[REPO]",
+        atom_format_r(atom, sizeof(atom), "%{#}%[CAT]%[PF]%[SLOT]%[REPO]",
                       tree_pkg_atom(pkg, true));
-        if (!nocolor)
-          color_remap();
         switch (tree_pkg_get_treetype(pkg))
         {
         case TREETYPE_BINPKG:   tc = MAGENTA; t = 'B';   break;
