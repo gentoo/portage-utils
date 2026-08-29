@@ -1402,6 +1402,9 @@ char *atom_to_string_r
  *  pfx - the version qualifier if set (e.g. > < = !)
  *  sfx - the version qualifier if set (e.g. *)
  *  BUILDID - the binpkg-multi-instance id
+ *
+ * The special sequences %{#} and %[#] disable and enable when
+ * previously enabled colourescapes respectively.
  */
 char *atom_format_r
 (
@@ -1418,6 +1421,7 @@ char *atom_format_r
   char        bracket;
   bool        showit;
   bool        connected;
+  bool        restore_colours = false;
 
   if (!a)
   {
@@ -1602,6 +1606,21 @@ char *atom_format_r
                        a->BUILDID, NORM);
           }
         }
+        else if (len == 1 &&
+                 fmt[0] == '#')
+        {
+          if (showit)
+          {
+            if (color_mapped())
+              restore_colours = true;
+            color_clear();
+          }
+          else
+          {
+            if (restore_colours)
+              color_remap();
+          }
+        }
         else
         {
           append_buf(buf, buflen, "<BAD:%.*s>", (int)len, fmt);
@@ -1620,6 +1639,9 @@ char *atom_format_r
     }
   }
 #undef append_buf
+
+  if (restore_colours)
+    color_remap();
 
   return ret;
 }
