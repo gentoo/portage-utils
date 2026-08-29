@@ -135,9 +135,9 @@ eat_file_fd_as_array
     len = strlen(p);
     while (len > 0 &&
            strchr("\r\n\t ", p[len - 1]) != NULL)
-      len--;
+      p[--len] = '\0';
     if (len > 0)
-      array_append_copy(ret, p, len);
+      array_append_copy(ret, p, len + 1);
   }
 
   fclose(f);
