@@ -681,12 +681,12 @@ dep_status_t dep_resolve_tree
           break;  /* ignore */
 
         atoms = hash_get(blockers,
-                         atom_format("%[CAT]%[PN]%[SLOT]", root->atom));
+                         atom_format("%{#}%[CAT]%[PN]%[SLOT]", root->atom));
         if (atoms == NULL)
         {
           atoms = array_new();
           hash_add(blockers,
-                   atom_format("%[CAT]%[PN]%[SLOT]", root->atom),
+                   atom_format("%{#}%[CAT]%[PN]%[SLOT]", root->atom),
                    atoms, NULL /* must be unset */);
         }
 
@@ -720,7 +720,7 @@ dep_status_t dep_resolve_tree
         bool          isunkeyw = false;
 
         blkatoms = hash_get(blockers,
-                            atom_format("%[CAT]%[PN]%[SLOT]", root->atom));
+                            atom_format("%{#}%[CAT]%[PN]%[SLOT]", root->atom));
         r = tree_match_atom(tree, root->atom,
                             (TREE_MATCH_DEFAULT |
                              TREE_MATCH_SORT));
