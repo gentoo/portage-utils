@@ -2042,7 +2042,7 @@ static int qmerge_merge_pkgs
     patom = tree_pkg_atom(n->pkg, true);
     ptype = tree_pkg_get_treetype(n->pkg);
     atom_format_r(atom, sizeof(atom),
-                  "%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", patom);
+                  "%{#}%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", patom);
 
     /* check if we already seen this one */
     set_add_unique(parents_seen, atom, &unseen);
@@ -2260,7 +2260,7 @@ static bool qmerge_print_node_d
     patom = tree_pkg_atom(n->pkg, true);
     ptype = tree_pkg_get_treetype(n->pkg);
     atom_format_r(atom, sizeof(atom),
-                  "%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", patom);
+                  "%{#}%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", patom);
 
     /* check if we already printed this one */
     set_add_unique(parents_seen, atom, &unseen);
@@ -2531,7 +2531,7 @@ static dep_status_t qmerge_resolve_dep
   }
 
   atom = tree_pkg_atom(node->pkg, true);
-  str  = atom_format("%[CAT]%[PN]%[SLOT]", atom);
+  str  = atom_format("%{#}%[CAT]%[PN]%[SLOT]", atom);
   dep  = hash_get(state->nodes, str);
   if (dep != NULL)
   {
@@ -2718,7 +2718,7 @@ static dep_status_t qmerge_resolve
     /* maybe: if we want to re-install the exact same versions:
       fmt = "%[CAT]%[PF]";
      */
-    fmt = "%[CAT]%[PN]%[SLOT]";
+    fmt = "%{#}%[CAT]%[PN]%[SLOT]";
 
     alist = array_new();
 
@@ -2846,7 +2846,7 @@ static dep_status_t qmerge_resolve
         size_t    m;
 
         blkatoms = hash_get(state->blockers,
-                            atom_format("%[CAT]%[PN]%[SLOT]",
+                            atom_format("%{#}%[CAT]%[PN]%[SLOT]",
                                         tree_pkg_atom(pkg, true)));
         array_for_each(blkatoms, m, blkatom)
         {
@@ -3059,7 +3059,7 @@ int qmerge_main
       atom = atom_explode(mask);
       if (atom != NULL)
       {
-        const char *hashkey = atom_format("%[CAT]%[PN]%[SLOT]", atom);
+        const char *hashkey = atom_format("%{#}%[CAT]%[PN]%[SLOT]", atom);
         atoms = hash_get(rstate.blockers, hashkey);
         if (atoms == NULL)
         {
