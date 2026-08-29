@@ -783,7 +783,8 @@ read_portage_profile
 					array_for_each(overlays, n, overlay)
 					{
 						repo_name = array_get(overlay_names, n);
-						if (strcmp(repo_name, s) == 0)
+						if (repo_name != NULL &&
+							strcmp(repo_name, s) == 0)
 						{
 							snprintf(profile_file, sizeof(profile_file),
 									"%s/profiles/%s/", overlay, p);
