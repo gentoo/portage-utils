@@ -220,13 +220,35 @@ void *array_get
   return arr->eles[elem];
 }
 
-/* sorts the elements in the array using the given comparator */
+/* string comparator used from array_sort when no comparator given */
+static int array_sort_str_compar
+(
+  const void *l,
+  const void *r
+)
+{
+  if (l == NULL &&
+      r == NULL)
+    return 0;
+  if (l == NULL)
+    return -1;
+  if (r == NULL)
+    return 1;
+
+  return strcmp(*(const char**)l, *(const char**)r);
+}
+
+/* sorts the elements in the array using the given comparator, when not
+ * given (e.g. NULL) a string comparator is used */
 void array_sort
 (
   array           *arr,
   array_compar_cb *compar
 )
 {
+  if (compar == NULL)
+    compar = array_sort_str_compar;
+
   if (arr != NULL &&
       !arr->sorted)
   {
@@ -256,9 +278,11 @@ void *array_binsearch
   size_t elem;
   int    cmp;
 
-  if (arr == NULL ||
-      compar == NULL)
+  if (arr == NULL)
     return NULL;
+
+  if (compar == NULL)
+    compar = array_sort_str_compar;
 
   if (!arr->sorted)
     array_sort(arr, compar);
