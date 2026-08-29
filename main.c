@@ -727,11 +727,10 @@ read_portage_profile
 	char profile_file[_Q_PATH_MAX * 3];
 	char rpath[_Q_PATH_MAX];
 	size_t profile_len;
+	size_t i;
 	char *s;
 	char *p;
-	char *buf = NULL;
-	size_t buf_len = 0;
-	char *saveptr;
+	array *entries;
 
 	/* create mutable/appendable copy */
 	profile_len = snprintf(profile_file, sizeof(profile_file), "%s/", profile);
@@ -744,11 +743,14 @@ read_portage_profile
 	 * treat parent profiles as defaults, that can be overridden by
 	 * *this* profile. */
 	strcpy(profile_file + profile_len, "parent");
-	if (eat_file(profile_file, &buf, &buf_len)) {
-		s = strtok_r(buf, "\n", &saveptr);
-		for (; s != NULL; s = strtok_r(NULL, "\n", &saveptr)) {
+	entries = eat_file_as_array(profile_file);
+	if (entries != NULL)
+	{
+		array_for_each(entries, i, s)
+		{
 			/* handle repo: notation (not in PMS, referenced in Wiki only?) */
-			if ((p = strchr(s, ':')) != NULL) {
+			if ((p = strchr(s, ':')) != NULL)
+			{
 				char *overlay;
 				char *repo_name;
 				size_t n;
@@ -756,10 +758,12 @@ read_portage_profile
 				/* split repo from target */
 				*p++ = '\0';
 
-				if (s[0] == '\0') {
+				if (s[0] == '\0')
+				{
 					/* empty repo name means a repo where the profile is */
-					const char* current_overlay = overlay_from_path(profile);
-					if (current_overlay == NULL) {
+					const char *current_overlay = overlay_from_path(profile);
+					if (current_overlay == NULL)
+					{
 						/* bring back the colon to see the ignored
 						 * parent line */
 						*(--p) = ':';
@@ -771,19 +775,24 @@ read_portage_profile
 					}
 					snprintf(profile_file, sizeof(profile_file),
 							"%s/profiles/%s", current_overlay, p);
-				} else {
+				}
+				else
+				{
 					/* match the repo */
 					repo_name = NULL;
-					array_for_each(overlays, n, overlay) {
+					array_for_each(overlays, n, overlay)
+					{
 						repo_name = array_get(overlay_names, n);
-						if (strcmp(repo_name, s) == 0) {
+						if (strcmp(repo_name, s) == 0)
+						{
 							snprintf(profile_file, sizeof(profile_file),
 									"%s/profiles/%s/", overlay, p);
 							break;
 						}
 						repo_name = NULL;
 					}
-					if (repo_name == NULL) {
+					if (repo_name == NULL)
+					{
 						/* bring back the colon to see the ignored
 						 * parent line */
 						*(--p) = ':';
@@ -792,8 +801,10 @@ read_portage_profile
 								 "in profile %s: %s", profile, s);
 						continue;
 					}
-                                }
-			} else {
+                }
+			}
+			else
+			{
 				snprintf(profile_file + profile_len,
 						sizeof(profile_file) - profile_len, "%s", s);
 			}
@@ -804,10 +815,8 @@ read_portage_profile
 			if (p != NULL)
 				snprintf(profile_file, sizeof(profile_file), "%s/", profile);
 		}
+		array_deepfree(entries, NULL);
 	}
-
-	if (buf != NULL)
-		free(buf);
 
 	/* now consume *this* profile's make.defaults and package.mask */
 	strcpy(profile_file + profile_len, "make.defaults");
@@ -872,13 +881,13 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 	char   pth[_Q_PATH_MAX];
 	char  *main_repo;
 	char  *repo;
-	char  *buf = NULL;
-	size_t buf_len = 0;
-	char  *s = NULL;  /* pacify compiler */
+	size_t i;
+	char  *s;
 	char  *p;
 	char  *q;
 	char  *r;
 	char  *e;
+	array *entries;
 	bool   do_trim;
 	bool   is_default;
 
@@ -886,31 +895,38 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 	if (getenv("DEBUG"))
 		fprintf(stderr, "  parse %s\n", pth);
 
-	if (!eat_file(pth, &buf, &buf_len)) {
-		if (buf != NULL)
-			free(buf);
+	entries = eat_file_as_array(pth);
+	if (entries == NULL)
 		return;
-	}
+
 	snprintf(pth, sizeof(pth), "/%s", repos_conf);
 
 	main_repo = NULL;
 	repo = NULL;
-	for (p = strtok_r(buf, "\n", &s); p != NULL; p = strtok_r(NULL, "\n", &s))
+	array_for_each(entries, i, p)
 	{
+		s = p + strlen(p) - 1;
 		/* trim trailing whitespace, remove comments, locate =, walking
 		 * backwards to the front of the string */
 		do_trim = true;
 		e = NULL;
-		for (r = q = s - 2; q >= p; q--) {
-			if (do_trim && isspace((int)*q)) {
+		for (r = q = s; q >= p; q--)
+		{
+			if (do_trim &&
+				isspace((int)*q))
+			{
 				*q = '\0';
 				r = q - 1;
-			} else if (*q == '#') {
+			}
+			else if (*q == '#')
+			{
 				do_trim = true;
 				*q = '\0';
 				e = NULL;
 				r = q - 1;
-			} else {
+			}
+			else
+			{
 				if (*q == '=')
 					e = q;
 				do_trim = false;
@@ -919,16 +935,24 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 		/* make q point to the last char */
 		q = r;
 
-		if (*p == '[' && *q == ']') {  /* section header */
+		if (*p == '[' &&
+			*q == ']')  /* section header */
+		{
 			repo = p + 1;
 			*q = '\0';
 			is_default = strcmp(repo, "DEFAULT") == 0;
 			continue;
-		} else if (*p == '\0') {       /* empty line */
+		}
+		else if (*p == '\0')  /* empty line */
+		{
 			continue;
-		} else if (e == NULL) {        /* missing = */
+		}
+		else if (e == NULL)  /* missing = */
+		{
 			continue;
-		} else if (repo == NULL) {     /* not in a section */
+		}
+		else if (repo == NULL)  /* not in a section */
+		{
 			continue;
 		}
 
@@ -939,19 +963,26 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 		for (*e++ = '\0'; e < q && isspace((int)*e); e++)
 			;
 
-		if (is_default && strcmp(p, "main-repo") == 0) {
+		if (is_default &&
+			strcmp(p, "main-repo") == 0)
+		{
 			main_repo = e;
-		} else if (!is_default && strcmp(p, "location") == 0) {
-			void *ele;
+		}
+		else if (!is_default &&
+				 strcmp(p, "location") == 0)
+		{
+			void  *ele;
+			char  *overlay;
 			size_t n;
-			char *overlay;
 
-			array_for_each(overlay_names, n, overlay) {
+			array_for_each(overlay_names, n, overlay)
+			{
 				if (strcmp(overlay, repo) == 0)
 					break;
 				overlay = NULL;
 			}
-			if (overlay != NULL) {
+			if (overlay != NULL)
+			{
 				/* replace overlay */
 				array_delete(overlay_src, n, NULL);
 				array_append_strcpy(overlay_src, pth);
@@ -961,17 +992,20 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 
 				array_delete(overlays, n, NULL);
 				ele = array_append_strcpy(overlays, e);
-			} else {
+			}
+			else
+			{
 				ele     = array_append_strcpy(overlays, e);
 				overlay = array_append_strcpy(overlay_names, repo);
 				array_append_strcpy(overlay_src, pth);
 			}
-			if (main_repo && strcmp(repo, main_repo) == 0)
+			if (main_repo &&
+				strcmp(repo, main_repo) == 0)
 				*primary = overlay;
 		}
 	}
 
-	free(buf);
+	array_deepfree(entries, NULL);
 }
 
 /* Handle a possible directory of files. */
