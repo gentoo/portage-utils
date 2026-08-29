@@ -113,4 +113,63 @@ eat_file
   return eat_file_at(AT_FDCWD, file, bufptr, bufsize);
 }
 
+array *
+eat_file_fd_as_array
+(
+	int fd
+)
+{
+  char   buf[BUFSIZ];
+  char  *p;
+	FILE  *f;
+	array *ret;
+	size_t len;
+
+	if ((f = fdopen(fd, "r")) == NULL)
+	  return NULL;
+
+	ret = array_new();
+
+  while ((p = fgets(buf, sizeof(buf), f)) != NULL)
+  {
+    len = strlen(p);
+    while (len > 0 &&
+           strchr("\r\n\t ", p[len - 1]) != NULL)
+      len--;
+    if (len > 0)
+      array_append_copy(ret, p, len);
+  }
+
+  fclose(f);
+
+  return ret;
+}
+
+array *
+eat_file_at_as_array
+(
+  int         dfd,
+  const char *file
+)
+{
+  array *ret;
+  int    fd;
+
+  fd = openat(dfd, file, O_CLOEXEC|O_RDONLY);
+  ret = eat_file_fd_as_array(fd);
+  if (ret == NULL)
+    close(fd);
+
+  return ret;
+}
+
+array *
+eat_file_as_array
+(
+  const char *file
+)
+{
+  return eat_file_at_as_array(AT_FDCWD, file);
+}
+
 /* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
