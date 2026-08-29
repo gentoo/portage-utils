@@ -2134,35 +2134,27 @@ static array *qmerge_read_file
 {
   char   pth[_Q_PATH_MAX];
   array *ret;
-  char  *buf     = NULL;
-  char  *nexttok;
   char  *line;
   char  *p;
-  size_t len     = 0;
+  size_t n;
 
   snprintf(pth, sizeof(pth), "%s%s%s/%s", portroot, configroot, path, file);
-  if (!eat_file(pth, &buf, &len))
+  ret = eat_file_as_array(pth);
+  if (ret == NULL)
   {
     warnp("unable to read file /%s%s/%s", configroot, path, file);
     return NULL;
   }
 
-  ret = array_new();
-
-  for (line = strtok_r(buf, "\n", &nexttok);
-       line != NULL;
-       line = strtok_r(NULL, "\n", &nexttok))
+  array_for_each_rev(ret, n, line)
   {
     /* drop comments */
     if ((p = strchr(line, '#')) != NULL)
       *p = '\0';
     rmspace(line);
     if (line[0] == '\0')
-      continue;
-    array_append_strcpy(ret, line);
+      array_delete(ret, n, NULL);
   }
-
-  free(buf);
 
   return ret;
 }
