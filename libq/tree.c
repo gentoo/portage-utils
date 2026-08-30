@@ -508,7 +508,7 @@ tree_ctx *tree_new
       ret->type = TREE_EBUILD;
 
       snprintf(buf, sizeof(buf), "%s/profiles/repo_name", path);
-      if (eat_file_at(ret->portroot_fd, buf, &ret->repo, &len) != 0)
+      if (eat_file_at(ret->portroot_fd, buf, &ret->repo, &len) > 0)
         (void)rmspace(ret->repo);
     }
     break; /* }}} */
@@ -688,15 +688,16 @@ static bool tree_pkg_vdb_eat
 {
   char buf[_Q_PATH_MAX];
   int  fd;
-  bool ret;
+  bool ret = true;
 
   snprintf(buf, sizeof(buf), "%s/%s", pkg->path, file);
 
   if ((fd = openat(pkg->cat->tree->portroot_fd, buf, O_RDONLY, 0)) < 0)
     return false;
 
-  ret = eat_file_fd(fd, bufptr, buflen);
-  if (ret)
+  if (eat_file_fd(fd, bufptr, buflen) < 0)
+    ret = false;
+  else
     rmspace(*bufptr);
 
   close(fd);
@@ -715,14 +716,15 @@ static bool tree_pkg_md5_read
   char       *p;
   size_t      len;
   int         fd;
-  bool        ret;
+  bool        ret = true;
 
   if ((fd = openat(pkg->cat->tree->portroot_fd, path, O_RDONLY, 0)) < 0)
     return false;
 
   data = NULL;
   len  = 0;
-  ret  = eat_file_fd(fd, &data, &len);
+  if (eat_file_fd(fd, &data, &len) < 0)
+    ret = false;
   close(fd);
 
   if (!ret)
@@ -833,14 +835,15 @@ static bool tree_pkg_ebuild_read
   int         fd;
   bool        esc;
   bool        findnl;
-  bool        ret;
+  bool        ret = true;
 
   if ((fd = openat(pkg->cat->tree->portroot_fd, pkg->path, O_RDONLY, 0)) < 0)
     return false;
 
   p   = NULL;
   len = 0;
-  ret = eat_file_fd(fd, &p, &len);
+  if (eat_file_fd(fd, &p, &len) < 0)
+    ret = false;
   close(fd);
 
   if (!ret)
@@ -2192,7 +2195,7 @@ int tree_foreach_pkg
       size_t             len;
       size_t             rootlen;
       int                fd;
-      bool               eret;
+      bool               eret     = true;
 
       fd = openat(tree->portroot_fd, tree->path, O_RDONLY | O_CLOEXEC);
       if (fd < 0)
@@ -2200,7 +2203,8 @@ int tree_foreach_pkg
 
       buf  = NULL;
       len  = 0;
-      eret = eat_file_fd(fd, &buf, &len);
+      if (eat_file_fd(fd, &buf, &len) < 0)
+        eret = false;
       close(fd);
 
       if (!eret)

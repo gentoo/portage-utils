@@ -1414,7 +1414,7 @@ static array *probe_proc(array *atoms)
 			 * is that it doesn't require root access, for cmdline can
 			 * be read by anyone */
 			snprintf(npath, sizeof(npath), "/proc/%s/cmdline", pid);
-			if (eat_file(npath, &cmdline, &cmdlinesize)) {
+			if (eat_file(npath, &cmdline, &cmdlinesize) > 0) {
 				if (cmdlinesize > 0 && cmdline[0] == '[' &&
 						(p = strchr(cmdline, ']')) != NULL &&
 						strpfx(p, "] sandbox") == 0)
@@ -1640,7 +1640,7 @@ int qlop_main(int argc, char **argv)
 			case 'w':
 				if (atomfile != NULL)
 					err("Only use -w once");
-				if (!eat_file(optarg, &atomfile, &i))
+				if (eat_file(optarg, &atomfile, &i) < 0)
 					err("failed to open file %s", optarg);
 				break;
 		}

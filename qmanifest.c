@@ -1794,7 +1794,7 @@ qmanifest_main(int argc, char **argv)
 				repo = NULL;
 				repolen = 0;
 				snprintf(path, sizeof(path), "%s/profiles/repo_name", overlay);
-				if (eat_file(path, &repo, &repolen)) {
+				if (eat_file(path, &repo, &repolen) > 0) {
 					void *name;
 					void *src;
 

@@ -1626,8 +1626,13 @@ static int pkg_merge
   fflush(stdout);
 
   /* we won't realloc, so we can loose the alloc size */
-  eprefix_len = eat_file("vdb/EPREFIX", &eprefix, &eprefix_len) ?
-    strlen(eprefix) : 0;
+  {
+    ssize_t eplen = eat_file("vdb/EPREFIX", &eprefix, &eprefix_len);
+    if (eplen < 0)
+      eprefix_len = 0;
+    else
+      eprefix_len = (size_t)eplen;
+  }
   /* don't care/use the string lengths on these */
   eat_file("vdb/EAPI", &eapi, &eapi_len);
   eat_file("vdb/DEFINED_PHASES", &pm_phases, &pm_phases_len);

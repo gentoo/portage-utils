@@ -15,7 +15,7 @@
 #include "xalloc.h"
 #include "eat_file.h"
 
-bool
+ssize_t
 eat_file_fd
 (
   int     fd,
@@ -26,15 +26,12 @@ eat_file_fd
   char       *buf;
   size_t      read_size;
   struct stat s;
-  bool        ret = true;
 
   /* First figure out how much data we should read from the fd. */
   if (fd == -1 ||
       fstat(fd, &s) != 0)
   {
-    ret = false;
-    read_size = 0;
-    /* Fall through so we set the first byte 0 */
+    return -1;
   }
   else if (!s.st_size)
   {
@@ -68,21 +65,21 @@ eat_file_fd
     if (s.st_size)
     {
       if (read(fd, buf, read_size) != (ssize_t)read_size)
-        return false;
+        return -1;
       buf[read_size] = '\0';
     }
     else
     {
       if ((read_size = read(fd, buf, read_size)) <= 0)
-        return false;
+        return -1;
       buf[read_size] = '\0';
     }
   }
 
-  return ret;
+  return (ssize_t)read_size;
 }
 
-bool
+ssize_t
 eat_file_at
 (
   int         dfd,
@@ -91,10 +88,10 @@ eat_file_at
   size_t     *bufsize
 )
 {
-  int  fd;
-  bool ret;
+  ssize_t ret;
+  int     fd;
 
-  fd = openat(dfd, file, O_CLOEXEC|O_RDONLY);
+  fd  = openat(dfd, file, O_CLOEXEC|O_RDONLY);
   ret = eat_file_fd(fd, bufptr, bufsize);
   if (fd != -1)
     close(fd);
@@ -102,7 +99,7 @@ eat_file_at
   return ret;
 }
 
-bool
+ssize_t
 eat_file
 (
   const char *file,

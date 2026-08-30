@@ -543,7 +543,7 @@ int q_main(int argc, char **argv)
 			if (strcmp(repo_name, "<PORTDIR>") == 0) {
 				repo_name = NULL;
 				snprintf(buf, sizeof(buf), "%s/profiles/repo_name", overlay);
-				if (!eat_file(buf, &repo_name, &repo_name_len)) {
+				if (eat_file(buf, &repo_name, &repo_name_len) < 0) {
 					free(repo_name);
 					repo_name = NULL;
 				}
@@ -718,7 +718,10 @@ int q_main(int argc, char **argv)
 
 					if (buf != NULL)
 						*buf = '\0';
-					eat_file(mfileloc, &buf, &buflen);
+					/* cannot use as_array for we need to preserve empty
+					 * lines in order to be able to count */
+					if (eat_file(mfileloc, &buf, &buflen) < 0)
+						err("could not read %s", mfileloc);
 
 					line = 0;
 					for (l = buf; (s = strchr(l, '\n')) != NULL; l = s + 1)

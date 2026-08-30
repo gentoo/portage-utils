@@ -11,9 +11,9 @@
 
 #include "array.h"
 
-bool eat_file_fd(int, char **, size_t *);
-bool eat_file(const char *, char **, size_t *);
-bool eat_file_at(int, const char *, char **, size_t *);
+ssize_t eat_file_fd(int, char **, size_t *);
+ssize_t eat_file(const char *, char **, size_t *);
+ssize_t eat_file_at(int, const char *, char **, size_t *);
 
 array *eat_file_fd_as_array(int fd);
 array *eat_file_as_array(const char *name);
