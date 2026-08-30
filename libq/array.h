@@ -14,11 +14,13 @@
 
 typedef struct array_t array;
 typedef void (array_free_cb)(void *priv);
+typedef void *(array_clone_cb)(void *priv);
 typedef int (array_compar_cb)(const void *l, const void *r);
 
 array *array_new(void);
 void   array_free(array *arr);
 void   array_deepfree(array *arr, array_free_cb *func);
+array *array_clone(array *in, array_clone_cb *func);
 void  *array_append(array *arr, void *data);
 void  *array_append_copy(array *arr, const void *data, size_t len);
 void   array_move(array *dst, array *src);

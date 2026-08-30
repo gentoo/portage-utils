@@ -68,6 +68,55 @@ void array_deepfree
   array_free(arr);
 }
 
+/* creates a copy of the input array and calls the clone callback to get
+ * a copy of each entry, when set -- thus creating a deep copy
+ * when the clone callback is NULL, a shallow clone is created, the
+ * entry pointers are simply copied into the resulting array */
+array *array_clone
+(
+  array          *arr,
+  array_clone_cb *func
+)
+{
+  array *ret;
+
+  if (arr == NULL)
+    return NULL;
+
+  if (func == NULL)
+  {
+    /* shallow copy */
+    ret = array_new();
+
+    if (arr->len > 0)
+      ret->eles = xmemdup(arr->eles, sizeof(arr->eles[0]) * arr->len);
+
+    ret->siz    = arr->len;
+    ret->len    = arr->len;
+    ret->sorted = arr->sorted;
+  }
+  else
+  {
+    size_t i;
+
+    /* create deep copy */
+    ret = array_new();
+
+    if (arr->len > 0)
+    {
+      ret->eles = xmalloc(sizeof(arr->eles[0]) * arr->len);
+      for (i = 0; i < arr->len; i++)
+        ret->eles[i] = func(arr->eles[i]);
+    }
+
+    ret->siz    = arr->len;
+    ret->len    = arr->len;
+    ret->sorted = arr->sorted;
+  }
+
+  return ret;
+}
+
 /* appends the given pointer to the list, no copying of data takes place
  * returns the pointer */
 void *array_append
