@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Gentoo Foundation
+ * Copyright 2025-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2025-     Fabian Groffen  - <grobian@gentoo.org>
@@ -9,17 +9,20 @@
 #define _FILE_MAGIC_H 1
 
 typedef enum _file_magic_type {
-	FMAGIC_UNKNOWN = 0,
-	FMAGIC_BZIP2,
-	FMAGIC_GZIP,
-	FMAGIC_XZ,
-	FMAGIC_LZ4,
-	FMAGIC_ZSTD,
-	FMAGIC_LZIP,
-	FMAGIC_LZO,
-	FMAGIC_TAR
+  FMAGIC_UNKNOWN = 0,
+  FMAGIC_BZIP2,
+  FMAGIC_GZIP,
+  FMAGIC_XZ,
+  FMAGIC_LZ4,
+  FMAGIC_ZSTD,
+  FMAGIC_LZIP,
+  FMAGIC_LZO,
+  FMAGIC_TAR
 } file_magic_type;
 
 file_magic_type file_magic_guess_fd(int fd);
+file_magic_type file_magic_guess(const char *buf, size_t len);
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */

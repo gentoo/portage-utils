@@ -11,14 +11,14 @@
 
 #include "file_magic.h"
 
-file_magic_type file_magic_guess_fd
+file_magic_type file_magic_guess
 (
-  int fd
+  const char *buf,
+  size_t      len
 )
 {
-  unsigned char   magic[257+6];
-  ssize_t         mlen;
-  file_magic_type ret   = FMAGIC_UNKNOWN;
+  const unsigned char *magic = (const unsigned char *)buf;
+  file_magic_type      ret   = FMAGIC_UNKNOWN;
 
   /* using libmagic would probably be much more complete, but since we
    * want to keep the dependencies minimal, we do some simple probing
@@ -34,26 +34,26 @@ file_magic_type file_magic_guess_fd
    * lzo: 9-byte:  89 'L' 'Z' 'O' 0 d a 1a a at byte 0
    * br:  Brotli is undetectcble */
 
-  if (fd < 0 ||
-      (mlen = read(fd, magic, sizeof(magic))) <= 0)
+  if (buf == NULL ||
+      len <= 2)
   {
     /* do nothing */
     return ret;
   }
-  else if (mlen >= 3 &&
+  else if (len >= 3 &&
            magic[0] == 'B' &&
            magic[1] == 'Z' &&
            magic[2] == 'h')
   {
     ret = FMAGIC_BZIP2;
   }
-  else if (mlen >= 2 &&
+  else if (len >= 2 &&
            magic[0] == 037 &&
            magic[1] == 0213)
   {
     ret = FMAGIC_GZIP;
   }
-  else if (mlen >= 5 &&
+  else if (len >= 5 &&
            magic[1] == '7' &&
            magic[2] == 'z' &&
            magic[3] == 'X' &&
@@ -61,7 +61,7 @@ file_magic_type file_magic_guess_fd
   {
     ret = FMAGIC_XZ;
   }
-  else if (mlen == 257+6 &&
+  else if (len >= 257+6 &&
            magic[257] == 'u' &&
            magic[258] == 's' &&
            magic[259] == 't' &&
@@ -72,7 +72,7 @@ file_magic_type file_magic_guess_fd
   {
     ret = FMAGIC_TAR;
   }
-  else if (mlen >= 4 &&
+  else if (len >= 4 &&
            magic[0] == 0x04 &&
            magic[1] == 0x22 &&
            magic[2] == 0x4D &&
@@ -80,7 +80,7 @@ file_magic_type file_magic_guess_fd
   {
     ret = FMAGIC_LZ4;
   }
-  else if (mlen >= 4 &&
+  else if (len >= 4 &&
            magic[0] >= 0x22 &&
            magic[0] <= 0x28 &&
            magic[1] == 0xB5 &&
@@ -89,7 +89,7 @@ file_magic_type file_magic_guess_fd
   {
     ret = FMAGIC_ZSTD;
   }
-  else if (mlen >= 4 &&
+  else if (len >= 4 &&
            magic[0] == 'L' &&
            magic[1] == 'Z' &&
            magic[2] == 'I' &&
@@ -97,7 +97,7 @@ file_magic_type file_magic_guess_fd
   {
     ret = FMAGIC_LZIP;
   }
-  else if (mlen >= 9 &&
+  else if (len >= 9 &&
            magic[0] == 0x89 &&
            magic[1] == 'L' &&
            magic[2] == 'Z' &&
@@ -111,10 +111,31 @@ file_magic_type file_magic_guess_fd
     ret = FMAGIC_LZO;
   }
 
-  /* try to rewind, if this fails, what can we do? we still have found
-   * what it should be... */
-  (void)lseek(fd, SEEK_CUR, (off_t)-mlen);
   return ret;
 }
 
+file_magic_type file_magic_guess_fd
+(
+  int fd
+)
+{
+  char            magic[257+6];
+  ssize_t         mlen;
+  file_magic_type ret   = FMAGIC_UNKNOWN;
+
+  if (fd < 0 ||
+      (mlen = read(fd, magic, sizeof(magic))) <= 0)
+  {
+    /* do nothing */
+    return ret;
+  }
+
+  ret = file_magic_guess(magic, (size_t)mlen);
+
+  /* try to rewind, if this fails, what can we do? we still have found
+   * what it should be... */
+  (void)lseek(fd, SEEK_CUR, (off_t)-mlen);
+
+  return ret;
+}
 /* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
