@@ -15,6 +15,8 @@ ssize_t eat_file_fd(int, char **, size_t *);
 ssize_t eat_file(const char *, char **, size_t *);
 ssize_t eat_file_at(int, const char *, char **, size_t *);
 
+ssize_t eat_file_url(const char *, char **, size_t *);
+
 array *eat_file_fd_as_array(int fd);
 array *eat_file_as_array(const char *name);
 array *eat_file_at_as_array(int rootfd, const char *name);

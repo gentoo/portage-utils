@@ -12,6 +12,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#ifdef HAVE_CURL
+# include <curl/curl.h>
+#endif
+
 #include "xalloc.h"
 #include "eat_file.h"
 
@@ -167,6 +171,94 @@ eat_file_as_array
 )
 {
   return eat_file_at_as_array(AT_FDCWD, file);
+}
+
+#ifdef HAVE_CURL
+/* passing structure for cURL callback */
+struct eat_file_buffer {
+    char  *data;
+    size_t size;
+    size_t pos;
+};
+typedef struct eat_file_buffer eat_file_buffer;
+
+/* cURL write callback */
+static size_t
+eat_file_write_cb
+(
+  void  *contents,
+  size_t size,
+  size_t nmemb,
+  void  *userp
+)
+{
+  eat_file_buffer *buf = userp;
+  size_t           n   = size * nmemb;
+
+  if (buf->size - buf->pos < n)
+  {
+    buf->size += n - (buf->size - buf->pos);
+    buf->data = xrealloc(buf->data, buf->size + 1);
+  }
+
+  memcpy(buf->data + buf->pos, contents, n);
+  buf->pos += n;
+  buf->data[buf->pos] = '\0';
+
+  return n;
+}
+#endif
+
+ssize_t
+eat_file_url
+(
+  const char *url,
+  char      **bufptr,
+  size_t     *bufsize
+)
+{
+#ifndef HAVE_CURL
+  (void)url;
+  (void)bufptr;
+  (void)bufsize;
+
+  return -1;
+#else
+  CURL           *curl = curl_easy_init();
+  eat_file_buffer buf;
+  long            status;
+
+  if (curl == NULL)
+    return -1;
+
+  if (*bufptr == NULL)
+    *bufsize = 0;
+
+  VAL_CLEAR(buf);
+  buf.data = *bufptr;
+  buf.size = *bufsize;
+
+  curl_easy_setopt(curl, CURLOPT_URL, url);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, eat_file_write_cb);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+
+  if (curl_easy_perform(curl) != CURLE_OK ||
+      curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status) != CURLE_OK ||
+      status < 200 ||
+      status >= 300)
+  {
+    curl_easy_cleanup(curl);
+    return -1;
+  }
+
+  curl_easy_cleanup(curl);
+
+  *bufptr  = buf.data;
+  *bufsize = buf.size;
+  return buf.pos;
+#endif
 }
 
 /* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
