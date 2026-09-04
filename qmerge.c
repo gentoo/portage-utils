@@ -3021,6 +3021,13 @@ int qmerge_main
     tree = tree_new(portroot, pkgdir, TREETYPE_BINPKG, true);
     if (tree != NULL)
       rstate.tree = tree_merge(rstate.tree, tree);
+
+    if (*binhost != '\0')
+    {
+      tree = tree_new(portroot, binhost, TREETYPE_BINPKG, true);
+      if (tree != NULL)
+        rstate.tree = tree_merge(rstate.tree, tree);
+    }
   }
 
   /* add ebuild trees */
