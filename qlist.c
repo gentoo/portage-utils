@@ -427,7 +427,7 @@ int qlist_main(int argc, char **argv)
 {
 	int i;
 	int ret;
-	tree_ctx *vdb;
+	tree_ctx *tree;
 	int show_slots = 0;
 	bool show_repo = false;
 	bool do_columns = false;
@@ -522,20 +522,27 @@ int qlist_main(int argc, char **argv)
 		const char *overlay;
 
 		array_for_each(overlays, n, overlay) {
-			vdb = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
-			if (vdb != NULL) {
-				ret |= tree_foreach_pkg_sorted(vdb, qlist_cb, &state, NULL);
-				tree_close(vdb);
+			tree = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
+			if (tree != NULL) {
+				ret |= tree_foreach_pkg_sorted(tree, qlist_cb, &state, NULL);
+				tree_close(tree);
 			}
 		}
 	} else {
 		if (state.do_binpkgs)
-			vdb = tree_new(portroot, pkgdir, TREETYPE_BINPKG, false);
+		{
+			if (*binhost != '\0')
+				tree = tree_new(portroot, binhost, TREETYPE_BINPKG, false);
+			else
+				tree = tree_new(portroot, pkgdir, TREETYPE_BINPKG, false);
+		}
 		else
-			vdb = tree_new(portroot, portvdb, TREETYPE_VDB, false);
-		if (vdb != NULL) {
-			ret = tree_foreach_pkg_sorted(vdb, qlist_cb, &state, NULL);
-			tree_close(vdb);
+		{
+			tree = tree_new(portroot, portvdb, TREETYPE_VDB, false);
+		}
+		if (tree != NULL) {
+			ret = tree_foreach_pkg_sorted(tree, qlist_cb, &state, NULL);
+			tree_close(tree);
 		}
 	}
 	free(state.buf);
