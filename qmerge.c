@@ -225,7 +225,13 @@ bool keep_work = false;
 bool debug = false;
 const char Packages[] = "Packages";
 
-static void pkg_fetch(int, const depend_atom *, tree_pkg_ctx *);
+static int pkg_verify_checksums
+(
+  tree_pkg_ctx   *pkg,
+  char           *path,
+  int             strict,
+  int             display
+);
 
 static bool qmerge_prompt
 (
@@ -243,56 +249,6 @@ static bool qmerge_prompt
   default:
     return false;
   }
-}
-
-static void fetch
-(
-  const char *destdir,
-  const char *src
-)
-{
-  if (!binhost[0])
-    return;
-
-  fflush(NULL);
-
-#if 0
-  if (getenv("FETCHCOMMAND") != NULL)
-  {
-    char buf[BUFSIZ];
-    snprintf(buf, sizeof(buf), "(export DISTDIR='%s' URI='%s/%s'; %s)",
-             destdir, binhost, src, getenv("FETCHCOMMAND"));
-    xsystem(buf, AT_FDCWD);
-  }
-  else
-#endif
-  {
-    char *path = NULL;
-
-    /* wget -c -q -P <dir> <uri> */
-    const char *argv[] = {
-      "echo",
-      "wget",
-      "-c",
-      "-P",
-      destdir,
-      path,
-      quiet ? (char *)"-q" : NULL,
-      NULL,
-    };
-
-    xasprintf(&path, "%s/%s", binhost, src);
-
-    if (!pretend && (force_download || install))
-      xsystemv(&argv[1], AT_FDCWD);  /* skip echo */
-    else
-      xsystemv(argv, AT_FDCWD);
-
-    free(path);
-  }
-
-  fflush(stdout);
-  fflush(stderr);
 }
 
 static int config_protected
@@ -1300,9 +1256,41 @@ static int pkg_merge
   p = tree_pkg_get_path(mpkg);
   i = (int)strlen(p);
 
-  /* check if the file exists, try to download it if absent */
-  snprintf(buf, sizeof(buf), "%s/%s", portroot, p);
-  /*FIXME: pkg_fetch() */
+  if (strncmp(p, "http://", sizeof("http://") - 1) == 0 ||
+      strncmp(p, "https://", sizeof("https://") - 1) == 0)
+  {
+#ifdef ENABLE_REMOTEBINHOST
+    char   *binbuf    = NULL;
+    size_t  binbufsiz = 0;
+    ssize_t binbuflen = 0;
+    int     ofd;
+
+    /* if this is a URL, then fetch the file first, the code below
+     * cannot really deal with direct stream or memory, so write to disk
+     * temporarily */
+    binbuflen = eat_file_url(p, &binbuf, &binbufsiz);
+    if (binbuflen < 0)
+      errf("failed to retrieve %s!", p);
+
+    snprintf(buf, sizeof(buf), "%s/binpkg.%s.%s",
+             T, matom->CATEGORY, matom->PF);
+    ofd = open(buf, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+    if (ofd < 0)
+      errf("failed to open tempfile for writing");
+    if (write(ofd, binbuf, binbufsiz) != binbufsiz)
+      errf("failed to write binpkg to tempfile");
+    close(ofd);
+
+    if (pkg_verify_checksums(mpkg, buf, qmerge_strict, !quiet) < 0)
+      errf("package verification failed");
+#else
+    errf("remote binhost support not compiled in!");
+#endif
+  }
+  else
+  {
+    snprintf(buf, sizeof(buf), "%s/%s", portroot, p);
+  }
 
   if (i > sizeof(".gpkg.tar") - 1 &&
       memcmp(&p[i - (sizeof(".gpkg.tar") - 1)],
@@ -1824,37 +1812,15 @@ static int pkg_merge
   return 0;
 }
 
-static int unlink_empty_at
-(
-  int         pfd,
-  const char *buf
-)
-{
-  struct stat st;
-  int         fd;
-  int         ret = -1;
-
-  fd = openat(pfd, buf, O_RDONLY);
-  if (fd != -1 &&
-      stat(buf, &st) != -1)
-  {
-    if (st.st_size == 0)
-      ret = unlinkat(pfd, buf, 0);
-  }
-  if (fd != -1)
-    close(fd);
-  return ret;
-}
-
 static int pkg_verify_checksums
 (
   tree_pkg_ctx   *pkg,
+  char           *path,
   int             strict,
   int             display
 )
 {
   atom_ctx *patom = tree_pkg_atom(pkg, false);
-  char     *path  = tree_pkg_get_path(pkg);
   int       ret   = 0;
   char      md5[MD5_DIGEST_LENGTH + 1];
   char      sha1[SHA1_DIGEST_LENGTH + 1];
@@ -1863,9 +1829,9 @@ static int pkg_verify_checksums
   int       mlen;
   bool      found = false;
 
-  if (hash_multiple_file_at(tree_pkg_get_portroot_fd(pkg), path,
-                            md5, sha1, NULL, NULL, NULL,
-                            &flen, HASH_MD5 | HASH_SHA1) == -1)
+  if (hash_multiple_file(path,
+                         md5, sha1, NULL, NULL, NULL,
+                         &flen, HASH_MD5 | HASH_SHA1) == -1)
     errf("failed to compute hashes for %s: %s\n",
          atom_to_string(patom), strerror(errno));
 
@@ -1931,90 +1897,6 @@ static int pkg_verify_checksums
     errf("strict is set in features");
 
   return ret;
-}
-
-static void pkg_fetch
-(
-  int                level,
-  const depend_atom *qatom,
-  tree_pkg_ctx      *mpkg
-)
-{
-  atom_ctx *patom     = tree_pkg_atom(mpkg, false);
-  int       verifyret;
-
-  (void)level;
-  (void)qatom;
-
-  unlink_empty_at(tree_pkg_get_portroot_fd(mpkg), tree_pkg_get_path(mpkg));
-
-  if (mkdir_p_at(tree_pkg_get_portroot_fd(mpkg), pkgdir + 1, 0755) == -1)
-  {
-    warn("Failed to create %s", pkgdir);
-    return;
-  }
-
-  if (force_download &&
-      faccessat(tree_pkg_get_portroot_fd(mpkg),
-                tree_pkg_get_path(mpkg), R_OK, 0) == 0)
-  {
-    if (pkg_verify_checksums(mpkg, 0, 0) != 0)
-      if (getenv("QMERGE") == NULL)
-        unlinkat(tree_pkg_get_portroot_fd(mpkg),
-                 tree_pkg_get_path(mpkg), 0);
-  }
-
-  if (faccessat(tree_pkg_get_portroot_fd(mpkg),
-                tree_pkg_get_path(mpkg), R_OK, 0) != 0)
-  {
-    char *p;
-    char  dest[_Q_PATH_MAX];
-
-    if (verbose)
-      printf("Fetching %s\n", atom_to_string(patom));
-
-    snprintf(dest, sizeof(dest), "%s%s/%s",
-             portroot, pkgdir, patom->CATEGORY);
-    if (mkdir_p(dest, 0755) != 0)
-    {
-      warnp("Failed to create %s", dest);
-      return;
-    }
-
-    /* fetch the package */
-    p = tree_pkg_meta(mpkg, Q_PATH);
-    if (p != NULL)
-      fetch(dest, p);
-    else
-      warn("invalid or missing path: %s, skipping",
-           p != NULL ? p : "<missing>");
-
-    /* verify the pkg exists now. unlink if zero bytes */
-    unlink_empty_at(tree_pkg_get_portroot_fd(mpkg),
-                    tree_pkg_get_path(mpkg));
-  }
-
-  if (faccessat(tree_pkg_get_portroot_fd(mpkg),
-                tree_pkg_get_path(mpkg), R_OK, 0) != 0)
-  {
-    warn("Failed to fetch %s from %s", patom->PF, binhost);
-    fflush(stderr);
-    return;
-  }
-
-  /* check to see if checksum matches */
-  verifyret = pkg_verify_checksums(mpkg, qmerge_strict, !quiet);
-  if (verifyret == -1)
-  {
-    warn("No checksum data for %s (try `emaint binhost --fix`)",
-         tree_pkg_get_path(mpkg));
-    return;
-  }
-  else if (verifyret == 0)
-  {
-    /* done? */
-    return;
-  }
 }
 
 static int qmerge_merge_pkgs
