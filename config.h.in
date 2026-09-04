@@ -59,6 +59,9 @@
 /* Define if qmanifest should be compiled */
 #undef ENABLE_QMANIFEST
 
+/* Define if remote binhost support should be compiled */
+#undef ENABLE_REMOTEBINHOST
+
 /* Define this to 1 if F_DUPFD behavior does not match POSIX */
 #undef FCNTL_DUPFD_BUGGY
 
@@ -446,6 +449,9 @@
 
 /* Define to 1 if you have the <crtdefs.h> header file. */
 #undef HAVE_CRTDEFS_H
+
+/* Define if you have cURL */
+#undef HAVE_CURL
 
 /* Define to 1 if the alignas and alignof keywords work. */
 #undef HAVE_C_ALIGNASOF

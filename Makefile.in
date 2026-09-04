@@ -272,7 +272,7 @@ q_DEPENDENCIES = $(top_builddir)/libq/libq.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -387,7 +387,7 @@ am__define_uniq_tagged_files = \
   done | $(am__uniquify_input)`
 DIST_SUBDIRS = $(SUBDIRS)
 am__DIST_COMMON = $(dist_man_MANS) $(srcdir)/Makefile.in \
-	$(srcdir)/config.h.in COPYING README.md ar-lib compile \
+	$(srcdir)/config.h.in COPYING INSTALL README.md ar-lib compile \
 	config.guess config.sub depcomp install-sh ltmain.sh missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
@@ -464,6 +464,8 @@ CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
+CURL_CFLAGS = @CURL_CFLAGS@
+CURL_LIBS = @CURL_LIBS@
 CWFLAGS = @CWFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
@@ -1584,7 +1586,7 @@ q_SOURCES = main.c q.c qatom.c qcheck.c qdepends.c qfile.c qgrep.c \
 q_CPPFLAGS = -I$(top_srcdir)/libq -I$(top_builddir)/autotools/gnulib \
 	-I$(top_srcdir)/autotools/gnulib $(OPENMP_CFLAGS) \
 	$(LIBBL2_CFLAGS) $(LIBZ_CFLAGS) $(LIBARCHIVE_CFLAGS) \
-	$(CWFLAGS) $(NULL) $(am__append_2)
+	$(CURL_CFLAGS) $(CWFLAGS) $(NULL) $(am__append_2)
 q_LDADD = \
 	$(top_builddir)/libq/libq.a \
 	$(top_builddir)/autotools/gnulib/libgnu.a \
@@ -1593,6 +1595,7 @@ q_LDADD = \
 	$(LIBZ_LIBS) \
 	$(GPGME_LIBS) \
 	$(LIBARCHIVE_LIBS) \
+	$(CURL_LIBS) \
 	$(LIB_CRYPTO) \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIB_EACCESS) \

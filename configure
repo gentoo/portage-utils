@@ -655,6 +655,8 @@ QMANIFEST_ENABLED_FALSE
 QMANIFEST_ENABLED_TRUE
 LIBZ_LIBS
 LIBZ_CFLAGS
+CURL_LIBS
+CURL_CFLAGS
 LIBARCHIVE_LIBS
 LIBARCHIVE_CFLAGS
 GPGME_LIBS
@@ -1926,6 +1928,7 @@ with_eprefix
 enable_qmanifest
 enable_gpkg
 enable_gtree
+enable_remotebinhost
 enable_year2038
 '
       ac_precious_vars='build_alias
@@ -1946,6 +1949,8 @@ GPGME_CFLAGS
 GPGME_LIBS
 LIBARCHIVE_CFLAGS
 LIBARCHIVE_LIBS
+CURL_CFLAGS
+CURL_LIBS
 LIBZ_CFLAGS
 LIBZ_LIBS'
 
@@ -2591,6 +2596,7 @@ Optional Features:
   --enable-qmanifest      support qmanifest applet
   --enable-gpkg           support GLEP-78 gpkg packages
   --enable-gtree          support gtree cache
+  --enable-remotebinhost  support access to binhosts over HTTP via cURL
   --enable-year2038       support timestamps after 2038
 
 Optional Packages:
@@ -2634,6 +2640,8 @@ Some influential environment variables:
               C compiler flags for LIBARCHIVE, overriding pkg-config
   LIBARCHIVE_LIBS
               linker flags for LIBARCHIVE, overriding pkg-config
+  CURL_CFLAGS C compiler flags for CURL, overriding pkg-config
+  CURL_LIBS   linker flags for CURL, overriding pkg-config
   LIBZ_CFLAGS C compiler flags for LIBZ, overriding pkg-config
   LIBZ_LIBS   linker flags for LIBZ, overriding pkg-config
 
@@ -11065,9 +11073,6 @@ if test $ac_cv_func_strerror_r_char_p = yes; then
 printf '%s\n' "#define STRERROR_R_CHAR_P 1" >>confdefs.h
 
 fi
-
-
-  XGETTEXT_EXTRA_OPTIONS=
 
 ac_fn_c_check_type "$LINENO" "uid_t" "ac_cv_type_uid_t" "$ac_includes_default"
 if test "x$ac_cv_type_uid_t" = xyes
@@ -21375,13 +21380,6 @@ fi
 fi
 
 
-  XGETTEXT_EXTRA_OPTIONS="$XGETTEXT_EXTRA_OPTIONS --flag=error:3:c-format"
-
-
-
-  XGETTEXT_EXTRA_OPTIONS="$XGETTEXT_EXTRA_OPTIONS --flag=error_at_line:5:c-format"
-
-
 
 
 
@@ -30845,6 +30843,13 @@ then :
 fi
 
 
+# Check whether --enable-remotebinhost was given.
+if test ${enable_remotebinhost+y}
+then :
+  enableval=$enable_remotebinhost;
+fi
+
+
 
 # always check libb2, gpgme and libarchive
 
@@ -31049,7 +31054,6 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     LIBBL2="no: missing dependencies"
-                    enable_qmanifest=no
 
 elif test $pkg_failed = untried; then
         { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -31065,7 +31069,6 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     LIBBL2="no: missing dependencies"
-                    enable_qmanifest=no
 
 else
         LIBBL2_CFLAGS=$pkg_cv_LIBBL2_CFLAGS
@@ -31168,9 +31171,6 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     GPGME="no: missing dependencies"
-                    enable_qmanifest=no
-                    enable_gpkg=no
-                    enable_gtree=no
 
 elif test $pkg_failed = untried; then
         { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -31204,9 +31204,6 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     GPGME="no: missing dependencies"
-                    enable_qmanifest=no
-                    enable_gpkg=no
-                    enable_gtree=no
 
 else
         GPGME_CFLAGS=$pkg_cv_GPGME_CFLAGS
@@ -31300,8 +31297,6 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     LIBARCHIVE="no: missing dependencies"
-                    enable_gpkg=no
-                    enable_gtree=no
 
 elif test $pkg_failed = untried; then
         { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -31326,8 +31321,6 @@ See 'config.log' for more details" "$LINENO" 5; }
 
 fi
                     LIBARCHIVE="no: missing dependencies"
-                    enable_gpkg=no
-                    enable_gtree=no
 
 else
         LIBARCHIVE_CFLAGS=$pkg_cv_LIBARCHIVE_CFLAGS
@@ -31373,8 +31366,104 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
 
 fi
 
-if test "x${enable_qmanifest}" != "xno"
+
+pkg_failed=no
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for libcurl" >&5
+printf %s "checking for libcurl... " >&6; }
+
+if test -n "$CURL_CFLAGS"; then
+    pkg_cv_CURL_CFLAGS="$CURL_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf '%s\n' "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libcurl\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libcurl") 2>&5
+  ac_status=$?
+  printf '%s\n' "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_CURL_CFLAGS=`$PKG_CONFIG --cflags "libcurl" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$CURL_LIBS"; then
+    pkg_cv_CURL_LIBS="$CURL_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf '%s\n' "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libcurl\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libcurl") 2>&5
+  ac_status=$?
+  printf '%s\n' "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_CURL_LIBS=`$PKG_CONFIG --libs "libcurl" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+        { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf '%s\n' "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+                CURL_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libcurl" 2>&1`
+        else
+                CURL_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libcurl" 2>&1`
+        fi
+        # Put the nasty error message in config.log where it belongs
+        echo "$CURL_PKG_ERRORS" >&5
+
+
+                    if test "x{enable_remotebinhost}" = "xyes"
 then :
+
+                             { { printf '%s\n' "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf '%s\n' "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-remotebinhost was given, but libcurl.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
+                    CURL="no: missing dependencies"
+
+elif test $pkg_failed = untried; then
+        { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf '%s\n' "no" >&6; }
+
+                    if test "x{enable_remotebinhost}" = "xyes"
+then :
+
+                             { { printf '%s\n' "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf '%s\n' "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "--enable-remotebinhost was given, but libcurl.pc could not be found
+See 'config.log' for more details" "$LINENO" 5; }
+
+fi
+                    CURL="no: missing dependencies"
+
+else
+        CURL_CFLAGS=$pkg_cv_CURL_CFLAGS
+        CURL_LIBS=$pkg_cv_CURL_LIBS
+        { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf '%s\n' "yes" >&6; }
+
+
+printf '%s\n' "#define HAVE_CURL 1" >>confdefs.h
+
+                    CURL="yes"
+
+fi
 
 
 pkg_failed=no
@@ -31436,33 +31525,31 @@ fi
         echo "$LIBZ_PKG_ERRORS" >&5
 
 
-    if test "x${enable_qmanifest}" = "xyes"
+                    if test "x${enable_qmanifest}" = "xyes"
 then :
 
-      { { printf '%s\n' "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+                            { { printf '%s\n' "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
 printf '%s\n' "$as_me: error: in '$ac_pwd':" >&2;}
 as_fn_error $? "--enable-qmanifest was given, but zlib.pc could not be found
 See 'config.log' for more details" "$LINENO" 5; }
 
 fi
-    LIBZ="no: missing dependencies"
-    enable_qmanifest=no
+                    LIBZ="no: missing dependencies"
 
 elif test $pkg_failed = untried; then
         { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf '%s\n' "no" >&6; }
 
-    if test "x${enable_qmanifest}" = "xyes"
+                    if test "x${enable_qmanifest}" = "xyes"
 then :
 
-      { { printf '%s\n' "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+                            { { printf '%s\n' "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
 printf '%s\n' "$as_me: error: in '$ac_pwd':" >&2;}
 as_fn_error $? "--enable-qmanifest was given, but zlib.pc could not be found
 See 'config.log' for more details" "$LINENO" 5; }
 
 fi
-    LIBZ="no: missing dependencies"
-    enable_qmanifest=no
+                    LIBZ="no: missing dependencies"
 
 else
         LIBZ_CFLAGS=$pkg_cv_LIBZ_CFLAGS
@@ -31473,12 +31560,15 @@ printf '%s\n' "yes" >&6; }
 
 printf '%s\n' "#define HAVE_LIBZ 1" >>confdefs.h
 
-    LIBZ="yes"
+                    LIBZ="yes"
 
 fi
 
-  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether to enable qmanifest" >&5
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether to enable qmanifest" >&5
 printf %s "checking whether to enable qmanifest... " >&6; }
+if test "x${enable_qmanifest}" != "xno"
+then :
+
   if test "x${LIBBL2}${LIBZ}${GPGME}" = "xyesyesyes"
 then :
 
@@ -31495,8 +31585,6 @@ fi
 
 else case e in #(
   e)
-  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether to enable qmanifest" >&5
-printf %s "checking whether to enable qmanifest... " >&6; }
   { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no: disabled by configure argument" >&5
 printf '%s\n' "no: disabled by configure argument" >&6; }
  ;;
@@ -31519,11 +31607,11 @@ printf '%s\n' "#define ENABLE_QMANIFEST 1" >>confdefs.h
 	do_qmanifest="yes"
 fi
 
+  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether to enable gpkg" >&5
+printf %s "checking whether to enable gpkg... " >&6; }
 if test "x${enable_gpkg}" != "xno"
 then :
 
-  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether to enable gpkg" >&5
-printf %s "checking whether to enable gpkg... " >&6; }
   if test "x${GPGME}${LIBARCHIVE}" = "xyesyes"
 then :
 
@@ -31540,8 +31628,6 @@ fi
 
 else case e in #(
   e)
-  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether to enable gpkg" >&5
-printf %s "checking whether to enable gpkg... " >&6; }
   { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no: disabled by configure argument" >&5
 printf '%s\n' "no: disabled by configure argument" >&6; }
  ;;
@@ -31564,11 +31650,11 @@ printf '%s\n' "#define ENABLE_GPKG 1" >>confdefs.h
 	do_gpkg="yes"
 fi
 
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether to enable gtree" >&5
+printf %s "checking whether to enable gtree... " >&6; }
 if test "x${enable_gtree}" != "xno"
 then :
 
-  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether to enable gtree" >&5
-printf %s "checking whether to enable gtree... " >&6; }
   if test "x${GPGME}${LIBARCHIVE}" = "xyesyes"
 then :
 
@@ -31585,8 +31671,6 @@ fi
 
 else case e in #(
   e)
-  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether to enable gtree" >&5
-printf %s "checking whether to enable gtree... " >&6; }
   { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no: disabled by configure argument" >&5
 printf '%s\n' "no: disabled by configure argument" >&6; }
  ;;
@@ -31608,6 +31692,40 @@ printf '%s\n' "#define ENABLE_GTREE 1" >>confdefs.h
 
 	do_gtree="yes"
 fi
+
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether to enable remote binhost support" >&5
+printf %s "checking whether to enable remote binhost support... " >&6; }
+if test "x${enable_remotebinhost}" != "xno"
+then :
+
+  if test "x${CURL}" = "xyes"
+then :
+
+    { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf '%s\n' "yes" >&6; }
+
+else case e in #(
+  e)
+    { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no: missing dependencies" >&5
+printf '%s\n' "no: missing dependencies" >&6; }
+   ;;
+esac
+fi
+
+else case e in #(
+  e)
+  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no: disabled by configure argument" >&5
+printf '%s\n' "no: disabled by configure argument" >&6; }
+ ;;
+esac
+fi
+
+if test "x$enable_remotebinhost" != xno ; then
+
+printf '%s\n' "#define ENABLE_REMOTEBINHOST 1" >>confdefs.h
+
+fi
+
 QMANIFEST_ENABLED="$do_qmanifest"
 
 GPKG_ENABLED="$do_gpkg"
