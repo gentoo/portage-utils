@@ -20,8 +20,17 @@
 # include <archive_entry.h>
 #endif
 
+#if defined(ENABLE_REMOTEBINHOST)
+# include <curl/curl.h>
+#endif
+
+#ifdef HAVE_LIBZ
+# include <zlib.h>
+#endif
+
 #include "atom.h"
 #include "eat_file.h"
+#include "file_magic.h"
 #include "hash.h"
 #include "rmspace.h"
 #include "scandirat.h"
@@ -95,6 +104,7 @@ struct tree_ {
     TREE_MERGED,
   }              type;
   bool           cats_complete:1;
+  bool           is_binhost:1;
 };
 
 struct tree_cat_ {
@@ -443,6 +453,7 @@ tree_ctx *tree_new
 {
   tree_ctx    *ret;
   struct stat  st;
+  bool         isurl = false;
 
   if (portroot == NULL ||
       path == NULL ||
@@ -468,6 +479,16 @@ tree_ctx *tree_new
     return NULL;
   }
 
+#ifdef ENABLE_REMOTEBINHOST
+  if (type == TREETYPE_BINPKG &&
+      (strncmp(path, "https://", sizeof("https://") - 1) == 0 ||
+       strncmp(path, "http://", sizeof("http://") - 1) == 0))
+  {
+    /* accept unchecked */
+    isurl = true;
+  }
+  else
+#endif
   if (fstatat(ret->portroot_fd, path, &st, 0) < 0)
   {
     if (!quiet)
@@ -526,28 +547,121 @@ tree_ctx *tree_new
   case TREETYPE_BINPKG: /* {{{ */
     {
       char   buf[_Q_PATH_MAX];
+#ifdef ENABLE_REMOTEBINHOST
+      CURL  *curl = curl_easy_init();
+#endif
+      bool   ispackages = false;
 
-      if (!S_ISDIR(st.st_mode))
+      if (!isurl &&
+          !S_ISDIR(st.st_mode))
       {
         if (!quiet)
           warn("invalid path '/%s' for binpkg tree: must be a directory", path);
         tree_close(ret);
+#ifdef ENABLE_REMOTEBINHOST
+        curl_easy_cleanup(curl);
+#endif
         return NULL;
       }
 
       ret->type = TREE_BINPKGS;
 
-      snprintf(buf, sizeof(buf), "%s/Packages", path);
+#ifdef HAVE_LIBZ
+      snprintf(buf, sizeof(buf), "%s/Packages.gz", path);
+#ifdef ENABLE_REMOTEBINHOST
+      if (isurl)
+      {
+        long     status;
+
+        curl_easy_setopt(curl, CURLOPT_URL, buf);
+        curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);  /* HEAD */
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+        if (curl_easy_perform(curl) == CURLE_OK &&
+            curl_easy_getinfo(curl,
+                              CURLINFO_RESPONSE_CODE, &status) == CURLE_OK &&
+            status >= 200 &&
+            status < 400)
+        {
+          ispackages = true;
+        }
+      }
+      else
+#endif
       if (fstatat(ret->portroot_fd, buf, &st, 0) == 0 &&
           S_ISREG(st.st_mode))
       {
-        free(ret->path);
-        ret->path = xstrdup(buf);
-        ret->type = TREE_PACKAGES;
+        ispackages = true;
       }
 
-      /* TODO: we can read the Packages.gz file too, need to elevate
-       * zlib check in configure, to unpack it */
+      if (ispackages)
+      {
+        free(ret->path);
+        ret->path       = xstrdup(buf);
+        ret->type       = TREE_PACKAGES;
+        ret->is_binhost = isurl;
+
+#ifdef ENABLE_REMOTEBINHOST
+        curl_easy_cleanup(curl);
+#endif
+        break;
+      }
+#endif
+
+      snprintf(buf, sizeof(buf), "%s/Packages", path);
+#ifdef ENABLE_REMOTEBINHOST
+      if (isurl)
+      {
+        long     status;
+
+        curl_easy_setopt(curl, CURLOPT_URL, buf);
+        curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);  /* HEAD */
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+        if (curl_easy_perform(curl) == CURLE_OK &&
+            curl_easy_getinfo(curl,
+                              CURLINFO_RESPONSE_CODE, &status) == CURLE_OK &&
+            status >= 200 &&
+            status < 400)
+        {
+          ispackages = true;
+        }
+      }
+      else
+#endif
+      if (fstatat(ret->portroot_fd, buf, &st, 0) == 0 &&
+          S_ISREG(st.st_mode))
+      {
+        ispackages = true;
+      }
+
+      if (ispackages)
+      {
+        free(ret->path);
+        ret->path       = xstrdup(buf);
+        ret->type       = TREE_PACKAGES;
+        ret->is_binhost = isurl;
+
+#ifdef ENABLE_REMOTEBINHOST
+        curl_easy_cleanup(curl);
+#endif
+        break;
+      }
+
+#ifdef ENABLE_REMOTEBINHOST
+      curl_easy_cleanup(curl);
+
+      if (isurl &&
+          ret->type == TREE_BINPKGS)
+      {
+        /* could try and list, but what for at this point */
+        if (!quiet)
+          warn("cannot use URL '%s' for binpkg tree: "
+               "must be a directory", path);
+        tree_close(ret);
+        return NULL;
+      }
+#endif
     }
     break; /* }}} */
   case TREETYPE_GTREE: /* {{{ */
@@ -2187,28 +2301,99 @@ int tree_foreach_pkg
     {
       tree_pkg_ctx      *pkg      = NULL;
       tree_cat_ctx       needle;
-      char              *buf;
+      char              *buf      = NULL;
       char              *k;
       char              *v;
       char              *cpv;
       char              *nexttok;
-      size_t             len;
+      ssize_t            buflen;
+      size_t             len      = 0;
       size_t             rootlen;
       int                fd;
-      bool               eret     = true;
 
-      fd = openat(tree->portroot_fd, tree->path, O_RDONLY | O_CLOEXEC);
-      if (fd < 0)
+#ifdef ENABLE_REMOTEBINHOST
+      if (tree->is_binhost)
+      {
+        buflen = eat_file_url(tree->path, &buf, &len);
+      }
+      else
+#endif
+      {
+        fd = openat(tree->portroot_fd, tree->path, O_RDONLY | O_CLOEXEC);
+        if (fd < 0)
+          return 1;
+
+        buflen = eat_file_fd(fd, &buf, &len);
+        close(fd);
+      }
+
+      if (buflen < 0)
+      {
+        free(buf);
         return 1;
+      }
 
-      buf  = NULL;
-      len  = 0;
-      if (eat_file_fd(fd, &buf, &len) < 0)
-        eret = false;
-      close(fd);
+#ifdef HAVE_LIBZ
+      if (file_magic_guess(buf, (ssize_t)buflen) == FMAGIC_GZIP)
+      {
+        z_stream zstrm;
+        char    *outbuf;
+        size_t   outbufsiz = buflen * 10;
+        int      zret;
+        bool     redo      = false;
 
-      if (!eret)
-        return 1;
+        do
+        {
+          outbuf = xmalloc(outbufsiz);
+
+          VAL_CLEAR(zstrm);
+          zstrm.next_in   = (Bytef *)buf;
+          zstrm.avail_in  = (uInt)buflen;
+          zstrm.next_out  = (Bytef *)outbuf;
+          zstrm.avail_out = (uInt)outbufsiz;
+
+          /* gzip */
+          inflateInit2(&zstrm, 15 + 16);
+
+          while ((zret = inflate(&zstrm, Z_FINISH)) == Z_OK)
+          {
+            if (zstrm.avail_out == 0)
+            {
+              /* doesn't fit, zap the buffer so we can get an idea of
+               * how much we need */
+              zstrm.next_out  = (Bytef *)outbuf;
+              zstrm.avail_out = (uInt)outbufsiz;
+              redo            = true;
+            }
+          }
+          if (zret != Z_STREAM_END)
+          {
+            /* error? ignore use original input */
+            warn("decompressing %s failed (%d, %s)",
+                 tree->path, zret, zstrm.msg);
+            free(outbuf);
+            break;
+          }
+          else
+          {
+            free(buf);
+            buf    = outbuf;
+            buflen = (size_t)zstrm.total_out;
+            break;
+          }
+
+          if (redo)
+          {
+            free(outbuf);
+            outbufsiz = (size_t)zstrm.total_out;
+            inflateEnd(&zstrm);
+          }
+        }
+        while (redo);
+
+        inflateEnd(&zstrm);
+      }
+#endif
 
       k = strrchr(tree->path, '/');
       if (k != NULL)
