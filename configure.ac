@@ -60,6 +60,10 @@ AC_ARG_ENABLE([gtree],
               [AS_HELP_STRING([--enable-gtree],
                               [support gtree cache])])
 
+AC_ARG_ENABLE([remotebinhost],
+              [AS_HELP_STRING([--enable-remotebinhost],
+                              [support access to binhosts over HTTP via cURL])])
+
 
 # always check libb2, gpgme and libarchive
 PKG_CHECK_MODULES([LIBBL2], [libb2],
@@ -73,7 +77,6 @@ PKG_CHECK_MODULES([LIBBL2], [libb2],
                             AC_MSG_FAILURE([--enable-qmanifest was given, but libb2.pc could not be found])
                           ])
                     LIBBL2="no: missing dependencies"
-                    enable_qmanifest=no
                   ])
 
 PKG_CHECK_MODULES([GPGME], [gpgme],
@@ -95,9 +98,6 @@ PKG_CHECK_MODULES([GPGME], [gpgme],
                             AC_MSG_FAILURE([--enable-gtree was given, but gpgme.pc could not be found])
                           ])
                     GPGME="no: missing dependencies"
-                    enable_qmanifest=no
-                    enable_gpkg=no
-                    enable_gtree=no
                   ])
 
 PKG_CHECK_MODULES([LIBARCHIVE], [libarchive],
@@ -123,30 +123,42 @@ PKG_CHECK_MODULES([LIBARCHIVE], [libarchive],
                             AC_MSG_FAILURE([--enable-gtree was given, but libarchive.pc could not be found])
                           ])
                     LIBARCHIVE="no: missing dependencies"
-                    enable_gpkg=no
-                    enable_gtree=no
                   ])
 
-AS_IF([test "x${enable_qmanifest}" != "xno"], [
-  PKG_CHECK_MODULES([LIBZ], [zlib], [
-    AC_DEFINE([HAVE_LIBZ], [1], [Define if you have zlib])
-    LIBZ="yes"
-  ], [
-    AS_IF([test "x${enable_qmanifest}" = "xyes"], [
-      AC_MSG_FAILURE([--enable-qmanifest was given, but zlib.pc could not be found])
-    ])
-    LIBZ="no: missing dependencies"
-    enable_qmanifest=no
-  ])
+PKG_CHECK_MODULES([CURL], [libcurl],
+                  [
+                    AC_DEFINE([HAVE_CURL], [1], [Define if you have cURL])
+                    CURL="yes"
+                  ],
+                  [
+                    AS_IF([test "x{enable_remotebinhost}" = "xyes"],
+                          [
+                             AC_MSG_FAILURE([--enable-remotebinhost was given, but libcurl.pc could not be found])
+                          ])
+                    CURL="no: missing dependencies"
+                  ])
 
-  AC_MSG_CHECKING([whether to enable qmanifest])
+PKG_CHECK_MODULES([LIBZ], [zlib],
+                  [
+                    AC_DEFINE([HAVE_LIBZ], [1], [Define if you have zlib])
+                    LIBZ="yes"
+                  ],
+                  [
+                    AS_IF([test "x${enable_qmanifest}" = "xyes"],
+                          [
+                            AC_MSG_FAILURE([--enable-qmanifest was given, but zlib.pc could not be found])
+                          ])
+                    LIBZ="no: missing dependencies"
+                  ])
+
+AC_MSG_CHECKING([whether to enable qmanifest])
+AS_IF([test "x${enable_qmanifest}" != "xno"], [
   AS_IF([test "x${LIBBL2}${LIBZ}${GPGME}" = "xyesyesyes"], [
     AC_MSG_RESULT([yes])
   ], [
     AC_MSG_RESULT([no: missing dependencies])
   ])
 ], [
-  AC_MSG_CHECKING([whether to enable qmanifest])
   AC_MSG_RESULT([no: disabled by configure argument])
 ])
 
@@ -158,15 +170,14 @@ if test "x$enable_qmanifest" != xno ; then
 	do_qmanifest="yes"
 fi
 
-AS_IF([test "x${enable_gpkg}" != "xno"], [
   AC_MSG_CHECKING([whether to enable gpkg])
+AS_IF([test "x${enable_gpkg}" != "xno"], [
   AS_IF([test "x${GPGME}${LIBARCHIVE}" = "xyesyes"], [
     AC_MSG_RESULT([yes])
   ], [
     AC_MSG_RESULT([no: missing dependencies])
   ])
 ], [
-  AC_MSG_CHECKING([whether to enable gpkg])
   AC_MSG_RESULT([no: disabled by configure argument])
 ])
 
@@ -178,15 +189,14 @@ if test "x$enable_gpkg" != xno ; then
 	do_gpkg="yes"
 fi
 
+AC_MSG_CHECKING([whether to enable gtree])
 AS_IF([test "x${enable_gtree}" != "xno"], [
-  AC_MSG_CHECKING([whether to enable gtree])
   AS_IF([test "x${GPGME}${LIBARCHIVE}" = "xyesyes"], [
     AC_MSG_RESULT([yes])
   ], [
     AC_MSG_RESULT([no: missing dependencies])
   ])
 ], [
-  AC_MSG_CHECKING([whether to enable gtree])
   AC_MSG_RESULT([no: disabled by configure argument])
 ])
 
@@ -197,6 +207,23 @@ if test "x$enable_gtree" != xno ; then
 			  [Define if gtree should be compiled])
 	do_gtree="yes"
 fi
+
+AC_MSG_CHECKING([whether to enable remote binhost support])
+AS_IF([test "x${enable_remotebinhost}" != "xno"], [
+  AS_IF([test "x${CURL}" = "xyes"], [
+    AC_MSG_RESULT([yes])
+  ], [
+    AC_MSG_RESULT([no: missing dependencies])
+  ])
+], [
+  AC_MSG_RESULT([no: disabled by configure argument])
+])
+
+if test "x$enable_remotebinhost" != xno ; then
+  AC_DEFINE([ENABLE_REMOTEBINHOST], [1],
+            [Define if remote binhost support should be compiled])
+fi
+
 AC_SUBST([QMANIFEST_ENABLED], ["$do_qmanifest"])
 AC_SUBST([GPKG_ENABLED], ["$do_gpkg"])
 AC_SUBST([GTREE_ENABLED], ["$do_gtree"])

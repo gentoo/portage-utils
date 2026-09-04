@@ -18,6 +18,10 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 
+#ifdef ENABLE_REMOTEBINHOST
+# include <curl/curl.h>
+#endif
+
 #include "eat_file.h"
 #include "rmspace.h"
 #include "scandirat.h"
@@ -1470,6 +1474,15 @@ int main(int argc, char **argv)
 				{
 					overlay = argv[i + 1];
 				}
+				else if (strcmp(&argv[i][2], "binhost") == 0 &&
+						 argv[i + 1] != NULL)
+				{
+					env_vars *var = get_portage_env_var(vars_to_read,
+														"PORTAGE_BINHOST");
+					if (var == NULL)
+						exit(153); /* impossible */
+					set_portage_env_var(var, argv[i + 1], "command line");
+				}
 			} else {
 				char *p;
 
@@ -1548,6 +1561,10 @@ int main(int argc, char **argv)
 		}
 	}
 
+#ifdef ENABLE_REMOTEBINHOST
+	curl_global_init(CURL_GLOBAL_DEFAULT);
+#endif
+
 	optind = 0;
 	i = q_main(argc, argv);
 
@@ -1557,6 +1574,10 @@ int main(int argc, char **argv)
 
 	if (warnout != stderr)
 		fclose(warnout);
+
+#ifdef ENABLE_REMOTEBINHOST
+	curl_global_cleanup();
+#endif
 
 	return i;
 }
