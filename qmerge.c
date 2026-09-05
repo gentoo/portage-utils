@@ -2454,8 +2454,13 @@ static dep_status_t qmerge_resolve_dep
     }
     else
     {
-      switch (atom_compare(tree_pkg_atom(node->ipkg, true),
-                           tree_pkg_atom(node->pkg, true)))
+      /* technically we should include BUILDID, but the VDB doesn't
+       * record it, so we can't really see a binpkg is a newer build
+       * than what's installed, so ignore it and treat it as the same */
+      switch (atom_compare_flg(tree_pkg_atom(node->ipkg, true),
+                               tree_pkg_atom(node->pkg, true),
+                               (ATOM_COMP_NOBUILDID |
+                                ATOM_COMP_NOREPO)))
       {
       case NOT_EQUAL: /* maybe SLOT difference? */
         node->type = NTYPE_MERGE;
