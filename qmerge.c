@@ -2267,17 +2267,23 @@ static bool qmerge_print_node_d
   switch (n->type)
   {
   case NTYPE_MERGE:
+    atom_format_r(atom, sizeof(atom),
+                  "%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", patom);
     printf("[%sN%s %s%c%s]%*s %s", GREEN, NORM, tc, t, NORM, level, "", atom);
     break;
   case NTYPE_UNMERGE:
     printf("[%sD%s %s%c%s]%*s %s", RED, NORM, tc, t, NORM, level, "", atom);
     break;
   case NTYPE_REMERGE:
+    atom_format_r(atom, sizeof(atom),
+                  "%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", patom);
     printf("[ %sR%s%s%c%s]%*s %s", YELLOW, NORM, tc, t, NORM, level, "", atom);
     if (repodiff)
       printf(" (%s)", atom_format("%[REPO]", iatom));
     break;
   case NTYPE_UPGRADE:
+    atom_format_r(atom, sizeof(atom),
+                  "%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", patom);
     printf("[ %sU%s%s%c%s]%*s %s", GREEN, NORM, tc, t, NORM, level, "", atom);
     if (repodiff)
       printf(" (%s)", atom_format("%[PVR]%[SLOT]%[REPO]", iatom));
@@ -2285,6 +2291,8 @@ static bool qmerge_print_node_d
       printf(" (%s)", atom_format("%[PVR]%[SLOT]", iatom));
     break;
   case NTYPE_DOWNGRADE:
+    atom_format_r(atom, sizeof(atom),
+                  "%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", patom);
     printf("[ %sd%s%s%c%s]%*s %s", YELLOW, NORM, tc, t, NORM, level, "", atom);
     if (repodiff)
       printf(" (%s)", atom_format("%[PVR]%[SLOT]%[REPO]", iatom));
@@ -2319,7 +2327,7 @@ static bool qmerge_print_node_d
 
       array_for_each(n->pkgs, i, pkg)
       {
-        atom_format_r(atom, sizeof(atom), "%{#}%[CAT]%[PF]%[SLOT]%[REPO]",
+        atom_format_r(atom, sizeof(atom), "%[CAT]%[PF]%[SLOT]%[REPO]",
                       tree_pkg_atom(pkg, true));
         switch (tree_pkg_get_treetype(pkg))
         {
@@ -2328,10 +2336,10 @@ static bool qmerge_print_node_d
         case TREETYPE_GTREE:    tc = BLUE;    t = 'E';   break;
         case TREETYPE_VDB:      tc = DKGREEN; t = 'I';   break;
         }
-        printf("[%s?%s %s%c%s] (%s%2zu%s)%*s %s%s%s\n",
+        printf("[%s?%s %s%c%s] (%s%2zu%s)%*s %s\n",
                YELLOW, NORM, tc, t, NORM,
                GREEN, i + 1, NORM, level, "",
-               DKBLUE, atom, NORM);
+               atom);
       }
       printf("      %sthe %s%zu%s packages above match the "
              "argument %s\"%s\"%s",
@@ -3094,7 +3102,8 @@ int qmerge_main
             num <= array_cnt(node->pkgs))
         {
           tree_pkg_ctx *pkg  = array_get(node->pkgs, num - 1);
-          char         *atom = atom_to_string(tree_pkg_atom(pkg, true));
+          char         *atom = atom_format("%{#}%[CAT]%[PN]",
+                                           (tree_pkg_atom(pkg, false)));
 
           array_delete(args, n, NULL);
           array_append_strcpy(args, atom);
