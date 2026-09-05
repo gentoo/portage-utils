@@ -184,6 +184,7 @@ typedef struct resolve_state_ {
   tree_ctx *tree;
   hash_t   *nodes;
   hash_t   *blockers;
+  array    *world;
   bool      unmerge:1;
   bool      upgrade:1;      /* only upgrade versions for explicit arguments */
   bool      upgrade_all:1;  /* deep upgrade, also for dependencies */
@@ -937,6 +938,69 @@ done:
   return ret;
 }
 
+static int qmerge_update_world_file
+(
+  resolve_state_t *state
+)
+{
+  char   path[_Q_PATH_MAX];
+  char  *atom;
+  FILE  *out;
+  size_t n;
+  int    ret;
+  int    rootfd;
+
+  snprintf(path, sizeof(path), "%s%s/var/lib/portage", portroot, configroot);
+  rootfd = open(path, O_RDONLY | O_DIRECTORY, 0);
+  if (rootfd < 0)
+  {
+    warnp("failed to open '%s'", path);
+    return -1;
+  }
+
+  snprintf(path, sizeof(path), "world.qmerge-%zu", (size_t)getpid());
+  ret = openat(rootfd, path,
+               O_WRONLY | O_CREAT,
+               S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH /* 0644 */);
+  out = fdopen(ret, "w");
+  if (ret < 0 ||
+      out == NULL)
+  {
+    if (ret >= 0)
+      close(ret);
+    close(rootfd);
+    warnp("could not open '%s' for writing", path);
+    return -1;
+  }
+
+  ret = 0;
+  array_for_each(state->world, n, atom)
+    if (fprintf(out, "%s\n", atom) <= 0)
+      ret = 1;
+
+  ret |= fflush(out);
+  fclose(out);
+
+  if (ret != 0)
+  {
+    unlinkat(rootfd, path, 0);
+    close(rootfd);
+    warnp("could not write new world file");
+    return -1;
+  }
+
+  if (move_file(rootfd, path, rootfd, "world", NULL) != 0)
+  {
+    unlinkat(rootfd, path, 0);
+    close(rootfd);
+    warnp("could not overwrite world file");
+    return -1;
+  }
+
+  close(rootfd);
+  return 0;
+}
+
 static void pkg_extract_xpak_cb
 (
   void *ctx,
@@ -1159,6 +1223,21 @@ static int pkg_unmerge
 
   if (!pretend)
   {
+    size_t retelem;
+
+    /* update the world file if this package was listed in it */
+    if (array_binsearch(state->world,
+                        atom_format("%{#}%[CAT]%[PN]%[SLOT]", atom),
+                        NULL, &retelem) != NULL ||
+        array_binsearch(state->world,
+                        atom_format("%{#}%[CAT]%[PN]", atom),
+                        NULL, &retelem) != NULL)
+    {
+      array_delete(state->world, retelem, NULL);
+      /* update the world file, ignore if it fails, so we at least
+       * succeed in unmerging this package completely */
+      qmerge_update_world_file(state);
+    }
     buf = tree_pkg_meta(pkg_ctx, Q_EAPI);
     if (buf == NULL)
       buf = (char *)"0";  /* default */
@@ -2545,7 +2624,7 @@ static dep_status_t qmerge_resolve
     if (root->type != NTYPE_ROOT)
       return DEP_FAIL;
 
-    alist = qmerge_read_file("/var/lib/portage", "world");
+    alist = array_clone(state->world, (array_clone_cb*)xstrdup);
     if (alist == NULL)
       return DEP_FAIL;
     isset = false;
@@ -2947,6 +3026,9 @@ int qmerge_main
     array_free(masks);
   }
 
+  /* pick up world file in case we have to do unmerges */
+  rstate.world = qmerge_read_file("/var/lib/portage", "world");
+
   /* resolve the input */
   /* TODO: respect nodeps */
   (void)nodeps;
@@ -3073,6 +3155,7 @@ int qmerge_main
   qmerge_free_node(root);
   tree_close(rstate.tree);
   hash_free(rstate.blockers);
+  array_deepfree(rstate.world, NULL);
   array_deepfree(args, NULL);
 
   return ret;
