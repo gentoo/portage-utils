@@ -974,6 +974,7 @@ static int qmerge_update_world_file
   }
 
   ret = 0;
+  array_sort(state->world, NULL);  /* Portage writes it in sorted order too */
   array_for_each(state->world, n, atom)
     if (fprintf(out, "%s\n", atom) <= 0)
       ret = 1;
@@ -2022,16 +2023,19 @@ static int qmerge_merge_pkgs
     return 0;
   }
 
+  if (n->type == NTYPE_INSTALLED)
+    return 0;  /* nothing to do */
+
   if (n->type != NTYPE_UNMERGE &&
       ptype != TREETYPE_BINPKG)
   {
-    warn("merging from non-binary packages not yet supported");
+    warn("merging from non-binary packages not yet supported for %s", atom);
     return 1;
   }
   else if (n->type == NTYPE_UNMERGE &&
            ptype != TREETYPE_VDB)
   {
-    warn("cannot unmerge non-installed package");
+    warn("cannot unmerge non-installed package %s", atom);
     return 1;
   }
 
@@ -2042,6 +2046,18 @@ static int qmerge_merge_pkgs
     if (pkg_merge(state, n->pkg, n->ipkg,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
+    /* add to world file if this was an explicit argument */
+    if (n->is_arg)
+    {
+      if (array_binsearch(state->world,
+                          atom_format("%{#}%[CAT]%[PN]%[SLOT]", n->atom),
+                          NULL, NULL) == NULL)
+      {
+        array_append_strcpy(state->world,
+                            atom_format("%{#}%[CAT]%[PN]%[SLOT]", n->atom));
+        qmerge_update_world_file(state);
+      }
+    }
     break;
   case NTYPE_UNMERGE:
     if (pkg_unmerge(state, n->pkg, NULL, NULL,
@@ -2277,8 +2293,8 @@ static bool qmerge_print_node_d
     break;
   case NTYPE_INSTALLED:
     atom_format_r(atom, sizeof(atom),
-                  "%{#}%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", patom);
-    printf("%s[  %c]%*s %s%s", BRYELLOW, t, level, "", atom, NORM);
+                  "%{#}%[CAT]%[PF]%[BUILDID]%[SLOT]%[REPO]", iatom);
+    printf("%s[  i]%*s %s%s", BRYELLOW, level, "", atom, NORM);
     break;
   case NTYPE_CONFLICT:
     printf("[%s!%s %s%c%s]%*s %s\n", RED, NORM, tc, t, NORM, level, "", atom);
