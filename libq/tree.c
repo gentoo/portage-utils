@@ -1537,7 +1537,7 @@ static int tree_cat_compar
  * the results with identical name (PN)
  * NOTE: this comparator does not respect atom CATEGORY, as it assumes
  *       it is only sorting packages inside a category */
-static int tree_pkg_compar
+static int tree_pkg_compar_pn
 (
   const void *d,
   const void *q
@@ -1581,6 +1581,33 @@ static int tree_pkg_compar
       }
     }
     return ret;
+  }
+}
+
+/* comparator like tree_pkg_compar_pn, but also comparing CATEGORY */
+static int tree_pkg_compar
+(
+  const void *d,
+  const void *q
+)
+{
+  tree_pkg_ctx *data  = *(tree_pkg_ctx **)d;
+  tree_pkg_ctx *query = *(tree_pkg_ctx **)q;
+
+  if (data == NULL &&
+      query == NULL)
+    return 0;
+  else if (data == NULL)
+    return 1;
+  else if (query == NULL)
+    return -1;
+  else
+  {
+    int ret = strcmp(data->cat->name, query->cat->name);
+    if (ret != 0)
+      return ret;
+
+    return tree_pkg_compar_pn(d, q);
   }
 }
 
@@ -1710,7 +1737,7 @@ static int tree_cat_foreach_pkg
     /* keep atom away while we search for the package, we want to know
      * the package is seen (in the cache), so we can also handle
      * negative responses here */
-    pkg = array_binsearch(cat->pkgs, &needle, tree_pkg_compar, &elem);
+    pkg = array_binsearch(cat->pkgs, &needle, tree_pkg_compar_pn, &elem);
     /* cleanup atom created implicitly for comparison */
     if (needle.atom)
       atom_implode(needle.atom);
@@ -1721,7 +1748,7 @@ static int tree_cat_foreach_pkg
 
       do
       {
-        if (tree_pkg_compar(&pkg, &nref) == 0)
+        if (tree_pkg_compar_pn(&pkg, &nref) == 0)
           ret |= callback(pkg, priv);
       }
       while (++elem < array_cnt(cat->pkgs) &&
@@ -1744,7 +1771,7 @@ static int tree_cat_foreach_pkg
     size_t n;
 
     if (sorted)
-      array_sort(cat->pkgs, tree_pkg_compar);
+      array_sort(cat->pkgs, tree_pkg_compar_pn);
 
     array_for_each(cat->pkgs, n, pkg)
       ret |= callback(pkg, priv);
@@ -1817,7 +1844,7 @@ static int tree_cat_foreach_pkg
             lookup.name = pn;
             lookup.path = pn;
             lookup.atom = NULL;
-            pkg = array_binsearch(cat->pkgs, &lookup, tree_pkg_compar, NULL);
+            pkg = array_binsearch(cat->pkgs, &lookup, tree_pkg_compar_pn, NULL);
             if (lookup.atom != NULL)
               atom_implode(lookup.atom);
             if (pkg != NULL)
@@ -1866,7 +1893,7 @@ static int tree_cat_foreach_pkg
 
           if (!sorted &&
               (!filterpn ||
-               tree_pkg_compar(&pkg, &nref) == 0))
+               tree_pkg_compar_pn(&pkg, &nref) == 0))
             ret |= callback(pkg, priv);
         }
 
@@ -1985,7 +2012,7 @@ static int tree_cat_foreach_pkg
 
               if (!sorted &&
                   (!filterpn ||
-                   tree_pkg_compar(&pkg, &nref) == 0))
+                   tree_pkg_compar_pn(&pkg, &nref) == 0))
                 ret |= callback(pkg, priv);
             }
             else if (nlen > sizeof(".gpkg.tar") - 1 &&
@@ -2003,7 +2030,7 @@ static int tree_cat_foreach_pkg
 
               if (!sorted &&
                   (!filterpn ||
-                   tree_pkg_compar(&pkg, &nref) == 0))
+                   tree_pkg_compar_pn(&pkg, &nref) == 0))
                 ret |= callback(pkg, priv);
             }
           }
@@ -2027,7 +2054,7 @@ static int tree_cat_foreach_pkg
 
             if (!sorted &&
                 (!filterpn ||
-                 tree_pkg_compar(&pkg, &nref) == 0))
+                 tree_pkg_compar_pn(&pkg, &nref) == 0))
               ret |= callback(pkg, priv);
           }
           else if (nlen > sizeof(".gpkg.tar") - 1 &&
@@ -2045,7 +2072,7 @@ static int tree_cat_foreach_pkg
 
             if (!sorted &&
                 (!filterpn ||
-                 tree_pkg_compar(&pkg, &nref) == 0))
+                 tree_pkg_compar_pn(&pkg, &nref) == 0))
               ret |= callback(pkg, priv);
           }
 
@@ -2122,7 +2149,7 @@ static int tree_cat_foreach_pkg
 
         if (!sorted &&
             (!filterpn ||
-             tree_pkg_compar(&pkg, &nref) == 0))
+             tree_pkg_compar_pn(&pkg, &nref) == 0))
           ret |= callback(pkg, priv);
       }
 
