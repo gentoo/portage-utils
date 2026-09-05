@@ -180,11 +180,21 @@ struct qmerge_node_ {
   bool          found:1;   /* for NTYPE_ERROR */
 };
 
+typedef struct resolve_state_ {
+  tree_ctx *tree;
+  hash_t   *nodes;
+  hash_t   *blockers;
+  bool      unmerge:1;
+  bool      upgrade:1;      /* only upgrade versions for explicit arguments */
+  bool      upgrade_all:1;  /* deep upgrade, also for dependencies */
+  bool      interactive:1;
+  bool      strict:1;
+  bool      keepwork:1;
+  bool      debug:1;
+} resolve_state_t;
 
-#define QMERGE_FLAGS "fFskKUpuyO" COMMON_FLAGS
+#define QMERGE_FLAGS "skKUpuyO" COMMON_FLAGS
 static struct option const qmerge_long_opts[] = {
-  {"fetch",   no_argument, NULL, 'f'},
-  {"force",   no_argument, NULL, 'F'},
   {"search",  no_argument, NULL, 's'},
   {"install", no_argument, NULL, 'K'},   /* legacy */
   {"usepkgonly", no_argument, NULL, 'K'},  /* emerge */
@@ -198,8 +208,6 @@ static struct option const qmerge_long_opts[] = {
   COMMON_LONG_OPTS
 };
 static const char * const qmerge_opts_help[] = {
-  "Fetch package and newest Packages metadata",
-  "Fetch package (skipping Packages)",
   "Search available packages",
   "Alias for --usepkgonly",
   "Install only from binary packages",
@@ -213,17 +221,6 @@ static const char * const qmerge_opts_help[] = {
   COMMON_OPTS_HELP
 };
 #define qmerge_usage(ret) usage(ret, QMERGE_FLAGS, qmerge_long_opts, qmerge_opts_help, NULL, lookup_applet_idx("qmerge"))
-
-char interactive = 1;
-char install = 0;
-char uninstall = 0;
-char force_download = 0;
-char follow_rdepends = 1;
-char qmerge_strict = 0;
-char update_only = 0;
-bool keep_work = false;
-bool debug = false;
-const char Packages[] = "Packages";
 
 static int pkg_verify_checksums
 (
@@ -607,14 +604,15 @@ static struct {
 
 static void pkg_run_func_at
 (
-  int             dirfd,
-  const char     *vdb_path,
-  const char     *phases,
-  enum pkg_phases phaseidx,
-  const char     *D,
-  const char     *T,
-  const char     *EAPI,
-  const char     *replacing
+  resolve_state_t *state,
+  int              dirfd,
+  const char      *vdb_path,
+  const char      *phases,
+  enum pkg_phases  phaseidx,
+  const char      *D,
+  const char      *T,
+  const char      *EAPI,
+  const char      *replacing
 )
 {
   const char *func;
@@ -718,11 +716,11 @@ static void pkg_run_func_at
     /*6*/ T,
     /*7*/ phase_replacingvers[phaseidx].varname,
     /*8*/ replacing,
-    /*9*/ debug ? "set -x;" : "");
+    /*9*/ state->debug ? "set -x;" : "");
   xsystem(script, dirfd);
   free(script);
 }
-#define pkg_run_func(...) pkg_run_func_at(AT_FDCWD, __VA_ARGS__)
+#define pkg_run_func(S, ...) pkg_run_func_at(S, AT_FDCWD, __VA_ARGS__)
 
 /* Copy one tree (the single package) to another tree (ROOT) */
 static int merge_tree_at
@@ -968,13 +966,14 @@ static void pkg_extract_xpak_cb
 
 static int pkg_unmerge
 (
-  tree_pkg_ctx *pkg_ctx,
-  depend_atom  *rpkg,
-  set_t        *keep,
-  int           cp_argc,
-  char        **cp_argv,
-  int           cpm_argc,
-  char        **cpm_argv
+  resolve_state_t *state,
+  tree_pkg_ctx    *pkg_ctx,
+  depend_atom     *rpkg,
+  set_t           *keep,
+  int              cp_argc,
+  char           **cp_argv,
+  int              cpm_argc,
+  char           **cpm_argv
 )
 {
   char      T[_Q_PATH_MAX];
@@ -1012,7 +1011,7 @@ static int pkg_unmerge
     phases = tree_pkg_meta(pkg_ctx, Q_DEFINED_PHASES);
     if (phases != NULL) {
       mkdir_p(T, 0755);
-      pkg_run_func_at(portroot_fd, tree_pkg_get_path(pkg_ctx),
+      pkg_run_func_at(state, portroot_fd, tree_pkg_get_path(pkg_ctx),
                       phases, PKG_PRERM,
                       T, T, buf, "");
     }
@@ -1168,7 +1167,7 @@ static int pkg_unmerge
     {
       mkdir_p(T, 0755);
       /* execute the pkg_postrm step */
-      pkg_run_func_at(portroot_fd, tree_pkg_get_path(pkg_ctx),
+      pkg_run_func_at(state, portroot_fd, tree_pkg_get_path(pkg_ctx),
                       phases, PKG_POSTRM,
                       T, T, buf, rpkg == NULL ? "" : rpkg->PVR);
     }
@@ -1194,12 +1193,13 @@ static int pkg_unmerge
 
 static int pkg_merge
 (
-  tree_pkg_ctx   *mpkg,
-  tree_pkg_ctx   *ipkg,
-  int             cp_argc,
-  char          **cp_argv,
-  int             cpm_argc,
-  char          **cpm_argv
+  resolve_state_t *state,
+  tree_pkg_ctx    *mpkg,
+  tree_pkg_ctx    *ipkg,
+  int              cp_argc,
+  char           **cp_argv,
+  int              cpm_argc,
+  char           **cpm_argv
 )
 {
   char            buf[_Q_PATH_MAX];
@@ -1281,7 +1281,7 @@ static int pkg_merge
       errf("failed to write binpkg to tempfile");
     close(ofd);
 
-    if (pkg_verify_checksums(mpkg, buf, qmerge_strict, !quiet) < 0)
+    if (pkg_verify_checksums(mpkg, buf, state->strict, !quiet) < 0)
       errf("package verification failed");
 #else
     errf("remote binhost support not compiled in!");
@@ -1626,9 +1626,9 @@ static int pkg_merge
   eat_file("vdb/DEFINED_PHASES", &pm_phases, &pm_phases_len);
 
   /* run required phases */
-  pkg_run_func("vdb", pm_phases, PKG_PRETEND, D, T, eapi, replver);
-  pkg_run_func("vdb", pm_phases, PKG_SETUP,   D, T, eapi, replver);
-  pkg_run_func("vdb", pm_phases, PKG_PREINST, D, T, eapi, replver);
+  pkg_run_func(state, "vdb", pm_phases, PKG_PRETEND, D, T, eapi, replver);
+  pkg_run_func(state, "vdb", pm_phases, PKG_SETUP,   D, T, eapi, replver);
+  pkg_run_func(state, "vdb", pm_phases, PKG_PREINST, D, T, eapi, replver);
 
   /* prune stuff via INSTALL_MASK */
   {
@@ -1689,7 +1689,7 @@ static int pkg_merge
   if (ipkg != NULL)
   {
     replver = tree_pkg_atom(ipkg, false)->PVR;
-    pkg_run_func("vdb", pm_phases, PKG_PRERM, D, T, eapi, replver);
+    pkg_run_func(state, "vdb", pm_phases, PKG_PRERM, D, T, eapi, replver);
   }
 
   objs = NULL;
@@ -1726,13 +1726,13 @@ static int pkg_merge
   {
     /* we need to really set this unmerge pending after we
      * look at contents of the new pkg */
-    pkg_unmerge(ipkg, matom, objs,
+    pkg_unmerge(state, ipkg, matom, objs,
                 cp_argc, cp_argv, cpm_argc, cpm_argv);
   }
 
   /* run postinst */
   if (!pretend)
-    pkg_run_func("vdb", pm_phases, PKG_POSTINST, D, T, eapi, replver);
+    pkg_run_func(state, "vdb", pm_phases, PKG_POSTINST, D, T, eapi, replver);
 
   if (eprefix != NULL)
     free(eprefix);
@@ -1801,7 +1801,7 @@ static int pkg_merge
 
   /* clean up our local temp dir */
   xchdir("..");
-  if (!keep_work)
+  if (!state->keepwork)
     rm_rf(matom->PF);
   /* don't care about return, but when empty, remove */
   rmdir("../qmerge");
@@ -1901,12 +1901,13 @@ static int pkg_verify_checksums
 
 static int qmerge_merge_pkgs
 (
-  node_t  *n,
-  set_t   *parents_seen,
-  int      cp_argc,
-  char   **cp_argv,
-  int      cpm_argc,
-  char   **cpm_argv
+  resolve_state_t *state,
+  node_t          *n,
+  set_t           *parents_seen,
+  int              cp_argc,
+  char           **cp_argv,
+  int              cpm_argc,
+  char           **cpm_argv
 )
 {
   char                atom[_Q_PATH_MAX];
@@ -1917,7 +1918,7 @@ static int qmerge_merge_pkgs
 
   array_for_each(n->predeps, i, dep)
   {
-    if (qmerge_merge_pkgs(dep, parents_seen,
+    if (qmerge_merge_pkgs(state, dep, parents_seen,
                           cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
   }
@@ -1959,32 +1960,32 @@ static int qmerge_merge_pkgs
   {
   case NTYPE_MERGE:
     printf("%s***%s merging %s\n", GREEN, NORM, atom);
-    if (pkg_merge(n->pkg, n->ipkg,
+    if (pkg_merge(state, n->pkg, n->ipkg,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
     break;
   case NTYPE_UNMERGE:
-    if (pkg_unmerge(n->pkg, NULL, NULL,
+    if (pkg_unmerge(state, n->pkg, NULL, NULL,
                     cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
     break;
   case NTYPE_REMERGE:
     printf("%s***%s remerging %s\n", YELLOW, NORM, atom);
-    if (pkg_merge(n->pkg, n->ipkg,
+    if (pkg_merge(state, n->pkg, n->ipkg,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
     break;
   case NTYPE_UPGRADE:
     printf("%s***%s upgrading %s [%s]\n",
            GREEN, NORM, atom, tree_pkg_atom(n->ipkg, false)->PVR);
-    if (pkg_merge(n->pkg, n->ipkg,
+    if (pkg_merge(state, n->pkg, n->ipkg,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
     break;
   case NTYPE_DOWNGRADE:
     printf("%s***%s downgrading %s [%s]\n",
            YELLOW, NORM, atom, tree_pkg_atom(n->ipkg, false)->PVR);
-    if (pkg_merge(n->pkg, n->ipkg,
+    if (pkg_merge(state, n->pkg, n->ipkg,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
     break;
@@ -1995,23 +1996,13 @@ static int qmerge_merge_pkgs
   /* post deps depend on us */
   array_for_each(n->postdeps, i, dep)
   {
-    if (qmerge_merge_pkgs(dep, parents_seen,
+    if (qmerge_merge_pkgs(state, dep, parents_seen,
                           cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
   }
 
   return 0;
 }
-
-typedef struct resolve_state_ {
-  tree_ctx *tree;
-  hash_t   *nodes;
-  hash_t   *blockers;
-  bool      unmerge:1;
-  bool      upgrade:1;      /* only upgrade versions for explicit arguments */
-  bool      upgrade_all:1;  /* deep upgrade, also for dependencies */
-  bool      interactive:1;
-} resolve_state_t;
 
 static array *qmerge_read_file
 (
@@ -2852,7 +2843,10 @@ int qmerge_main
   int             i;
   int             ret   = EXIT_SUCCESS;
   bool            abort;
-  bool            binpkgonly = false;
+  bool            binpkgonly  = false;
+  bool            interactive = true;
+  bool            uninstall   = false;
+  bool            nodeps      = false;
 
   if (argc < 2)
     qmerge_usage(EXIT_FAILURE);
@@ -2869,32 +2863,23 @@ int qmerge_main
   {
     switch (i)
     {
-    case 'f': force_download = 1;  break;
-    case 'F': force_download = 2;  break;
-    case 'K': binpkgonly = true;   break;
-    case 'U': uninstall = 1;       break;
-    case 'p': pretend = 1;         break;
-    case 'u': update_only = 1;     break;
-    case 'y': interactive = 0;     break;
-    case 'O': follow_rdepends = 0; break;
-    case 127: keep_work = true;    break;
-    case 128: debug = true;        break;
-    /* in case tree has https support, something like this could/should
-     * work:
-    case 'P': tree = tree_new(portroot, argv[optind], TREETYPE_BINPKG, false);
-              rstate.tree = tree_merge(rstate.tree, tree);
-     */
-              COMMON_GETOPTS_CASES(qmerge)
+    case 'K': binpkgonly = true;      break;
+    case 'U': uninstall = true;       break;
+    case 'p': pretend = 1;            break;
+    case 'u': rstate.upgrade = true;  break;
+    case 'y': interactive = false;    break;
+    case 'O': nodeps = true;          break;
+    case 127: rstate.keepwork = true; break;
+    case 128: rstate.debug = true;    break;
+    COMMON_GETOPTS_CASES(qmerge)
     }
   }
 
-  qmerge_strict = contains_set("strict", features) ? 1 : 0;
+  rstate.strict = contains_set("strict", features) ? 1 : 0;
 
-  if (uninstall != 0)
+  if (uninstall)
     rstate.unmerge = true;
-  if (update_only != 0)
-    rstate.upgrade = true;
-  if (interactive != 0)
+  if (interactive)
     rstate.interactive = true;
 
   /* add local binpkgs when present */
@@ -2963,6 +2948,8 @@ int qmerge_main
   }
 
   /* resolve the input */
+  /* TODO: respect nodeps */
+  (void)nodeps;
   abort = false;
   do
   {
@@ -3071,7 +3058,7 @@ int qmerge_main
       makeargv(config_protect, &cp_argc, &cp_argv);
       makeargv(config_protect_mask, &cpm_argc, &cpm_argv);
 
-      ret = qmerge_merge_pkgs(root, parents_seen,
+      ret = qmerge_merge_pkgs(&rstate, root, parents_seen,
                               cp_argc, cp_argv,
                               cpm_argc, cpm_argv);
       if (ret == 1)
