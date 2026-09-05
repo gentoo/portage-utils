@@ -1307,8 +1307,7 @@ atom_equality atom_compare_flg
     return _atom_compare_match(NEWER, pfx_op);
 
   /* binpkg-multi-instance support */
-  if (data->BUILDID > 0 ||
-      query->BUILDID > 0)
+  if (!(flags & ATOM_COMP_NOBUILDID))
   {
     if (data->BUILDID < query->BUILDID)
       return _atom_compare_match(OLDER, pfx_op);
