@@ -56,6 +56,7 @@ void xsystembash
             "--noprofile",
             "-c", command,
             (char *)NULL);
+      warnp("failed to launch " CONFIG_EPREFIX "bin/bash");
       /* Hrm, still here ?  Maybe no bash ... */
       _exit(execl("/bin/sh", "sh", "-c", command, (char *)NULL));
     }
@@ -80,6 +81,7 @@ void xsystembash
       newargv[argc] = NULL;
 
       execv(CONFIG_EPREFIX "bin/bash", (char *const *)newargv);
+      warnp("failed to launch " CONFIG_EPREFIX "bin/bash");
 
       /* Hrm, still here ?  Maybe no bash ... */
       newargv = &newargv[2];  /* shift, two args less */
