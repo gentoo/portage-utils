@@ -683,7 +683,7 @@ qkeyword_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			return EXIT_SUCCESS;
 
 		found = array_binsearch(metadata->email, data->qmaint,
-								(array_compar_cb *)strcmp, NULL) != NULL;
+								NULL, NULL) != NULL;
 
 		tree_close_metadata(metadata);
 		if (found)
