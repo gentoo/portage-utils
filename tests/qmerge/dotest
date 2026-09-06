@@ -22,6 +22,10 @@ mkportdir
 # copy packages into the ROOT
 cp -a "${as}/packages" "${ROOT}/"
 
+# create a world file to silence warnings about it
+mkdir -p "${ROOT}${PORTAGE_CONFIGROOT}"/var/lib/portage
+touch "${ROOT}${PORTAGE_CONFIGROOT}"/var/lib/portage/world
+
 set +e
 
 # sanity check on environment
