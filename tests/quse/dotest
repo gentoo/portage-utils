@@ -6,13 +6,17 @@ set -e
 
 mktmpdir
 
-mkportdir "${as}/portdir"
+export ROOT=${PWD}
+
+cp -a "${as}/portdir" "${PWD}"/
+
+mkportdir "/portdir"
 
 # check inference of PORTDIR with repos.conf
 q -ev PORTDIR
 q -ov
 
-d=${PORTDIR}/profiles
+d=${ROOT}${PORTDIR}/profiles
 entries() {
 	sed -e 's:#.*::' -e '/^$/d' "$1"
 }
