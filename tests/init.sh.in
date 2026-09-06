@@ -109,15 +109,16 @@ treedir() {
 mkportdir() {
 	export PORTDIR=$1
 
-	export PORTAGE_CONFIGROOT=${PWD}
-	mkdir -p etc/portage/
-	cat <<-EOF > etc/portage/repos.conf
+	# put config aside, so one can easily rm -Rf etc in tests
+	export PORTAGE_CONFIGROOT="/config_root"
+	mkdir -p "${ROOT}${PORTAGE_CONFIGROOT}"/etc/portage/
+	cat <<-EOF > "${ROOT}${PORTAGE_CONFIGROOT}"/etc/portage/repos.conf
 		[DEFAULT]
 		main-repo = utils-test
 		[utils-test]
 		location = ${PORTDIR}
 	EOF
-	cat <<-EOF > etc/portage/make.conf
+	cat <<-EOF > "${ROOT}${PORTAGE_CONFIGROOT}"/etc/portage/make.conf
 		# in absence of a valid profile
 		ACCEPT_KEYWORDS="~amd64"
 	EOF

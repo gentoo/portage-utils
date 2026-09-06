@@ -453,6 +453,8 @@ read_portage_file(const char *file, enum portage_file_type type, void *data)
 	hash_t *masks = data;
 
 	snprintf(npath, sizeof(npath), "%s%s", portroot, file + 1);
+	if (getenv("DEBUG"))
+		fprintf(stderr, "portage_file scanner %s\n", npath);
 	if ((dentslen = scandir(npath, &dents, NULL, alphasort)) > 0) {
 		int di;
 		struct dirent *d;
@@ -851,7 +853,7 @@ env_vars vars_to_read[] = {
 #define _Q_EVT(T, V, v, E, D) \
 	_Q_EV(T, V, .value.t = &v, .value_len = 0, D, E)
 
-	_Q_EVS(STR,  ROOT,                portroot,            true,  "/"),
+	_Q_EVS(STR,  ROOT,                portroot,            false, "/"),
 	_Q_EVS(STR,  ACCEPT_LICENSE,      accept_license,      true,  ""),
 	_Q_EVS(ISTR, INSTALL_MASK,        install_mask,        true,  ""),
 	_Q_EVS(ISTR, PKG_INSTALL_MASK,    pkg_install_mask,    true,  ""),
@@ -1023,7 +1025,7 @@ read_repos_conf(const char *repos_conf, char **primary)
 	int             count;
 
 	snprintf(top_conf, sizeof(top_conf), "%s%s%s",
-			 portroot, configroot, repos_conf);
+			 portroot, configroot + 1, repos_conf);
 	if (getenv("DEBUG"))
 		fprintf(stderr, "repos.conf.d scanner %s\n", top_conf);
 	count = scandir(top_conf, &confs, NULL, alphasort);
@@ -1064,49 +1066,62 @@ initialize_portage_env(void)
 {
 	char        pathbuf[_Q_PATH_MAX];
 	char        rpathbuf[_Q_PATH_MAX];
-	const char *s;
 	char       *primary_overlay;
+	const char *s;
 	env_vars   *var;
 	size_t      i;
+
+	struct {
+		const char *varname;
+		bool        trailingslash;
+	}           special_vars[] = {
+		{"ROOT",               true},
+		{"PORTAGE_CONFIGROOT", false}
+	};
 
 	package_masks = hash_new();
 	use_masks     = hash_new();
 
 	/* figure out where to find our config files, we need to do this
 	 * before handling the files, as it specifies where to find them */
-	s = getenv("PORTAGE_CONFIGROOT");
-	if (s == NULL)
+	for (i = 0; i < sizeof(special_vars) / sizeof(special_vars[0]); i++)
 	{
-		var = get_portage_env_var(vars_to_read, "PORTAGE_CONFIGROOT");
+		const char *source;
+		size_t      j;
+
+		var = get_portage_env_var(vars_to_read, special_vars[i].varname);
 		if (var == NULL)
 			exit(153); /* impossible */
-		s = var->default_value;
-		primary_overlay = (char *)"built-in";
-	}
-	else
-	{
-		primary_overlay = (char *)"PORTAGE_CONFIGROOT";
-	}
 
-	/* allow configroot to be empty */
-	if (s[0] != '/' &&
-		s[0] != '\0')
-		err("PORTAGE_CONFIGROOT must be an absolute path");
+		s = getenv(special_vars[i].varname);
+		if (s == NULL)
+		{
+			s = var->default_value;
+			source = "built-in";
+		}
+		else
+		{
+			source = special_vars[i].varname;
+		}
 
-	/* rstrip /-es */
-	i = strlen(s);
-	while (i > 0 &&
-		   s[i - 1] == '/')
-		i--;
-	/* construct configroot, ensure it is always at least / (contrast to
-	 * what we accept above) so in code we can always assume
-	 * configroot + 1 is valid */
-	snprintf(pathbuf, sizeof(pathbuf), "%s%.*s",
-			 i == 0 ? "/" : "", (int)i, s);
-	var = get_portage_env_var(vars_to_read, "PORTAGE_CONFIGROOT");
-	if (var == NULL)
-		exit(153); /* impossible */
-	set_portage_env_var(var, pathbuf, primary_overlay);
+		/* allow path to be empty, but absolute if set */
+		if (s[0] != '/' &&
+			s[0] != '\0')
+			err("%s must be an absolute path", special_vars[i].varname);
+
+		/* rstrip /-es */
+		j = strlen(s);
+		while (j > 0 &&
+			   s[j - 1] == '/')
+			j--;
+		/* construct path, ensure it is always at least / (contrast to
+		 * what we accept above) so in code we can always assume
+		 * path + 1 is valid */
+		snprintf(pathbuf, sizeof(pathbuf), "%s%.*s%s",
+				 j == 0 ? "/" : "", (int)j, s,
+				 j > 0 && special_vars[i].trailingslash ? "/" : "");
+		set_portage_env_var(var, pathbuf, source);
+	}
 
 	/* read overlays first so we can resolve repo references in profile
 	 * parent files (non PMS feature?) */
@@ -1337,17 +1352,6 @@ initialize_portage_env(void)
 		if (overlay == NULL)
 			overlay = "???";
 		var->src = xstrdup(overlay);
-	}
-
-	/* Make sure ROOT always ends in a slash */
-	var = get_portage_env_var(vars_to_read, "ROOT");
-	if (var == NULL)
-	    exit(153); /* impossible */
-
-	if (var->value_len == 0 || (*var->value.s)[var->value_len - 1] != '/') {
-		portroot = xrealloc(portroot, var->value_len + 2);
-		portroot[var->value_len] = '/';
-		portroot[var->value_len + 1] = '\0';
 	}
 
 	if (getenv("DEBUG")) {
