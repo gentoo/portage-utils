@@ -8,7 +8,7 @@
 set -e
 
 export ROOT=${as}/root
-export PORTAGE_CONFIGROOT=${as}/root
+export PORTAGE_CONFIGROOT=/
 
 mktmpdir
 
