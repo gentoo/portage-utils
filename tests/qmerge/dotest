@@ -11,7 +11,7 @@ export FEATURES='config-protect-if-modified'
 mktmpdir
 
 export ROOT=${PWD}/root
-export PORTAGE_TMPDIR=${PWD}
+export PORTAGE_TMPDIR=/var/tmp/portage
 export Q_VDB=/var/db/pkg
 export PKGDIR=/packages
 
