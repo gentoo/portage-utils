@@ -528,7 +528,7 @@ static int do_emerge_log(
 
 				atomset = hash_add(atomset, afmt, atom, (void **)&atomw);
 				if (atomw != NULL)
-					atom_implode(atom);
+					atom_implode(atomw);
 			}
 		}
 
