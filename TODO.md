@@ -28,6 +28,7 @@
 - parallel fetch binpkgs?
 - env is not saved/restored between pkg\_{pre,post}inst (see portage and REPO\_LAYOUT\_CONF\_WARN)
 - support TTL field in binpkgs file
+- show USE-flags enabled for binpkgs?
 
 # qdepends
 - -v should lookup whether packages are installed for || cases/colouring
