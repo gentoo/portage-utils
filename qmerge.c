@@ -2115,7 +2115,7 @@ static array *qmerge_read_file
   ret = eat_file_as_array(pth);
   if (ret == NULL)
   {
-    warnp("unable to read file /%s%s/%s", configroot, path, file);
+    warnp("unable to read file %s", pth);
     return NULL;
   }
 
