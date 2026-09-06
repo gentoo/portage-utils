@@ -374,7 +374,7 @@ size_t set_size
 }
 
 /* clear out a set */
-void clear_set
+void set_clear
 (
   set_t *q
 )
@@ -400,18 +400,24 @@ void clear_set
 }
 
 /* clear and free a set */
-void set_free(set_t *q)
+void set_free
+(
+  set_t *q
+)
 {
   if (q == NULL)
     return;
 
-  clear_set(q);
+  set_clear(q);
   free(q);
 }
 
 #ifdef EBUG
 static void
-set_print(const set_t *q)
+set_print
+(
+  const set_t *q
+)
 {
   set_elem_t *w;
   int         i;
