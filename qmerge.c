@@ -1466,6 +1466,11 @@ static int pkg_merge
       if (archive_entry_filetype(entry) != AE_IFREG)
         err("failed to unpack from gpkg: VDB entry '%s' is not a file", fname);
 
+      /* VDB isn't nested at this point, so ensure there's no such thing
+       * (also kills any path-stepping at the same time) */
+      if (strchr(fname, '/') != NULL)
+        err("failed to unpack from gpkg: VDB entry '%s' includes a dir", fname);
+
       archive_entry_set_pathname(entry, fname);
       fname = archive_entry_pathname(entry);  /* re-retrieve for errors */
 
