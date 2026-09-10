@@ -766,6 +766,7 @@ int quse_main(int argc, char **argv)
 							&state, state.match) > 0)
 					ret = EXIT_SUCCESS;
 				tree_close(t);
+				quse_last_atom = NULL;
 			}
 		}
 	}
