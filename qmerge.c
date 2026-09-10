@@ -1463,6 +1463,9 @@ static int pkg_merge
       if (*fname == '\0')
         continue;  /* bug #968185 */
 
+      if (archive_entry_filetype(entry) != AE_IFREG)
+        err("failed to unpack from gpkg: VDB entry '%s' is not a file", fname);
+
       archive_entry_set_pathname(entry, fname);
       fname = archive_entry_pathname(entry);  /* re-retrieve for errors */
 
