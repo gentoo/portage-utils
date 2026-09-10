@@ -1410,6 +1410,9 @@ static int pkg_merge
       if (strncmp(fname, "image.tar", sizeof("image.tar") - 1) == 0)
         fname = "image";
 
+      if (archive_entry_filetype(entry) != AE_IFREG)
+        err("failed to unpack from gpkg '%s': not a regular file", fname);
+
       archive_entry_set_pathname(entry, fname);
       fname = archive_entry_pathname(entry);  /* re-retrieve for errors */
 
