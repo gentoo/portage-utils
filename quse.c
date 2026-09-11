@@ -65,12 +65,12 @@ struct quse_state {
 	bool do_installed:1;
 	bool do_list:1;
 	bool need_full_atom:1;
-	depend_atom *match;
+	atom_ctx *match;
+	atom_ctx *last_atom;
 	regex_t *pregv;
 	const char *fmt;
 };
 
-static const atom_ctx *quse_last_atom;
 static char *_quse_getline_buf = NULL;
 static size_t _quse_getline_buflen = 0;
 #define GETLINE(FD, BUF, LEN) \
@@ -643,12 +643,12 @@ quse_results_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 			free(us.retv);
 			free(us.argv);
 		} else {
-			if (quse_last_atom == NULL ||
+			if (state->last_atom == NULL ||
 					verbose ||
-					strcmp(atom->CATEGORY, quse_last_atom->CATEGORY) != 0 ||
-					strcmp(atom->PN, quse_last_atom->PN) != 0)
+					strcmp(atom->CATEGORY, state->last_atom->CATEGORY) != 0 ||
+					strcmp(atom->PN, state->last_atom->PN) != 0)
 			{
-				quse_last_atom = atom;
+				state->last_atom = atom;
 				printf("%s: %s\n", atom_format(state->fmt, atom), v);
 			}
 		}
@@ -759,6 +759,7 @@ int quse_main(int argc, char **argv)
 		array_for_each(overlays, n, overlay) {
 			tree_ctx *t = tree_new(portroot, overlay, TREETYPE_EBUILD, false);
 			state.overlay = overlay;
+			state.last_atom = NULL;
 			if (t != NULL) {
 				state.repo =
 					state.need_full_atom ? tree_get_repo_name(t) : NULL;
@@ -766,7 +767,6 @@ int quse_main(int argc, char **argv)
 							&state, state.match) > 0)
 					ret = EXIT_SUCCESS;
 				tree_close(t);
-				quse_last_atom = NULL;
 			}
 		}
 	}
