@@ -1361,7 +1361,7 @@ static int pkg_merge
       errf("failed to write binpkg to tempfile");
     close(ofd);
 
-    if (pkg_verify_checksums(mpkg, buf, state->strict, !quiet) < 0)
+    if (pkg_verify_checksums(mpkg, buf, state->strict, !quiet) != 0)
       errf("package verification failed");
 #else
     errf("remote binhost support not compiled in!");
