@@ -130,7 +130,7 @@ static const struct applet_t {
 };
 
 /* Common usage for all applets */
-#define COMMON_FLAGS "vqChV"
+#define COMMON_FLAGS "vqChVb"
 #define COMMON_LONG_OPTS \
 	{"root",       a_argument, NULL, 0x1}, \
 	{"overlay",    a_argument, NULL, 0x2}, \
@@ -214,6 +214,9 @@ extern char *binpkg_format;
 extern array *overlays;
 extern array *overlay_names;
 extern array *overlay_src;
+extern array *binhosts;
+extern array *binhosts_names;
+extern array *binhosts_src;
 extern char *main_overlay;
 extern int twidth;
 extern bool nocolor;
