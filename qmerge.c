@@ -3082,6 +3082,14 @@ static dep_status_t qmerge_resolve
   return ret;
 }
 
+typedef struct {
+  char     *sync_uri;
+  char     *name;
+  char     *src;
+  unsigned  priority;
+  bool      verify_sig;
+} binhost_t;
+
 int qmerge_main
 (
   int    argc,
@@ -3143,9 +3151,11 @@ int qmerge_main
     if (tree != NULL)
       rstate.tree = tree_merge(rstate.tree, tree);
 
-    if (*binhost != '\0')
+    size_t       n;
+    binhost_t   *ele;
+    array_for_each(binhosts, n, ele)
     {
-      tree = tree_new(portroot, binhost, TREETYPE_BINPKG, true);
+      tree = tree_new(portroot, ele->sync_uri, TREETYPE_BINPKG, true);
       if (tree != NULL)
         rstate.tree = tree_merge(rstate.tree, tree);
     }
