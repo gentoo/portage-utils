@@ -18,6 +18,9 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 
+#ifdef HAVE_GPGME
+# include <gpgme.h>
+#endif
 #ifdef ENABLE_REMOTEBINHOST
 # include <curl/curl.h>
 #endif
@@ -1565,6 +1568,9 @@ int main(int argc, char **argv)
 		}
 	}
 
+#ifdef HAVE_GPGME
+	gpgme_check_version(NULL);
+#endif
 #ifdef ENABLE_REMOTEBINHOST
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 #endif

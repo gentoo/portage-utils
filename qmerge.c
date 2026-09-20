@@ -22,6 +22,7 @@
 #ifdef ENABLE_GPKG
 # include <archive.h>
 # include <archive_entry.h>
+# include <gpgme.h>
 #endif
 
 #include "stat-time.h"
@@ -1385,6 +1386,11 @@ static int pkg_merge
     struct archive       *t;
     struct archive_entry *entry;
     size_t                image_root_len;
+    bool                  require_sig;
+    bool                  has_sig;
+
+    require_sig = contains_set("binpkg-request-signature", features);
+    has_sig     = false;
 
     xchdir("temp");
     a = archive_read_new();
@@ -1394,9 +1400,11 @@ static int pkg_merge
       err("failed to open %s: %s", buf, archive_error_string(a));
     while (archive_read_next_header(a, &entry) == ARCHIVE_OK)
     {
+      char        tmpname[_Q_PATH_MAX];
       const char *fname = archive_entry_pathname(entry);
       size_t      size;
       la_int64_t  off;
+      bool        issig = false;
 
       /* drop pkg name dir prefix */
       fname = strchr(fname, '/');
@@ -1406,15 +1414,29 @@ static int pkg_merge
       if (*fname == '\0')
         continue;  /* bug #968185 */
 
-      /* drop compressor (and "tar" -- not to be misleading) for
-       * easy access below */
-      if (strncmp(fname, "metadata.tar", sizeof("metadata.tar") - 1) == 0)
-        fname = "metadata";
-      if (strncmp(fname, "image.tar", sizeof("image.tar") - 1) == 0)
-        fname = "image";
-
       if (archive_entry_filetype(entry) != AE_IFREG)
         err("failed to unpack from gpkg '%s': not a regular file", fname);
+
+      size = strlen(fname);
+      if (size > sizeof(".sig") - 1)
+      {
+        if (strcmp(&fname[size - (sizeof(".sig") - 1) - 1], ".sig") == 0)
+        {
+          issig   = true;
+          has_sig = true;
+        }
+      }
+
+      /* drop compressor (and "tar" -- not to be misleading) for
+       * easy access below */
+      if (strncmp(fname, "metadata.tar", sizeof("metadata.tar") - 1) == 0 ||
+          strncmp(fname, "image.tar", sizeof("image.tar") - 1) == 0)
+      {
+        snprintf(tmpname, sizeof(tmpname), "%s%s",
+                 fname[0] == 'm' ? "metadata" : "image",
+                 issig ? ".sig" : "");
+        fname = tmpname;
+      }
 
       archive_entry_set_pathname(entry, fname);
       fname = archive_entry_pathname(entry);  /* re-retrieve for errors */
@@ -1435,6 +1457,76 @@ static int pkg_merge
     archive_read_free(a);
     archive_write_close(t);
     archive_write_free(t);
+
+    if (require_sig)
+    {
+      if (!has_sig)
+        err("gpkg '%s' has no GPG signatures", p);
+    }
+
+    if (has_sig)
+    {
+      struct dirent       **files;
+      gpgme_ctx_t           ctx;
+      gpgme_data_t          sig    = NULL;
+      gpgme_data_t          data   = NULL;
+      gpgme_verify_result_t result;
+      gpgme_signature_t     s;
+      size_t                len;
+      int                   cnt;
+
+      /* all files need to be signed, if there's one missing, one must
+       * treat this package as faulty/evil/invalid/tampered with */
+
+      if (gpgme_new(&ctx) != GPG_ERR_NO_ERROR)
+        err("could not initialise gpgme!");
+
+      cnt = scandir(".", &files, filter_self_parent, NULL);
+      if (cnt > 0)  /* if no files, below will complain */
+      {
+        char fname[_Q_PATH_MAX];
+
+        for (i = 0; i < cnt; i++)
+        {
+          len = strlen(files[i]->d_name);
+          if (len > sizeof(".sig") - 1 &&
+              strcmp(&files[i]->d_name[len - (sizeof(".sig") - 1) - 1],
+                     ".sig") == 0)
+            continue;
+
+          /* blindly assume fname + .sig exists, and try to verify it,
+           * if not it is wrong nonetheless */
+          snprintf(fname, sizeof(fname), "%s.sig", files[i]->d_name);
+          if (gpgme_data_new_from_file(&sig, fname, 1) != GPG_ERR_NO_ERROR)
+            err("could not verify signature of '%s', "
+                "'%s' not found or unreadable", files[i]->d_name, fname);
+
+          if (gpgme_data_new_from_file(&data, files[i]->d_name, 1)
+              != GPG_ERR_NO_ERROR)
+            err("could not read '%s': file not found or unreadable",
+                files[i]->d_name);
+
+          if (gpgme_op_verify(ctx, sig, data, NULL) != GPG_ERR_NO_ERROR)
+            err("verification could not be performed!");
+
+          result = gpgme_op_verify_result(ctx);
+          for (s = result->signatures;
+               s != NULL;
+               s = s->next)
+          {
+            if (s->status != GPG_ERR_NO_ERROR)
+              err("verification of '%s' failed: %s",
+                  files[i]->d_name, gpgme_strerror(s->status));
+          }
+
+          gpgme_data_release(sig);
+          gpgme_data_release(data);
+          gpgme_release(ctx);
+        }
+      }
+      scandir_free(files, cnt);
+    }
+
     xchdir("..");
 
     /* now we unpacked everything, we can extract the VDB (metadata)
@@ -2632,9 +2724,13 @@ static dep_status_t qmerge_resolve_dep
       {
         node_t *err = qmerge_new_node(NTYPE_MASKED, node);
         err->pkg  = node->pkg;
-        err->atom = dep_node_atom(deps);
-        err->mask = xstrdup(atom_to_string(dep_node_mask(deps)));
         err->dep  = deps;
+        if (dep_node_fail_input(deps) != NULL)
+          err->atom = dep_node_fail_input(deps);
+        else
+          err->atom = dep_node_atom(deps);
+        if (err->atom != NULL)
+          err->mask = xstrdup(atom_to_string(err->atom));
         deps      = NULL;
         array_append(depends[i].store, err);
       }

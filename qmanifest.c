@@ -1780,8 +1780,6 @@ qmanifest_main(int argc, char **argv)
 		/* default mode: verify */
 		runfunc = process_dir_vrfy;
 
-	gpgme_check_version(NULL);
-
 	if (isoverlay || (!isdir && !isoverlay)) {
 		char *repo;
 		size_t repolen;
