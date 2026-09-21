@@ -153,19 +153,14 @@ void *array_append_copy
 {
   void *ret = NULL;
 
+  if (arr == NULL)
+    return NULL;
+
   if (data != NULL &&
       len > 0)
     ret = xmemdup(data, len);
 
-  if (array_append(arr, ret) == NULL &&
-      ret != NULL)
-  {
-    free(ret);
-    ret = NULL;
-  }
-
-  arr->sorted = false;
-  return ret;
+  return array_append(arr, ret);
 }
 
 /* moves all elements from src into dst, leaving src an empty array */
