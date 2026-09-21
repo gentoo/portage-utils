@@ -1,4 +1,9 @@
 /*
+ * Copyright 2005-2026 Gentoo Foundation
+ * Distributed under the terms of the GNU General Public License v2
+ */
+
+/*
  * June 30, 2001                 Manuel Novoa III
  *
  * All-integer version (hey, not everyone has floating point) of
@@ -29,55 +34,68 @@
 #include "human_readable.h"
 
 const char *
-make_human_readable_str(unsigned long long val,
-	unsigned long block_size, unsigned long display_unit)
+make_human_readable_str
+(
+  unsigned long long val,
+  unsigned long      block_size,
+  unsigned long      display_unit
+)
 {
-	static const char unit_chars[] = {
-		'\0', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'
-	};
+  static const char unit_chars[] = {
+    '\0', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'
+  };
+  static char       str[21];    /* Sufficient for 64 bit unsigned integers. */
 
-	unsigned frac; /* 0..9 - the fractional digit */
-	const char *u;
+  const char *u;
+  unsigned    frac; /* 0..9 - the fractional digit */
 
-	static char str[21];		/* Sufficient for 64 bit unsigned integers. */
+  if (val == 0)
+    return "0";
 
-	if (val == 0)
-		return "0";
+  if (block_size > 1)
+    val *= block_size;
+  frac = 0;
+  u    = unit_chars;
 
-	if (block_size > 1)
-		val *= block_size;
-	frac = 0;
-	u = unit_chars;
+  if (display_unit)
+  {
+    val += display_unit / 2;  /* Deal with rounding */
+    val /= display_unit;      /* Don't combine with the line above! */
+    /* will just print it as ulonglong (below) */
+    snprintf(str, sizeof(str), "%llu", val);
+  }
+  else
+  {
+    while ((val >= 1024)
+           /* && (u < unit_chars + sizeof(unit_chars) - 1) - always true */)
+    {
+      u++;
+      frac = (((unsigned)val % 1024) * 10 + 1024 / 2) / 1024;
+      val /= 1024;
+    }
+    if (frac >= 10)  /* we need to round up here */
+    {
+      val++;
+      frac = 0;
+    }
+    /* If block_size is 0, dont print fractional part */
+    if (block_size == 0)
+    {
+      if (frac >= 5)
+        val++;
+      snprintf(str, sizeof(str), "%llu%c", val, *u);
+    }
+    else if (u == unit_chars)
+    {
+      snprintf(str, sizeof(str), "%llu", val);
+    }
+    else
+    {
+      snprintf(str, sizeof(str), "%llu.%u%c", val, frac, *u);
+    }
+  }
 
-	if (display_unit) {
-		val += display_unit/2;  /* Deal with rounding */
-		val /= display_unit;    /* Don't combine with the line above! */
-		/* will just print it as ulonglong (below) */
-		snprintf(str, sizeof(str), "%llu", val);
-	} else {
-		while ((val >= 1024)
-		 /* && (u < unit_chars + sizeof(unit_chars) - 1) - always true */
-		) {
-			u++;
-			frac = (((unsigned)val % 1024) * 10 + 1024/2) / 1024;
-			val /= 1024;
-		}
-		if (frac >= 10) { /* we need to round up here */
-			++val;
-			frac = 0;
-		}
-		/* If block_size is 0, dont print fractional part */
-		if (block_size == 0) {
-			if (frac >= 5) {
-				++val;
-			}
-			snprintf(str, sizeof(str), "%llu%c", val, *u);
-		} else if (u == unit_chars) {
-			snprintf(str, sizeof(str), "%llu", val);
-		} else {
-			snprintf(str, sizeof(str), "%llu.%u%c", val, frac, *u);
-		}
-	}
-
-	return str;
+  return str;
 }
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
