@@ -89,6 +89,40 @@ static char *mylib_funcname
 }
 ``` 
 
+Scope braces
+------------
+
+Use balanced use of braces in if-else conditions.  If a single
+expression is used, braces may be omitted.  This is not a hard rule,
+however, in some scenarios such as multi-line conditions it reads easier
+to use braces even though a single expression is used.
+Examples:
+```
+  if (foo)
+    dobar = false;
+
+  if (foo)
+    fnord *= 2;
+  else
+    fnord  = 0;
+
+  if (bar == 0 &&
+      fnord == 1)
+  {
+    foo = true;
+  }
+
+  if (baz > 0)
+  {
+    do_foo(ctx);
+    visited = true;
+  }
+  else
+  {
+    warn("baz '%u' > 0", baz);
+  }
+```
+
 Comments
 --------
 
