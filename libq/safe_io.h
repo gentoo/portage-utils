@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -18,3 +18,5 @@ ssize_t safe_read(int fd, void *buf, size_t len);
 ssize_t safe_write(int fd, const void *buf, size_t len);
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
