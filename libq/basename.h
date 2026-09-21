@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 Gentoo Foundation
+ * Copyright 2010-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2010-2014 Mike Frysinger  - <vapier@gentoo.org>
@@ -17,3 +17,5 @@ const char *_basename(const char *filename);
 #define basename(x) _basename(x)
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
