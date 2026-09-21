@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2024 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2008 Ned Ludd        - <solar@gentoo.org>
@@ -11,20 +11,24 @@
 #define _CONTENTS_H 1
 
 typedef enum {
-	CONTENTS_DIR, CONTENTS_OBJ, CONTENTS_SYM
+  CONTENTS_DIR = 1,
+  CONTENTS_OBJ,
+  CONTENTS_SYM
 } contents_type;
 
 typedef struct {
-	contents_type type;
-	char *_data;
-	char *name;
-	char *sym_target;
-	char *digest;
-	char *mtime_str;
-	long mtime;
+  contents_type type;
+  char         *_data;
+  char         *name;
+  char         *sym_target;
+  char         *digest;
+  char         *mtime_str;
+  long          mtime;
 } contents_entry;
 
 contents_entry *contents_parse_line_len(char *line, size_t len);
 #define contents_parse_line(L) contents_parse_line_len(L, strlen(L))
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
