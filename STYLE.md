@@ -25,12 +25,27 @@ Indentation
 - For Vim users, this is set via
   `vim: set ts=2 sw=2 expandtab cino+=\:0:`
 
-Spacing after if, while, do, for, etc.
---------------------------------------
+Spacing after if, while, do, for, switch, etc.
+----------------------------------------------
 
 The `(cond)` block is separated by a space after the `if`, `while`,
 `do` and the like.  Similarly a space is between `for` and the `(`
 following it.
+
+Spacing for comparisons and operations, etc.
+--------------------------------------------
+
+Surround operators such as `<`, `+` with spaces.  Use a space after a
+`,` but not before.  Exceptions are the shorthands like `++`.  Examples:
+```
+  len++;
+
+  foo = bar + len - 1;
+
+  fnord(x, y, 2);
+
+  x = myarr[i + 1];
+```
 
 Conditions
 ----------
@@ -83,9 +98,12 @@ modifiers like `static` and its return type on their own line, followed
 by the name of the function on its own line, and then the argument
 variables formatted like the Declarations section above between `(` and
 `)` on their own lines, indented by one level (2 spaces) followed by the
-opening brace `{` for the function body.  Function names are where
-possible prefixed by their module name so they are clearly identified as
-to which module they belong.  An example of a static function:
+opening brace `{` for the function body.  The only exception to this is
+a parameterless function, for which the mandatory `(void)` can be placed
+directly after the function name to distinguish it clearly from any
+arguments, should there be any.  Function names are where possible
+prefixed by their module name so they are clearly identified as to which
+module they belong.  An example of a static function:
 ```
 static char *mylib_funcname
 (
@@ -93,6 +111,11 @@ static char *mylib_funcname
   int      id,
   char    *name
 )
+{
+  /* something */
+}
+
+mylib_t *mylib_new(void)
 {
   /* something */
 }
@@ -165,3 +188,31 @@ the `=` alignment.  Example:
   ret->mypoint = &this_thing;
 ```
 
+strcmp, strncmp and memcmp
+--------------------------
+
+Use explicit comparisons against the return value of these functions.
+In particular avoid constructs like `!strcmp(...)` as that reads
+confusing like a negative statement, while it actually evaluates to
+`true` for the matching condition; just use `strcmp(...) == 0` instead.
+
+memset
+------
+
+Use the `VAL_CLEAR` and `VALP_CLEAR` macros to clear structs, arrays and
+pointers.  Simple examples are:
+```
+  struct stat st;
+
+  VAL_CLEAR(st);
+
+...
+
+  struct {
+    char buf[16];
+    bool set;
+  } *myelem;
+
+  myelem = xmalloc(sizeof(*myelem));
+  VALP_CLEAR(myelem->buf);
+```
