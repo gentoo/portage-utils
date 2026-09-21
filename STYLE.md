@@ -25,6 +25,13 @@ Indentation
 - For Vim users, this is set via
   `vim: set ts=2 sw=2 expandtab cino+=\:0:`
 
+Spacing after if, while, do, for, etc.
+--------------------------------------
+
+The `(cond)` block is separated by a space after the `if`, `while`,
+`do` and the like.  Similarly a space is between `for` and the `(`
+following it.
+
 Conditions
 ----------
 
@@ -53,7 +60,9 @@ are aligned such that the type and the variable name are in two columns.
 Pointer asterisks (`*`) are in front of the variable name's alignment.
 Try to allow the compiler to make proper alignment, e.g. not having to
 waste space by alignment rules by going from large to small storage
-sizes.  If there are initialisations align them in their own column too
+sizes.  Do not declare multiple variables on the same line, use separate
+declarations for extra clarity and avoid mistakes with pointer types.
+If there are initialisations align them in their own column too
 on the `=`. Example:
 ```
   char      buf[2048];
@@ -95,7 +104,8 @@ Scope braces
 Use balanced use of braces in if-else conditions.  If a single
 expression is used, braces may be omitted.  This is not a hard rule,
 however, in some scenarios such as multi-line conditions it reads easier
-to use braces even though a single expression is used.
+to use braces even though a single expression is used.  For do-while
+loops, put the while on a new line after the scope closing `}`.
 Examples:
 ```
   if (foo)
@@ -121,6 +131,12 @@ Examples:
   {
     warn("baz '%u' > 0", baz);
   }
+
+  do
+  {
+    /* blah */
+  }
+  while (mycondition);
 ```
 
 Comments
@@ -129,4 +145,23 @@ Comments
 Use C-style comments, not C++/C99 style comments.  That means, don't use
 `//` to comment lines, use `/*` and `*/` blocks instead.  You can use
 Java-style comments for functions, but this is not a requirement.
+
+Assignments
+-----------
+
+Blocks of assignments should be aligned on the `=` character to read
+more tabular.  Shorthand characters such as `+`, `-`, `*`, etc go before
+the `=` alignment.  Example:
+```
+  isset   = true;
+  nmemb  += this_thing;
+  ret    += this_thing;
+  ptr    -= this_thing;
+  fnordzy = myfunc(this_thing);
+
+  ret          = xzalloc(sizeof(*ret));
+  ret->memb1   = foo;
+  ret->memb2   = true;
+  ret->mypoint = &this_thing;
+```
 
