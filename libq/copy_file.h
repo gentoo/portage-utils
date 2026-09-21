@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2011-2016 Mike Frysinger  - <vapier@gentoo.org>
@@ -14,3 +14,5 @@ int copy_file_fd(int fd_src, int fd_dst);
 int copy_file(FILE *src, FILE *dst);
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
