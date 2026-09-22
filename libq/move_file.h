@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2021 Gentoo Authors
+ * Copyright 2005-2026 Gentoo Authors
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2005-2010 Ned Ludd        - <solar@gentoo.org>
@@ -19,3 +19,5 @@ int move_file(int rootfd_src, const char *name_src,
 		  	  struct stat *stat_src);
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
