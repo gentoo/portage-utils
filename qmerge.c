@@ -2813,7 +2813,7 @@ static dep_status_t qmerge_resolve
     if (root->type != NTYPE_ROOT)
       return DEP_FAIL;
 
-    q = q_profile_walk("packages", qmerge_add_set_system, set_new());
+    q = profile_walk_rows("packages", qmerge_add_set_system, set_new());
 
     alist = array_new();
     a     = set_keys(q);

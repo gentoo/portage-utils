@@ -19,6 +19,9 @@
 - add test for qsearch to avoid repetitions like
   https://bugs.gentoo.org/701470
 
+# main
+- move profile parsing/reading stuff to libq/profile
+
 # qmerge
 - needs safe deleting (merge in place rather than unmerge;merge)
 - multiple binary repos?
