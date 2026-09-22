@@ -271,7 +271,7 @@ qcheck_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 
 			/* compute hash for file */
 			hash_cb_t hash_cb =
-				state->undo_prelink ? hash_cb_prelink_undo : NULL;
+				state->undo_prelink ? prelink_undo_hash_cb : NULL;
 			f_digest = hash_file_at_cb(portroot_fd,
 									   entry->name + 1, hash_algo, hash_cb);
 

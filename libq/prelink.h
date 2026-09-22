@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -9,6 +9,8 @@
 #include <stdbool.h>
 
 bool prelink_available(void);
-int hash_cb_prelink_undo(int fd, const char *filename);
+int  prelink_undo_hash_cb(int fd, const char *filename);
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
