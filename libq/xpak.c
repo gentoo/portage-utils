@@ -44,361 +44,420 @@
 #define TBZ2_FOOTER_LEN      (TBZ2_END_MSG_LEN + TBZ2_END_SIZE_LEN)
 
 typedef struct {
-	void *ctx;
-	FILE *fp;
-	unsigned int xpakstart;  /* offset in the file for XPAKPACK */
-	unsigned int index_len;
-	unsigned int data_len;
-	char *index;
-	char *data;
+  void        *ctx;
+  FILE        *fp;
+  char        *index;
+  char        *data;
+  unsigned int xpakstart;  /* offset in the file for XPAKPACK */
+  unsigned int index_len;
+  unsigned int data_len;
 } _xpak_archive;
 
-static void _xpak_walk_index(
-		_xpak_archive *x,
-		xpak_callback_t func)
+static void
+_xpak_walk_index
+(
+  _xpak_archive  *x,
+  xpak_callback_t func
+)
 {
-	unsigned int pathname_len;
-	unsigned int data_offset;
-	unsigned int data_len;
-	char *p;
-	char pathname[100];
+  char        *p;
+  char         pathname[100];
+  unsigned int pathname_len;
+  unsigned int data_offset;
+  unsigned int data_len;
 
-	p = x->index;
-	while ((p - x->index) < x->index_len) {
-		pathname_len = READ_BE_INT32((unsigned char*)p);
-		if (pathname_len >= sizeof(pathname))
-			err("pathname length %d exceeds limit %zd",
-					pathname_len, sizeof(pathname));
-		p += 4;
-		memcpy(pathname, p, pathname_len);
-		pathname[pathname_len] = '\0';
-		if (strchr(pathname, '/') != NULL || strchr(pathname, '\\') != NULL)
-			err("Index contains a file with a path: '%s'", pathname);
-		p += pathname_len;
-		data_offset = READ_BE_INT32((unsigned char*)p);
-		p += 4;
-		data_len = READ_BE_INT32((unsigned char*)p);
-		p += 4;
+  p = x->index;
+  while ((p - x->index) < x->index_len)
+  {
+    pathname_len = READ_BE_INT32((unsigned char *)p);
+    if (pathname_len >= sizeof(pathname))
+      err("pathname length %d exceeds limit %zd",
+          pathname_len, sizeof(pathname));
+    p += 4;
+    memcpy(pathname, p, pathname_len);
+    pathname[pathname_len] = '\0';
+    if (strchr(pathname, '/') != NULL ||
+        strchr(pathname, '\\') != NULL)
+      err("Index contains a file with a path: '%s'", pathname);
+    p += pathname_len;
+    data_offset = READ_BE_INT32((unsigned char *)p);
+    p += 4;
+    data_len = READ_BE_INT32((unsigned char *)p);
+    p += 4;
 
-		/* check offset and len individually to deal with overflow */
-		if (x->data != NULL &&
-				(data_offset > x->data_len ||
-				 data_len > x->data_len ||
-				 data_offset + data_len > x->data_len))
-			err("Data for '%s' is out of bounds: offset=%u, len=%u, size=%u\n",
-					pathname, data_len, data_offset, x->data_len);
+    /* check offset and len individually to deal with overflow */
+    if (x->data != NULL &&
+        (data_offset > x->data_len ||
+         data_len > x->data_len ||
+         data_offset + data_len > x->data_len))
+      err("Data for '%s' is out of bounds: offset=%u, len=%u, size=%u\n",
+          pathname, data_len, data_offset, x->data_len);
 
-		(*func)(x->ctx, pathname, pathname_len,
-				data_offset, data_len, x->data);
-	}
+    (*func)(x->ctx, pathname, pathname_len,
+            data_offset, data_len, x->data);
+  }
 }
 
-static _xpak_archive *_xpak_open(const int fd)
+static _xpak_archive *
+_xpak_open
+(
+  const int fd
+)
 {
-	static _xpak_archive ret;
-	char buf[XPAK_START_LEN];
+  static _xpak_archive ret;
+  char                 buf[XPAK_START_LEN];
 
-	/* init the file */
-	memset(&ret, 0x00, sizeof(ret));
-	if ((ret.fp = fdopen(fd, "r")) == NULL)
-		return NULL;
+  /* init the file */
+  VAL_CLEAR(ret);
+  if ((ret.fp = fdopen(fd, "r")) == NULL)
+    return NULL;
 
-	/* verify this xpak doesn't suck */
-	if (fread(buf, 1, XPAK_START_LEN, ret.fp) != XPAK_START_LEN)
-		goto close_and_ret;
-	if (memcmp(buf, XPAK_START_MSG, XPAK_START_MSG_LEN) != 0) {
-		/* stream not positioned at XPAKSTART, let's see if we can
-		 * reposition the stream */
-		if (fseek(ret.fp, -TBZ2_FOOTER_LEN, SEEK_END) == 0)
-		{
-			if (fread(buf, 1, TBZ2_FOOTER_LEN, ret.fp) != TBZ2_FOOTER_LEN)
-				goto close_and_ret;
+  /* verify this xpak doesn't suck */
+  if (fread(buf, 1, XPAK_START_LEN, ret.fp) != XPAK_START_LEN)
+    goto close_and_ret;
+  if (memcmp(buf, XPAK_START_MSG, XPAK_START_MSG_LEN) != 0)
+  {
+    /* stream not positioned at XPAKSTART, let's see if we can
+     * reposition the stream */
+    if (fseek(ret.fp, -TBZ2_FOOTER_LEN, SEEK_END) == 0)
+    {
+      if (fread(buf, 1, TBZ2_FOOTER_LEN, ret.fp) != TBZ2_FOOTER_LEN)
+        goto close_and_ret;
 
-			if (memcmp(buf + TBZ2_END_SIZE_LEN,
-						TBZ2_END_MSG, TBZ2_END_MSG_LEN) == 0)
-			{
-				int xpaklen = READ_BE_INT32(buf);
+      if (memcmp(buf + TBZ2_END_SIZE_LEN,
+                 TBZ2_END_MSG, TBZ2_END_MSG_LEN) == 0)
+      {
+        int xpaklen = READ_BE_INT32(buf);
 
-				if (fseek(ret.fp, -(xpaklen + TBZ2_FOOTER_LEN), SEEK_END) == 0)
-				{
-					ret.xpakstart = (unsigned int)ftell(ret.fp);
-					if (fread(buf, 1, XPAK_START_LEN, ret.fp) != XPAK_START_LEN)
-						goto close_and_ret;
-					if (memcmp(buf, XPAK_START_MSG, XPAK_START_MSG_LEN) == 0)
-						goto setup_lens;
-				}
-			}
-		}
-		warn("Not an xpak file");
-		goto close_and_ret;
-	}
-	ret.xpakstart = 0;  /* pure xpak file */
+        if (fseek(ret.fp, -(xpaklen + TBZ2_FOOTER_LEN), SEEK_END) == 0)
+        {
+          ret.xpakstart = (unsigned int)ftell(ret.fp);
+          if (fread(buf, 1, XPAK_START_LEN, ret.fp) != XPAK_START_LEN)
+            goto close_and_ret;
+          if (memcmp(buf, XPAK_START_MSG, XPAK_START_MSG_LEN) == 0)
+            goto setup_lens;
+        }
+      }
+    }
+    warn("Not an xpak file");
+    goto close_and_ret;
+  }
+  ret.xpakstart = 0;  /* pure xpak file */
 
 setup_lens:
-	/* calc index and data sizes */
-	ret.index_len = READ_BE_INT32((unsigned char*)buf+XPAK_START_MSG_LEN);
-	ret.data_len = READ_BE_INT32((unsigned char*)buf+XPAK_START_MSG_LEN+4);
-	if (!ret.index_len || !ret.data_len) {
-		warn("Skipping empty archive");
-		goto close_and_ret;
-	}
+  /* calc index and data sizes */
+  ret.index_len = READ_BE_INT32((unsigned char *)buf + XPAK_START_MSG_LEN);
+  ret.data_len  = READ_BE_INT32((unsigned char *)buf + XPAK_START_MSG_LEN + 4);
+  if (ret.index_len == 0 ||
+      ret.data_len == 0)
+  {
+    warn("Skipping empty archive");
+    goto close_and_ret;
+  }
 
-	return &ret;
+  return &ret;
 
 close_and_ret:
-	if (ret.fp != stdin)
-		fclose(ret.fp);
-	return NULL;
-}
-
-static void _xpak_close(_xpak_archive *x)
-{
-	fclose(x->fp);
-}
-
-int
-xpak_process_fd(
-	int fd,
-	bool get_data,
-	void *ctx,
-	xpak_callback_t func)
-{
-	_xpak_archive *x;
-	char buf[BUFSIZE];
-	size_t in;
-
-	x = _xpak_open(fd);
-	if (!x)
-		return -1;
-
-	x->ctx = ctx;
-	x->index = buf;
-
-	if (x->index_len >= sizeof(buf))
-		err("index length %d exceeds limit %zd", x->index_len, sizeof(buf));
-	in = fread(x->index, 1, x->index_len, x->fp);
-	if (in != (size_t)x->index_len)
-		err("insufficient data read, got %zd, requested %d", in, x->index_len);
-
-	if (get_data) {
-		/* the xpak may be large (like when it has CONTENTS) #300744 */
-		x->data = xmalloc(x->data_len);
-
-		in = fread(x->data, 1, x->data_len, x->fp);
-		if (in != (size_t)x->data_len)
-			err("insufficient data read, got %zd, requested %d",
-					in, x->data_len);
-	} else {
-		x->data = NULL;
-		x->data_len = 0;
-	}
-
-	_xpak_walk_index(x, func);
-
-	_xpak_close(x);
-
-	if (get_data)
-		free(x->data);
-
-	return x->xpakstart;
-}
-
-int
-xpak_process(
-	const char *file,
-	bool get_data,
-	void *ctx,
-	xpak_callback_t func)
-{
-	int fd = -1;
-	int ret;
-
-	if (file[0] == '-' && file[1] == '\0')
-		fd = 0;
-	else if ((fd = open(file, O_RDONLY | O_CLOEXEC)) == -1)
-		return -1;
-
-	ret = xpak_process_fd(fd, get_data, ctx, func);
-	if (ret < 0)
-		warn("Unable to open file '%s'", file);
-
-	return ret;
+  if (ret.fp != stdin)
+    fclose(ret.fp);
+  return NULL;
 }
 
 static void
-_xpak_add_file(
-		int fd,
-		const char *filename,
-		struct stat *st,
-		FILE *findex,
-		int *index_len,
-		FILE *fdata,
-		int *data_len,
-		int verbose)
+_xpak_close
+(
+  _xpak_archive *x
+)
 {
-	FILE *fin;
-	unsigned char intbuf[4];
-	unsigned char *p = intbuf;
-	const char *basefile;
-	int in_len;
-
-	basefile = basename(filename);
-
-	if (verbose == 1)
-		printf("%s\n", basefile);
-	else if (verbose)
-		printf("%s @ offset byte %i\n", basefile, *data_len);
-
-	/* write out the (pathname_len) */
-	in_len = strlen(basefile);
-	WRITE_BE_INT32(p, in_len);
-	fwrite(p, 1, 4, findex);
-	/* write out the pathname */
-	fwrite(basefile, 1, in_len, findex);
-	/* write out the (data_offset) */
-	WRITE_BE_INT32(p, *data_len);
-	fwrite(p, 1, 4, findex);
-
-	*index_len += 4 + in_len + 4 + 4;
-
-	/* now open the file, get (data_len),
-	 * and append the file to the data file */
-	if ((fin = fdopen(fd, "r")) == NULL) {
-		warnp("could not open for reading: %s", filename);
-		WRITE_BE_INT32(p, 0);
-		fwrite(p, 1, 4, findex);
-		return;
-	}
-
-	in_len = st->st_size;
-	/* the xpak format can only store files whose size is a 32bit int
-	 * so we have to make sure we don't store a big file */
-	if (in_len != st->st_size) {
-		warnf("File is too big: %zu", (size_t)st->st_size);
-		fclose(fin);
-		WRITE_BE_INT32(p, 0);
-		fwrite(p, 1, 4, findex);
-		return;
-	}
-
-	WRITE_BE_INT32(p, in_len);
-	fwrite(p, 1, 4, findex);
-	copy_file(fin, fdata);
-	fclose(fin);
-
-	*data_len += in_len;
+  fclose(x->fp);
 }
 
 int
-xpak_create(
-		int dir_fd,
-		const char *file,
-		int argc,
-		char **argv,
-		bool append,
-		int verbose)
+xpak_process_fd
+(
+  int             fd,
+  bool            get_data,
+  void           *ctx,
+  xpak_callback_t func
+)
 {
-	FILE *findex, *fdata, *fout;
-	struct dirent **dir = NULL;
-	int i, fidx, numfiles;
-	struct stat st;
-	char path[_Q_PATH_MAX];
-	unsigned char intbuf[4];
-	unsigned char *p;
-	int index_len, data_len;
+  char           buf[BUFSIZE];
+  _xpak_archive *x;
+  size_t         in;
 
-	if (argc == 0)
-		err("Create usage: <xpak output> <files/dirs to pack>");
+  x = _xpak_open(fd);
+  if (!x)
+    return -1;
 
-	if (strlen(file) >= sizeof(path)-6)
-		err("Pathname is too long: %s", file);
+  x->ctx   = ctx;
+  x->index = buf;
 
-	if ((fout = fopen(file, append ? "a" : "w")) == NULL) {
-		warnp("could not open output: %s", file);
-		return 1;
-	}
-	strcpy(path, file); strcat(path, ".index");
-	if ((findex = fopen(path, "w+")) == NULL) {
-		warnp("could not open output: %s", path);
-		fclose(fout);
-		return 1;
-	}
-	strcpy(path, file); strcat(path, ".dat");
-	if ((fdata = fopen(path, "w+")) == NULL) {
-		warnp("could not open output: %s", path);
-		fclose(fout);
-		fclose(findex);
-		return 1;
-	}
+  if (x->index_len >= sizeof(buf))
+    err("index length %d exceeds limit %zd", x->index_len, sizeof(buf));
+  in = fread(x->index, 1, x->index_len, x->fp);
+  if (in != (size_t)x->index_len)
+    err("insufficient data read, got %zd, requested %d", in, x->index_len);
 
-	index_len = data_len = 0;
-	for (i = 0; i < argc; ++i) {
-		int fd;
+  if (get_data)
+  {
+    /* the xpak may be large (like when it has CONTENTS) #300744 */
+    x->data = xmalloc(x->data_len);
 
-		if (fstatat(dir_fd, argv[i], &st, 0)) {
-			warnp("fstatat(%s) failed", argv[i]);
-			continue;
-		}
-		if (S_ISDIR(st.st_mode)) {
-			dir = NULL;
-			if ((numfiles =
-						scandir(argv[i], &dir, filter_hidden, alphasort)) < 0)
-			{
-				warn("Directory '%s' is empty; skipping", argv[i]);
-				continue;
-			}
-			for (fidx = 0; fidx < numfiles; ++fidx) {
-				int ret = snprintf(path, sizeof(path), "%s/%s",
-						argv[i], dir[fidx]->d_name);
+    in = fread(x->data, 1, x->data_len, x->fp);
+    if (in != (size_t)x->data_len)
+      err("insufficient data read, got %zd, requested %d",
+          in, x->data_len);
+  }
+  else
+  {
+    x->data = NULL;
+    x->data_len = 0;
+  }
 
-				if (ret < 0 || (size_t)ret >= sizeof(path)) {
-					warn("skipping path too long: %s/%s",
-							argv[i], dir[fidx]->d_name);
-					continue;
-				}
+  _xpak_walk_index(x, func);
 
-				fd = openat(dir_fd, path, O_RDONLY|O_CLOEXEC);
-				if (fd < 0 || fstat(fd, &st) < 0) {
-					warnp("could not read %s", path);
-					continue;
-				}
-				_xpak_add_file(fd, path, &st,
-						findex, &index_len, fdata, &data_len, verbose);
-				/* _xpak_add_file closes fd */
-			}
-			scandir_free(dir, numfiles);
-		} else if (S_ISREG(st.st_mode)) {
-			fd = openat(dir_fd, argv[i], O_RDONLY|O_CLOEXEC);
-			if (fd < 0 || fstat(fd, &st) < 0) {
-				warnp("could not read %s", path);
-				continue;
-			}
-			_xpak_add_file(fd, argv[i], &st,
-					findex, &index_len, fdata, &data_len, verbose);
-			/* _xpak_add_file closes fd */
-		} else
-			warn("Skipping non file/directory '%s'", argv[i]);
-	}
+  _xpak_close(x);
 
-	rewind(findex);
-	rewind(fdata);
+  if (get_data)
+    free(x->data);
 
-	/* "XPAKPACK" + (index_len) + (data_len) + index + data + "XPAKSTOP" */
-	fwrite(XPAK_START_MSG, 1, XPAK_START_MSG_LEN, fout); /* "XPAKPACK" */
-	p = intbuf;
-	WRITE_BE_INT32(p, index_len);
-	fwrite(p, 1, 4, fout);                               /* (index_len) */
-	WRITE_BE_INT32(p, data_len);
-	fwrite(p, 1, 4, fout);                               /* (data_len) */
-	copy_file(findex, fout);                       /* index */
-	copy_file(fdata, fout);                        /* data */
-	fwrite(XPAK_END_MSG, 1, XPAK_END_MSG_LEN, fout);     /* "XPAKSTOP" */
-
-	strcpy(path, file); strcat(path, ".index"); unlink(path);
-	strcpy(path, file); strcat(path, ".dat");   unlink(path);
-	fclose(findex);
-	fclose(fdata);
-	fclose(fout);
-
-	return 0;
+  return x->xpakstart;
 }
+
+int
+xpak_process
+(
+  const char     *file,
+  bool            get_data,
+  void           *ctx,
+  xpak_callback_t func
+)
+{
+  int fd = -1;
+  int ret;
+
+  if (file[0] == '-' &&
+      file[1] == '\0')
+  {
+    fd = 0;
+  }
+  else if ((fd = open(file, O_RDONLY | O_CLOEXEC)) == -1)
+  {
+    return -1;
+  }
+
+  ret = xpak_process_fd(fd, get_data, ctx, func);
+  if (ret < 0)
+    warn("Unable to open file '%s'", file);
+
+  return ret;
+}
+
+static void
+_xpak_add_file
+(
+  int          fd,
+  const char  *filename,
+  struct stat *st,
+  FILE        *findex,
+  int         *index_len,
+  FILE        *fdata,
+  int         *data_len,
+  int          verbose
+)
+{
+  FILE          *fin;
+  const char    *basefile;
+  unsigned char *p;
+  unsigned char  intbuf[4];
+  int            in_len;
+
+  basefile = basename(filename);
+
+  if (verbose == 1)
+    printf("%s\n", basefile);
+  else if (verbose > 1)
+    printf("%s @ offset byte %i\n", basefile, *data_len);
+
+  /* write out the (pathname_len) */
+  p      = intbuf;
+  in_len = strlen(basefile);
+  WRITE_BE_INT32(p, in_len);
+  fwrite(p, 1, 4, findex);
+  /* write out the pathname */
+  fwrite(basefile, 1, in_len, findex);
+  /* write out the (data_offset) */
+  WRITE_BE_INT32(p, *data_len);
+  fwrite(p, 1, 4, findex);
+
+  *index_len += 4 + in_len + 4 + 4;
+
+  /* now open the file, get (data_len),
+   * and append the file to the data file */
+  if ((fin = fdopen(fd, "r")) == NULL)
+  {
+    warnp("could not open for reading: %s", filename);
+    WRITE_BE_INT32(p, 0);
+    fwrite(p, 1, 4, findex);
+    return;
+  }
+
+  in_len = st->st_size;
+  /* the xpak format can only store files whose size is a 32bit int
+   * so we have to make sure we don't store a big file */
+  if (in_len != st->st_size)
+  {
+    warnf("File is too big: %zu", (size_t)st->st_size);
+    fclose(fin);
+    WRITE_BE_INT32(p, 0);
+    fwrite(p, 1, 4, findex);
+    return;
+  }
+
+  WRITE_BE_INT32(p, in_len);
+  fwrite(p, 1, 4, findex);
+  copy_file(fin, fdata);
+  fclose(fin);
+
+  *data_len += in_len;
+}
+
+int
+xpak_create
+(
+  int         dir_fd,
+  const char *file,
+  int         argc,
+  char      **argv,
+  bool        append,
+  int         verbose
+)
+{
+  char            path[_Q_PATH_MAX];
+  struct stat     st;
+  FILE           *findex;
+  FILE           *fdata;
+  FILE           *fout;
+  struct dirent **dir     = NULL;
+  unsigned char  *p;
+  unsigned char   intbuf[4];
+  int             i;
+  int             fidx;
+  int             numfiles;
+  int             index_len;
+  int             data_len;
+
+  if (argc == 0)
+    err("Create usage: <xpak output> <files/dirs to pack>");
+
+  if (strlen(file) >= sizeof(path) - (sizeof(".index") - 1))
+    err("Pathname is too long: %s", file);
+
+  if ((fout = fopen(file, append ? "a" : "w")) == NULL)
+  {
+    warnp("could not open output: %s", file);
+    return 1;
+  }
+  strcpy(path, file); strcat(path, ".index");
+  if ((findex = fopen(path, "w+")) == NULL)
+  {
+    warnp("could not open output: %s", path);
+    fclose(fout);
+    return 1;
+  }
+  strcpy(path, file); strcat(path, ".dat");
+  if ((fdata = fopen(path, "w+")) == NULL)
+  {
+    warnp("could not open output: %s", path);
+    fclose(fout);
+    fclose(findex);
+    return 1;
+  }
+
+  index_len = data_len = 0;
+  for (i = 0; i < argc; ++i)
+  {
+    int fd;
+
+    if (fstatat(dir_fd, argv[i], &st, 0))
+    {
+      warnp("fstatat(%s) failed", argv[i]);
+      continue;
+    }
+    if (S_ISDIR(st.st_mode))
+    {
+      dir = NULL;
+      if ((numfiles = scandir(argv[i], &dir, filter_hidden, alphasort)) < 0)
+      {
+        warn("Directory '%s' is empty; skipping", argv[i]);
+        continue;
+      }
+      for (fidx = 0; fidx < numfiles; fidx++)
+      {
+        int ret = snprintf(path, sizeof(path), "%s/%s",
+                           argv[i], dir[fidx]->d_name);
+
+        if (ret < 0 ||
+            (size_t)ret >= sizeof(path))
+        {
+          warn("skipping path too long: %s/%s",
+               argv[i], dir[fidx]->d_name);
+          continue;
+        }
+
+        fd = openat(dir_fd, path, O_RDONLY|O_CLOEXEC);
+        if (fd < 0 ||
+            fstat(fd, &st) < 0)
+        {
+          warnp("could not read %s", path);
+          continue;
+        }
+        _xpak_add_file(fd, path, &st,
+                       findex, &index_len, fdata, &data_len, verbose);
+        /* _xpak_add_file closes fd */
+      }
+      scandir_free(dir, numfiles);
+    }
+    else if (S_ISREG(st.st_mode))
+    {
+      fd = openat(dir_fd, argv[i], O_RDONLY|O_CLOEXEC);
+      if (fd < 0 ||
+          fstat(fd, &st) < 0)
+      {
+        warnp("could not read %s", path);
+        continue;
+      }
+      _xpak_add_file(fd, argv[i], &st,
+                     findex, &index_len, fdata, &data_len, verbose);
+      /* _xpak_add_file closes fd */
+    }
+    else
+    {
+      warn("Skipping non file/directory '%s'", argv[i]);
+    }
+  }
+
+  rewind(findex);
+  rewind(fdata);
+
+  /* "XPAKPACK" + (index_len) + (data_len) + index + data + "XPAKSTOP" */
+  fwrite(XPAK_START_MSG, 1, XPAK_START_MSG_LEN, fout); /* "XPAKPACK" */
+  p = intbuf;
+  WRITE_BE_INT32(p, index_len);
+  fwrite(p, 1, 4, fout);                               /* (index_len) */
+  WRITE_BE_INT32(p, data_len);
+  fwrite(p, 1, 4, fout);                               /* (data_len) */
+  copy_file(findex, fout);                       /* index */
+  copy_file(fdata, fout);                        /* data */
+  fwrite(XPAK_END_MSG, 1, XPAK_END_MSG_LEN, fout);     /* "XPAKSTOP" */
+
+  strcpy(path, file); strcat(path, ".index"); unlink(path);
+  strcpy(path, file); strcat(path, ".dat");   unlink(path);
+  fclose(findex);
+  fclose(fdata);
+  fclose(fout);
+
+  return 0;
+}
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
