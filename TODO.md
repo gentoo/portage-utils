@@ -14,7 +14,6 @@
   qlist -Iv $(portageq --repo gentoo --orphaned) in one step (bug 711466#c3)
 - handle compressed Packages.gz file in tree
 - rename atom\_ctx to atom\_t and similar for all structures like array
-- rid ourselves of libq/xasprintf
 
 # tests
 - add test for qsearch to avoid repetitions like

@@ -32,7 +32,6 @@
 #include "scandirat.h"
 #include "set.h"
 #include "tree.h"
-#include "xasprintf.h"
 #include "xchdir.h"
 #include "xmkdir.h"
 #include "xpak.h"

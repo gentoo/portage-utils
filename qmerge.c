@@ -26,6 +26,7 @@
 #endif
 
 #include "stat-time.h"
+#include "xvasprintf.h"
 
 #include "atom.h"
 #include "contents.h"
@@ -41,7 +42,6 @@
 #include "scandirat.h"
 #include "set.h"
 #include "tree.h"
-#include "xasprintf.h"
 #include "xchdir.h"
 #include "xmkdir.h"
 #include "xpak.h"
@@ -648,68 +648,68 @@ static void pkg_run_func_at
 
   qprintf("@@@ %s\n", func);
 
-  xasprintf(&script,
-            /* Provide funcs required by the PMS */
-            "EBUILD_PHASE=%3$s\n"
-            "debug-print() { :; }\n"
-            "debug-print-function() { :; }\n"
-            "debug-print-section() { :; }\n"
-            /* Not quite right */
-            "has_version() { [ -n \"$(qlist -ICqe \"$1\")\" ]; }\n"
-            "best_version() { qlist -ICqev \"$1\"; }\n"
-            "use() { useq \"$@\"; }\n"
-            "usex() { useq \"$1\" && echo \"${2-yes}$4\" || echo \"${3-no}$5\"; }\n"
-            "useq() { hasq \"$1\" ${USE}; }\n"
-            "usev() { hasv \"$1\" ${USE}; }\n"
-            "has() { hasq \"$@\"; }\n"
-            "hasq() { local h=$1; shift; case \" $* \" in *\" $h \"*) return 0;; *) return 1;; esac; }\n"
-            "hasv() { hasq \"$@\" && echo \"$1\"; }\n"
-            "elog() { printf ' * %%b\\n' \"$*\" >&2; }\n"
-            "einfon() { printf ' * %%b' \"$*\" >&2; }\n"
-            "einfo() { elog \"$@\"; }\n"
-            "ewarn() { elog \"$@\"; }\n"
-            "eqawarn() { elog \"QA: \"\"$@\"; }\n"
-            "eerror() { elog \"$@\"; }\n"
-            "die() { eerror \"$@\"; exit 1; }\n"
-            "fowners() { local f a=$1; shift; for f in \"$@\"; do chown $a \"${ED}/${f}\"; done; }\n"
-            "fperms() { local f a=$1; shift; for f in \"$@\"; do chmod $a \"${ED}/${f}\"; done; }\n"
-            /* TODO: This should suppress `die` */
-            "nonfatal() { \"$@\"; }\n"
-            "ebegin() { printf ' * %%b ...' \"$*\" >&2; }\n"
-            "eend() { local r=${1:-$?}; [ $# -gt 0 ] && shift; [ $r -eq 0 ] && echo ' [ ok ]' || echo \" $* \"'[ !! ]'; return $r; } >&2\n"
-            "dodir() { mkdir -p \"$@\"; }\n"
-            "keepdir() { dodir \"$@\" && touch \"$@\"/.keep_${CATEGORY}_${PN}-${SLOT%%/*}; }\n"
-            /* TODO: This should be fatal upon error */
-            "emake() { ${MAKE:-make} ${MAKEOPTS} \"$@\"; }\n"
-            /* Unpack the env */
-            "{ mkdir -p \"%6$s\"; "
-            "bzip2 -dc '%1$s/environment.bz2' > \"%6$s/environment\" "
-            "|| exit 1; }\n"
-            /* Load the main env */
-            ". \"%6$s/environment\"\n"
-            /* Reload env vars that matter to us */
-            "export EBUILD_PHASE_FUNC='%2$s'\n"
-            "export FILESDIR=/.does/not/exist/anywhere\n"
-            "export MERGE_TYPE=binary\n"
-            "export ROOT='%4$s'\n"
-            "export EROOT=\"${ROOT%%/}${EPREFIX%%/}/\"\n"
-            /* BROOT, SYSROOT, ESYSROOT: PMS table 8.3 Prefix values for DEPEND */
-            "export BROOT=\n"
-            "export SYSROOT=\"${ROOT}\"\n"
-            "export ESYSROOT=\"${EROOT}\"\n"
-            "export D=\"%5$s\"\n"
-            "export ED=\"${D%%/}${EPREFIX%%/}/\"\n"
-            "export T=\"%6$s\"\n"
-            /* we do not support preserve-libs yet, so force
-             * preserve_old_lib instead */
-            "export FEATURES=\"${FEATURES/preserve-libs/}\"\n"
-            /* replacing versions: we ignore EAPI availability, for it will
-             * never hurt */
-            "export %7$s=\"%8$s\"\n"
-            /* Finally run the func */
-            "%9$s%2$s\n"
-            /* Ignore func return values (not exit values) */
-            ":",
+  script = xasprintf(
+      /* Provide funcs required by the PMS */
+      "EBUILD_PHASE=%3$s\n"
+      "debug-print() { :; }\n"
+      "debug-print-function() { :; }\n"
+      "debug-print-section() { :; }\n"
+      /* Not quite right */
+      "has_version() { [ -n \"$(qlist -ICqe \"$1\")\" ]; }\n"
+      "best_version() { qlist -ICqev \"$1\"; }\n"
+      "use() { useq \"$@\"; }\n"
+      "usex() { useq \"$1\" && echo \"${2-yes}$4\" || echo \"${3-no}$5\"; }\n"
+      "useq() { hasq \"$1\" ${USE}; }\n"
+      "usev() { hasv \"$1\" ${USE}; }\n"
+      "has() { hasq \"$@\"; }\n"
+      "hasq() { local h=$1; shift; case \" $* \" in *\" $h \"*) return 0;; *) return 1;; esac; }\n"
+      "hasv() { hasq \"$@\" && echo \"$1\"; }\n"
+      "elog() { printf ' * %%b\\n' \"$*\" >&2; }\n"
+      "einfon() { printf ' * %%b' \"$*\" >&2; }\n"
+      "einfo() { elog \"$@\"; }\n"
+      "ewarn() { elog \"$@\"; }\n"
+      "eqawarn() { elog \"QA: \"\"$@\"; }\n"
+      "eerror() { elog \"$@\"; }\n"
+      "die() { eerror \"$@\"; exit 1; }\n"
+      "fowners() { local f a=$1; shift; for f in \"$@\"; do chown $a \"${ED}/${f}\"; done; }\n"
+      "fperms() { local f a=$1; shift; for f in \"$@\"; do chmod $a \"${ED}/${f}\"; done; }\n"
+      /* TODO: This should suppress `die` */
+      "nonfatal() { \"$@\"; }\n"
+      "ebegin() { printf ' * %%b ...' \"$*\" >&2; }\n"
+      "eend() { local r=${1:-$?}; [ $# -gt 0 ] && shift; [ $r -eq 0 ] && echo ' [ ok ]' || echo \" $* \"'[ !! ]'; return $r; } >&2\n"
+      "dodir() { mkdir -p \"$@\"; }\n"
+      "keepdir() { dodir \"$@\" && touch \"$@\"/.keep_${CATEGORY}_${PN}-${SLOT%%/*}; }\n"
+      /* TODO: This should be fatal upon error */
+      "emake() { ${MAKE:-make} ${MAKEOPTS} \"$@\"; }\n"
+      /* Unpack the env */
+      "{ mkdir -p \"%6$s\"; "
+      "bzip2 -dc '%1$s/environment.bz2' > \"%6$s/environment\" "
+      "|| exit 1; }\n"
+      /* Load the main env */
+      ". \"%6$s/environment\"\n"
+      /* Reload env vars that matter to us */
+      "export EBUILD_PHASE_FUNC='%2$s'\n"
+      "export FILESDIR=/.does/not/exist/anywhere\n"
+      "export MERGE_TYPE=binary\n"
+      "export ROOT='%4$s'\n"
+      "export EROOT=\"${ROOT%%/}${EPREFIX%%/}/\"\n"
+      /* BROOT, SYSROOT, ESYSROOT: PMS table 8.3 Prefix values for DEPEND */
+      "export BROOT=\n"
+      "export SYSROOT=\"${ROOT}\"\n"
+      "export ESYSROOT=\"${EROOT}\"\n"
+      "export D=\"%5$s\"\n"
+      "export ED=\"${D%%/}${EPREFIX%%/}/\"\n"
+      "export T=\"%6$s\"\n"
+      /* we do not support preserve-libs yet, so force
+       * preserve_old_lib instead */
+      "export FEATURES=\"${FEATURES/preserve-libs/}\"\n"
+      /* replacing versions: we ignore EAPI availability, for it will
+       * never hurt */
+      "export %7$s=\"%8$s\"\n"
+      /* Finally run the func */
+      "%9$s%2$s\n"
+      /* Ignore func return values (not exit values) */
+      ":",
     /*1*/ vdb_path,
     /*2*/ func,
     /*3*/ phase,
@@ -1320,8 +1320,8 @@ static int pkg_merge
            portroot, port_tmpdir, matom->CATEGORY, matom->PF);
   mkdir_p(buf, 0755);
   xchdir(buf);
-  xasprintf(&D, "%s/image", buf);
-  xasprintf(&T, "%s/temp", buf);
+  D = xasprintf("%s/image", buf);
+  T = xasprintf("%s/temp", buf);
 
   /* ensure it is empty (rm_rf doesn't actually remove $PWD, just
    * everything under it) */

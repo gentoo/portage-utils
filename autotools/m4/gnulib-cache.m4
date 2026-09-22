@@ -62,7 +62,8 @@
 #  sys_stat-h \
 #  unlinkat \
 #  utimensat \
-#  xalloc
+#  xalloc \
+#  xvasprintf
 
 # Specification in the form of a few gnulib-tool.m4 macro invocations:
 gl_LOCAL_DIR([])
@@ -92,6 +93,7 @@ gl_MODULES([
   unlinkat
   utimensat
   xalloc
+  xvasprintf
 ])
 gl_AVOID([])
 gl_SOURCE_BASE([autotools/gnulib])

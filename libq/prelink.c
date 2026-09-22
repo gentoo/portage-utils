@@ -12,13 +12,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include "xvasprintf.h"
 
 #ifdef __linux__
 # include <elf.h>
 # define LIBQ_PRELINK_HAS_ELF 1
 #endif
 
-#include "xasprintf.h"
 #include "prelink.h"
 
 static const char prelink_bin[] = "prelink";
@@ -84,10 +84,10 @@ prelink_available(void)
     const char       *curpath     = getenv("PATH");
     char             *path;
 
-    xasprintf(&path, "PATH=%s%s%s",
-              curpath ? curpath : "",
-              curpath ? ":"     : "",
-              sbin_path);
+    path = xasprintf("PATH=%s%s%s",
+                     curpath ? curpath : "",
+                     curpath ? ":"     : "",
+                     sbin_path);
     putenv(path);
     status = prelink_in_current_path(false);
   }
