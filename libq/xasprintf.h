@@ -26,11 +26,13 @@
 
 /* asprintf(char **strp, const char *fmt, ...); */
 #define xasprintf(strp, fmt, args...) \
-	({ \
-		int _ret = asprintf(strp, fmt , ## args); \
-		if (unlikely(_ret == -1)) \
-			err("Out of memory"); \
-		_ret; \
-	})
+  ({ \
+    int _ret = asprintf(strp, fmt , ## args); \
+    if (unlikely(_ret == -1)) \
+      err("Out of memory"); \
+    _ret; \
+  })
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
