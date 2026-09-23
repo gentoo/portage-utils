@@ -58,6 +58,7 @@
 #  unlinkat \
 #  utimensat \
 #  xalloc \
+#  xstrndup \
 #  xvasprintf
 
 AUTOMAKE_OPTIONS = 1.14 gnits subdir-objects
@@ -2259,6 +2260,22 @@ endif
 
 ## end   gnulib module strncat
 
+## begin gnulib module strndup
+
+if GL_COND_OBJ_STRNDUP
+libgnu_a_SOURCES += strndup.c
+endif
+
+## end   gnulib module strndup
+
+## begin gnulib module strnlen
+
+if GL_COND_OBJ_STRNLEN
+libgnu_a_SOURCES += strnlen.c
+endif
+
+## end   gnulib module strnlen
+
 ## begin gnulib module strtoll
 
 if GL_COND_OBJ_STRTOLL
@@ -3495,6 +3512,12 @@ EXTRA_DIST += xalloc-oversized.h
 libgnu_a_SOURCES += xsize.h xsize.c
 
 ## end   gnulib module xsize
+
+## begin gnulib module xstrndup
+
+libgnu_a_SOURCES += xstrndup.h xstrndup.c
+
+## end   gnulib module xstrndup
 
 ## begin gnulib module xvasprintf
 

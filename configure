@@ -930,6 +930,10 @@ GL_COND_OBJ_SYMLINK_FALSE
 GL_COND_OBJ_SYMLINK_TRUE
 GL_COND_OBJ_STRTOLL_FALSE
 GL_COND_OBJ_STRTOLL_TRUE
+GL_COND_OBJ_STRNLEN_FALSE
+GL_COND_OBJ_STRNLEN_TRUE
+GL_COND_OBJ_STRNDUP_FALSE
+GL_COND_OBJ_STRNDUP_TRUE
 GL_COND_OBJ_STRNCAT_FALSE
 GL_COND_OBJ_STRNCAT_TRUE
 GL_COND_OBJ_STRNCASECMP_FALSE
@@ -4451,6 +4455,7 @@ as_fn_append ac_func_c_list " readlink HAVE_READLINK"
 as_fn_append ac_func_c_list " link HAVE_LINK"
 as_fn_append ac_func_c_list " renameat HAVE_RENAMEAT"
 as_fn_append ac_header_c_list " stdckdint.h stdckdint_h HAVE_STDCKDINT_H"
+as_fn_append ac_func_c_list " strndup HAVE_STRNDUP"
 as_fn_append ac_func_c_list " unlinkat HAVE_UNLINKAT"
 as_fn_append ac_header_c_list " utime.h utime_h HAVE_UTIME_H"
 as_fn_append ac_func_c_list " utimens HAVE_UTIMENS"
@@ -8452,6 +8457,8 @@ fi
   # Code from module strings-h:
   # Code from module strncasecmp:
   # Code from module strncat:
+  # Code from module strndup:
+  # Code from module strnlen:
   # Code from module strtoll:
   # Code from module symlink:
   # Code from module symlinkat:
@@ -8500,6 +8507,7 @@ fi
   # Code from module xalloc-die:
   # Code from module xalloc-oversized:
   # Code from module xsize:
+  # Code from module xstrndup:
   # Code from module xvasprintf:
 
 
@@ -15744,8 +15752,8 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
         LIBS="$saved_LIBS"
         test $gl_pthread_api = yes && break
       done
-      echo "$as_me:15747: gl_pthread_api=$gl_pthread_api" >&5
-      echo "$as_me:15748: LIBPTHREAD=$LIBPTHREAD" >&5
+      echo "$as_me:15755: gl_pthread_api=$gl_pthread_api" >&5
+      echo "$as_me:15756: LIBPTHREAD=$LIBPTHREAD" >&5
 
       gl_pthread_in_glibc=no
       # On Linux with glibc >= 2.34, libc contains the fully functional
@@ -15774,7 +15782,7 @@ rm -rf conftest*
   *) :
      ;;
 esac
-      echo "$as_me:15777: gl_pthread_in_glibc=$gl_pthread_in_glibc" >&5
+      echo "$as_me:15785: gl_pthread_in_glibc=$gl_pthread_in_glibc" >&5
 
       # Test for libpthread by looking for pthread_kill.
       if test $gl_pthread_api = yes && test -z "$LIBPTHREAD"
@@ -16026,7 +16034,7 @@ fi
 fi
 
 fi
-      echo "$as_me:16029: LIBPMULTITHREAD=$LIBPMULTITHREAD" >&5
+      echo "$as_me:16037: LIBPMULTITHREAD=$LIBPMULTITHREAD" >&5
 
 fi
     { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether POSIX threads API is available" >&5
@@ -20941,6 +20949,27 @@ printf '%s\n' "$gl_cv_func_strncat_works" >&6; }
     *yes) ;;
     *) REPLACE_STRNCAT=1 ;;
   esac
+
+ac_fn_check_decl "$LINENO" "strndup" "ac_cv_have_decl_strndup" "$ac_includes_default" "$ac_c_undeclared_builtin_options$ac_c_future_darwin_options" "CFLAGS"
+if test "x$ac_cv_have_decl_strndup" = xyes
+then :
+  ac_have_decl=1
+else case e in #(
+  e) ac_have_decl=0 ;;
+esac
+fi
+printf '%s\n' "#define HAVE_DECL_STRNDUP $ac_have_decl" >>confdefs.h
+
+
+ac_fn_check_decl "$LINENO" "strnlen" "ac_cv_have_decl_strnlen" "$ac_includes_default" "$ac_c_undeclared_builtin_options$ac_c_future_darwin_options" "CFLAGS"
+if test "x$ac_cv_have_decl_strnlen" = xyes
+then :
+  ac_have_decl=1
+else case e in #(
+  e) ac_have_decl=0 ;;
+esac
+fi
+printf '%s\n' "#define HAVE_DECL_STRNLEN $ac_have_decl" >>confdefs.h
 
 
 
@@ -36602,6 +36631,268 @@ printf '%s\n' "#define GNULIB_TEST_STRNCAT 1" >>confdefs.h
 
 
 
+
+
+
+  if test $ac_cv_have_decl_strndup = no; then
+    HAVE_DECL_STRNDUP=0
+  fi
+
+  if test $ac_cv_func_strndup = yes; then
+    HAVE_STRNDUP=1
+            { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for working strndup" >&5
+printf %s "checking for working strndup... " >&6; }
+if test ${gl_cv_func_strndup_works+y}
+then :
+  printf %s "(cached) " >&6
+else case e in #(
+  e) if test "$cross_compiling" = yes
+then :
+  case $host_os in
+            aix*) gl_cv_func_strndup_works="guessing no";;
+            *)    gl_cv_func_strndup_works="guessing yes";;
+          esac
+
+else case e in #(
+  e) cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+         #include <string.h>
+                           #include <stdlib.h>
+int
+main (void)
+{
+
+#if !HAVE_DECL_STRNDUP
+  extern
+  #ifdef __cplusplus
+  "C"
+  #endif
+  char *strndup (const char *, size_t);
+#endif
+  int result = 0;
+  {
+    char *s = strndup ("some longer string", 15);
+    free (s);
+    s = strndup ("shorter string", 13);
+    if (s[13] != '\0')
+      result |= 1;
+    free (s);
+  }
+  if (strndup (NULL, 0) == NULL)
+    result |= 2;
+  return result;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_run "$LINENO"
+then :
+  gl_cv_func_strndup_works=yes
+else case e in #(
+  e) gl_cv_func_strndup_works=no ;;
+esac
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext ;;
+esac
+fi
+ ;;
+esac
+fi
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $gl_cv_func_strndup_works" >&5
+printf '%s\n' "$gl_cv_func_strndup_works" >&6; }
+    case $gl_cv_func_strndup_works in
+      *no) REPLACE_STRNDUP=1 ;;
+    esac
+  else
+    HAVE_STRNDUP=0
+  fi
+
+
+     if test $HAVE_STRNDUP = 0 || test $REPLACE_STRNDUP = 1; then
+  GL_COND_OBJ_STRNDUP_TRUE=
+  GL_COND_OBJ_STRNDUP_FALSE='#'
+else
+  GL_COND_OBJ_STRNDUP_TRUE='#'
+  GL_COND_OBJ_STRNDUP_FALSE=
+fi
+:
+    if test -z "${GL_COND_OBJ_STRNDUP_TRUE}" && test -z "${GL_COND_OBJ_STRNDUP_FALSE}"; then
+    GL_COND_OBJ_STRNDUP_TRUE='#'
+    GL_COND_OBJ_STRNDUP_FALSE='#'
+  fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          GL_GNULIB_STRNDUP=1
+
+
+
+
+
+printf '%s\n' "#define GNULIB_TEST_STRNDUP 1" >>confdefs.h
+
+
+
+
+
+
+
+
+
+  if test $ac_cv_have_decl_strnlen = no; then
+    HAVE_DECL_STRNLEN=0
+  else
+
+        { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for working strnlen" >&5
+printf %s "checking for working strnlen... " >&6; }
+if test ${ac_cv_func_strnlen_working+y}
+then :
+  printf %s "(cached) " >&6
+else case e in #(
+  e) if test "$cross_compiling" = yes
+then :
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$ac_includes_default
+int
+main (void)
+{
+#if defined _AIX && !defined _AIX51
+	    #error "AIX pre 5.1 is buggy"
+	   #endif
+	   #ifdef __ANDROID__
+	    #include <android/api-level.h>
+	    #if __ANDROID_API__ < 22
+	     #error "Android API < 22 is buggy"
+	    #endif
+	   #endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  ac_cv_func_strnlen_working=yes
+else case e in #(
+  e) ac_cv_func_strnlen_working=no ;;
+esac
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+else case e in #(
+  e) cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$ac_includes_default
+       /* Use pstrnlen to test; 'volatile' prevents the compiler
+	   from optimizing the strnlen calls away.  */
+	size_t (*volatile pstrnlen) (char const *, size_t) = strnlen;
+	char const s[] = "foobar";
+	int s_len = sizeof s - 1;
+
+int
+main (void)
+{
+
+	/* AIX 4.3 is buggy: strnlen (S, 1) == 3.  */
+	int i;
+	for (i = 0; i < s_len + 1; ++i)
+	  {
+	    int expected = i <= s_len ? i : s_len;
+	    if (pstrnlen (s, i) != expected)
+	      return 1;
+	  }
+
+	/* Android 5.0 (API 21) strnlen ("", SIZE_MAX) incorrectly crashes.  */
+	if (pstrnlen ("", -1) != 0)
+	  return 1;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_run "$LINENO"
+then :
+  ac_cv_func_strnlen_working=yes
+else case e in #(
+  e) ac_cv_func_strnlen_working=no ;;
+esac
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext ;;
+esac
+fi
+ ;;
+esac
+fi
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_strnlen_working" >&5
+printf '%s\n' "$ac_cv_func_strnlen_working" >&6; }
+test $ac_cv_func_strnlen_working = no && :
+
+
+    if test $ac_cv_func_strnlen_working = no; then
+      REPLACE_STRNLEN=1
+    fi
+  fi
+
+
+     if test $HAVE_DECL_STRNLEN = 0 || test $REPLACE_STRNLEN = 1; then
+  GL_COND_OBJ_STRNLEN_TRUE=
+  GL_COND_OBJ_STRNLEN_FALSE='#'
+else
+  GL_COND_OBJ_STRNLEN_TRUE='#'
+  GL_COND_OBJ_STRNLEN_FALSE=
+fi
+:
+    if test -z "${GL_COND_OBJ_STRNLEN_TRUE}" && test -z "${GL_COND_OBJ_STRNLEN_FALSE}"; then
+    GL_COND_OBJ_STRNLEN_TRUE='#'
+    GL_COND_OBJ_STRNLEN_FALSE='#'
+  fi
+
+  if test -z "$GL_COND_OBJ_STRNLEN_TRUE"; then :
+
+    :
+
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          GL_GNULIB_STRNLEN=1
+
+
+
+
+
+printf '%s\n' "#define GNULIB_TEST_STRNLEN 1" >>confdefs.h
+
+
+
+
+
+
   ac_fn_c_check_func "$LINENO" "strtoll" "ac_cv_func_strtoll"
 if test "x$ac_cv_func_strtoll" = xyes
 then :
@@ -39260,6 +39551,11 @@ then :
   printf '%s\n' "#define HAVE_STDINT_H 1" >>confdefs.h
 
 fi
+
+
+
+
+  :
 
 
 

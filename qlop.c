@@ -18,7 +18,6 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <xalloc.h>
-#include "xvasprintf.h"
 
 #include "array.h"
 #include "atom.h"

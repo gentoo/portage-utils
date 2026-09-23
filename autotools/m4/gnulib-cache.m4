@@ -63,6 +63,7 @@
 #  unlinkat \
 #  utimensat \
 #  xalloc \
+#  xstrndup \
 #  xvasprintf
 
 # Specification in the form of a few gnulib-tool.m4 macro invocations:
@@ -93,6 +94,7 @@ gl_MODULES([
   unlinkat
   utimensat
   xalloc
+  xstrndup
   xvasprintf
 ])
 gl_AVOID([])

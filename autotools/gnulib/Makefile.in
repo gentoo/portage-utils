@@ -72,6 +72,7 @@
 #  unlinkat \
 #  utimensat \
 #  xalloc \
+#  xstrndup \
 #  xvasprintf
 
 
@@ -221,28 +222,30 @@ host_triplet = @host@
 @GL_COND_OBJ_STRERROR_OVERRIDE_TRUE@am__append_66 = strerror-override.c
 @GL_COND_OBJ_STRNCASECMP_TRUE@am__append_67 = strncasecmp.c
 @GL_COND_OBJ_STRNCAT_TRUE@am__append_68 = strncat.c
-@GL_COND_OBJ_STRTOLL_TRUE@am__append_69 = strtoll.c
-@GL_COND_OBJ_SYMLINK_TRUE@am__append_70 = symlink.c
-@GL_COND_OBJ_SYMLINKAT_TRUE@am__append_71 = symlinkat.c
-@LIBUNISTRING_COMPILE_UNICASE_TOLOWER_TRUE@am__append_72 = unicase/tolower.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_ALNUM_TRUE@am__append_73 = unictype/ctype_alnum.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_ALPHA_TRUE@am__append_74 = unictype/ctype_alpha.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_BLANK_TRUE@am__append_75 = unictype/ctype_blank.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_CNTRL_TRUE@am__append_76 = unictype/ctype_cntrl.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_DIGIT_TRUE@am__append_77 = unictype/ctype_digit.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_GRAPH_TRUE@am__append_78 = unictype/ctype_graph.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_LOWER_TRUE@am__append_79 = unictype/ctype_lower.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_PRINT_TRUE@am__append_80 = unictype/ctype_print.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_PUNCT_TRUE@am__append_81 = unictype/ctype_punct.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_SPACE_TRUE@am__append_82 = unictype/ctype_space.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_UPPER_TRUE@am__append_83 = unictype/ctype_upper.c
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_XDIGIT_TRUE@am__append_84 = unictype/ctype_xdigit.c
-@LIBUNISTRING_COMPILE_UNIWIDTH_WIDTH_TRUE@am__append_85 = uniwidth/width.c
-@GL_COND_OBJ_UNLINK_TRUE@am__append_86 = unlink.c
-@GL_COND_OBJ_UNLINKAT_TRUE@am__append_87 = unlinkat.c
-@GL_COND_OBJ_UTIME_TRUE@am__append_88 = utime.c
-@GL_COND_OBJ_UTIMENSAT_TRUE@am__append_89 = utimensat.c
-@GL_COND_OBJ_WCWIDTH_TRUE@am__append_90 = wcwidth.c
+@GL_COND_OBJ_STRNDUP_TRUE@am__append_69 = strndup.c
+@GL_COND_OBJ_STRNLEN_TRUE@am__append_70 = strnlen.c
+@GL_COND_OBJ_STRTOLL_TRUE@am__append_71 = strtoll.c
+@GL_COND_OBJ_SYMLINK_TRUE@am__append_72 = symlink.c
+@GL_COND_OBJ_SYMLINKAT_TRUE@am__append_73 = symlinkat.c
+@LIBUNISTRING_COMPILE_UNICASE_TOLOWER_TRUE@am__append_74 = unicase/tolower.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_ALNUM_TRUE@am__append_75 = unictype/ctype_alnum.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_ALPHA_TRUE@am__append_76 = unictype/ctype_alpha.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_BLANK_TRUE@am__append_77 = unictype/ctype_blank.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_CNTRL_TRUE@am__append_78 = unictype/ctype_cntrl.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_DIGIT_TRUE@am__append_79 = unictype/ctype_digit.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_GRAPH_TRUE@am__append_80 = unictype/ctype_graph.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_LOWER_TRUE@am__append_81 = unictype/ctype_lower.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_PRINT_TRUE@am__append_82 = unictype/ctype_print.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_PUNCT_TRUE@am__append_83 = unictype/ctype_punct.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_SPACE_TRUE@am__append_84 = unictype/ctype_space.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_UPPER_TRUE@am__append_85 = unictype/ctype_upper.c
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_XDIGIT_TRUE@am__append_86 = unictype/ctype_xdigit.c
+@LIBUNISTRING_COMPILE_UNIWIDTH_WIDTH_TRUE@am__append_87 = uniwidth/width.c
+@GL_COND_OBJ_UNLINK_TRUE@am__append_88 = unlink.c
+@GL_COND_OBJ_UNLINKAT_TRUE@am__append_89 = unlinkat.c
+@GL_COND_OBJ_UTIME_TRUE@am__append_90 = utime.c
+@GL_COND_OBJ_UTIMENSAT_TRUE@am__append_91 = utimensat.c
+@GL_COND_OBJ_WCWIDTH_TRUE@am__append_92 = wcwidth.c
 subdir = autotools/gnulib
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
@@ -390,6 +393,8 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/strings_h.m4 \
 	$(top_srcdir)/autotools/m4/strncasecmp.m4 \
 	$(top_srcdir)/autotools/m4/strncat.m4 \
+	$(top_srcdir)/autotools/m4/strndup.m4 \
+	$(top_srcdir)/autotools/m4/strnlen.m4 \
 	$(top_srcdir)/autotools/m4/strtoll.m4 \
 	$(top_srcdir)/autotools/m4/symlink.m4 \
 	$(top_srcdir)/autotools/m4/symlinkat.m4 \
@@ -423,6 +428,7 @@ am__aclocal_m4_deps = $(top_srcdir)/autotools/m4/00gnulib.m4 \
 	$(top_srcdir)/autotools/m4/wint_t.m4 \
 	$(top_srcdir)/autotools/m4/xalloc.m4 \
 	$(top_srcdir)/autotools/m4/xsize.m4 \
+	$(top_srcdir)/autotools/m4/xstrndup.m4 \
 	$(top_srcdir)/autotools/m4/xvasprintf.m4 \
 	$(top_srcdir)/autotools/m4/zzgnulib.m4 \
 	$(top_srcdir)/configure.ac
@@ -471,8 +477,8 @@ am__libgnu_a_SOURCES_DIST = access.c openat-priv.h openat-proc.c \
 	setlocale_null-unlocked.c size_max.h stat.c stat-time.c \
 	stdio-read.c stdio-write.c stdio-consolesafe.c stdlib.c \
 	strdup.c strerror.c strerror-override.c string.c strncasecmp.c \
-	strncat.c strtoll.c symlink.c symlinkat.c timespec.c u64.c \
-	unicase/tolower.c unictype/ctype_alnum.c \
+	strncat.c strndup.c strnlen.c strtoll.c symlink.c symlinkat.c \
+	timespec.c u64.c unicase/tolower.c unictype/ctype_alnum.c \
 	unictype/ctype_alpha.c unictype/ctype_blank.c \
 	unictype/ctype_cntrl.c unictype/ctype_digit.c \
 	unictype/ctype_graph.c unictype/ctype_lower.c \
@@ -481,7 +487,8 @@ am__libgnu_a_SOURCES_DIST = access.c openat-priv.h openat-proc.c \
 	unictype/ctype_xdigit.c unistd.c uniwidth/width.c unlink.c \
 	unlinkat.c utime.c utimens.c utimensat.c vaszprintf.c \
 	aszprintf.c wctype-h.c wcwidth.c xmalloc.c xalloc-die.c \
-	xsize.h xsize.c xvasprintf.h xvasprintf.c xasprintf.c
+	xsize.h xsize.c xstrndup.h xstrndup.c xvasprintf.h \
+	xvasprintf.c xasprintf.c
 @GL_COND_OBJ_ACCESS_TRUE@am__objects_1 = libgnu_a-access.$(OBJEXT)
 @GL_GENERATE_BYTESWAP_H_TRUE@am__objects_2 =  \
 @GL_GENERATE_BYTESWAP_H_TRUE@	libgnu_a-byteswap.$(OBJEXT)
@@ -579,31 +586,33 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @GL_COND_OBJ_STRNCASECMP_TRUE@am__objects_67 =  \
 @GL_COND_OBJ_STRNCASECMP_TRUE@	libgnu_a-strncasecmp.$(OBJEXT)
 @GL_COND_OBJ_STRNCAT_TRUE@am__objects_68 = libgnu_a-strncat.$(OBJEXT)
-@GL_COND_OBJ_STRTOLL_TRUE@am__objects_69 = libgnu_a-strtoll.$(OBJEXT)
-@GL_COND_OBJ_SYMLINK_TRUE@am__objects_70 = libgnu_a-symlink.$(OBJEXT)
-@GL_COND_OBJ_SYMLINKAT_TRUE@am__objects_71 =  \
+@GL_COND_OBJ_STRNDUP_TRUE@am__objects_69 = libgnu_a-strndup.$(OBJEXT)
+@GL_COND_OBJ_STRNLEN_TRUE@am__objects_70 = libgnu_a-strnlen.$(OBJEXT)
+@GL_COND_OBJ_STRTOLL_TRUE@am__objects_71 = libgnu_a-strtoll.$(OBJEXT)
+@GL_COND_OBJ_SYMLINK_TRUE@am__objects_72 = libgnu_a-symlink.$(OBJEXT)
+@GL_COND_OBJ_SYMLINKAT_TRUE@am__objects_73 =  \
 @GL_COND_OBJ_SYMLINKAT_TRUE@	libgnu_a-symlinkat.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICASE_TOLOWER_TRUE@am__objects_72 = unicase/libgnu_a-tolower.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_ALNUM_TRUE@am__objects_73 = unictype/libgnu_a-ctype_alnum.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_ALPHA_TRUE@am__objects_74 = unictype/libgnu_a-ctype_alpha.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_BLANK_TRUE@am__objects_75 = unictype/libgnu_a-ctype_blank.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_CNTRL_TRUE@am__objects_76 = unictype/libgnu_a-ctype_cntrl.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_DIGIT_TRUE@am__objects_77 = unictype/libgnu_a-ctype_digit.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_GRAPH_TRUE@am__objects_78 = unictype/libgnu_a-ctype_graph.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_LOWER_TRUE@am__objects_79 = unictype/libgnu_a-ctype_lower.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_PRINT_TRUE@am__objects_80 = unictype/libgnu_a-ctype_print.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_PUNCT_TRUE@am__objects_81 = unictype/libgnu_a-ctype_punct.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_SPACE_TRUE@am__objects_82 = unictype/libgnu_a-ctype_space.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_UPPER_TRUE@am__objects_83 = unictype/libgnu_a-ctype_upper.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_XDIGIT_TRUE@am__objects_84 = unictype/libgnu_a-ctype_xdigit.$(OBJEXT)
-@LIBUNISTRING_COMPILE_UNIWIDTH_WIDTH_TRUE@am__objects_85 = uniwidth/libgnu_a-width.$(OBJEXT)
-@GL_COND_OBJ_UNLINK_TRUE@am__objects_86 = libgnu_a-unlink.$(OBJEXT)
-@GL_COND_OBJ_UNLINKAT_TRUE@am__objects_87 =  \
+@LIBUNISTRING_COMPILE_UNICASE_TOLOWER_TRUE@am__objects_74 = unicase/libgnu_a-tolower.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_ALNUM_TRUE@am__objects_75 = unictype/libgnu_a-ctype_alnum.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_ALPHA_TRUE@am__objects_76 = unictype/libgnu_a-ctype_alpha.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_BLANK_TRUE@am__objects_77 = unictype/libgnu_a-ctype_blank.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_CNTRL_TRUE@am__objects_78 = unictype/libgnu_a-ctype_cntrl.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_DIGIT_TRUE@am__objects_79 = unictype/libgnu_a-ctype_digit.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_GRAPH_TRUE@am__objects_80 = unictype/libgnu_a-ctype_graph.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_LOWER_TRUE@am__objects_81 = unictype/libgnu_a-ctype_lower.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_PRINT_TRUE@am__objects_82 = unictype/libgnu_a-ctype_print.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_PUNCT_TRUE@am__objects_83 = unictype/libgnu_a-ctype_punct.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_SPACE_TRUE@am__objects_84 = unictype/libgnu_a-ctype_space.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_UPPER_TRUE@am__objects_85 = unictype/libgnu_a-ctype_upper.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNICTYPE_CTYPE_XDIGIT_TRUE@am__objects_86 = unictype/libgnu_a-ctype_xdigit.$(OBJEXT)
+@LIBUNISTRING_COMPILE_UNIWIDTH_WIDTH_TRUE@am__objects_87 = uniwidth/libgnu_a-width.$(OBJEXT)
+@GL_COND_OBJ_UNLINK_TRUE@am__objects_88 = libgnu_a-unlink.$(OBJEXT)
+@GL_COND_OBJ_UNLINKAT_TRUE@am__objects_89 =  \
 @GL_COND_OBJ_UNLINKAT_TRUE@	libgnu_a-unlinkat.$(OBJEXT)
-@GL_COND_OBJ_UTIME_TRUE@am__objects_88 = libgnu_a-utime.$(OBJEXT)
-@GL_COND_OBJ_UTIMENSAT_TRUE@am__objects_89 =  \
+@GL_COND_OBJ_UTIME_TRUE@am__objects_90 = libgnu_a-utime.$(OBJEXT)
+@GL_COND_OBJ_UTIMENSAT_TRUE@am__objects_91 =  \
 @GL_COND_OBJ_UTIMENSAT_TRUE@	libgnu_a-utimensat.$(OBJEXT)
-@GL_COND_OBJ_WCWIDTH_TRUE@am__objects_90 = libgnu_a-wcwidth.$(OBJEXT)
+@GL_COND_OBJ_WCWIDTH_TRUE@am__objects_92 = libgnu_a-wcwidth.$(OBJEXT)
 am_libgnu_a_OBJECTS = $(am__objects_1) libgnu_a-openat-proc.$(OBJEXT) \
 	libgnu_a-basename-lgpl.$(OBJEXT) $(am__objects_2) \
 	libgnu_a-c32isalnum.$(OBJEXT) libgnu_a-c32isalpha.$(OBJEXT) \
@@ -655,19 +664,20 @@ am_libgnu_a_OBJECTS = $(am__objects_1) libgnu_a-openat-proc.$(OBJEXT) \
 	libgnu_a-stdlib.$(OBJEXT) $(am__objects_64) $(am__objects_65) \
 	$(am__objects_66) libgnu_a-string.$(OBJEXT) $(am__objects_67) \
 	$(am__objects_68) $(am__objects_69) $(am__objects_70) \
-	$(am__objects_71) libgnu_a-timespec.$(OBJEXT) \
-	libgnu_a-u64.$(OBJEXT) $(am__objects_72) $(am__objects_73) \
+	$(am__objects_71) $(am__objects_72) $(am__objects_73) \
+	libgnu_a-timespec.$(OBJEXT) libgnu_a-u64.$(OBJEXT) \
 	$(am__objects_74) $(am__objects_75) $(am__objects_76) \
 	$(am__objects_77) $(am__objects_78) $(am__objects_79) \
 	$(am__objects_80) $(am__objects_81) $(am__objects_82) \
-	$(am__objects_83) $(am__objects_84) libgnu_a-unistd.$(OBJEXT) \
-	$(am__objects_85) $(am__objects_86) $(am__objects_87) \
-	$(am__objects_88) libgnu_a-utimens.$(OBJEXT) $(am__objects_89) \
+	$(am__objects_83) $(am__objects_84) $(am__objects_85) \
+	$(am__objects_86) libgnu_a-unistd.$(OBJEXT) $(am__objects_87) \
+	$(am__objects_88) $(am__objects_89) $(am__objects_90) \
+	libgnu_a-utimens.$(OBJEXT) $(am__objects_91) \
 	libgnu_a-vaszprintf.$(OBJEXT) libgnu_a-aszprintf.$(OBJEXT) \
-	libgnu_a-wctype-h.$(OBJEXT) $(am__objects_90) \
+	libgnu_a-wctype-h.$(OBJEXT) $(am__objects_92) \
 	libgnu_a-xmalloc.$(OBJEXT) libgnu_a-xalloc-die.$(OBJEXT) \
-	libgnu_a-xsize.$(OBJEXT) libgnu_a-xvasprintf.$(OBJEXT) \
-	libgnu_a-xasprintf.$(OBJEXT)
+	libgnu_a-xsize.$(OBJEXT) libgnu_a-xstrndup.$(OBJEXT) \
+	libgnu_a-xvasprintf.$(OBJEXT) libgnu_a-xasprintf.$(OBJEXT)
 libgnu_a_OBJECTS = $(am_libgnu_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -796,7 +806,9 @@ am__depfiles_remade = ./$(DEPDIR)/libgnu_a-access.Po \
 	./$(DEPDIR)/libgnu_a-string.Po \
 	./$(DEPDIR)/libgnu_a-stripslash.Po \
 	./$(DEPDIR)/libgnu_a-strncasecmp.Po \
-	./$(DEPDIR)/libgnu_a-strncat.Po ./$(DEPDIR)/libgnu_a-strtol.Po \
+	./$(DEPDIR)/libgnu_a-strncat.Po \
+	./$(DEPDIR)/libgnu_a-strndup.Po \
+	./$(DEPDIR)/libgnu_a-strnlen.Po ./$(DEPDIR)/libgnu_a-strtol.Po \
 	./$(DEPDIR)/libgnu_a-strtoll.Po \
 	./$(DEPDIR)/libgnu_a-symlink.Po \
 	./$(DEPDIR)/libgnu_a-symlinkat.Po \
@@ -812,6 +824,7 @@ am__depfiles_remade = ./$(DEPDIR)/libgnu_a-access.Po \
 	./$(DEPDIR)/libgnu_a-xalloc-die.Po \
 	./$(DEPDIR)/libgnu_a-xasprintf.Po \
 	./$(DEPDIR)/libgnu_a-xmalloc.Po ./$(DEPDIR)/libgnu_a-xsize.Po \
+	./$(DEPDIR)/libgnu_a-xstrndup.Po \
 	./$(DEPDIR)/libgnu_a-xvasprintf.Po \
 	malloc/$(DEPDIR)/libgnu_a-scratch_buffer_grow.Po \
 	malloc/$(DEPDIR)/libgnu_a-scratch_buffer_grow_preserve.Po \
@@ -2443,15 +2456,16 @@ libgnu_a_SOURCES = $(am__append_1) openat-priv.h openat-proc.c \
 	$(am__append_62) $(am__append_63) stdlib.c $(am__append_64) \
 	$(am__append_65) $(am__append_66) string.c $(am__append_67) \
 	$(am__append_68) $(am__append_69) $(am__append_70) \
-	$(am__append_71) timespec.c u64.c $(am__append_72) \
-	$(am__append_73) $(am__append_74) $(am__append_75) \
-	$(am__append_76) $(am__append_77) $(am__append_78) \
-	$(am__append_79) $(am__append_80) $(am__append_81) \
-	$(am__append_82) $(am__append_83) $(am__append_84) unistd.c \
-	$(am__append_85) $(am__append_86) $(am__append_87) \
-	$(am__append_88) utimens.c $(am__append_89) vaszprintf.c \
-	aszprintf.c wctype-h.c $(am__append_90) xmalloc.c xalloc-die.c \
-	xsize.h xsize.c xvasprintf.h xvasprintf.c xasprintf.c
+	$(am__append_71) $(am__append_72) $(am__append_73) timespec.c \
+	u64.c $(am__append_74) $(am__append_75) $(am__append_76) \
+	$(am__append_77) $(am__append_78) $(am__append_79) \
+	$(am__append_80) $(am__append_81) $(am__append_82) \
+	$(am__append_83) $(am__append_84) $(am__append_85) \
+	$(am__append_86) unistd.c $(am__append_87) $(am__append_88) \
+	$(am__append_89) $(am__append_90) utimens.c $(am__append_91) \
+	vaszprintf.c aszprintf.c wctype-h.c $(am__append_92) xmalloc.c \
+	xalloc-die.c xsize.h xsize.c xstrndup.h xstrndup.c \
+	xvasprintf.h xvasprintf.c xasprintf.c
 libgnu_a_CFLAGS = $(AM_CFLAGS) $(GL_CFLAG_GNULIB_WARNINGS) $(GL_CFLAG_ALLOW_WARNINGS)
 libgnu_a_LIBADD = $(gl_libgnu_LIBOBJS)
 libgnu_a_DEPENDENCIES = $(gl_libgnu_LIBOBJS)
@@ -2749,6 +2763,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-stripslash.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-strncasecmp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-strncat.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-strndup.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-strnlen.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-strtol.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-strtoll.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-symlink.Po@am__quote@ # am--include-marker
@@ -2769,6 +2785,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-xasprintf.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-xmalloc.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-xsize.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-xstrndup.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libgnu_a-xvasprintf.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@malloc/$(DEPDIR)/libgnu_a-scratch_buffer_grow.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@malloc/$(DEPDIR)/libgnu_a-scratch_buffer_grow_preserve.Po@am__quote@ # am--include-marker
@@ -4462,6 +4479,34 @@ libgnu_a-strncat.obj: strncat.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-strncat.obj `if test -f 'strncat.c'; then $(CYGPATH_W) 'strncat.c'; else $(CYGPATH_W) '$(srcdir)/strncat.c'; fi`
 
+libgnu_a-strndup.o: strndup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-strndup.o -MD -MP -MF $(DEPDIR)/libgnu_a-strndup.Tpo -c -o libgnu_a-strndup.o `test -f 'strndup.c' || echo '$(srcdir)/'`strndup.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-strndup.Tpo $(DEPDIR)/libgnu_a-strndup.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='strndup.c' object='libgnu_a-strndup.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-strndup.o `test -f 'strndup.c' || echo '$(srcdir)/'`strndup.c
+
+libgnu_a-strndup.obj: strndup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-strndup.obj -MD -MP -MF $(DEPDIR)/libgnu_a-strndup.Tpo -c -o libgnu_a-strndup.obj `if test -f 'strndup.c'; then $(CYGPATH_W) 'strndup.c'; else $(CYGPATH_W) '$(srcdir)/strndup.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-strndup.Tpo $(DEPDIR)/libgnu_a-strndup.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='strndup.c' object='libgnu_a-strndup.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-strndup.obj `if test -f 'strndup.c'; then $(CYGPATH_W) 'strndup.c'; else $(CYGPATH_W) '$(srcdir)/strndup.c'; fi`
+
+libgnu_a-strnlen.o: strnlen.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-strnlen.o -MD -MP -MF $(DEPDIR)/libgnu_a-strnlen.Tpo -c -o libgnu_a-strnlen.o `test -f 'strnlen.c' || echo '$(srcdir)/'`strnlen.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-strnlen.Tpo $(DEPDIR)/libgnu_a-strnlen.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='strnlen.c' object='libgnu_a-strnlen.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-strnlen.o `test -f 'strnlen.c' || echo '$(srcdir)/'`strnlen.c
+
+libgnu_a-strnlen.obj: strnlen.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-strnlen.obj -MD -MP -MF $(DEPDIR)/libgnu_a-strnlen.Tpo -c -o libgnu_a-strnlen.obj `if test -f 'strnlen.c'; then $(CYGPATH_W) 'strnlen.c'; else $(CYGPATH_W) '$(srcdir)/strnlen.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-strnlen.Tpo $(DEPDIR)/libgnu_a-strnlen.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='strnlen.c' object='libgnu_a-strnlen.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-strnlen.obj `if test -f 'strnlen.c'; then $(CYGPATH_W) 'strnlen.c'; else $(CYGPATH_W) '$(srcdir)/strnlen.c'; fi`
+
 libgnu_a-strtoll.o: strtoll.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-strtoll.o -MD -MP -MF $(DEPDIR)/libgnu_a-strtoll.Tpo -c -o libgnu_a-strtoll.o `test -f 'strtoll.c' || echo '$(srcdir)/'`strtoll.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-strtoll.Tpo $(DEPDIR)/libgnu_a-strtoll.Po
@@ -4909,6 +4954,20 @@ libgnu_a-xsize.obj: xsize.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xsize.c' object='libgnu_a-xsize.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-xsize.obj `if test -f 'xsize.c'; then $(CYGPATH_W) 'xsize.c'; else $(CYGPATH_W) '$(srcdir)/xsize.c'; fi`
+
+libgnu_a-xstrndup.o: xstrndup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-xstrndup.o -MD -MP -MF $(DEPDIR)/libgnu_a-xstrndup.Tpo -c -o libgnu_a-xstrndup.o `test -f 'xstrndup.c' || echo '$(srcdir)/'`xstrndup.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-xstrndup.Tpo $(DEPDIR)/libgnu_a-xstrndup.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xstrndup.c' object='libgnu_a-xstrndup.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-xstrndup.o `test -f 'xstrndup.c' || echo '$(srcdir)/'`xstrndup.c
+
+libgnu_a-xstrndup.obj: xstrndup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-xstrndup.obj -MD -MP -MF $(DEPDIR)/libgnu_a-xstrndup.Tpo -c -o libgnu_a-xstrndup.obj `if test -f 'xstrndup.c'; then $(CYGPATH_W) 'xstrndup.c'; else $(CYGPATH_W) '$(srcdir)/xstrndup.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libgnu_a-xstrndup.Tpo $(DEPDIR)/libgnu_a-xstrndup.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xstrndup.c' object='libgnu_a-xstrndup.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -c -o libgnu_a-xstrndup.obj `if test -f 'xstrndup.c'; then $(CYGPATH_W) 'xstrndup.c'; else $(CYGPATH_W) '$(srcdir)/xstrndup.c'; fi`
 
 libgnu_a-xvasprintf.o: xvasprintf.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libgnu_a_CFLAGS) $(CFLAGS) -MT libgnu_a-xvasprintf.o -MD -MP -MF $(DEPDIR)/libgnu_a-xvasprintf.Tpo -c -o libgnu_a-xvasprintf.o `test -f 'xvasprintf.c' || echo '$(srcdir)/'`xvasprintf.c
@@ -5485,6 +5544,8 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/libgnu_a-stripslash.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-strncasecmp.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-strncat.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-strndup.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-strnlen.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-strtol.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-strtoll.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-symlink.Po
@@ -5505,6 +5566,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/libgnu_a-xasprintf.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-xmalloc.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-xsize.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-xstrndup.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-xvasprintf.Po
 	-rm -f malloc/$(DEPDIR)/libgnu_a-scratch_buffer_grow.Po
 	-rm -f malloc/$(DEPDIR)/libgnu_a-scratch_buffer_grow_preserve.Po
@@ -5695,6 +5757,8 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/libgnu_a-stripslash.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-strncasecmp.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-strncat.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-strndup.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-strnlen.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-strtol.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-strtoll.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-symlink.Po
@@ -5715,6 +5779,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/libgnu_a-xasprintf.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-xmalloc.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-xsize.Po
+	-rm -f ./$(DEPDIR)/libgnu_a-xstrndup.Po
 	-rm -f ./$(DEPDIR)/libgnu_a-xvasprintf.Po
 	-rm -f malloc/$(DEPDIR)/libgnu_a-scratch_buffer_grow.Po
 	-rm -f malloc/$(DEPDIR)/libgnu_a-scratch_buffer_grow_preserve.Po

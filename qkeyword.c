@@ -22,7 +22,6 @@
 #include "scandirat.h"
 #include "set.h"
 #include "tree.h"
-#include "xvasprintf.h"
 
 /********************************************************************/
 /* Required portage-utils stuff                                     */

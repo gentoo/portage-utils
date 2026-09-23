@@ -219,6 +219,8 @@ AC_DEFUN([gl_EARLY],
   # Code from module strings-h:
   # Code from module strncasecmp:
   # Code from module strncat:
+  # Code from module strndup:
+  # Code from module strnlen:
   # Code from module strtoll:
   # Code from module symlink:
   # Code from module symlinkat:
@@ -267,6 +269,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module xalloc-die:
   # Code from module xalloc-oversized:
   # Code from module xsize:
+  # Code from module xstrndup:
   # Code from module xvasprintf:
 ])
 
@@ -952,6 +955,17 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_STRNCAT
   ])
   gl_STRING_MODULE_INDICATOR([strncat])
+  gl_FUNC_STRNDUP
+  gl_CONDITIONAL([GL_COND_OBJ_STRNDUP],
+                 [test $HAVE_STRNDUP = 0 || test $REPLACE_STRNDUP = 1])
+  gl_STRING_MODULE_INDICATOR([strndup])
+  gl_FUNC_STRNLEN
+  gl_CONDITIONAL([GL_COND_OBJ_STRNLEN],
+                 [test $HAVE_DECL_STRNLEN = 0 || test $REPLACE_STRNLEN = 1])
+  AM_COND_IF([GL_COND_OBJ_STRNLEN], [
+    gl_PREREQ_STRNLEN
+  ])
+  gl_STRING_MODULE_INDICATOR([strnlen])
   gl_FUNC_STRTOLL
   gl_CONDITIONAL([GL_COND_OBJ_STRTOLL],
                  [test $HAVE_STRTOLL = 0 || test $REPLACE_STRTOLL = 1])
@@ -1075,6 +1089,7 @@ AC_DEFUN([gl_INIT],
   gl_MODULE_INDICATOR([xalloc])
   gl_MODULE_INDICATOR([xalloc-die])
   gl_XSIZE
+  gl_XSTRNDUP
   gl_XVASPRINTF
   m4_ifdef([AM_XGETTEXT_OPTION],
     [AM_][XGETTEXT_OPTION([--flag=xasprintf:1:c-format])])
@@ -1489,6 +1504,8 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/stripslash.c
   lib/strncasecmp.c
   lib/strncat.c
+  lib/strndup.c
+  lib/strnlen.c
   lib/strtol.c
   lib/strtoll.c
   lib/symlink.c
@@ -1565,6 +1582,8 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/xmalloc.c
   lib/xsize.c
   lib/xsize.h
+  lib/xstrndup.c
+  lib/xstrndup.h
   lib/xvasprintf.c
   lib/xvasprintf.h
   m4/00gnulib.m4
@@ -1713,6 +1732,8 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/strings_h.m4
   m4/strncasecmp.m4
   m4/strncat.m4
+  m4/strndup.m4
+  m4/strnlen.m4
   m4/strtoll.m4
   m4/symlink.m4
   m4/symlinkat.m4
@@ -1747,6 +1768,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/wint_t.m4
   m4/xalloc.m4
   m4/xsize.m4
+  m4/xstrndup.m4
   m4/xvasprintf.m4
   m4/zzgnulib.m4
 ])

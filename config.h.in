@@ -461,6 +461,12 @@
 /* Define to 1 when the gnulib module strncat should be tested. */
 #undef GNULIB_TEST_STRNCAT
 
+/* Define to 1 when the gnulib module strndup should be tested. */
+#undef GNULIB_TEST_STRNDUP
+
+/* Define to 1 when the gnulib module strnlen should be tested. */
+#undef GNULIB_TEST_STRNLEN
+
 /* Define to 1 when the gnulib module strtoll should be tested. */
 #undef GNULIB_TEST_STRTOLL
 
@@ -656,6 +662,14 @@
 /* Define to 1 if you have the declaration of 'strncasecmp', and to 0 if you
    don't. */
 #undef HAVE_DECL_STRNCASECMP
+
+/* Define to 1 if you have the declaration of 'strndup', and to 0 if you
+   don't. */
+#undef HAVE_DECL_STRNDUP
+
+/* Define to 1 if you have the declaration of 'strnlen', and to 0 if you
+   don't. */
+#undef HAVE_DECL_STRNLEN
 
 /* Define to 1 if you have the declaration of 'towlower', and to 0 if you
    don't. */
@@ -995,6 +1009,9 @@
 
 /* Define to 1 if you have the 'strncasecmp' function. */
 #undef HAVE_STRNCASECMP
+
+/* Define to 1 if you have the 'strndup' function. */
+#undef HAVE_STRNDUP
 
 /* Define to 1 if you have the 'strnlen' function. */
 #undef HAVE_STRNLEN

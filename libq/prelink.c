@@ -12,7 +12,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include "xvasprintf.h"
 
 #ifdef __linux__
 # include <elf.h>

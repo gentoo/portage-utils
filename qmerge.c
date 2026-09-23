@@ -25,9 +25,6 @@
 # include <gpgme.h>
 #endif
 
-#include "stat-time.h"
-#include "xvasprintf.h"
-
 #include "atom.h"
 #include "contents.h"
 #include "copy_file.h"

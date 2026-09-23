@@ -53,6 +53,7 @@ mods="
 	unlinkat
 	utimensat
 	xalloc
+	xstrndup
 	xvasprintf
 "
 v gnulib-tool \
