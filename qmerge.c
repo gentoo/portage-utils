@@ -1481,7 +1481,7 @@ static int pkg_merge
       cnt = scandir(".", &files, filter_self_parent, NULL);
       if (cnt > 0)  /* if no files, below will complain */
       {
-        char fname[_Q_PATH_MAX];
+        char fname[_Q_PATH_MAX + 32];
 
         for (i = 0; i < cnt; i++)
         {
