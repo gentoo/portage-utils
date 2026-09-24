@@ -52,7 +52,8 @@ Conditions
 
 For any multi-conditions, put each condition on its own line.  This not
 only allows a debugger to point to the expression, but makes it visual
-that there are multiple conditions.  For example:
+that there are multiple conditions.  Put the and/or operator on the end
+of the line.  For example:
 ```
   if (foo &&
       (bar > 0 ||
