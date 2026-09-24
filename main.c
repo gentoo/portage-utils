@@ -57,6 +57,9 @@ char *binpkg_format;
 array *overlays;
 array *overlay_names;
 array *overlay_src;
+array *binhosts;
+array *binhosts_names;
+array *binhosts_src;
 hash_t *package_masks = NULL;
 hash_t *use_masks = NULL;
 
@@ -65,6 +68,7 @@ static char *eprefix;
 static char *accept_license;
 
 #define STR_DEFAULT "built-in default"
+#define BINHOST_PRIORITY_UNSET UINT_MAX
 
 /* helper functions for showing errors */
 const char *argv0;
@@ -883,22 +887,108 @@ env_vars vars_to_read[] = {
 #undef _Q_EVB
 };
 
-/* Handle a single file in the repos.conf format. */
-static void
-read_one_repos_conf(const char *repos_conf, char **primary)
+
+typedef struct {
+  char     *sync_uri;
+  char     *name;
+  char     *src;
+  unsigned  priority;
+  bool      verify_sig;
+} binhost_t;
+
+
+static void binhost_fill
+(
+  const void *binhost,
+  const void *data
+)
 {
-	char   pth[_Q_PATH_MAX];
-	char  *main_repo;
-	char  *repo;
-	size_t i;
-	char  *s;
-	char  *p;
-	char  *q;
-	char  *r;
-	char  *e;
-	array *entries;
-	bool   do_trim;
-	bool   is_default;
+  binhost_t *p          = data;
+  binhost_t *b          = binhost;
+  char      *sync_uri   = p->sync_uri;
+  char      *name       = p->name;
+  char      *src        = p->src;
+  int        priority   = p->priority;
+  bool       verify_sig = p->verify_sig;
+
+  b->priority   = priority;
+  b->verify_sig = verify_sig;
+
+  if (sync_uri != NULL)
+	  b->sync_uri = xstrdup(sync_uri);
+  if (name != NULL)
+	  b->name = xstrdup(name);
+  if (src != NULL)
+	  b->src = xstrdup(src);
+}
+
+static int binhost_priority_compar
+(
+  const void *l,
+  const void *r
+)
+{
+  binhost_t *bl = *(binhost_t**)l;
+  binhost_t *br = *(binhost_t**)r;
+
+  if (bl == NULL &&
+	  br == NULL)
+	  return 0;
+  else if (bl == NULL)
+	  return 1;
+  else if (br == NULL)
+	  return -1;
+  if (bl->priority == BINHOST_PRIORITY_UNSET)
+	  return 1;
+  else if (br->priority == BINHOST_PRIORITY_UNSET)
+	  return -1;
+  if (bl->priority == br->priority)
+	  return 0;
+  else if (bl->priority > br->priority)
+	  return -1;
+  else return 1;
+}
+
+static void free_binhost
+(
+  void *priv
+)
+{
+  binhost_t *e = priv;
+  if (e == NULL)
+	  return;
+
+  if (e->sync_uri != NULL)
+	  free(e->sync_uri);
+  if (e->name != NULL)
+	  free(e->name);
+  if (e->src != NULL)
+	  free(e->src);
+  free(e);
+}
+
+enum portage_conf_type { OVERLAY_CONF, BINREPOS_CONF };
+/* Handle a single file in the repos.conf format. */
+static void read_one_repos_conf
+(
+  const char *repos_conf,
+  char **primary,
+  enum portage_conf_type type
+)
+{
+	char        pth[_Q_PATH_MAX];
+	char        *main_repo;
+	char        *repo;
+	size_t      i;
+	char        *s;
+	char        *p;
+	char        *q;
+	char        *r;
+	char        *e;
+	array       *entries;
+	bool        do_trim;
+	bool        is_default;
+	binhost_t   tmp;
 
 	snprintf(pth, sizeof(pth), "%s%s", portroot, repos_conf);
 	if (getenv("DEBUG"))
@@ -972,13 +1062,111 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 		for (*e++ = '\0'; e < q && isspace((int)*e); e++)
 			;
 
-		if (is_default &&
+		if (type == BINREPOS_CONF &&
+		    !is_default)
+		{
+			binhost_t   *ele;
+			binhost_t   *curr_binhost;
+			binhost_t   *it;
+			char        *binhost;
+			size_t       n;
+			long         priority;
+
+			array_for_each(binhosts, n, it)
+			{
+				binhost = it->name;
+				if (strcmp(binhost, repo) == 0)
+					break;
+				binhost = NULL;
+				VAL_CLEAR(tmp);
+			}
+
+			curr_binhost = array_get(binhosts, n);
+			tmp.name     = repo;
+			tmp.src      = pth;
+			tmp.priority = BINHOST_PRIORITY_UNSET;
+
+			/* store current context before we begin rewrite any information */
+			if (curr_binhost != NULL)
+			{
+				if (curr_binhost->sync_uri != NULL)
+					tmp.sync_uri = xstrdup(curr_binhost->sync_uri);
+				tmp.priority = curr_binhost->priority;
+			}
+
+			if (strcmp(p, "priority") == 0)
+			{
+				tmp.priority = strtol(e, NULL, 10);
+
+				if (binhost != NULL)
+				{
+					array_delete(binhosts, n, free_binhost);
+
+					ele = xzalloc(sizeof(tmp));
+					binhost_fill(ele, &tmp);
+					array_append(binhosts, ele);
+				}
+				else
+				{
+					ele = xzalloc(sizeof(tmp));
+					binhost_fill(ele, &tmp);
+					array_append(binhosts, ele);
+				}
+			}
+			else if (strcmp(p, "verify-signature") == 0)
+			{
+				if (strcmp(e, "true") == 0)
+					tmp.verify_sig = true;
+
+				if (binhost != NULL)
+				{
+					array_delete(binhosts, n, free_binhost);
+
+					ele = xzalloc(sizeof(tmp));
+					binhost_fill(ele, &tmp);
+					array_append(binhosts, ele);
+				}
+				else
+				{
+					ele = xzalloc(sizeof(tmp));
+					binhost_fill(ele, &tmp);
+					array_append(binhosts, ele);
+				}
+			}
+
+			if (tmp.sync_uri != NULL)
+				free(tmp.sync_uri);
+
+			if (strcmp(p, "sync-uri") == 0)
+			{
+				/* If rewriting an existing binhost with a new sync-uri,
+				* the old one assigned above will be freed */
+				tmp.sync_uri = e;
+
+				if (binhost != NULL)
+				{
+					array_delete(binhosts, n, free_binhost);
+
+					ele = xzalloc(sizeof(tmp));
+					binhost_fill(ele, &tmp);
+					array_append(binhosts, ele);
+				}
+				else
+				{
+					ele = xzalloc(sizeof(tmp));
+					binhost_fill(ele, &tmp);
+					array_append(binhosts, ele);
+				}
+			}
+		}
+
+		else if (is_default &&
 			strcmp(p, "main-repo") == 0)
 		{
 			main_repo = e;
 		}
 		else if (!is_default &&
-				 strcmp(p, "location") == 0)
+			strcmp(p, "location") == 0)
 		{
 			void  *ele;
 			char  *overlay;
@@ -995,10 +1183,8 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 				/* replace overlay */
 				array_delete(overlay_src, n, NULL);
 				array_append_strcpy(overlay_src, pth);
-
 				ele = array_remove(overlay_names, n);
 				array_append(overlay_names, ele);
-
 				array_delete(overlays, n, NULL);
 				ele = array_append_strcpy(overlays, e);
 			}
@@ -1011,15 +1197,18 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 			if (main_repo &&
 				strcmp(repo, main_repo) == 0)
 				*primary = overlay;
-		}
+			}
 	}
-
 	array_deepfree(entries, NULL);
 }
 
 /* Handle a possible directory of files. */
-static void
-read_repos_conf(const char *repos_conf, char **primary)
+static void read_repos_conf
+(
+  const char *repos_conf,
+  char **primary,
+  enum portage_conf_type type
+)
 {
 	char            top_conf[_Q_PATH_MAX];
 	struct dirent **confs = NULL;
@@ -1033,7 +1222,7 @@ read_repos_conf(const char *repos_conf, char **primary)
 	count = scandir(top_conf, &confs, NULL, alphasort);
 	if (count == -1) {
 		if (errno == ENOTDIR)
-			read_one_repos_conf(top_conf + strlen(portroot), primary);
+			read_one_repos_conf(top_conf + strlen(portroot), primary, type);
 	} else {
 		char sub_conf[_Q_PATH_MAX * 2];
 
@@ -1057,7 +1246,7 @@ read_repos_conf(const char *repos_conf, char **primary)
 				!S_ISREG(st.st_mode))
 				continue;
 
-			read_one_repos_conf(sub_conf + strlen(portroot), primary);
+			read_one_repos_conf(sub_conf + strlen(portroot), primary, type);
 		}
 		scandir_free(confs, count);
 	}
@@ -1128,8 +1317,21 @@ initialize_portage_env(void)
 	/* read overlays first so we can resolve repo references in profile
 	 * parent files (non PMS feature?) */
 	primary_overlay = NULL;
-	read_repos_conf("/usr/share/portage/config/repos.conf", &primary_overlay);
-	read_repos_conf("/etc/portage/repos.conf", &primary_overlay);
+	read_repos_conf("/usr/share/portage/config/repos.conf", &primary_overlay, OVERLAY_CONF);
+	read_repos_conf("/etc/portage/repos.conf", &primary_overlay, OVERLAY_CONF);
+	read_repos_conf("/usr/share/portage/config/binrepos.conf", NULL, BINREPOS_CONF);
+	read_repos_conf("/etc/portage/binrepos.conf", NULL, BINREPOS_CONF);
+
+	array_sort(binhosts, binhost_priority_compar);
+
+	size_t     n;
+	binhost_t *b;
+
+	array_for_each(binhosts, n, b)
+	{
+		array_append_strcpy(binhosts_names, b->name);
+		array_append_strcpy(binhosts_src,   b->src);
+	}
 
 	/* consider Portage's defaults */
 	snprintf(pathbuf, sizeof(pathbuf),
@@ -1407,9 +1609,12 @@ int main(int argc, char **argv)
 	/* ensure any err/warn doesn't use unitialised vars */
 	color_clear();
 
-	overlays      = array_new();
-	overlay_names = array_new();
-	overlay_src   = array_new();
+	overlays       = array_new();
+	overlay_names  = array_new();
+	overlay_src    = array_new();
+	binhosts       = array_new();
+	binhosts_names = array_new();
+	binhosts_src   = array_new();
 
 	/* initialise all the properties with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
@@ -1580,6 +1785,9 @@ int main(int argc, char **argv)
 	array_deepfree(overlays, NULL);
 	array_deepfree(overlay_names, NULL);
 	array_deepfree(overlay_src, NULL);
+	array_deepfree(binhosts, free_binhost);
+	array_deepfree(binhosts_names, NULL);
+	array_deepfree(binhosts_src, NULL);
 
 	if (warnout != stderr)
 		fclose(warnout);
