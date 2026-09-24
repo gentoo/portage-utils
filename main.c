@@ -29,7 +29,6 @@
 #include "rmspace.h"
 #include "scandirat.h"
 #include "set.h"
-#include "xasprintf.h"
 
 /* variables to control runtime behavior */
 char *main_overlay;

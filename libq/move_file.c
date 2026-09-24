@@ -13,7 +13,6 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "stat-time.h"
 
 #include "copy_file.h"
 #include "move_file.h"

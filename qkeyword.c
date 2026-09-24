@@ -22,7 +22,6 @@
 #include "scandirat.h"
 #include "set.h"
 #include "tree.h"
-#include "xasprintf.h"
 
 /********************************************************************/
 /* Required portage-utils stuff                                     */
@@ -737,16 +736,18 @@ keyword_sort(const void *l, const void *r)
 static void
 qkeyword_load_arches(const char *overlay)
 {
-	FILE *fp;
-	char *filename, *s;
-	int linelen;
+	char   filename[_Q_PATH_MAX];
+	FILE  *fp;
+	char  *s;
+	int    linelen;
 	size_t buflen;
-	char *buf;
+	char  *buf;
 
-	xasprintf(&filename, "%s/%s/profiles/arch.list", portroot, overlay);
+	snprintf(filename, sizeof(filename),
+			 "%s/%s/profiles/arch.list", portroot, overlay);
 	fp = fopen(filename, "re");
 	if (!fp)
-		goto done;
+		return;
 
 	buf = NULL;
 	while ((linelen = getline(&buf, &buflen, fp)) >= 0) {
@@ -777,8 +778,6 @@ qkeyword_load_arches(const char *overlay)
 	array_sort(archlist, keyword_sort);
 
 	fclose(fp);
- done:
-	free(filename);
 }
 
 static int

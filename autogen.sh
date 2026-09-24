@@ -53,6 +53,8 @@ mods="
 	unlinkat
 	utimensat
 	xalloc
+	xstrndup
+	xvasprintf
 "
 v gnulib-tool \
 	--source-base=autotools/gnulib --m4-base=autotools/m4 \

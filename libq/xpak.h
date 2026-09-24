@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2019 Gentoo Foundation
+ * Copyright 2005-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  */
 
@@ -15,3 +15,5 @@ int xpak_process(const char *, bool, void *, xpak_callback_t);
 int xpak_create(int, const char *, int, char **, bool, int);
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */

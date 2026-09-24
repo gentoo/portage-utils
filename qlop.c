@@ -24,7 +24,6 @@
 #include "eat_file.h"
 #include "scandirat.h"
 #include "set.h"
-#include "xasprintf.h"
 
 #define QLOP_DEFAULT_LOGFILE "emerge.log"
 
@@ -1647,7 +1646,7 @@ int qlop_main(int argc, char **argv)
 	}
 
 	if (logfile == NULL)
-		xasprintf(&logfile, "%s/%s", portlogdir, QLOP_DEFAULT_LOGFILE);
+		logfile = xasprintf("%s/%s", portlogdir, QLOP_DEFAULT_LOGFILE);
 
 	argc -= optind;
 	argv += optind;

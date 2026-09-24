@@ -23,7 +23,6 @@
 #include "hash.h"
 #include "prelink.h"
 #include "tree.h"
-#include "xasprintf.h"
 #include "xregex.h"
 
 #define QCHECK_FORMAT "%[CATEGORY]%[PN]"

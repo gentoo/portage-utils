@@ -3,7 +3,6 @@ QFILES = \
 	array.c array.h \
 	atom.c atom.h \
 	basename.c basename.h \
-	busybox.h \
 	colors.c colors.h \
 	contents.c contents.h \
 	copy_file.c copy_file.h \
@@ -21,7 +20,6 @@ QFILES = \
 	scandirat.c scandirat.h \
 	set.c set.h \
 	tree.c tree.h \
-	xasprintf.h \
 	xchdir.c xchdir.h \
 	xmkdir.c xmkdir.h \
 	xpak.c xpak.h \

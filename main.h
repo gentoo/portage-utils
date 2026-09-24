@@ -18,10 +18,24 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+/* gnulib */
+#include <dirent.h>
+#include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
+#include "md5.h"
+#include "sha1.h"
+#include "sha256.h"
+#include "sha512.h"
+#include "stat-time.h"
+#include "xalloc.h"
+#include "xstrndup.h"
+#include "xvasprintf.h"
 
 #include "colors.h"  /* because err/warn macros use it */
 

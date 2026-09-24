@@ -14,3 +14,5 @@ void xsystembash(const char *command, const char **argv, int cwd);
 #define xsystemv(V,F) xsystembash(NULL, V, F)
 
 #endif
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */

@@ -1,45 +1,67 @@
 /*
- * Copyright 2011-2019 Gentoo Foundation
+ * Copyright 2011-2026 Gentoo Foundation
  * Distributed under the terms of the GNU General Public License v2
  *
  * Copyright 2011-2016 Mike Frysinger  - <vapier@gentoo.org>
  */
 
 #include "main.h"
-#include "xregex.h"
 
 #include <stdlib.h>
 
-int wregcomp(regex_t *preg, const char *regex, int cflags)
+#include "xregex.h"
+
+int
+wregcomp
+(
+  regex_t    *preg,
+  const char *regex,
+  int         cflags
+)
 {
-	int ret = regcomp(preg, regex, cflags);
-	if (unlikely(ret)) {
-		char errbuf[256];
-		regerror(ret, preg, errbuf, sizeof(errbuf));
-		warn("invalid regexp: %s -- %s\n", regex, errbuf);
-	}
-	return ret;
+  int ret = regcomp(preg, regex, cflags);
+  if (unlikely(ret))
+  {
+    char errbuf[256];
+    regerror(ret, preg, errbuf, sizeof(errbuf));
+    warn("invalid regexp: %s -- %s\n", regex, errbuf);
+  }
+  return ret;
 }
 
-void xregcomp(regex_t *preg, const char *regex, int cflags)
+void
+xregcomp
+(
+  regex_t    *preg,
+  const char *regex,
+  int         cflags
+)
 {
-	if (unlikely(wregcomp(preg, regex, cflags)))
-		exit(EXIT_FAILURE);
+  if (unlikely(wregcomp(preg, regex, cflags)))
+    exit(EXIT_FAILURE);
 }
 
 int
-rematch(const char *re, const char *match, int cflags)
+rematch
+(
+  const char *re,
+  const char *match,
+  int         cflags
+)
 {
-	regex_t preg;
-	int ret;
+  regex_t preg;
+  int     ret;
 
-	if ((match == NULL) || (re == NULL))
-		return EXIT_FAILURE;
+  if (match == NULL ||
+      re == NULL)
+    return EXIT_FAILURE;
 
-	if (wregcomp(&preg, re, cflags))
-		return EXIT_FAILURE;
-	ret = regexec(&preg, match, 0, NULL, 0);
-	regfree(&preg);
+  if (wregcomp(&preg, re, cflags))
+    return EXIT_FAILURE;
+  ret = regexec(&preg, match, 0, NULL, 0);
+  regfree(&preg);
 
-	return ret;
+  return ret;
 }
+
+/* vim: set ts=2 sw=2 expandtab cino+=\:0 foldmethod=marker: */
