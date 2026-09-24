@@ -1464,16 +1464,31 @@ static int pkg_merge
     if (has_sig)
     {
       struct dirent       **files;
+      set_t                *sign_excludes = set_new();
       gpgme_ctx_t           ctx;
-      gpgme_data_t          sig    = NULL;
-      gpgme_data_t          data   = NULL;
+      gpgme_data_t          sig           = NULL;
+      gpgme_data_t          data          = NULL;
       gpgme_verify_result_t result;
       gpgme_signature_t     s;
       size_t                len;
       int                   cnt;
 
       /* all files need to be signed, if there's one missing, one must
-       * treat this package as faulty/evil/invalid/tampered with */
+       * treat this package as faulty/evil/invalid/tampered with
+       * BUT glep-0078 isn't that well specified, and it actually says
+       * in the container format that only metadata.tar and image.tar
+       * are detached-signed in a .sig file, and Manifest is clear-text
+       * signed.  The gpkg-1 file is required, but NOT signed.
+       * Long story short, this sucks.  They had better made it very
+       * explicit what had to be signed, and put the signatures in one
+       * file or something.
+       * We treat the file as follows, sign_exclude files need not to
+       * have a .sig file, the rest must have so, such that foreign
+       * members or future members are always included, and archives
+       * containing weird stuff are rejected.  Better be safe than
+       * sorry. */
+      set_add(sign_excludes, "gpkg-1");    /* marker only */
+      set_add(sign_excludes, "Manifest");  /* clear-text signed :( */
 
       if (gpgme_new(&ctx) != GPG_ERR_NO_ERROR)
         err("could not initialise gpgme!");
@@ -1489,6 +1504,9 @@ static int pkg_merge
           if (len > sizeof(".sig") - 1 &&
               strcmp(&files[i]->d_name[len - (sizeof(".sig") - 1) - 1],
                      ".sig") == 0)
+            continue;
+
+          if (set_contains(sign_excludes, files[i]->d_name))
             continue;
 
           /* blindly assume fname + .sig exists, and try to verify it,
@@ -1518,10 +1536,32 @@ static int pkg_merge
 
           gpgme_data_release(sig);
           gpgme_data_release(data);
-          gpgme_release(ctx);
         }
+
       }
       scandir_free(files, cnt);
+      set_free(sign_excludes);
+
+      /* now check Manifest, the one-off being clear-signed */
+      if (gpgme_data_new_from_file(&sig, "Manifest", 1) != GPG_ERR_NO_ERROR)
+        err("could not verify signature of 'Manifest': "
+            "not found or unreadable");
+
+      if (gpgme_op_verify(ctx, sig, NULL, NULL) != GPG_ERR_NO_ERROR)
+        err("verification could not be performed!");
+
+      result = gpgme_op_verify_result(ctx);
+      for (s = result->signatures;
+           s != NULL;
+           s = s->next)
+      {
+        if (s->status != GPG_ERR_NO_ERROR)
+          err("verification of 'Manifest' failed: %s",
+              gpgme_strerror(s->status));
+      }
+      gpgme_data_release(sig);
+
+      gpgme_release(ctx);
     }
 
     xchdir("..");
