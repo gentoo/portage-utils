@@ -1391,10 +1391,17 @@ static int pkg_merge
 
     xchdir("temp");
     a = archive_read_new();
-    t = archive_write_disk_new();
     archive_read_support_format_all(a);
     if (archive_read_open_filename(a, buf, BUFSIZ) != ARCHIVE_OK)
       err("failed to open %s: %s", buf, archive_error_string(a));
+    t = archive_write_disk_new();
+    if (archive_write_disk_set_options(t,
+                                       (ARCHIVE_EXTRACT_SECURE_SYMLINKS |
+                                        ARCHIVE_EXTRACT_SECURE_NODOTDOT |
+                                        ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS))
+        != ARCHIVE_OK)
+      err("could not set secure options for unpacking: %s",
+          archive_error_string(t));
     while (archive_read_next_header(a, &entry) == ARCHIVE_OK)
     {
       char        tmpname[_Q_PATH_MAX];
@@ -1573,11 +1580,18 @@ static int pkg_merge
     t = archive_write_disk_new();
     archive_read_support_format_all(a);
     archive_read_support_filter_all(a);
-    archive_write_disk_set_options(t, (ARCHIVE_EXTRACT_PERM |
-                                       ARCHIVE_EXTRACT_TIME |
-                                       ARCHIVE_EXTRACT_ACL |
-                                       ARCHIVE_EXTRACT_FFLAGS |
-                                       ARCHIVE_EXTRACT_XATTR));
+    if (archive_write_disk_set_options(t,
+                                       (ARCHIVE_EXTRACT_PERM |
+                                        ARCHIVE_EXTRACT_TIME |
+                                        ARCHIVE_EXTRACT_ACL |
+                                        ARCHIVE_EXTRACT_FFLAGS |
+                                        ARCHIVE_EXTRACT_XATTR |
+                                        ARCHIVE_EXTRACT_SECURE_SYMLINKS |
+                                        ARCHIVE_EXTRACT_SECURE_NODOTDOT |
+                                        ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS))
+        != ARCHIVE_OK)
+      err("could not set secure options for unpacking data: %s",
+          archive_error_string(t));
     if (archive_read_open_filename(a, "../temp/metadata",
                                    BUFSIZ) != ARCHIVE_OK)
       err("failed to open metadata: %s", archive_error_string(a));
@@ -1635,11 +1649,18 @@ static int pkg_merge
     t = archive_write_disk_new();
     archive_read_support_format_all(a);
     archive_read_support_filter_all(a);
-    archive_write_disk_set_options(t, (ARCHIVE_EXTRACT_PERM |
-                                       ARCHIVE_EXTRACT_TIME |
-                                       ARCHIVE_EXTRACT_ACL |
-                                       ARCHIVE_EXTRACT_FFLAGS |
-                                       ARCHIVE_EXTRACT_XATTR));
+    if (archive_write_disk_set_options(t,
+                                       (ARCHIVE_EXTRACT_PERM |
+                                        ARCHIVE_EXTRACT_TIME |
+                                        ARCHIVE_EXTRACT_ACL |
+                                        ARCHIVE_EXTRACT_FFLAGS |
+                                        ARCHIVE_EXTRACT_XATTR |
+                                        ARCHIVE_EXTRACT_SECURE_SYMLINKS |
+                                        ARCHIVE_EXTRACT_SECURE_NODOTDOT |
+                                        ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS))
+        != ARCHIVE_OK)
+      err("could not set secure options for unpacking data: %s",
+          archive_error_string(t));
     if (archive_read_open_filename(a, "../temp/image",
                                    BUFSIZ) != ARCHIVE_OK)
       err("failed to open metadata: %s", archive_error_string(a));
@@ -1659,6 +1680,11 @@ static int pkg_merge
 
       if (archive_entry_filetype(entry) != AE_IFLNK)
       {
+        size_t len;
+
+        /* these checks are also requested in the libarchive disk
+         * writer, but it doesn't hurt to check this twice (or should
+         * the flags not be available for some reason) */
         if (fname[0] == '/')
         {
           /* refuse absolute path */
@@ -1674,17 +1700,34 @@ static int pkg_merge
 
         /* check that any symlinks we might hit don't make us end up
          * outside of the image root, if realpath fails with ENOENT it
-         * means whatever it is pointing to doesn't exist, so we can't
-         * accidentially follow a symlink either */
-        snprintf(buf, sizeof(buf), "%s/%s", image_root, fname);
-        if (realpath(buf, member_path) == NULL)
+         * means whatever it is pointing to doesn't exist, which means
+         * we need to check higher up in the directory stack */
+        len = snprintf(buf, sizeof(buf), "%s/%s", image_root, fname);
+        if (len >= sizeof(buf))
+          err("resulting path overflows buffer: %s\n", fname);
+
+        while (true)
         {
-          if (errno != ENOENT)
-            errp("could not resolve target path for %s", buf);
-        }
-        else if (strncmp(image_root, member_path, image_root_len + 1) != 0)
-        {
-          err("refusing symlink escape via '%s' from gpkg", fname);
+          buf[len] = '\0';
+          if (realpath(buf, member_path) == NULL)
+          {
+            if (errno != ENOENT)
+              errp("could not resolve target path for %s", buf);
+
+            if ((p = strrchr(buf, '/')) == NULL)  /* should be impossible */
+              break;
+
+            len = p - buf;  /* cannot be 0, see above */
+            if (len > image_root_len + 1)
+              continue;
+          }
+          else if (strncmp(image_root, member_path, image_root_len) != 0 ||
+                   member_path[image_root_len] != '/')
+          {
+            err("refusing symlink escape via '%s' from gpkg", fname);
+          }
+
+          break;
         }
       }
 
