@@ -1889,6 +1889,7 @@ process_dir_vrfy(void)
   return ret;
 }
 
+
 int
 qmanifest_main
 (
@@ -1900,7 +1901,7 @@ qmanifest_main
   char          path2[_Q_PATH_MAX];
   char         *prog;
   const char *(*runfunc)(void);
-  char         *overlay;
+  repo_t       *overlay;
   const char   *rsn;
   size_t        n;
   int           i;
@@ -1950,30 +1951,23 @@ qmanifest_main
       (!isdir &&
        !isoverlay))
   {
-    char  *repo;
+    char   *repo;
+    repo_t *ele;
     size_t repolen;
 
     array_for_each(overlays, n, overlay)
     {
-      repo = array_get(overlay_names, n);
+      repo = overlay->name
       if (repo != NULL &&
           strcmp(repo, "<PORTDIR>") == 0)
       {
         repo = NULL;
         repolen = 0;
-        snprintf(path, sizeof(path), "%s/profiles/repo_name", overlay);
+        snprintf(path, sizeof(path), "%s/profiles/repo_name", overlay->location);
         if (eat_file(path, &repo, &repolen) > 0)
         {
-          void *name;
-          void *src;
-
-          array_delete(overlays, n, NULL);
-          name = array_remove(overlay_names, n);
-          src  = array_remove(overlay_src, n);
-
-          array_append(overlays,      repo);
-          array_append(overlay_names, name);
-          array_append(overlay_src,   src);
+          ele = array_remove(overlays, n);
+          array_append(overlays, ele);
         }
         else
         {
@@ -1994,9 +1988,9 @@ qmanifest_main
   argv += optind;
   for (i = 0; i < argc; i++)
   {
-    array_for_each(overlay_names, n, overlay)
+    array_for_each(overlays, n, overlay)
     {
-      if (strcmp(overlay, argv[i]) == 0)
+      if (strcmp(overlay->name, argv[i]) == 0)
       {
         overlay = array_get(overlays, n);
         break;
@@ -2020,42 +2014,42 @@ qmanifest_main
     if (isdir ||
         (!isoverlay &&
          overlay == NULL)) /* !isdir && !isoverlay */
-      overlay = argv[i];
+      overlay->location = argv[i];
 
-    if (*overlay != '/')
+    if (*overlay->location != '/')
     {
       if (portroot[1] == '\0')
       {
         /* resolve the path */
         if (fchdir(curdirfd) != 0)
           continue;  /* this shouldn't happen */
-        if (realpath(overlay, path) == NULL &&
+        if (realpath(overlay->location, path) == NULL &&
             *path == '\0')
         {
-          warn("could not resolve %s", overlay);
+          warn("could not resolve %s", overlay->location);
           continue;  /* very unlikely */
         }
       }
       else
       {
-        snprintf(path, sizeof(path), "./%s", overlay);
+        snprintf(path, sizeof(path), "./%s", overlay->location);
       }
     }
     else
     {
-      snprintf(path, sizeof(path), "%s", overlay);
+      snprintf(path, sizeof(path), "%s", overlay->location);
     }
 
     snprintf(path2, sizeof(path2), "%s%s", portroot, path);
     if (chdir(path2) != 0)
     {
-      warn("cannot change directory to %s: %s", overlay, strerror(errno));
+      warn("cannot change directory to %s: %s", overlay->location, strerror(errno));
       ret |= 1;
       continue;
     }
 
     if (runfunc == process_dir_vrfy)
-      printf("verifying %s%s%s...\n", BOLD, overlay, NORM);
+      printf("verifying %s%s%s...\n", BOLD, overlay->location, NORM);
 
     rsn = runfunc();
     if (rsn != NULL)

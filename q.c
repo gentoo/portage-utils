@@ -36,7 +36,7 @@
 #include "tree.h"
 #include "xmkdir.h"
 
-#define Q_FLAGS "cij:oem" COMMON_FLAGS
+#define Q_FLAGS "cij:oemb" COMMON_FLAGS
 static struct option const q_long_opts[] = {
 	{"build-cache",   no_argument, NULL, 'c'},
 	{"install",       no_argument, NULL, 'i'},
@@ -44,6 +44,7 @@ static struct option const q_long_opts[] = {
 	{"overlays",      no_argument, NULL, 'o'},
 	{"envvar",        no_argument, NULL, 'e'},
 	{"masks",         no_argument, NULL, 'm'},
+	{"binhosts",      no_argument, NULL, 'b'},
 	COMMON_LONG_OPTS
 };
 static const char * const q_opts_help[] = {
@@ -53,6 +54,7 @@ static const char * const q_opts_help[] = {
 	"Print available overlays (read from repos.conf)",
 	"Print used variables and their found values",
 	"Print (package.)masks for the current profile",
+	"Print available binhosts (read from binrepos.conf)",
 	COMMON_OPTS_HELP
 };
 #define q_usage(ret) usage(ret, Q_FLAGS, q_long_opts, q_opts_help, NULL, lookup_applet_idx("q"))
@@ -442,6 +444,7 @@ int q_main(int argc, char **argv)
 	bool print_overlays;
 	bool print_vars;
 	bool print_masks;
+	bool print_binhosts;
 	const char *p;
 	const char *jobs;
 	APPLET func;
@@ -465,6 +468,7 @@ int q_main(int argc, char **argv)
 	print_overlays = false;
 	print_vars     = false;
 	print_masks    = false;
+	print_binhosts = false;
 	while ((i = GETOPT_LONG(Q, q, "+")) != -1) {
 		switch (i) {
 		COMMON_GETOPTS_CASES(q)
@@ -475,6 +479,7 @@ int q_main(int argc, char **argv)
 		case 'o': print_overlays = true;   break;
 		case 'e': print_vars     = true;   break;
 		case 'm': print_masks    = true;   break;
+		case 'b': print_binhosts = true;   break;
 		}
 	}
 
@@ -531,18 +536,49 @@ int q_main(int argc, char **argv)
 		return ret;
 	}
 
+	if (print_binhosts)
+	{
+		repo_t *b;
+		size_t  n;
+		array_for_each(binhosts, n, b)
+		{
+			printf("%s%s%s: %s",
+					GREEN, b->name == NULL ? "?unknown?" : b->name,
+					NORM, b->name);
+			if (verbose > 1)
+			{
+				printf(" [%s] ", b->src);
+				if (b->priority != REPO_PRIORITY_UNSET)
+					printf("priority: [%d] ", b->priority);
+				else
+				{
+					printf("priority: [%s] ", "unset");
+				}
+				printf("sync-uri: [%s] verify-signature: [%s] location: [%s]", b->sync_uri ?
+					b->sync_uri : "?unknown?", b->verify_sig == true ? "true" : "false", b->location ?
+					b->location : "?unknown?");
+			}
+			else if (verbose)
+			{
+				printf(" [%s]", b->src);
+			}
+			printf("\n");
+		}
+		return 0;
+	}
+
 	if (print_overlays) {
-		char *overlay;
+		repo_t *overlay;
 		char *repo_name = NULL;
 		size_t repo_name_len = 0;
 		char buf[_Q_PATH_MAX];
 		size_t n;
 
 		array_for_each(overlays, n, overlay) {
-			repo_name = array_get(overlay_names, n);
+			repo_name = overlay->name;
 			if (strcmp(repo_name, "<PORTDIR>") == 0) {
 				repo_name = NULL;
-				snprintf(buf, sizeof(buf), "%s/profiles/repo_name", overlay);
+				snprintf(buf, sizeof(buf), "%s/profiles/repo_name", overlay->location);
 				if (eat_file(buf, &repo_name, &repo_name_len) < 0) {
 					free(repo_name);
 					repo_name = NULL;
@@ -552,10 +588,10 @@ int q_main(int argc, char **argv)
 			}
 			printf("%s%s%s: %s%s%s%s",
 					GREEN, repo_name == NULL ? "?unknown?" : repo_name,
-					NORM, overlay,
-					YELLOW, main_overlay == overlay ? " (main)" : "", NORM);
+					NORM, overlay->name,
+					YELLOW, main_overlay == overlay->location ? " (main)" : "", NORM);
 			if (verbose)
-				printf(" [%s]\n", (char *)array_get(overlay_src, n));
+				printf(" [%s]\n", overlay->src);
 			else
 				printf("\n");
 			if (repo_name_len != 0) {

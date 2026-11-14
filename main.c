@@ -55,8 +55,7 @@ set  *accept_keywords;
 char *install_mask;
 char *binpkg_format;
 array *overlays;
-array *overlay_names;
-array *overlay_src;
+array *binhosts;
 hash_t *package_masks = NULL;
 hash_t *use_masks = NULL;
 
@@ -660,7 +659,7 @@ static const char *
 overlay_from_path(const char *path)
 {
 	size_t n;
-	char *overlay;
+	repo_t *overlay;
 	size_t max_match = 0;
 	const char *found_overlay = NULL;
 
@@ -673,16 +672,16 @@ overlay_from_path(const char *path)
 		array_for_each(overlays, n, overlay) {
 			size_t overlay_len;
 
-			if (!starts_with(path, overlay, &overlay_len))
+			if (!starts_with(path, overlay->location, &overlay_len))
 				continue;
 
 			if (overlay_len <= max_match)
 				continue;
 
 			max_match = overlay_len;
-			found_overlay = overlay;
+			found_overlay = overlay->location;
 
-			if (overlay[overlay_len] == '\0')
+			if (overlay->location[overlay_len] == '\0')
 				break;
 		}
 	} else {
@@ -697,7 +696,7 @@ overlay_from_path(const char *path)
 		array_for_each(overlays, n, overlay) {
 			size_t overlay_len;
 
-			snprintf(resolved, sizeof(resolved), "%s%s", portroot, &overlay[1]);
+			snprintf(resolved, sizeof(resolved), "%s%s", portroot, &overlay->location[1]);
 			if (realpath(resolved, ovrlpath) == NULL)
 				memcpy(ovrlpath, resolved, sizeof(resolved));
 
@@ -708,7 +707,7 @@ overlay_from_path(const char *path)
 				continue;
 
 			max_match = overlay_len;
-			found_overlay = overlay;
+			found_overlay = overlay->location;
 		}
 	}
 
@@ -759,8 +758,8 @@ read_portage_profile
 			/* handle repo: notation (not in PMS, referenced in Wiki only?) */
 			if ((p = strchr(s, ':')) != NULL)
 			{
-				char *overlay;
-				char *repo_name;
+				repo_t *overlay;
+				char   *repo_name;
 				size_t n;
 
 				/* split repo from target */
@@ -790,12 +789,12 @@ read_portage_profile
 					repo_name = NULL;
 					array_for_each(overlays, n, overlay)
 					{
-						repo_name = array_get(overlay_names, n);
+						repo_name = overlay->name;
 						if (repo_name != NULL &&
 							strcmp(repo_name, s) == 0)
 						{
 							snprintf(profile_file, sizeof(profile_file),
-									"%s/profiles/%s/", overlay, p);
+									"%s/profiles/%s/", overlay->location, p);
 							break;
 						}
 						repo_name = NULL;
@@ -883,9 +882,73 @@ env_vars vars_to_read[] = {
 #undef _Q_EVB
 };
 
+static void repo_fill
+(
+  const void *repo,
+  const void *data
+)
+{
+  repo_t *r = repo;
+  repo_t *d = data;
+
+  memcpy(r, d, sizeof(*r));
+
+  if (d->sync_uri != NULL)
+    r->sync_uri = xstrdup(d->sync_uri);
+  if (d->name != NULL)
+    r->name = xstrdup(d->name);
+  if (d->src != NULL)
+    r->src = xstrdup(d->src);
+  if (d->location != NULL)
+    r->location = xstrdup(d->location);
+}
+
+static int repo_priority_compar
+(
+  const void *l,
+  const void *r
+)
+{
+  repo_t *bl = *(repo_t**)l;
+  repo_t *br = *(repo_t**)r;
+
+  if (bl == NULL &&
+      br == NULL)
+    return 0;
+  else if (bl == NULL)
+    return 1;
+  else if (br == NULL)
+    return -1;
+  if (bl->priority == REPO_PRIORITY_UNSET)
+    return 1;
+  else if (br->priority == REPO_PRIORITY_UNSET)
+    return -1;
+  if (bl->priority == br->priority)
+    return 0;
+  else if (bl->priority > br->priority)
+    return -1;
+  else return 1;
+}
+
+static void free_repo
+(
+  repo_t *priv
+)
+{
+  if (priv == NULL)
+    return;
+
+  free(priv->sync_uri);
+  free(priv->location);
+  free(priv->name);
+  free(priv->src);
+  free(priv);
+}
+
+enum portage_conf_type { OVERLAY_CONF, BINREPOS_CONF };
 /* Handle a single file in the repos.conf format. */
 static void
-read_one_repos_conf(const char *repos_conf, char **primary)
+read_one_repos_conf(const char *repos_conf, char **primary, enum portage_conf_type type)
 {
 	char   pth[_Q_PATH_MAX];
 	char  *main_repo;
@@ -899,6 +962,10 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 	array *entries;
 	bool   do_trim;
 	bool   is_default;
+	repo_t tmp;
+	repo_t *it;
+	repo_t *curr_repo;
+	void   *select[] = {overlays, binhosts};
 
 	snprintf(pth, sizeof(pth), "%s%s", portroot, repos_conf);
 	if (getenv("DEBUG"))
@@ -912,6 +979,7 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 
 	main_repo = NULL;
 	repo = NULL;
+	VAL_CLEAR(tmp);
 	array_for_each(entries, i, p)
 	{
 		s = p + strlen(p) - 1;
@@ -977,41 +1045,122 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 		{
 			main_repo = e;
 		}
-		else if (!is_default &&
-				 strcmp(p, "location") == 0)
+
+		repo_t *ele;
+		char   *repo_name = NULL;
+		size_t  n;
+
+		array_for_each(select[type], n, it)
 		{
-			void  *ele;
-			char  *overlay;
-			size_t n;
+			repo_name = it->name;
+			if (strcmp(repo_name, repo) == 0)
+				break;
+			repo_name = NULL;
+			VAL_CLEAR(tmp);
+		}
 
-			array_for_each(overlay_names, n, overlay)
+		curr_repo    = array_get(select[type], n);
+		tmp.priority = REPO_PRIORITY_UNSET;
+		tmp.name     = repo;
+		tmp.src      = pth;
+
+		if (curr_repo != NULL)
+		{
+			if (curr_repo->sync_uri != NULL)
+				tmp.sync_uri = xstrdup(curr_repo->sync_uri);
+			if (curr_repo->location != NULL)
+				tmp.location = xstrdup(curr_repo->location);
+			tmp.priority   = curr_repo->priority;
+			tmp.verify_sig = curr_repo->verify_sig;
+		}
+
+		if (!is_default &&
+			strcmp(p, "priority") == 0)
+		{
+			tmp.priority = strtol(e, NULL, 10);
+
+			if (repo_name != NULL)
 			{
-				if (strcmp(overlay, repo) == 0)
-					break;
-				overlay = NULL;
-			}
-			if (overlay != NULL)
-			{
-				/* replace overlay */
-				array_delete(overlay_src, n, NULL);
-				array_append_strcpy(overlay_src, pth);
+				array_delete(select[type], n, (array_free_cb*)free_repo);
 
-				ele = array_remove(overlay_names, n);
-				array_append(overlay_names, ele);
-
-				array_delete(overlays, n, NULL);
-				ele = array_append_strcpy(overlays, e);
+				ele = xzalloc(sizeof(*ele));
+				repo_fill(ele, &tmp);
+				array_append(select[type], ele);
 			}
 			else
 			{
-				ele     = array_append_strcpy(overlays, e);
-				overlay = array_append_strcpy(overlay_names, repo);
-				array_append_strcpy(overlay_src, pth);
+				ele = xzalloc(sizeof(*ele));
+				repo_fill(ele, &tmp);
+				array_append(select[type], ele);
+			}
+		}
+		else if (!is_default &&
+			strcmp(p, "verify-signature") == 0)
+		{
+			if (strcmp(e, "true") == 0)
+				tmp.verify_sig = true;
+
+			if (repo_name != NULL)
+			{
+				array_delete(select[type], n, (array_free_cb*)free_repo);
+				ele = xzalloc(sizeof(*ele));
+				repo_fill(ele, &tmp);
+				array_append(select[type], ele);
+			}
+			else
+			{
+				ele = xzalloc(sizeof(*ele));
+				repo_fill(ele, &tmp);
+				array_append(select[type], ele);
+			}
+		}
+
+		if (!is_default &&
+			strcmp(p, "sync-uri") == 0)
+		{
+			free(tmp.sync_uri);
+			tmp.sync_uri = e;
+
+			if (repo_name != NULL)
+			{
+				array_delete(select[type], n, (array_free_cb*)free_repo);
+				ele = xzalloc(sizeof(*ele));
+				repo_fill(ele, &tmp);
+				array_append(select[type], ele);
+			}
+			else
+			{
+				ele = xzalloc(sizeof(*ele));
+				repo_fill(ele, &tmp);
+				array_append(select[type], ele);
+			}
+		}
+
+		if (!is_default &&
+			strcmp(p, "location") == 0)
+		{
+			free(tmp.location);
+			tmp.location = e;
+
+			if (repo_name != NULL)
+			{
+				array_delete(select[type], n, (array_free_cb*)free_repo);
+				ele = xzalloc(sizeof(*ele));
+				repo_fill(ele, &tmp);
+				array_append(select[type], ele);
+			}
+			else
+			{
+				ele = xzalloc(sizeof(*ele));
+				repo_fill(ele, &tmp);
+				array_append(select[type], ele);
 			}
 			if (main_repo &&
 				strcmp(repo, main_repo) == 0)
-				*primary = overlay;
+				*primary = repo_name;
 		}
+		tmp.sync_uri = NULL;
+		tmp.location = NULL;
 	}
 
 	array_deepfree(entries, NULL);
@@ -1019,7 +1168,7 @@ read_one_repos_conf(const char *repos_conf, char **primary)
 
 /* Handle a possible directory of files. */
 static void
-read_repos_conf(const char *repos_conf, char **primary)
+read_repos_conf(const char *repos_conf, char **primary, enum portage_conf_type type)
 {
 	char            top_conf[_Q_PATH_MAX];
 	struct dirent **confs = NULL;
@@ -1033,7 +1182,7 @@ read_repos_conf(const char *repos_conf, char **primary)
 	count = scandir(top_conf, &confs, NULL, alphasort);
 	if (count == -1) {
 		if (errno == ENOTDIR)
-			read_one_repos_conf(top_conf + strlen(portroot), primary);
+			read_one_repos_conf(top_conf + strlen(portroot), primary, type);
 	} else {
 		char sub_conf[_Q_PATH_MAX * 2];
 
@@ -1057,7 +1206,7 @@ read_repos_conf(const char *repos_conf, char **primary)
 				!S_ISREG(st.st_mode))
 				continue;
 
-			read_one_repos_conf(sub_conf + strlen(portroot), primary);
+			read_one_repos_conf(sub_conf + strlen(portroot), primary, type);
 		}
 		scandir_free(confs, count);
 	}
@@ -1128,8 +1277,12 @@ initialize_portage_env(void)
 	/* read overlays first so we can resolve repo references in profile
 	 * parent files (non PMS feature?) */
 	primary_overlay = NULL;
-	read_repos_conf("/usr/share/portage/config/repos.conf", &primary_overlay);
-	read_repos_conf("/etc/portage/repos.conf", &primary_overlay);
+	read_repos_conf("/usr/share/portage/config/repos.conf", &primary_overlay, OVERLAY_CONF);
+	read_repos_conf("/etc/portage/repos.conf", &primary_overlay, OVERLAY_CONF);
+	read_repos_conf("/usr/share/portage/config/binrepos.conf", NULL, BINREPOS_CONF);
+	read_repos_conf("/etc/portage/binrepos.conf", NULL, BINREPOS_CONF);
+
+	array_sort(binhosts, repo_priority_compar);
 
 	/* consider Portage's defaults */
 	snprintf(pathbuf, sizeof(pathbuf),
@@ -1138,15 +1291,15 @@ initialize_portage_env(void)
 
 	/* start with base masks, Portage behaviour PMS 5.2.8 */
 	if (primary_overlay != NULL) {
-		char *overlay;
+		repo_t *overlay;
 		size_t n;
-		array_for_each(overlay_names, n, overlay) {
-			if (overlay == primary_overlay) {
+		array_for_each(overlays, n, overlay) {
+			if (overlay->name == primary_overlay) {
 				snprintf(pathbuf, sizeof(pathbuf), "%s/profiles/package.mask",
-						(char *)array_get(overlays, n));
+						overlay->location);
 				read_portage_file(pathbuf, PMASK_FILE, package_masks);
 				snprintf(pathbuf, sizeof(pathbuf), "%s/profiles/use.mask",
-						(char *)array_get(overlays, n));
+						overlay->location);
 				read_portage_file(pathbuf, UMASK_FILE, use_masks);
 				break;
 			}
@@ -1308,9 +1461,11 @@ initialize_portage_env(void)
 	/* handle PORTDIR and primary_overlay to get a unified
 	 * administration in overlays */
 	{
+		repo_t     *ele;
 		const char *overlay;
 
 		var = get_portage_env_var(vars_to_read, "PORTDIR");
+		ele = xzalloc(sizeof(*ele));
 		if (var == NULL)
 		    exit(153); /* impossible */
 
@@ -1321,9 +1476,11 @@ initialize_portage_env(void)
 
 			if (overlay == NULL) {  /* add PORTDIR to overlays */
 				overlay = xstrdup(main_overlay);
-				array_append(overlays, (char *)overlay);
-				array_append_strcpy(overlay_names, "<PORTDIR>");
-				array_append_strcpy(overlay_src, var->src);
+				ele->location = overlay;
+				ele->name     = xstrdup("<PORTDIR>");
+				ele->src      = xstrdup(var->src);
+				array_append(overlays, ele);
+				ele = NULL;
 			} else {
 				/* ignore make.conf and/or env setting origin if defined by
 				 * repos.conf since the former are deprecated */
@@ -1337,7 +1494,8 @@ initialize_portage_env(void)
 		/* set main_overlay to the one pointed to by repos.conf, if any */
 		i = 0;
 		if (primary_overlay != NULL) {
-			array_for_each(overlay_names, i, overlay) {
+			array_for_each(overlays, i, ele) {
+				overlay = ele->name;
 				if (overlay == primary_overlay)
 					break;
 				overlay = NULL;
@@ -1347,10 +1505,11 @@ initialize_portage_env(void)
 			if (overlay == NULL)
 				i = 0;
 		}
-		main_overlay = array_get(overlays, i);
+		ele = array_get(overlays, i);
+		main_overlay = ele->location;
 		/* set source for PORTDIR var */
 		free(var->src);
-		overlay = array_get(overlay_src, i);
+		overlay = ele->src;
 		if (overlay == NULL)
 			overlay = "???";
 		var->src = xstrdup(overlay);
@@ -1408,8 +1567,7 @@ int main(int argc, char **argv)
 	color_clear();
 
 	overlays      = array_new();
-	overlay_names = array_new();
-	overlay_src   = array_new();
+	binhosts      = array_new();
 
 	/* initialise all the properties with their default value */
 	for (i = 0; vars_to_read[i].name; ++i) {
@@ -1515,7 +1673,8 @@ int main(int argc, char **argv)
 	{
 		char buf[_Q_PATH_MAX];
 		const char *match;
-		char *oname;
+		repo_t *ov;
+		repo_t *ele;
 		size_t n;
 
 		if (overlay[0] != '/' &&
@@ -1528,11 +1687,11 @@ int main(int argc, char **argv)
 			if (match == NULL)
 			{
 				/* then as overlay name */
-				array_for_each(overlay_names, n, oname)
+				array_for_each(overlays, n, ov)
 				{
-					if (strcmp(oname, overlay) == 0)
+					if (strcmp(ov->name, overlay) == 0)
 					{
-						match = array_get(overlays, n);
+						match = ov->location;
 						break;
 					}
 				}
@@ -1548,21 +1707,21 @@ int main(int argc, char **argv)
 			{
 				/* this is an absolute path, so create it as overlay,
 				 * which allows for easy testing */
-				match = array_append_strcpy(overlays, overlay);
-
-				array_append_strcpy(overlay_names, "implicit");
-				array_append_strcpy(overlay_src,   "--overlay");
+				ele = xzalloc(sizeof(*ele));
+				ele->location = xstrdup(overlay);
+				ele->name     = xstrdup("implicit");
+				ele->src      = xstrdup("--overlay");
+				array_append(overlays, ele);
+				ele = NULL;
 			}
 		}
 
 		/* at this point match should always be set to something */
-		array_for_each_rev(overlays, n, oname)
+		array_for_each_rev(overlays, n, ov)
 		{
-			if (oname != match)
+			if (ov->location != match)
 			{
-				array_delete(overlays,      n, NULL);
-				array_delete(overlay_names, n, NULL);
-				array_delete(overlay_src,   n, NULL);
+				array_delete(overlays, n, (array_free_cb*)free_repo);
 			}
 		}
 	}
@@ -1577,9 +1736,8 @@ int main(int argc, char **argv)
 	optind = 0;
 	i = q_main(argc, argv);
 
-	array_deepfree(overlays, NULL);
-	array_deepfree(overlay_names, NULL);
-	array_deepfree(overlay_src, NULL);
+	array_deepfree(overlays, (array_free_cb*)free_repo);
+	array_deepfree(binhosts, (array_free_cb*)free_repo);
 
 	if (warnout != stderr)
 		fclose(warnout);

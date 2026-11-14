@@ -189,6 +189,16 @@ typedef struct {
 	bool            fromenv;
 } env_vars;
 extern env_vars vars_to_read[];
+typedef struct {
+	char    *sync_uri;
+	char    *location;
+	char    *name;
+	char    *src;
+	unsigned priority;
+	bool     verify_sig;
+} repo_t;
+void free_repo(repo_t *priv);
+#define REPO_PRIORITY_UNSET 0
 
 extern char *portarch;
 extern char *portroot;
@@ -212,8 +222,7 @@ extern hash_t *use_masks;
 extern char *install_mask;
 extern char *binpkg_format;
 extern array *overlays;
-extern array *overlay_names;
-extern array *overlay_src;
+extern array *binhosts;
 extern char *main_overlay;
 extern int twidth;
 extern bool nocolor;
