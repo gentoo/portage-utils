@@ -851,7 +851,7 @@ env_vars vars_to_read[] = {
 #define _Q_EVS(t, V, v, E, D) \
 	_Q_EV(t, V, .value.s = &v, .value_len = sizeof(D) - 1, D, E)
 #define _Q_EVB(t, V, v, E, D) \
-	_Q_EV(t, V, .value.b = &v, .value_len = 0, D, E)
+	_Q_EV(t, V, .value.b = &v, .value_len = 0, (const char *)(D), E)
 #define _Q_EVT(T, V, v, E, D) \
 	_Q_EV(T, V, .value.t = &v, .value_len = 0, D, E)
 
