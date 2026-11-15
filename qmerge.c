@@ -1363,12 +1363,9 @@ static int pkg_merge
 #ifdef ENABLE_GPKG
     /* unpack the whole thing to temp, dropping the pkg name dir, so
      * we end up with generic files in temp */
-    char                  image_root[_Q_PATH_MAX];
-    char                  member_path[_Q_PATH_MAX];
     struct archive       *a;
     struct archive       *t;
     struct archive_entry *entry;
-    size_t                image_root_len;
     bool                  require_sig;
     bool                  has_sig;
 
@@ -1626,10 +1623,6 @@ static int pkg_merge
 
     /* finally the image */
     xchdir("image");
-    /* POSIX says getcwd returns a realpath'd location */
-    if (getcwd(image_root, sizeof(image_root)) == NULL)
-      errp("could not get image root absolute location");
-    image_root_len = strlen(image_root);
 
     a = archive_read_new();
     t = archive_write_disk_new();
@@ -1666,56 +1659,17 @@ static int pkg_merge
 
       if (archive_entry_filetype(entry) != AE_IFLNK)
       {
-        size_t len;
-
-        /* these checks are also requested in the libarchive disk
-         * writer, but it doesn't hurt to check this twice (or should
-         * the flags not be available for some reason) */
         if (fname[0] == '/')
         {
           /* refuse absolute path */
           err("refusing absolute path '%s' from gpkg", fname);
         }
-        else if ((p = strstr(fname, "..")) != NULL &&
-                 p[2] == '/')
-        {
-          if (p == fname ||
-              p[-1] == '/')
-            err("refusing path traversal in '%s' from gpkg", fname);
-        }
-
-        /* check that any symlinks we might hit don't make us end up
-         * outside of the image root, if realpath fails with ENOENT it
-         * means whatever it is pointing to doesn't exist, which means
-         * we need to check higher up in the directory stack */
-        len = snprintf(buf, sizeof(buf), "%s/%s", image_root, fname);
-        if (len >= sizeof(buf))
-          err("resulting path overflows buffer: %s\n", fname);
-
-        while (true)
-        {
-          buf[len] = '\0';
-          if (realpath(buf, member_path) == NULL)
-          {
-            if (errno != ENOENT)
-              errp("could not resolve target path for %s", buf);
-
-            if ((p = strrchr(buf, '/')) == NULL)  /* should be impossible */
-              break;
-
-            len = p - buf;  /* cannot be 0, see above */
-            if (len > image_root_len + 1)
-              continue;
-          }
-          else if (strncmp(image_root, member_path, image_root_len) != 0 ||
-                   member_path[image_root_len] != '/')
-          {
-            err("refusing symlink escape via '%s' from gpkg", fname);
-          }
-
-          break;
-        }
       }
+
+      /* note: path traversal (ARCHIVE_EXTRACT_SECURE_NODOTDOT) and
+       * symlink checks (ARCHIVE_EXTRACT_SECURE_SYMLINKS) are
+       * delegated to libarchive, as they do a good job convering all
+       * cases */
 
       archive_entry_set_pathname(entry, fname);
       fname = archive_entry_pathname(entry);  /* re-retrieve for errors */
