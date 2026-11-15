@@ -1223,21 +1223,6 @@ static int pkg_unmerge
 
   if (!pretend)
   {
-    size_t retelem;
-
-    /* update the world file if this package was listed in it */
-    if (array_binsearch(state->world,
-                        atom_format("%{#}%[CAT]%[PN]%[SLOT]", atom),
-                        NULL, &retelem) != NULL ||
-        array_binsearch(state->world,
-                        atom_format("%{#}%[CAT]%[PN]", atom),
-                        NULL, &retelem) != NULL)
-    {
-      array_delete(state->world, retelem, NULL);
-      /* update the world file, ignore if it fails, so we at least
-       * succeed in unmerging this package completely */
-      qmerge_update_world_file(state);
-    }
     buf = tree_pkg_meta(pkg_ctx, Q_EAPI);
     if (buf == NULL)
       buf = (char *)"0";  /* default */
@@ -2218,6 +2203,7 @@ static int qmerge_merge_pkgs
   node_t             *dep;
   size_t              i;
   enum tree_open_type ptype    = 0;
+  bool                wupdate  = false;
 
   array_for_each(n->predeps, i, dep)
   {
@@ -2269,29 +2255,20 @@ static int qmerge_merge_pkgs
     if (pkg_merge(state, n->pkg, n->ipkg,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
-    /* add to world file if this was an explicit argument */
-    if (n->is_arg)
-    {
-      if (array_binsearch(state->world,
-                          atom_format("%{#}%[CAT]%[PN]%[SLOT]", n->atom),
-                          NULL, NULL) == NULL)
-      {
-        array_append_strcpy(state->world,
-                            atom_format("%{#}%[CAT]%[PN]%[SLOT]", n->atom));
-        qmerge_update_world_file(state);
-      }
-    }
+    wupdate = true;
     break;
   case NTYPE_UNMERGE:
     if (pkg_unmerge(state, n->pkg, NULL, NULL,
                     cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
+    wupdate = true;
     break;
   case NTYPE_REMERGE:
     printf("%s***%s remerging %s\n", YELLOW, NORM, atom);
     if (pkg_merge(state, n->pkg, n->ipkg,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
+    wupdate = true;
     break;
   case NTYPE_UPGRADE:
     printf("%s***%s upgrading %s [%s]\n",
@@ -2299,6 +2276,7 @@ static int qmerge_merge_pkgs
     if (pkg_merge(state, n->pkg, n->ipkg,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
+    wupdate = true;
     break;
   case NTYPE_DOWNGRADE:
     printf("%s***%s downgrading %s [%s]\n",
@@ -2306,9 +2284,50 @@ static int qmerge_merge_pkgs
     if (pkg_merge(state, n->pkg, n->ipkg,
                   cp_argc, cp_argv, cpm_argc, cpm_argv) != 0)
       return 1;
+    wupdate = true;
     break;
   default:
     break;  /* ignore this node */
+  }
+
+  /* add to world file if this was an explicit argument */
+  if (wupdate &&
+      (n->is_arg ||
+       n->type == NTYPE_UNMERGE))
+  {
+    size_t retelem;
+    bool   modified = false;
+
+    /* remove with without/SLOT variant from world file so we don't end
+     * up with duplicates when adding a new slotted version */
+    if (array_binsearch(state->world,
+                        atom_format("%{#}%[CAT]%[PN]%[SLOT]", patom),
+                        NULL, &retelem) != NULL ||
+        array_binsearch(state->world,
+                        atom_format("%{#}%[CAT]%[PN]", patom),
+                        NULL, &retelem) != NULL)
+    {
+      array_delete(state->world, retelem, NULL);
+      modified = true;
+    }
+
+    if (n->type != NTYPE_UNMERGE)
+    {
+      char *patoms;
+      if (patom->SLOT != NULL &&
+          strcmp(patom->SLOT, "0") == 0)
+        patoms = atom_format("%{#}%[CAT]%[PN]", patom);
+      else
+        patoms = atom_format("%{#}%[CAT]%[PN]%[SLOT]", patom);
+      if (array_binsearch(state->world, patoms, NULL, NULL) == NULL)
+      {
+        array_append_strcpy(state->world, patoms);
+        modified = true;
+      }
+    }
+
+    if (modified)
+      qmerge_update_world_file(state);
   }
 
   /* post deps depend on us */
