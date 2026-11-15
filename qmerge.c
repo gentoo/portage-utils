@@ -949,6 +949,7 @@ static int qmerge_update_world_file
   int    rootfd;
 
   snprintf(path, sizeof(path), "%s%s/var/lib/portage", portroot, configroot);
+  mkdir_p(path, 0775);  /* dir may be absent on new install/ROOT */
   rootfd = open(path, O_RDONLY | O_DIRECTORY, 0);
   if (rootfd < 0)
   {
@@ -2336,10 +2337,7 @@ static array *qmerge_read_file
   snprintf(pth, sizeof(pth), "%s%s%s/%s", portroot, configroot, path, file);
   ret = eat_file_as_array(pth);
   if (ret == NULL)
-  {
-    warnp("unable to read file %s", pth);
-    return NULL;
-  }
+    return NULL;  /* be silent about this, world file may be absent */
 
   array_for_each_rev(ret, n, line)
   {
