@@ -1030,7 +1030,7 @@ read_repos_conf(const char *repos_conf, char **primary)
 			 portroot, configroot + 1, repos_conf);
 	if (getenv("DEBUG"))
 		fprintf(stderr, "repos.conf.d scanner %s\n", top_conf);
-	count = scandir(top_conf, &confs, NULL, alphasort);
+	count = scandir(top_conf, &confs, filter_hidden, alphasort);
 	if (count == -1) {
 		if (errno == ENOTDIR)
 			read_one_repos_conf(top_conf + strlen(portroot), primary);
@@ -1041,10 +1041,6 @@ read_repos_conf(const char *repos_conf, char **primary)
 		{
 			const char *name = confs[i]->d_name;
 			struct stat st;
-
-			/* skip self, parent, and "hidden" files */
-			if (name[0] == '.' || name[0] == '\0')
-				continue;
 
 			/* Exclude backup files (aka files with ~ as postfix). */
 			if (name[strlen(name) - 1] == '~')
