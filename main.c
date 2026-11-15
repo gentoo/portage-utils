@@ -683,7 +683,7 @@ overlay_from_path(const char *path)
 			found_overlay = overlay;
 
 			if (overlay[overlay_len] == '\0')
-				break;
+				break;  /* full match, nothing will fit better */
 		}
 	} else {
 		char rootpath[_Q_PATH_MAX];
