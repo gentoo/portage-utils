@@ -738,25 +738,25 @@ static int merge_tree_at
   char      **cpm_argv
 )
 {
-  struct stat    st;
-  DIR           *dir;
-  struct dirent *de;
-  char          *cpath;
-  size_t         clen;
-  size_t         nlen;
-  size_t         mnlen;
-  int            i;
-  int            ret;
-  int            subfd_src;
-  int            subfd_dst;
+  struct stat     st;
+  struct dirent **des;
+  char           *cpath;
+  size_t          clen;
+  size_t          nlen;
+  size_t          mnlen;
+  int             i;
+  int             descnt;
+  int             ret;
+  int             subfd_src;
+  int             subfd_dst;
 
   ret = -1;
 
   /* Get handles to these subdirs */
-  /* Cannot use O_PATH as we want to use fdopendir() */
-  subfd_src = openat(fd_src, src, O_RDONLY|O_CLOEXEC);
+  subfd_src = openat(fd_src, src, O_RDONLY|O_CLOEXEC|O_PATH);
   if (subfd_src < 0)
     return ret;
+
   subfd_dst = openat(fd_dst, dst, O_RDONLY|O_CLOEXEC|O_PATH);
   if (subfd_dst < 0)
   {
@@ -764,10 +764,13 @@ static int merge_tree_at
     return ret;
   }
 
-  i = dup(subfd_src);  /* fdopendir closes its argument */
-  dir = fdopendir(i);
-  if (!dir)
-    goto done;
+  descnt = scandirat(fd_src, src, &des, filter_self_parent, alphasort);
+  if (descnt < 0)
+  {
+    close(subfd_src);
+    close(subfd_dst);
+    return ret;
+  }
 
   cpath       = *cpathp;
   clen        = strlen(cpath);
@@ -775,12 +778,9 @@ static int merge_tree_at
   nlen        = 0;
   mnlen       = 0;
 
-  while ((de = readdir(dir)) != NULL)
+  for (i = 0; i < descnt; i++)
   {
-    const char *name = de->d_name;
-
-    if (filter_self_parent(de) == 0)
-      continue;
+    const char *name = des[i]->d_name;
 
     /* Build up the full path for this entry */
     nlen = strlen(name);
@@ -925,11 +925,10 @@ static int merge_tree_at
       continue;
     }
   }
+  scandir_free(des, descnt);
 
-  closedir(dir);
   ret = 0;
 
-done:
   close(subfd_src);
   close(subfd_dst);
 
