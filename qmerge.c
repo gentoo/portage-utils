@@ -3202,14 +3202,6 @@ int qmerge_main
   if (argc < 2)
     qmerge_usage(EXIT_FAILURE);
 
-  VAL_CLEAR(rstate);
-
-  tree = vdb = tree_new(portroot, portvdb, TREETYPE_VDB, false);
-  if (tree == NULL)
-    err("cannot function without VDB");
-  rstate.tree     = tree;
-  rstate.blockers = hash_new();
-
   while ((i = GETOPT_LONG(QMERGE, qmerge, "")) != -1)
   {
     switch (i)
@@ -3225,6 +3217,28 @@ int qmerge_main
     COMMON_GETOPTS_CASES(qmerge)
     }
   }
+
+  VAL_CLEAR(rstate);
+
+  tree = vdb = tree_new(portroot, portvdb, TREETYPE_VDB, true);
+  if (tree == NULL)
+  {
+    int rootfd;
+    rootfd = open(portroot, O_RDONLY | O_DIRECTORY, 0);
+    if (rootfd >= 0)
+    {
+      /* see if this is due to a missing VDB dir, which can happen if we
+       * install into a virgin ROOT (or system) */
+      if (portvdb[0] == '/')
+        mkdir_p_at(rootfd, &portvdb[1], 0755);
+      close(rootfd);
+      tree = vdb = tree_new(portroot, portvdb, TREETYPE_VDB, true);
+    }
+  }
+  if (tree == NULL)
+    err("failed to open VDB at %s, cannot function without VDB", portvdb);
+  rstate.tree     = tree;
+  rstate.blockers = hash_new();
 
   rstate.strict = contains_set("strict", features) ? 1 : 0;
 
