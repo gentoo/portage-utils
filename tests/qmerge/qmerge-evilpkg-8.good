@@ -1,0 +1,4 @@
+qmerge: failed to unpack image 'sub/../../../../../../tmp/GPKGPUDOT.txt': Path contains '..'
+These are the packages involved in this operation:
+[N B] app-misc/evilpkg-8:0::gentoo <- arg "=app-misc/evilpkg-8"
+*** merging app-misc/evilpkg-8:0::gentoo

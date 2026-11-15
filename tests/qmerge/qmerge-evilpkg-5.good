@@ -1,0 +1,4 @@
+qmerge: failed to unpack image 'linkdir/escdir/a/b/c/GPKGPU4.txt': Cannot extract through symlink linkdir/escdir/a/b/c/GPKGPU4.txt
+These are the packages involved in this operation:
+[N B] app-misc/evilpkg-5:0::gentoo <- arg "=app-misc/evilpkg-5"
+*** merging app-misc/evilpkg-5:0::gentoo

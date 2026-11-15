@@ -1,0 +1,4 @@
+qmerge: failed to unpack image 'linkdir/GPKGLNK': Cannot extract through symlink linkdir/GPKGLNK
+These are the packages involved in this operation:
+[N B] app-misc/evilpkg-9:0::gentoo <- arg "=app-misc/evilpkg-9"
+*** merging app-misc/evilpkg-9:0::gentoo

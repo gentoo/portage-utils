@@ -204,6 +204,66 @@ if [[ -n ${GPKG_ENABLED} ]] ; then
 	tend $? "qmerge-test: [G] install ${pkgver}-r${rev}" || die "${out}"
 	out=$(yes | qmerge -yU qmerge-test)
 	tend $? "qmerge-test: [G] uninstall ${pkgver}-r${rev}" || die "${out}"
+
+	# test various scenarios of (sym)link attacks and path steppings
+	TESTS=(
+		benign
+		symlink
+		symlink_over
+		symlink_newdir
+		deep_newdirs
+		rel_symlink
+		chain
+		dotdot
+		sym_through_sym
+		hardlink_through_sym
+		hardlink_data_through_sym_pax
+		hardlink_name_through_sym
+		self_root
+		legit_abs_symlinks
+		legit_dir_symlink_inside
+		legit_hardlink
+	)
+
+	mkdir "${ROOT}"/pkgs/app-misc
+	cp -a "${ROOT}"/packages/app-misc/* "${ROOT}"/pkgs/app-misc/
+	qlist -kIv
+	export ACCEPT_KEYWORDS="amd64 ~amd64"
+
+	i=1
+	for t in "${TESTS[@]}" ; do
+		qmerge -KOy "=app-misc/evilpkg-${i}" > out 2>&1
+		ret=$?
+
+		case ${t} in
+			benign| \
+			legit_abs_symlinks| \
+			legit_hardlink)
+				exp=0
+				;;
+			*)
+				exp=1
+				;;
+		esac
+
+		if ! diff -u ${as}/qmerge-evilpkg-${i}.good out ; then
+			tfail "output does not match for: ${t}"
+			[[ ! -e ${as}/qmerge-evilpkg-${i}.good ]] && \
+				cat out > ${as}/qmerge-evilpkg-${i}.good
+			ret=1
+		fi
+		if [[ ${exp} -ne ${ret} ]] ; then
+			tfail "exit code (${ret}) does not match expected (${exp})"
+			ret=1
+		else
+			ret=0
+		fi
+		tend ${ret} "evilpkg-${i}: ${t}"
+
+		# ensure it is clean again
+		qmerge -yU "=app-misc/evilpkg-${i}" > /dev/null 2>&1
+		: $((i++))
+	done
 fi
 
 

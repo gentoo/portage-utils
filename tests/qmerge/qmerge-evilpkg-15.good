@@ -1,0 +1,4 @@
+qmerge: failed to unpack image 'usr/lib/libbar.so': Cannot extract through symlink usr/lib/libbar.so
+These are the packages involved in this operation:
+[N B] app-misc/evilpkg-15:0::gentoo <- arg "=app-misc/evilpkg-15"
+*** merging app-misc/evilpkg-15:0::gentoo

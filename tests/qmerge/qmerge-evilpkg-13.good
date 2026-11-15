@@ -1,0 +1,4 @@
+qmerge: failed to unpack image 'x/selffile': Cannot extract through symlink x/selffile
+These are the packages involved in this operation:
+[N B] app-misc/evilpkg-13:0::gentoo <- arg "=app-misc/evilpkg-13"
+*** merging app-misc/evilpkg-13:0::gentoo

@@ -1,0 +1,11 @@
+These are the packages involved in this operation:
+[N B] app-misc/evilpkg-1:0::gentoo <- arg "=app-misc/evilpkg-1"
+*** merging app-misc/evilpkg-1:0::gentoo
+--- pkg_pretend
+--- pkg_setup
+--- pkg_preinst
+--- /usr/
+--- /usr/bin/
+>>> /usr/bin/hello
+--- pkg_postinst
+>>> app-misc/evilpkg-1

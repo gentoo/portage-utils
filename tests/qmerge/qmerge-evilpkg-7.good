@@ -1,0 +1,4 @@
+qmerge: failed to unpack image 'l1/GPKGPU.txt': Cannot extract through symlink l1/GPKGPU.txt
+These are the packages involved in this operation:
+[N B] app-misc/evilpkg-7:0::gentoo <- arg "=app-misc/evilpkg-7"
+*** merging app-misc/evilpkg-7:0::gentoo

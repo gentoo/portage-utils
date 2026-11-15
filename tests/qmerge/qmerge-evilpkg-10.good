@@ -1,0 +1,4 @@
+qmerge: failed to unpack image 'hl': Cannot extract through symlink linkdir/PREEXIST.txt
+These are the packages involved in this operation:
+[N B] app-misc/evilpkg-10:0::gentoo <- arg "=app-misc/evilpkg-10"
+*** merging app-misc/evilpkg-10:0::gentoo
