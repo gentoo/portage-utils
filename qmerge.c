@@ -2962,7 +2962,10 @@ static dep_status_t qmerge_resolve
 
     alist = qmerge_read_file("/etc/portage/sets", thing);
     if (alist == NULL)
+    {
+      warn("could not open /etc/portage/sets/%s", thing);
       return DEP_FAIL;
+    }
   }
 
   if (alist != NULL)
